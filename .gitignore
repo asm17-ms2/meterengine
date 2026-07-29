@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+
+# 환경 변수 (예시 파일만 추적)
+.env
+.env.*
+!.env.example
+
+# 에디터/로컬 도구
+.idea/
+.vscode/
+.conductor/
+
+# 로그
+*.log
+
+# 스택 확정(ADR) 후 언어별 항목을 추가한다
+
+# 개인 공간과 개인 지침 (커밋하지 않음)
+/work
+/CLAUDE.local.md
+.claude/settings.local.json
