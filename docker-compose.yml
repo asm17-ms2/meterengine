@@ -1,0 +1,24 @@
+# 로컬 개발 환경. 팀원 공통으로 사용한다.
+# - 직접 실행: docker compose up -d
+# - backend 실행 시 자동 기동: cd backend && ./gradlew bootRun (spring-boot-docker-compose)
+services:
+  postgres:
+    image: postgres:18
+    container_name: meterengine-postgres
+    environment:
+      POSTGRES_DB: meterengine
+      POSTGRES_USER: meterengine
+      POSTGRES_PASSWORD: meterengine
+    ports:
+      - "5432:5432"
+    volumes:
+      # postgres:18 이미지부터 데이터 볼륨 마운트 지점이 /var/lib/postgresql 이다
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meterengine -d meterengine"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
