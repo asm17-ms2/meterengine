@@ -1,0 +1,106 @@
+# Redocly 린트 설정 - MS2-27 API 명세
+#
+# 실행: npm run lint       (Redocly + Scalar 순차)
+#       npm run lint:redocly / npm run lint:scalar
+#       npm run docs        (미리보기 HTML)
+#       npm run mock        (목 서버 - 백엔드 없이 계약대로 응답)
+#
+# CI 연결은 MS2-31(박성종) 소관이다. 이 파일은 "무엇을 검사할지"만 정의한다.
+
+# =============================================================================
+# 기준선을 `all`로 잡는다 (2026-07-29 변경)
+#
+# [왜 바꿨나] 처음엔 `recommended`였고 "경고 0건"으로 통과했다. 그런데 그건
+#   명세가 좋아서가 아니라 검사가 약해서였다. `all`로 올리니 100건이 나왔고
+#   그중 실제 결함이 두 종류 있었다:
+#
+#     (1) 필수 문자열에 minLength가 없어 빈 문자열("")이 통과했다.
+#        external_customer_id: "" 인 이벤트가 저장되면 어떤 고객으로도 해소되지
+#        않아 영구 미해소로 남는다 - 에러 없이 청구에서 빠지는 조용한 과소청구다.
+#        (ERD도 transaction_id에 CHECK (<> '')를 걸어 같은 것을 막고 있다)
+#     (2) limit 파라미터에 description이 없었다.
+#
+#   "0건 통과"를 품질 신호로 쓰려면 기준선이 높아야 한다. 낮은 기준선의 0건은
+#   아무것도 보장하지 않는다.
+#
+# [끄는 규칙에는 반드시 이유를 단다] 아래 off 항목은 전부 "우리 설계상 오탐"이거나
+#   "취향 문제"임을 확인한 것이다. 판단 없이 끈 것은 하나도 없다.
+# =============================================================================
+
+extends:
+  - all
+
+apis:
+  meterengine@v1:
+    root: openapi.yaml
+
+rules:
+  # --- 우리 설계상 오탐이라 끈다 ---
+
+  # 에러 응답이 application/problem+json 이라 "표준 mime type이 아니다"로 걸린다.
+  # 그러나 그건 RFC 9457이 요구하는 미디어 타입이다. 규칙이 우리 설계를 못 따라온다.
+  response-mime-type: off
+
+  # /events/batch, /billable-metrics/{code}/price, /customers/{id}/usage 가 걸린다.
+  # batch, price, usage는 컬렉션이 아니라 동작 또는 하위 리소스 세그먼트라 단수가 맞다.
+  path-segment-plural: off
+
+  # 로컬 개발 서버(localhost:8080)는 의도적이다. MS2-31의 Docker Compose 환경에서
+  # 팀 3인이 같은 주소로 명세를 확인해야 한다.
+  no-server-example.com: off
+
+  # 사내 API라 라이선스 필드를 두지 않는다 (공개 배포 대상 아님).
+  info-license: off
+  info-license-strict: off
+
+  # --- 취향 문제라 끈다 ---
+
+  # 태그를 알파벳순으로 강제한다. 우리 태그는 파이프라인 순서
+  # (Events > Billable Metrics > Customers > Usage > Invoices)로 배열해야
+  # 문서가 읽히므로 끈다.
+  tags-alphabetical: off
+
+  # 경로 안의 HTTP 메서드 순서를 강제한다. 문서 렌더링 순서에만 영향이라 무시한다.
+  path-http-verbs-order: off
+
+  # --- 아래는 error로 유지한다 (기본 all에 포함되지만 중요도를 명시해 둠) ---
+  #
+  # 두 린터를 대조해 얻은 실측 (2026-07-29). Scalar는 전부 warning이라 CI를 못 막는다.
+  #   ┌────────────────────┬───────────────┬──────────────────┐
+  #   │ 결함               │ Redocly 기본  │ Scalar(spectral) │
+  #   ├────────────────────┼───────────────┼──────────────────┤
+  #   │ operationId 누락   │ error         │ warning          │
+  #   │ description 누락   │ 못 잡음       │ warning          │
+  #   │ tags 누락          │ 못 잡음       │ warning          │
+  #   │ 미정의 tag 참조    │ 못 잡음       │ warning          │
+  #   └────────────────────┴───────────────┴──────────────────┘
+  # => Scalar = 넓게 훑어 후보를 발견 / Redocly = 확정된 규칙을 error로 강제.
+  #   `all` 기준선이 위 항목을 모두 error로 덮으므로 개별 승격은 필요 없어졌다.
+  operation-operationId: error
+  operation-summary: error
+  operation-description: error
+  operation-tag-defined: error
+  operation-4xx-response: error
+  no-unresolved-refs: error
+  scalar-property-missing-example: error   # 목/문서에서 "string" 자리표시자 방지
+
+  # --- required-string-property-missing-min-length: 남은 지적 22건을 전수 확인한 결과
+  #    전부 오탐이라 끈다. 다만 이 규칙이 찾아준 진짜 결함 2건은 이미 고쳤다.
+  #
+  #    [고친 것] EventInput.external_customer_id / code, CustomerInput.name,
+  #      BillableMetricInput.code / name - 필수인데 minLength가 없어 빈 문자열이
+  #      통과했다. `minLength: 1`을 박았다. 이건 규칙을 끄더라도 명세에 남는다.
+  #
+  #    [오탐인 이유 - 22건 분류]
+  #      (1) 이미 다른 제약이 빈 문자열을 배제한다 (minLength는 중복)
+  #          - format: date-time  -> occurred_at, received_at, timeframe_*, created_at
+  #          - enum               -> aggregation_type, model, status
+  #          - pattern            -> Currency (^[A-Z]{3}$)
+  #          - format: uri        -> Problem.type
+  #      (2) 응답 전용 스키마다. 서버가 만드는 값이라 입력 검증 대상이 아니다
+  #          - UsageSummary, DraftInvoice, Problem.title, quantity 등
+  #         이 규칙은 요청 스키마에서만 의미가 있는데 응답에도 일괄로 붙는다.
+  #
+  #    [재검토] 새 요청 스키마를 추가할 때는 이 규칙을 일시적으로 켜서 확인한다:
+  #      npx redocly lint openapi.yaml --extends=all
+  required-string-property-missing-min-length: off
