@@ -1,0 +1,35 @@
+# Redocly 린트 설정 — MS2-27 API 명세
+#
+# CI 연결은 MS2-31(박성종) 소관이다. 이 파일은 "무엇을 검사할지"만 정의한다.
+#   실행: npx @redocly/cli lint openapi.yaml
+#   미리보기 HTML 생성: npx @redocly/cli build-docs openapi.yaml -o "명세 미리보기.html"
+#     └ 생성된 HTML은 자체 완결 파일이라 리뷰어는 Node 없이 더블클릭만 하면 된다.
+#       (Redocly v1의 preview-docs는 v2에서 제거됐다. build-docs가 후속이다.)
+
+extends:
+  - recommended
+
+apis:
+  meterengine@v1:
+    root: openapi.yaml
+
+rules:
+  # 로컬 개발 서버(localhost:8080)는 의도적이다. MS2-31의 Docker Compose 환경에서
+  # 팀 3인이 같은 주소로 명세를 확인하기 위해 필요하다.
+  no-server-example.com: off
+
+  # (2026-07-29 제거) no-ambiguous-paths 억제는 더 이상 필요 없다.
+  #   초안은 내부 ID 경로(/customers/{customer_id}/usage)와 외부 ID 경로
+  #   (/customers/external_id/{ext})를 둘 다 뒀고, 둘이 3칸으로 충돌해 억제가 필요했다.
+  #   MS2-26 결정 6이 "API 표면은 external_id 단일 축"으로 확정하면서 내부 ID 경로가
+  #   사라졌고 모호성도 함께 소멸했다. → 억제 없이 통과한다.
+
+  # 아래는 명세 품질 게이트로 유지한다 (구현 스토리가 계약을 벗어나지 않게)
+  operation-operationId: error
+  operation-summary: error
+  operation-description: error   # Scalar가 잡아낸 누락 3건이 계기 (2026-07-29)
+  no-unresolved-refs: error
+
+  # 사내 API라 라이선스 필드를 두지 않는다 (공개 배포 대상 아님)
+  info-license: off
+  info-license-strict: off
