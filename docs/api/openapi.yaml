@@ -16,9 +16,8 @@ openapi: 3.1.0
 #   [탈락] 무엇을 검토했다가 왜 버렸는가
 #   [재검토] 어떤 일이 생기면 이 결정을 다시 볼 것인가
 #
-# 배경 설명, 용어 사전, 조사 근거 URL은 같은 폴더의 두 문서에 있다:
-#   - MS2-27 API 명세 결정.md                      (요약 - 훑고 판단)
-#   - 이해 확인 - MS2-27 API 명세 결정 풀어쓰기.md  (용어 사전 + 인과관계)
+# 결정 근거는 전부 이 파일 안 주석에 있다. 별도 설명 문서를 만들지 않는다
+# (docs/api/README.md의 규칙). 리뷰어가 근거를 찾으러 다른 파일을 열 필요가 없다.
 #
 # -----------------------------------------------------------------------------
 # 확정된 팀 결정 위에 서 있다 (2026-07-29 데일리 비준)
@@ -49,6 +48,7 @@ openapi: 3.1.0
 #     0002 PostgreSQL 단일 (ClickHouse 후순위)
 #     0003 동기 REST 직접 저장 - **성공 응답 = 저장 완료**
 #     0004 조회 시 raw에서 계산 (사전 집계 없음)
+#     0005 모듈러 모놀리스 - 배포 단위와 내부 경계 결정이라 API 표면에 영향 없음
 #
 # MS2-26이 나에게 넘긴 것: 응답 코드(200/409), 멱등 키 위치, 입력 형식,
 #   properties 정책. 이 파일의 [내 결정] 표시가 그것들이다.
@@ -60,12 +60,12 @@ info:
   summary: 사용량 기반 과금 엔진 - 이벤트 수집, 집계, 요금 계산, draft 인보이스 조회
   description: |
     **반영 범위**: 슬라이스 1 (MS2-36) - 이벤트 수집 단건/배치(배치는 명세만),
-    미터 정의, 단가 설정, 집계 조회, draft 인보이스 조회.
+    미터 정의, 단가 설정, **고객 등록과 조회**, 집계 조회, draft 인보이스 조회.
     인보이스 확정, 부가세, 결제, 세금계산서, 크레딧, 구독은 이 버전에 없다(S2 이후).
 
     # 공통 규약
 
-    아래 5개 규약은 **전 슬라이스 공통**이며, 한 번 공개하면 도입사 코드를 깨뜨려야만
+    아래 8개 규약은 **전 슬라이스 공통**이며, 한 번 공개하면 도입사 코드를 깨뜨려야만
     바꿀 수 있으므로 v1에서 확정한다.
 
     ## 1. 인증
@@ -108,9 +108,13 @@ info:
     > 않는다. 살아있는 식별자로 다시 생성하면 `409 resource_already_exists`다.
     > 삭제 엔드포인트는 후속 슬라이스에서 추가한다.
 
-    **그런데도 과거 청구가 안전한 이유**: 이벤트는 수신 시점에 내부 고객을 확정해
-    **그 시점의 대상에 고정**된다. 나중에 같은 이름으로 다른 고객이 등록돼도
+    **그런데도 과거 청구가 안전한 이유**: **해소된 이벤트는** 수신 시점에 내부 고객이
+    확정되어 **그 시점의 대상에 고정**된다. 나중에 같은 이름으로 다른 고객이 등록돼도
     **과거 이벤트의 귀속은 바뀌지 않는다.**
+
+    > 미해소 이벤트(3절)는 고정된 대상이 없으므로 이 논증의 밖에 있다. 후속
+    > 슬라이스가 재연결을 구현할 때 **삭제된 고객의 미해소 이벤트가 같은 ID로 새로
+    > 등록된 고객에 붙는 경로**를 열지 않도록 대상 제한을 함께 정해야 한다.
 
     이 장치가 없으면 "고객 삭제 → 같은 이름으로 다른 회사 등록" 시 과거 사용량이
     새 회사 것으로 둔갑하는데, 이벤트는 불변이라 **사후 정정 경로가 없다.**
@@ -136,21 +140,50 @@ info:
     | 형식 검증 실패 (필수 필드 누락, 잘못된 시각 형식, 범위 초과) | 422 | `validation_error` |
     | 레이트 리밋 | 429 | `rate_limited` |
 
+    **5xx는 이 표에 없고 오퍼레이션에도 선언하지 않는다.** 서버 오류는 계약이 아니라
+    사고이고, 어느 엔드포인트에서나 날 수 있어 오퍼레이션마다 적으면 소음만 는다.
+    다만 클라이언트가 알아야 할 것은 하나다 - **5xx에 대한 재시도는 안전하다.**
+    이벤트는 `transaction_id`가, 제어면은 `Idempotency-Key`가 중복을 막는다.
+    5xx 본문도 Problem Details 형식이다.
+
     **409가 두 가지 뜻을 갖는다.** 상태코드만으로는 구분되지 않으므로 `type` URI와
     `code`로 판별한다. RFC 9457이 `type`을 1차 식별자로 규정하는 이유가 이것이다.
+
+    **422도 `code`가 갈린다.** 형식 검증 실패는 `validation_error`, 같은
+    `Idempotency-Key`에 다른 페이로드는 `idempotency_key_reuse`, 기간 파라미터를 하나만
+    준 경우는 `timeframe_incomplete`, 해석할 수 없는 커서는 `invalid_cursor`다.
 
     ### 401과 403의 구분
 
     - **401**: "네가 누구인지 모르겠다." 키가 없거나, 무효하거나, 폐기됐다
     - **403**: "누구인지는 알지만 이 작업 권한이 없다." 키 스코프가 부족하다
-      (`read` 키로 이벤트 수집 시도, `events:write` 키로 인보이스 조회 시도 등)
 
     401은 키를 고쳐야 하고, 403은 **키의 스코프를 바꿔 재발급**해야 한다.
 
+    ### 스코프와 오퍼레이션의 대응 (제안 - 확정 필요)
+
+    | 스코프 | 허용 |
+    |---|---|
+    | `read` | 모든 `GET` |
+    | `events:write` | `POST /events`, `POST /events/batch` |
+    | `write` | 나머지 쓰기 (고객 등록, 미터 정의, 단가 설정) |
+
+    상위 스코프가 하위를 포함하지 않는다. 키에 필요한 스코프를 모두 부여한다.
+
+    > **`read` / `events:write` 2단으로는 부족하다.** 수집만 하는 서버 키와 관리
+    > 작업을 하는 키를 나누려면 제어면 쓰기가 별도 스코프여야 한다. 2단이면 이벤트
+    > 수집 키가 고객 등록과 단가 변경 권한까지 갖는다.
+    >
+    > 위 3단은 **이 명세의 제안**이며 확정은 인증 설계 담당과 합의해야 한다.
+    > 정해지기 전까지 구현자가 임의로 채우지 않도록 여기 적어 둔다.
+
     > **미등록 고객, 미터는 에러가 아니다.** 없는 `external_customer_id`나 `code`로
-    > 이벤트를 보내도 **거절하지 않고 저장**한다. 거절하면 그 이벤트는 영원히 유실되지만
-    > 저장해두면 나중에 고객을 등록해 연결할 수 있기 때문이다(MS2-26 결정 1-B).
+    > 이벤트를 보내도 **거절하지 않고 저장**한다. 거절은 복구 불가지만 저장은 가역이라
+    > 재연결의 여지가 남기 때문이다(MS2-26 결정 1-B).
     > 응답의 `unresolved` 필드로 어떤 참조가 아직 안 붙었는지 알려준다.
+    > **다만 슬라이스 1에서 재연결은 일어나지 않는다.** 나중에 같은 ID로 고객이나 미터를
+    > 등록해도 이미 저장된 미해소 이벤트는 소급 연결되지 않고, 등록 이후 수신분부터
+    > 집계된다. 재연결의 실행 주체와 시점은 후속 슬라이스에서 정한다.
 
     ## 4. 멱등 - 같은 요청을 두 번 보내도 안전하게
 
@@ -179,7 +212,15 @@ info:
     | 원 요청 **처리 중** 재전송 | `409` |
     | 같은 키, **내용이 다름** | `422` (`idempotency_key_reuse`) |
 
-    키 보존: **최소 24시간**.
+    - **키의 유효 범위는 (도입사, 엔드포인트, 키)다.** 같은 키를 다른 엔드포인트에
+      써도 서로 간섭하지 않는다. `transaction_id`가 (도입사, 키)로 계정 전역인 것과
+      다르다 - 제어면 키는 "이 요청을 두 번 실행하지 마라"는 뜻이지 자원의 정체성이
+      아니기 때문이다
+    - **실패 응답도 재생 대상이다.** 4xx로 끝난 요청에 같은 키가 오면 그 4xx를
+      그대로 재생한다. 성공만 재생하면 클라이언트가 "재시도했더니 다른 답이 왔다"를
+      겪어 재시도 루프가 깨진다
+    - 키 보존: **최소 24시간**. 보존 기간이 지나면 키는 사라지고 **새 요청으로
+      처리된다.** 생성 요청이라면 그때 `409 resource_already_exists`가 난다
 
     > **"내용이 다름 -> 422"는 근거가 약한 결정이다. 팀 승인 후 유지 중(2026-07-29).**
     >
@@ -256,7 +297,8 @@ info:
 
     - 모든 시각은 **RFC 3339** 문자열이다. Unix epoch을 쓰지 않는다.
     - `occurred_at` - 이벤트가 실제 발생한 시각. 클라이언트가 보내며 **필수**다.
-    - `received_at` - MeterEngine이 수신한 시각. 서버가 정하며 읽기 응답에만 나온다.
+    - `received_at` - MeterEngine이 수신한 시각. **서버가 정하며 클라이언트는 보낼 수
+      없다.** 수집 응답을 포함해 모든 이벤트 응답에 실린다.
     - 저장은 **UTC**, 기간 귀속과 표시는 **KST(UTC+9)** 기준이다.
     - 사용량 귀속 계산은 **`occurred_at` 기준**이다.
 
@@ -277,6 +319,14 @@ info:
     ## 8. 페이지네이션
 
     목록 응답은 커서 기반이며 `{ data, pagination_metadata }` 봉투를 쓴다.
+
+    **정렬은 `created_at` 오름차순이며, 동률은 내부 ID로 가른다.** 커서 방식은
+    "여기부터 다음"을 가리키는 것이라 **전순서가 정해져 있어야만 성립한다.** 순서가
+    흔들리면 offset 방식을 버린 이유(항목 중복, 누락)가 그대로 돌아온다. 내부 ID는
+    응답에 노출되지 않지만 tie-breaker로만 쓰이므로 표면 규약(2절)과 충돌하지 않는다.
+
+    정렬 기준을 클라이언트가 고르는 파라미터는 두지 않는다. 필요해지면 선택
+    파라미터 추가로 붙일 수 있다(7절 기준 하위 호환).
 
   contact:
     name: MeterEngine 팀 (ASM17 MS2)
@@ -347,7 +397,8 @@ paths:
 
         > **미등록 고객, 미터도 받는다.** 등록되지 않은 `external_customer_id`나
         > `code`로 보내도 거절하지 않고 저장하며, 응답의 `unresolved`에 표시한다.
-        > 나중에 고객을 등록하면 연결된다.
+        > **슬라이스 1에서 재연결은 없다.** 나중에 고객이나 미터를 등록해도 이미 저장된
+        > 이벤트는 소급 연결되지 않고, 등록 이후 수신분부터 집계된다.
 
         구현: MS2-38
       requestBody:
@@ -427,6 +478,11 @@ paths:
   #      the entire batch with a 422 and persists nothing." 오픈소스라 서버 코드에서
   #      실제 DB 롤백도 확인했다:
   #        Event.transaction do ... raise ActiveRecord::Rollback if result.errors.any?
+  # [단, 우리와 다른 점] Lago는 **중복 transaction_id도 invalid로 보아 배치 전체를
+  #      거부**한다(value_already_exist). 우리는 그 부분만 의도적으로 다르다 - MS2-38
+  #      인수 조건이 "재전송해도 한 번만 반영되고 응답은 성공"이라 중복을 오류로 두면
+  #      인수 조건과 충돌한다. 즉 이 설계는 Lago를 그대로 따른 것이 아니라
+  #      "형식 오류에만 원자적"으로 좁혀 채택한 것이다.
   # [탈락] 207 Multi-Status - 이 시장에 검증된 선례가 없고 도구 지원이 나쁘다.
   # [탈락] 200 + 건별 결과 배열 - 모든 클라이언트에 대사 의무를 지운다.
   #
@@ -449,8 +505,12 @@ paths:
         | 배열에 섞인 것 | 처리 |
         |---|---|
         | **이미 수집된 `transaction_id`** | 건너뛰고 **배치는 성공**. 중복은 오류가 아니다 |
+        | **한 배열 안에서 중복된 `transaction_id`** | **첫 건만 저장**하고 나머지는 건너뛴다. 위와 같이 센다 |
         | **미등록 고객, 미터** | 저장하고 `unresolved` 표시. 오류가 아니다 |
         | **형식 오류** (필수 필드 누락, 잘못된 시각 등) | `422`로 **배치 전체 거부** |
+
+        `received_count = ingested_count + deduplicated_count`가 **항상 성립한다.**
+        이 항등식이 없으면 클라이언트가 "몇 건이 어디로 갔는지"를 대사할 수 없다.
 
         **형식 오류에 대해서만 원자적이다.** 한 건이라도 형식이 틀리면 전체를 거부하고
         **아무것도 저장하지 않는다.** 따라서 클라이언트는 고쳐서 배치 전체를 그대로
@@ -461,8 +521,13 @@ paths:
 
         응답의 `summary`로 몇 건이 새로 들어가고 몇 건이 중복이었는지 알 수 있다.
 
+        **전건이 중복이어도 `201`이다.** 단건 수집은 중복일 때 `200`으로 갈리지만,
+        배치는 한 요청에 신규와 중복이 섞이므로 요청 단위로 코드를 가를 수 없다.
+        몇 건이 실제로 저장됐는지는 `summary.ingested_count`로 판별한다.
+
         > 주의: 이 엔드포인트는 **명세에만 포함**되고 슬라이스 1 구현 범위가 아니다
         > (ADR 0003에 명시). MS2-38의 인수 조건은 단건 수집뿐이다.
+        > **슬라이스 1 데모는 단건 수집을 반복해 통과한다.**
       requestBody:
         required: true
         content:
@@ -510,7 +575,7 @@ paths:
                         description: 이미 있어서 건너뛴 수
               examples:
                 demo:
-                  summary: S1 데모 시나리오 - 100건 중 20건이 중복
+                  summary: 100건 중 20건이 중복인 배치 (S1 구현 범위 아님)
                   description: |
                     `events` 배열은 지면상 1건만 표시했다. 실제로는 요청과 같은 100건이
                     같은 순서로 돌아온다.
@@ -564,9 +629,9 @@ paths:
       operationId: createBillableMetric
       summary: 미터 정의 생성
       description: |
-        무엇을 어떻게 셀지 정의한다. 슬라이스 1은 `count_agg`와 `sum_agg`만 지원한다.
+        무엇을 어떻게 셀지 정의한다. 슬라이스 1은 `COUNT`와 `SUM`만 지원한다.
 
-        `sum_agg`는 합산 대상 속성을 `field_name`으로 지정해야 한다.
+        `SUM`은 합산 대상 속성을 `field_name`으로 지정해야 한다.
 
         제어면 요청이므로 `Idempotency-Key` 헤더를 붙이면 재전송이 안전하다.
 
@@ -613,6 +678,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [billable_metric]
                 properties:
                   billable_metric:
                     $ref: '#/components/schemas/BillableMetric'
@@ -686,30 +752,40 @@ paths:
         - name: code
           in: path
           required: true
-          schema: { type: string }
-          description: 미터 코드
+          # 본문의 BillableMetricInput.code와 같은 제약을 건다. 경로 파라미터만
+          #   느슨하면 255자를 넘는 코드가 검증 없이 조회 계층까지 내려간다.
+          schema: { type: string, minLength: 1, maxLength: 255 }
+          description: |
+            단가를 설정할 미터의 코드. 등록되지 않은 코드면 `404 metric_not_found`다.
+            길이가 1~255자를 벗어나면 `422`다.
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PriceInput'
+              type: object
+              required: [price]
+              properties:
+                price:
+                  $ref: '#/components/schemas/PriceInput'
             examples:
               sub_won:
                 summary: 1원 미만 단가 - 1,000토큰당 4원
                 value:
-                  model: "per_unit"
-                  unit_price: 4
-                  unit_size: 1000
-                  currency: "KRW"
+                  price:
+                    model: "per_unit"
+                    unit_price: 4
+                    unit_size: 1000
+                    currency: "KRW"
               simple:
                 summary: 1회당 50원
                 value:
-                  model: "per_unit"
-                  unit_price: 50
-                  unit_size: 1
-                  currency: "KRW"
+                  price:
+                    model: "per_unit"
+                    unit_price: 50
+                    unit_size: 1
+                    currency: "KRW"
       responses:
         '200':
           description: |
@@ -723,7 +799,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Price'
+                type: object
+                required: [price]
+                properties:
+                  price:
+                    $ref: '#/components/schemas/Price'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -742,7 +822,9 @@ paths:
         **도입사 계정 전체에서 유일**해야 하며, 이후 모든 조회에서 이 값으로 고객을
         지목한다.
 
-        이미 이 ID로 들어온 이벤트가 있다면 등록 시점에 연결된다.
+        이미 이 ID로 들어온 미해소 이벤트가 있어도 **슬라이스 1에서는 등록 시점에 소급
+        연결되지 않는다.** 등록 이후 수신되는 이벤트부터 이 고객에 연결되며, 이미 쌓인
+        미해소 이벤트의 재연결은 후속 슬라이스 범위다.
 
         제어면 요청이므로 `Idempotency-Key` 헤더를 붙이면 재전송이 안전하다.
       parameters:
@@ -778,6 +860,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [customer]
                 properties:
                   customer:
                     $ref: '#/components/schemas/Customer'
@@ -794,7 +877,12 @@ paths:
       summary: 고객 목록
       description: |
         관리자 최소 화면(MS2-46)의 고객 목록이 이 엔드포인트를 그대로 쓴다.
-        화면 전용 엔드포인트는 만들지 않는다.
+
+        **슬라이스 1에는 화면 전용 엔드포인트를 만들지 않는다.** 지금 표면이 하나이기
+        때문이지, 영구히 하나로 간다는 뜻이 아니다. 도입사가 API 키로 호출하는 표면과
+        우리 프론트엔드가 로그인을 거쳐 호출하는 표면은 결국 갈린다(MS2-31 PR 논의).
+        **표면이 갈리는 시점에 경로별로 어느 표면에 속하는지 표기한다.** S1은 그 시점이
+        아니므로 표기하지 않는다.
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -849,6 +937,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [customer]
                 properties:
                   customer:
                     $ref: '#/components/schemas/Customer'
@@ -881,10 +970,23 @@ paths:
         `422`(`timeframe_incomplete`)를 반환한다. 반쪽만 받으면 나머지를 서버가
         어떻게 채우든 클라이언트 의도와 어긋날 수 있기 때문이다.
 
+        - `timeframe_start >= timeframe_end`면 `422`(`validation_error`)다. 빈 결과를
+          돌려주지 않는다. 뒤집힌 구간은 거의 항상 클라이언트 버그이고, 빈 결과로
+          답하면 "사용량이 0이다"로 오독된다
+        - **한 번에 조회할 수 있는 최대 구간은 31일**이다. 넘으면 `422`다.
+          집계는 조회 시점에 raw에서 계산되므로(ADR 0004) 긴 구간 요청 하나가
+          전체 스캔이 된다. 월 단위 청구가 목적이므로 31일이면 충분하다
+        - **명시된 값은 그대로 쓴다.** "경계 판정은 KST"는 **기본값을 서버가 계산할
+          때** 적용되는 규칙이고, 클라이언트가 보낸 절대시각을 KST 자정으로
+          재해석하지는 않는다
+
         구현: MS2-39
 
-        > 착수 시 확정 필요 (MS2-39): 집계 반영 지연 목표치.
-        > 월 귀속 기준은 MS2-26 결정 2로 확정됨 (`occurred_at` 기준 + KST 경계).
+        > 착수 시 확정 필요 (MS2-39): 집계 반영 지연 목표치, **월 귀속 상세 규칙**.
+        > 확정된 것은 그 상위 원칙뿐이다 - `occurred_at` 기준 계산과 KST 경계
+        > (MS2-26 결정 2). ADR 0004도 "기간 경계(월 귀속) 규칙은 MS2-39 착수 시
+        > 확정한다"로 남겨두었다. 이 명세가 정하는 것은 조회 파라미터의 형태와
+        > 기본값까지이며, 경계에 걸친 이벤트의 귀속 규칙은 MS2-39 소관이다.
       parameters:
         - $ref: '#/components/parameters/ExternalCustomerId'
         - $ref: '#/components/parameters/TimeframeStart'
@@ -896,9 +998,25 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [usage]
                 properties:
                   usage:
                     $ref: '#/components/schemas/UsageSummary'
+              examples:
+                demo:
+                  summary: S1 데모 시나리오 - 100건 전송, 20건 중복, 80건 반영
+                  value:
+                    usage:
+                      external_customer_id: "acme-corp"
+                      timeframe_start: "2026-07-01T00:00:00+09:00"
+                      timeframe_end: "2026-08-01T00:00:00+09:00"
+                      metrics:
+                        - code: "llm_tokens"
+                          name: "LLM 토큰"
+                          aggregation_type: "SUM"
+                          quantity: "120000"
+                          events_count: 80
+                      unresolved_events_count: 0
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -925,6 +1043,17 @@ paths:
         > 청구 기간의 정식 정의는 MS2-41 착수 시 확정된다. 확정되면 이 기본값을
         > 그 정의로 바꾼다. 클라이언트가 기간을 생략해 왔다면 코드는 바뀌지 않는다.
 
+        ### 슬라이스 1의 계산 규칙
+
+        - **단가는 조회 시점의 현재 값을 기간 전체에 적용한다.** 기간 중간에 단가가
+          바뀌어도 구간을 쪼개지 않는다. 단가 이력은 보존되지만(MS2-26 결정 7) 그
+          이력을 청구에 반영하는 구조는 MS2-40의 버전제가 확정된 뒤 MS2-41에서 다룬다.
+          S1에 인보이스 확정 개념이 없어(아래) 조회 시점 계산이 계약과 어긋나지 않는다
+        - **단가가 없는 미터의 사용량은 라인아이템이 될 수 없다.** `unit_price`가
+          없으면 금액을 만들 수 없기 때문이다. 대신 그 미터 코드를
+          `unpriced_metric_codes`로 노출한다. 조용히 빼면 사용량이 있는데 청구액이
+          0인 이유를 아무도 모른다
+
         > 슬라이스 1 범위 한정: 상태는 `draft` 하나뿐이다. 상태 전이, 확정, 불변성은
         > S2(MS2-42) 범위이며 여기서 모델링하지 않는다.
         >
@@ -941,9 +1070,31 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [draft_invoice]
                 properties:
                   draft_invoice:
                     $ref: '#/components/schemas/DraftInvoice'
+              examples:
+                demo:
+                  summary: S1 데모 시나리오 - 120,000토큰 x (1,000토큰당 4원) = 480원
+                  value:
+                    draft_invoice:
+                      external_customer_id: "acme-corp"
+                      status: "draft"
+                      currency: "KRW"
+                      timeframe_start: "2026-07-01T00:00:00+09:00"
+                      timeframe_end: "2026-08-01T00:00:00+09:00"
+                      line_items:
+                        - code: "llm_tokens"
+                          name: "LLM 토큰"
+                          quantity: "120000"
+                          unit_price: 4
+                          unit_size: 1000
+                          amount: 480
+                          precise_amount: "480.000000000000"
+                      total_amount: 480
+                      unpriced_metric_codes: []
+                      issued_at: "2026-07-29T09:00:00Z"
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -971,7 +1122,15 @@ components:
   #            X-MeterEngine-Account 를 무해하게 덧붙일 수 있도록 모든 경로를 테넌트
   #            비의존 형태로 유지해 두었다.
   #
-  # 웹훅 충돌 회피(MS2-72 대비): 나가는 헤더는 전부 X-MeterEngine-* 접두사로 통일한다.
+  # 웹훅 충돌 회피(MS2-72 대비): **웹훅으로 우리가 보내는 요청 헤더**는 전부
+  #   X-MeterEngine-* 접두사로 통일한다 (서명, 이벤트 ID 등).
+  #   API 응답 헤더는 여기 해당하지 않는다. 두 개를 쓰는데 근거가 서로 다르다:
+  #     X-RateLimit-*        널리 쓰이는 사실상 관례를 따른다
+  #     Idempotency-Replayed 표준도 관례도 아니다. Stripe의 실제 헤더는
+  #                          `Idempotent-Replayed`이고 IANA 등록도 없다. 우리는
+  #                          요청 헤더 `Idempotency-Key`와 어간을 맞추려고 의도적으로
+  #                          다른 이름을 골랐다. 어차피 비표준이라 클라이언트가
+  #                          자동 인식할 여지가 없고, 그렇다면 짝이 맞는 편이 낫다.
   # ---------------------------------------------------------------------------
   # ---------------------------------------------------------------------------
   # ORGANIZATION 인증 컬럼 요구사항  ← ERD v1이 MS2-27로 이관한 항목
@@ -1046,6 +1205,7 @@ components:
         클라이언트가 알 수 없다). 쓰기 요청에는 붙이기를 권한다.
       schema:
         type: string
+        minLength: 1
         maxLength: 255
         examples: ["550e8400-e29b-41d4-a716-446655440000"]
 
@@ -1159,9 +1319,19 @@ components:
     # [탈락] 소문자 "krw" - Stripe가 소문자를 요구하지만 그건 표준이 아니라 관행이다.
     Currency:
       type: string
-      description: 대문자 ISO 4217 통화 코드
-      pattern: '^[A-Z]{3}$'
+      description: |
+        대문자 ISO 4217 통화 코드.
+
+        **슬라이스 1은 `KRW`만 허용한다.** 다통화는 후속 범위이며 enum 값 추가로
+        연다(7절 기준 하위 호환).
+      enum: [KRW]
       examples: ["KRW"]
+      # 왜 pattern이 아니라 enum인가:
+      #   초안은 `^[A-Z]{3}$`였다. 그러면 PUT price에 currency: "USD"가 통과하는데,
+      #   그 미터가 KRW 고객의 인보이스에 들어가면 DraftInvoice.currency 하나에 두
+      #   통화가 뭉개진다. 금액은 AmountKrw(원 단위 정수)로 고정돼 있으므로 값 자체가
+      #   거짓이 된다. 통과시킨 뒤의 동작을 정하느니 지금 막는 편이 옳다.
+      #   [되돌리기 방향] enum 값 추가는 non-breaking이라 넓히는 쪽은 언제든 안전하다.
 
     # -------------------------------------------------------------------------
     # 이벤트 수집 바디
@@ -1175,7 +1345,9 @@ components:
     #          중복 제거는 DB 유니크 인덱스 하나면 끝난다. 초당 수천 건이 들어오는
     #          데이터면에서 이 차이가 크다.
     #   → 제어면(고객, 미터, 단가)은 Idempotency-Key 헤더를 쓴다. 역할을 갈랐다.
-    #     (MS2-26 결정 4가 "멱등 키 위치"를 MS2-27로 이관했고, 그 결정이 이것이다)
+    #     (MS2-26이 "멱등 키 위치"를 MS2-27로 이관했고, 그 결정이 이것이다.
+    #      결정 4가 이관한 것은 응답 코드이고 키 위치는 별도 이관 항목이다 -
+    #      이 파일 상단 53~54행의 목록과 같다)
     # -------------------------------------------------------------------------
     EventInput:
       type: object
@@ -1215,7 +1387,8 @@ components:
             빈 값은 어떤 고객으로도 해소될 수 없어 영구 미해소로 남기 때문이다.
 
             **등록되지 않은 값이어도 거절하지 않는다.** 이벤트는 저장되고 응답의
-            `unresolved`에 표시된다. 나중에 그 ID로 고객을 등록하면 연결된다.
+            `unresolved`에 표시된다. 다만 **슬라이스 1에서는 나중에 그 ID로 고객을
+            등록해도 소급 연결되지 않는다** - 등록 이후 수신분부터 집계된다.
         code:
           type: string
           minLength: 1
@@ -1262,6 +1435,9 @@ components:
           type: object
           additionalProperties: true
           maxProperties: 50
+          propertyNames:
+            minLength: 1
+            maxLength: 64
           default: {}
           description: |
             집계에 쓰이는 임의 속성. `SUM` 미터는 여기서 `field_name`에 해당하는
@@ -1275,10 +1451,11 @@ components:
             | 규칙 | 값 | 왜 |
             |---|---|---|
             | 스키마 검증 | **안 함** | 미터 정의가 무엇을 읽을지 정한다 |
-            | 키 개수 | 최대 **50개** | 악의적, 실수 대량 페이로드 방어 |
-            | 키 이름 | 최대 **64자**, 빈 문자열 금지 | 인덱싱, 조회 실용 한계 |
-            | 값 타입 | 문자열, 숫자, 불리언, null | 아래 참조 |
-            | 중첩 | **저장은 되나 집계 대상 아님** | `field_name`은 최상위 키만 지목 |
+            | 키 개수 | 최대 **50개** (`maxProperties`) | 악의적, 실수 대량 페이로드 방어 |
+            | 키 이름 | **1~64자** (`propertyNames`). 위반은 `422` | 인덱싱, 조회 실용 한계 |
+            | 값 타입 | **아무 JSON 값이나 저장한다** | raw 보존이 원칙(결정 3) |
+            | 집계 대상 값 | 최상위 키의 **문자열, 숫자, 불리언, null**만 | `field_name`은 최상위 키만 지목 |
+            | 중첩 객체, 배열 | **저장은 되나 집계 대상 아님** | 경로 문법이 필요해 MS2-39 소관 |
             | 대소문자 | **구분함** (`Tokens` ≠ `tokens`) | 서버가 정규화하지 않는다 |
             | 예약어 | 없음 | 최상위 이벤트 필드와 별도 네임스페이스 |
 
@@ -1328,13 +1505,15 @@ components:
 
                 이벤트는 저장됐고 **에러가 아니다.**
 
-                **슬라이스 1에서 재연결은 일어나지 않는다.** 미해소 이벤트는 저장된
-                채로 남고 집계에서 제외된다. 나중에 같은 ID로 고객이나 미터를 등록해도
-                **자동으로 연결되지 않는다.**
+                **슬라이스 1 API에는 재연결을 실행하는 경로가 없다.** 미해소 이벤트는
+                저장된 채로 남고 집계에서 제외된다. 나중에 같은 ID로 고객이나 미터를
+                등록해도 **이 API를 통해서는 소급 연결되지 않는다.**
 
-                재연결을 누가 언제 실행할지(등록 시점 자동 처리, 배치, 수동 트리거)와
-                미해소 이벤트 원문 조회 API는 **후속 슬라이스 범위**다. S1은 미해소가
-                발생했다는 사실과 그 건수만 노출한다.
+                데이터 모델 쪽은 재연결이 가능하도록 설계돼 있다(MS2-26 결정 1-B의
+                "저장은 가역"). **없는 것은 그 능력이 아니라 그것을 실행하는 API와
+                실행 시점의 합의다.** 누가 언제 실행할지(등록 시점 자동 처리, 배치,
+                수동 트리거)와 미해소 이벤트 원문 조회 API는 **후속 슬라이스 범위**다.
+                S1은 미해소가 발생했다는 사실과 그 건수만 노출한다.
               items:
                 type: string
                 enum: [external_customer_id, code]
@@ -1453,7 +1632,7 @@ components:
           description: '`unit_size` 단위당 금액(원 단위 정수).'
           examples: [4]
           # DB 컬럼명은 ERD v1에서 `unit_price_krw`다. API는 `unit_price` - 통화 접미사만 뺐다.
-          #   [왜 뺐나] ERD 자신이 "다통화 확장은 currency 컬럼 추가(가산적)"라고 적었는데,
+          #   [왜 뺐나] MS2-26이 "다통화 확장은 currency 컬럼 추가(가산적)"라고 정했는데,
           #     그 시점에 `_krw`는 거짓이 된다. 응답에 `currency` 필드가 이미 있어 중복이기도 하다.
           #   변경 이력: 초안은 `unit_amount`였다. 라인아이템의 `amount`(계산 결과 금액)와
           #     헷갈려서 `unit_price`로 바꿨다. 이건 "단가"이지 "금액"이 아니다.
@@ -1525,11 +1704,15 @@ components:
 
     UsageSummary:
       type: object
-      required: [external_customer_id, timeframe_start, timeframe_end, metrics]
+      # unresolved_events_count를 필수로 둔다: MS2-46 화면이 이 값을 상시 표시하므로
+      #   서버가 생략할 수 있으면 화면이 "0건"과 "모름"을 구분할 수 없다.
+      required: [external_customer_id, timeframe_start, timeframe_end, metrics, unresolved_events_count]
       properties:
         external_customer_id: { type: string, examples: ["acme-corp"] }
-        timeframe_start: { type: string, format: date-time, examples: ["2026-07-01T00:00:00Z"] }
-        timeframe_end: { type: string, format: date-time, examples: ["2026-08-01T00:00:00Z"] }
+        # 예시를 KST 오프셋으로 적는다. 기본값이 "당월(KST)"이므로 UTC 자정(...Z)으로
+        #   적으면 실제 경계보다 9시간 늦은 다른 순간이 되어 규약과 어긋난다.
+        timeframe_start: { type: string, format: date-time, examples: ["2026-07-01T00:00:00+09:00"] }
+        timeframe_end: { type: string, format: date-time, examples: ["2026-08-01T00:00:00+09:00"] }
         metrics:
           type: array
           items:
@@ -1538,7 +1721,9 @@ components:
             properties:
               code: { type: string, examples: ["llm_tokens"] }
               name: { type: string, examples: ["LLM 토큰"] }
-              aggregation_type: { type: string, examples: ["SUM"] }
+              # 미터 정의와 같은 enum을 쓴다. 응답에서만 자유 문자열이면 클라이언트가
+              #   분기할 수 없고, 두 곳의 표기가 갈릴 여지가 생긴다.
+              aggregation_type: { type: string, enum: [COUNT, SUM], examples: ["SUM"] }
               quantity:
                 type: string
                 description: |
@@ -1559,7 +1744,21 @@ components:
           type: integer
           description: |
             이 기간에 수신됐지만 **고객이나 미터가 연결되지 않아 집계에서 빠진**
-            이벤트 건수. `0`이면 정상이다.
+            이벤트 건수.
+
+            **`0`이 정상을 뜻하지는 않는다.** 아래 "세는 기준"이 이 고객에 귀속
+            가능한 것만 세기 때문이다. 도입사가 고객 ID 자체를 오타 냈다면 그
+            이벤트는 어느 고객의 이 수에도 잡히지 않는다.
+
+            **세는 기준**: 이벤트에 담겨 온 **원문 `external_customer_id` 문자열이
+            경로 파라미터와 일치**하고, `occurred_at`이 이 기간에 들어가며, 고객이나
+            미터 중 하나라도 해소되지 않은 이벤트의 수다. 미해소 이벤트는 내부 고객에
+            연결되어 있지 않으므로 **원문 문자열로 귀속**시킨다.
+
+            > **S1의 한계**: 고객이 **한 번도 등록된 적 없으면** 이 엔드포인트가
+            > `404`라서 그 고객의 미해소 건수는 조회할 수 없다. 조직 단위 미해소
+            > 조회는 후속 슬라이스 범위다. S1에서 이 수가 잡히는 것은 **고객은
+            > 등록됐지만 미터가 없는 경우**와 **등록 전에 들어와 쌓인 이벤트**다.
 
             0이 아니면 도입사가 등록하지 않은 `external_customer_id`나 `code`로
             이벤트를 보내고 있다는 뜻이며, **그만큼 청구가 누락되고 있다.**
@@ -1578,7 +1777,9 @@ components:
 
     DraftInvoice:
       type: object
-      required: [external_customer_id, status, currency, timeframe_start, timeframe_end, line_items, total_amount]
+      # issued_at도 필수다. 조회할 때마다 서버가 재계산해 채우므로 없을 수가 없고,
+      #   화면이 "언제 기준 금액인가"를 표시하려면 상시 있어야 한다.
+      required: [external_customer_id, status, currency, timeframe_start, timeframe_end, line_items, total_amount, unpriced_metric_codes, issued_at]
       properties:
         external_customer_id: { type: string, examples: ["acme-corp"] }
         status:
@@ -1590,8 +1791,8 @@ components:
             enum 값 추가는 non-breaking이므로 나중에 확장한다.
         currency:
           $ref: '#/components/schemas/Currency'
-        timeframe_start: { type: string, format: date-time, examples: ["2026-07-01T00:00:00Z"] }
-        timeframe_end: { type: string, format: date-time, examples: ["2026-08-01T00:00:00Z"] }
+        timeframe_start: { type: string, format: date-time, examples: ["2026-07-01T00:00:00+09:00"] }
+        timeframe_end: { type: string, format: date-time, examples: ["2026-08-01T00:00:00+09:00"] }
         line_items:
           type: array
           items:
@@ -1619,18 +1820,42 @@ components:
                 $ref: '#/components/schemas/AmountKrw'
                 description: |
                   `quantity × unit_price ÷ unit_size`를 정수로 확정한 금액.
+                # 예시는 위 필드들과 산수가 맞아야 한다: 120000 x 4 / 1000 = 480.
+                #   AmountKrw의 기본 예시(12500)를 그대로 물려받으면 같은 라인아이템
+                #   안에서 수량과 금액이 어긋난 문서가 렌더링된다.
+                examples: [480]
               precise_amount:
                 type: string
                 description: |
                   단수 처리 전 고정밀 중간값. 검증과 감사에 쓴다.
 
                   **정수 확정(`amount`)은 라인아이템마다 1회만** 일어난다.
-                  절사/반올림 규칙은 MS2-40에서 정한다.
-                examples: ["6120.000000000000"]
+
+                  **S1의 임시 절사 규칙은 MS2-40에서 정한다** (인수 조건이 "KRW 정수
+                  계산이며 소수점 처리는 임시 규칙으로 명시"다). S2의 KRW 단수 규칙
+                  최종본은 MS2-44 소관이며, 그때 이 임시 규칙을 대체한다.
+                  둘은 같은 것의 임시본과 최종본이지 경쟁하는 두 결정이 아니다.
+                examples: ["480.000000000000"]
         total_amount:
           $ref: '#/components/schemas/AmountKrw'
           description: |
-            청구 예정액. **공급가액 기준이며 부가세를 포함하지 않는다** (S2 범위).
+            청구 예정액. **`line_items[].amount`의 단순 합**이다. 합산은 정수끼리
+            이뤄지므로 여기서 추가 단수 처리가 일어나지 않는다.
+
+            **공급가액 기준이며 부가세를 포함하지 않는다** (S2 범위).
+          examples: [480]
+        unpriced_metric_codes:
+          type: array
+          items: { type: string }
+          examples: [[]]
+          description: |
+            **사용량은 있으나 단가가 설정되지 않아 라인아이템에서 빠진 미터 코드.**
+            비어 있으면 전부 청구에 반영됐다는 뜻이다.
+
+            단가 없는 미터는 금액을 만들 수 없어 라인아이템이 될 수 없다. 그 사실을
+            노출하지 않으면 `unresolved_events_count`와 같은 종류의 조용한 과소청구가
+            된다 - 에러도 없고 청구서에도 안 보인다. 단가를 설정하면 다음 조회부터
+            정상 반영된다(draft는 조회할 때마다 재계산되므로 소급된다).
         issued_at:
           type: string
           format: date-time
@@ -1687,9 +1912,15 @@ components:
     #     "표준 범위 밖"이다.
     #
     # 변경: 초안에서 뒤집은 것:
-    #   "RFC 9457이 JSON Pointer를 쓰는 errors[] 배열을 규범 예시로 싣고 있다"는 주장은
-    #   검증에서 0-3으로 반박됐고 RFC 본문에서 확인되지 않았다.
-    #   → 아래 errors[]는 RFC가 승인한 형태가 아니라 MeterEngine 자체 설계다.
+    #   초안은 "RFC 9457이 errors[] 배열을 규범으로 정의한다"고 적었다. 3절을 직접
+    #   확인하니 RFC는 errors[]를 **가상의 문제 유형(fictional problem type)에 대한
+    #   예시로만** 싣는다. 원문 예시는 각 원소가 detail + pointer(JSON Pointer)이고,
+    #   "problem-specific extensions can convey more than one instance of the same
+    #   problem type. For example:" 이라는 문장이 붙어 있다. 즉 확장의 작성 예시이지
+    #   준수 대상 규범이 아니다.
+    #   → 아래 errors[]는 그 예시를 변형한 MeterEngine 자체 설계다. 원소를
+    #     pointer 대신 field + index로 둔 것이 그 변형이다(배치의 배열 인덱스를
+    #     지목해야 하는데 JSON Pointer는 그 용도로 장황하다).
     # -------------------------------------------------------------------------
     Problem:
       type: object
@@ -1697,7 +1928,11 @@ components:
         RFC 9457 Problem Details. `Content-Type`은 `application/problem+json`.
 
         `errors[]`는 RFC가 규정한 형태가 아니라 **MeterEngine 자체 확장**이다.
-      required: [type, title, status]
+
+        `code`는 RFC 확장 멤버지만 **모든 에러 응답에 항상 넣는다.** 409와 422처럼
+        한 상태코드를 여러 원인이 공유하므로, 클라이언트가 분기할 값이 없으면
+        상태코드만으로는 원인을 가릴 수 없다.
+      required: [type, title, status, code, instance]
       properties:
         type:
           type: string
@@ -1720,7 +1955,11 @@ components:
         instance:
           type: string
           examples: ["/v1/events#req_01H8XY7ZQ3"]
-          description: 이 발생 건을 식별하는 URI 참조 (요청 경로 + 요청 ID)
+          description: |
+            이 발생 건을 식별하는 URI 참조 (요청 경로 + 요청 ID).
+
+            **항상 채운다.** 요청 ID를 얻을 다른 경로(전용 응답 헤더)를 두지 않았으므로,
+            이것이 없으면 도입사가 장애를 문의할 때 어느 요청인지 특정할 수 없다.
         code:
           type: string
           description: |
@@ -1728,9 +1967,25 @@ components:
           examples: ["validation_error"]
         errors:
           type: array
-          description: 필드 단위 다중 에러 (MeterEngine 자체 설계)
+          description: |
+            필드 단위 다중 에러 (MeterEngine 자체 설계).
+
+            표준을 안 따르기로 한 부분이므로 최소 계약을 여기서 정한다.
+            **각 원소는 `code`를 반드시 갖는다.** `field`는 특정 필드를 지목할 수 있을
+            때, `index`는 배치 요청일 때 함께 온다.
+
+            | 필드 `code` | 뜻 |
+            |---|---|
+            | `value_is_mandatory` | 필수 필드가 없다 |
+            | `invalid_format` | 형식이 맞지 않는다 (시각, 커서 등) |
+            | `value_out_of_range` | 길이나 범위를 벗어났다 |
+            | `value_already_exist` | 이미 등록된 값이다 |
+
+            어휘 추가는 하위 호환이다(7절). 클라이언트는 모르는 `code`를 만나면
+            상위 `detail`을 사람에게 보여주는 것으로 처리한다.
           items:
             type: object
+            required: [code]
             properties:
               index:
                 type: integer
@@ -1753,6 +2008,7 @@ components:
             type: "https://api.meterengine.io/problems/malformed-request"
             title: "Malformed request"
             status: 400
+            instance: "/v1/events#req_01H8XY7ZQ4"
             code: "malformed_request"
 
     Unauthorized:
@@ -1764,6 +2020,7 @@ components:
             type: "https://api.meterengine.io/problems/unauthorized"
             title: "Authentication failed"
             status: 401
+            instance: "/v1/events#req_01H8XY7ZQ5"
             code: "unauthorized"
 
     Forbidden:
@@ -1778,6 +2035,7 @@ components:
             type: "https://api.meterengine.io/problems/insufficient-scope"
             title: "Insufficient scope"
             status: 403
+            instance: "/v1/events#req_01H8XY7ZQ6"
             detail: "이 키에는 events:write 스코프가 없습니다."
             code: "insufficient_scope"
 
@@ -1801,6 +2059,7 @@ components:
                 type: "https://api.meterengine.io/problems/idempotency-conflict"
                 title: "Request in progress"
                 status: 409
+                instance: "/v1/customers#req_01H8XY7ZQ7"
                 detail: "같은 Idempotency-Key의 요청이 처리 중입니다."
                 code: "idempotency_conflict"
             resource_already_exists:
@@ -1809,28 +2068,59 @@ components:
                 type: "https://api.meterengine.io/problems/resource-already-exists"
                 title: "Resource already exists"
                 status: 409
+                instance: "/v1/customers#req_01H8XY7ZQ8"
                 detail: "external_customer_id 'acme-corp'는 이미 등록되어 있습니다."
                 code: "resource_already_exists"
                 errors:
                   - field: "external_customer_id"
                     code: "value_already_exist"
-                    detail: "조회하려면 GET /customers/acme-corp 를 쓰세요."
+                    detail: "조회하려면 GET /v1/customers/acme-corp 를 쓰세요."
 
     NotFound:
-      description: 자원 없음
+      description: |
+        경로가 지목한 자원이 없다. `code`는 `{resource}_not_found` 형태이며
+        어떤 자원이 없는지 알려준다.
+
+        | 엔드포인트 | `code` |
+        |---|---|
+        | `/customers/{external_customer_id}` 계열 | `customer_not_found` |
+        | `/billable-metrics/{code}/price` | `metric_not_found` |
+
+        미등록 고객, 미터로 **이벤트를 보내는 것**은 404가 아니다 - 저장하고
+        `unresolved`로 표시한다(결정 1-B). 404는 조회와 설정 경로에만 나온다.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example:
-            type: "https://api.meterengine.io/problems/not-found"
-            title: "Resource not found"
-            status: 404
-            code: "customer_not_found"
+          examples:
+            customer_not_found:
+              summary: 없는 고객 조회
+              value:
+                type: "https://api.meterengine.io/problems/customer-not-found"
+                title: "Customer not found"
+                status: 404
+                instance: "/v1/customers/acme-corp#req_01H8XY7ZQ9"
+                detail: "고객 'acme-corp'를 찾을 수 없습니다."
+                code: "customer_not_found"
+            metric_not_found:
+              summary: 없는 미터에 단가 설정
+              value:
+                type: "https://api.meterengine.io/problems/metric-not-found"
+                title: "Metric not found"
+                status: 404
+                instance: "/v1/billable-metrics/llm_tokens/price#req_01H8XY7ZQA"
+                detail: "미터 'llm_tokens'를 찾을 수 없습니다. 먼저 미터를 정의하세요."
+                code: "metric_not_found"
 
     ValidationError:
       description: |
-        **형식** 검증 실패. 필수 필드 누락, 잘못된 시각 형식, 그리고 같은
-        `Idempotency-Key`에 다른 페이로드가 여기 해당한다.
+        **형식** 검증 실패. 상태코드는 하나지만 `code`가 갈린다.
+
+        | `code` | 원인 |
+        |---|---|
+        | `validation_error` | 필수 필드 누락, 잘못된 시각 형식, 길이, 범위 위반 |
+        | `idempotency_key_reuse` | 같은 `Idempotency-Key`에 다른 페이로드 |
+        | `timeframe_incomplete` | `timeframe_start`/`timeframe_end` 중 하나만 지정 |
+        | `invalid_cursor` | 해석할 수 없는 `cursor` |
 
         **미등록 고객, 미터와 `transaction_id` 중복은 여기 해당하지 않는다** -
         둘 다 정상 처리되며 각각 `unresolved` 표시와 `200` 응답으로 다뤄진다.
@@ -1852,35 +2142,66 @@ components:
             timeframe_incomplete:
               summary: 조회 기간을 하나만 지정
               value:
-                type: "https://api.meterengine.io/problems/validation-error"
-                title: "Request validation failed"
+                type: "https://api.meterengine.io/problems/timeframe-incomplete"
+                title: "Incomplete timeframe"
                 status: 422
+                instance: "/v1/customers/acme-corp/usage#req_01H8XY7ZQB"
                 detail: "timeframe_start와 timeframe_end는 둘 다 지정하거나 둘 다 생략해야 합니다."
-                code: "validation_error"
+                code: "timeframe_incomplete"
                 errors:
                   - field: "timeframe_end"
                     code: "value_is_mandatory"
                     detail: "timeframe_start를 지정했으면 timeframe_end도 필요합니다."
+            invalid_cursor:
+              summary: 해석할 수 없는 커서
+              value:
+                type: "https://api.meterengine.io/problems/invalid-cursor"
+                title: "Invalid cursor"
+                status: 422
+                instance: "/v1/customers#req_01H8XY7ZQC"
+                detail: "cursor 값을 해석할 수 없습니다. 이전 응답의 next_cursor를 그대로 넣으세요."
+                code: "invalid_cursor"
+                errors:
+                  - field: "cursor"
+                    code: "invalid_format"
             idempotency_reuse:
               summary: 같은 멱등키에 다른 페이로드
               value:
                 type: "https://api.meterengine.io/problems/idempotency-key-reuse"
                 title: "Idempotency key reused with a different payload"
                 status: 422
+                instance: "/v1/customers#req_01H8XY7ZQD"
                 detail: "이 Idempotency-Key는 다른 요청 내용으로 이미 사용되었습니다."
                 code: "idempotency_key_reuse"
 
     RateLimited:
       description: |
         레이트 리밋 초과. `transaction_id` 중복 제거 덕분에 재시도는 안전하다.
-        (주의: 리밋 값은 미정 - 헤더 형태만 규약으로 확정)
+
+        **리밋 값(몇 건/몇 초)은 미정이고 담당 스토리도 아직 없다.** 여기서
+        확정하는 것은 헤더의 이름과 **의미**뿐이다. 의미를 정하지 않으면 구현자가
+        `X-RateLimit-Reset`을 잔여 초로 넣을지 epoch으로 넣을지 임의로 고른다.
       headers:
+        Retry-After:
+          description: |
+            재시도까지 기다려야 할 **초**. RFC 9110 표준 헤더이며 대부분의 HTTP
+            클라이언트가 자동 백오프에 쓴다. `X-RateLimit-Reset`과 같은 시점을
+            가리키되 표현만 다르다.
+          schema: { type: integer, examples: [30] }
         X-RateLimit-Limit:
-          schema: { type: integer }
+          description: 이 창(window)에 허용된 총 요청 수
+          schema: { type: integer, examples: [1000] }
         X-RateLimit-Remaining:
-          schema: { type: integer }
+          description: 현재 창에 남은 요청 수. 리밋을 넘은 응답에서는 `0`이다
+          schema: { type: integer, examples: [0] }
         X-RateLimit-Reset:
-          schema: { type: integer }
+          description: |
+            창이 초기화되는 시각. **Unix epoch 초**다 (잔여 초가 아니다).
+            잔여 초는 `Retry-After`가 준다.
+
+            예시 `1785333900`은 `2026-07-29T14:05:00Z`이며, 같은 응답의
+            `Retry-After: 30`과 같은 시점을 가리킨다.
+          schema: { type: integer, examples: [1785333900] }
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -1888,4 +2209,5 @@ components:
             type: "https://api.meterengine.io/problems/rate-limited"
             title: "Too many requests"
             status: 429
+            instance: "/v1/events#req_01H8XY7ZQE"
             code: "rate_limited"
