@@ -19,7 +19,7 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ./gradlew bootRun
 ```
 
-레포 루트의 `docker-compose.yml`에 정의된 PostgreSQL을 자동으로 띄우고 서버를 시작한다 (spring-boot-docker-compose).
+레포 루트의 `docker-compose.yml`에 정의된 PostgreSQL을 자동으로 띄우고 서버를 시작한다 (spring-boot-docker-compose). IDE에서 main 클래스를 직접 실행해도 되고, working directory가 backend/든 레포 루트든 동작한다 (`backend/compose.yaml`은 루트 정의를 가리키는 include 심이다).
 
 ## 빌드와 테스트
 
