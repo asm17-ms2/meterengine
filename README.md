@@ -34,3 +34,14 @@
 ## 진행 상태
 
 이슈 진행은 Jira MS2 프로젝트에서 관리한다: https://asm17-ms2.atlassian.net
+
+## License
+
+Copyright (c) 2026 asm17-ms2 team. All rights reserved.
+
+이 저장소는 포트폴리오 열람 목적으로만 공개되어 있습니다.
+사전 서면 동의 없이 소스 코드의 복제, 수정, 재배포, 상업적 이용을 금지합니다.
+
+This repository is publicly visible for portfolio purposes only.
+Unauthorized copying, modification, redistribution, or commercial use
+of this source code is strictly prohibited without prior written consent.
