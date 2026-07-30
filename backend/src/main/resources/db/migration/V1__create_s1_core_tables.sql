@@ -230,12 +230,34 @@ CREATE TRIGGER usage_events_guard_update
   BEFORE UPDATE ON usage_events
   FOR EACH ROW EXECUTE FUNCTION usage_events_guard_update();
 
+-- 가드 트리거 (결정 3, PR #13 리뷰): DELETE와 TRUNCATE는 전면 차단한다.
+-- TRUNCATE는 행 트리거를 타지 않으므로 문장 트리거를 따로 건다.
+-- S1 실험 데이터 등 수동 정리(결정 3의 "수동 절차로만 하고 기록")가 필요하면
+-- 테이블 소유자가 트리거를 잠시 해제하고 삭제한 뒤 재활성화한다:
+--   ALTER TABLE usage_events DISABLE TRIGGER usage_events_guard_delete;
+--   DELETE FROM usage_events WHERE ...;
+--   ALTER TABLE usage_events ENABLE TRIGGER usage_events_guard_delete;
+CREATE FUNCTION usage_events_guard_delete() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'usage_events is append-only: DELETE/TRUNCATE is blocked (결정 3)';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER usage_events_guard_delete
+  BEFORE DELETE ON usage_events
+  FOR EACH ROW EXECUTE FUNCTION usage_events_guard_delete();
+
+CREATE TRIGGER usage_events_guard_truncate
+  BEFORE TRUNCATE ON usage_events
+  FOR EACH STATEMENT EXECUTE FUNCTION usage_events_guard_delete();
+
 -- 롤 권한 (결정 3 -- 롤 분리 후 별도 마이그레이션으로 실행. 담당 스토리는 미정:
 -- 현재 로컬/CI 구성은 단일 계정(meterengine)이라 롤 분리 전제가 없다.
 -- 전제: app_role은 테이블 소유자가 아님):
---   REVOKE UPDATE, DELETE ON usage_events FROM app_role;
+--   REVOKE UPDATE, DELETE, TRUNCATE ON usage_events FROM app_role;
 --   GRANT UPDATE (customer_id, meter_id) ON usage_events TO app_role;
--- DELETE 차단은 롤 권한으로만 한다 (운영 롤의 수동 정리 절차는 결정 3 참조).
+-- 위 가드 트리거가 1차 차단이고 롤 권한은 추가 방어다 (PR #13 리뷰로 변경:
+-- 종전 "DELETE 차단은 롤 권한으로만"에서 트리거 차단 우선으로).
 -- 트리거 우회 방지: app_role에는 트리거 disable 권한(테이블 소유권)을 주지 않는다.
 
 -- 집계 조회용 인덱스는 MS2-39 착수 시 접근 패턴 확정 후 추가한다 (가산적).
