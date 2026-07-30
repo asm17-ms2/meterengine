@@ -161,8 +161,8 @@ CREATE TABLE price_policies (
 --   - 원문 보존: external_customer_id, code는 받은 그대로 (결정 1-B)
 --   - 수신 시 해소: customer_id, meter_id는 수신 시 이름 조회로 찾은 UUID,
 --     못 찾으면 NULL (미해소 -- 집계 제외, 관리자 화면에 건수 노출)
---   - received_at은 서버가 찍는다. 앱은 INSERT 목록에 이 컬럼을 넣지 않는다
---     (now()는 트랜잭션 시작 시각이라 부적합, clock_timestamp() 사용)
+--   - received_at은 서버가 찍는다. BEFORE INSERT 트리거가 항상 DB 서버
+--     시각으로 덮어쓴다 -- 앱이 값을 넣어도 무시 (아래 트리거 주석 참조)
 --   - properties 키 정책은 MS2-27 확정: 키 50개, 이름 1~64자, 값은
 --     문자열/숫자/불리언/null, 중첩은 저장하되 집계 대상 아님.
 --     검증은 API 경계에서 하고 DB는 JSONB 그대로 보존한다
@@ -197,6 +197,24 @@ CREATE TABLE usage_events (
     FOREIGN KEY (organization_id, meter_id)
     REFERENCES meters (organization_id, id)
 );
+
+-- received_at 강제 (결정 2 "클라이언트 입력 불가", PR #13 리뷰):
+-- DEFAULT는 컬럼을 생략한 INSERT에만 적용되어 앱이 값을 넣으면 그대로
+-- 저장된다 (ORM이 전체 필드를 INSERT에 넣으면 바로 그 경로). 트리거가
+-- 항상 DB 서버 시각으로 덮어써 received_at을 서버의 사실로 만든다.
+-- DEFAULT는 트리거가 해제된 경우의 안전망으로 유지한다.
+-- 재검토 조건: 수집 경로가 비동기(큐 도입 등)로 바뀌면 앱 도착과 DB 저장의
+-- 간격이 커지므로 수신 시각의 의미(앱 수신 vs DB 저장)를 재정의한다.
+CREATE FUNCTION usage_events_set_received_at() RETURNS trigger AS $$
+BEGIN
+  NEW.received_at := clock_timestamp();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER usage_events_set_received_at
+  BEFORE INSERT ON usage_events
+  FOR EACH ROW EXECUTE FUNCTION usage_events_set_received_at();
 
 -- 가드 트리거 (결정 1-B 재연결 + 결정 3):
 -- UPDATE는 customer_id, meter_id의 NULL -> 값 1회 채움만 허용한다.
