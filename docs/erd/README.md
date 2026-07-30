@@ -11,4 +11,5 @@
 
 ## 현재 상태
 
-아직 문서 없음. 스프린트 1의 도메인 개념도 v0(MS2-21 산출물)를 출발점으로 한다.
+- `erd.md`: S1 ERD v2 (정본). mermaid 다이어그램 + 제약 표 + 스토리별 이관 항목
+- S1 확정분의 DB 반영은 `backend/src/main/resources/db/migration/V1__create_s1_core_tables.sql`
