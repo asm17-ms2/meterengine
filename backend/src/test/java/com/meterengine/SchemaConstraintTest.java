@@ -139,6 +139,29 @@ class SchemaConstraintTest {
   }
 
   @Test
+  void received_at은_앱이_값을_넣어도_서버가_찍은_시각으로_덮어쓴다() {
+    OffsetDateTime clientSuppliedTime = OffsetDateTime.parse("2020-01-01T00:00:00Z");
+
+    UUID eventId =
+        jdbc.queryForObject(
+            """
+            INSERT INTO usage_events
+              (organization_id, transaction_id, external_customer_id, code, occurred_at, received_at)
+            VALUES (?, 'tx-1', 'cust-1', 'api_call', now(), ?)
+            RETURNING id
+            """,
+            UUID.class,
+            insertOrganization(),
+            clientSuppliedTime);
+
+    OffsetDateTime receivedAt =
+        jdbc.queryForObject(
+            "SELECT received_at FROM usage_events WHERE id = ?", OffsetDateTime.class, eventId);
+
+    assertThat(receivedAt).isAfter(clientSuppliedTime);
+  }
+
+  @Test
   void 살아있는_고객끼리는_같은_external_id를_가질_수_없다() {
     UUID orgId = insertOrganization();
     insertCustomer(orgId, "acme");
