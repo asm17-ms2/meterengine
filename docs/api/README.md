@@ -94,10 +94,8 @@ npm run mock
 
 Scalar CLI는 Node 24 이상이 필요하다. 버전이 낮으면 `lint:scalar`와 `mock`이 실행되지 않는다. 생성물(HTML)은 `.gitignore`로 제외되어 있다.
 
-## MS2-31에서 정할 것
+## MS2-31에서 정한 것 (2026-07-30)
 
-- CI에서 `cd docs/api && npm run lint` 실행. `npm ci`는 필요 없다(의존성 없음)
-- `redocly.yaml`과 `package.json` 위치. 지금은 스펙 옆에 두어 상대 경로가 맞는다. 리포 루트로 옮길지는 CI 구성 시 판단한다
-- 리포 루트에 `.node-version`(24) 추가 검토. Scalar CLI가 Node 24를 요구하는데 팀원 환경이 낮으면 그 자리에서 막힌다. 개발 환경 범위라 이 PR에 넣지 않았다
-
-처리 시점은 PR #11 논의에서 합의했다. **두 PR 중 나중에 머지되는 쪽에 넣거나, 둘 다 머지된 뒤 별도 PR로 처리한다.** #11이 열려 있는 동안에는 서로의 변경을 확인할 수 없어 한쪽에서 미리 넣으면 충돌만 는다.
+- CI가 PR마다 `docs` job으로 `npm run lint`를 실행한다 (`.github/workflows/ci.yml`). `npm ci`는 없다(의존성 없음)
+- `redocly.yaml`과 `package.json`은 스펙 옆(이 폴더)에 유지한다. 도구가 스펙 전용이고 상대 경로가 맞으며, 리포 루트로 옮기면 루트에 Node 프로젝트 파일이 생겨 frontend와 혼동을 부른다
+- 리포 루트에 `.node-version`(24)을 추가했다. Scalar CLI의 Node 24 요구를 버전 매니저(fnm 등)가 자동으로 맞추게 한다
