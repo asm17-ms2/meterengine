@@ -219,16 +219,13 @@ CREATE TRIGGER usage_events_set_received_at
 -- 가드 트리거 (결정 1-B 재연결 + 결정 3):
 -- UPDATE는 customer_id, meter_id의 NULL -> 값 1회 채움만 허용한다.
 -- 값 -> 다른 값, 값 -> NULL, 그 외 컬럼 변경은 전부 거부한다.
+-- 허용 두 컬럼을 뺀 행 전체를 비교하므로 이후 추가되는 컬럼도 자동으로
+-- 보호된다 (PR #13 리뷰: 나열식은 컬럼 추가 시 함수 갱신을 잊으면
+-- 그 컬럼만 조용히 수정 가능해지고 기존 테스트로는 잡히지 않는다).
 CREATE FUNCTION usage_events_guard_update() RETURNS trigger AS $$
 BEGIN
-  IF NEW.id                   IS DISTINCT FROM OLD.id
-  OR NEW.organization_id      IS DISTINCT FROM OLD.organization_id
-  OR NEW.transaction_id       IS DISTINCT FROM OLD.transaction_id
-  OR NEW.external_customer_id IS DISTINCT FROM OLD.external_customer_id
-  OR NEW.code                 IS DISTINCT FROM OLD.code
-  OR NEW.properties           IS DISTINCT FROM OLD.properties
-  OR NEW.occurred_at          IS DISTINCT FROM OLD.occurred_at
-  OR NEW.received_at          IS DISTINCT FROM OLD.received_at THEN
+  IF to_jsonb(NEW) - 'customer_id' - 'meter_id'
+     IS DISTINCT FROM to_jsonb(OLD) - 'customer_id' - 'meter_id' THEN
     RAISE EXCEPTION 'usage_events is append-only: only customer_id/meter_id may be filled (결정 3)';
   END IF;
 
