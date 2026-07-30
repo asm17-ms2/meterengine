@@ -40,9 +40,23 @@ jobs:
           package_json_file: frontend/package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      # 의존성 없음: 스크립트가 npx로 검사 도구를 버전 고정 실행한다 (docs/api/README.md 참조)
+      - run: npm run lint
