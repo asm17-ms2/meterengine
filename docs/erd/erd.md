@@ -1,7 +1,7 @@
 # S1 ERD v2 (MS2-26)
 
 - 작성: 2026-07-29, 문인호 / 개정: 2026-07-30
-- 버전: v2 / 반영 범위: 슬라이스 1 (MS2-36 코어 파이프라인) + MS2-27 API 명세 v1(PR #9) 역반영
+- 버전: v2.1 / 반영 범위: 슬라이스 1 (MS2-36 코어 파이프라인) + MS2-27 API 명세 v1(PR #9) 역반영 + PR #13 리뷰 반영(복합 FK 테넌트 격리, DELETE/TRUNCATE 트리거 차단)
 - 지위: living document. 이후 슬라이스에서 엔티티가 추가되면 버전을 올린다
 - 전제: 불변 결정 목록 확정본(정본은 Notion 팀 위키, 2026-07-29 데일리 비준)의 결정 0~7 + `docs/api/openapi.yaml` (MS2-27, PR #9). 재논의 없이 두 문서를 근거로 참조한다
 - 자료형은 PostgreSQL 기준이다 (ADR 0002 승인). 권한 메커니즘(롤 분리)의 담당 스토리는 미정이다 (PR #11의 개발 환경은 단일 계정 구성)
@@ -145,8 +145,11 @@ DRAFT_INVOICE와 INVOICE_LINE_ITEM은 엔티티와 관계만 S1 범위이고, �
 |---|---|---|
 | USAGE_EVENT | `UNIQUE (organization_id, transaction_id)` -- 무기한 유일, 기간 윈도우 없음 | 결정 1 |
 | USAGE_EVENT.transaction_id | `CHECK (transaction_id <> '' AND length <= 255)`, 바이트 단위 정확 일치, 서버는 해석/정규화하지 않음 | 결정 1 부속 |
-| USAGE_EVENT | append-only: 앱 롤에 UPDATE/DELETE 권한 없음 (DB 강제, 롤 분리 전제 -- 담당 스토리 미정) | 결정 3 |
+| USAGE_EVENT | append-only: 가드 트리거가 UPDATE(허용 예외는 아래 행)와 DELETE/TRUNCATE를 전면 차단한다. 롤 분리(담당 스토리 미정)는 추가 방어. 수동 정리는 소유자가 트리거를 잠시 해제 후 삭제, 재활성화하고 기록한다 (PR #13 리뷰로 "롤 권한으로만 차단"에서 변경) | 결정 3 |
 | USAGE_EVENT.customer_id, meter_id | 예외적으로 NULL -> 값 1회 채움만 허용: 컬럼 단위 UPDATE 권한 + 가드 트리거 | 결정 1-B 재연결 |
+| USAGE_EVENT.customer_id, meter_id | 복합 FK `(organization_id, customer_id/meter_id)`로 같은 도입사 소속만 참조 가능 (테넌트 교차 참조 차단). NULL이면 검사를 건너뛰어 미해소 이벤트 저장에 영향 없음 | 결정 0 확장, PR #13 리뷰 |
+| PRICE_POLICY.meter_id | 복합 FK `(organization_id, meter_id)`로 같은 도입사의 미터만 참조 가능 | 결정 0 확장, PR #13 리뷰 |
+| CUSTOMER, METER | `UNIQUE (organization_id, id)` -- 위 복합 FK의 참조 대상 (id가 PK라 유일성은 자명, FK 형식 요건) | PR #13 리뷰 |
 | USAGE_EVENT.received_at | 서버가 찍는다 (`clock_timestamp()`), 클라이언트 입력 불가 | 결정 2 |
 | 모든 테이블 id | DB 기본값 `gen_random_uuid()`로 생성 (앱 생성 아님). 스택 중립이고 DB가 방어선이라는 원칙과 정합. 가역 결정 -- 삽입 성능 이슈가 실측되면 UUIDv7 계열로 전환 검토 | 확정본 부록 위임, 2026-07-29 결정 |
 | CUSTOMER | `UNIQUE (organization_id, external_id) WHERE deleted_at IS NULL` -- 부분 유니크로 이름 재사용 허용 | 결정 6 |
@@ -198,3 +201,4 @@ DRAFT_INVOICE와 INVOICE_LINE_ITEM은 엔티티와 관계만 S1 범위이고, �
 |---|---|---|
 | v1 | 2026-07-29 | S1 범위 최초 작성 (불변결정목록 확정본 기준) |
 | v2 | 2026-07-30 | MS2-27 API 명세 v1(PR #9) 역반영: api_keys, idempotency_keys 테이블 추가, customers/meters에 name과 created_at, price_policies에 created_at 추가, MS2-27 이관 항목 확정 상태 갱신, 의도된 제외 3건 기록. 같은 날 레포 `docs/erd/`로 이관하고 V1 마이그레이션과 동기화 |
+| v2.1 | 2026-07-30 | PR #13 리뷰 반영: customer_id/meter_id 참조를 복합 FK로 교체해 테넌트 교차 참조를 DB에서 차단, usage_events DELETE/TRUNCATE를 트리거로 차단(롤 권한은 추가 방어로 변경) |
