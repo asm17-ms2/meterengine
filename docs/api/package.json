@@ -1,0 +1,16 @@
+{
+  "name": "meterengine-api-spec",
+  "private": true,
+  "description": "MS2-27 API 명세. 검사와 미리보기, 목 서버 실행 스크립트",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "npm run lint:redocly && npm run lint:scalar",
+    "lint:redocly": "npx -y --loglevel=error @redocly/cli@2.41.1 lint openapi.yaml",
+    "lint:scalar": "npx -y --loglevel=error @scalar/cli@2.0.1 document lint openapi.yaml",
+    "docs": "npx -y --loglevel=error @redocly/cli@2.41.1 build-docs openapi.yaml -o api-preview.html",
+    "mock": "npx -y --loglevel=error @scalar/cli@2.0.1 document mock openapi.yaml --port 8787 --watch",
+    "preview": "npx -y --loglevel=error @scalar/cli@2.0.1 document serve openapi.yaml --port 8788 --watch"
+  }
+}
