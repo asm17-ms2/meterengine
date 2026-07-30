@@ -1,0 +1,4 @@
+# pnpm은 의존성의 postinstall 스크립트 실행을 기본 차단한다. 필요한 것만 허용한다.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

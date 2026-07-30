@@ -6,8 +6,8 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `backend/` | 미터링 엔진 API 서버. 기술 스택은 ADR 확정 후 초기화한다 |
-| `frontend/` | 관리자 화면. 기술 스택은 ADR 확정 후 초기화한다 |
+| `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle (ADR 0001) |
+| `frontend/` | 관리자 화면. Next.js + TypeScript (ADR 0001) |
 | `docs/` | 코드가 원인인 문서: OpenAPI 명세, ADR, ERD |
 | `work/` | 개인 작업 공간. .gitignore로 제외되며 각자 만들어 쓴다 (CLAUDE.md 참조) |
 
@@ -29,7 +29,22 @@
 
 ## 시작하기
 
-기술 스택이 ADR(MS2-28)에서 확정된 뒤 로컬 실행 방법을 여기에 작성한다. 목표는 클론 후 한 명령으로 로컬 실행(MS2-31 완료 조건)이다.
+사전 준비: JDK 25, Node.js 24+, Docker Desktop (Compose 포함).
+
+```
+# backend + PostgreSQL (DB는 자동 기동)
+cd backend && ./gradlew bootRun
+
+# frontend
+cd frontend && corepack enable pnpm && pnpm install && pnpm dev
+
+# DB만 필요할 때
+docker compose up -d
+```
+
+MS2-31 완료 조건이던 "클론 후 한 명령으로 로컬 실행"은 backend + DB 기준 `./gradlew bootRun` 한 명령으로 충족한다 (DB가 자동 기동된다). frontend는 별도 명령으로 실행한다.
+
+자세한 내용은 `backend/README.md`, `frontend/README.md` 참조. CI는 `.github/workflows/ci.yml`에서 PR마다 backend 빌드/테스트와 frontend lint/빌드를 실행한다.
 
 ## 진행 상태
 
