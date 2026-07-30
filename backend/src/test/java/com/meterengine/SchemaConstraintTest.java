@@ -73,6 +73,61 @@ class SchemaConstraintTest {
   }
 
   @Test
+  void 저장된_이벤트는_삭제할_수_없다() {
+    UUID eventId = insertUsageEvent(insertOrganization(), "tx-1");
+
+    assertThatThrownBy(() -> jdbc.update("DELETE FROM usage_events WHERE id = ?", eventId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("append-only");
+  }
+
+  @Test
+  void 이벤트_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbc.execute("TRUNCATE usage_events"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("append-only");
+  }
+
+  @Test
+  void 같은_도입사의_고객은_이벤트에_귀속시킬_수_있다() {
+    UUID orgId = insertOrganization();
+    insertUsageEventWithCustomer(orgId, "tx-1", insertCustomer(orgId, "acme"));
+  }
+
+  @Test
+  void 다른_도입사의_고객은_이벤트에_귀속시킬_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgCustomerId = insertCustomer(insertOrganization(), "acme");
+
+    assertThatThrownBy(() -> insertUsageEventWithCustomer(orgId, "tx-1", otherOrgCustomerId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 같은_도입사의_미터는_이벤트에_연결할_수_있다() {
+    UUID orgId = insertOrganization();
+    insertUsageEventWithMeter(orgId, "tx-1", insertMeter(orgId, "api_call"));
+  }
+
+  @Test
+  void 다른_도입사의_미터는_이벤트에_연결할_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgMeterId = insertMeter(insertOrganization(), "api_call");
+
+    assertThatThrownBy(() -> insertUsageEventWithMeter(orgId, "tx-1", otherOrgMeterId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 다른_도입사의_미터로는_가격정책을_만들_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgMeterId = insertMeter(insertOrganization(), "api_call");
+
+    assertThatThrownBy(() -> insertPricePolicy(orgId, otherOrgMeterId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
   void received_at은_앱이_넣지_않아도_서버가_찍는다() {
     UUID eventId = insertUsageEvent(insertOrganization(), "tx-1");
 
@@ -114,6 +169,26 @@ class SchemaConstraintTest {
         externalId);
   }
 
+  private UUID insertMeter(UUID orgId, String code) {
+    return jdbc.queryForObject(
+        """
+        INSERT INTO meters (organization_id, code, name, aggregation_type)
+        VALUES (?, ?, ?, 'COUNT')
+        RETURNING id
+        """,
+        UUID.class,
+        orgId,
+        code,
+        code);
+  }
+
+  private void insertPricePolicy(UUID orgId, UUID meterId) {
+    jdbc.update(
+        "INSERT INTO price_policies (organization_id, meter_id, unit_price_krw) VALUES (?, ?, 4)",
+        orgId,
+        meterId);
+  }
+
   private UUID insertUsageEvent(UUID orgId, String transactionId) {
     return jdbc.queryForObject(
         """
@@ -125,5 +200,29 @@ class SchemaConstraintTest {
         UUID.class,
         orgId,
         transactionId);
+  }
+
+  private void insertUsageEventWithCustomer(UUID orgId, String transactionId, UUID customerId) {
+    jdbc.update(
+        """
+        INSERT INTO usage_events
+          (organization_id, transaction_id, external_customer_id, customer_id, code, occurred_at)
+        VALUES (?, ?, 'cust-1', ?, 'api_call', now())
+        """,
+        orgId,
+        transactionId,
+        customerId);
+  }
+
+  private void insertUsageEventWithMeter(UUID orgId, String transactionId, UUID meterId) {
+    jdbc.update(
+        """
+        INSERT INTO usage_events
+          (organization_id, transaction_id, external_customer_id, code, meter_id, occurred_at)
+        VALUES (?, ?, 'cust-1', 'api_call', ?, now())
+        """,
+        orgId,
+        transactionId,
+        meterId);
   }
 }
