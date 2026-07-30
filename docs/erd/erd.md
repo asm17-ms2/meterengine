@@ -146,7 +146,7 @@ DRAFT_INVOICE와 INVOICE_LINE_ITEM은 엔티티와 관계만 S1 범위이고, �
 | USAGE_EVENT | `UNIQUE (organization_id, transaction_id)` -- 무기한 유일, 기간 윈도우 없음 | 결정 1 |
 | USAGE_EVENT.transaction_id | `CHECK (transaction_id <> '' AND length <= 255)`, 바이트 단위 정확 일치, 서버는 해석/정규화하지 않음 | 결정 1 부속 |
 | USAGE_EVENT | append-only: 가드 트리거가 UPDATE(허용 예외는 아래 행)와 DELETE/TRUNCATE를 전면 차단한다. 롤 분리(담당 스토리 미정)는 추가 방어. 수동 정리는 소유자가 트리거를 잠시 해제 후 삭제, 재활성화하고 기록한다 (PR #13 리뷰로 "롤 권한으로만 차단"에서 변경) | 결정 3 |
-| USAGE_EVENT.customer_id, meter_id | 예외적으로 NULL -> 값 1회 채움만 허용: 컬럼 단위 UPDATE 권한 + 가드 트리거. 가드는 허용 두 컬럼을 뺀 행 전체를 비교하므로 이후 추가되는 컬럼도 자동 보호된다 | 결정 1-B 재연결, PR #13 리뷰 |
+| USAGE_EVENT.customer_id, meter_id | 예외적으로 NULL -> 값 1회 채움만 허용: 가드 트리거가 강제한다 (컬럼 단위 UPDATE 권한은 롤 분리 확정 후 추가 방어로 실행). 가드는 허용 두 컬럼을 뺀 행 전체를 비교하므로 이후 추가되는 컬럼도 자동 보호된다 | 결정 1-B 재연결, PR #13 리뷰 |
 | USAGE_EVENT.customer_id, meter_id | 복합 FK `(organization_id, customer_id/meter_id)`로 같은 도입사 소속만 참조 가능 (테넌트 교차 참조 차단). NULL이면 검사를 건너뛰어 미해소 이벤트 저장에 영향 없음 | 결정 0 확장, PR #13 리뷰 |
 | PRICE_POLICY.meter_id | 복합 FK `(organization_id, meter_id)`로 같은 도입사의 미터만 참조 가능 | 결정 0 확장, PR #13 리뷰 |
 | CUSTOMER, METER | `UNIQUE (organization_id, id)` -- 위 복합 FK의 참조 대상 (id가 PK라 유일성은 자명, FK 형식 요건) | PR #13 리뷰 |
