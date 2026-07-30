@@ -91,7 +91,11 @@ CREATE TABLE customers (
   external_id     TEXT NOT NULL,
   name            TEXT NOT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at      TIMESTAMPTZ
+  deleted_at      TIMESTAMPTZ,
+
+  -- 테넌트 교차 참조 차단용 복합 FK(usage_events)의 참조 대상. id가 PK라
+  -- 조합의 유일성은 자명하고, FK가 참조하려면 형식상 필요하다 (PR #13 리뷰)
+  CONSTRAINT customers_org_id_unique UNIQUE (organization_id, id)
 );
 
 CREATE UNIQUE INDEX customers_org_external_id_alive
@@ -113,7 +117,11 @@ CREATE TABLE meters (
   aggregation_type TEXT NOT NULL
     CHECK (aggregation_type IN ('COUNT', 'SUM')),
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at       TIMESTAMPTZ
+  deleted_at       TIMESTAMPTZ,
+
+  -- 테넌트 교차 참조 차단용 복합 FK(usage_events, price_policies)의 참조 대상
+  -- (customers의 같은 제약 참조, PR #13 리뷰)
+  CONSTRAINT meters_org_id_unique UNIQUE (organization_id, id)
 );
 
 CREATE UNIQUE INDEX meters_org_code_alive
@@ -136,10 +144,15 @@ CREATE UNIQUE INDEX meters_org_code_alive
 CREATE TABLE price_policies (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id),
-  meter_id        UUID NOT NULL REFERENCES meters(id),
+  meter_id        UUID NOT NULL,
   unit_price_krw  BIGINT NOT NULL CHECK (unit_price_krw >= 0),
   unit_size       BIGINT NOT NULL DEFAULT 1 CHECK (unit_size >= 1),
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- 다른 도입사의 미터에 가격정책이 붙는 것을 DB가 차단한다 (PR #13 리뷰)
+  CONSTRAINT price_policies_meter_same_org
+    FOREIGN KEY (organization_id, meter_id)
+    REFERENCES meters (organization_id, id)
 );
 
 -- ----------------------------------------------------------------------------
@@ -160,9 +173,9 @@ CREATE TABLE usage_events (
   transaction_id       TEXT NOT NULL
     CHECK (transaction_id <> '' AND length(transaction_id) <= 255),
   external_customer_id TEXT NOT NULL,
-  customer_id          UUID REFERENCES customers(id),
+  customer_id          UUID,
   code                 TEXT NOT NULL,
-  meter_id             UUID REFERENCES meters(id),
+  meter_id             UUID,
   properties           JSONB NOT NULL DEFAULT '{}',
   occurred_at          TIMESTAMPTZ NOT NULL,
   received_at          TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
@@ -171,7 +184,18 @@ CREATE TABLE usage_events (
   -- 같은 transaction_id 재전송은 이 제약이 거르고 앱은 성공 응답만 반환
   -- (first-write-wins, 결정 4). 응답 코드는 MS2-27 확정: 201 신규 / 200 기존 반환.
   CONSTRAINT usage_events_org_transaction_id_unique
-    UNIQUE (organization_id, transaction_id)
+    UNIQUE (organization_id, transaction_id),
+
+  -- 테넌트 교차 참조 차단 (PR #13 리뷰): (도입사, 고객/미터) 조합으로 검사해
+  -- 해소 로직에 버그가 있어도 다른 도입사의 고객/미터에 귀속되지 못하게 한다.
+  -- 구성 컬럼에 NULL이 있으면 검사를 건너뛰므로(MATCH SIMPLE 기본 동작)
+  -- 미해소 이벤트(customer_id/meter_id NULL) 저장에는 영향이 없다.
+  CONSTRAINT usage_events_customer_same_org
+    FOREIGN KEY (organization_id, customer_id)
+    REFERENCES customers (organization_id, id),
+  CONSTRAINT usage_events_meter_same_org
+    FOREIGN KEY (organization_id, meter_id)
+    REFERENCES meters (organization_id, id)
 );
 
 -- 가드 트리거 (결정 1-B 재연결 + 결정 3):
