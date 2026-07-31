@@ -49,4 +49,9 @@ spotless {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// OpenApiSnapshotTest가 레포 루트 아래에 생성물을 쓴다. 실행 위치(IDE/Gradle)에 따라 경로가 달라지지 않도록 절대 경로로 넘긴다.
+	systemProperty(
+		"meterengine.openapi.snapshot",
+		layout.projectDirectory.file("../docs/api/generated/openapi.yaml").asFile.absolutePath,
+	)
 }

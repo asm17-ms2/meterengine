@@ -1,0 +1,9 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- description: Generated server url
+  url: http://localhost
+paths: {}
+components: {}

@@ -29,6 +29,8 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ./gradlew spotlessApply  # 포맷 자동 적용
 ```
 
+`build`는 `OpenApiSnapshotTest`로 `docs/api/generated/openapi.yaml`(구현 스냅샷)을 다시 만든다. **컨트롤러나 DTO를 건드렸다면 이 파일도 같은 커밋에 넣어야 한다.** 빼먹으면 CI backend job이 실패한다. 이유와 정본 관계는 `docs/api/README.md`의 "구현 스냅샷" 절에 있다.
+
 ## 구조
 
 단일 Gradle 모듈 + 도메인별 패키지 분리로 시작한다 (ADR 0005). 도메인 패키지 목록은 슬라이스를 진행하며 도출하고, 경계는 코드 리뷰로 지킨다.
