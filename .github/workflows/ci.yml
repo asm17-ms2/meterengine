@@ -30,9 +30,15 @@ jobs:
       # CI는 파일을 고치거나 커밋하지 않는다. 갱신은 개발자가 로컬에서 한다 (pnpm-lock.yaml과 같은 계약).
       - name: OpenAPI 생성물 최신성 검사
         run: |
-          if [ -n "$(git status --porcelain -- ../docs/api/generated/openapi.yaml)" ]; then
+          SNAPSHOT=../docs/api/generated/openapi.yaml
+          if [ -n "$(git status --porcelain -- "$SNAPSHOT")" ]; then
             echo "::error::OpenAPI 생성물이 커밋된 내용과 다릅니다. 로컬에서 ./gradlew build 후 docs/api/generated/openapi.yaml을 함께 커밋하세요."
-            git diff -- ../docs/api/generated/openapi.yaml
+            # 무엇이 다른지 로그에 남긴다. 미추적(??) 파일은 인덱스에 없어 diff 대상이 아니므로
+            # --intent-to-add로 먼저 등록해야 내용이 보인다. 다만 그 상태에서 unstaged diff를 보면
+            # 삭제된 경우가 빈 출력이 되므로 HEAD와 비교한다. 수정/삭제/미추적 세 경우 모두
+            # 내용이 남는다 (PR #14 리뷰).
+            git add --intent-to-add -- "$SNAPSHOT"
+            git diff HEAD -- "$SNAPSHOT"
             exit 1
           fi
 
