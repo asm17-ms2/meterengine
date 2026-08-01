@@ -18,7 +18,9 @@ services:
       # postgres:18 이미지부터 데이터 볼륨 마운트 지점이 /var/lib/postgresql 이다
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meterengine -d meterengine"]
+      # -h 127.0.0.1로 TCP를 확인한다. postgres 이미지는 초기화 중에 유닉스 소켓 전용
+      # 임시 서버를 띄우므로, 소켓으로 검사하면 아직 준비되지 않은 서버를 healthy로 읽는다
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U meterengine -d meterengine"]
       interval: 5s
       timeout: 3s
       retries: 10
