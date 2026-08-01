@@ -8,7 +8,7 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 - `backend/`: 미터링 엔진 API 서버
 - `frontend/`: 관리자 화면
-- `docs/`: 코드가 원인인 문서 (OpenAPI, ADR, ERD)
+- `docs/`: 코드가 원인인 문서 (시스템 사양, OpenAPI, ADR, 스키마)
 - `work/`: 개인 작업 공간 (.gitignore로 제외, 아래 참조)
 
 ## 개인 작업 공간 (work/)
@@ -49,9 +49,10 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 ## 문서 흐름
 
-- 코드가 원인인 문서는 이 레포 `docs/`에 둔다: `docs/api/`(OpenAPI), `docs/adr/`(아키텍처 결정), `docs/erd/`(도메인 모델). 코드와 같은 PR에서 리뷰한다
-- 합의가 원인인 문서(제품 정의, 슬라이스 시퀀스, 정책, 회의록)는 Notion의 MS2 팀 위키가 정본이다 (주소는 위 "팀과 협업 도구" 참조)
-- 정책의 정밀 규칙(KRW 절사 방식 등)은 레포에 복사하지 않는다. 테스트가 Notion 정책 항목 번호를 참조해 고정한다. 정책 변경 순서: Notion 합의 -> 테스트/코드 반영
+- 문서 분류와 위치는 `docs/문서-관리-규칙.md`가 정본이다. 새 문서를 만들기 전에 그 문서의 판별 순서를 따른다
+- 코드가 원인인 문서는 이 레포 `docs/`에 둔다: `docs/spec/`(시스템 사양), `docs/api/`(OpenAPI), `docs/adr/`(아키텍처 결정), `docs/erd/`(스키마, 생성물). 코드와 같은 PR에서 리뷰한다
+- 합의가 원인인 문서(제품 정의, 슬라이스 시퀀스, 회의록)는 Notion의 MS2 팀 위키가 정본이다 (주소는 위 "팀과 협업 도구" 참조)
+- 코드가 참조하는 값(절사 방식, 보존 기간 등)의 정본은 `docs/spec/`이다. 값을 Notion과 레포에 나눠 두지 않는다. Notion 정책 문서가 값을 인용할 때는 정본 경로를 병기한다
 - `docs/api/openapi.yaml`은 수기 정본, `docs/api/generated/openapi.yaml`은 springdoc 생성물이다. 생성물은 손으로 고치지 않는다 (다음 빌드에서 덮어써진다)
 - backend의 컨트롤러, DTO, OpenAPI 어노테이션을 바꿨으면 `cd backend && ./gradlew build`로 생성물을 재생성하고 **소스와 같은 커밋에 포함한다.** 빠뜨리면 CI backend job이 실패한다. 생성물을 커밋해 두는 목적은 PR diff에 API 표면 변화를 드러내는 것이다 (상세는 `docs/api/README.md`의 "구현 스냅샷")
 

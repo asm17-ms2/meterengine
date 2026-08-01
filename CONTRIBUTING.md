@@ -5,7 +5,7 @@
 ## 확정된 규칙
 
 - main에는 직접 push할 수 없다 (GitHub 브랜치 보호로 강제). 모든 변경은 브랜치를 만들어 PR로 올린다
-- docs/의 문서(ADR, OpenAPI, ERD)도 코드와 같은 PR 흐름을 따른다. ADR은 "제안" 상태로 PR을 올리고, 합의되면 같은 PR에서 상태를 "승인"으로 바꾸고 결정일을 기입한 뒤 머지한다. "제안" 상태로 머지하지 않는다 (docs/adr/README.md 참조)
+- docs/의 문서도 코드와 같은 PR 흐름을 따른다. ADR의 상태 전이와 기각 처리는 `docs/adr/README.md`, 문서 분류와 위치는 `docs/문서-관리-규칙.md`를 따른다
 - work/는 개인 작업 공간이라 PR 대상이 아니다
 - 브랜치 네이밍: `<type>/MS2-<이슈번호>-<설명>` 형식. type은 feat, fix, docs, refactor, test, ci, chore 중 하나. 예: `docs/MS2-31-branch-strategy`, `feat/MS2-40-event-ingest`. 브랜치명에 이슈 키가 들어가 Jira가 브랜치/PR을 이슈에 자동 연결한다
 - 머지 방식: squash merge. PR 하나가 main 커밋 하나로 남아 이슈 단위 추적이 쉽고, 브랜치 안 커밋 정리에 힘 쓰지 않아도 된다. main 룰셋의 Allowed merge methods를 squash만 허용으로 설정해 강제한다. squash로 원본 커밋과의 연결이 끊기는 문제는 아래 "머지 후 브랜치 삭제"와 "선행 브랜치 위 작업" 규칙이 안전장치다
