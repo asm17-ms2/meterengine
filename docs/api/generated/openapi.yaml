@@ -5,5 +5,71 @@ info:
 servers:
 - description: Generated server url
   url: http://localhost
-paths: {}
-components: {}
+paths:
+  /v1/events:
+    post:
+      operationId: ingest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventIngestRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventIngestResponse"
+          description: OK
+      tags:
+      - event-controller
+components:
+  schemas:
+    EventBody:
+      type: object
+      properties:
+        code:
+          type: string
+        external_customer_id:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        properties:
+          type: object
+          additionalProperties: {}
+        received_at:
+          type: string
+          format: date-time
+        transaction_id:
+          type: string
+        unresolved:
+          type: array
+          items:
+            type: string
+    EventIngestRequest:
+      type: object
+      properties:
+        event:
+          $ref: "#/components/schemas/EventInput"
+    EventIngestResponse:
+      type: object
+      properties:
+        event:
+          $ref: "#/components/schemas/EventBody"
+    EventInput:
+      type: object
+      properties:
+        code:
+          type: string
+        external_customer_id:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        properties:
+          type: object
+          additionalProperties: {}
+        transaction_id:
+          type: string
