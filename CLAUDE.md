@@ -55,6 +55,8 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 - 코드가 참조하는 값(절사 방식, 보존 기간 등)의 정본은 `docs/spec/`이다. 값을 Notion과 레포에 나눠 두지 않는다. Notion 정책 문서가 값을 인용할 때는 정본 경로를 병기한다
 - `docs/api/openapi.yaml`은 수기 정본, `docs/api/generated/openapi.yaml`은 springdoc 생성물이다. 생성물은 손으로 고치지 않는다 (다음 빌드에서 덮어써진다)
 - backend의 컨트롤러, DTO, OpenAPI 어노테이션을 바꿨으면 `cd backend && ./gradlew build`로 생성물을 재생성하고 **소스와 같은 커밋에 포함한다.** 빠뜨리면 CI backend job이 실패한다. 생성물을 커밋해 두는 목적은 PR diff에 API 표면 변화를 드러내는 것이다 (상세는 `docs/api/README.md`의 "구현 스냅샷")
+- `docs/erd/erd.md`는 수기 정책 정본, `docs/erd/generated/`는 tbls 생성물이다. 생성물은 손으로 고치지 않는다. 컬럼과 제약의 짧은 근거는 마이그레이션의 `COMMENT ON`에서 온다
+- DB 마이그레이션(`backend/src/main/resources/db/migration/V*.sql`)을 바꿨으면 `./scripts/generate-erd.sh`로 생성물을 재생성하고 **마이그레이션과 같은 커밋에 포함한다.** 빠뜨리면 CI erd job이 실패한다 (상세는 `docs/erd/README.md`)
 
 ## 출력 형식
 
