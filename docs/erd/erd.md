@@ -2,11 +2,21 @@
 
 - 작성: 2026-07-29, 문인호 / 개정: 2026-07-30
 - 버전: v2.2 / 반영 범위: 슬라이스 1 (MS2-36 코어 파이프라인) + MS2-27 API 명세 v1(PR #9) 역반영 + PR #13 리뷰 반영(복합 FK 테넌트 격리, DELETE/TRUNCATE 트리거 차단, received_at 트리거 강제, UPDATE 가드 행 전체 비교)
-- 지위: living document. 이후 슬라이스에서 엔티티가 추가되면 버전을 올린다
+- 지위: living document. 이후 슬라이스에서 엔티티가 추가되면 이 문서를 고친다 (버전 번호 대신 git 히스토리로 추적한다, 아래 "이 문서와 generated/의 관계")
 - 전제: 불변 결정 목록 확정본(정본은 Notion 팀 위키, 2026-07-29 데일리 비준)의 결정 0~7 + `docs/api/openapi.yaml` (MS2-27, PR #9). 재논의 없이 두 문서를 근거로 참조한다
 - 자료형은 PostgreSQL 기준이다 (ADR 0002 승인). 권한 메커니즘(롤 분리)의 담당 스토리는 미정이다 (PR #11의 개발 환경은 단일 계정 구성)
 - 이 문서의 S1 확정분은 V1 마이그레이션(`backend/src/main/resources/db/migration/V1__create_s1_core_tables.sql`)으로 DB에 반영된다
-- 표기 도구: 지금은 mermaid 텍스트로 작성한다. 제안 문서의 tbls는 실제 DB에서 생성하는 도구라, MS2-31로 DB가 생긴 뒤 자동 생성으로 전환한다
+- 표기 도구: 다이어그램과 컬럼/제약 목록은 `generated/`에 tbls로 생성한다 (MS2-31). 기계가 뽑을 수 있는 것은 이 문서에 옮겨 적지 않는다
+
+## 이 문서와 generated/의 관계
+
+`generated/`는 마이그레이션을 적용한 DB에서 tbls가 뽑은 렌더링이다. 컬럼, 제약, 인덱스, 트리거의 실제 정의와 ER 다이어그램이 거기 있다. 손으로 고치지 않는다 (다음 재생성에서 덮어써진다).
+
+이 문서는 그 스키마가 왜 그 모양인지를 담는다. 결정 번호, 이관 항목, 아직 테이블이 없는 엔티티, DB 제약으로 표현되지 않는 정책(시각 귀속 경계 등)은 여기에만 있다.
+
+둘이 어긋나면 정책의 정본은 이 문서다. 다만 `generated/`는 실제 DB에서 뽑은 것이라, 다르다는 사실 자체가 마이그레이션과 정책이 어긋났다는 신호다. **어느 쪽이 맞는지 혼자 정하지 말고 팀에 먼저 알린다.** 대개는 이 문서에 근거를 보태는 쪽으로 끝나지만, 이 문서를 무시하고 스키마를 고쳐도 된다는 뜻은 아니다.
+
+문서 버전 관리는 git 히스토리에 맡긴다. 아래 개정 이력은 v2.2까지의 기록으로 두고 더 늘리지 않는다.
 
 ## 엔티티 6종 (결정 0) + 지원 테이블 2종 (MS2-27)
 
@@ -31,115 +41,18 @@ v2에서 MS2-27 인증/멱등 규약이 요구하는 지원 테이블 2종(API_K
 
 ## ERD
 
-```mermaid
-erDiagram
-    ORGANIZATION ||--o{ API_KEYS : "인증 키를 발급받는다"
-    ORGANIZATION ||--o{ IDEMPOTENCY_KEYS : "멱등키 기록을 남긴다"
-    ORGANIZATION ||--o{ CUSTOMER : "고객을 보유한다"
-    ORGANIZATION ||--o{ METER : "미터를 정의한다"
-    ORGANIZATION ||--o{ PRICE_POLICY : "가격정책을 정의한다"
-    ORGANIZATION ||--o{ USAGE_EVENT : "이벤트를 전송한다"
-    ORGANIZATION ||--o{ DRAFT_INVOICE : "청구 예정액을 조회한다"
+다이어그램과 컬럼/제약 목록은 [`generated/README.md`](generated/README.md)에 있다.
 
-    CUSTOMER |o--o{ USAGE_EVENT : "귀속된다 (미해소 시 NULL)"
-    METER |o--o{ USAGE_EVENT : "집계 대상으로 삼는다 (미해소 시 NULL)"
-    METER ||--o{ PRICE_POLICY : "단가가 적용된다"
+S1 범위지만 아직 테이블이 없어 `generated/`에 나타나지 않는 엔티티가 둘 있다.
 
-    CUSTOMER ||--o{ DRAFT_INVOICE : "청구 대상이다"
-    DRAFT_INVOICE ||--|{ INVOICE_LINE_ITEM : "청구 항목으로 구성된다"
-    INVOICE_LINE_ITEM }o--|| METER : "어떤 미터의 요금인지 가리킨다"
+| 엔티티 | 관계 | S1에서 확정된 것 |
+|---|---|---|
+| DRAFT_INVOICE | ORGANIZATION 1 : N, CUSTOMER 1 : N | 엔티티와 관계뿐. 테이블로 저장할지, 청구 기간과 draft 상태를 어떻게 표현할지는 MS2-41 착수 시 결정한다 |
+| INVOICE_LINE_ITEM | DRAFT_INVOICE 1 : N, METER N : 1 | 고정밀 원본값(precise_amount)과 확정 금액(amount_krw)의 병행 저장 (결정 5 부속, 재논의 불가). 사용량 표현은 MS2-39 결과에 의존한다 |
 
-    ORGANIZATION {
-        uuid id PK "내부 PK (결정 6)"
-    }
+## 제약과 근거 (generated/와 세트로 읽는다)
 
-    API_KEYS {
-        uuid id PK
-        uuid organization_id FK "NOT NULL, 도입사 1 : 키 N (무중단 회전)"
-        text key_hash "인증 대조용 해시, 평문 저장 금지, 유니크"
-        text key_prefix "화면 식별용 앞자리 (me_sk_live_ 등)"
-        text environment "live / test"
-        text scope "events:write / read (MVP 2단)"
-        timestamptz expires_at "회전 시 구 키 유예기간, NULL이면 무기한"
-        timestamptz revoked_at "즉시 폐기. 행 삭제 금지 (감사 추적)"
-        timestamptz last_used_at "회전 후 이 키가 아직 쓰이나 판단 근거"
-        timestamptz created_at "발급 시각"
-    }
-
-    IDEMPOTENCY_KEYS {
-        uuid id PK
-        uuid organization_id FK "NOT NULL"
-        text endpoint "키 유효 범위의 한 축 -- (도입사, 엔드포인트, 키)"
-        text idempotency_key "요청 헤더 Idempotency-Key 원문"
-        text request_fingerprint "요청 내용 지문, 같은 키에 다른 내용이면 422"
-        text status "processing / completed"
-        int response_status "원 응답 상태코드, 완료 시 저장"
-        text response_body "원 응답 바디 그대로 (실패 응답 포함 재생)"
-        timestamptz created_at "보존 기간(최소 24시간) 기산점"
-    }
-
-    CUSTOMER {
-        uuid id PK "등록 시 발급, 영구 불변 (결정 6)"
-        uuid organization_id FK "NOT NULL (결정 0)"
-        text external_id "도입사가 지은 이름 (결정 6)"
-        text name "화면 표시용 이름 (MS2-27 필수 입력)"
-        timestamptz created_at "API 응답 필수 (MS2-27)"
-        timestamptz deleted_at "soft delete, 살아있는 행끼리만 (org, external_id) 유니크"
-    }
-
-    METER {
-        uuid id PK "등록 시 발급, 영구 불변 (결정 6)"
-        uuid organization_id FK "NOT NULL (결정 0)"
-        text code "도입사가 지은 이름 (결정 6)"
-        text name "화면 표시용 이름 (MS2-27 필수 입력)"
-        text aggregation_type "COUNT / SUM (SUM 대상 속성 컬럼은 MS2-39)"
-        timestamptz created_at "API 응답 필수 (MS2-27)"
-        timestamptz deleted_at "soft delete, 살아있는 행끼리만 (org, code) 유니크"
-    }
-
-    USAGE_EVENT {
-        uuid id PK "DB 기본값 gen_random_uuid()로 생성"
-        uuid organization_id FK "NOT NULL (결정 0)"
-        text transaction_id "멱등키, (org, transaction_id) 유니크 (결정 1)"
-        text external_customer_id "받은 원문 보존 (결정 1-B)"
-        uuid customer_id FK "수신 시 해소, 미해소면 NULL (결정 1-B)"
-        text code "받은 원문 보존 (결정 1-B)"
-        uuid meter_id FK "수신 시 해소, 미해소면 NULL (결정 1-B)"
-        jsonb properties "키 정책은 MS2-27 확정 (키 50개, 이름 1~64자)"
-        timestamptz occurred_at "발생 시각, NOT NULL, UTC (결정 2)"
-        timestamptz received_at "수신 시각, NOT NULL, 서버가 찍음 (결정 2)"
-    }
-
-    PRICE_POLICY {
-        uuid id PK
-        uuid organization_id FK "NOT NULL (결정 0)"
-        uuid meter_id FK "NOT NULL, 미터 1 : 정책 N"
-        bigint unit_price_krw "단가, 원 단위 정수 (결정 5)"
-        bigint unit_size "묶음 수량, (4, 1000) = 1000토큰당 4원 (결정 5)"
-        timestamptz created_at "행 생성 시각. API 응답 updated_at의 원천 (아래 제약 표)"
-    }
-
-    DRAFT_INVOICE {
-        uuid id PK
-        uuid organization_id FK "NOT NULL (결정 0)"
-        uuid customer_id FK "NOT NULL"
-        text period "청구 기간 정의는 MS2-41 착수 시 확정"
-        text status "draft 상태의 최소 표현은 MS2-41 착수 시 확정"
-    }
-
-    INVOICE_LINE_ITEM {
-        uuid id PK
-        uuid invoice_id FK "NOT NULL"
-        uuid meter_id FK "NOT NULL, 요금 출처 미터"
-        text quantity "미터별 사용량, 표현은 MS2-41 착수 시 확정"
-        numeric precise_amount "고정밀 원본값, 병행 저장 (결정 5 부속, 확정)"
-        bigint amount_krw "확정 금액, 원 단위 정수 (결정 5, 확정)"
-    }
-```
-
-DRAFT_INVOICE와 INVOICE_LINE_ITEM은 엔티티와 관계만 S1 범위이고, 테이블 정의(컬럼 확정)는 MS2-41 착수 시 한다. 위 다이어그램에서 "MS2-41 착수 시 확정"이 붙은 속성은 자리 표시이며, 확정된 것은 precise_amount와 amount_krw 병행 저장뿐이다.
-
-## mermaid로 표현하지 못한 제약 (V1 마이그레이션과 세트로 읽는다)
+제약의 실제 정의는 `generated/`가 DB에서 뽑는다. 이 표는 그 제약이 왜 있는지와, DB 제약으로 표현되지 않는 정책을 담는다.
 
 | 대상 | 제약 | 근거 |
 |---|---|---|
@@ -196,6 +109,8 @@ DRAFT_INVOICE와 INVOICE_LINE_ITEM은 엔티티와 관계만 S1 범위이고, �
 | MS2-46 화면 | **추가 결정 없음.** 조회 전용이고 S1 API만 호출한다. 미해소 이벤트 건수는 MS2-27이 집계 조회 응답의 unresolved_events_count로 확정했다 (이 ERD의 customer_id/meter_id NULL 설계가 근거) |
 
 ## 개정 이력
+
+v2.2까지의 기록이다. 이후 변경은 git 히스토리로 추적하고 이 표를 늘리지 않는다 (MS2-31).
 
 | 버전 | 날짜 | 내용 |
 |---|---|---|
