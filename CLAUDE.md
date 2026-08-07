@@ -8,7 +8,7 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 - `backend/`: 미터링 엔진 API 서버
 - `frontend/`: 관리자 화면
-- `docs/`: 코드가 원인인 문서 (시스템 사양, OpenAPI, ADR, 스키마)
+- `docs/`: 무엇을 둘지 미정 (아래 "문서 흐름" 참조)
 - `work/`: 개인 작업 공간 (.gitignore로 제외, 아래 참조)
 
 ## 개인 작업 공간 (work/)
@@ -26,16 +26,16 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 ## 현재 상태 (중요)
 
-- 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일 (docs/adr/ 0001~0005 참조). 세부 라이브러리는 MS2-31, 프론트엔드 상세는 MS2-46에서 정한다
-- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로)는 확정, GitHub 브랜치 보호로 강제된다. 네이밍/머지 방식 등 나머지는 개발 환경 구축(MS2-31)에서 합의한다. 요약은 CONTRIBUTING.md, 정본은 Notion "개발 워크플로" 페이지
-- MVP 범위는 MS2-24 정의서 기준으로 진행 중이며 확정본이 아니다. 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
+- 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 라이브러리는 MS2-31, 프론트엔드 상세는 MS2-46에서 정한다
+- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로)는 확정, GitHub 브랜치 보호로 강제된다. 네이밍/머지 방식 등 나머지는 개발 환경 구축(MS2-31)에서 합의한다. 정본은 CONTRIBUTING.md
+- 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
 - 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
 
 ## 팀과 협업 도구
 
 - 팀: 박성종(팀 리드), 문인호, 양성지 / 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기)
 - Jira/Confluence: https://asm17-ms2.atlassian.net (Jira 프로젝트 키 MS2, Confluence의 MS2 스페이스)
-- Notion: MS2 팀 위키, https://app.notion.com/p/d210899b32b883148ab281a902fedf74 (합의가 원인인 문서의 정본, 아래 "문서 흐름" 참조)
+- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (어떤 문서를 여기에 둘지는 미정, 아래 "문서 흐름" 참조)
 - 팀 GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling)
 
 ## 개발 방법론
@@ -43,20 +43,11 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 빅뱅 설계를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다.
 
 - 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다
-- 문서(API 명세, ADR, ERD)는 living document다. 슬라이스 착수 시점에 필요한 범위만 확정하고 구현에서 배운 것을 반영해 버전을 올린다. 문서에는 버전과 반영 범위를 명시한다
-- 되돌리기 어려운 결정은 첫 슬라이스 전에 확정한다: 이벤트 멱등키(transaction_id), occurred_at/received_at 시각 필드 구분, raw 이벤트 불변성(정정은 이벤트로), 자금 미경유 구조
 - 명세서나 정책 문서를 작성할 때 현재 슬라이스 범위와 미정 범위를 구분해 쓴다
 
 ## 문서 흐름
 
-- 문서 분류와 위치는 `docs/문서-관리-규칙.md`가 정본이다. 새 문서를 만들기 전에 그 문서의 판별 순서를 따른다
-- 코드가 원인인 문서는 이 레포 `docs/`에 둔다: `docs/spec/`(시스템 사양), `docs/api/`(OpenAPI), `docs/adr/`(아키텍처 결정), `docs/erd/`(스키마, 생성물). 코드와 같은 PR에서 리뷰한다
-- 합의가 원인인 문서(제품 정의, 슬라이스 시퀀스, 회의록)는 Notion의 MS2 팀 위키가 정본이다 (주소는 위 "팀과 협업 도구" 참조)
-- 코드가 참조하는 값(절사 방식, 보존 기간 등)의 정본은 `docs/spec/`이다. 값을 Notion과 레포에 나눠 두지 않는다. Notion 정책 문서가 값을 인용할 때는 정본 경로를 병기한다
-- `docs/api/openapi.yaml`은 수기 정본, `docs/api/generated/openapi.yaml`은 springdoc 생성물이다. 생성물은 손으로 고치지 않는다 (다음 빌드에서 덮어써진다)
-- backend의 컨트롤러, DTO, OpenAPI 어노테이션을 바꿨으면 `cd backend && ./gradlew build`로 생성물을 재생성하고 **소스와 같은 커밋에 포함한다.** 빠뜨리면 CI backend job이 실패한다. 생성물을 커밋해 두는 목적은 PR diff에 API 표면 변화를 드러내는 것이다 (상세는 `docs/api/README.md`의 "구현 스냅샷")
-- `docs/erd/erd.md`는 수기 정책 정본, `docs/erd/generated/`는 tbls 생성물이다. 생성물은 손으로 고치지 않는다. 컬럼과 제약의 짧은 근거는 마이그레이션의 `COMMENT ON`에서 온다
-- DB 마이그레이션(`backend/src/main/resources/db/migration/V*.sql`)을 바꿨으면 `./scripts/generate-erd.sh`로 생성물을 재생성하고 **마이그레이션과 같은 커밋에 포함한다.** 빠뜨리면 CI erd job이 실패한다 (상세는 `docs/erd/README.md`)
+TODO (MS2-116): 문서를 어디에 둘지 미정이다. 규칙의 정본은 `docs/document-rules.md`이며, 새 문서를 만들기 전에 그 파일을 보고 없는 내용이면 먼저 물어본다.
 
 ## 출력 형식
 

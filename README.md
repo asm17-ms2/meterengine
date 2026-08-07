@@ -6,24 +6,18 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle (ADR 0001) |
-| `frontend/` | 관리자 화면. Next.js + TypeScript (ADR 0001) |
-| `docs/` | 코드가 원인인 문서: 시스템 사양, OpenAPI 명세, ADR, 스키마 |
+| `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
+| `frontend/` | 관리자 화면. Next.js + TypeScript |
+| `docs/` | 무엇을 둘지 미정 (`docs/document-rules.md`) |
 | `work/` | 개인 작업 공간. .gitignore로 제외되며 각자 만들어 쓴다 (CLAUDE.md 참조) |
 
 ## 개발 방식
 
-빅뱅 설계(명세와 정책을 전부 확정한 뒤 개발 시작)를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다.
-
-- 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다 (예: 이벤트 수집 -> 집계 -> rating -> draft 인보이스)
-- 문서(API 명세, ADR, ERD)는 living document다. 슬라이스 착수 시점에 그 슬라이스에 필요한 범위만 확정하고, 구현에서 배운 것을 반영해 버전을 올린다
-- 단, 되돌리기 어려운 결정은 첫 슬라이스 전에 확정한다: 이벤트 멱등키(transaction_id), occurred_at/received_at 시각 필드, raw 이벤트 불변성, 자금 미경유 구조
+빅뱅 설계(명세와 정책을 전부 확정한 뒤 개발 시작)를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다. 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다 (예: 이벤트 수집 -> 집계 -> rating -> draft 인보이스).
 
 ## 문서 위치 규칙
 
-무엇이 바뀔 때 문서가 바뀌는지로 나눈다. 코드가 원인인 문서는 이 레포의 `docs/`에 두고 코드와 같은 PR에서 리뷰한다. 합의가 원인인 문서(제품 정의, 슬라이스 시퀀스, 회의록)는 Notion의 MS2 팀 위키가 정본이다.
-
-분류 기준과 판별 순서는 [`docs/문서-관리-규칙.md`](docs/문서-관리-규칙.md)에 있다. 새 문서를 만들기 전에 본다.
+TODO (MS2-116): 미정이다. 규칙은 [`docs/document-rules.md`](docs/document-rules.md)에서 정한다.
 
 ## 시작하기
 

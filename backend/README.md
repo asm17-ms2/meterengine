@@ -4,12 +4,12 @@
 
 ## 기술 스택
 
-- Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL (ADR 0001). 버전은 `gradle/libs.versions.toml`에서 관리한다
-- PostgreSQL 단일 저장소 (ADR 0002), DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다 (ADR 0004)
-- 스키마 마이그레이션: Flyway (`src/main/resources/db/migration/`)
-- API 명세: spec-first로 시작한다. 명세는 `docs/api/`에 두고(MS2-27에서 작성), springdoc-openapi는 구현 스냅샷을 만들어 명세와 대조하는 용도로 쓴다. 정본 정책은 API 표면별로 다르다: 고객 대면 API는 수기 명세가 계속 정본, 콘솔 내부 API는 구현 완료 후 springdoc 생성물로 정본을 승격한다 (상세는 `docs/api/README.md`)
+- Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
+- PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
+- 스키마 마이그레이션: Flyway. 아직 마이그레이션이 없다. 첫 마이그레이션은 `src/main/resources/db/migration/`에 둔다
+- API 명세: 아직 없다. 어디에 둘지는 `docs/document-rules.md` 참조
 - API 문서 UI: Scalar. 앱을 띄우면 `/scalar`에 뜬다. 원본 문서는 `/v3/api-docs`(JSON)와 `/v3/api-docs.yaml`이다. Swagger UI는 쓰지 않는다. 두 UI가 같은 문서를 보여줄 이유가 없어 `springdoc-openapi-starter-webmvc-ui` 대신 `-scalar`를 쓴다. 렌더링 JS가 jar에 번들되어 앱이 직접 서빙하므로 CDN을 타지 않고 버전이 의존성에 고정된다
-- 테스트: JUnit 5 + AssertJ + Testcontainers. DB 제약 동작을 실제 PostgreSQL로 검증한다
+- 테스트: JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 실제 PostgreSQL 컨테이너로 돌린다
 - 코드 포맷: Spotless + google-java-format. CI에서 검사한다
 
 ## 실행
@@ -29,8 +29,6 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ./gradlew spotlessApply  # 포맷 자동 적용
 ```
 
-`build`는 `OpenApiSnapshotTest`로 `docs/api/generated/openapi.yaml`(구현 스냅샷)을 다시 만든다. **컨트롤러나 DTO를 건드렸다면 이 파일도 같은 커밋에 넣어야 한다.** 빼먹으면 CI backend job이 실패한다. 이유와 정본 관계는 `docs/api/README.md`의 "구현 스냅샷" 절에 있다.
-
 ## 구조
 
-단일 Gradle 모듈 + 도메인별 패키지 분리로 시작한다 (ADR 0005). 도메인 패키지 목록은 슬라이스를 진행하며 도출하고, 경계는 코드 리뷰로 지킨다.
+단일 Gradle 모듈 + 도메인별 패키지 분리로 시작한다. 도메인 패키지 목록은 슬라이스를 진행하며 도출하고, 경계는 코드 리뷰로 지킨다.
