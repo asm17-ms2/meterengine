@@ -1,8 +1,0 @@
-# tbls가 graphviz로 그린 ER 다이어그램을 PR diff에서 접는다. 컬럼 하나만 늘어도
-# 전체 좌표가 다시 잡혀 수백 줄이 바뀌는데, 사람이 읽을 내용이 아니다.
-# 스키마 변화는 마이그레이션 SQL과 같은 디렉터리의 .md 표에 그대로 드러나고
-# 그쪽이 리뷰할 내용이다. 그림 자체를 비교하려면 GitHub의 리치 diff를 쓴다.
-#
-# 같은 이유로 .md와 docs/api/generated는 접지 않는다. 생성물을 커밋해 두는 목적이
-# PR diff에 표면 변화를 드러내는 것이라 접으면 목적이 사라진다.
-docs/erd/generated/*.svg linguist-generated=true

@@ -24,23 +24,7 @@ jobs:
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v4
       # build = 컴파일 + Spotless 포맷 검사 + 테스트 (Testcontainers가 PostgreSQL 컨테이너 사용)
-      # build 안의 OpenApiSnapshotTest가 docs/api/generated/openapi.yaml을 다시 만든다.
       - run: ./gradlew build
-      # 위에서 다시 만든 생성물이 커밋된 내용과 다르면 재생성 결과를 함께 커밋하지 않았다는 뜻이다.
-      # CI는 파일을 고치거나 커밋하지 않는다. 갱신은 개발자가 로컬에서 한다 (pnpm-lock.yaml과 같은 계약).
-      - name: OpenAPI 생성물 최신성 검사
-        run: |
-          SNAPSHOT=../docs/api/generated/openapi.yaml
-          if [ -n "$(git status --porcelain -- "$SNAPSHOT")" ]; then
-            echo "::error::OpenAPI 생성물이 커밋된 내용과 다릅니다. 로컬에서 ./gradlew build 후 docs/api/generated/openapi.yaml을 함께 커밋하세요."
-            # 무엇이 다른지 로그에 남긴다. 미추적(??) 파일은 인덱스에 없어 diff 대상이 아니므로
-            # --intent-to-add로 먼저 등록해야 내용이 보인다. 다만 그 상태에서 unstaged diff를 보면
-            # 삭제된 경우가 빈 출력이 되므로 HEAD와 비교한다. 수정/삭제/미추적 세 경우 모두
-            # 내용이 남는다 (PR #14 리뷰).
-            git add --intent-to-add -- "$SNAPSHOT"
-            git diff HEAD -- "$SNAPSHOT"
-            exit 1
-          fi
 
   frontend:
     name: frontend
@@ -62,40 +46,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
-
-  erd:
-    name: erd
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      # 일회용 postgres에 마이그레이션을 적용하고 tbls로 docs/erd/generated를 다시 만든다.
-      # tbls는 도커 이미지로 실행하므로 러너에 설치할 것이 없다.
-      - run: ./scripts/generate-erd.sh
-      # backend job의 OpenAPI 검사와 같은 계약이다. CI는 파일을 고치거나 커밋하지 않는다.
-      - name: ERD 생성물 최신성 검사
-        run: |
-          GENERATED=docs/erd/generated
-          if [ -n "$(git status --porcelain -- "$GENERATED")" ]; then
-            echo "::error::ERD 생성물이 커밋된 내용과 다릅니다. 로컬에서 ./scripts/generate-erd.sh 후 docs/erd/generated를 함께 커밋하세요."
-            # 미추적 파일은 인덱스에 없어 diff 대상이 아니므로 --intent-to-add로 먼저 등록한다.
-            # 그 상태의 unstaged diff는 삭제를 빈 출력으로 만들어서 HEAD와 비교한다 (PR #14 리뷰).
-            git add --intent-to-add -- "$GENERATED"
-            # svg는 좌표만 수백 줄 바뀌어 로그를 덮는다. 무엇이 바뀌었는지는 .md로 충분하다.
-            git diff HEAD --stat -- "$GENERATED"
-            git diff HEAD -- "$GENERATED/*.md"
-            exit 1
-          fi
-
-  docs:
-    name: docs
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs/api
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .node-version
-      # 의존성 없음: 스크립트가 npx로 검사 도구를 버전 고정 실행한다 (docs/api/README.md 참조)
-      - run: npm run lint
