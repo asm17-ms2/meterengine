@@ -27,14 +27,14 @@ CREATE TABLE organization (
 -- ----------------------------------------------------------------------------
 CREATE TABLE billable_metric (
   organization_id UUID NOT NULL REFERENCES organization(id),
-  metric_code     VARCHAR NOT NULL,
+  code            VARCHAR NOT NULL,
   name            VARCHAR NOT NULL,
   event_type      VARCHAR NOT NULL,
   aggregation     VARCHAR NOT NULL,
   target_property VARCHAR,
   unit_price      NUMERIC NOT NULL CHECK (unit_price >= 0),
 
-  PRIMARY KEY (organization_id, metric_code)
+  PRIMARY KEY (organization_id, code)
 );
 
 -- ----------------------------------------------------------------------------
