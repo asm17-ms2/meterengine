@@ -78,3 +78,41 @@ CREATE TABLE usage_event (
     FOREIGN KEY (organization_id, customer_id)
     REFERENCES customer (organization_id, id)
 );
+
+-- received_at 강제 (스토리 MS2-121 팀 정책 "클라이언트 값은 무시한다"):
+-- DEFAULT는 컬럼을 생략한 INSERT에만 적용되어 앱이 값을 넣으면 그대로
+-- 저장된다 (ORM이 전체 필드를 INSERT에 넣으면 바로 그 경로). 트리거가
+-- 항상 DB 서버 시각으로 덮어써 received_at을 서버의 사실로 만든다.
+-- DEFAULT는 트리거가 해제된 경우의 안전망으로 유지한다.
+CREATE FUNCTION usage_event_set_received_at() RETURNS trigger AS $$
+BEGIN
+  NEW.received_at := clock_timestamp();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER usage_event_set_received_at
+  BEFORE INSERT ON usage_event
+  FOR EACH ROW EXECUTE FUNCTION usage_event_set_received_at();
+
+-- 불변 가드 (스토리 MS2-121 팀 정책 "저장된 이벤트는 UPDATE/DELETE 되지
+-- 않는다. DB가 막는다"): raw 청구 근거는 append-only다. 정정이 필요하면
+-- 수정이 아니라 새 이벤트로 한다.
+-- TRUNCATE는 행 트리거를 타지 않으므로 문장 트리거를 따로 건다.
+CREATE FUNCTION usage_event_block_mutation() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'usage_event is append-only: UPDATE/DELETE/TRUNCATE is blocked';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER usage_event_block_update
+  BEFORE UPDATE ON usage_event
+  FOR EACH ROW EXECUTE FUNCTION usage_event_block_mutation();
+
+CREATE TRIGGER usage_event_block_delete
+  BEFORE DELETE ON usage_event
+  FOR EACH ROW EXECUTE FUNCTION usage_event_block_mutation();
+
+CREATE TRIGGER usage_event_block_truncate
+  BEFORE TRUNCATE ON usage_event
+  FOR EACH STATEMENT EXECUTE FUNCTION usage_event_block_mutation();
