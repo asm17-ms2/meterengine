@@ -27,7 +27,7 @@ import org.springframework.util.StreamUtils;
 class SeedDataTest {
 
   /** 요청 헤더로 보낼 도입사 ID. 시드가 고정값으로 넣기 때문에 테스트가 값을 알 수 있다. */
-  private static final String SEED_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000001";
+  private static final String SEED_ORGANIZATION_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
   @Autowired private JdbcTemplate jdbc;
 

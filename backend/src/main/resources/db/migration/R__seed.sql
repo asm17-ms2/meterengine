@@ -26,26 +26,32 @@
 --   운영 프로파일 제외를 검토한다.
 -- ============================================================================
 
--- 고정 UUID를 쓰는 이유 두 가지
+-- id를 고정하는 이유 두 가지
 --   1) 인증을 뺐기 때문에(8/10 결정) 도입사 ID를 요청 헤더로 보낸다. curl 테스트와
---      프론트엔드(MS2-127)가 손으로 다루는 값이라 사람이 알아볼 수 있어야 한다
+--      프론트엔드(MS2-127)가 이 값을 그대로 쓰므로 실행할 때마다 달라지면 안 된다
 --   2) id를 생략하면 DEFAULT gen_random_uuid()가 매번 새 행을 만든다. 충돌 자체가 나지
 --      않아 ON CONFLICT가 발동하지 못한다. 값을 박아야 재실행이 성립한다
 --      (V1의 PK는 중복 행을 막아 주고, ON CONFLICT는 재실행이 에러로 죽지 않게 한다.
 --       층이 달라 둘 다 필요하다. ON CONFLICT를 빼고 두 번 돌리면 PK 위반으로 실패한다)
--- 끝자리로 역할이 구분된다. 도입사는 ...0001, 고객은 ...0011번대.
+--
+-- 값은 UUID 생성기로 뽑은 실제 v4다 (26-08-10 데일리 스크럼 결정). 00000000-...-0001
+-- 같은 값은 읽기는 쉬우나 버전 자리가 0이라 v1~v8 어디에도 속하지 않고, 실제 데이터와
+-- 형태가 달라 오해를 부른다. 대신 값만 보고는 역할을 알 수 없으므로 행마다 주석을 단다.
 
+-- 이 id가 요청 헤더(X-Organization-Id)에 실려 오는 값이다.
 INSERT INTO organization (id, name) VALUES
-  ('00000000-0000-0000-0000-000000000001', '데모 도입사')
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', '데모 도입사')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 고객이 2명인 이유: MS2-124 인수 조건에 "이벤트 없는 고객은 사용량 0, 금액 0"이 있다.
 -- 한 명뿐이면 그 케이스를 만들 수 없어서, 이벤트를 받는 고객과 받지 않는 고객을 함께 둔다.
 INSERT INTO customer (id, organization_id, name) VALUES
-  ('00000000-0000-0000-0000-000000000011',
-   '00000000-0000-0000-0000-000000000001', '아크메 주식회사'),
-  ('00000000-0000-0000-0000-000000000012',
-   '00000000-0000-0000-0000-000000000001', '베타 스튜디오')
+  -- 이벤트를 받는 고객. 수집 API 테스트와 데모가 이 id로 이벤트를 보낸다
+  ('a728e7b6-d82b-4f3c-a960-a66a02794c1d',
+   'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '아크메 주식회사'),
+  -- 이벤트가 없는 고객. 사용량 0, 금액 0으로 보이는지 확인하는 쪽이다
+  ('252339bc-d5f8-472d-b5d6-ed8554049450',
+   'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '베타 스튜디오')
 ON CONFLICT (id) DO UPDATE SET
   organization_id = EXCLUDED.organization_id,
   name            = EXCLUDED.name;
@@ -64,7 +70,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- TODO(후속 스토리): target_property가 token이 아닌 미터가 생기면 행을 추가한다.
 INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property, unit_price) VALUES
-  ('00000000-0000-0000-0000-000000000001', 'token-usage', '토큰 사용량',
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '토큰 사용량',
    'chat_completion', 'SUM', 'token', 0.5)
 ON CONFLICT (organization_id, code) DO UPDATE SET
   name            = EXCLUDED.name,
