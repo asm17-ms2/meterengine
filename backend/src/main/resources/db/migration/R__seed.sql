@@ -52,9 +52,11 @@ INSERT INTO customer (id, organization_id, name) VALUES
   -- 이벤트가 없는 고객. 사용량 0, 금액 0으로 보이는지 확인하는 쪽이다
   ('252339bc-d5f8-472d-b5d6-ed8554049450',
    'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '베타 스튜디오')
-ON CONFLICT (id) DO UPDATE SET
-  organization_id = EXCLUDED.organization_id,
-  name            = EXCLUDED.name;
+-- organization_id는 일부러 갱신 대상에서 뺐다. 고객이 도입사를 옮기는 것은 테넌트 경계
+-- 변경이라 시드 재실행이 조용히 할 일이 아니다. 실제로도 그 고객의 이벤트가 한 건이라도
+-- 있으면 복합 FK usage_event_customer_same_org가 막아 migrate가 실패한다(실측). 시드에서
+-- 도입사를 바꿔야 할 일이 생기면 그때 별도 마이그레이션으로 다룬다.
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 각 값의 근거
 --   event_type      이벤트가 미터를 지목하는 매칭 키. SchemaConstraintTest가 쓰는 값과
