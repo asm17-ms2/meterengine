@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,22 @@ class SeedDataTest {
 
     assertThat(rowCount("organization")).isEqualTo(1);
     assertThat(rowCount("customer")).isEqualTo(2);
+    assertThat(rowCount("billable_metric")).isEqualTo(1);
+  }
+
+  /**
+   * R__은 파일이 곧 DB 상태라는 뜻이므로, 재실행이 값을 파일 기준으로 되돌려야 한다. DO NOTHING이면 이 테스트가 깨진다. 파일을 고쳐도 기존 행이 남아 에러
+   * 없이 무시되기 때문이다.
+   */
+  @Test
+  void 값이_바뀐_상태에서_시드를_다시_실행하면_파일_기준으로_되돌아온다() {
+    jdbc.update("UPDATE billable_metric SET unit_price = 999, name = '손으로 바꾼 이름'");
+
+    jdbc.execute(readSeedScript());
+
+    var metric = jdbc.queryForMap("SELECT name, unit_price FROM billable_metric");
+    assertThat(metric.get("name")).isEqualTo("토큰 사용량");
+    assertThat((BigDecimal) metric.get("unit_price")).isEqualByComparingTo("0.5");
     assertThat(rowCount("billable_metric")).isEqualTo(1);
   }
 

@@ -4,9 +4,22 @@
 -- 이번 슬라이스는 고객/미터/단가 등록 API를 만들지 않는다. 데이터가 들어오는 통로가
 -- 이 시드뿐이라, 수집(MS2-130)과 조회(MS2-124)가 붙을 기준 데이터를 여기서 만든다.
 --
--- 반복 마이그레이션(R__)인 이유: 마이그레이션과 함께 자동 적용돼야 MS2-128의
--- "단일 명령으로 클린 환경(마이그레이션 + 시드) 실행"이 성립한다. V2__로 두면 Flyway가
--- 두 번 돌리지 않아서, 멱등이 스크립트가 아니라 Flyway 덕분에 성립해버린다.
+-- Flyway 자리에 두는 이유: 마이그레이션과 함께 자동 적용돼야 MS2-128의 "단일 명령으로
+-- 클린 환경(마이그레이션 + 시드) 실행"이 성립한다.
+--
+-- 반복 마이그레이션(R__)인 이유 두 가지.
+--   1) 시드는 고쳐 쓰는 파일이다. 단가와 고객 이름은 앞으로 바뀐다. V__는 한 번 적용되면
+--      체크섬 감시 때문에 파일을 못 고치고, 고치면 불일치로 기동이 실패한다. 바꿀 때마다
+--      새 버전 파일을 만들어야 한다. R__은 체크섬이 바뀌면 다시 적용해서 파일이 정본이 된다
+--   2) 시드는 스키마가 다 갖춰진 뒤에 들어가야 한다. R__은 항상 모든 V__ 뒤에 실행된다.
+--      V2__ 시드였다면 클린 DB 재구축 시 V1 -> V2(시드) -> V3(스키마 변경) 순서가 되어,
+--      V3가 컬럼을 바꾸면 옛 시드가 그 자리에서 깨진다
+--
+-- ON CONFLICT가 DO UPDATE인 이유: R__의 의미가 "파일이 곧 상태"라서다. Flyway 공식 문서가
+-- 반복 마이그레이션의 멱등성 예시로 드는 CREATE OR REPLACE는 "아무것도 안 하기"가 아니라
+-- "파일 내용과 일치시키기"다. 데이터에서 그 짝이 DO UPDATE다. DO NOTHING으로 두면 파일을
+-- 고쳐도 기존 행이 남아 에러도 경고도 없이 무시된다(실측). 행 수는 늘지 않으므로 인수 조건
+-- "두 번 실행해도 중복 생성되지 않는다"는 그대로 만족한다.
 --
 -- TODO(배포 시점): 이 시드는 배포 환경에도 함께 적용된다. 8/10 플래닝에서 이번
 --   스프린트는 로컬 데모만 하기로 해서 지금은 문제가 없다. 배포가 생기는 스프린트에서
@@ -16,13 +29,15 @@
 -- 고정 UUID를 쓰는 이유 두 가지
 --   1) 인증을 뺐기 때문에(8/10 결정) 도입사 ID를 요청 헤더로 보낸다. curl 테스트와
 --      프론트엔드(MS2-127)가 손으로 다루는 값이라 사람이 알아볼 수 있어야 한다
---   2) id를 생략하면 DEFAULT gen_random_uuid()가 매번 새 행을 만든다. 충돌할 대상이
---      없어서 ON CONFLICT DO NOTHING이 아무 일도 하지 않는다. 값을 박아야 멱등이 된다
+--   2) id를 생략하면 DEFAULT gen_random_uuid()가 매번 새 행을 만든다. 충돌 자체가 나지
+--      않아 ON CONFLICT가 발동하지 못한다. 값을 박아야 재실행이 성립한다
+--      (V1의 PK는 중복 행을 막아 주고, ON CONFLICT는 재실행이 에러로 죽지 않게 한다.
+--       층이 달라 둘 다 필요하다. ON CONFLICT를 빼고 두 번 돌리면 PK 위반으로 실패한다)
 -- 끝자리로 역할이 구분된다. 도입사는 ...0001, 고객은 ...0011번대.
 
 INSERT INTO organization (id, name) VALUES
   ('00000000-0000-0000-0000-000000000001', '데모 도입사')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 고객이 2명인 이유: MS2-124 인수 조건에 "이벤트 없는 고객은 사용량 0, 금액 0"이 있다.
 -- 한 명뿐이면 그 케이스를 만들 수 없어서, 이벤트를 받는 고객과 받지 않는 고객을 함께 둔다.
@@ -31,7 +46,9 @@ INSERT INTO customer (id, organization_id, name) VALUES
    '00000000-0000-0000-0000-000000000001', '아크메 주식회사'),
   ('00000000-0000-0000-0000-000000000012',
    '00000000-0000-0000-0000-000000000001', '베타 스튜디오')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  organization_id = EXCLUDED.organization_id,
+  name            = EXCLUDED.name;
 
 -- 각 값의 근거
 --   event_type      이벤트가 미터를 지목하는 매칭 키. SchemaConstraintTest가 쓰는 값과
@@ -49,4 +66,9 @@ INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property, unit_price) VALUES
   ('00000000-0000-0000-0000-000000000001', 'token-usage', '토큰 사용량',
    'chat_completion', 'SUM', 'token', 0.5)
-ON CONFLICT (organization_id, code) DO NOTHING;
+ON CONFLICT (organization_id, code) DO UPDATE SET
+  name            = EXCLUDED.name,
+  event_type      = EXCLUDED.event_type,
+  aggregation     = EXCLUDED.aggregation,
+  target_property = EXCLUDED.target_property,
+  unit_price      = EXCLUDED.unit_price;
