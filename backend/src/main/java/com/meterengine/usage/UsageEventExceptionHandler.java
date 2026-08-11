@@ -19,12 +19,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 필드가 같고, 우리 것만 확장 멤버 code가 붙는다. 그 짝이 되는 프레임워크 쪽 설정은 application.properties의
  * spring.mvc.problemdetails.enabled다.
  *
+ * <p><b>이 컨트롤러에만 건다.</b> 셀렉터를 주지 않으면 advice는 전역이다. 그러면 나중에 고객 등록 API가 생겼을 때 거기서 난
+ * DataIntegrityViolationException까지 아래 핸들러로 와서 "이벤트를 저장할 수 없다"는 엉뚱한 응답이 나간다. 예외 타입을 좁혀서 막을 수는 없다.
+ * jsonb가 거부한 값(22P05)과 FK 위반(23503)이 둘 다 같은 DataIntegrityViolationException이라 어느 도메인에서 왔는지 구분되지 않기
+ * 때문이다. 범위를 묶어 두면 다른 컨트롤러는 프레임워크 기본 ProblemDetail을 받고, 필요한 도메인이 자기 advice를 따로 붙이면 된다.
+ *
  * <p><b>ResponseEntityExceptionHandler를 상속하면 안 된다.</b> 자동 설정이
  * {@code @ConditionalOnMissingBean(ResponseEntityExceptionHandler.class)}라 상속하는 순간 기본 처리가 통째로 물러난다.
- * 대신 {@code @Order}가 필요하다. 아래 검증 핸들러가 프레임워크 예외를 가로채는데, 자동 설정 핸들러가 {@code @Order(0)}이라 순서를 주지 않으면 기본
- * 처리가 이긴다.
+ * 대신 {@code @Order}가 필요하다. 범위를 좁혀도 이 컨트롤러에는 자동 설정 핸들러가 함께 걸린다. 아래 검증 핸들러가 프레임워크 예외를 가로채는데, 자동 설정
+ * 핸들러가 {@code @Order(0)}이라 순서를 주지 않으면 기본 처리가 이긴다.
  */
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = UsageEventController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class UsageEventExceptionHandler {
 
@@ -45,6 +50,8 @@ class UsageEventExceptionHandler {
    * 저장되지도 않을 이벤트를 영원히 재전송한다.
    *
    * <p>중복 키는 여기 오지 않는다. UsageEventIngestService가 먼저 잡아 200으로 답한다.
+   *
+   * <p>잡는 예외가 제약 위반 전반을 덮는 넓은 타입이라, 이 문구가 맞으려면 advice가 이 컨트롤러에만 걸려 있어야 한다 (클래스 javadoc 참조).
    */
   @ExceptionHandler(DataIntegrityViolationException.class)
   ProblemDetail handleRejectedByDatabase(DataIntegrityViolationException exception) {
