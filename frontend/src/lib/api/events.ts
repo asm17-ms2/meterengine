@@ -1,17 +1,10 @@
 import "server-only";
 
 import { serverFetch, type Result } from "@/lib/api/client";
-import { mockEventPage } from "@/lib/api/events.mock";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
-/**
- * GET /v1/events 응답. 백엔드의 EventPageResponse(MS2-131, PR #24)와 1:1이다.
- *
- * 그 PR이 아직 머지되지 않아서, METERENGINE_EVENTS_BASE_URL이 비어 있으면
- * events.mock.ts의 생성기가 같은 모양을 만들어 준다. 머지되면 환경변수만 채우면
- * 되고 이 파일은 그대로 둔다.
- */
+/** GET /v1/events 응답. 백엔드의 EventPageResponse(MS2-131)와 1:1이다. */
 export type EventPage = {
   /** 서버가 계산한 조회 월. 요청이 month를 생략했을 때 어느 달로 갔는지 알려준다. */
   month: string;
@@ -146,12 +139,7 @@ export async function loadEvents(
     };
   }
 
-  // GET /v1/events(MS2-131)가 머지되기 전까지는 내장 목을 쓴다.
-  if (config.eventsBaseUrl === null) {
-    return { ok: true, data: mockEventPage(query) };
-  }
-
-  return serverFetch<EventPage>(config.eventsBaseUrl, "/v1/events", {
+  return serverFetch<EventPage>(config.apiBaseUrl, "/v1/events", {
     month: query.month,
     page: String(query.page),
     size: String(PAGE_SIZE),
