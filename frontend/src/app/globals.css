@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Modernist 디자인 시스템. layer(components)로 넣는 것이 중요하다.
+   Tailwind v4의 @import "tailwindcss"가 theme < base < components < utilities
+   순서로 레이어를 선언하므로, 이 자리에 넣으면
+   - modernist의 h1..h6가 preflight 리셋을 이기고
+   - 같은 요소에 붙인 Tailwind 레이아웃 유틸은 여전히 modernist를 이긴다.
+   레이어 없이 임포트하면 언레이어 CSS가 모든 레이어를 이겨서
+   Tailwind 유틸이 아무것도 못 덮는다. */
+@import "../styles/modernist.css" layer(components);
+
+/* 콘솔 전용 클래스. 디자인 시스템에 없고 프로토타입이 인라인 style로 쓴 것들이다. */
+@import "../styles/console.css" layer(components);
+
+/* Tailwind 기본 테마와 modernist가 겹치는 네임스페이스를 지운다.
+   Tailwind v4는 --color-neutral-*, --radius-sm/md/lg, --shadow-sm/md/lg를
+   기본 테마로 정의하는데, modernist가 :root에서 셋 다 덮어쓴다.
+   그대로 두면 rounded-lg가 조용히 0px이 되고 bg-neutral-200이 다른 색이 된다.
+   네임스페이스를 지워 해당 유틸 자체를 없앤다. 색, 모서리, 그림자는
+   modernist 토큰으로만 간다 (var(--color-accent) 등을 직접 쓴다). */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme {
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, Menlo, monospace;
 }
