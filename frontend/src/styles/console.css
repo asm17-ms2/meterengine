@@ -249,8 +249,11 @@
   text-align: right;
 }
 
+/* 숫자와 시각. 줄바꿈을 막는 이유는 '2026-08-28 15:47:06' 같은 값이 칸보다 조금
+   좁을 때 공백에서 접혀 그 행만 두 줄이 되기 때문이다. */
 .grid-cell--num {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .grid-cell--mono {
@@ -285,6 +288,110 @@
   font-weight: 400;
   font-size: 12.5px;
   color: var(--text-55);
+}
+
+/* properties 미리보기 칸. grid-cell--mono보다 한 단계 작고 옅다. */
+.grid-cell--props {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-70);
+}
+
+/* - 페이지네이션 - */
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.pager__gap {
+  padding: 0 6px;
+  color: var(--text-45);
+}
+
+/* - 이벤트 상세 드로어 - */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--color-neutral-900) 35%, transparent);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
+  width: min(440px, 92vw);
+  background: var(--color-bg);
+  border-left: 2px solid var(--color-divider);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 2px solid var(--color-divider);
+}
+
+.drawer__body {
+  padding: 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawer__section-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-60);
+  margin-bottom: 6px;
+}
+
+.detail-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px 12px;
+  font-size: 13px;
+}
+
+.detail-grid dt {
+  color: var(--text-55);
+}
+
+/* 브라우저 기본 dd 들여쓰기를 지운다. 그리드 열이 위치를 정한다. */
+.detail-grid dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail-grid__mono {
+  font-family: var(--mono);
+}
+
+.raw-json {
+  margin: 0;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* - 빈 상태 - */
