@@ -30,18 +30,18 @@ function partsOf(value: Date): Record<string, string> {
   return out;
 }
 
-/** `2026-08-09 14:11:02` — 표 셀에 쓰는 형태. */
+/** `2026-08-09 14:11:02` - 표 셀에 쓰는 형태. */
 export function formatKstDateTime(iso: string): string {
   const p = partsOf(new Date(iso));
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
 }
 
-/** `2026-08-09 14:12:04 KST` — 필터 행의 조회 시각. */
+/** `2026-08-09 14:12:04 KST` - 필터 행의 조회 시각. */
 export function formatKstStamp(value: Date): string {
   return `${formatKstDateTime(value.toISOString())} KST`;
 }
 
-/** `2026년 8월` — 화면 제목용. `yyyy-MM`을 받는다. */
+/** `2026년 8월` - 화면 제목용. `yyyy-MM`을 받는다. */
 export function formatKoreanMonth(month: string): string {
   const [year, mm] = month.split("-");
   return `${year}년 ${Number(mm)}월`;

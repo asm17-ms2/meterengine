@@ -11,7 +11,7 @@ export function TopNav() {
     >
       <span className="nav-brand">MeterEngine</span>
       <span style={{ fontSize: 12, color: "var(--text-55)" }}>
-        관리자 콘솔 · {config.organizationName} ({config.organizationId})
+        관리자 콘솔, {config.organizationName} ({config.organizationId})
       </span>
     </div>
   );
