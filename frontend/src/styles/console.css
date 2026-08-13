@@ -1,0 +1,360 @@
+/* 관리자 콘솔 전용 스타일.
+ *
+ * Modernist 디자인 시스템(modernist.css)에 없는 것들만 여기 둔다. 디자인 프로토타입
+ * (관리자 콘솔.dc.html)이 인라인 style로 쓴 레이아웃, hover, 그리드 표를 옮긴 것이다.
+ * modernist.css는 디자인 원본과 diff를 유지해야 해서 건드리지 않는다.
+ *
+ * 그리드 표의 grid-template-columns는 화면마다 달라서 컴포넌트에서 인라인으로 준다. */
+
+:root {
+  /* 디자인이 반복해서 쓰는 본문색 투명도 단계 */
+  --text-45: color-mix(in srgb, var(--color-text) 45%, transparent);
+  --text-50: color-mix(in srgb, var(--color-text) 50%, transparent);
+  --text-55: color-mix(in srgb, var(--color-text) 55%, transparent);
+  --text-60: color-mix(in srgb, var(--color-text) 60%, transparent);
+  --text-65: color-mix(in srgb, var(--color-text) 65%, transparent);
+  --text-70: color-mix(in srgb, var(--color-text) 70%, transparent);
+
+  --mono: ui-monospace, Menlo, monospace;
+}
+
+/* - 셸 - */
+
+.console-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.console-sidebar {
+  position: sticky;
+  top: 54px;
+  align-self: start;
+  height: calc(100vh - 54px);
+  overflow: auto;
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-divider);
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.console-main {
+  padding: 24px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.console-content {
+  width: 100%;
+  max-width: 1220px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* - 사이드바 내비게이션 -
+   활성 항목은 3px 왼쪽 보더를 갖고, 비활성 항목은 그만큼 padding으로 메워
+   상태가 바뀌어도 글자가 좌우로 흔들리지 않는다. */
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.side-nav__item {
+  display: block;
+  padding: 10px 16px 10px 19px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.side-nav__item:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.side-nav__item[aria-current="page"] {
+  padding-left: 16px;
+  font-weight: 600;
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+  border-left: 3px solid var(--color-accent);
+}
+
+.side-nav__item[aria-current="page"]:hover {
+  background: var(--color-accent-100);
+}
+
+/* - 개발 모드 표 상태 스위치 (프로덕션에서는 렌더링되지 않는다) - */
+
+.dev-switch {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid var(--color-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dev-switch__label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-50);
+}
+
+.dev-switch__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dev-switch__btn {
+  padding: 4px 9px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  text-decoration: none;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-divider);
+  cursor: pointer;
+}
+
+.dev-switch__btn[aria-current="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+/* - 화면 헤더와 필터 행 - */
+
+.screen-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.screen-header__meta {
+  font-size: 12px;
+  color: var(--text-60);
+}
+
+.screen-header__meta b {
+  color: var(--color-text);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-divider);
+}
+
+.filter-bar__stamp {
+  font-size: 11px;
+  color: var(--text-55);
+  margin-left: 4px;
+}
+
+.filter-bar__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.screen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+}
+
+.screen-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-55);
+}
+
+/* - 그리드 표 -
+   디자인이 <table>이 아니라 CSS grid를 쓴다. 열 정의가 헤더와 본문에 같이
+   들어가야 해서 grid-template-columns는 컴포넌트에서 인라인으로 넘긴다. */
+
+.grid-table {
+  overflow-x: auto;
+  flex: 1;
+}
+
+.grid-head {
+  display: grid;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-60);
+  border-bottom: 2px solid var(--color-divider);
+}
+
+.grid-row {
+  display: grid;
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.grid-row--clickable {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.grid-row--clickable:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.grid-row--group {
+  background: var(--color-surface);
+  font-weight: 600;
+}
+
+.grid-cell {
+  padding: 8px;
+  min-width: 0;
+}
+
+.grid-cell--group {
+  padding: 10px 8px;
+}
+
+.grid-cell--child {
+  padding-left: 28px;
+}
+
+.grid-cell--right {
+  text-align: right;
+}
+
+.grid-cell--num {
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-cell--mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.grid-cell--muted {
+  color: var(--text-60);
+}
+
+.grid-cell--truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* - 빈 상태 - */
+
+.empty-state {
+  border: 1px solid var(--color-divider);
+  padding: 44px 24px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.empty-state__title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+
+.empty-state__body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-60);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+/* - 에러 상태 - */
+
+.error-state {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent-100);
+  padding: 32px 24px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.error-state__title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 20px;
+  color: var(--color-accent-800);
+}
+
+.error-state__body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-accent-900);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+.error-state__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* - 로딩 스켈레톤 - */
+
+.skeleton {
+  padding: 20px 0;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeleton__row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 120px 90px;
+  gap: 14px;
+  align-items: center;
+}
+
+.skeleton__bar {
+  height: 12px;
+  background: var(--color-neutral-300);
+}
+
+.skeleton__bar--alt {
+  background: var(--color-neutral-200);
+}
+
+.skeleton__label {
+  font-size: 12px;
+  color: var(--text-50);
+}
