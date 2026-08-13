@@ -22,7 +22,7 @@ class UsageEventIngestService {
   }
 
   IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
-    if (!customers.existsInOrganization(organizationId, request.customerId())) {
+    if (!customers.existsByOrganizationIdAndId(organizationId, request.customerId())) {
       throw new UnknownCustomerException(organizationId, request.customerId());
     }
 

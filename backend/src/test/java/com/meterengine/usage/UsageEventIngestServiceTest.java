@@ -45,7 +45,7 @@ class UsageEventIngestServiceTest {
 
   @Test
   void 저장에_성공하면_중복이_아니라고_응답한다() {
-    when(customers.existsInOrganization(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     IngestEventResponse response = service.ingest(ORG_ID, request("tx-1"));
@@ -56,7 +56,7 @@ class UsageEventIngestServiceTest {
 
   @Test
   void 이미_있는_키라_저장이_건너뛰어지면_중복이라고_응답한다() {
-    when(customers.existsInOrganization(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     assertThat(service.ingest(ORG_ID, request("tx-1")).duplicate()).isTrue();
@@ -64,7 +64,7 @@ class UsageEventIngestServiceTest {
 
   @Test
   void 유니크_제약_위반_예외가_터져도_중복_성공으로_응답한다() {
-    when(customers.existsInOrganization(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any()))
         .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
 
@@ -75,7 +75,7 @@ class UsageEventIngestServiceTest {
 
   @Test
   void 이_도입사의_고객이_아니면_저장하지_않고_예외를_던진다() {
-    when(customers.existsInOrganization(ORG_ID, CUSTOMER_ID)).thenReturn(false);
+    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> service.ingest(ORG_ID, request("tx-1")))
         .isInstanceOf(UnknownCustomerException.class)
@@ -87,7 +87,7 @@ class UsageEventIngestServiceTest {
 
   @Test
   void properties는_판정_없이_그대로_직렬화해_넘긴다() {
-    when(customers.existsInOrganization(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     service.ingest(
