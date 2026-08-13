@@ -19,16 +19,19 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>도입사의 미터를 하나씩 돌면서, 그 미터의 event_type과 맞는 이벤트를 고객별로 합산한다. 금액은 내지 않는다. 사용량에 단가를 곱하는 일은 MS2-124 청구
  * 예정액 API의 몫이고, 이 서비스의 결과가 그 입력이 된다.
+ *
+ * <p>public인 이유: 그 MS2-124가 invoice 패키지에서 이 서비스를 직접 호출한다. 결과 모델({@link MetricUsage})이 처음부터
+ * public이었던 것과 같은 사정이다.
  */
 @Service
-class UsageAggregationService {
+public class UsageAggregationService {
 
   /**
    * 청구 기간을 자르는 기준 시간대다. "8월 사용량"이 무슨 뜻인지는 시간대를 정해야 답이 나온다 (스토리 MS2-121은 국내 도입사 대상이라 KST).
    *
    * <p>이 상수가 곧 월 경계 인수 기준의 근거다. 2026-08-31T23:59:59+09:00은 8월, 2026-09-01T00:00:00+09:00은 9월.
    */
-  static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
+  public static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
 
   private final UsageEventRepository usageEvents;
   private final BillableMetricRepository metrics;
@@ -44,7 +47,7 @@ class UsageAggregationService {
   }
 
   /** 지금이 속한 달(KST). 기간을 지정하지 않은 조회의 기본값이다. */
-  static YearMonth currentMonth() {
+  public static YearMonth currentMonth() {
     return YearMonth.now(BILLING_ZONE);
   }
 
@@ -58,7 +61,7 @@ class UsageAggregationService {
    * JPA 레포지토리와 JdbcTemplate이 같은 커넥션과 같은 스냅샷을 쓴다.
    */
   @Transactional(readOnly = true)
-  List<MetricUsage> aggregate(UUID organizationId, YearMonth month) {
+  public List<MetricUsage> aggregate(UUID organizationId, YearMonth month) {
     List<BillableMetric> organizationMetrics =
         metrics.findByOrganizationIdOrderByCodeAsc(organizationId);
     if (organizationMetrics.isEmpty()) {
