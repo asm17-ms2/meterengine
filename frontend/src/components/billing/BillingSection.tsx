@@ -13,7 +13,7 @@ import {
 import {
   formatDecimal,
   formatKrw,
-  formatKstDateTime,
+  formatKstStamp,
   uuidTail,
 } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
@@ -95,7 +95,7 @@ export async function BillingMeta({
       고객 <b>{result.data.customers.length}</b>곳, 청구 라인{" "}
       <b>{countInvoiceLines(result.data.customers)}</b>줄
       <br />
-      계산 시각 {formatKstDateTime(result.data.calculated_at)}
+      계산 시각 {formatKstStamp(new Date(result.data.calculated_at))}
     </>
   );
 }
