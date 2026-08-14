@@ -7,7 +7,7 @@ import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import {
   CollapseProvider,
   ExpandControls,
-} from "@/components/usage/CollapseProvider";
+} from "@/components/table/CollapseProvider";
 import { UsageMeta, UsageSection } from "@/components/usage/UsageSection";
 import { loadUsage } from "@/lib/api/usage";
 import { readDevState } from "@/lib/dev-state";

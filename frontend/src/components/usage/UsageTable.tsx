@@ -1,6 +1,6 @@
 "use client";
 
-import { useCollapse } from "@/components/usage/CollapseProvider";
+import { useCollapse } from "@/components/table/CollapseProvider";
 import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
 
 /**
