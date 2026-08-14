@@ -53,6 +53,18 @@ export function formatNumber(value: number): string {
 }
 
 /**
+ * 소수가 올 수 있는 값(집계 수량, 단가). 서버가 준 자릿수만 보여주고,
+ * toFixed로 가짜 정밀도를 만들지 않는다.
+ */
+export function formatDecimal(value: number): string {
+  return value.toLocaleString("ko-KR", { maximumFractionDigits: 10 });
+}
+
+export function formatKrw(value: number): string {
+  return `${formatDecimal(value)}원`;
+}
+
+/**
  * UUID의 마지막 그룹만. 표에서 고객 이름 옆에 붙이는 짧은 식별자다.
  * 전체 UUID는 상세 드로어의 raw payload에 싣는다.
  */

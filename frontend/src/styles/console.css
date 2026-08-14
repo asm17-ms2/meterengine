@@ -290,6 +290,20 @@
   color: var(--text-55);
 }
 
+/* 합계 행. 위아래 2px 구분선으로 표 본문과 가른다. */
+.grid-row--total {
+  border-top: 2px solid var(--color-divider);
+  border-bottom: 2px solid var(--color-divider);
+  font-weight: 600;
+}
+
+/* 합계 금액. 이 화면에서 가장 힘준 숫자다 (디자인: heading 폰트 800 / 17px). */
+.grid-cell__total-amount {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 17px;
+}
+
 /* properties 미리보기 칸. grid-cell--mono보다 한 단계 작고 옅다. */
 .grid-cell--props {
   font-family: var(--mono);
