@@ -1,0 +1,8 @@
+transaction_id,customer_id,event_type,timestamp,properties,note
+demo-001,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-05T10:00:00+09:00,"{""token"": 501, ""model"": ""claude""}",
+demo-002,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-10T14:30:00+09:00,"{""token"": 500, ""model"": ""claude""}",
+demo-001,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-05T10:00:00+09:00,"{""token"": 501, ""model"": ""claude""}",같은 이벤트 재전송(중복)
+demo-003,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-12T09:15:00+09:00,"{""token"": 3}",
+demo-004,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-13T18:45:00+09:00,"{""token"": 1}",
+demo-bad-customer,9f31c2aa-0000-0000-0000-000000000000,chat_completion,2026-08-12T12:00:00+09:00,"{""token"": 120}",미등록 고객
+demo-bad-field,a728e7b6-d82b-4f3c-a960-a66a02794c1d,,2026-08-12T13:00:00+09:00,"{""token"": 50}",필수값 누락(event_type)
