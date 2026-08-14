@@ -29,7 +29,10 @@ export type EventEntry = {
    * 지금은 문제가 없다.
    */
   properties: Record<string, unknown>;
-  /** ISO 8601. 백엔드가 KST 오프셋(+09:00)으로 내려준다. */
+  /**
+   * ISO 8601. 보낸 값의 오프셋과 무관하게 백엔드가 UTC(`Z`)로 정규화해서 내려준다.
+   * 표시는 formatKstDateTime이 KST로 바꿔 그리고, 상세 드로어의 원본 JSON에는 `Z`가 그대로 나온다.
+   */
   occurred_at: string;
   received_at: string;
 };
