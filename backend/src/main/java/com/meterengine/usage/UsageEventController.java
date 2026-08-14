@@ -63,6 +63,10 @@ public class UsageEventController {
     @ApiResponse(responseCode = "200", description = "저장했거나(duplicate=false) 이미 저장돼 있다(true)"),
     @ApiResponse(
         responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemDetail.class)),
         description =
             """
             code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
@@ -99,7 +103,10 @@ public class UsageEventController {
     @ApiResponse(responseCode = "200", description = "한 페이지 분량의 이벤트. 조건에 맞는 것이 없으면 events가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
-        content = @Content(schema = @Schema(implementation = ProblemDetail.class)),
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemDetail.class)),
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
