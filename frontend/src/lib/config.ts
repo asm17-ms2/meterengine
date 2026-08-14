@@ -13,7 +13,4 @@ export const config = {
     process.env.METERENGINE_ORGANIZATION_ID ??
     "d7cee55d-8c82-4afc-b996-6749d8b26a4e",
   organizationName: process.env.METERENGINE_ORGANIZATION_NAME ?? "데모 도입사",
-
-  /** null이면 내장 목을 쓴다. GET /v1/events(MS2-131)가 아직 없어서다. */
-  eventsBaseUrl: process.env.METERENGINE_EVENTS_BASE_URL ?? null,
 } as const;
