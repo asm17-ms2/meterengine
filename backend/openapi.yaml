@@ -1,0 +1,364 @@
+openapi: 3.1.0
+info:
+  description: |
+    사용량 기반 과금 플랫폼의 API. 사용량 이벤트를 수집하고, 고객별 월 사용량과 청구 예정액을 조회한다.
+
+    도입사는 X-Organization-Id 헤더로 받는다. 이 헤더는 임시물이며 MS2-126이 Bearer API 키 인증을
+    붙이면서 인증 주체에서 꺼내는 형태로 바뀐다.
+
+    오류 응답은 RFC 9457 problem+json이다. 다만 code 확장 멤버는 /v1/events에만 있다.
+    /v1/usage는 도메인 예외가 없어 프레임워크 기본 형식을 그대로 쓴다.
+  title: MeterEngine API
+  version: v1
+servers:
+- description: 문서를 서빙한 호스트
+  url: /
+paths:
+  /v1/events:
+    get:
+      description: |
+        지정한 달의 이벤트를 occurred_at 최신순으로 한 페이지씩 돌려준다. 같은 시각이 여럿이면
+        transaction_id 내림차순으로 순서가 고정돼, 같은 요청을 여러 번 보내도 결과가 같다.
+        기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
+        2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다 (사용량 조회와 같은 판정).
+        customer_id, month, event_type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
+        properties는 저장된 값을 그대로 낸다. 서버가 키를 고르거나 값을 해석하지 않는다.
+        저장 타입이 jsonb라 키 순서와 공백은 수집 때와 달라질 수 있고, 숫자 자릿수는 그대로다.
+
+        FE 규약 둘은 서버가 강제할 수 없어 여기 적어 둔다.
+        page는 0부터다(화면의 1페이지 = page=0). 필터를 바꾸면 page를 0으로 되돌린다.
+        안 그러면 3페이지를 보다가 조건을 좁혔을 때 그만큼 페이지가 없어 빈 화면이 뜬다.
+      operationId: query
+      parameters:
+      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 0부터 세는 페이지 번호. 화면의 1페이지가 0이다.
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - description: 한 페이지에 담을 개수.
+        in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      - description: 고객을 좁힌다. 생략하면 도입사의 모든 고객이 대상이다.
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - description: "조회할 달(yyyy-MM, KST). 생략하면 이번 달이다."
+        example: 2026-08
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      - description: 이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.
+        in: query
+        name: event_type
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventPageResponse"
+          description: 한 페이지 분량의 이벤트. 조건에 맞는 것이 없으면 events가 빈 배열이다
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+          description: |
+            code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
+            아니거나 month가 yyyy-MM이 아니거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=customer_not_found: (도입사, customer_id) 조합을 찾을 수 없다. 미등록과 다른 도입사
+            소속은 구별되지 않는다.
+      summary: 사용량 이벤트 조회
+      tags:
+      - usage-event-controller
+    post:
+      description: |
+        같은 (도입사, transaction_id)의 재전송은 저장하지 않고 최초 저장본을 유지한다(first-write-wins).
+        재전송도 200이며 duplicate가 true로 내려온다.
+        properties의 내용은 검증하지 않는다. 저장 타입이 jsonb라 키 순서와 공백은 보존되지 않지만,
+        숫자는 정수/소수 모두 자릿수가 잘리지 않는다.
+        timestamp는 이벤트 발생 시각이며 occurred_at으로 저장된다.
+        received_at은 서버가 찍으며 요청에 담긴 값은 무시된다.
+      operationId: ingest
+      parameters:
+      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestEventRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IngestEventResponse"
+          description: 저장했거나(duplicate=false) 이미 저장돼 있다(true)
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+          description: |
+            code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
+            code=customer_not_found: (도입사, customer_id) 조합을 찾을 수 없다.
+            code=invalid_event: DB가 담을 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
+      summary: 사용량 이벤트 수집
+      tags:
+      - usage-event-controller
+  /v1/invoice:
+    get:
+      description: |
+        도입사의 모든 고객에 대해 미터별 사용량 x 단가로 청구 예정액을 계산해 돌려준다.
+        집계는 조회 시점에 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
+        금액은 원 단위 정수이고, 라인(고객 x 미터)마다 원 미만을 절사한 뒤 합산한다.
+        이벤트가 없는 고객도 모든 미터 라인이 수량 0, 금액 0으로 들어간다.
+        고객 순서는 이름 오름차순, 라인 순서는 미터 code 오름차순으로 고정이다.
+      operationId: preview
+      parameters:
+      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다."
+        example: 2026-08
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DraftInvoiceResponse"
+          description: 고객별 청구 예정액. 미터가 없는 도입사는 각 고객의 lines가 빈 배열이다
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+          description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code 확장 멤버는 없다"
+      summary: 청구 예정액 조회
+      tags:
+      - draft-invoice-controller
+  /v1/usage:
+    get:
+      description: |
+        도입사의 미터마다 그 미터의 event_type과 맞는 이벤트를 고객별로 합산해 돌려준다.
+        기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
+        2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다.
+        도입사의 모든 고객이 응답에 들어가며, 이벤트가 없는 고객은 quantity가 0이다.
+        properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
+        금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
+      operationId: usage
+      parameters:
+      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다."
+        example: 2026-08
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MonthlyUsageResponse"
+          description: 미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+          description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code 확장 멤버는 없다"
+      summary: 고객별 월 사용량 조회
+      tags:
+      - usage-aggregation-controller
+components:
+  schemas:
+    CustomerEntry:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        quantity:
+          type: number
+    DraftInvoiceResponse:
+      type: object
+      properties:
+        calculated_at:
+          type: string
+          format: date-time
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerEntry"
+        month:
+          type: string
+        total_amount:
+          type: integer
+          format: int64
+    EventEntry:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        event_type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        properties:
+          type: object
+          additionalProperties: {}
+        received_at:
+          type: string
+          format: date-time
+        transaction_id:
+          type: string
+    EventPageResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventEntry"
+        month:
+          type: string
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int64
+    IngestEventRequest:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties: {}
+        timestamp:
+          type: string
+          format: date-time
+        transaction_id:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - customer_id
+      - event_type
+      - properties
+      - timestamp
+      - transaction_id
+    IngestEventResponse:
+      type: object
+      properties:
+        duplicate:
+          type: boolean
+        transaction_id:
+          type: string
+    MetricEntry:
+      type: object
+      properties:
+        aggregation:
+          type: string
+        code:
+          type: string
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerEntry"
+        event_type:
+          type: string
+        name:
+          type: string
+        target_property:
+          type: string
+    MonthlyUsageResponse:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricEntry"
+        month:
+          type: string
+    ProblemDetail:
+      type: object
+      properties:
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties: {}
+        status:
+          type: integer
+          format: int32
+        title:
+          type: string
+        type:
+          type: string
+          format: uri
