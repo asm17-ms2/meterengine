@@ -1,0 +1,11 @@
+transaction_id,customer_id,event_type,timestamp,properties,note
+edge-001,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-01T00:00:00+09:00,"{""token"": 100}",8월 첫 순간(KST 자정 경계)
+edge-002,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-31T23:59:59+09:00,"{""token"": 200}",8월 마지막 순간
+edge-003,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-09-01T00:00:00+09:00,"{""token"": 400}",9월 귀속(경계 넘음)
+edge-004,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-31T15:00:00Z,"{""token"": 800}",UTC 표기지만 KST로는 9월
+edge-005,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-31T14:59:59Z,"{""token"": 1600}",UTC 표기지만 KST로는 8월
+edge-006,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-15T12:00:00+09:00,"{""token"": 12.5}",소수 토큰(예정액 절사 확인)
+edge-007,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-15T13:00:00+09:00,"{""token"": ""500""}",token이 문자열이라 집계 제외(저장은 됨)
+edge-008,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-15T14:00:00+09:00,"{""model"": ""claude""}",token 키 없음이라 집계 제외(저장은 됨)
+edge-009,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-20T09:30:00+09:00,"{""token"": 1000000, ""model"": ""claude""}",
+edge-010,a728e7b6-d82b-4f3c-a960-a66a02794c1d,chat_completion,2026-08-25T18:00:00+09:00,"{""token"": 7}",
