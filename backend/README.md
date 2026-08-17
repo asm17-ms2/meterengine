@@ -48,4 +48,12 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 
 ## 구조
 
-단일 Gradle 모듈 + 도메인별 패키지 분리로 시작한다. 도메인 패키지 목록은 슬라이스를 진행하며 도출하고, 경계는 코드 리뷰로 지킨다.
+단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 넷을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
+
+- `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
+- `metric`: 과금 지표와 고객별 월 사용량 집계 (`/v1/usage`)
+- `invoice`: 청구 예정액 조회 (`/v1/invoice`)
+- `customer`: 고객 엔티티와 조회
+- 도메인 소속이 아닌 것(부트스트랩, 설정)은 루트에 둔다
+
+경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 event -> metric(청구 월 경계 계산 공유), invoice -> metric(집계 호출)의 한 방향만 있다.
