@@ -6,8 +6,11 @@
 
 - Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
-- 스키마 마이그레이션: Flyway. 아직 마이그레이션이 없다. 첫 마이그레이션은 `src/main/resources/db/migration/`에 둔다
-- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없다. 최종 위치는 `docs/document-rules.md`가 정해지면 옮긴다
+- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 두 개다
+  - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 네 테이블
+  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 단가 등록 API가 없어서 지금은 데이터가 들어오는 통로가 이 파일뿐이다
+- 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
+- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
 - API 문서 UI: Scalar. 앱을 띄우면 `/scalar`에 뜬다. 원본 문서는 `/v3/api-docs`(JSON)와 `/v3/api-docs.yaml`이다. Swagger UI는 쓰지 않는다. 두 UI가 같은 문서를 보여줄 이유가 없어 `springdoc-openapi-starter-webmvc-ui` 대신 `-scalar`를 쓴다. 렌더링 JS가 jar에 번들되어 앱이 직접 서빙하므로 CDN을 타지 않고 버전이 의존성에 고정된다
 - 테스트: JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 실제 PostgreSQL 컨테이너로 돌린다
 - 코드 포맷: Spotless + google-java-format. CI에서 검사한다
@@ -32,6 +35,17 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ## API 문서
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
+
+현재 오퍼레이션은 넷이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+
+| 오퍼레이션 | 내용 |
+| --- | --- |
+| `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
+| `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
+| `GET /v1/usage` | 고객별 월 사용량 집계 |
+| `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
+
+넷 다 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 
 **컨트롤러나 DTO를 건드렸으면 `openapi.yaml`을 같은 커밋에 넣는다.** `./gradlew build`가 다시 만들어 주니, 빌드 후 `git status`에 이 파일이 떴으면 계약이 바뀐 것이다. 프론트엔드는 백엔드를 띄우지 않고 이 파일로 계약을 읽는다.
 
