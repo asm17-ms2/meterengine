@@ -39,7 +39,7 @@ class UsageAggregationServiceTest {
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
-  @Mock private UsageEventRepository usageEvents;
+  @Mock private UsageAggregationRepository usageEvents;
   @Mock private BillableMetricRepository metrics;
   @Mock private CustomerRepository customers;
 

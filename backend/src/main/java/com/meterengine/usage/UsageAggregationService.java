@@ -33,12 +33,12 @@ public class UsageAggregationService {
    */
   public static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
 
-  private final UsageEventRepository usageEvents;
+  private final UsageAggregationRepository usageEvents;
   private final BillableMetricRepository metrics;
   private final CustomerRepository customers;
 
   UsageAggregationService(
-      UsageEventRepository usageEvents,
+      UsageAggregationRepository usageEvents,
       BillableMetricRepository metrics,
       CustomerRepository customers) {
     this.usageEvents = usageEvents;
@@ -69,7 +69,7 @@ public class UsageAggregationService {
     }
 
     // 기간은 반열린 구간 [start, end)다. occurred_at이 TIMESTAMPTZ라 이 비교가 절대 시각으로 이뤄져서,
-    // 같은 순간을 어느 오프셋으로 표기해 보냈든 같은 달에 귀속된다 (UsageEventRepository.sumByCustomer 참조).
+    // 같은 순간을 어느 오프셋으로 표기해 보냈든 같은 달에 귀속된다 (UsageAggregationRepository.sumByCustomer 참조).
     OffsetDateTime start = month.atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
     OffsetDateTime end = month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
 
