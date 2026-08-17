@@ -10,10 +10,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.repository.CustomerRepository;
-import com.meterengine.event.dto.IngestEventRequest;
-import com.meterengine.event.dto.IngestEventResponse;
+import com.meterengine.event.dto.EventIngestRequest;
+import com.meterengine.event.dto.EventIngestResponse;
 import com.meterengine.event.exception.UnknownCustomerException;
-import com.meterengine.event.repository.UsageEventRepository;
+import com.meterengine.event.repository.EventRepository;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -32,19 +32,19 @@ import tools.jackson.databind.json.JsonMapper;
  * 갈음한다 (하위작업 인수 기준).
  */
 @ExtendWith(MockitoExtension.class)
-class UsageEventIngestServiceTest {
+class EventIngestServiceTest {
 
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
 
-  @Mock private UsageEventRepository usageEvents;
+  @Mock private EventRepository usageEvents;
   @Mock private CustomerRepository customers;
 
-  private UsageEventIngestService service;
+  private EventIngestService service;
 
   @BeforeEach
   void setUp() {
-    service = new UsageEventIngestService(usageEvents, customers, JsonMapper.builder().build());
+    service = new EventIngestService(usageEvents, customers, JsonMapper.builder().build());
   }
 
   @Test
@@ -52,7 +52,7 @@ class UsageEventIngestServiceTest {
     when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
-    IngestEventResponse response = service.ingest(ORG_ID, request("tx-1"));
+    EventIngestResponse response = service.ingest(ORG_ID, request("tx-1"));
 
     assertThat(response.transactionId()).isEqualTo("tx-1");
     assertThat(response.duplicate()).isFalse();
@@ -72,7 +72,7 @@ class UsageEventIngestServiceTest {
     when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any()))
         .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
 
-    IngestEventResponse response = service.ingest(ORG_ID, request("tx-1"));
+    EventIngestResponse response = service.ingest(ORG_ID, request("tx-1"));
 
     assertThat(response.duplicate()).isTrue();
   }
@@ -96,7 +96,7 @@ class UsageEventIngestServiceTest {
 
     service.ingest(
         ORG_ID,
-        new IngestEventRequest(
+        new EventIngestRequest(
             "tx-1",
             CUSTOMER_ID,
             "chat_completion",
@@ -113,8 +113,8 @@ class UsageEventIngestServiceTest {
             eq(OffsetDateTime.parse("2026-08-10T12:00:00+09:00")));
   }
 
-  private IngestEventRequest request(String transactionId) {
-    return new IngestEventRequest(
+  private EventIngestRequest request(String transactionId) {
+    return new EventIngestRequest(
         transactionId,
         CUSTOMER_ID,
         "chat_completion",

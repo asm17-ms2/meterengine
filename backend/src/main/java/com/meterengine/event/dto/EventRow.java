@@ -11,7 +11,7 @@ import java.util.UUID;
  * @param propertiesJson DB의 jsonb를 문자열 그대로 담는다. 파싱하지 않는다 (이유는 {@link
  *     EventPageResponse.EventEntry#properties()} 참조).
  */
-public record UsageEventRow(
+public record EventRow(
     String transactionId,
     UUID customerId,
     String customerName,

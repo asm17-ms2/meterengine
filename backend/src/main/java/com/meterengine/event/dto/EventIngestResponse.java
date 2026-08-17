@@ -10,14 +10,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p>duplicate가 true면 이번 요청은 아무것도 저장하지 않았고 최초 저장본이 그대로 남아 있다 (first-write-wins). 같은 키로 내용이 다른 요청이
  * 와도 마찬가지다.
  */
-public record IngestEventResponse(
+public record EventIngestResponse(
     @JsonProperty("transaction_id") String transactionId, boolean duplicate) {
 
-  public static IngestEventResponse stored(String transactionId) {
-    return new IngestEventResponse(transactionId, false);
+  public static EventIngestResponse stored(String transactionId) {
+    return new EventIngestResponse(transactionId, false);
   }
 
-  public static IngestEventResponse alreadyStored(String transactionId) {
-    return new IngestEventResponse(transactionId, true);
+  public static EventIngestResponse alreadyStored(String transactionId) {
+    return new EventIngestResponse(transactionId, true);
   }
 }

@@ -1,10 +1,10 @@
 package com.meterengine.event.controller;
 
+import com.meterengine.event.dto.EventIngestRequest;
+import com.meterengine.event.dto.EventIngestResponse;
 import com.meterengine.event.dto.EventPageResponse;
-import com.meterengine.event.dto.IngestEventRequest;
-import com.meterengine.event.dto.IngestEventResponse;
-import com.meterengine.event.service.UsageEventIngestService;
-import com.meterengine.event.service.UsageEventQueryService;
+import com.meterengine.event.service.EventIngestService;
+import com.meterengine.event.service.EventQueryService;
 import com.meterengine.metric.service.UsageAggregationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,19 +36,19 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>필터를 미리 만들어 두지 않은 이유: MS2-126은 Spring Security로 들어올 예정이라 컨트롤러가 SecurityContext에서 도입사를 꺼내게 된다.
  * 어느 쪽이든 이 시그니처는 바뀌므로, 지금 필터를 두면 나중에 버릴 코드만 늘어난다.
  *
- * <p><b>조회를 새 클래스로 빼지 않은 이유.</b> {@link UsageEventExceptionHandler}가 {@code assignableTypes}로 이
- * 컨트롤러에만 걸려 있어서, 조회를 다른 클래스로 옮기면 오류가 {@code code} 붙은 problem+json이 아니라 프레임워크 기본형으로 나간다. FE 공통 오류
- * 컴포넌트가 그 {@code code}로 문구를 고르므로 형식이 갈라지면 안 된다. {@code /v1/events}는 하나의 리소스라 POST와 GET을 한 컨트롤러에 두는
- * 것이 표준적이기도 하다.
+ * <p><b>조회를 새 클래스로 빼지 않은 이유.</b> {@link EventExceptionHandler}가 {@code assignableTypes}로 이 컨트롤러에만
+ * 걸려 있어서, 조회를 다른 클래스로 옮기면 오류가 {@code code} 붙은 problem+json이 아니라 프레임워크 기본형으로 나간다. FE 공통 오류 컴포넌트가 그
+ * {@code code}로 문구를 고르므로 형식이 갈라지면 안 된다. {@code /v1/events}는 하나의 리소스라 POST와 GET을 한 컨트롤러에 두는 것이
+ * 표준적이기도 하다.
  */
 @RestController
 @RequestMapping("/v1/events")
-public class UsageEventController {
+public class EventController {
 
-  private final UsageEventIngestService ingestService;
-  private final UsageEventQueryService queryService;
+  private final EventIngestService ingestService;
+  private final EventQueryService queryService;
 
-  UsageEventController(UsageEventIngestService ingestService, UsageEventQueryService queryService) {
+  EventController(EventIngestService ingestService, EventQueryService queryService) {
     this.ingestService = ingestService;
     this.queryService = queryService;
   }
@@ -80,11 +80,11 @@ public class UsageEventController {
             code=invalid_event: DB가 담을 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
             """)
   })
-  public IngestEventResponse ingest(
+  public EventIngestResponse ingest(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody IngestEventRequest request) {
+      @Valid @RequestBody EventIngestRequest request) {
     return ingestService.ingest(organizationId, request);
   }
 

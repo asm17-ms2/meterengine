@@ -1,6 +1,6 @@
 package com.meterengine.event.repository;
 
-import com.meterengine.event.dto.UsageEventRow;
+import com.meterengine.event.dto.EventRow;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,11 +15,11 @@ import org.springframework.stereotype.Repository;
  * 난다. ON CONFLICT DO NOTHING은 save()로 표현할 수 없고, PK가 복합이라 @IdClass도 필요하다. 얻을 것보다 우회할 것이 많다.
  */
 @Repository
-public class UsageEventRepository {
+public class EventRepository {
 
   private final JdbcTemplate jdbc;
 
-  UsageEventRepository(JdbcTemplate jdbc) {
+  EventRepository(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -73,7 +73,7 @@ public class UsageEventRepository {
    * @param customerId null이면 고객을 좁히지 않는다
    * @param eventType null이거나 공백뿐이면 종류를 좁히지 않는다
    */
-  public List<UsageEventRow> findPage(
+  public List<EventRow> findPage(
       UUID organizationId,
       UUID customerId,
       String eventType,
@@ -100,7 +100,7 @@ public class UsageEventRepository {
         LIMIT ? OFFSET ?
         """,
         (rs, rowNum) ->
-            new UsageEventRow(
+            new EventRow(
                 rs.getString("transaction_id"),
                 rs.getObject("customer_id", UUID.class),
                 rs.getString("customer_name"),

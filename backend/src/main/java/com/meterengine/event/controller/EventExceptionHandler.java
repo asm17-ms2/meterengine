@@ -33,9 +33,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * 대신 {@code @Order}가 필요하다. 범위를 좁혀도 이 컨트롤러에는 자동 설정 핸들러가 함께 걸린다. 아래 검증 핸들러가 프레임워크 예외를 가로채는데, 자동 설정
  * 핸들러가 {@code @Order(0)}이라 순서를 주지 않으면 기본 처리가 이긴다.
  */
-@RestControllerAdvice(assignableTypes = UsageEventController.class)
+@RestControllerAdvice(assignableTypes = EventController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
-class UsageEventExceptionHandler {
+class EventExceptionHandler {
 
   @ExceptionHandler(UnknownCustomerException.class)
   ProblemDetail handleUnknownCustomer(UnknownCustomerException exception) {
@@ -53,7 +53,7 @@ class UsageEventExceptionHandler {
    * INSERT 사이에 고객이 사라진 경우이고, 둘 다 같은 요청을 다시 보내도 성공하지 않는다. 없으면 500이 나가는데 5xx는 재시도해도 된다는 신호라 수집 클라이언트가
    * 저장되지도 않을 이벤트를 영원히 재전송한다.
    *
-   * <p>중복 키는 여기 오지 않는다. UsageEventIngestService가 먼저 잡아 200으로 답한다.
+   * <p>중복 키는 여기 오지 않는다. EventIngestService가 먼저 잡아 200으로 답한다.
    *
    * <p>잡는 예외가 제약 위반 전반을 덮는 넓은 타입이라, 이 문구가 맞으려면 advice가 이 컨트롤러에만 걸려 있어야 한다 (클래스 javadoc 참조).
    */

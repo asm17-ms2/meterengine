@@ -30,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 이벤트 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-131).
  *
  * <p>{@code @AutoConfigureMockMvc}를 쓰지 않고 WebApplicationContext에서 직접 만드는 이유는 {@link
- * UsageEventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
+ * EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
  *
  * <p><b>실제 Postgres여야 한다.</b> 월 귀속이 TIMESTAMPTZ 비교의 의미에 달려 있고, 동점 정렬은 DB가 실제로 어떤 순서를 내놓느냐의 문제다. 둘 다
  * 인메모리 DB로 바꾸면 통과 여부가 그 DB의 방언을 따라간다.
@@ -38,7 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class UsageEventQueryIntegrationTest {
+class EventQueryIntegrationTest {
 
   private static final String AUGUST = "2026-08";
 

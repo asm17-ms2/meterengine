@@ -155,8 +155,8 @@ class OpenApiDocumentTest {
     // 같은 문장이 있어서, @JsonProperty를 전부 지워도 통과한다 (실측). 스키마 안을 봐야 한다.
     assertSchemaHasField("EventEntry", "transaction_id");
     assertSchemaHasField("EventEntry", "customer_name");
-    assertSchemaHasField("IngestEventRequest", "customer_id");
-    assertSchemaHasField("IngestEventResponse", "transaction_id");
+    assertSchemaHasField("EventIngestRequest", "customer_id");
+    assertSchemaHasField("EventIngestResponse", "transaction_id");
     assertSchemaHasField("MetricEntry", "target_property");
     assertSchemaHasField("CustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");

@@ -2,9 +2,9 @@ package com.meterengine.event.service;
 
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.dto.EventPageResponse;
-import com.meterengine.event.dto.UsageEventRow;
+import com.meterengine.event.dto.EventRow;
 import com.meterengine.event.exception.UnknownCustomerException;
-import com.meterengine.event.repository.UsageEventRepository;
+import com.meterengine.event.repository.EventRepository;
 import com.meterengine.metric.service.UsageAggregationService;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -19,12 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>수집한 이벤트를 화면이 표로 그릴 수 있게 한 페이지씩 돌려준다. 값을 해석하지 않는다. 어느 키가 사용량인지 판정하고 합치는 일은 집계(MS2-129)의 몫이다.
  */
 @Service
-public class UsageEventQueryService {
+public class EventQueryService {
 
-  private final UsageEventRepository usageEvents;
+  private final EventRepository usageEvents;
   private final CustomerRepository customers;
 
-  UsageEventQueryService(UsageEventRepository usageEvents, CustomerRepository customers) {
+  EventQueryService(EventRepository usageEvents, CustomerRepository customers) {
     this.usageEvents = usageEvents;
     this.customers = customers;
   }
@@ -64,7 +64,7 @@ public class UsageEventQueryService {
             .toOffsetDateTime();
 
     long total = usageEvents.count(organizationId, customerId, eventType, start, end);
-    List<UsageEventRow> rows =
+    List<EventRow> rows =
         usageEvents.findPage(organizationId, customerId, eventType, start, end, page, size);
 
     return new EventPageResponse(
@@ -72,10 +72,10 @@ public class UsageEventQueryService {
         page,
         size,
         total,
-        rows.stream().map(UsageEventQueryService::toEntry).toList());
+        rows.stream().map(EventQueryService::toEntry).toList());
   }
 
-  private static EventPageResponse.EventEntry toEntry(UsageEventRow row) {
+  private static EventPageResponse.EventEntry toEntry(EventRow row) {
     return new EventPageResponse.EventEntry(
         row.transactionId(),
         row.customerId(),

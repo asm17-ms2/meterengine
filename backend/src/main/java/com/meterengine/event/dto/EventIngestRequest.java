@@ -25,7 +25,7 @@ import java.util.UUID;
  * <p>JSON 이름은 {@code @JsonProperty}로 하나씩 못박는다. 전역 SNAKE_CASE 설정을 켜면 springdoc 생성물처럼 우리가 만들지 않은 응답까지
  * 영향을 받는다.
  */
-public record IngestEventRequest(
+public record EventIngestRequest(
     /**
      * 멱등키. 상한이 필요한 이유는 (organization_id, transaction_id)가 PK, 즉 btree 인덱스이기 때문이다. btree는 인덱스 행이
      * 2704바이트를 넘을 수 없어 비압축 2704자에서 SQLSTATE 54000으로 실패한다(실측). 압축이 잘 되는 값은 3000자도 통과하므로, 상한이 없으면 길이가

@@ -31,7 +31,7 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class UsageEventIngestIntegrationTest {
+class EventIngestIntegrationTest {
 
   private static final String OCCURRED_AT = "2026-08-10T12:00:00+09:00";
 
@@ -300,7 +300,7 @@ class UsageEventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
 
     // 형식 오류는 Boot의 ProblemDetailsExceptionHandler가, 고객 매핑 실패는
-    // UsageEventExceptionHandler가 맡는다. 후자가 ResponseEntityExceptionHandler를
+    // EventExceptionHandler가 맡는다. 후자가 ResponseEntityExceptionHandler를
     // 상속하면 전자의 자동 설정이 물러나므로, 둘이 공존하는지 확인한다.
     String withoutTransactionId =
         """
@@ -400,7 +400,7 @@ class UsageEventIngestIntegrationTest {
     // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
     // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
     // 겪었다. INSERT 문 자체가 실패했으니 저장은 0건이고, 운영에서는 ingest()가 트랜잭션 밖에서 돌아
-    // 다음 요청에 영향이 없다. 이 제약이 UsageEventIngestService의 DuplicateKeyException catch에
+    // 다음 요청에 영향이 없다. 이 제약이 EventIngestService의 DuplicateKeyException catch에
     // 달아 둔 경고와 같은 사실이다.
   }
 

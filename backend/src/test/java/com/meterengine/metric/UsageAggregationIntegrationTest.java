@@ -30,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 방언을 따라간다 (MS2-129 인수 기준이 H2를 금지하는 이유).
  *
  * <p>{@code @AutoConfigureMockMvc}를 쓰지 않고 WebApplicationContext에서 직접 만드는 이유는 {@link
- * UsageEventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
+ * EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
