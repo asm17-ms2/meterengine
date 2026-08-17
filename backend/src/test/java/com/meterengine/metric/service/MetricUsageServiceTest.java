@@ -15,7 +15,7 @@ import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.metric.repository.UsageAggregationRepository;
+import com.meterengine.metric.repository.MetricUsageRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -34,27 +34,27 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * 집계 서비스의 분기 검증 (MS2-129).
  *
  * <p>월 귀속이 실제로 맞는지는 Postgres의 TIMESTAMPTZ 비교에 달려 있어 {@link
- * com.meterengine.metric.UsageAggregationIntegrationTest}가 맡는다. 여기서는 서비스가 레포지토리에 어떤 기간을 넘기는지, 결과를
- * 어떻게 조립하는지만 본다.
+ * com.meterengine.metric.MetricUsageIntegrationTest}가 맡는다. 여기서는 서비스가 레포지토리에 어떤 기간을 넘기는지, 결과를 어떻게
+ * 조립하는지만 본다.
  */
 @ExtendWith(MockitoExtension.class)
-class UsageAggregationServiceTest {
+class MetricUsageServiceTest {
 
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
-  @Mock private UsageAggregationRepository usageEvents;
+  @Mock private MetricUsageRepository usageEvents;
   @Mock private BillableMetricRepository metrics;
   @Mock private CustomerRepository customers;
 
   @Captor private ArgumentCaptor<OffsetDateTime> startCaptor;
   @Captor private ArgumentCaptor<OffsetDateTime> endCaptor;
 
-  private UsageAggregationService service;
+  private MetricUsageService service;
 
   @BeforeEach
   void setUp() {
-    service = new UsageAggregationService(usageEvents, metrics, customers);
+    service = new MetricUsageService(usageEvents, metrics, customers);
   }
 
   @Test

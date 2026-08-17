@@ -16,11 +16,11 @@ import org.springframework.stereotype.Repository;
  * 파라미터로 고른 키를 합산하는 이 쿼리는 JPQL로 표현할 수 없다.
  */
 @Repository
-public class UsageAggregationRepository {
+public class MetricUsageRepository {
 
   private final JdbcTemplate jdbc;
 
-  UsageAggregationRepository(JdbcTemplate jdbc) {
+  MetricUsageRepository(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 

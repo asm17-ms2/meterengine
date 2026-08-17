@@ -63,8 +63,8 @@ public class EventRepository {
    * transaction_id}는 PK 구성요소라 도입사 안에서 유일함이 DB로 보장돼, tiebreaker에 필요한 결정성을 준다.
    *
    * <p><b>기간은 반열린 구간 [start, end)다.</b> {@link
-   * com.meterengine.metric.repository.UsageAggregationRepository#sumByCustomer}와 같은 방식으로, 호출자가 KST
-   * 월 경계를 계산해 넘긴다. 두 API가 같은 달을 다르게 자르면 화면 숫자가 어긋난다.
+   * com.meterengine.metric.repository.MetricUsageRepository#sumByCustomer}와 같은 방식으로, 호출자가 KST 월 경계를
+   * 계산해 넘긴다. 두 API가 같은 달을 다르게 자르면 화면 숫자가 어긋난다.
    *
    * <p><b>customer는 LEFT JOIN이다.</b> 복합 FK가 있어 짝이 없을 수 없지만, 조인 실패가 행을 통째로 삼키는 쪽보다 이름만 비는 쪽이 낫다.
    *

@@ -8,7 +8,7 @@ import com.meterengine.invoice.dto.DraftInvoiceResponse.LineEntry;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
-import com.meterengine.metric.service.UsageAggregationService;
+import com.meterengine.metric.service.MetricUsageService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
@@ -32,10 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DraftInvoiceService {
 
-  private final UsageAggregationService aggregation;
+  private final MetricUsageService aggregation;
   private final CustomerRepository customers;
 
-  DraftInvoiceService(UsageAggregationService aggregation, CustomerRepository customers) {
+  DraftInvoiceService(MetricUsageService aggregation, CustomerRepository customers) {
     this.aggregation = aggregation;
     this.customers = customers;
   }
@@ -51,7 +51,7 @@ public class DraftInvoiceService {
    */
   @Transactional(readOnly = true)
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
-    OffsetDateTime calculatedAt = OffsetDateTime.now(UsageAggregationService.BILLING_ZONE);
+    OffsetDateTime calculatedAt = OffsetDateTime.now(MetricUsageService.BILLING_ZONE);
 
     List<Customer> organizationCustomers =
         customers.findByOrganizationIdOrderByNameAscIdAsc(organizationId);

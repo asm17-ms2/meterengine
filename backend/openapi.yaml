@@ -208,7 +208,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/MonthlyUsageResponse"
+                $ref: "#/components/schemas/MetricUsageResponse"
           description: 미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다
         "400":
           content:
@@ -218,7 +218,7 @@ paths:
           description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code 확장 멤버는 없다"
       summary: 고객별 월 사용량 조회
       tags:
-      - usage-aggregation-controller
+      - metric-usage-controller
 components:
   schemas:
     CustomerEntry:
@@ -334,7 +334,7 @@ components:
           type: string
         target_property:
           type: string
-    MonthlyUsageResponse:
+    MetricUsageResponse:
       type: object
       properties:
         metrics:

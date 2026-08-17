@@ -3,7 +3,7 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.metric.dto.MonthlyUsageResponse;
+import com.meterengine.metric.dto.MetricUsageResponse;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class UsageAggregationIntegrationTest {
+class MetricUsageIntegrationTest {
 
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final String AUGUST = "2026-08";
@@ -122,7 +122,7 @@ class UsageAggregationIntegrationTest {
     UUID beta = insertCustomer(orgId, "베타");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    MonthlyUsageResponse response = usageOf(orgId, AUGUST);
+    MetricUsageResponse response = usageOf(orgId, AUGUST);
 
     assertThat(response.metrics().getFirst().customers())
         .extracting(customer -> customer.customerId())
@@ -294,17 +294,17 @@ class UsageAggregationIntegrationTest {
         .exchange();
   }
 
-  private MonthlyUsageResponse usageOf(UUID organizationId, String month) {
+  private MetricUsageResponse usageOf(UUID organizationId, String month) {
     MvcTestResult result = get(organizationId, month);
     assertThat(result).hasStatusOk();
     return readBody(result);
   }
 
-  private MonthlyUsageResponse readBody(MvcTestResult result) {
+  private MetricUsageResponse readBody(MvcTestResult result) {
     try {
       return jsonMapper.readValue(
           result.getResponse().getContentAsString(StandardCharsets.UTF_8),
-          MonthlyUsageResponse.class);
+          MetricUsageResponse.class);
     } catch (UnsupportedEncodingException e) {
       throw new IllegalStateException("응답 본문을 읽지 못했다", e);
     }

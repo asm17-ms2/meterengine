@@ -11,7 +11,7 @@ import com.meterengine.invoice.dto.DraftInvoiceResponse.LineEntry;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
-import com.meterengine.metric.service.UsageAggregationService;
+import com.meterengine.metric.service.MetricUsageService;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -37,7 +37,7 @@ class DraftInvoiceServiceTest {
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
-  @Mock private UsageAggregationService aggregation;
+  @Mock private MetricUsageService aggregation;
   @Mock private CustomerRepository customers;
 
   private DraftInvoiceService service;

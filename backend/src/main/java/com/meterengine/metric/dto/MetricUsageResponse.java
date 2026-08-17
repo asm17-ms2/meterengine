@@ -17,10 +17,10 @@ import java.util.UUID;
  *
  * @param month 집계 기준 월. yyyy-MM, KST 기준이다. 요청이 month를 생략했을 때 어느 달로 계산했는지 응답만 보고 알 수 있어야 한다
  */
-public record MonthlyUsageResponse(String month, List<MetricEntry> metrics) {
+public record MetricUsageResponse(String month, List<MetricEntry> metrics) {
 
-  public static MonthlyUsageResponse from(YearMonth month, List<MetricUsage> metricUsages) {
-    return new MonthlyUsageResponse(
+  public static MetricUsageResponse from(YearMonth month, List<MetricUsage> metricUsages) {
+    return new MetricUsageResponse(
         month.toString(), metricUsages.stream().map(MetricEntry::from).toList());
   }
 
