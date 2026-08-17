@@ -14,9 +14,9 @@ import org.springframework.context.annotation.Configuration;
  * definition"}, version이 {@code "v0"}인 채로 프론트엔드에 나간다. 설정 프로퍼티로는 채울 수 없어서(springdoc 3.0.3이 제공하는
  * 프로퍼티에 {@code info.*}가 없다) 빈으로 준다.
  *
- * <p><b>패키지를 새로 파지 않았다.</b> 이 클래스가 main의 첫 {@code @Configuration}이라 어디에 두든 그것이 관례가 되는데, 설정 클래스를 어느
- * 패키지에 모을지는 MS2-141(스프링 패키지 재구조화)에서 정한다. 그때까지 루트에 파일 하나로 둔다. 어디에 두든 {@code @SpringBootApplication}의
- * 스캔 범위 안이라 동작은 같다.
+ * <p><b>패키지를 새로 파지 않았다.</b> MS2-149 재구조화에서 도메인 패키지는 customer, event, invoice, metric 넷으로 정했는데, 이
+ * 클래스는 어느 도메인 소속도 아니라 루트에 남긴다 (MS2-141은 취소됨). 설정 클래스가 더 생기면 그때 모을 자리를 정한다. 어디에 두든
+ * {@code @SpringBootApplication}의 스캔 범위 안이라 동작은 같다.
  */
 @Configuration(proxyBeanMethods = false)
 class OpenApiConfig {

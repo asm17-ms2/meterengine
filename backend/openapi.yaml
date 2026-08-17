@@ -95,7 +95,7 @@ paths:
             소속은 구별되지 않는다.
       summary: 사용량 이벤트 조회
       tags:
-      - usage-event-controller
+      - event-controller
     post:
       description: |
         같은 (도입사, transaction_id)의 재전송은 저장하지 않고 최초 저장본을 유지한다(first-write-wins).
@@ -117,14 +117,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IngestEventRequest"
+              $ref: "#/components/schemas/EventIngestRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/IngestEventResponse"
+                $ref: "#/components/schemas/EventIngestResponse"
           description: 저장했거나(duplicate=false) 이미 저장돼 있다(true)
         "400":
           content:
@@ -137,7 +137,7 @@ paths:
             code=invalid_event: DB가 담을 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
       summary: 사용량 이벤트 수집
       tags:
-      - usage-event-controller
+      - event-controller
   /v1/invoice:
     get:
       description: |
@@ -208,7 +208,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/MonthlyUsageResponse"
+                $ref: "#/components/schemas/MetricUsageResponse"
           description: 미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다
         "400":
           content:
@@ -218,7 +218,7 @@ paths:
           description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code 확장 멤버는 없다"
       summary: 고객별 월 사용량 조회
       tags:
-      - usage-aggregation-controller
+      - metric-usage-controller
 components:
   schemas:
     CustomerEntry:
@@ -267,25 +267,7 @@ components:
           format: date-time
         transaction_id:
           type: string
-    EventPageResponse:
-      type: object
-      properties:
-        events:
-          type: array
-          items:
-            $ref: "#/components/schemas/EventEntry"
-        month:
-          type: string
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        total:
-          type: integer
-          format: int64
-    IngestEventRequest:
+    EventIngestRequest:
       type: object
       properties:
         customer_id:
@@ -310,13 +292,31 @@ components:
       - properties
       - timestamp
       - transaction_id
-    IngestEventResponse:
+    EventIngestResponse:
       type: object
       properties:
         duplicate:
           type: boolean
         transaction_id:
           type: string
+    EventPageResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventEntry"
+        month:
+          type: string
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int64
     MetricEntry:
       type: object
       properties:
@@ -334,7 +334,7 @@ components:
           type: string
         target_property:
           type: string
-    MonthlyUsageResponse:
+    MetricUsageResponse:
       type: object
       properties:
         metrics:
