@@ -23,7 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
  * 청구 예정액 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-124).
  *
  * <p>실제 Postgres여야 하는 이유와 MockMvc를 직접 구성하는 이유는 {@link
- * com.meterengine.usage.UsageAggregationIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
+ * com.meterengine.metric.UsageAggregationIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
  *
  * <p>월 경계 자체(8월 마지막 순간과 9월 첫 순간)는 MS2-129의 테스트가 소유하므로 여기서 반복하지 않는다.
  */
