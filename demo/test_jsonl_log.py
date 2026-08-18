@@ -36,7 +36,7 @@ def _write_sample(path):
             '"event_type": "chat_completion", "properties": {"token": 1}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=400,
-            response_text='{"type": "about:blank", "status": 400, "code": "customer_not_found"}',
+            response_text='{"status": 400, "code": "unknown_customer_reference"}',
             outcome="rejected",
             error=None,
             elapsed_ms=8,
@@ -81,7 +81,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         _write_sample(self.path)
         record = read_log(self.path).records[1]
         self.assertEqual(record.status, 400)
-        self.assertEqual(record.response["code"], "customer_not_found")
+        self.assertEqual(record.response["code"], "unknown_customer_reference")
 
     def test_error_레코드는_status와_response가_없다(self):
         _write_sample(self.path)

@@ -2,6 +2,7 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -161,7 +162,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("customer_not_found");
+        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
     assertThat(totalCount(orgId)).isZero();
   }
 
@@ -178,7 +179,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("customer_not_found");
+        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
     assertThat(totalCount(orgId)).isZero();
   }
 
@@ -314,7 +315,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
 
     assertThat(post(orgId, body("tx-1", UUID.randomUUID().toString())))
         .hasStatus(400)
@@ -322,7 +323,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("customer_not_found");
+        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
   }
 
   @Test
@@ -336,12 +337,13 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
+    // 2026-08-17부터 자바 이름(eventType)이 아니라 도입사가 보낸 JSON 키다 (MS2-150 A-2).
     assertThat(post(orgId, withoutEventType))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .asString()
-        .isEqualTo("eventType");
+        .isEqualTo("event_type");
   }
 
   @Test
@@ -395,7 +397,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("invalid_event");
+        .isEqualTo(ErrorCodes.INVALID_EVENT);
 
     // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
     // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
@@ -428,12 +430,13 @@ class EventIngestIntegrationTest {
 
     assertThat(post(orgId, body("x".repeat(255), customerId.toString()))).hasStatusOk();
 
+    // 자바 이름은 transactionId다. 와이어 이름으로 통일했다 (MS2-150 A-2).
     assertThat(post(orgId, body("x".repeat(256), customerId.toString())))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .asString()
-        .isEqualTo("transactionId");
+        .isEqualTo("transaction_id");
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {

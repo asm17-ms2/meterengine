@@ -61,7 +61,7 @@ class PredictSendTest(unittest.TestCase):
         prediction = predict_send([_event("evt-1", customer="9f31c2aa-0000-0000-0000-000000000000")], KNOWN)
         self.assertEqual(prediction.stored, [])
         self.assertEqual(prediction.outcomes[0].outcome, "rejected")
-        self.assertEqual(prediction.outcomes[0].code, "customer_not_found")
+        self.assertEqual(prediction.outcomes[0].code, "unknown_customer_reference")
 
     def test_필수값_누락은_거절로_예측한다(self):
         prediction = predict_send([_event("evt-1", event_type="  ")], KNOWN)

@@ -107,7 +107,7 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
     org_id = args.org_id or DEFAULT_ORG_ID
     client = ApiClient(base_url, org_id, timeout_seconds=args.timeout)
 
-    # 등록 고객 명단을 서버에서 받아 customer_not_found까지 예측한다.
+    # 등록 고객 명단을 서버에서 받아 unknown_customer_reference까지 예측한다.
     usage = client.get_usage(args.month)
     if usage.status != 200:
         print("/v1/usage 응답이 200이 아니라 고객 명단을 얻지 못했습니다: %s" % parse_problem(usage.status, usage.body).summary(), file=sys.stderr)

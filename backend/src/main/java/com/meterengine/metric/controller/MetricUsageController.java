@@ -1,5 +1,6 @@
 package com.meterengine.metric.controller;
 
+import com.meterengine.ProblemResponse;
 import com.meterengine.metric.dto.MetricUsageResponse;
 import com.meterengine.metric.service.MetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -54,15 +54,19 @@ public class MetricUsageController {
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다"),
     // content를 주지 않으면 400 스키마가 200의 것(MetricUsageResponse)으로 문서에 나간다 (MS2-140 실측).
-    // 실제로는 spring.mvc.problemdetails.enabled=true가 problem+json을 내보낸다. 다만 이 엔드포인트에는
-    // 전용 advice가 없어 code 확장 멤버가 붙지 않는다.
+    // 실제로는 spring.mvc.problemdetails.enabled=true가 problem+json을 내보낸다.
+    //
+    // [2026-08-17, MS2-150 7단계] 예전 주석은 "전용 advice가 없어 code 확장 멤버가 붙지 않는다"고 적었는데
+    // 4단계 이후로 거짓이다. FrameworkExceptionHandler가 프레임워크 4xx 전부에 code를 붙이므로 이 엔드포인트도
+    // /v1/events와 같은 모양으로 답한다. 그래서 스키마도 하나(ProblemResponse)로 합쳤다.
     @ApiResponse(
         responseCode = "400",
         content =
             @Content(
                 mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemDetail.class)),
-        description = "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code 확장 멤버는 없다")
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description =
+            "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
   })
   public MetricUsageResponse usage(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")

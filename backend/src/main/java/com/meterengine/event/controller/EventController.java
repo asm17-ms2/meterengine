@@ -1,5 +1,6 @@
 package com.meterengine.event.controller;
 
+import com.meterengine.ProblemResponse;
 import com.meterengine.event.dto.EventIngestRequest;
 import com.meterengine.event.dto.EventIngestResponse;
 import com.meterengine.event.dto.EventPageResponse;
@@ -18,7 +19,6 @@ import jakarta.validation.constraints.Min;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,11 +72,11 @@ public class EventController {
         content =
             @Content(
                 mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemDetail.class)),
+                schema = @Schema(implementation = ProblemResponse.class)),
         description =
             """
             code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
-            code=customer_not_found: (도입사, customer_id) 조합을 찾을 수 없다.
+            code=unknown_customer_reference: (도입사, customer_id) 조합을 찾을 수 없다.
             code=invalid_event: DB가 담을 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
             """)
   })
@@ -112,12 +112,12 @@ public class EventController {
         content =
             @Content(
                 mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemDetail.class)),
+                schema = @Schema(implementation = ProblemResponse.class)),
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
             아니거나 month가 yyyy-MM이 아니거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=customer_not_found: (도입사, customer_id) 조합을 찾을 수 없다. 미등록과 다른 도입사
+            code=unknown_customer_reference: (도입사, customer_id) 조합을 찾을 수 없다. 미등록과 다른 도입사
             소속은 구별되지 않는다.
             """)
   })

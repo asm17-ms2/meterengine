@@ -2,6 +2,7 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.dto.EventPageResponse;
 import com.meterengine.metric.service.MetricUsageService;
@@ -81,7 +82,7 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("customer_not_found");
+        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
   }
 
   // ---------------------------------------------------------------------------
@@ -342,7 +343,7 @@ class EventQueryIntegrationTest {
   }
 
   @Test
-  void 미등록_고객으로_필터하면_400이고_code가_customer_not_found다() {
+  void 미등록_고객으로_필터하면_400이고_code가_unknown_customer_reference다() {
     UUID orgId = insertOrganization("도입사");
 
     assertThat(get(orgId, "?customer_id=" + UUID.randomUUID()))
@@ -351,7 +352,7 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("customer_not_found");
+        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
   }
 
   // ---------------------------------------------------------------------------
@@ -368,13 +369,13 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
     assertThat(get(orgId, "?size=0"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
   }
 
   @Test
@@ -395,7 +396,7 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
   }
 
   @Test
@@ -420,7 +421,7 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
   }
 
   @Test
@@ -433,13 +434,13 @@ class EventQueryIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
     assertThat(get(orgId, "?month=2026-13"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo("validation_error");
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
   }
 
   // ---------------------------------------------------------------------------

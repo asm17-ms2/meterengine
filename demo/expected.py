@@ -117,7 +117,7 @@ def predict_send(events: List[Event], known_customer_ids: Optional[Set[str]]) ->
             continue
         customer_id = event.customer_id.lower()
         if known_customer_ids is not None and customer_id not in known_customer_ids:
-            outcomes.append(PredictedOutcome(index, "rejected", "customer_not_found", "미등록 고객"))
+            outcomes.append(PredictedOutcome(index, "rejected", "unknown_customer_reference", "미등록 고객"))
             continue
         if event.transaction_id in seen_transaction_ids:
             outcomes.append(PredictedOutcome(index, "duplicate", None, "같은 transaction_id가 이미 저장됨"))
