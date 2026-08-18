@@ -7,7 +7,7 @@ import {
   toCustomerGroups,
   type MonthlyUsage,
 } from "@/lib/api/usage";
-import { formatNumber, uuidTail } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 /**
@@ -64,7 +64,6 @@ export async function UsageSection({
   const view: UsageGroupView[] = groups.map((group) => ({
     customerId: group.customerId,
     customerName: group.customerName,
-    customerIdTail: uuidTail(group.customerId),
     meters: group.meters.map((meter) => ({
       label: meter.label,
       quantity: formatNumber(meter.quantity),

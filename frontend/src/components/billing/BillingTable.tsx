@@ -10,8 +10,6 @@ import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid"
 export type BillingGroupView = {
   customerId: string;
   customerName: string;
-  /** UUID 마지막 그룹. 이름 옆에 붙는 짧은 식별자다. */
-  customerIdTail: string;
   /** 고객 소계. 서버가 준 amount를 원화 표기만 한 것이다. */
   amount: string;
   lines: BillingLineView[];
@@ -61,7 +59,7 @@ export function BillingTable({
               <div className="grid-cell grid-cell--group">
                 <span aria-hidden>{collapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
-                <span className="grid-cell__id">{group.customerIdTail}</span>
+                <span className="grid-cell__id">{group.customerId}</span>
               </div>
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
                 청구 라인 {group.lines.length}줄
