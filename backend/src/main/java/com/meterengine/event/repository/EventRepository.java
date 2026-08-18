@@ -132,6 +132,36 @@ public class EventRepository {
   }
 
   /**
+   * 이 (도입사, 고객)에 이벤트가 한 건이라도 있는지 (MS2-155).
+   *
+   * <p>고객 삭제가 이 판정에 걸려 있다. 이벤트가 있는 고객은 지울 수 없고 409가 나간다. 그 규칙 자체는 V1의 복합 FK가 강제하고, 이 조회는 사용자에게 쓸 만한
+   * 오류를 주기 위해 앱이 먼저 물어보는 것이다.
+   *
+   * <p><b>{@link #count}로 갈음하지 않는다.</b> 필터를 전부 null로 넘기면 같은 범위가 나오지만, 그쪽은 조건에 걸리는 행을 끝까지 센다. 여기서
+   * 필요한 답은 "있다/없다"뿐이라 {@code EXISTS}가 첫 행에서 멈춘다. 이벤트가 수백만 건인 고객에서 차이가 난다.
+   *
+   * <p><b>이 메서드가 customer 쪽이 아니라 여기 있는 이유.</b> usage_event를 아는 것은 이 패키지다. 고객 쪽에 SQL을 두면 테이블이 바뀔 때 그
+   * 사실이 이 도메인 밖에서 조용히 깨진다. 대신 customer -> event 참조가 생겨 두 패키지가 서로를 참조하게 되는데, 그것이 문제가 되는 시점(모듈 경계를
+   * 강제할 때)에는 customer가 필요한 조회를 인터페이스로 선언하고 이 패키지가 구현하는 식으로 방향을 되돌릴 수 있다. 호출부는 그대로 둔 채로 된다.
+   *
+   * <p>organization_id를 조건에 함께 넣는다. PK가 (도입사, transaction_id)라 customer_id만으로 조회하면 인덱스를 타지 못할 뿐
+   * 아니라, 도입사를 빼먹은 조회가 여기서만 예외가 되는 것도 곤란하다.
+   */
+  public boolean existsForCustomer(UUID organizationId, UUID customerId) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM usage_event
+              WHERE organization_id = ? AND customer_id = ?
+            )
+            """,
+            Boolean.class,
+            organizationId,
+            customerId));
+  }
+
+  /**
    * 두 쿼리가 같은 조건을 보도록 WHERE 절을 한 곳에서 만든다.
    *
    * <p>목록과 건수가 조건이 어긋나면 페이지 번호는 있는데 그 페이지가 비는 식으로 조용히 깨진다.

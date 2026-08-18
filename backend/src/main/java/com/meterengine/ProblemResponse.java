@@ -80,7 +80,10 @@ public record ProblemResponse(
               ErrorCodes.REQUEST_TYPE_NOT_SUPPORTED,
               ErrorCodes.RESPONSE_TYPE_NOT_ACCEPTABLE,
               ErrorCodes.METHOD_NOT_ALLOWED,
-              ErrorCodes.ENDPOINT_NOT_FOUND
+              ErrorCodes.ENDPOINT_NOT_FOUND,
+              ErrorCodes.CUSTOMER_NOT_FOUND,
+              ErrorCodes.CUSTOMER_HAS_EVENTS,
+              ErrorCodes.UNKNOWN_ORGANIZATION
             })
         String code,
     @Schema(
