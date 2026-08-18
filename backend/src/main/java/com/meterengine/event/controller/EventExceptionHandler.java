@@ -1,5 +1,7 @@
 package com.meterengine.event.controller;
 
+import com.meterengine.ErrorCodes;
+import com.meterengine.ProblemMembers;
 import com.meterengine.event.exception.UnknownCustomerException;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +44,7 @@ class EventExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     problem.setTitle("Unknown customer");
-    problem.setProperty("code", "customer_not_found");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
     return problem;
   }
 
@@ -64,7 +66,7 @@ class EventExceptionHandler {
             HttpStatus.BAD_REQUEST,
             "the event could not be stored as sent; retrying the same payload will not succeed");
     problem.setTitle("Invalid event");
-    problem.setProperty("code", "invalid_event");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.INVALID_EVENT);
     return problem;
   }
 
@@ -148,8 +150,8 @@ class EventExceptionHandler {
         ProblemDetail.forStatusAndDetail(
             HttpStatus.BAD_REQUEST, "the request could not be accepted as sent");
     problem.setTitle("Bad Request");
-    problem.setProperty("code", "validation_error");
-    problem.setProperty("errors", errors);
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.VALIDATION_ERROR);
+    problem.setProperty(ProblemMembers.ERRORS, errors);
     return problem;
   }
 
@@ -176,8 +178,8 @@ class EventExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request content.");
     problem.setTitle("Bad Request");
-    problem.setProperty("code", "validation_error");
-    problem.setProperty("errors", errors);
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.VALIDATION_ERROR);
+    problem.setProperty(ProblemMembers.ERRORS, errors);
     return problem;
   }
 }

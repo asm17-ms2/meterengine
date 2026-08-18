@@ -16,8 +16,17 @@ export type ApiError = {
   status: number;
   /**
    * 백엔드가 problem detail에 얹는 커스텀 확장 멤버.
-   * validation_error / customer_not_found / invalid_event 중 하나이거나,
-   * 여기서 만든 network_error / dev_forced.
+   *
+   * 백엔드가 내는 값 (2026-08-17, MS2-150 4단계 기준):
+   *   validation_error / unknown_customer_reference / invalid_event /
+   *   malformed_request_body / request_type_not_supported /
+   *   response_type_not_acceptable / method_not_allowed / endpoint_not_found
+   *
+   * 여기서 만든 값: network_error / http_error / dev_forced.
+   *
+   * 닫힌 집합처럼 보이지만 열린 것으로 다룬다. 백엔드가 code를 추가해도 이 주석은
+   * 따라오지 않고, 5xx와 본문이 problem+json이 아닌 응답에는 code가 없어
+   * http_error로 채워진다. 모르는 값은 기본 문구로 떨어뜨린다 (MS2-150 B-2).
    */
   code: string;
   title: string;
