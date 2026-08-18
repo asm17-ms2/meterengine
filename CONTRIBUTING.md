@@ -27,6 +27,7 @@ README는 슬라이스가 끝날 때마다 조금씩 밀린다. "아직 없다"�
 | 프론트 화면을 추가하거나 자리표시자를 실제 화면으로 바꿨다 | `frontend/README.md`의 "화면" 표 |
 | 마이그레이션이나 시드를 추가/변경했다 | `backend/README.md` 기술 스택의 Flyway 항목 |
 | 컨트롤러나 DTO를 건드렸다 | `backend/README.md` "API 문서"의 오퍼레이션 표. 생성물 `backend/openapi.yaml`은 CLAUDE.md의 규칙을 따른다 |
+| 오류 code를 추가/변경했거나 오류 응답 형식을 건드렸다 | `backend/README.md` "오류 응답"의 code 목록. 값의 정본은 `ErrorCodes`이고, 프론트엔드는 모르는 code에 기본 문구를 쓴다 |
 | 실행 명령이나 사전 준비(런타임 버전, 컨테이너)가 바뀌었다 | 루트 README "시작하기"와 해당 하위 README의 "실행" |
 | 가리키던 Jira 이슈가 닫혔다 (완료든 취소든) | 그 이슈 키가 적힌 README 줄. 결정이 났으면 결정 내용을 쓰고, 안 났으면 이슈 키를 떼고 미정이라고만 남긴다 |
 
