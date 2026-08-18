@@ -8,6 +8,7 @@
 | --- | --- |
 | `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
+| `demo/` | 수집-조회 데모/검증 CLI. Python 3.9+, 표준 라이브러리만 쓴다 |
 | `docs/` | 무엇을 둘지 미정 (`docs/document-rules.md`) |
 | `work/` | 개인 작업 공간. .gitignore로 제외되며 각자 만들어 쓴다 (CLAUDE.md 참조) |
 
@@ -17,7 +18,9 @@
 
 ## 문서 위치 규칙
 
-TODO (MS2-116): 미정이다. 규칙은 [`docs/document-rules.md`](docs/document-rules.md)에서 정한다.
+코드를 고칠 때 같이 고쳐야 하는 문서는 레포에, 논의해서 정하는 것은 Notion MS2 팀 위키에 둔다. 규칙의 정본은 [`docs/document-rules.md`](docs/document-rules.md)이며, 새 문서를 만들기 전에 그 파일을 본다.
+
+레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 브랜치와 PR 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md), 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
 
 ## 시작하기
 
@@ -30,13 +33,16 @@ cd backend && ./gradlew bootRun
 # frontend
 cd frontend && corepack enable pnpm && pnpm install && pnpm dev
 
+# 데모/검증 CLI (백엔드가 떠 있어야 한다, 레포 루트에서)
+python3 demo/meterdemo.py --help
+
 # DB만 필요할 때
 docker compose up -d
 ```
 
 MS2-31 완료 조건이던 "클론 후 한 명령으로 로컬 실행"은 backend + DB 기준 `./gradlew bootRun` 한 명령으로 충족한다 (DB가 자동 기동된다). frontend는 별도 명령으로 실행한다.
 
-자세한 내용은 `backend/README.md`, `frontend/README.md` 참조. CI는 `.github/workflows/ci.yml`에서 PR마다 backend 빌드/테스트와 frontend lint/빌드를 실행한다.
+자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조. API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다). CI는 `.github/workflows/ci.yml`에서 PR마다 backend 빌드/테스트와 frontend lint/빌드를 실행한다.
 
 ## 진행 상태
 
