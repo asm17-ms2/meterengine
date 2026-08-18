@@ -337,12 +337,13 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
+    // 2026-08-17부터 자바 이름(eventType)이 아니라 도입사가 보낸 JSON 키다 (MS2-150 A-2).
     assertThat(post(orgId, withoutEventType))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .asString()
-        .isEqualTo("eventType");
+        .isEqualTo("event_type");
   }
 
   @Test
@@ -429,12 +430,13 @@ class EventIngestIntegrationTest {
 
     assertThat(post(orgId, body("x".repeat(255), customerId.toString()))).hasStatusOk();
 
+    // 자바 이름은 transactionId다. 와이어 이름으로 통일했다 (MS2-150 A-2).
     assertThat(post(orgId, body("x".repeat(256), customerId.toString())))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .asString()
-        .isEqualTo("transactionId");
+        .isEqualTo("transaction_id");
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {

@@ -51,7 +51,12 @@ class Problem:
 
 
 def parse_problem(status: int, body: Optional[dict]) -> Problem:
-    """problem+json을 파싱한다. code는 /v1/events에만 있으므로 없을 수 있다."""
+    """problem+json을 파싱한다.
+
+    code는 2026-08-17(MS2-150 A-1, B-1)부터 세 엔드포인트의 4xx에 모두 붙는다. 그래도 없을 수 있어
+    Optional로 둔다. 5xx는 본문 형식을 약속하지 않고(B-3) 프록시나 게이트웨이가 problem+json이 아닌
+    본문을 돌려줄 수 있다.
+    """
     body = body or {}
     return Problem(
         status=status,

@@ -1,4 +1,9 @@
-"""problem+json 파싱 검증. code 확장 멤버는 /v1/events에만 있으므로 폴백이 필요하다."""
+"""problem+json 파싱 검증.
+
+code 확장 멤버는 2026-08-17(MS2-150 A-1, B-1)부터 세 엔드포인트의 4xx에 모두 붙는다. 예전에는
+/v1/events에만 있었고 이 파일의 폴백도 그 이유로 있었다. 폴백은 그대로 두는데 이유가 바뀌었다.
+5xx는 본문 형식을 약속하지 않기로 했고(B-3), 프록시가 끼어들면 problem+json이 아닌 본문도 온다.
+"""
 
 import unittest
 
@@ -13,21 +18,26 @@ class ParseProblemTest(unittest.TestCase):
                 "type": "about:blank",
                 "title": "Bad Request",
                 "status": 400,
-                "detail": "요청 본문 검증에 실패했습니다",
+                # detail은 영어, errors[].message는 한국어다. 헷갈리기 쉬운데 읽는 사람이 다르다.
+                # detail은 로그와 개발자용이고(B-2), 도입사가 읽는 자리는 errors[].message다
+                # (MS2-150 6단계). 2026-08-17까지 이 픽스처는 둘을 정확히 반대로 담고 있었다.
+                "detail": "the request could not be accepted as sent",
                 "code": "validation_error",
-                "errors": [{"field": "eventType", "message": "must not be blank"}],
+                "errors": [{"field": "event_type", "message": "공백일 수 없습니다"}],
             },
         )
         self.assertEqual(problem.code, "validation_error")
-        self.assertEqual(problem.errors[0]["field"], "eventType")
+        # 와이어 이름이다. 2026-08-17까지 이 픽스처는 자바 이름(eventType)을 담고 있었는데,
+        # 서버가 A-2로 바뀐 뒤에도 그대로여서 데모가 없는 계약을 예시로 보여주고 있었다.
+        self.assertEqual(problem.errors[0]["field"], "event_type")
 
-    def test_usage_invoice의_400은_code가_없다(self):
+    def test_code가_없는_본문도_다룬다(self):
         problem = parse_problem(
             400,
-            {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Invalid request content."},
+            {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "the request could not be accepted as sent"},
         )
         self.assertIsNone(problem.code)
-        self.assertEqual(problem.detail, "Invalid request content.")
+        self.assertEqual(problem.detail, "the request could not be accepted as sent")
 
     def test_json이_아닌_바디도_다룬다(self):
         problem = parse_problem(502, None)
