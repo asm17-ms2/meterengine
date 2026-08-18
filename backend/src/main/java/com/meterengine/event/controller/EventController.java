@@ -1,5 +1,6 @@
 package com.meterengine.event.controller;
 
+import com.meterengine.ProblemResponse;
 import com.meterengine.event.dto.EventIngestRequest;
 import com.meterengine.event.dto.EventIngestResponse;
 import com.meterengine.event.dto.EventPageResponse;
@@ -18,7 +19,6 @@ import jakarta.validation.constraints.Min;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,7 +72,7 @@ public class EventController {
         content =
             @Content(
                 mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemDetail.class)),
+                schema = @Schema(implementation = ProblemResponse.class)),
         description =
             """
             code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
@@ -112,7 +112,7 @@ public class EventController {
         content =
             @Content(
                 mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemDetail.class)),
+                schema = @Schema(implementation = ProblemResponse.class)),
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가

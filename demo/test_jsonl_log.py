@@ -36,7 +36,7 @@ def _write_sample(path):
             '"event_type": "chat_completion", "properties": {"token": 1}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=400,
-            response_text='{"type": "about:blank", "status": 400, "code": "unknown_customer_reference"}',
+            response_text='{"status": 400, "code": "unknown_customer_reference"}',
             outcome="rejected",
             error=None,
             elapsed_ms=8,

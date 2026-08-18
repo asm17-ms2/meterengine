@@ -15,7 +15,8 @@ class ParseProblemTest(unittest.TestCase):
         problem = parse_problem(
             400,
             {
-                "type": "about:blank",
+                # type은 넣지 않는다. 서버가 안 보낸다 (MS2-150 7단계 결정). 2026-08-17까지 이
+                # 픽스처들이 "about:blank"를 담고 있어 없는 필드를 예시로 보여주고 있었다.
                 "title": "Bad Request",
                 "status": 400,
                 # detail은 영어, errors[].message는 한국어다. 헷갈리기 쉬운데 읽는 사람이 다르다.
@@ -34,7 +35,7 @@ class ParseProblemTest(unittest.TestCase):
     def test_code가_없는_본문도_다룬다(self):
         problem = parse_problem(
             400,
-            {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "the request could not be accepted as sent"},
+            {"title": "Bad Request", "status": 400, "detail": "the request could not be accepted as sent"},
         )
         self.assertIsNone(problem.code)
         self.assertEqual(problem.detail, "the request could not be accepted as sent")

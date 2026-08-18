@@ -2,15 +2,22 @@ package com.meterengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
@@ -192,10 +199,83 @@ class OpenApiDocumentTest {
   void 모든_400이_200_스키마를_물려받지_않는다() {
     // @ApiResponse에 content를 안 주면 400 스키마가 그 오퍼레이션의 200 스키마로 나간다. 넷 중 하나만
     // 잡아 두면 나머지 셋이 조용히 틀린 채로 커밋된다 (MS2-140에서 실제로 그런 상태를 발견했다).
-    assertProblemDetail("/v1/events", "get");
-    assertProblemDetail("/v1/events", "post");
-    assertProblemDetail("/v1/usage", "get");
-    assertProblemDetail("/v1/invoice", "get");
+    //
+    // 어느 스키마를 가리키는지도 함께 본다. 넷이 같아야 한다.
+    //
+    // [2026-08-17, MS2-150 7단계] 예전에는 "code가 붙는 쪽(/v1/events)과 안 붙는 쪽이 갈린다"고 적혀
+    // 있었다. 4단계가 프레임워크 4xx 전부에 code를 붙여 그 구분이 없어졌고, 7단계가 스키마를 하나로
+    // 합쳤다. 다시 갈리면 그것은 회귀이므로 넷을 같은 이름으로 못박아 둔다.
+    assertProblemSchema("/v1/events", "get", "ProblemResponse");
+    assertProblemSchema("/v1/events", "post", "ProblemResponse");
+    assertProblemSchema("/v1/usage", "get", "ProblemResponse");
+    assertProblemSchema("/v1/invoice", "get", "ProblemResponse");
+  }
+
+  @Test
+  void 오류_스키마가_실제_본문과_같은_모양이다() {
+    // ProblemDetail을 그대로 물리면 springdoc이 확장 멤버를 담는 Map 필드를 그대로 읽어, 응답에 없는
+    // properties 객체가 스키마에 생기고 정작 최상위로 나가는 code와 errors는 빠진다 (PR #31 리뷰).
+    // Jackson이 @JsonAnyGetter로 맵을 펼치는 것을 springdoc이 모르기 때문이다.
+    assertSchemaHasField("ProblemResponse", ProblemMembers.CODE);
+    assertSchemaHasField("ProblemResponse", ProblemMembers.ERRORS);
+    assertSchemaHasField("ProblemFieldError", ProblemMembers.FIELD);
+    assertSchemaHasField("ProblemFieldError", ProblemMembers.MESSAGE);
+
+    // [2026-08-17, 8단계] assertSchemaHasNoField(..., "properties") 두 줄을 지웠다 (MS2-150 [0-B] 21).
+    // ProblemResponse에 properties 컴포넌트가 없으니 그 단언은 어떤 변경으로도 빨개지지 않는다. 잡으려던
+    // 회귀(ProblemDetail을 그대로 스키마로 물리는 것)는 바로 아래 doesNotContainKey와 이 아래 키 집합
+    // 대조가 이미 양방향으로 잡는다. 절대 실패할 수 없는 단언은 검사 개수만 늘리고 통과를 근거로 쓰게 만든다.
+
+    // 문서 전용 타입으로 갈아탄 뒤에도 프레임워크 타입이 문서에 남아 있으면, 어느 쪽이 계약인지 갈린다.
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.components.schemas")
+        .asMap()
+        .doesNotContainKey("ProblemDetail");
+
+    // ---- 여기부터가 이름값을 하게 만드는 부분 (MS2-150 인수기준 6) ----
+    //
+    // 2026-08-17까지 이 테스트는 이름과 달리 실제 본문을 한 번도 보지 않았다. 문서가 어떤 모양인지만 보므로
+    // 400을 code 있는 스키마로 문서화해 놓고 실제로는 code 없는 응답을 내도 통과했고, MS2-150 이전이 정확히
+    // 그 상태였다. 보증하지 않는 것을 보증한다고 읽히는 이름이라 없는 것보다 위험했다.
+    //
+    // 그래서 문서 프로퍼티 키 집합과 실제 본문 최상위 키 집합을 맞댄다. 한 줄이 양방향을 잡는다.
+    // 문서에만 있는 필드(과거의 type)와 응답에만 있는 필드(누가 setProperty를 새로 추가한 경우)가 모두 걸린다.
+    //
+    // errors는 code=validation_error일 때만 실리므로 한 응답으로는 집합이 안 찬다. 실리는 응답과 안 실리는
+    // 응답의 합집합을 쓴다. 그 조건 자체는 ProblemResponse javadoc과 스키마 description에 적혀 있다.
+    //
+    // 상태와 핸들러를 갈라서 태운다. 합집합이라 경로를 늘리면 잡을 수 있는 것만 늘고 놓치는 것은 줄어든다.
+    // 400(프레임워크), 404, 405, 415, 그리고 다른 컨트롤러의 400까지 넣는다.
+    //
+    // [정본과 다른 자리에 뒀다] MS2-150 인수기준 6은 이 대조를 EventIngestIntegrationTest에 넣으라고 적었다.
+    // 이유가 "컨텍스트 재사용"이었는데, 두 테스트가 같은 @SpringBootTest 컨텍스트를 쓰므로 그 이득은 어느
+    // 쪽에 둬도 같다. 반면 대조하려면 문서와 응답이 <b>둘 다</b> 필요하고 문서를 꺼내는 json()이 여기 있다.
+    // 저쪽에 두면 문서 조회 코드를 복제하게 된다.
+    Set<String> documented = keysOf(json(), "$.components.schemas.ProblemResponse.properties");
+    Set<String> actual = new TreeSet<>();
+    actual.addAll(keysOf(mvc.get().uri("/v1/events").exchange(), "$")); // 400, errors 있음
+    actual.addAll(keysOf(mvc.get().uri("/v1/nope").exchange(), "$")); // 404, errors 없음
+    actual.addAll(keysOf(mvc.method(HttpMethod.DELETE).uri("/v1/events").exchange(), "$")); // 405
+    actual.addAll(
+        keysOf(
+            mvc.post().uri("/v1/events").contentType(MediaType.TEXT_PLAIN).content("{}").exchange(),
+            "$")); // 415
+    actual.addAll(keysOf(mvc.get().uri("/v1/usage").exchange(), "$")); // 다른 컨트롤러의 400
+
+    assertThat(actual)
+        .as(
+            "문서 프로퍼티와 실제 400 본문의 최상위 키가 갈렸다. 문서에만: %s / 응답에만: %s",
+            difference(documented, actual), difference(actual, documented))
+        .isEqualTo(documented);
+
+    // 경로에 따라 갈리는 두 필드는 그 사유가 생성물에 실려야 한다 (MS2-150 인수기준 4).
+    //
+    // javadoc에 적는 것으로는 안 된다. 계약을 읽는 쪽은 openapi.yaml만 보고 javadoc은 거기 실리지 않는다.
+    // code와 errors는 응답마다 있고 없고가 갈리므로, 사유가 없으면 FE가 "가끔 없는 필드"를 만나 놓고
+    // 그것이 규약인지 버그인지 판단할 근거가 없다.
+    assertSchemaFieldHasDescription("ProblemResponse", ProblemMembers.CODE);
+    assertSchemaFieldHasDescription("ProblemResponse", ProblemMembers.ERRORS);
   }
 
   // ---------------------------------------------------------------------------
@@ -207,15 +287,62 @@ class OpenApiDocumentTest {
         .isNotNull();
   }
 
-  /** 400 응답이 problem+json의 {@code ProblemDetail}을 가리키는지 본다. */
-  private void assertProblemDetail(String path, String method) {
+  private void assertSchemaFieldHasDescription(String schema, String field) {
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            "$.components.schemas.%s.properties.%s.description".formatted(schema, field))
+        .asString()
+        .as("%s.%s에 description이 없다. 사유가 생성물에 실려야 한다 (인수기준 4)", schema, field)
+        .isNotBlank();
+  }
+
+  /** 400 응답이 problem+json으로, 기대한 오류 스키마를 가리키는지 본다. */
+  private void assertProblemSchema(String path, String method, String schema) {
     assertThat(json())
         .bodyJson()
         .extractingPath(
             "$.paths['%s'].%s.responses['400'].content['application/problem+json'].schema.$ref"
                 .formatted(path, method))
         .asString()
-        .endsWith("ProblemDetail");
+        .isEqualTo("#/components/schemas/%s".formatted(schema));
+  }
+
+  /**
+   * 응답 본문에서 주어진 경로가 가리키는 객체의 키 집합을 꺼낸다.
+   *
+   * <p>기대 키를 테스트에 손으로 적지 않으려고 양쪽을 같은 방법으로 꺼낸다. 손으로 적으면 스키마의 사본이 하나 더 생겨서, 필드가 늘 때 사본이 갈리거나(유형 I)
+   * 사본만 고치고 통과하는 일이 난다.
+   */
+  private Set<String> keysOf(MvcTestResult result, String path) {
+    try {
+      JsonNode node = new ObjectMapper().readTree(body(result)).at(toPointer(path));
+      Set<String> keys = new TreeSet<>();
+      node.fieldNames().forEachRemaining(keys::add);
+      assertThat(keys).as("%s가 비었다. 경로가 틀렸거나 응답이 JSON이 아니다", path).isNotEmpty();
+      return keys;
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  /**
+   * {@code $.a.b} 형태를 Jackson JSON Pointer({@code /a/b})로 바꾼다. {@code $}는 루트다.
+   *
+   * <p><b>점 표기만 다룬다.</b> 이 파일의 다른 단언이 쓰는 {@code $.paths['/v1/events']} 같은 대괄호 표기를 넣으면 조용히 엉뚱한 포인터가
+   * 만들어져 "키가 비었다"는 엉뚱한 실패로 나타난다. 그래서 대괄호를 만나면 그 자리에서 세운다. 검사기가 틀린 답을 내는 것보다 안 도는 편이 낫다(유형 F).
+   */
+  private static String toPointer(String path) {
+    if (path.indexOf('[') >= 0) {
+      throw new IllegalArgumentException("대괄호 표기는 지원하지 않는다. 점 표기로 적어라: " + path);
+    }
+    return "$".equals(path) ? "" : "/" + path.substring(2).replace('.', '/');
+  }
+
+  private static Set<String> difference(Set<String> left, Set<String> right) {
+    Set<String> only = new TreeSet<>(left);
+    only.removeAll(right);
+    return only;
   }
 
   private MvcTestResult json() {
