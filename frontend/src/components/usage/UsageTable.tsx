@@ -10,8 +10,6 @@ import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid"
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
-  /** UUID 마지막 그룹. 이름 옆에 붙는 짧은 식별자다. */
-  customerIdTail: string;
   meters: { label: string; quantity: string }[];
 };
 
@@ -40,7 +38,7 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
               <div className="grid-cell grid-cell--group">
                 <span aria-hidden>{collapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
-                <span className="grid-cell__id">{group.customerIdTail}</span>
+                <span className="grid-cell__id">{group.customerId}</span>
               </div>
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
                 미터 {group.meters.length}개
