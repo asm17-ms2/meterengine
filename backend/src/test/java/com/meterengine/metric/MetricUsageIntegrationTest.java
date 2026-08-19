@@ -325,8 +325,8 @@ class MetricUsageIntegrationTest {
     jdbc.update(
         """
         INSERT INTO billable_metric
-          (organization_id, code, name, event_type, aggregation, target_property, unit_price)
-        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token', 0.5)
+          (organization_id, code, name, event_type, aggregation, target_property)
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token')
         """,
         organizationId);
     return organizationId;

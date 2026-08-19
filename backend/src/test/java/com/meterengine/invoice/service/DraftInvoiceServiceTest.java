@@ -1,6 +1,7 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
@@ -12,10 +13,12 @@ import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,12 +42,13 @@ class DraftInvoiceServiceTest {
 
   @Mock private MetricUsageService aggregation;
   @Mock private CustomerRepository customers;
+  @Mock private PriceRateRepository prices;
 
   private DraftInvoiceService service;
 
   @BeforeEach
   void setUp() {
-    service = new DraftInvoiceService(aggregation, customers);
+    service = new DraftInvoiceService(aggregation, customers, prices);
   }
 
   @Test
@@ -52,7 +56,9 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customers.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID)).thenReturn(List.of(acme));
     when(aggregation.aggregate(ORG_ID, AUGUST))
-        .thenReturn(List.of(usage(metric("token-usage", "token", "0.5"), acme, "3290")));
+        .thenReturn(List.of(usage(metric("token-usage", "token"), acme, "3290")));
+    when(prices.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
@@ -77,7 +83,9 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customers.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID)).thenReturn(List.of(acme));
     when(aggregation.aggregate(ORG_ID, AUGUST))
-        .thenReturn(List.of(usage(metric("token-usage", "token", "0.5"), acme, "3291")));
+        .thenReturn(List.of(usage(metric("token-usage", "token"), acme, "3291")));
+    when(prices.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
@@ -92,8 +100,13 @@ class DraftInvoiceServiceTest {
     when(aggregation.aggregate(ORG_ID, AUGUST))
         .thenReturn(
             List.of(
-                usage(metric("token-usage", "token", "0.5"), acme, "3291"),
-                usage(metric("api-request-count", "count", "0.5"), acme, "5")));
+                usage(metric("token-usage", "token"), acme, "3291"),
+                usage(metric("api-request-count", "count"), acme, "5")));
+    when(prices.findBaseUnitPrices(ORG_ID))
+        .thenReturn(
+            Map.of(
+                "token-usage", new BigDecimal("0.5"),
+                "api-request-count", new BigDecimal("0.5")));
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
@@ -114,10 +127,12 @@ class DraftInvoiceServiceTest {
         .thenReturn(
             List.of(
                 new MetricUsage(
-                    metric("token-usage", "token", "0.5"),
+                    metric("token-usage", "token"),
                     List.of(
                         new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500")),
                         new CustomerUsage(beta.getId(), "베타", BigDecimal.ZERO)))));
+    when(prices.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
     List<CustomerEntry> entries = service.preview(ORG_ID, AUGUST).customers();
 
@@ -136,6 +151,7 @@ class DraftInvoiceServiceTest {
     Customer beta = customer("베타");
     when(customers.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID)).thenReturn(List.of(acme, beta));
     when(aggregation.aggregate(ORG_ID, AUGUST)).thenReturn(List.of());
+    when(prices.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
@@ -151,19 +167,29 @@ class DraftInvoiceServiceTest {
             });
   }
 
+  /**
+   * V2 마이그레이션과 시드가 미터:단가 1:1을 보장하므로 정상 경로에서는 없다. 그래도 데이터가 깨졌을 때 조용한 0원 청구 대신 즉시 실패해야 한다 (V1의
+   * longValueExact와 같은 태도).
+   */
+  @Test
+  void 단가가_없는_미터는_즉시_실패한다() {
+    Customer acme = customer("아크메");
+    when(customers.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID)).thenReturn(List.of(acme));
+    when(aggregation.aggregate(ORG_ID, AUGUST))
+        .thenReturn(List.of(usage(metric("token-usage", "token"), acme, "3290")));
+    when(prices.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
+
+    assertThatThrownBy(() -> service.preview(ORG_ID, AUGUST))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("token-usage");
+  }
+
   private static Customer customer(String name) {
     return new Customer(UUID.randomUUID(), ORG_ID, name);
   }
 
-  private static BillableMetric metric(String code, String targetProperty, String unitPrice) {
-    return new BillableMetric(
-        ORG_ID,
-        code,
-        code + " 미터",
-        "chat_completion",
-        "SUM",
-        targetProperty,
-        new BigDecimal(unitPrice));
+  private static BillableMetric metric(String code, String targetProperty) {
+    return new BillableMetric(ORG_ID, code, code + " 미터", "chat_completion", "SUM", targetProperty);
   }
 
   private static MetricUsage usage(BillableMetric metric, Customer customer, String quantity) {
