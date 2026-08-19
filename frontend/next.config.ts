@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Docker 실행 이미지(frontend/Dockerfile)가 이 출력만 담는다. next build가 실제로
+  // 도달하는 모듈만 추려 .next/standalone에 self-contained 서버를 만들어 주므로,
+  // 이미지에 pnpm과 node_modules 전체를 넣지 않아도 된다.
+  //
+  // next dev에는 영향이 없다. 다만 next start(pnpm start)는 이 설정과 같이 쓰지 말라고
+  // Next가 경고한다. 실측하면 경고를 내고도 200을 주지만, 지원하는 조합이 아니므로
+  // 프로덕션 실행은 node .next/standalone/server.js를 쓴다 (Dockerfile의 CMD가 그것이다).
+  output: "standalone",
+
   // 기본 위치(bottom-left)가 사이드바 하단의 개발 모드 표 상태 스위치를 덮는다.
   devIndicators: { position: "bottom-right" },
 
