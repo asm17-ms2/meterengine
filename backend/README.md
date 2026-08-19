@@ -6,9 +6,10 @@
 
 - Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
-- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 두 개다
+- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 세 개다
   - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 네 테이블
-  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 단가 등록 API가 없어서 지금은 데이터가 들어오는 통로가 이 파일뿐이다
+  - `V2__split_price_policy_from_billable_metric.sql` - 미터의 unit_price를 price_policy(가격 정책)와 price_rate(단가)로 분리 (MS2-158). 다차원 가격 대비 형태지만 이번 슬라이스는 전부 무차원('{}')이다
+  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터, 가격 등록 API가 없어서 지금은 고객 API(MS2-155)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
 - 오류 응답: RFC 9457 problem+json 하나로 통일하고 `code` 확장 멤버로 종류를 고른다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
@@ -133,18 +134,20 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 
 ## 구조
 
-단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 넷을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
+단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 다섯을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
 - `metric`: 과금 지표와 고객별 월 사용량 집계 (`/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`)
-- `customer`: 고객 엔티티와 조회. 나머지 셋이 공통으로 쓰는 아래층이다
-- 도메인 넷 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
+- `pricing`: 가격 정책과 단가 (MS2-158에서 미터의 unit_price를 분리). 지금은 조회 리포지토리 하나고, 등록 API(MS2-157)가 여기 얹힌다
+- `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
+- 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
-경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 다섯이고 순환이 없다.
+경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 일곱이다.
 
 - `event` -> `customer` (고객 판정), `event` -> `metric` (청구 월 경계 계산 공유)
-- `invoice` -> `customer` (고객 조회), `invoice` -> `metric` (집계 호출)
+- `invoice` -> `customer` (고객 조회), `invoice` -> `metric` (집계 호출), `invoice` -> `pricing` (단가 조회)
 - `metric` -> `customer` (고객 조회)
+- `customer` -> `event` (고객 삭제 전 이벤트 유무 확인, MS2-155)
 
-`customer`가 아래층이고 나머지 셋이 그것을 쓴다. 반대 방향(`customer` -> 다른 도메인)은 없다.
+`customer`가 아래층이고 event, metric, invoice가 그것을 쓴다. 역방향은 `customer` -> `event` 하나뿐인데, 이 때문에 event와 customer는 서로를 참조한다. 수용한 이유와 방향을 되돌리는 방법은 `CustomerService`의 클래스 주석에 있다. `pricing`은 다른 도메인에 의존하지 않는다.
