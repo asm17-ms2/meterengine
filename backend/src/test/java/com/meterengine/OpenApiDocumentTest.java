@@ -136,12 +136,29 @@ class OpenApiDocumentTest {
         .bodyJson()
         .extractingPath("$.paths")
         .asMap()
-        .containsOnlyKeys("/v1/events", "/v1/usage", "/v1/invoice");
+        .containsOnlyKeys(
+            "/v1/events", "/v1/usage", "/v1/invoice", "/v1/customers", "/v1/customers/{id}");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/usage'].get.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/invoice'].get.summary").isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/customers'].get.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/customers'].post.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/customers/{id}'].put.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/customers/{id}'].delete.summary")
+        .isNotNull();
   }
 
   @Test
@@ -167,6 +184,7 @@ class OpenApiDocumentTest {
     assertSchemaHasField("MetricEntry", "target_property");
     assertSchemaHasField("CustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
+    assertSchemaHasField("CustomerResponse", "customer_id");
 
     // 자바 필드명이 문서 어디로도 새지 않는다.
     assertThat(body(json()))
@@ -209,6 +227,23 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/events", "post", "ProblemResponse");
     assertProblemSchema("/v1/usage", "get", "ProblemResponse");
     assertProblemSchema("/v1/invoice", "get", "ProblemResponse");
+    assertProblemSchema("/v1/customers", "get", "ProblemResponse");
+    assertProblemSchema("/v1/customers", "post", "ProblemResponse");
+    assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
+  }
+
+  /**
+   * 400 말고 다른 오류 상태도 마찬가지다 (MS2-155).
+   *
+   * <p>고객 API가 처음으로 404와 409를 쓴다. 위 테스트가 400만 보므로, content를 빠뜨린 404가 CustomerResponse 스키마를 물려받아도
+   * 아무도 알아채지 못한다. 삭제의 204는 본문이 없어 볼 것이 없다.
+   */
+  @Test
+  void 고객_API의_404와_409도_200_스키마를_물려받지_않는다() {
+    assertProblemSchema("/v1/customers/{id}", "put", "404", "ProblemResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
   }
 
   @Test
@@ -299,11 +334,16 @@ class OpenApiDocumentTest {
 
   /** 400 응답이 problem+json으로, 기대한 오류 스키마를 가리키는지 본다. */
   private void assertProblemSchema(String path, String method, String schema) {
+    assertProblemSchema(path, method, "400", schema);
+  }
+
+  /** 400 말고 다른 오류 상태를 볼 때 쓴다 (MS2-155의 404, 409). */
+  private void assertProblemSchema(String path, String method, String status, String schema) {
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.paths['%s'].%s.responses['400'].content['application/problem+json'].schema.$ref"
-                .formatted(path, method))
+            "$.paths['%s'].%s.responses['%s'].content['application/problem+json'].schema.$ref"
+                .formatted(path, method, status))
         .asString()
         .isEqualTo("#/components/schemas/%s".formatted(schema));
   }
