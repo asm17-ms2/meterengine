@@ -6,8 +6,12 @@
 
 - Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
-- 스키마 마이그레이션: Flyway. 아직 마이그레이션이 없다. 첫 마이그레이션은 `src/main/resources/db/migration/`에 둔다
-- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없다. 최종 위치는 `docs/document-rules.md`가 정해지면 옮긴다
+- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 두 개다
+  - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 네 테이블
+  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 단가 등록 API가 없어서 지금은 데이터가 들어오는 통로가 이 파일뿐이다
+- 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
+- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
+- 오류 응답: RFC 9457 problem+json 하나로 통일하고 `code` 확장 멤버로 종류를 고른다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
 - API 문서 UI: Scalar. 앱을 띄우면 `/scalar`에 뜬다. 원본 문서는 `/v3/api-docs`(JSON)와 `/v3/api-docs.yaml`이다. Swagger UI는 쓰지 않는다. 두 UI가 같은 문서를 보여줄 이유가 없어 `springdoc-openapi-starter-webmvc-ui` 대신 `-scalar`를 쓴다. 렌더링 JS가 jar에 번들되어 앱이 직접 서빙하므로 CDN을 타지 않고 버전이 의존성에 고정된다
 - 테스트: JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 실제 PostgreSQL 컨테이너로 돌린다
 - 코드 포맷: Spotless + google-java-format. CI에서 검사한다
@@ -33,6 +37,17 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
 
+현재 오퍼레이션은 넷이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+
+| 오퍼레이션 | 내용 |
+| --- | --- |
+| `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
+| `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
+| `GET /v1/usage` | 고객별 월 사용량 집계 |
+| `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
+
+넷 다 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
+
 **컨트롤러나 DTO를 건드렸으면 `openapi.yaml`을 같은 커밋에 넣는다.** `./gradlew build`가 다시 만들어 주니, 빌드 후 `git status`에 이 파일이 떴으면 계약이 바뀐 것이다. 프론트엔드는 백엔드를 띄우지 않고 이 파일로 계약을 읽는다.
 
 생성은 `OpenApiDocumentTest`가 한다. springdoc은 코드를 정적으로 분석하지 않아 앱이 떠 있어야 문서를 만들 수 있고, 그래서 생성 자리가 테스트다. 앱을 띄운 상태에서는 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
@@ -46,6 +61,64 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 - 프론트엔드가 이 파일과 실제 응답이 다르다고 보고한다
 - PR 리뷰에서 생성물 누락을 지적한 일이 두 번 나온다
 
+## 오류 응답
+
+오류는 형식 하나로 나간다. RFC 9457 problem+json에 `code` 확장 멤버를 얹은 것이고, 스키마는 `openapi.yaml`의 `ProblemResponse`다 (MS2-150).
+
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "the request could not be accepted as sent",
+  "instance": "/v1/events",
+  "code": "validation_error",
+  "errors": [{ "field": "event_type", "message": "공백일 수 없습니다" }]
+}
+```
+
+- `code`가 기계 판독용이다. 화면 문구는 이 값으로 고른다. `title`과 `detail`은 영어이고 로그와 개발자용이라 그대로 띄우지 않는다
+- `errors`는 `code=validation_error`일 때만 실린다. `field`는 도입사가 보낸 이름이다 (자바 필드명이 아니다)
+- `type`은 나가지 않는다. 값이 기본값 `about:blank`라 직렬화에서 빠지고, 우리가 `setType`을 부르는 곳이 없다
+- **5xx는 본문 형식을 약속하지 않는다.** 일부 5xx가 problem+json으로, 일부가 Boot 기본 형식으로 나가는데 클라이언트가 둘을 구분할 방법이 없다. 5xx에는 `code`를 붙이지 않는다. 클라이언트는 상태 코드만 보고, `code`가 없을 때 쓸 기본 문구를 갖고 있어야 한다
+
+### code 목록
+
+값의 정본은 `ErrorCodes`다. **code를 늘리거나 없앨 때 고치는 곳은 그 파일 하나다.** 운영 코드, 문서 스키마의 `allowableValues`, 통합 테스트 단언이 전부 이 상수를 거친다.
+
+| code | 상태 | 언제 |
+| --- | --- | --- |
+| `validation_error` | 400 | 헤더 누락, 쿼리 파라미터 타입 불일치, 본문 필드 제약 위반 |
+| `unknown_customer_reference` | 400 | 실어 보낸 `customer_id`로 (도입사, 고객) 조합을 찾지 못했다 |
+| `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
+| `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
+| `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
+| `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
+| `response_type_not_acceptable` | 406 | `Accept`로 만족시킬 응답 표현이 없다 |
+| `request_type_not_supported` | 415 | 보낸 `Content-Type`을 받을 수 없다 |
+
+**code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.** 그래서 옛 이름 `customer_not_found`를 `unknown_customer_reference`로 개명했다. 그 오류는 주소(`/v1/events`)가 아니라 실어 보낸 값이 잘못된 경우라 404가 아니라 400이다. 옛 이름은 MS2-155가 만들 `GET /v1/customers/{id}`의 404가 쓰도록 비워 뒀다.
+
+### 문구의 언어
+
+도입사가 읽는 자리는 `errors[].message` 하나다. 여기만 한국어이고 `title`과 `detail`은 영어로 둔다. 로그와 지원 문의에서 검색 가능한 고정 문자열이 낫기 때문이다.
+
+`spring.web.locale=ko`와 `spring.web.locale-resolver=fixed`로 못박아서 `Accept-Language`가 무엇이든 한국어가 나간다. 리졸버를 열어 두면 한 응답 안에 두 언어가 섞인다. Hibernate Validator는 en 번들을 갖고 있어 "must not be blank"로 답하는데 우리 문구는 ko 하나뿐이라 한국어가 그대로 나가기 때문이다. 다국어가 필요해지면 번들을 갖추고 그때 연다.
+
+우리가 만드는 문구는 `src/main/resources/messages.properties`에 있고 넷뿐이다. 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 Hibernate Validator의 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
+
+### 예외 핸들러 둘
+
+| 클래스 | 걸리는 범위 | 잡는 것 |
+| --- | --- | --- |
+| `FrameworkExceptionHandler` (루트) | 전역 | 프레임워크가 내는 예외 20종. 본문이 나가는 19종이 `handleExceptionInternal` 한 자리를 지나므로 거기서 4xx에만 `code`를 얹는다. 상태 코드와 응답 헤더(405의 `Allow`, 415의 `Accept`) 결정은 프레임워크에 남긴다 |
+| `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
+
+`EventExceptionHandler`를 한 컨트롤러에만 건 이유는 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"로 둔갑한다.
+
+**[주의] `ResponseEntityExceptionHandler`를 상속하는 클래스를 또 만들지 않는다.** Boot 자동 설정이 `@ConditionalOnMissingBean(ResponseEntityExceptionHandler.class)`라, 그 타입의 빈이 둘이면 하나만 등록되고 프레임워크 예외 처리의 절반이 조용히 사라진다. 그 자리는 `FrameworkExceptionHandler`가 의도적으로 차지하고 있다. 새 오류를 붙이려면 그 클래스를 고치거나, 도메인 예외를 잡는 별도 advice(상속 없는 `@RestControllerAdvice`)를 쓴다.
+
+프레임워크 4xx까지 같은 형식으로 끌어오는 스위치가 `spring.mvc.problemdetails.enabled=true`다. 끄면 한 엔드포인트가 400을 두 스키마로 낸다.
+
 ## 구조
 
 단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 넷을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
@@ -53,7 +126,13 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
 - `metric`: 과금 지표와 고객별 월 사용량 집계 (`/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`)
-- `customer`: 고객 엔티티와 조회
-- 도메인 소속이 아닌 것(부트스트랩, 설정)은 루트에 둔다
+- `customer`: 고객 엔티티와 조회. 나머지 셋이 공통으로 쓰는 아래층이다
+- 도메인 넷 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
-경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 event -> metric(청구 월 경계 계산 공유), invoice -> metric(집계 호출)의 한 방향만 있다.
+경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 다섯이고 순환이 없다.
+
+- `event` -> `customer` (고객 판정), `event` -> `metric` (청구 월 경계 계산 공유)
+- `invoice` -> `customer` (고객 조회), `invoice` -> `metric` (집계 호출)
+- `metric` -> `customer` (고객 조회)
+
+`customer`가 아래층이고 나머지 셋이 그것을 쓴다. 반대 방향(`customer` -> 다른 도메인)은 없다.

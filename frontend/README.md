@@ -2,7 +2,13 @@
 
 관리자 화면. Next.js + TypeScript.
 
-create-next-app 스캐폴드에 App Router, Tailwind CSS, ESLint가 포함되어 있다. 이는 init 구성이지 확정 스택이 아니다. 상태 관리, UI 라이브러리(Tailwind 유지 여부 포함), 렌더링 방식 활용 범위 등 세부 스택은 MS2-46 착수 시점에 정한다. 화면은 API 계약을 기준으로 backend와 병렬 개발한다 (계약 문서 위치는 `docs/document-rules.md` 참조).
+create-next-app 스캐폴드로 시작했고, 화면을 만들면서 아래로 굳었다.
+
+- App Router. 데이터를 읽는 화면은 Server Component에서 그린다
+- 상태 관리 라이브러리는 쓰지 않는다. 조회 조건은 쿼리스트링(`?month=`, `?page=`)이 들고, 접기/펼치기 같은 화면 안의 상태만 Client Component가 쓴다
+- 스타일은 Modernist 디자인 시스템이 정본이고 Tailwind는 레이아웃 유틸로만 쓴다 (아래 "디자인 시스템" 참조)
+
+화면은 API 계약을 기준으로 backend와 병렬 개발한다. 계약의 정본은 `backend/openapi.yaml`이다 (백엔드를 띄우지 않고 이 파일로 읽는다).
 
 ## 실행
 
@@ -41,9 +47,8 @@ pnpm build
 
 - CORS가 아예 없다. 백엔드에 CORS 설정이 없고, `X-Organization-Id`가 커스텀 헤더라
   브라우저가 직접 부르면 preflight에서 막힌다.
-- 조회 대상 도입사를 정하는 `X-Organization-Id`가 클라이언트에 가지 않는다. 이 헤더는
-  MS2-126이 Bearer 인증으로 대체할 임시 장치라, 브라우저에 두면 devtools에서 바꿔
-  다른 테넌트를 조회할 수 있다.
+- 조회 대상 도입사를 정하는 `X-Organization-Id`가 클라이언트에 가지 않는다. 인증이 아직
+  없어서 쓰는 임시 헤더라, 브라우저에 두면 devtools에서 바꿔 다른 테넌트를 조회할 수 있다.
 
 `next.config.ts`의 `rewrites()`로 프록시하지 않는 것도 같은 이유다. rewrites는 요청 헤더를
 주입할 수 없어서 헤더를 브라우저가 붙여야 한다.
@@ -88,11 +93,15 @@ CSP를 걸거나 폐쇄망에 배포하게 되면 폰트를 레포로 가져와�
 
 ## 화면
 
-| 경로 | 이슈 | 상태 |
-| --- | --- | --- |
-| `/events` | MS2-134 | 자리표시자. `GET /v1/events`(MS2-131) 대기 |
-| `/usage` | MS2-136 | 구현됨. `GET /v1/usage` |
-| `/billing` | MS2-127 | 구현됨. `GET /v1/invoice` |
+셋 다 구현됐다. 라우트는 `src/app/(console)/` 아래에 있다.
+
+| 경로 | 화면 | 백엔드 | 이슈 |
+| --- | --- | --- | --- |
+| `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) | `GET /v1/events` | MS2-134 |
+| `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` | MS2-136 |
+| `/billing` | 청구 예정액 | `GET /v1/invoice` | MS2-127 |
+
+`/`는 `/usage`로 리다이렉트한다 (`src/app/page.tsx`).
 
 개발 모드에서는 사이드바 하단에 표 상태(정상/빈 상태/로딩/에러) 스위치가 뜬다.
 `?state=`만 바꾸며, 프로덕션 빌드에서는 통째로 제거된다.

@@ -10,12 +10,7 @@ import {
   type DraftInvoice,
   type InvoiceCustomer,
 } from "@/lib/api/invoice";
-import {
-  formatDecimal,
-  formatKrw,
-  formatKstStamp,
-  uuidTail,
-} from "@/lib/format";
+import { formatDecimal, formatKrw, formatKstStamp } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 /**
@@ -108,7 +103,6 @@ function toBillingGroupViews(customers: InvoiceCustomer[]): BillingGroupView[] {
   return customers.map((customer) => ({
     customerId: customer.customer_id,
     customerName: customer.customer_name,
-    customerIdTail: uuidTail(customer.customer_id),
     amount: formatKrw(customer.amount),
     lines: customer.lines.map((line) => ({
       label: line.target_property

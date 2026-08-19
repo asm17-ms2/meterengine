@@ -27,8 +27,8 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 ## 현재 상태 (중요)
 
-- 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 라이브러리는 MS2-31, 프론트엔드 상세는 MS2-46에서 정한다
-- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로)는 확정, GitHub 브랜치 보호로 강제된다. 네이밍/머지 방식 등 나머지는 개발 환경 구축(MS2-31)에서 합의한다. 정본은 CONTRIBUTING.md
+- 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 구성은 `backend/README.md`와 `frontend/README.md`가 정본이다
+- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로), 브랜치 네이밍, squash 머지 모두 확정됐고 GitHub 브랜치 보호로 강제된다. 정본은 CONTRIBUTING.md
 - 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
 - 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
 
@@ -36,7 +36,7 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 - 팀: 박성종(팀 리드), 문인호, 양성지 / 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기)
 - Jira/Confluence: https://asm17-ms2.atlassian.net (Jira 프로젝트 키 MS2, Confluence의 MS2 스페이스)
-- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (어떤 문서를 여기에 둘지는 미정, 아래 "문서 흐름" 참조)
+- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (정책과 스프린트 범위의 정본, 아래 "문서 흐름" 참조)
 - 팀 GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling)
 
 ## 개발 방법론
@@ -48,7 +48,11 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 ## 문서 흐름
 
-TODO (MS2-116): 문서를 어디에 둘지 미정이다. 규칙의 정본은 `docs/document-rules.md`이며, 새 문서를 만들기 전에 그 파일을 보고 없는 내용이면 먼저 물어본다.
+코드를 고칠 때 같이 고쳐야 하면 레포, 논의해서 정하는 것이면 Notion MS2 팀 위키다. 규칙의 정본은 `docs/document-rules.md`이며, 새 문서를 만들기 전에 그 파일을 보고 없는 내용이면 먼저 물어본다.
+
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치와 PR 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. `docs/` 아래에 무엇을 둘지는 아직 정하지 않았다.
+
+PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 
 ## OpenAPI 생성물 (MS2-140)
 

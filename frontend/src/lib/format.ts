@@ -63,12 +63,3 @@ export function formatDecimal(value: number): string {
 export function formatKrw(value: number): string {
   return `${formatDecimal(value)}원`;
 }
-
-/**
- * UUID의 마지막 그룹만. 표에서 고객 이름 옆에 붙이는 짧은 식별자다.
- * 전체 UUID는 상세 드로어의 raw payload에 싣는다.
- */
-export function uuidTail(uuid: string): string {
-  const parts = uuid.split("-");
-  return parts[parts.length - 1] ?? uuid;
-}
