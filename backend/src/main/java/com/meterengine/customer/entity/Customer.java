@@ -36,6 +36,18 @@ public class Customer {
     this.name = name;
   }
 
+  /**
+   * 이름을 바꾼다 (MS2-155).
+   *
+   * <p>고칠 수 있는 것이 이름뿐이라 setter 대신 이 이름을 쓴다.
+   *
+   * <p>{@code public}인 것은 MS2-149가 엔티티와 서비스를 다른 패키지로 갈라 놓아서다. 쓰는 곳은 {@code
+   * com.meterengine.customer.service.CustomerService} 하나다.
+   */
+  public void rename(String name) {
+    this.name = name;
+  }
+
   public UUID getId() {
     return id;
   }

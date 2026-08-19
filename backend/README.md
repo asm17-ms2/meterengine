@@ -37,16 +37,22 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
 
-현재 오퍼레이션은 넷이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+현재 오퍼레이션은 여덟이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 
 | 오퍼레이션 | 내용 |
 | --- | --- |
+| `GET /v1/customers` | 고객 목록. 이름 오름차순, 페이지 나누지 않음 |
+| `POST /v1/customers` | 고객 등록. 서버가 customer_id를 발급한다 |
+| `PUT /v1/customers/{id}` | 고객 이름 수정 |
+| `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
 
-넷 다 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
+전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
+
+고객 삭제는 행을 실제로 지운다 (MS2-155). 지워도 되는 고객이 곧 이벤트가 하나도 없는 고객이라 남길 것이 없어서다. 이벤트가 있는 고객을 지우려 하면 409이고, 그 규칙은 앱이 아니라 `usage_event`의 복합 FK가 강제한다.
 
 **컨트롤러나 DTO를 건드렸으면 `openapi.yaml`을 같은 커밋에 넣는다.** `./gradlew build`가 다시 만들어 주니, 빌드 후 `git status`에 이 파일이 떴으면 계약이 바뀐 것이다. 프론트엔드는 백엔드를 띄우지 않고 이 파일로 계약을 읽는다.
 
@@ -89,14 +95,17 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 | --- | --- | --- |
 | `validation_error` | 400 | 헤더 누락, 쿼리 파라미터 타입 불일치, 본문 필드 제약 위반 |
 | `unknown_customer_reference` | 400 | 실어 보낸 `customer_id`로 (도입사, 고객) 조합을 찾지 못했다 |
+| `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록에서만 난다) |
 | `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
 | `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
+| `customer_not_found` | 404 | 경로가 가리킨 고객이 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
+| `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
 | `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
 | `response_type_not_acceptable` | 406 | `Accept`로 만족시킬 응답 표현이 없다 |
 | `request_type_not_supported` | 415 | 보낸 `Content-Type`을 받을 수 없다 |
 
-**code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.** 그래서 옛 이름 `customer_not_found`를 `unknown_customer_reference`로 개명했다. 그 오류는 주소(`/v1/events`)가 아니라 실어 보낸 값이 잘못된 경우라 404가 아니라 400이다. 옛 이름은 MS2-155가 만들 `GET /v1/customers/{id}`의 404가 쓰도록 비워 뒀다.
+**code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.** 그래서 옛 이름 `customer_not_found`를 `unknown_customer_reference`로 개명했다. 그 오류는 주소(`/v1/events`)가 아니라 실어 보낸 값이 잘못된 경우라 404가 아니라 400이다. 옛 이름은 MS2-155가 가져갔다. `PUT`/`DELETE /v1/customers/{id}`가 가리킨 고객이 없을 때의 404다. 단건 조회(`GET /v1/customers/{id}`)는 만들지 않았다. 고객이 가진 정보가 목록에 이미 다 들어 있어서다.
 
 ### 문구의 언어
 
@@ -106,14 +115,17 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 
 우리가 만드는 문구는 `src/main/resources/messages.properties`에 있고 넷뿐이다. 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 Hibernate Validator의 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
 
-### 예외 핸들러 둘
+### 예외 핸들러 셋
 
 | 클래스 | 걸리는 범위 | 잡는 것 |
 | --- | --- | --- |
 | `FrameworkExceptionHandler` (루트) | 전역 | 프레임워크가 내는 예외 20종. 본문이 나가는 19종이 `handleExceptionInternal` 한 자리를 지나므로 거기서 4xx에만 `code`를 얹는다. 상태 코드와 응답 헤더(405의 `Allow`, 415의 `Accept`) 결정은 프레임워크에 남긴다 |
 | `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
+| `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류 셋. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `DataIntegrityViolationException` -> `unknown_organization` |
 
-`EventExceptionHandler`를 한 컨트롤러에만 건 이유는 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"로 둔갑한다.
+도메인 advice 둘을 각자 한 컨트롤러에만 건 이유는 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다.
+
+고객 삭제에서 나는 FK 위반은 advice까지 가지 않는다. `CustomerService.delete`가 `CustomerHasEventsException`으로 바꿔 던져 409가 된다. 그 자리가 뜻을 아는 유일한 곳이라서다.
 
 **[주의] `ResponseEntityExceptionHandler`를 상속하는 클래스를 또 만들지 않는다.** Boot 자동 설정이 `@ConditionalOnMissingBean(ResponseEntityExceptionHandler.class)`라, 그 타입의 빈이 둘이면 하나만 등록되고 프레임워크 예외 처리의 절반이 조용히 사라진다. 그 자리는 `FrameworkExceptionHandler`가 의도적으로 차지하고 있다. 새 오류를 붙이려면 그 클래스를 고치거나, 도메인 예외를 잡는 별도 advice(상속 없는 `@RestControllerAdvice`)를 쓴다.
 
