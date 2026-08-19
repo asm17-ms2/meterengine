@@ -98,5 +98,32 @@ public final class ErrorCodes {
    */
   public static final String ENDPOINT_NOT_FOUND = "endpoint_not_found";
 
+  /**
+   * 경로가 가리킨 고객이 없다. <b>404다</b> (MS2-155).
+   *
+   * <p>{@link #UNKNOWN_CUSTOMER_REFERENCE}가 이 이름을 비워 두고 개명한 자리다. 저쪽은 {@code /v1/events}의 본문이나 쿼리에
+   * 실린 <b>값</b>이 알 수 없는 고객을 가리킨 것이라 400이고, 이쪽은 {@code /v1/customers/&#123;id&#125;}의 경로가 가리키는
+   * <b>리소스</b>가 없는 것이라 404다. code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.
+   *
+   * <p>두 경우가 이 값으로 묶인다. 없는 고객과 다른 도입사 소속. 구별해 답하면 남의 도입사에 그 고객이 있다는 사실이 새어 나간다.
+   */
+  public static final String CUSTOMER_NOT_FOUND = "customer_not_found";
+
+  /**
+   * 사용량 이벤트가 있어 고객을 지울 수 없다. 409다 (MS2-155).
+   *
+   * <p>FE가 이 값에는 재시도 버튼을 붙이지 않는다. 요청 자체는 형식과 대상 모두 올바르고, 도입사가 요청을 고쳐서 될 일이 아니다.
+   */
+  public static final String CUSTOMER_HAS_EVENTS = "customer_has_events";
+
+  /**
+   * {@code X-Organization-Id}가 등록된 도입사가 아니다. 400이다 (MS2-155).
+   *
+   * <p>고객 등록의 FK 위반에서만 난다. 이 값이 없으면 헤더 오타 하나가 500이 되고, 5xx는 서버 잘못이라는 신호라 도입사가 자기 헤더를 의심하지 않는다.
+   *
+   * <p>MS2-126이 Bearer 인증을 붙이면 인증 단계에서 걸러져 이 code는 도달 불가능해진다. 그때 지운다.
+   */
+  public static final String UNKNOWN_ORGANIZATION = "unknown_organization";
+
   private ErrorCodes() {}
 }
