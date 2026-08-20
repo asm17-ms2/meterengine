@@ -112,13 +112,18 @@ CSP를 걸거나 폐쇄망에 배포하게 되면 폰트를 레포로 가져와�
 
 ## 화면
 
-셋 다 구현됐다. 라우트는 `src/app/(console)/` 아래에 있다.
+넷 다 구현됐다. 라우트는 `src/app/(console)/` 아래에 있다.
 
 | 경로 | 화면 | 백엔드 | 이슈 |
 | --- | --- | --- | --- |
 | `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) | `GET /v1/events` | MS2-134 |
 | `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` | MS2-136 |
 | `/billing` | 청구 예정액 | `GET /v1/invoice` | MS2-127 |
+| `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) | `GET/POST/PUT/DELETE /v1/customers` | MS2-154 |
+
+`/customers`만 쓰기 화면이다. 저장 버튼은 브라우저에서 시작하므로 서버로 돌아올 길이
+필요하고, 그 길이 Server Action이다 (`src/app/(console)/customers/actions.ts`). 브라우저는
+여전히 백엔드를 직접 부르지 않는다 - 아래 "백엔드 연동"의 이유가 쓰기에도 그대로 적용된다.
 
 `/`는 `/usage`로 리다이렉트한다 (`src/app/page.tsx`).
 
