@@ -28,6 +28,10 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
    *
    * <p>정렬을 이름으로 고정한다. 없으면 반환 순서가 보장되지 않아 같은 데이터에도 화면의 행 순서가 매번 달라진다. 동명이인이 있어도 순서가 흔들리지 않도록 id를 두
    * 번째 키로 둔다.
+   *
+   * <p>그 이름이 어떤 순서인지는 여기가 아니라 {@code customer.name}의 collation이 정한다. 파생 쿼리라 정렬을 DB가 하기 때문이다. 한국어
+   * 사전순은 마이그레이션 V4가 만든 {@code korean}(ICU ko-KR) collation에서 나온다 (MS2-143). 자바 계층에서 다시 정렬하지 않으므로 이
+   * 순서가 그대로 응답에 실린다.
    */
   List<Customer> findByOrganizationIdOrderByNameAscIdAsc(UUID organizationId);
 

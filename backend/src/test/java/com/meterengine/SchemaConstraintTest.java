@@ -225,6 +225,43 @@ class SchemaConstraintTest {
         code);
   }
 
+  // --- 이름 collation (MS2-143) ---
+
+  /**
+   * 사람이 읽는 이름 컬럼이 한국어 collation을 쓰는지 본다.
+   *
+   * <p>여기서 보는 이유: {@code ddl-auto=validate}는 컬럼의 존재와 타입만 확인하고 collation은 검사 항목이 아니다. 마이그레이션 V4가
+   * 되돌려져도 앱은 아무 말 없이 뜬다. 이 단언이 유일한 직접 가드다.
+   *
+   * <p>정렬 결과 자체는 {@code CustomerCrudIntegrationTest}가 API를 관통해 본다. 그쪽이 깨졌을 때 원인이 collation인지 다른 것인지
+   * 이 테스트가 갈라 준다.
+   */
+  @Test
+  void 사람이_읽는_이름_컬럼은_한국어_collation을_쓴다() {
+    assertThat(collationOf("customer", "name")).isEqualTo("korean");
+    assertThat(collationOf("organization", "name")).isEqualTo("korean");
+    assertThat(collationOf("billable_metric", "name")).isEqualTo("korean");
+  }
+
+  /** 식별자 컬럼은 기계가 매칭하는 값이라 언어별 정렬을 붙이지 않는다. DB 기본값을 쓰면 collation_name이 비어 있다. */
+  @Test
+  void 식별자_컬럼에는_한국어_collation을_붙이지_않는다() {
+    assertThat(collationOf("billable_metric", "code")).isNull();
+    assertThat(collationOf("usage_event", "transaction_id")).isNull();
+    assertThat(collationOf("usage_event", "event_type")).isNull();
+  }
+
+  private String collationOf(String table, String column) {
+    return jdbc.queryForObject(
+        """
+        SELECT collation_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ? AND column_name = ?
+        """,
+        String.class,
+        table,
+        column);
+  }
+
   private void insertPricePolicy(UUID orgId, String metricCode) {
     jdbc.update(
         "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, ?)", orgId, metricCode);
