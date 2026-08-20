@@ -83,7 +83,10 @@ public record ProblemResponse(
               ErrorCodes.ENDPOINT_NOT_FOUND,
               ErrorCodes.CUSTOMER_NOT_FOUND,
               ErrorCodes.CUSTOMER_HAS_EVENTS,
-              ErrorCodes.UNKNOWN_ORGANIZATION
+              ErrorCodes.UNKNOWN_ORGANIZATION,
+              ErrorCodes.METRIC_NOT_FOUND,
+              ErrorCodes.PRICE_POLICY_ALREADY_EXISTS,
+              ErrorCodes.INVALID_PRICE_POLICY
             })
         String code,
     @Schema(
