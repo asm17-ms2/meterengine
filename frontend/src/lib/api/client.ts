@@ -17,10 +17,11 @@ export type ApiError = {
   /**
    * 백엔드가 problem detail에 얹는 커스텀 확장 멤버.
    *
-   * 백엔드가 내는 값 (2026-08-17, MS2-150 4단계 기준):
+   * 백엔드가 내는 값 (2026-08-20, MS2-155 기준):
    *   validation_error / unknown_customer_reference / invalid_event /
    *   malformed_request_body / request_type_not_supported /
-   *   response_type_not_acceptable / method_not_allowed / endpoint_not_found
+   *   response_type_not_acceptable / method_not_allowed / endpoint_not_found /
+   *   customer_not_found / customer_has_events / unknown_organization
    *
    * 여기서 만든 값: network_error / http_error / dev_forced.
    *
@@ -66,27 +67,30 @@ async function toApiError(response: Response): Promise<ApiError> {
 }
 
 /**
- * 던지지 않고 Result를 돌려준다. 이게 중요하다. 예외를 던지면 Next가 페이지를
- * error.tsx로 갈아치워 화면 헤더와 필터 행까지 사라지는데, 디자인은 에러 블록이
- * 필터 행 아래 제자리에 있어야 한다.
+ * 조회와 쓰기가 공유하는 네트워크 계층. 헤더 주입, 타임아웃, problem+json 변환이
+ * 여기 한 곳에 있다.
+ *
+ * 응답 본문을 읽지 않고 Response를 그대로 넘긴다. 조회는 항상 JSON이지만 쓰기는
+ * 204(본문 없음)가 섞여서, 본문을 어떻게 읽을지는 호출부가 정해야 한다.
  */
-export async function serverFetch<T>(
-  baseUrl: string,
-  path: string,
-  searchParams?: Record<string, string | undefined>,
-): Promise<Result<T>> {
-  const url = new URL(path, baseUrl);
-  for (const [key, value] of Object.entries(searchParams ?? {})) {
-    if (value !== undefined) url.searchParams.set(key, value);
-  }
-
+async function call(
+  url: URL,
+  init: { method: string; body?: string },
+): Promise<Result<Response>> {
   let response: Response;
   try {
     response = await fetch(url, {
+      method: init.method,
       headers: {
         "X-Organization-Id": config.organizationId,
         Accept: "application/json, application/problem+json",
+        // 본문이 있을 때만 붙인다. DELETE에 Content-Type을 달면 본문 없는 요청에
+        // 형식을 선언하는 꼴이라 서버가 415로 되받을 여지가 생긴다.
+        ...(init.body === undefined
+          ? {}
+          : { "Content-Type": "application/json" }),
       },
+      body: init.body,
       // 런타임 기본값과 같지만, 빌드 타임 prerender가 응답을 굳히는 것을 막고
       // 의도를 코드에 남긴다.
       cache: "no-store",
@@ -108,5 +112,51 @@ export async function serverFetch<T>(
   }
 
   if (!response.ok) return { ok: false, error: await toApiError(response) };
-  return { ok: true, data: (await response.json()) as T };
+  return { ok: true, data: response };
+}
+
+/**
+ * 던지지 않고 Result를 돌려준다. 이게 중요하다. 예외를 던지면 Next가 페이지를
+ * error.tsx로 갈아치워 화면 헤더와 필터 행까지 사라지는데, 디자인은 에러 블록이
+ * 필터 행 아래 제자리에 있어야 한다.
+ */
+export async function serverFetch<T>(
+  baseUrl: string,
+  path: string,
+  searchParams?: Record<string, string | undefined>,
+): Promise<Result<T>> {
+  const url = new URL(path, baseUrl);
+  for (const [key, value] of Object.entries(searchParams ?? {})) {
+    if (value !== undefined) url.searchParams.set(key, value);
+  }
+
+  const result = await call(url, { method: "GET" });
+  if (!result.ok) return result;
+  return { ok: true, data: (await result.data.json()) as T };
+}
+
+/**
+ * 쓰기(등록, 수정, 삭제). 조회와 같은 Result 규약이라 실패해도 던지지 않는다.
+ *
+ * 브라우저가 이 함수에 직접 닿지 않는다. 호출자는 Server Action이고, 거기서
+ * 조직 헤더가 붙는다 (MS2-154). 브라우저가 백엔드를 직접 부르면 커스텀 헤더라
+ * preflight에 막히고, 조직 식별자가 devtools에 노출된다.
+ *
+ * 204는 {@code data}가 undefined다. 타입 인자로 그걸 표현할 방법이 없어서
+ * DELETE 호출부는 {@code serverSend<void>}로 부르고 data를 보지 않는다.
+ */
+export async function serverSend<T>(
+  baseUrl: string,
+  path: string,
+  options: { method: "POST" | "PUT" | "DELETE"; body?: unknown },
+): Promise<Result<T>> {
+  const result = await call(new URL(path, baseUrl), {
+    method: options.method,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+  if (!result.ok) return result;
+
+  // 204(삭제)와 본문 없는 2xx. response.json()을 그냥 부르면 빈 본문에서 던진다.
+  if (result.data.status === 204) return { ok: true, data: undefined as T };
+  return { ok: true, data: (await result.data.json()) as T };
 }

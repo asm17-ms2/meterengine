@@ -36,6 +36,17 @@ export function formatKstDateTime(iso: string): string {
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
 }
 
+/**
+ * `2026-08-09` - 날짜만 쓰는 칸. 고객 목록의 등록일이 이걸 쓴다.
+ *
+ * 시:분:초를 버리는 이유는 그 칸에서 쓰이지 않아서다. 등록 시각의 정밀한 값이
+ * 필요해지면 formatKstDateTime을 쓰면 된다.
+ */
+export function formatKstDate(iso: string): string {
+  const p = partsOf(new Date(iso));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
 /** `2026-08-09 14:12:04 KST` - 필터 행의 조회 시각. */
 export function formatKstStamp(value: Date): string {
   return `${formatKstDateTime(value.toISOString())} KST`;
