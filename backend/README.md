@@ -6,9 +6,10 @@
 
 - Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
-- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 세 개다
+- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 네 개다
   - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 네 테이블
   - `V2__split_price_policy_from_billable_metric.sql` - 미터의 unit_price를 price_policy(가격 정책)와 price_rate(단가)로 분리 (MS2-158). 다차원 가격 대비 형태지만 이번 슬라이스는 전부 무차원('{}')이다
+  - `V3__add_customer_created_at.sql` - customer에 등록 시각 `created_at` 추가 (MS2-171). 새 행은 DB가 `clock_timestamp()`로 채운다. **이미 있던 행은 마이그레이션 시각 하나를 나눠 받았고 그 값은 실제 등록 시각이 아니다** (등록 시각을 기록하기 전에 만들어진 행이라 그 사실이 남아 있지 않다. 값이 전부 같다는 것이 백필 표식이다). API로는 이 값을 보낼 통로가 없고, raw SQL이 값을 실어 보내면 그대로 저장된다 - `usage_event.received_at`과 달리 덮어쓰는 트리거를 두지 않았다 (사유는 파일 주석에 있다)
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터, 가격 등록 API가 없어서 지금은 고객 API(MS2-155)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
@@ -43,7 +44,7 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 | 오퍼레이션 | 내용 |
 | --- | --- |
 | `GET /v1/customers` | 고객 목록. 이름 오름차순, 페이지 나누지 않음 |
-| `POST /v1/customers` | 고객 등록. 서버가 customer_id를 발급한다 |
+| `POST /v1/customers` | 고객 등록. 서버가 customer_id와 등록 시각을 만든다 |
 | `PUT /v1/customers/{id}` | 고객 이름 수정 |
 | `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
