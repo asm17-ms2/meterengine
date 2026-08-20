@@ -47,7 +47,7 @@ MS2-142(Mock 데이터) 산출물이 이 스키마 그대로 나와서 잠정 �
 |---|---|
 | transaction_id | 멱등 키 (같은 값 재전송은 중복 처리) |
 | customer_id | 고객 UUID (시드가 발급한 customer.id) |
-| event_type | 미터의 event_type (기본 시드: chat_completion, 확장 시드: llm_request, network_traffic) |
+| event_type | 미터의 event_type (부트 시드에 chat_completion, llm_request, network_traffic이 있다) |
 | timestamp | RFC 3339, 오프셋 포함 (occurred_at이 된다) |
 | properties | JSON 객체 문자열. CSV 셀 안에서는 큰따옴표를 두 번 쓴다 |
 | note (선택) | 행 설명, 콘솔 표시 전용. 서버로 전송하지 않으며 없거나 비면 표시 생략 |
@@ -88,29 +88,22 @@ GET /v1/usage, GET /v1/invoice 응답과 표로 나란히 비교하고 일치/�
 - 1: 불일치 있음
 - 2: 실행 오류 (서버 미기동, 소스 없음, 스키마 미확정 등)
 
-## 확장 시드 (sample-events.csv의 전제)
+## sample-events.csv가 쓰는 데이터
 
-`demo/sample-events.csv`(MS2-142 mock 축소판)는 부트 시드에 없는 고객 3곳
-(이슬비랩스, 도담헬스, 한들물류)과 미터 3개(input-tokens 0.5원, output-tokens 2.5원,
-network-egress 120원)를 전제로 한다. 백엔드 기동 후 한 번만 적용한다:
+`demo/sample-events.csv`(MS2-142 mock 축소판)는 고객 3곳(이슬비랩스, 도담헬스, 한들물류)과
+미터 3개(input-tokens 0.5원, output-tokens 2.5원, network-egress 120원)를 쓴다.
 
-```bash
-docker exec -i meterengine-postgres psql -U meterengine -d meterengine < demo/seed-customers.sql
-docker exec -i meterengine-postgres psql -U meterengine -d meterengine < demo/seed-metrics.sql
-```
+**따로 준비할 것은 없다.** 이 데이터는 백엔드의 부트 시드(`R__seed.sql`)에 들어 있어 기동만
+하면 적용된다. 예전에는 `demo/seed-customers.sql`과 `seed-metrics.sql`을 psql로 직접 주입해야
+했는데, MS2-166에서 부트 시드로 편입하면서 두 파일을 없앴다. 배포 환경에서는 RDS에 직접
+붙을 수 없어(MS2-164) psql 주입이라는 경로 자체가 성립하지 않기 때문이다.
 
-- 적용하지 않고 보내면 100건 전부 미등록 고객으로 400 거절된다 (그것대로 400 시연은 된다)
-- 재적용은 안전하다 (ON CONFLICT DO UPDATE). 단, 고객/미터를 줄이는 방향은 이벤트가
-  이미 있으면 FK 때문에 불가능하므로 구성을 바꾸려면 DB 초기화부터 다시 한다
-- 부트 시드(R__seed.sql)에 넣지 않은 이유: 고객/미터 등록 API(MS2-155, MS2-157, MS2-159)가
-  만들어지는 중이라 부트 시드를 불리는 대신 등록 흐름으로 전환할 예정이다. API가 나오면
-  이 psql 주입을 API 등록으로 교체한다. 그때 customer_id 발급 방식(서버 발급 vs 클라이언트
-  지정)에 따라 CSV의 고정 고객 id 유지 여부를 함께 결정해야 한다
+기본 시드의 아크메 주식회사와 베타 스튜디오는 이 CSV의 이벤트를 받지 않아 사용량 0, 금액 0
+행으로 보인다.
 
 ## 처음 실행해 보기 (시연 코스)
 
-레포 루트에서 순서대로 실행한다. 백엔드가 떠 있어야 하고, 위 확장 시드가 적용돼
-있어야 한다. 동봉된 `demo/sample-events.csv`는 100행(신규 80, 같은 transaction_id
+레포 루트에서 순서대로 실행한다. 백엔드가 떠 있으면 된다. 동봉된 `demo/sample-events.csv`는 100행(신규 80, 같은 transaction_id
 재전송 중복 20)으로, 한 번 보낸 뒤에는 몇 번을 재전송해도 전부 중복이라 DB가
 바뀌지 않는다. 부담 없이 반복 실행해도 된다.
 
@@ -164,12 +157,11 @@ cd demo && python3 -m unittest && cd ..
 `demo/sample-events.csv`가 이 절차용 MS2-142 데이터다. 절차:
 
 1. 깨끗한 상태에서 시작: `docker compose down -v` 후 백엔드 재기동 (재마이그레이션과 부트 시드 적용)
-2. 확장 시드 적용 (위 "확장 시드" 절의 psql 두 줄)
-3. `send --csv demo/sample-events.csv`: 100건(같은 transaction_id 중복 20건 포함) 전송,
+2. `send --csv demo/sample-events.csv`: 100건(같은 transaction_id 중복 20건 포함) 전송,
    신규 80 / 중복 20이 태그로 보인다
-4. `verify --log <방금 로그>`: 사용량이 80건분 합인지 표로 확인
-5. 같은 CSV로 `send` 재실행 (전부 [DUP]가 보인다)
-6. 첫 로그로 다시 `verify`: 예정액이 직전과 같은지 확인
+3. `verify --log <방금 로그>`: 사용량이 80건분 합인지 표로 확인
+4. 같은 CSV로 `send` 재실행 (전부 [DUP]가 보인다)
+5. 첫 로그로 다시 `verify`: 예정액이 직전과 같은지 확인
 
 수기 검산 앵커 (verify가 자동 계산하지만 눈대중용, 전부 2026년 8월 귀속):
 
@@ -202,8 +194,7 @@ cd demo && python3 -m unittest && cd ..
 - meterdemo.py: 엔트리 (argparse, 종료 코드)
 - model.py: KST 상수, Event, RFC3339 파싱, 와이어 바디 조립
 - csvio.py: CSV 소스 읽기
-- sample-events.csv: MS2-142 mock 축소판 100행 (신규 80, 중복 20). 확장 시드 필요
-- seed-customers.sql / seed-metrics.sql: 확장 시드 (고객 3, 미터 3). 위 "확장 시드" 절 참조
+- sample-events.csv: MS2-142 mock 축소판 100행 (신규 80, 중복 20). 쓰는 고객과 미터는 부트 시드에 있다
 - sample-events-edge.csv: 경계 케이스 샘플 (KST 월 경계, UTC 표기, 소수 토큰,
   집계 제외 행 -- 문자열 token과 token 없음)
 - api_client.py: 백엔드 HTTP 래퍼 (problem+json 파싱 포함)

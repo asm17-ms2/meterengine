@@ -36,6 +36,30 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ./gradlew spotlessApply  # 포맷 자동 적용
 ```
 
+## 컨테이너 이미지
+
+배포용 실행 이미지는 `Dockerfile`이 만든다 (MS2-161). 멀티 스테이지라 실행 이미지에는
+JRE와 jar만 들어간다. 테스트는 CI가 돌리므로 이미지 빌드에서는 실행하지 않는다
+(Testcontainers가 Docker 데몬을 요구하는데 빌드 안에는 데몬이 없다).
+
+```
+docker build -t meterengine-backend .
+```
+
+**DB 접속은 이미지에 굽지 않고 런타임 환경변수로 받는다.** `application.properties`에
+`spring.datasource.*`가 한 줄도 없는 이유다. 로컬은 spring-boot-docker-compose가 커넥션을
+만들어 주지만 그건 developmentOnly라 jar에 들어가지 않는다. 즉 운영에서 DB에 붙는 유일한
+경로가 아래 세 변수다.
+
+| 환경변수 | 예 |
+| --- | --- |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<host>:5432/meterengine` |
+| `SPRING_DATASOURCE_USERNAME` | `meterengine` |
+| `SPRING_DATASOURCE_PASSWORD` | (SSM Parameter Store SecureString) |
+
+운영에서 이 값을 주입하는 것은 `deploy/compose.prod.yml`이고, 값은 Parameter Store에서
+온다. 절차는 `deploy/README.md`에 있다.
+
 ## API 문서
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
