@@ -1,7 +1,6 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
@@ -168,20 +167,27 @@ class DraftInvoiceServiceTest {
   }
 
   /**
-   * V2 마이그레이션과 시드가 미터:단가 1:1을 보장하므로 정상 경로에서는 없다. 그래도 데이터가 깨졌을 때 조용한 0원 청구 대신 즉시 실패해야 한다 (V1의
-   * longValueExact와 같은 태도).
+   * 정책 등록(MS2-157)과 단가 등록(MS2-177)이 분리돼 "단가가 아직 없는 미터"는 정상 상태다. 조용한 0원 라인은 단가 누락을 화면에서 숨기므로, 라인 자체를
+   * 뺀다 (PR 43 리뷰 결정).
    */
   @Test
-  void 단가가_없는_미터는_즉시_실패한다() {
+  void 단가가_없는_미터는_라인에서_빠진다() {
     Customer acme = customer("아크메");
     when(customers.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID)).thenReturn(List.of(acme));
     when(aggregation.aggregate(ORG_ID, AUGUST))
-        .thenReturn(List.of(usage(metric("token-usage", "token"), acme, "3290")));
-    when(prices.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
+        .thenReturn(
+            List.of(
+                usage(metric("token-usage", "token"), acme, "3290"),
+                usage(metric("api-calls", "count"), acme, "3")));
+    when(prices.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    assertThatThrownBy(() -> service.preview(ORG_ID, AUGUST))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("token-usage");
+    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+
+    assertThat(response.customers().getFirst().lines())
+        .singleElement()
+        .satisfies(line -> assertThat(line.metricCode()).isEqualTo("token-usage"));
+    assertThat(response.totalAmount()).isEqualTo(1645);
   }
 
   private static Customer customer(String name) {

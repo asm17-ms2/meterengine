@@ -29,9 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>금액은 BigDecimal로만 계산하고 마지막에 원 단위 정수로 만든다. 단가가 NUMERIC이라 토큰당 1원 미만이 가능한데, double을 거치면 청구 근거가 조용히
  * 어긋난다 (V2 마이그레이션의 단가 주석 참조: 금액 계산의 정수 연산 보장은 계산 로직 소관).
  *
- * <p>단가는 미터가 아니라 price_rate에서 온다 (MS2-158 분리). 단가 없는 미터는 즉시 실패한다. 시드와 등록 API(MS2-157, 기본 단가 행 필수)
- * 어느 통로로도 그런 미터가 생기지 않고, 발생했다면 데이터가 깨진 것이다. 그 상태로 조용히 0원 청구를 내보내는 것보다 500이 낫다. 미터 등록 API(MS2-159)가
- * 생기면 "정책 없는 미터"가 가능해지므로 그때 이 태도를 다시 정한다.
+ * <p>단가는 미터가 아니라 price_rate에서 온다 (MS2-158 분리). 기본 단가가 없는 미터는 라인에서 제외한다 (PR 43 리뷰 결정). 정책 등록
+ * API(MS2-157)가 정책만 받고 단가는 MS2-177이 따로 붙이므로, "단가가 아직 없는 미터"는 깨진 데이터가 아니라 등록이 진행 중인 정상 상태다. 그 미터로 0원
+ * 청구를 내보내면 단가 누락이 화면에서 안 보이므로, 0원 라인 대신 라인 자체를 뺀다.
  */
 @Service
 public class DraftInvoiceService {
@@ -65,6 +65,7 @@ public class DraftInvoiceService {
     Map<String, BigDecimal> unitPrices = prices.findBaseUnitPrices(organizationId);
     List<MetricQuantities> metricQuantities =
         aggregation.aggregate(organizationId, month).stream()
+            .filter(usage -> unitPrices.containsKey(usage.metric().getCode()))
             .map(usage -> MetricQuantities.from(usage, unitPrices))
             .toList();
 
@@ -100,14 +101,10 @@ public class DraftInvoiceService {
 
     static MetricQuantities from(MetricUsage usage, Map<String, BigDecimal> unitPrices) {
       String metricCode = usage.metric().getCode();
-      BigDecimal unitPrice = unitPrices.get(metricCode);
-      if (unitPrice == null) {
-        throw new IllegalStateException("미터에 기본 단가가 없다: " + metricCode);
-      }
       return new MetricQuantities(
           metricCode,
           usage.metric().getTargetProperty(),
-          unitPrice,
+          unitPrices.get(metricCode),
           usage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
