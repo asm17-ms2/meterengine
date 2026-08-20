@@ -63,20 +63,35 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 --                   맞춰서 테스트와 시드가 따로 놀지 않게 한다
 --   code            매칭에 쓰이지 않는 표시용 식별자라, 이 미터가 재는 대상을 그대로 적는다
 --   target_property SUM 집계가 properties에서 읽을 키
---   unit_price      토큰당 0.5원. MS2-128의 "100건 중 80건 반영" 검증에서 토큰 500짜리
---                   이벤트면 40,000토큰에 20,000원이라 기댓값이 암산된다
 --
--- TODO(후속 스토리): 지금 구조는 event_type 하나로만 미터를 지목해서 모델별 단가를
---   구분할 수 없다. code에 모델명을 넣지 않은 것도 그 때문이다. 모델별 단가가 필요해지면
---   미터를 여러 개로 나누고 매칭 구조부터 바꿔야 한다.
 -- TODO(후속 스토리): target_property가 token이 아닌 미터가 생기면 행을 추가한다.
 INSERT INTO billable_metric
-  (organization_id, code, name, event_type, aggregation, target_property, unit_price) VALUES
+  (organization_id, code, name, event_type, aggregation, target_property) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '토큰 사용량',
-   'chat_completion', 'SUM', 'token', 0.5)
+   'chat_completion', 'SUM', 'token')
 ON CONFLICT (organization_id, code) DO UPDATE SET
   name            = EXCLUDED.name,
   event_type      = EXCLUDED.event_type,
   aggregation     = EXCLUDED.aggregation,
-  target_property = EXCLUDED.target_property,
-  unit_price      = EXCLUDED.unit_price;
+  target_property = EXCLUDED.target_property;
+
+-- 가격 정책과 단가 (MS2-158에서 billable_metric.unit_price를 분리한 자리)
+--
+-- 정책은 무차원('{}')이다. 모델별 단가 같은 차원은 다차원 후속 스토리에서 이 두 행의
+-- 값만 바꿔 켠다 (dimension_properties에 키를 선언하고 조합별 rate 행을 추가).
+--
+-- 단가는 토큰당 0.5원. MS2-128의 "100건 중 80건 반영" 검증에서 토큰 500짜리
+-- 이벤트면 40,000토큰에 20,000원이라 기댓값이 암산된다.
+--
+-- ON CONFLICT 대상이 도입사/고객 시드와 달리 고정 id가 아닌 이유: 두 테이블의 PK가
+-- 자연 키(도입사, 미터, 조합)라 값 자체로 충돌이 성립한다. id를 박아야 재실행이
+-- 성립하던 organization/customer와 층이 다르다.
+INSERT INTO price_policy (organization_id, metric_code) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage')
+ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+  dimension_properties = EXCLUDED.dimension_properties;
+
+INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.5)
+ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+  unit_price = EXCLUDED.unit_price;

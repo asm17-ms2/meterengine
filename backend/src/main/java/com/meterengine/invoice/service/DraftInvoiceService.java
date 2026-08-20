@@ -7,8 +7,8 @@ import com.meterengine.invoice.dto.DraftInvoiceResponse.CustomerEntry;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.LineEntry;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
-import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
@@ -27,17 +27,23 @@ import org.springframework.transaction.annotation.Transactional;
  * 계산").
  *
  * <p>금액은 BigDecimal로만 계산하고 마지막에 원 단위 정수로 만든다. 단가가 NUMERIC이라 토큰당 1원 미만이 가능한데, double을 거치면 청구 근거가 조용히
- * 어긋난다 (V1 마이그레이션의 단가 주석 참조: 금액 계산의 정수 연산 보장은 계산 로직 소관).
+ * 어긋난다 (V2 마이그레이션의 단가 주석 참조: 금액 계산의 정수 연산 보장은 계산 로직 소관).
+ *
+ * <p>단가는 미터가 아니라 price_rate에서 온다 (MS2-158 분리). 단가 없는 미터는 즉시 실패한다. V2 마이그레이션과 시드가 미터:단가 1:1을 보장하므로
+ * 등록 API(MS2-157) 전에는 발생 경로가 없고, 발생했다면 데이터가 깨진 것이다. 그 상태로 조용히 0원 청구를 내보내는 것보다 500이 낫다.
  */
 @Service
 public class DraftInvoiceService {
 
   private final MetricUsageService aggregation;
   private final CustomerRepository customers;
+  private final PriceRateRepository prices;
 
-  DraftInvoiceService(MetricUsageService aggregation, CustomerRepository customers) {
+  DraftInvoiceService(
+      MetricUsageService aggregation, CustomerRepository customers, PriceRateRepository prices) {
     this.aggregation = aggregation;
     this.customers = customers;
+    this.prices = prices;
   }
 
   /**
@@ -55,8 +61,11 @@ public class DraftInvoiceService {
 
     List<Customer> organizationCustomers =
         customers.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+    Map<String, BigDecimal> unitPrices = prices.findBaseUnitPrices(organizationId);
     List<MetricQuantities> metricQuantities =
-        aggregation.aggregate(organizationId, month).stream().map(MetricQuantities::from).toList();
+        aggregation.aggregate(organizationId, month).stream()
+            .map(usage -> MetricQuantities.from(usage, unitPrices))
+            .toList();
 
     List<CustomerEntry> entries =
         organizationCustomers.stream()
@@ -78,15 +87,26 @@ public class DraftInvoiceService {
   }
 
   /**
-   * 미터 하나의 고객별 수량을 customerId로 찾는 형태로 뒤집은 것.
+   * 미터 하나의 고객별 수량을 customerId로 찾는 형태로 뒤집고, 그 미터의 단가를 짝지어 둔 것.
    *
    * <p>집계 결과와 고객 목록을 인덱스로 짝짓지 않기 위해서다. 지금은 두 목록의 순서가 같지만, 그건 집계 구현의 사정이지 이 코드가 기댈 계약이 아니다.
    */
-  private record MetricQuantities(BillableMetric metric, Map<UUID, BigDecimal> byCustomer) {
+  private record MetricQuantities(
+      String metricCode,
+      String targetProperty,
+      BigDecimal unitPrice,
+      Map<UUID, BigDecimal> byCustomer) {
 
-    static MetricQuantities from(MetricUsage usage) {
+    static MetricQuantities from(MetricUsage usage, Map<String, BigDecimal> unitPrices) {
+      String metricCode = usage.metric().getCode();
+      BigDecimal unitPrice = unitPrices.get(metricCode);
+      if (unitPrice == null) {
+        throw new IllegalStateException("미터에 기본 단가가 없다: " + metricCode);
+      }
       return new MetricQuantities(
-          usage.metric(),
+          metricCode,
+          usage.metric().getTargetProperty(),
+          unitPrice,
           usage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
@@ -94,11 +114,7 @@ public class DraftInvoiceService {
     LineEntry lineFor(UUID customerId) {
       BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
       return new LineEntry(
-          metric.getCode(),
-          metric.getTargetProperty(),
-          quantity,
-          metric.getUnitPrice(),
-          charge(quantity, metric.getUnitPrice()));
+          metricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
   }
 

@@ -206,8 +206,18 @@ class DraftInvoiceIntegrationTest {
     jdbc.update(
         """
         INSERT INTO billable_metric
-          (organization_id, code, name, event_type, aggregation, target_property, unit_price)
-        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token', 0.5)
+          (organization_id, code, name, event_type, aggregation, target_property)
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        """,
+        organizationId);
+    // 단가는 MS2-158부터 분리 테이블에 있다. 무차원 정책 + '{}' 기본 단가 행이 시드와 같은 규약이다.
+    jdbc.update(
+        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, 'token-usage')",
+        organizationId);
+    jdbc.update(
+        """
+        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        VALUES (?, 'token-usage', '{}', 0.5)
         """,
         organizationId);
     return organizationId;

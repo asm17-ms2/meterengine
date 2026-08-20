@@ -32,10 +32,12 @@ class SeedDataTest {
   @Autowired private JdbcTemplate jdbc;
 
   @Test
-  void 시드는_도입사_1개와_고객_2명과_미터_1개를_넣는다() {
+  void 시드는_도입사_1개와_고객_2명과_미터_1개와_가격_1벌을_넣는다() {
     assertThat(rowCount("organization")).isEqualTo(1);
     assertThat(rowCount("customer")).isEqualTo(2);
     assertThat(rowCount("billable_metric")).isEqualTo(1);
+    assertThat(rowCount("price_policy")).isEqualTo(1);
+    assertThat(rowCount("price_rate")).isEqualTo(1);
   }
 
   @Test
@@ -45,22 +47,50 @@ class SeedDataTest {
     assertThat(rowCount("organization")).isEqualTo(1);
     assertThat(rowCount("customer")).isEqualTo(2);
     assertThat(rowCount("billable_metric")).isEqualTo(1);
+    assertThat(rowCount("price_policy")).isEqualTo(1);
+    assertThat(rowCount("price_rate")).isEqualTo(1);
   }
 
   /**
    * R__은 파일이 곧 DB 상태라는 뜻이므로, 재실행이 값을 파일 기준으로 되돌려야 한다. DO NOTHING이면 이 테스트가 깨진다. 파일을 고쳐도 기존 행이 남아 에러
-   * 없이 무시되기 때문이다.
+   * 없이 무시되기 때문이다. 단가의 정본은 MS2-158부터 price_rate다.
    */
   @Test
   void 값이_바뀐_상태에서_시드를_다시_실행하면_파일_기준으로_되돌아온다() {
-    jdbc.update("UPDATE billable_metric SET unit_price = 999, name = '손으로 바꾼 이름'");
+    jdbc.update("UPDATE billable_metric SET name = '손으로 바꾼 이름'");
+    jdbc.update("UPDATE price_policy SET dimension_properties = '{model}'");
+    jdbc.update("UPDATE price_rate SET unit_price = 999");
 
     jdbc.execute(readSeedScript());
 
-    var metric = jdbc.queryForMap("SELECT name, unit_price FROM billable_metric");
-    assertThat(metric.get("name")).isEqualTo("토큰 사용량");
-    assertThat((BigDecimal) metric.get("unit_price")).isEqualByComparingTo("0.5");
+    assertThat(jdbc.queryForObject("SELECT name FROM billable_metric", String.class))
+        .isEqualTo("토큰 사용량");
+    // 시드의 INSERT는 dimension_properties를 나열하지 않아서, 되돌리기는 ON CONFLICT의
+    // EXCLUDED가 생략된 컬럼에 DEFAULT('{}')를 싣는다는 사실에 기댄다. 그 미묘한 지점을 여기서 고정한다.
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT dimension_properties::text FROM price_policy", String.class))
+        .isEqualTo("{}");
+    assertThat(jdbc.queryForObject("SELECT unit_price FROM price_rate", BigDecimal.class))
+        .isEqualByComparingTo("0.5");
     assertThat(rowCount("billable_metric")).isEqualTo(1);
+    assertThat(rowCount("price_rate")).isEqualTo(1);
+  }
+
+  /** 무차원 시드의 규약이다. 정책은 빈 키 집합, 단가는 '{}' 조합 1행 (2026-08-19 팀 합의). */
+  @Test
+  void 시드_가격은_무차원_기본_단가_1행이다() {
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT dimension_properties::text FROM price_policy", String.class))
+        .isEqualTo("{}");
+
+    var rate =
+        jdbc.queryForMap("SELECT metric_code, dimension_values::text, unit_price FROM price_rate");
+
+    assertThat(rate.get("metric_code")).isEqualTo("token-usage");
+    assertThat(rate.get("dimension_values")).isEqualTo("{}");
+    assertThat((BigDecimal) rate.get("unit_price")).isEqualByComparingTo("0.5");
   }
 
   @Test
@@ -77,8 +107,7 @@ class SeedDataTest {
   @Test
   void 시드_미터는_token을_SUM으로_집계하도록_설정된다() {
     var metric =
-        jdbc.queryForMap(
-            "SELECT event_type, aggregation, target_property, unit_price FROM billable_metric");
+        jdbc.queryForMap("SELECT event_type, aggregation, target_property FROM billable_metric");
 
     assertThat(metric.get("event_type")).isEqualTo("chat_completion");
     assertThat(metric.get("aggregation")).isEqualTo("SUM");

@@ -128,6 +128,121 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
+  // --- 가격 정책 / 단가 (MS2-158) ---
+
+  /**
+   * 단가 행(price_rate)의 FK 과녁이 미터가 아니라 정책(price_policy)인 이유: 단가는 축 선언 없이는 해석할 수 없어서, 선언 없는 단가가 존재하는
+   * 순간 계산이 도달하지 못하는 죽은 행이 되고 기본 단가로 조용히 계산된다. FK가 그 상태를 입력 시점의 실패로 바꾼다. 미터 존재와 same-org는 policy ->
+   * billable_metric 복합 FK를 통해 이행적으로 보장된다.
+   */
+  @Test
+  void 미터가_없으면_가격_정책을_만들_수_없다() {
+    UUID orgId = insertOrganization();
+
+    assertThatThrownBy(() -> insertPricePolicy(orgId, "no-such-metric"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 다른_도입사의_미터에는_가격_정책을_붙일_수_없다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    UUID otherOrgId = insertOrganization();
+
+    assertThatThrownBy(() -> insertPricePolicy(otherOrgId, "token-usage"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 같은_미터에_가격_정책은_하나만_만들_수_있다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    insertPricePolicy(orgId, "token-usage");
+
+    assertThatThrownBy(() -> insertPricePolicy(orgId, "token-usage"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 가격_정책이_없으면_단가를_만들_수_없다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+
+    assertThatThrownBy(() -> insertPriceRate(orgId, "token-usage", "{}", "0.5"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 단가는_음수일_수_없다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    insertPricePolicy(orgId, "token-usage");
+
+    assertThatThrownBy(() -> insertPriceRate(orgId, "token-usage", "{}", "-0.5"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  /**
+   * JSONB는 키 순서를 정규화하므로 표기만 다른 같은 조합도 같은 값으로 취급되어 PK가 막는다. 조합당 단가 1행이라는 불변식이 표기 차이에 뚫리지 않는지까지 확인한다.
+   */
+  @Test
+  void 같은_조합의_단가는_키_순서가_달라도_두_번_저장되지_않는다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    insertPricePolicy(orgId, "token-usage");
+    insertPriceRate(orgId, "token-usage", "{\"model\": \"opus5\", \"region\": \"kr\"}", "0.5");
+
+    assertThatThrownBy(
+            () ->
+                insertPriceRate(
+                    orgId, "token-usage", "{\"region\": \"kr\", \"model\": \"opus5\"}", "2.5"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  /** 단가의 정본이 price_rate로 옮겨졌으므로, 옛 자리가 남아 있으면 두 정본이 생긴다. */
+  @Test
+  void billable_metric에는_더_이상_unit_price_열이_없다() {
+    Boolean columnExists =
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM information_schema.columns
+              WHERE table_name = 'billable_metric' AND column_name = 'unit_price')
+            """,
+            Boolean.class);
+
+    assertThat(columnExists).isFalse();
+  }
+
+  private void insertMetric(UUID orgId, String code) {
+    jdbc.update(
+        """
+        INSERT INTO billable_metric
+          (organization_id, code, name, event_type, aggregation, target_property)
+        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        """,
+        orgId,
+        code);
+  }
+
+  private void insertPricePolicy(UUID orgId, String metricCode) {
+    jdbc.update(
+        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, ?)", orgId, metricCode);
+  }
+
+  private void insertPriceRate(
+      UUID orgId, String metricCode, String dimensionValues, String price) {
+    jdbc.update(
+        """
+        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        VALUES (?, ?, ?::jsonb, ?::numeric)
+        """,
+        orgId,
+        metricCode,
+        dimensionValues,
+        price);
+  }
+
   private void deleteCustomer(UUID customerId) {
     jdbc.update("DELETE FROM customer WHERE id = ?", customerId);
   }
