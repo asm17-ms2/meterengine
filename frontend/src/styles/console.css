@@ -498,3 +498,17 @@
   font-size: 12px;
   color: var(--text-50);
 }
+
+/*
+ * 행 안에 버튼이 있는 표 (고객 목록의 수정/삭제). 셀 높이가 텍스트와 버튼으로
+ * 갈려서 기본 stretch로는 글자와 버튼의 세로 중심이 어긋난다.
+ */
+.grid-row--actions {
+  align-items: center;
+}
+
+.grid-cell--actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
