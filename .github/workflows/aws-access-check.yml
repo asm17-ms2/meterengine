@@ -1,0 +1,39 @@
+name: AWS 접근 점검
+
+# 수동 실행 전용. OIDC 신뢰 관계와 ECR 접근이 살아 있는지 확인한다.
+# 신뢰 정책이 main 한정(refs/heads/main)이라 main에서 실행해야 통과한다.
+on: workflow_dispatch
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::928618307647:role/meterengine-github-actions-role
+          aws-region: ap-northeast-2
+
+      - name: 역할 확인
+        run: aws sts get-caller-identity
+
+      # 역할에 ecr:DescribeRepositories는 없다. 권한이 있는 describe-images로 리포 접근을 본다
+      - name: ECR 리포 접근 확인
+        continue-on-error: true
+        run: |
+          for repo in meterengine-backend meterengine-frontend; do
+            echo "--- $repo ---"
+            aws ecr describe-images --repository-name "$repo" \
+              --query 'imageDetails[].imageTags' --output text
+          done
+
+      # 토큰이 로그에 남지 않도록 docker login으로 바로 넘긴다
+      - name: ECR 로그인 확인
+        run: |
+          aws ecr get-login-password \
+            | docker login --username AWS --password-stdin \
+              928618307647.dkr.ecr.ap-northeast-2.amazonaws.com
