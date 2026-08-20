@@ -185,6 +185,7 @@ class OpenApiDocumentTest {
     assertSchemaHasField("CustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "customer_id");
+    assertSchemaHasField("CustomerResponse", "created_at");
 
     // 자바 필드명이 문서 어디로도 새지 않는다.
     assertThat(body(json()))
@@ -197,7 +198,8 @@ class OpenApiDocumentTest {
             "receivedAt",
             "targetProperty",
             "totalAmount",
-            "calculatedAt");
+            "calculatedAt",
+            "createdAt");
   }
 
   // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ package com.meterengine.customer.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.customer.entity.Customer;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -11,11 +12,16 @@ import java.util.UUID;
  *
  * <p>필드 이름 {@code customer_id}는 사용량, 청구 예정액, 이벤트 조회 응답이 이미 쓰는 이름이다. 여기서만 {@code id}로 두면 화면이 같은 값을 두
  * 이름으로 다루게 된다.
+ *
+ * <p>{@code created_at}은 세 곳 모두에 실린다 (MS2-171). 레코드가 하나라 등록만 빼거나 목록만 넣는 선택지가 없고, 나눌 근거도 없다. 화면이 이것을
+ * 필수로 다뤄도 되는지({@code required}) 는 아직 정하지 않았다. 소비자인 고객 화면(MS2-154)이 미착수라 판단 근거가 없다.
  */
 public record CustomerResponse(
-    @JsonProperty("customer_id") UUID customerId, @JsonProperty("name") String name) {
+    @JsonProperty("customer_id") UUID customerId,
+    @JsonProperty("name") String name,
+    @JsonProperty("created_at") OffsetDateTime createdAt) {
 
   public static CustomerResponse from(Customer customer) {
-    return new CustomerResponse(customer.getId(), customer.getName());
+    return new CustomerResponse(customer.getId(), customer.getName(), customer.getCreatedAt());
   }
 }

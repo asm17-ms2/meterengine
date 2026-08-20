@@ -414,6 +414,9 @@ components:
     CustomerResponse:
       type: object
       properties:
+        created_at:
+          type: string
+          format: date-time
         customer_id:
           type: string
           format: uuid

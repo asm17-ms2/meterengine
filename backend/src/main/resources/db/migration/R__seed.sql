@@ -45,6 +45,11 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 고객이 2명인 이유: MS2-124 인수 조건에 "이벤트 없는 고객은 사용량 0, 금액 0"이 있다.
 -- 한 명뿐이면 그 케이스를 만들 수 없어서, 이벤트를 받는 고객과 받지 않는 고객을 함께 둔다.
+--
+-- created_at을 여기서 적지 않는 이유(MS2-171): V3의 DEFAULT clock_timestamp()가 채운다.
+-- 그래서 이 두 행의 created_at은 고객이 등록된 시각이 아니라 이 DB를 만든 시각이다.
+-- 아래 ON CONFLICT의 갱신 대상에도 일부러 넣지 않았다. 넣으면 시드를 다시 돌릴 때마다
+-- 두 고객이 "방금 등록됐다"로 바뀐다 (organization_id를 뺀 것과 같은 이유).
 INSERT INTO customer (id, organization_id, name) VALUES
   -- 이벤트를 받는 고객. 수집 API 테스트와 데모가 이 id로 이벤트를 보낸다
   ('a728e7b6-d82b-4f3c-a960-a66a02794c1d',

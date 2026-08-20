@@ -6,6 +6,7 @@ import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,8 +49,9 @@ class CustomerCrudIntegrationTest {
   // --- 등록 ---
 
   @Test
-  void 등록하면_201과_발급된_id가_오고_목록에_보인다() {
+  void 등록하면_201과_발급된_id와_등록시각이_오고_목록에_보인다() {
     UUID orgId = insertOrganization();
+    OffsetDateTime beforePost = dbNow();
 
     MvcTestResult created =
         post(
@@ -60,6 +62,25 @@ class CustomerCrudIntegrationTest {
 
     assertThat(created).hasStatus(201).bodyJson().extractingPath("$.name").isEqualTo("아크메 주식회사");
     assertThat(created).bodyJson().extractingPath("$.customer_id").asString().isNotEmpty();
+
+    // created_at은 DB가 만들고 Hibernate가 INSERT ... RETURNING으로 되읽어 채운다 (MS2-171).
+    // 이 단언이 없으면 @Generated를 빼거나 insertable=false로 바꿔도 전부 초록이고, 등록 응답만
+    // null이 나가는 상태가 조용히 머지된다. 등록 경로가 merge를 타서(CustomerService.create의
+    // javadoc 참조) 되읽기가 성립하는지도 여기서만 확인된다.
+    //
+    // 값이 POST 직전 시각보다 뒤인지까지 본다. 이것이 잡는 회귀는 V3의 마지막 문장(SET DEFAULT
+    // clock_timestamp())이 사라져 앞 문장의 DEFAULT now()가 남는 경우다. 두 문장을 하나로 합치자는
+    // 정리가 정확히 그 모양이 된다. 구분이 되는 이유는 이 클래스가 @Transactional이라 테스트 전체가
+    // 한 트랜잭션이고, now()가 주는 트랜잭션 시작 시각은 beforePost보다 항상 앞이기 때문이다.
+    //
+    // 상한은 두지 않는다. 실패를 만들어 본 네 경우 중 상한이 잡은 것이 하나도 없었고, 단언 시점에
+    // 시각을 다시 재는 상한은 테스트가 길어질수록 느슨해져 사실상 통과가 보장된다. 이 레포가 MS2-150
+    // 8단계에서 지운 "절대 실패할 수 없는 단언"과 같은 것이 된다.
+    //
+    // parse가 형식도 함께 본다. 비ISO 패턴과 epoch 정수화 둘 다 여기서 걸리는 것을 확인했다.
+    OffsetDateTime createdAt =
+        OffsetDateTime.parse(jsonMapper.readTree(bodyText(created)).get("created_at").asString());
+    assertThat(createdAt).isAfterOrEqualTo(beforePost);
 
     assertThat(list(orgId))
         .hasStatusOk()
@@ -199,25 +220,40 @@ class CustomerCrudIntegrationTest {
   @Test
   void 이름을_고치면_200이고_목록에_반영된다() {
     UUID orgId = insertOrganization();
-    UUID customerId = createCustomer(orgId, "옛 이름");
+    MvcTestResult created =
+        post(
+            orgId,
+            """
+        {"name":"옛 이름"}
+        """);
+    UUID customerId =
+        UUID.fromString(jsonMapper.readTree(bodyText(created)).get("customer_id").asString());
+    String createdAt = jsonMapper.readTree(bodyText(created)).get("created_at").asString();
 
-    assertThat(
-            put(
-                orgId,
-                customerId,
-                """
+    MvcTestResult renamed =
+        put(
+            orgId,
+            customerId,
+            """
         {"name":"새 이름"}
-        """))
-        .hasStatusOk()
-        .bodyJson()
-        .extractingPath("$.name")
-        .isEqualTo("새 이름");
+        """);
+    assertThat(renamed).hasStatusOk().bodyJson().extractingPath("$.name").isEqualTo("새 이름");
+
+    // 세 응답이 같은 created_at을 낸다 (D4가 "레코드 하나를 셋이 공유한다"고 정한 것의 채점자).
+    // 등록에만 단언이 있으면 수정과 목록에서 값이 사라지거나 달라져도 전부 초록이다. insertable=false
+    // 역검증에서 18건 중 1건만 죽고 목록과 수정이 통과한 것이 그 실측 증거였다.
+    assertThat(renamed).bodyJson().extractingPath("$.created_at").asString().isEqualTo(createdAt);
 
     assertThat(list(orgId))
         .bodyJson()
         .extractingPath("$.customers[*].name")
         .asArray()
         .containsExactly("새 이름");
+    assertThat(list(orgId))
+        .bodyJson()
+        .extractingPath("$.customers[0].created_at")
+        .asString()
+        .isEqualTo(createdAt);
   }
 
   @Test
@@ -399,6 +435,11 @@ class CustomerCrudIntegrationTest {
         .uri("/v1/customers/" + customerId)
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
+  }
+
+  /** DB 서버 시각. created_at 하한 대조에 쓴다. JVM 시각을 쓰면 컨테이너와 호스트의 시계 차가 섞인다. */
+  private OffsetDateTime dbNow() {
+    return jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class);
   }
 
   /** API로 만든다. 테스트가 검증하는 경로로 픽스처를 만들어야 발급된 id가 실제로 쓸 수 있는 값인지도 함께 확인된다. */
