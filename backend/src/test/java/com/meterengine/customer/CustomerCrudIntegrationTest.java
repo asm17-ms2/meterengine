@@ -205,6 +205,36 @@ class CustomerCrudIntegrationTest {
         .containsExactly("기역", "니은", "히읗");
   }
 
+  /**
+   * 이름 순서가 한국어 사전순인지 본다 (MS2-143).
+   *
+   * <p>순서를 만드는 곳이 자바가 아니라 DB(customer.name의 collation)라, 리포지터리가 아니라 API를 관통해 확인한다. 마이그레이션 V4가 되돌려지든
+   * 자바 계층에 재정렬이 끼어들든 여기서 걸린다.
+   *
+   * <p>데이터를 이 조합으로 고른 이유. 한글 셋(가나다/나비/힘찬)이 en_US.utf8을 걸러내고(그 collation에서는 나비, 힘찬이 가나다 앞으로 온다), 한글이
+   * 라틴보다 앞선다는 점이 로케일 없는 und-x-icu를 걸러내고, 대소문자가 다른 두 라틴 이름이 갈리지 않는다는 점이 C와 pg_c_utf8을 걸러낸다(그 둘에서는
+   * Beta Corp이 acme corp보다 앞이다).
+   *
+   * <p>단언은 전부 1차 수준(문자 자체가 다름)의 비교만 쓴다. 대소문자만 다른 이름끼리의 순서는 ICU의 3차 수준이라 ICU 라이브러리 버전이 올라가면 흔들릴 수 있어
+   * 일부러 넣지 않았다.
+   */
+  @Test
+  void 목록은_한국어_사전순이다() {
+    UUID orgId = insertOrganization();
+    createCustomer(orgId, "힘찬");
+    createCustomer(orgId, "Beta Corp");
+    createCustomer(orgId, "가나다");
+    createCustomer(orgId, "acme corp");
+    createCustomer(orgId, "나비");
+
+    assertThat(list(orgId))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.customers[*].name")
+        .asArray()
+        .containsExactly("가나다", "나비", "힘찬", "acme corp", "Beta Corp");
+  }
+
   @Test
   void 고객이_없으면_빈_배열이다() {
     assertThat(list(insertOrganization()))
