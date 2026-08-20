@@ -3,8 +3,6 @@ package com.meterengine.pricing.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,21 +11,21 @@ import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.dto.SavePricePolicyRequest;
-import com.meterengine.pricing.dto.SavePricePolicyRequest.RateEntry;
+import com.meterengine.pricing.entity.PricePolicy;
+import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.exception.InvalidPricePolicyException;
 import com.meterengine.pricing.exception.MetricNotFoundException;
 import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * 등록의 검증과 예외 분기를 본다 (MS2-157).
@@ -39,7 +37,6 @@ class PricePolicyServiceTest {
 
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final String METRIC = "token-usage";
-  private static final RateEntry BASE_RATE = new RateEntry(Map.of(), new BigDecimal("0.5"));
 
   @Mock private PricePolicyRepository policies;
   @Mock private BillableMetricRepository metrics;
@@ -55,104 +52,64 @@ class PricePolicyServiceTest {
   void 미터가_없으면_MetricNotFound다() {
     when(metrics.existsById(new BillableMetricId(ORG_ID, METRIC))).thenReturn(false);
 
-    assertThatThrownBy(() -> register(List.of(), List.of(BASE_RATE)))
-        .isInstanceOf(MetricNotFoundException.class);
-    verify(policies, never()).insertPolicy(any(), anyString(), any());
+    assertThatThrownBy(() -> register(List.of())).isInstanceOf(MetricNotFoundException.class);
+    verify(policies, never()).saveAndFlush(any());
   }
 
   @Test
   void 정책이_이미_있으면_AlreadyExists다() {
     metricExists();
-    when(policies.exists(ORG_ID, METRIC)).thenReturn(true);
+    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(true);
 
-    assertThatThrownBy(() -> register(List.of(), List.of(BASE_RATE)))
+    assertThatThrownBy(() -> register(List.of()))
         .isInstanceOf(PricePolicyAlreadyExistsException.class);
-    verify(policies, never()).insertPolicy(any(), anyString(), any());
+    verify(policies, never()).saveAndFlush(any());
   }
 
   @Test
   void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
     metricExists();
-    when(policies.exists(ORG_ID, METRIC)).thenReturn(false);
-    doThrow(new DuplicateKeyException("pk")).when(policies).insertPolicy(ORG_ID, METRIC, List.of());
+    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(false);
+    when(policies.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("pk"));
 
-    assertThatThrownBy(() -> register(List.of(), List.of(BASE_RATE)))
+    assertThatThrownBy(() -> register(List.of()))
         .isInstanceOf(PricePolicyAlreadyExistsException.class);
   }
 
   @Test
-  void 기본_단가_행이_없으면_Invalid다() {
+  void 선언의_중복이나_빈_키는_Invalid다() {
     metricExists();
 
-    assertThatThrownBy(
-            () ->
-                register(
-                    List.of("model"),
-                    List.of(new RateEntry(Map.of("model", "opus5"), new BigDecimal("2.0")))))
-        .isInstanceOf(InvalidPricePolicyException.class)
-        .hasMessageContaining("base rate");
-  }
-
-  @Test
-  void 조합의_키_집합이_선언과_다르면_Invalid다() {
-    metricExists();
-
-    assertThatThrownBy(
-            () ->
-                register(
-                    List.of("model"),
-                    List.of(
-                        BASE_RATE, new RateEntry(Map.of("region", "kr"), new BigDecimal("2.0")))))
-        .isInstanceOf(InvalidPricePolicyException.class)
-        .hasMessageContaining("do not match");
-  }
-
-  @Test
-  void 같은_조합이_두_번_오면_Invalid다() {
-    metricExists();
-
-    assertThatThrownBy(
-            () ->
-                register(
-                    List.of("model"),
-                    List.of(
-                        BASE_RATE,
-                        new RateEntry(Map.of("model", "opus5"), new BigDecimal("2.0")),
-                        new RateEntry(Map.of("model", "opus5"), new BigDecimal("3.0")))))
+    assertThatThrownBy(() -> register(List.of("model", "model")))
         .isInstanceOf(InvalidPricePolicyException.class)
         .hasMessageContaining("duplicate");
+    assertThatThrownBy(() -> register(List.of(" ")))
+        .isInstanceOf(InvalidPricePolicyException.class)
+        .hasMessageContaining("blank");
+    verify(policies, never()).saveAndFlush(any());
   }
 
   @Test
-  void 선언의_중복이나_빈_키도_Invalid다() {
+  void 정상_등록이면_정책이_저장되고_저장된_모양이_응답이_된다() {
     metricExists();
+    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(false);
 
-    assertThatThrownBy(() -> register(List.of("model", "model"), List.of(BASE_RATE)))
-        .isInstanceOf(InvalidPricePolicyException.class);
-    assertThatThrownBy(() -> register(List.of(" "), List.of(BASE_RATE)))
-        .isInstanceOf(InvalidPricePolicyException.class);
-  }
+    PricePolicyResponse response = register(List.of("model"));
 
-  @Test
-  void 정상_등록이면_정책과_단가가_저장되고_저장된_모양이_응답이_된다() {
-    metricExists();
-    when(policies.exists(ORG_ID, METRIC)).thenReturn(false);
-    RateEntry opusRate = new RateEntry(Map.of("model", "opus5"), new BigDecimal("2.0"));
-
-    PricePolicyResponse response = register(List.of("model"), List.of(BASE_RATE, opusRate));
-
-    verify(policies).insertPolicy(ORG_ID, METRIC, List.of("model"));
-    verify(policies).insertRate(ORG_ID, METRIC, Map.of(), new BigDecimal("0.5"));
-    verify(policies).insertRate(ORG_ID, METRIC, Map.of("model", "opus5"), new BigDecimal("2.0"));
+    ArgumentCaptor<PricePolicy> saved = ArgumentCaptor.forClass(PricePolicy.class);
+    verify(policies).saveAndFlush(saved.capture());
+    assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORG_ID);
+    assertThat(saved.getValue().getMetricCode()).isEqualTo(METRIC);
+    assertThat(saved.getValue().getDimensionProperties()).containsExactly("model");
     assertThat(response.metricCode()).isEqualTo(METRIC);
-    assertThat(response.rates()).hasSize(2);
+    assertThat(response.dimensionProperties()).containsExactly("model");
   }
 
   private void metricExists() {
     when(metrics.existsById(new BillableMetricId(ORG_ID, METRIC))).thenReturn(true);
   }
 
-  private PricePolicyResponse register(List<String> properties, List<RateEntry> rates) {
-    return service.register(ORG_ID, METRIC, new SavePricePolicyRequest(properties, rates));
+  private PricePolicyResponse register(List<String> properties) {
+    return service.register(ORG_ID, METRIC, new SavePricePolicyRequest(properties));
   }
 }

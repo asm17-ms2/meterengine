@@ -50,7 +50,7 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
-| `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언과 조합별 단가를 한 트랜잭션으로, 기본 단가(`{}`) 행 필수, 미터당 1개(중복 409) |
+| `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 
@@ -100,9 +100,9 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 | `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록에서만 난다) |
 | `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
 | `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
-| `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (키 집합 불일치, 기본 단가 행 부재, 조합 중복) |
+| `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
 | `customer_not_found` | 404 | 경로가 가리킨 고객이 없거나 다른 도입사 소속이다 |
-| `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 (미등록 도입사 포함) |
+| `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
 | `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
 | `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
@@ -144,7 +144,7 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
 - `metric`: 과금 지표와 고객별 월 사용량 집계 (`/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`)
-- `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 등록 API를 얹었다. 조회 API는 MS2-176 예정이다
+- `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 정책 등록 API를 얹었다. 조회는 MS2-176, 단가 등록/수정/삭제는 MS2-177 예정이다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 

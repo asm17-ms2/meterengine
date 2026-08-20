@@ -136,16 +136,16 @@ public final class ErrorCodes {
   /**
    * 그 미터에 가격 정책이 이미 있다. 409다 (MS2-157).
    *
-   * <p>FE가 이 값에는 재시도 버튼을 붙이지 않는다. 미터당 정책 1개는 price_policy PK의 불변식이고, 덮어쓰기는 청구가 읽는 단가를 조용히 바꾸므로 지원하지
-   * 않는다. 수정 API는 정책 이력(버전) 논의 뒤 별도 티켓이다.
+   * <p>FE가 이 값에는 재시도 버튼을 붙이지 않는다. 미터당 정책 1개는 price_policy PK의 불변식이고, 덮어쓰기는 단가 해석의 기준인 축 선언을 조용히
+   * 바꾸므로 지원하지 않는다. 수정 API는 정책 이력(버전) 논의 뒤 별도 티켓이다.
    */
   public static final String PRICE_POLICY_ALREADY_EXISTS = "price_policy_already_exists";
 
   /**
    * 요청 본문이 형식은 맞지만 가격 정책으로 성립하지 않는다. 400이다 (MS2-157).
    *
-   * <p>{@link #VALIDATION_ERROR}와 갈라 두는 이유: 저쪽은 필드 하나씩의 형식이라 {@code errors}로 필드를 짚을 수 있다. 이쪽은 필드
-   * 사이의 관계(조합의 키 집합과 선언의 불일치, 기본 단가 행 부재, 조합 중복)라 짚을 필드가 하나가 아니고, 사유는 {@code detail}에 담긴다.
+   * <p>{@link #VALIDATION_ERROR}와 갈라 두는 이유: 저쪽은 필드 하나씩의 형식이라 {@code errors}로 필드를 짚을 수 있다. 이쪽은 선언 안의
+   * 관계(중복 키, 빈 키)라 짚을 필드가 하나가 아니고, 사유는 {@code detail}에 담긴다.
    */
   public static final String INVALID_PRICE_POLICY = "invalid_price_policy";
 
