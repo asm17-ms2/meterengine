@@ -29,6 +29,20 @@ pnpm build
 
 `pnpm build`는 백엔드가 꺼져 있어도 통과해야 한다. CI가 그 상태로 돌린다.
 
+## 컨테이너 이미지
+
+배포용 실행 이미지는 `Dockerfile`이 만든다 (MS2-162). 로컬 개발은 이 이미지를 쓰지 않고
+위의 `pnpm dev` 그대로다.
+
+```
+docker build -t meterengine-frontend .
+docker run -p 3000:3000 -e METERENGINE_API_BASE_URL=http://host.docker.internal:8080 meterengine-frontend
+```
+
+`next.config.ts`의 `output: "standalone"`이 이 이미지를 위한 설정이다. 백엔드 주소와 도입사
+식별자는 이미지에 굽지 않고 런타임 환경변수로 받는다. 운영에서 무엇이 이 값을 주입하는지는
+MS2-166(운영 compose)에서 정한다.
+
 ## 환경변수
 
 변수 목록과 설명은 `.env.example`에 있다. 값은 `.env.local`에 둔다 (커밋 대상 아님).

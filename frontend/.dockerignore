@@ -1,0 +1,18 @@
+# 빌드 컨텍스트에서 뺀다. 전송량을 줄이는 것보다 중요한 것이 아래 두 줄이다.
+
+# 로컬 설치본과 빌드 산출물. 호스트의 것이 들어가면 이미지 안에서 다시 만든 것과 섞인다.
+# node_modules는 플랫폼별 네이티브 바이너리를 들고 있어 특히 위험하다(맥 arm64 -> 리눅스).
+node_modules
+.next
+
+# 개발자 개인의 실제 값. 이미지에 구워지면 안 된다. 운영 값은 컨테이너 환경변수로 받는다.
+# next build와 standalone 서버가 이 디렉터리의 .env 파일을 자동으로 읽기 때문에 여기서 막는다.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
