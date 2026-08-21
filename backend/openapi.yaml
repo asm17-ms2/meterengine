@@ -350,6 +350,66 @@ paths:
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
+  /v1/metrics/{metricCode}/price-policy:
+    post:
+      description: |
+        미터에 가격 정책(가격을 가르는 속성 키의 선언)을 등록한다.
+        무차원 미터면 dimension_properties를 빈 배열로 보낸다.
+        단가는 이 API가 받지 않고 별도의 단가 API(MS2-177 예정)가 등록한다.
+        단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
+        미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
+      operationId: register
+      parameters:
+      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 정책을 붙일 미터의 code.
+        in: path
+        name: metricCode
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavePricePolicyRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PricePolicyResponse"
+          description: 등록된 정책 전체. 반영 결과를 확인하는 창구다
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: |
+            code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 사유는 detail에 있다.
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: "code=metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: "code=price_policy_already_exists: 이 미터에 정책이 이미 있다. 요청을 고쳐서\
+            \ 될 일이 아니다"
+      summary: 가격 정책 등록
+      tags:
+      - price-policy-controller
   /v1/usage:
     get:
       description: |
@@ -534,6 +594,15 @@ components:
             $ref: "#/components/schemas/MetricEntry"
         month:
           type: string
+    PricePolicyResponse:
+      type: object
+      properties:
+        dimension_properties:
+          type: array
+          items:
+            type: string
+        metric_code:
+          type: string
     ProblemFieldError:
       type: object
       description: 형식 검증에 걸린 필드 하나
@@ -566,6 +635,9 @@ components:
           - customer_not_found
           - customer_has_events
           - unknown_organization
+          - metric_not_found
+          - price_policy_already_exists
+          - invalid_price_policy
           example: validation_error
         detail:
           type: string
@@ -605,3 +677,12 @@ components:
           minLength: 0
       required:
       - name
+    SavePricePolicyRequest:
+      type: object
+      properties:
+        dimension_properties:
+          type: array
+          items:
+            type: string
+      required:
+      - dimension_properties

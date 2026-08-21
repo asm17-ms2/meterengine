@@ -135,6 +135,49 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
+  void 단가가_아직_없는_미터는_라인에서_빠진다() {
+    UUID orgId = organizationWithTokenMetric();
+    UUID acme = insertCustomer(orgId, "아크메");
+    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+
+    // 정책 등록 API(MS2-157)는 정책만 만들고 단가는 MS2-177이 붙인다. 그 사이의 미터가
+    // 사용량을 가져도 청구 예정액은 죽거나 0원을 내보내지 않고 라인을 뺀다 (PR 43 리뷰 결정).
+    jdbc.update(
+        """
+        INSERT INTO billable_metric
+          (organization_id, code, name, event_type, aggregation, target_property)
+        VALUES (?, 'api-calls', 'API 호출량', 'api_call', 'SUM', 'count')
+        """,
+        orgId);
+    assertThat(
+            mvc.post()
+                .uri("/v1/metrics/api-calls/price-policy")
+                .header("X-Organization-Id", orgId.toString())
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"dimension_properties\": []}")
+                .exchange())
+        .hasStatus(201);
+    jdbc.update(
+        """
+        INSERT INTO usage_event
+          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        VALUES (?, 'tx-2', ?, 'api_call', '{"count": 3}', '2026-08-10T13:00:00+09:00')
+        """,
+        orgId,
+        acme);
+
+    MvcTestResult result = get(orgId, AUGUST);
+
+    assertThat(result).hasStatusOk();
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(1);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.customers[0].lines[0].metric_code")
+        .isEqualTo("token-usage");
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+  }
+
+  @Test
   void month를_지정하면_그_달로_집계한다() {
     UUID orgId = organizationWithTokenMetric();
     UUID acme = insertCustomer(orgId, "아크메");

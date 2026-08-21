@@ -137,7 +137,12 @@ class OpenApiDocumentTest {
         .extractingPath("$.paths")
         .asMap()
         .containsOnlyKeys(
-            "/v1/events", "/v1/usage", "/v1/invoice", "/v1/customers", "/v1/customers/{id}");
+            "/v1/events",
+            "/v1/usage",
+            "/v1/invoice",
+            "/v1/customers",
+            "/v1/customers/{id}",
+            "/v1/metrics/{metricCode}/price-policy");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
@@ -158,6 +163,10 @@ class OpenApiDocumentTest {
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/customers/{id}'].delete.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/metrics/{metricCode}/price-policy'].post.summary")
         .isNotNull();
   }
 
@@ -185,6 +194,8 @@ class OpenApiDocumentTest {
     assertSchemaHasField("CustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "customer_id");
+    assertSchemaHasField("SavePricePolicyRequest", "dimension_properties");
+    assertSchemaHasField("PricePolicyResponse", "metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");
 
     // 자바 필드명이 문서 어디로도 새지 않는다.
@@ -199,6 +210,9 @@ class OpenApiDocumentTest {
             "targetProperty",
             "totalAmount",
             "calculatedAt",
+            "dimensionProperties",
+            "dimensionValues",
+            "unitPrice",
             "createdAt");
   }
 
@@ -233,19 +247,22 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers", "post", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
+    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "ProblemResponse");
   }
 
   /**
-   * 400 말고 다른 오류 상태도 마찬가지다 (MS2-155).
+   * 400 말고 다른 오류 상태도 마찬가지다 (MS2-155, 가격 정책은 MS2-157).
    *
    * <p>고객 API가 처음으로 404와 409를 쓴다. 위 테스트가 400만 보므로, content를 빠뜨린 404가 CustomerResponse 스키마를 물려받아도
    * 아무도 알아채지 못한다. 삭제의 204는 본문이 없어 볼 것이 없다.
    */
   @Test
-  void 고객_API의_404와_409도_200_스키마를_물려받지_않는다() {
+  void 고객과_가격_API의_404와_409도_200_스키마를_물려받지_않는다() {
     assertProblemSchema("/v1/customers/{id}", "put", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
+    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "404", "ProblemResponse");
+    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "409", "ProblemResponse");
   }
 
   @Test
