@@ -57,6 +57,28 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 ## 배포
 
+**main에 머지되면 자동으로 배포된다.** `.github/workflows/cd.yml`이 이미지를 굽고 ECR에 올린 뒤,
+SSM으로 서버의 배포 스크립트를 부른다. 따로 할 일은 없다.
+
+```
+main 머지 -> [build (backend) | build (frontend)]  ubuntu-24.04-arm 러너에서 병렬
+          -> ECR push (태그 = 커밋 SHA)
+          -> deploy: SSM SendCommand -> 서버에서 deploy.sh
+          -> 외부에서 https://meterengine.com/usage 200 확인
+```
+
+ARM 러너를 쓰는 이유는 배포 대상 EC2가 t4g(arm64)여서다. x86에서 구운 이미지는 서버에서 실행되지
+않는다. 퍼블릭 저장소라 이 러너는 무료다.
+
+AWS 자격은 OIDC로 받는다. 저장소 secrets에 장기 액세스 키가 없다. 다만 IAM 신뢰 정책이
+`refs/heads/main` 한정이라 **다른 브랜치에서는 배포 워크플로가 AssumeRole에서 막힌다.**
+PR 단계에서 CD를 시험할 수 없다는 뜻이기도 하다.
+
+배포가 실패하면 Actions 로그에 서버 출력이 그대로 찍힌다. SSM 응답은 2500자에서 잘리므로,
+거기서 원인이 안 보이면 서버에 붙어서 컨테이너 로그를 본다(아래 "문제를 볼 때").
+
+### 손으로 배포하기
+
 ```bash
 /opt/meterengine/deploy/deploy.sh <git-sha>
 ```
@@ -80,6 +102,37 @@ aws ssm send-command \
   --parameters 'commands=["/opt/meterengine/deploy/deploy.sh <git-sha>"]' \
   --query 'Command.CommandId' --output text
 ```
+
+## 롤백
+
+이전 커밋으로 되돌린다. 이미지 태그가 곧 커밋 SHA라, 롤백은 "이전 SHA로 다시 배포"와 같은 말이다.
+되돌릴 커밋의 이미지는 ECR에 이미 있으므로 빌드가 필요 없다.
+
+1. GitHub > Actions > **CD** > Run workflow
+2. **Use workflow from은 main으로 둔다** (다른 브랜치를 고르면 AssumeRole이 막힌다)
+3. `image_tag`에 되돌릴 커밋 SHA 40자를 넣고 실행
+
+빌드 job이 건너뛰어지고 배포만 다시 돈다. 서버의 레포도 그 커밋으로 맞춰지므로 compose 파일과
+Caddyfile까지 그 시점 상태로 돌아간다.
+
+Actions에 들어갈 수 없는 상황이면 서버에서 직접 같은 일을 할 수 있다.
+
+```bash
+aws ssm send-command \
+  --instance-ids i-0f47bb1f028cd29a9 \
+  --document-name AWS-RunShellScript \
+  --parameters 'commands=["cd /opt/meterengine && git fetch origin && git checkout --force <SHA> && ./deploy/deploy.sh <SHA>"]'
+```
+
+되돌릴 SHA는 ECR에서 확인할 수 있다.
+
+```bash
+aws ecr describe-images --repository-name meterengine-backend \
+  --query 'reverse(sort_by(imageDetails,&imagePushedAt))[].[imageTags[0],imagePushedAt]' --output text
+```
+
+DB 마이그레이션은 되돌아가지 않는다. Flyway는 앞으로만 간다. 스키마를 바꾼 배포를 롤백해야 하면
+옛 코드가 새 스키마에서 도는 상황이 되므로, 그 경우는 롤백보다 고쳐서 다시 배포하는 편이 안전하다.
 
 ## 서버 접속 (SSM)
 
