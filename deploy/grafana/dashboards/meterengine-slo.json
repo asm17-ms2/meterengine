@@ -16,7 +16,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (1 - sum(increase(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\"}[15d])) / sum(increase(http_server_requests_seconds_count[15d])))"
+          "expr": "100 * (1 - (sum(increase(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\",uri!~\"/actuator.*\"}[15d])) or vector(0)) / sum(increase(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[15d])))"
         }
       ],
       "fieldConfig": {
@@ -73,7 +73,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * sum(rate(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))",
+          "expr": "100 * sum(rate(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\",uri!~\"/actuator.*\"}[5m])) / sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[5m]))",
           "legendFormat": "5xx %"
         }
       ],
@@ -150,7 +150,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/host/root\"} / node_filesystem_size_bytes{mountpoint=\"/host/root\"})",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"})",
           "legendFormat": "디스크 %"
         }
       ],

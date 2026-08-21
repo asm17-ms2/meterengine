@@ -91,6 +91,7 @@ services:
     # 기본 인자가 통째로 사라져서, config 경로도 같이 줘야 한다.
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
       # EBS가 20GB뿐이다. 시간과 용량 중 먼저 닿는 쪽에서 오래된 데이터를 지운다.
       - --storage.tsdb.retention.time=15d
       - --storage.tsdb.retention.size=2GB

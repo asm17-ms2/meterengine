@@ -60,6 +60,8 @@ groups:
                 - evaluator: { type: lt, params: [1] }
 
       # 5xx율 5% 초과가 5분 지속. outcome은 Micrometer가 상태 코드에서 만들어 주는 라벨이다.
+      # /actuator는 제외한다. Prometheus scrape가 항상 성공하는 요청을 분당 4건 깔아서,
+      # 트래픽이 적을 때 실제 오류율을 임계값 아래로 희석시킨다 (PR 51 리뷰).
       # 트래픽이 0이면 0/0 = NaN이라 NoData가 되는데, 요청이 없는 것은 장애가 아니므로 OK로 둔다.
       - uid: high-5xx-rate
         title: 5xx 응답 비율 초과
@@ -75,7 +77,7 @@ groups:
             datasourceUid: prometheus
             model:
               refId: A
-              expr: sum(rate(http_server_requests_seconds_count{outcome="SERVER_ERROR"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))
+              expr: sum(rate(http_server_requests_seconds_count{outcome="SERVER_ERROR",uri!~"/actuator.*"}[5m])) / sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[5m]))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
