@@ -28,6 +28,9 @@ dependencies {
 	implementation(libs.springdoc.openapi.starter.webmvc.scalar)
 	implementation("org.flywaydb:flyway-database-postgresql")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
+	// 우리 코드가 부르는 API가 없어 runtimeOnly다. actuator가 클래스패스에서 감지해
+	// /actuator/prometheus를 만든다. 노출 범위는 application.properties가 정한다 (MS2-168).
+	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 	runtimeOnly("org.postgresql:postgresql")
 	testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
