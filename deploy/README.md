@@ -30,7 +30,6 @@
 | --- | --- |
 | `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend와 모니터링 셋(Prometheus, node exporter, Grafana) |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드. 디렉터리째 마운트하는 이유는 `compose.prod.yml` 주석에 있다 |
-| `compose.local-db.yml` | RDS(MS2-164)가 생길 때까지 쓰는 임시 postgres. 아래 "RDS 전환" 참조 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/` | Prometheus 수집 대상 정의 (MS2-168) |
 | `grafana/` | Grafana 데이터 소스, 대시보드, 경보의 정본. UI에서 고친 것은 재배포 때 파일 내용으로 돌아간다 |
@@ -181,33 +180,6 @@ SSH 키도 22번 포트도 없다. 서버 안의 SSM 에이전트가 AWS로 걸�
 aws ssm put-parameter --name /meterengine/prod/grafana-admin-password --type SecureString --value '<비밀번호>'
 aws ssm put-parameter --name /meterengine/prod/slack-webhook-url --type SecureString --value '<webhook URL>'
 ```
-
-## RDS 전환 (MS2-164 완료 시)
-
-지금은 `db-host`가 `PLACEHOLDER`라 `deploy.sh`가 `compose.local-db.yml`을 함께 물려 임시 postgres 컨테이너를 띄운다. 배포 경로 전체를 RDS 없이 미리 검증하려고 둔 임시 조치다.
-
-RDS가 생기면:
-
-1. Parameter Store의 `db-host`, `db-username`, `db-password`를 실제 값으로 채운다
-2. 지금 돌고 있는 것과 **같은 SHA로** 배포 스크립트를 다시 돌린다. 코드가 바뀌지 않았으니 이미지를 다시 구울 필요가 없다. `deploy.sh`가 `.env`를 새 파라미터 값으로 다시 쓰고, `db-host`가 `PLACEHOLDER`가 아닌 것을 보고 임시 postgres를 떼어낸다(`--remove-orphans`가 컨테이너까지 치운다). 이미지가 이미 서버에 있어 `pull`도 즉시 끝나므로 수십 초면 된다
-
-   ```bash
-   # 지금 서버에서 도는 SHA 확인
-   aws ssm send-command --instance-ids i-0f47bb1f028cd29a9 --document-name AWS-RunShellScript \
-     --parameters 'commands=["git -C /opt/meterengine rev-parse HEAD"]'
-
-   # 그 SHA로 다시 배포
-   aws ssm send-command --instance-ids i-0f47bb1f028cd29a9 --document-name AWS-RunShellScript \
-     --parameters 'commands=["/opt/meterengine/deploy/deploy.sh <SHA>"]'
-   ```
-
-   CD를 쓰고 싶으면 Actions > CD > Run workflow에 같은 SHA를 넣어도 된다. 이미 올라간 이미지라 빌드 job이 건너뛰어지고 배포만 돈다. main에 push할 필요는 없다. 그러면 이미지를 새로 굽느라 시간만 더 든다
-3. 확인이 끝나면 `compose.local-db.yml`과 `deploy.sh`의 `PLACEHOLDER` 분기를 지우고, 남은 볼륨도 지운다
-   ```bash
-   docker volume rm meterengine-prod_local-db-data
-   ```
-
-임시 DB의 데이터는 옮기지 않는다. 스키마는 Flyway가 RDS에 다시 만들고, 시드는 `R__seed.sql`이 다시 넣는다.
 
 ## 모니터링 (MS2-168)
 

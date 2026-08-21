@@ -102,19 +102,13 @@ main() {
 	# 2. Parameter Store에서 설정을 받아 .env를 다시 만든다.
 	write_env_file "$sha"
 
-	# 3. DB가 아직 준비되지 않았으면 임시 postgres를 붙인다.
-	#    MS2-164에서 db-host에 실제 RDS 엔드포인트가 들어가면 이 분기가 저절로 꺼진다.
-	local compose_files=(-f "$REPO_DIR/deploy/compose.prod.yml")
+	# 3. 어느 DB에 붙는지 로그에 남긴다. 주소는 Parameter Store의 db-host에서 온다.
+	#    배포가 엉뚱한 DB를 본 채로 성공하는 것을 알아챌 유일한 단서라 남긴다.
 	local db_host
 	db_host=$(grep '^DB_HOST=' "$ENV_FILE" | cut -d= -f2-)
-	if [ "$db_host" = "PLACEHOLDER" ]; then
-		log "주의: db-host가 아직 PLACEHOLDER다. 임시 postgres 컨테이너로 띄운다 (MS2-164 대기 중)"
-		compose_files+=(-f "$REPO_DIR/deploy/compose.local-db.yml")
-	else
-		log "DB: $db_host"
-	fi
+	log "DB: $db_host"
 
-	local compose=(docker compose --env-file "$ENV_FILE" "${compose_files[@]}")
+	local compose=(docker compose --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.prod.yml")
 
 	# 4. ECR 로그인. 비밀번호가 로그에 남지 않도록 stdin으로 넘긴다.
 	aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_REGISTRY" >/dev/null
