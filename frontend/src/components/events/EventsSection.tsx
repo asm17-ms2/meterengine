@@ -9,7 +9,7 @@ import {
   totalPages,
   type EventPage,
 } from "@/lib/api/events";
-import { formatKstDateTime, formatNumber } from "@/lib/format";
+import { formatKstDateTime, formatDecimal } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 /**
@@ -51,7 +51,7 @@ export async function EventsSection({
         title={outOfRange ? "이 페이지에는 이벤트가 없습니다" : "수집된 이벤트가 없습니다"}
         body={
           outOfRange
-            ? `${month}의 이벤트는 ${formatNumber(page.total)}건, ${pageCount}페이지까지입니다. 요청한 페이지가 그 뒤에 있습니다.`
+            ? `${month}의 이벤트는 ${formatDecimal(page.total)}건, ${pageCount}페이지까지입니다. 요청한 페이지가 그 뒤에 있습니다.`
             : `${month}에 수집된 이벤트가 없습니다. 기간을 바꾸거나 이벤트 수집이 동작하는지 확인하세요.`
         }
         resetHref={hrefFor(0)}
@@ -99,7 +99,7 @@ export async function EventsMeta({
 
   return (
     <>
-      총 <b>{formatNumber(result.data.total)}</b>건, 이 페이지{" "}
+      총 <b>{formatDecimal(result.data.total)}</b>건, 이 페이지{" "}
       <b>{result.data.events.length}</b>줄
     </>
   );
