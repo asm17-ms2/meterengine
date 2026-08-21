@@ -21,9 +21,10 @@
 -- 고쳐도 기존 행이 남아 에러도 경고도 없이 무시된다(실측). 행 수는 늘지 않으므로 인수 조건
 -- "두 번 실행해도 중복 생성되지 않는다"는 그대로 만족한다.
 --
--- TODO(배포 시점): 이 시드는 배포 환경에도 함께 적용된다. 8/10 플래닝에서 이번
---   스프린트는 로컬 데모만 하기로 해서 지금은 문제가 없다. 배포가 생기는 스프린트에서
---   운영 프로파일 제외를 검토한다.
+-- 운영 적용 여부(MS2-166에서 결정): 이 시드는 운영 DB에도 그대로 적용한다. 제외하지 않은
+--   이유는 이번 스토리(MS2-145)의 목표가 배포된 데모이고, 프론트가 조회할 도입사와
+--   demo/ CLI, MS2-169의 hook 이벤트 전송이 모두 여기 '데모 도입사'를 기준으로 돌기 때문이다.
+--   운영에 실제 고객 데이터가 들어오는 시점에는 프로파일별 spring.flyway.locations로 분리한다.
 -- ============================================================================
 
 -- id를 고정하는 이유 두 가지
@@ -45,6 +46,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 고객이 2명인 이유: MS2-124 인수 조건에 "이벤트 없는 고객은 사용량 0, 금액 0"이 있다.
 -- 한 명뿐이면 그 케이스를 만들 수 없어서, 이벤트를 받는 고객과 받지 않는 고객을 함께 둔다.
+-- (아래 "데모 확장" 절에 고객 3곳이 더 있다. 여기 둘은 기본 시드로 항상 필요한 쪽이다)
 --
 -- created_at을 여기서 적지 않는 이유(MS2-171): V3의 DEFAULT clock_timestamp()가 채운다.
 -- 그래서 이 두 행의 created_at은 고객이 등록된 시각이 아니라 이 DB를 만든 시각이다.
@@ -69,7 +71,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 --   code            매칭에 쓰이지 않는 표시용 식별자라, 이 미터가 재는 대상을 그대로 적는다
 --   target_property SUM 집계가 properties에서 읽을 키
 --
--- TODO(후속 스토리): target_property가 token이 아닌 미터가 생기면 행을 추가한다.
+-- target_property가 token이 아닌 미터는 아래 "데모 확장" 절에 있다.
 INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '토큰 사용량',
@@ -98,5 +100,63 @@ ON CONFLICT (organization_id, metric_code) DO UPDATE SET
 
 INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.5)
+ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+  unit_price = EXCLUDED.unit_price;
+
+
+-- ============================================================================
+-- 데모 확장 (MS2-166에서 편입)
+--
+-- MS2-142 mock 산출물의 축소판이다. demo/sample-events.csv가 이 고객 id와 event_type으로
+-- 이벤트를 보내므로, 이것이 없으면 그 CSV는 100건 전부 미등록 고객으로 거절된다.
+--
+-- 원래는 demo/seed-customers.sql과 demo/seed-metrics.sql을 psql로 직접 주입했다. 여기로
+-- 옮긴 이유는 MS2-164가 RDS에 개발자가 직접 붙지 못하게 잠그기 때문이다. 주입 경로가
+-- 사라지면 배포된 환경에서는 데모 CSV를 영영 쓸 수 없게 된다. 고객 등록 API(MS2-155)로
+-- 넣는 방법도 검토했지만, 서버가 id를 발급하는 구조라 CSV의 고정 customer_id와 맞지 않는다.
+--
+-- 미터가 3개인 이유 (2026-08-14 결정, 전체판은 10개다)
+--   input-tokens / output-tokens: llm_request 이벤트 하나가 미터 두 개에 잡히는 것을 보여준다
+--   network-egress: 소수 수량과 예정액 절사를 보여준다
+--
+-- 실제 고객 데이터가 들어오는 시점에는 이 절만 프로파일별 spring.flyway.locations로 떼어낸다.
+-- 위쪽 기본 시드와 섞지 않고 절을 나눠 둔 것이 그때를 위한 준비다.
+-- ============================================================================
+
+-- id는 고객 이름에서 uuid5로 만든 결정론적 값이라 MS2-142 원본과 항상 같다.
+INSERT INTO customer (id, organization_id, name) VALUES
+  ('35bc8d12-9d38-57ab-bc9b-bbd35d779a26',
+   'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '이슬비랩스'),
+  ('008cd6a7-6ff9-505d-9421-747e7d2d62aa',
+   'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '도담헬스'),
+  ('8c525322-2712-5b5f-aa1a-435a7ff9fe97',
+   'd7cee55d-8c82-4afc-b996-6749d8b26a4e', '한들물류')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+INSERT INTO billable_metric
+  (organization_id, code, name, event_type, aggregation, target_property) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '입력 토큰',
+   'llm_request', 'SUM', 'input_tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '출력 토큰',
+   'llm_request', 'SUM', 'output_tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '외부 전송량',
+   'network_traffic', 'SUM', 'egress_gb')
+ON CONFLICT (organization_id, code) DO UPDATE SET
+  name            = EXCLUDED.name,
+  event_type      = EXCLUDED.event_type,
+  aggregation     = EXCLUDED.aggregation,
+  target_property = EXCLUDED.target_property;
+
+INSERT INTO price_policy (organization_id, metric_code) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress')
+ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+  dimension_properties = EXCLUDED.dimension_properties;
+
+INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.5),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 2.5),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '{}', 120.0)
 ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;

@@ -40,8 +40,13 @@ docker run -p 3000:3000 -e METERENGINE_API_BASE_URL=http://host.docker.internal:
 ```
 
 `next.config.ts`의 `output: "standalone"`이 이 이미지를 위한 설정이다. 백엔드 주소와 도입사
-식별자는 이미지에 굽지 않고 런타임 환경변수로 받는다. 운영에서 무엇이 이 값을 주입하는지는
-MS2-166(운영 compose)에서 정한다.
+식별자는 이미지에 굽지 않고 런타임 환경변수로 받는다. 운영에서는 `deploy/compose.prod.yml`이
+주입하며, 값은 SSM Parameter Store에서 온다 (MS2-166). 백엔드 주소는 공개 도메인이 아니라
+컨테이너 네트워크 안의 `http://backend:8080`이다.
+
+`src/lib/config.ts`의 기본값 때문에 변수를 빠뜨려도 오류 없이 로컬 주소와 데모 도입사로
+떨어진다. 운영 compose는 이 조용한 실패를 막으려고 세 변수를 필수로 걸어 두었다
+(값이 없으면 컨테이너가 아예 뜨지 않는다).
 
 ## 환경변수
 
@@ -107,13 +112,18 @@ CSP를 걸거나 폐쇄망에 배포하게 되면 폰트를 레포로 가져와�
 
 ## 화면
 
-셋 다 구현됐다. 라우트는 `src/app/(console)/` 아래에 있다.
+넷 다 구현됐다. 라우트는 `src/app/(console)/` 아래에 있다.
 
 | 경로 | 화면 | 백엔드 | 이슈 |
 | --- | --- | --- | --- |
 | `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) | `GET /v1/events` | MS2-134 |
 | `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` | MS2-136 |
 | `/billing` | 청구 예정액 | `GET /v1/invoice` | MS2-127 |
+| `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) | `GET/POST/PUT/DELETE /v1/customers` | MS2-154 |
+
+`/customers`만 쓰기 화면이다. 저장 버튼은 브라우저에서 시작하므로 서버로 돌아올 길이
+필요하고, 그 길이 Server Action이다 (`src/app/(console)/customers/actions.ts`). 브라우저는
+여전히 백엔드를 직접 부르지 않는다 - 아래 "백엔드 연동"의 이유가 쓰기에도 그대로 적용된다.
 
 `/`는 `/usage`로 리다이렉트한다 (`src/app/page.tsx`).
 

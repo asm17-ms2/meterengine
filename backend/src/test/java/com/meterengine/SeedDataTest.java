@@ -29,15 +29,23 @@ class SeedDataTest {
   /** 요청 헤더로 보낼 도입사 ID. 시드가 고정값으로 넣기 때문에 테스트가 값을 알 수 있다. */
   private static final String SEED_ORGANIZATION_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
+  // 시드가 넣는 행 수. 기본 시드와 데모 확장(MS2-166)을 나눠 적어 무엇이 늘었는지 보이게 한다.
+  // 시드에 행을 더하면 여기도 함께 고친다.
+  private static final int CUSTOMERS = 2 + 3; // 아크메, 베타 + 이슬비랩스, 도담헬스, 한들물류
+  private static final int METRICS = 1 + 3; // token-usage + input/output-tokens, network-egress
+  // 미터마다 정책 1개와 단가 1행이 붙는다. 전부 무차원이라 조합이 '{}' 하나뿐이다.
+  private static final int PRICE_POLICIES = METRICS;
+  private static final int PRICE_RATES = METRICS;
+
   @Autowired private JdbcTemplate jdbc;
 
   @Test
-  void 시드는_도입사_1개와_고객_2명과_미터_1개와_가격_1벌을_넣는다() {
+  void 시드는_도입사와_고객과_미터와_가격을_넣는다() {
     assertThat(rowCount("organization")).isEqualTo(1);
-    assertThat(rowCount("customer")).isEqualTo(2);
-    assertThat(rowCount("billable_metric")).isEqualTo(1);
-    assertThat(rowCount("price_policy")).isEqualTo(1);
-    assertThat(rowCount("price_rate")).isEqualTo(1);
+    assertThat(rowCount("customer")).isEqualTo(CUSTOMERS);
+    assertThat(rowCount("billable_metric")).isEqualTo(METRICS);
+    assertThat(rowCount("price_policy")).isEqualTo(PRICE_POLICIES);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
 
   @Test
@@ -45,10 +53,10 @@ class SeedDataTest {
     jdbc.execute(readSeedScript());
 
     assertThat(rowCount("organization")).isEqualTo(1);
-    assertThat(rowCount("customer")).isEqualTo(2);
-    assertThat(rowCount("billable_metric")).isEqualTo(1);
-    assertThat(rowCount("price_policy")).isEqualTo(1);
-    assertThat(rowCount("price_rate")).isEqualTo(1);
+    assertThat(rowCount("customer")).isEqualTo(CUSTOMERS);
+    assertThat(rowCount("billable_metric")).isEqualTo(METRICS);
+    assertThat(rowCount("price_policy")).isEqualTo(PRICE_POLICIES);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
 
   /**
@@ -63,30 +71,45 @@ class SeedDataTest {
 
     jdbc.execute(readSeedScript());
 
-    assertThat(jdbc.queryForObject("SELECT name FROM billable_metric", String.class))
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT name FROM billable_metric WHERE code = 'token-usage'", String.class))
         .isEqualTo("토큰 사용량");
     // 시드의 INSERT는 dimension_properties를 나열하지 않아서, 되돌리기는 ON CONFLICT의
     // EXCLUDED가 생략된 컬럼에 DEFAULT('{}')를 싣는다는 사실에 기댄다. 그 미묘한 지점을 여기서 고정한다.
     assertThat(
             jdbc.queryForObject(
-                "SELECT dimension_properties::text FROM price_policy", String.class))
+                "SELECT dimension_properties::text FROM price_policy WHERE metric_code ="
+                    + " 'token-usage'",
+                String.class))
         .isEqualTo("{}");
-    assertThat(jdbc.queryForObject("SELECT unit_price FROM price_rate", BigDecimal.class))
-        .isEqualByComparingTo("0.5");
-    assertThat(rowCount("billable_metric")).isEqualTo(1);
-    assertThat(rowCount("price_rate")).isEqualTo(1);
-  }
-
-  /** 무차원 시드의 규약이다. 정책은 빈 키 집합, 단가는 '{}' 조합 1행 (2026-08-19 팀 합의). */
-  @Test
-  void 시드_가격은_무차원_기본_단가_1행이다() {
     assertThat(
             jdbc.queryForObject(
-                "SELECT dimension_properties::text FROM price_policy", String.class))
-        .isEqualTo("{}");
+                "SELECT unit_price FROM price_rate WHERE metric_code = 'token-usage'",
+                BigDecimal.class))
+        .isEqualByComparingTo("0.5");
+    assertThat(rowCount("billable_metric")).isEqualTo(METRICS);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
+  }
+
+  /**
+   * 무차원 시드의 규약이다. 정책은 빈 키 집합, 단가는 미터마다 '{}' 조합 1행 (2026-08-19 팀 합의). 미터가 늘어도 규약은 같으므로 특정 행이 아니라 전부를
+   * 본다.
+   */
+  @Test
+  void 시드_가격은_미터마다_무차원_단가_1행이다() {
+    assertThat(
+            jdbc.queryForList("SELECT dimension_properties::text FROM price_policy", String.class))
+        .hasSize(PRICE_POLICIES)
+        .containsOnly("{}");
+    assertThat(jdbc.queryForList("SELECT dimension_values::text FROM price_rate", String.class))
+        .hasSize(PRICE_RATES)
+        .containsOnly("{}");
 
     var rate =
-        jdbc.queryForMap("SELECT metric_code, dimension_values::text, unit_price FROM price_rate");
+        jdbc.queryForMap(
+            "SELECT metric_code, dimension_values::text, unit_price FROM price_rate"
+                + " WHERE metric_code = 'token-usage'");
 
     assertThat(rate.get("metric_code")).isEqualTo("token-usage");
     assertThat(rate.get("dimension_values")).isEqualTo("{}");
@@ -94,24 +117,45 @@ class SeedDataTest {
   }
 
   @Test
-  void 시드_도입사_ID로_조회하면_고객_2명이_모두_나온다() {
+  void 시드_도입사_ID로_조회하면_고객이_모두_나온다() {
     Integer customers =
         jdbc.queryForObject(
             "SELECT count(*) FROM customer WHERE organization_id = ?::uuid",
             Integer.class,
             SEED_ORGANIZATION_ID);
 
-    assertThat(customers).isEqualTo(2);
+    assertThat(customers).isEqualTo(CUSTOMERS);
   }
 
   @Test
   void 시드_미터는_token을_SUM으로_집계하도록_설정된다() {
     var metric =
-        jdbc.queryForMap("SELECT event_type, aggregation, target_property FROM billable_metric");
+        jdbc.queryForMap(
+            "SELECT event_type, aggregation, target_property FROM billable_metric"
+                + " WHERE code = 'token-usage'");
 
     assertThat(metric.get("event_type")).isEqualTo("chat_completion");
     assertThat(metric.get("aggregation")).isEqualTo("SUM");
     assertThat(metric.get("target_property")).isEqualTo("token");
+  }
+
+  /**
+   * demo/sample-events.csv가 쓰는 데이터다. CSV는 고객 id와 event_type을 파일에 박아 두고 보내므로, 시드에서 하나라도 어긋나면 100건이
+   * 전부 거절된다. MS2-166에서 psql 주입(demo/seed-*.sql)을 걷어내고 부트 시드로 옮긴 값들이라 회귀를 여기서 잡는다.
+   */
+  @Test
+  void 데모_확장_시드가_sample_events가_쓰는_고객과_미터를_넣는다() {
+    assertThat(jdbc.queryForList("SELECT id::text FROM customer", String.class))
+        .contains(
+            "35bc8d12-9d38-57ab-bc9b-bbd35d779a26",
+            "008cd6a7-6ff9-505d-9421-747e7d2d62aa",
+            "8c525322-2712-5b5f-aa1a-435a7ff9fe97");
+
+    // 이벤트 하나가 미터 두 개에 잡히는 구성이 이 데모의 핵심이라 짝으로 고정한다.
+    assertThat(
+            jdbc.queryForList(
+                "SELECT code FROM billable_metric WHERE event_type = 'llm_request'", String.class))
+        .containsExactlyInAnyOrder("input-tokens", "output-tokens");
   }
 
   private Integer rowCount(String table) {

@@ -16,8 +16,13 @@ export function ErrorState({
 }: {
   title: string;
   error: ApiError;
-  /** '기간 좁히기'가 갈 곳. 보통 직전 달이다. */
-  narrowerHref: string;
+  /**
+   * '기간 좁히기'가 갈 곳. 보통 직전 달이다.
+   *
+   * 없으면 그 버튼이 빠진다. 기간으로 조회하지 않는 화면(고객 목록)에서는
+   * 누를 데가 없어서다 - 이 도입사의 고객 전부가 응답이라 좁힐 조건이 없다.
+   */
+  narrowerHref?: string;
 }) {
   const detail = [error.title, error.detail].filter(Boolean).join(" - ");
   const status = error.status > 0 ? ` (${error.status})` : "";
@@ -31,9 +36,11 @@ export function ErrorState({
       </p>
       <div className="error-state__actions">
         <RetryButton />
-        <Link className="btn btn-secondary" href={narrowerHref}>
-          기간 좁히기
-        </Link>
+        {narrowerHref ? (
+          <Link className="btn btn-secondary" href={narrowerHref}>
+            기간 좁히기
+          </Link>
+        ) : null}
       </div>
     </div>
   );
