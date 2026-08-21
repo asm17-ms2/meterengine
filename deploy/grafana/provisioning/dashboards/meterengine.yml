@@ -1,0 +1,13 @@
+# 대시보드 파일 프로바이더 (MS2-168). deploy/grafana/dashboards/의 JSON이 compose 볼륨으로
+# /var/lib/grafana/dashboards 에 마운트되고, 여기서 읽어 간다.
+apiVersion: 1
+
+providers:
+  - name: meterengine
+    folder: MeterEngine
+    type: file
+    # 파일이 정본이므로 UI에서 고친 내용은 다음 갱신 때 파일 내용으로 돌아간다.
+    # 대시보드를 고치려면 JSON을 고쳐 배포한다.
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

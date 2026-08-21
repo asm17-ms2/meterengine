@@ -1,0 +1,13 @@
+# Grafana 데이터 소스 (MS2-168). UI에서 만들지 않고 파일로 넣는 이유는 compose의 grafana
+# 서비스 주석 참조 (재배포에도 살아남는 정본).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    # 경보 규칙(alerting/alerting.yml)과 대시보드 JSON이 이 uid를 참조한다. 바꾸면 셋을 같이 바꾼다.
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
