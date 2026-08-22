@@ -73,7 +73,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * sum(rate(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\",uri!~\"/actuator.*\"}[5m])) / sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[5m]))",
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{outcome=\"SERVER_ERROR\",uri!~\"/actuator.*\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[5m]))",
           "legendFormat": "5xx %"
         }
       ],
