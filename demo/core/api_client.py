@@ -14,7 +14,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from model import loads_decimal
+from core.model import loads_decimal
 
 
 class TransportError(Exception):

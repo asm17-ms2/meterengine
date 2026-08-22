@@ -13,12 +13,12 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from api_client import ApiClient, TransportError, parse_problem, roster_from_usage
-from csvio import read_csv_events
-from expected import Prediction, predict_send
-from jsonl_log import JsonlLogWriter
-from model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
-from render import Console, format_gate, format_send_pair, format_summary
+from core.api_client import ApiClient, TransportError, parse_problem, roster_from_usage
+from csvdemo.csvio import read_csv_events
+from csvdemo.expected import Prediction, predict_send
+from core.jsonl_log import JsonlLogWriter
+from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
+from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
 LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 PREVIEW_LIMIT = 5

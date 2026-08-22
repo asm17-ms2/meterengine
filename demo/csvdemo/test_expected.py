@@ -3,7 +3,7 @@
 import unittest
 from decimal import Decimal
 
-from expected import (
+from csvdemo.expected import (
     MetricMeta,
     build_expected,
     line_amount,
@@ -11,8 +11,8 @@ from expected import (
     stored_events_from_log,
     sum_quantities,
 )
-from jsonl_log import SendRecord
-from model import Event, StoredEvent, parse_rfc3339
+from core.jsonl_log import SendRecord
+from core.model import Event, StoredEvent, parse_rfc3339
 
 ACME = "a728e7b6-d82b-4f3c-a960-a66a02794c1d"
 BETA = "252339bc-d5f8-472d-b5d6-ed8554049450"

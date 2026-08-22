@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Optional
 
-from model import loads_decimal
+from core.model import loads_decimal
 
 FORMAT_VERSION = 1
 
