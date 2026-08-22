@@ -1,0 +1,29 @@
+# Prometheus 수집 설정 (MS2-168). compose 내부 네트워크의 서비스 이름으로 붙는다.
+#
+# 백엔드의 /actuator/prometheus는 Caddy가 프록시하지 않아 인터넷에서 안 보이지만,
+# 여기는 같은 compose 네트워크 안이라 backend:8080으로 직접 닿는다.
+
+global:
+  # 15초는 Prometheus 기본값이다. 짧을수록 디스크를 더 쓰는데, retention 제한(compose의
+  # command 참조)이 있어 15초로도 20GB EBS에 부담이 없다.
+  scrape_interval: 15s
+  # 규칙 평가 주기. 경보 규칙은 Grafana가 갖고 있어 여기서는 기본값 그대로 둔다.
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 앱 지표. 5xx율과 응답 지연(http_server_requests_seconds)이 여기서 나온다.
+  # up{job="backend"} == 0 이 헬스체크 실패 경보의 재료다.
+  - job_name: backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["backend:8080"]
+
+  # 서버 자원. CPU 경보(node_cpu_seconds_total)와 디스크 감시가 여기서 나온다.
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # 자기 자신. 수집이 밀리거나(scrape_duration) TSDB가 커지는 것을 볼 수 있다.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

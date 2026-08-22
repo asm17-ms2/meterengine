@@ -1,0 +1,118 @@
+# 경보 규칙과 Slack 연동 (MS2-168). 임계값의 근거는 각 규칙의 주석에 있다.
+# 값은 운영하면서 조정하는 것을 전제로 한 시작값이다. 조정하면 이 파일을 고쳐 배포한다.
+#
+# 발화 테스트: 임계값을 일부러 낮춰 배포해 Slack 수신을 확인하고 원복한다.
+# 한 번도 울려 보지 않은 경보는 없는 것과 같다.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: slack
+    receivers:
+      - uid: slack-webhook
+        type: slack
+        settings:
+          # Grafana가 기동 때 환경변수로 치환한다. 값은 Parameter Store
+          # /meterengine/prod/slack-webhook-url 에서 온다 (deploy.sh -> compose environment).
+          url: $SLACK_WEBHOOK_URL
+
+policies:
+  - orgId: 1
+    receiver: slack
+    group_by: ["alertname"]
+    # 같은 경보의 재알림은 4시간에 한 번. 계속 울리면 아무도 안 보게 된다.
+    repeat_interval: 4h
+
+groups:
+  - orgId: 1
+    name: meterengine
+    folder: MeterEngine
+    interval: 1m
+    rules:
+      # 헬스체크 실패. Prometheus가 백엔드 scrape에 실패하면 up이 0이 된다.
+      # 프로세스 다운, 포트 불통, 응답 불능을 전부 잡는다. 3분은 재배포(90초 대기)보다 길어서
+      # 정상 배포로는 울리지 않는 값이다.
+      - uid: backend-down
+        title: 백엔드 헬스체크 실패
+        condition: C
+        for: 3m
+        # Prometheus 자체가 죽어 평가할 데이터가 없어도 문제 상황이므로 경보로 취급한다.
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: 백엔드가 3분 넘게 scrape에 응답하지 않는다. meterengine.com API가 죽었을 가능성이 높다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: up{job="backend"}
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+
+      # 5xx율 5% 초과가 5분 지속. outcome은 Micrometer가 상태 코드에서 만들어 주는 라벨이다.
+      # /actuator는 제외한다. Prometheus scrape가 항상 성공하는 요청을 분당 4건 깔아서,
+      # 트래픽이 적을 때 실제 오류율을 임계값 아래로 희석시킨다 (PR 51 리뷰).
+      # 트래픽이 0이면 0/0 = NaN이라 NoData가 되는데, 요청이 없는 것은 장애가 아니므로 OK로 둔다.
+      - uid: high-5xx-rate
+        title: 5xx 응답 비율 초과
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 최근 5분 요청의 5% 넘게 5xx로 실패하고 있다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum(rate(http_server_requests_seconds_count{outcome="SERVER_ERROR",uri!~"/actuator.*"}[5m])) / sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[5m]))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+
+      # CPU 5분 평균 80% 초과가 10분 지속. t4g.medium 2vCPU 기준으로, 짧은 스파이크(배포,
+      # 마이그레이션)는 넘기고 지속 포화만 잡는 값이다.
+      - uid: high-cpu
+        title: CPU 사용률 초과
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: EC2 CPU가 10분 넘게 80%를 웃돌고 있다. 처리량 한계이거나 폭주하는 프로세스가 있다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [80] }

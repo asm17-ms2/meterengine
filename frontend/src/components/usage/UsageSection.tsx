@@ -7,7 +7,7 @@ import {
   toCustomerGroups,
   type MonthlyUsage,
 } from "@/lib/api/usage";
-import { formatNumber } from "@/lib/format";
+import { formatDecimal } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 /**
@@ -66,7 +66,7 @@ export async function UsageSection({
     customerName: group.customerName,
     meters: group.meters.map((meter) => ({
       label: meter.label,
-      quantity: formatNumber(meter.quantity),
+      quantity: formatDecimal(meter.quantity),
     })),
   }));
 

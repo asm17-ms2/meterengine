@@ -9,6 +9,10 @@
                    |     \--그 외--> [frontend:3000]
               인증서 자동 발급              |
                                 (서버사이드로 backend:8080 직접 호출)
+
+[Prometheus] --scrape--> backend:8080/actuator/prometheus, node-exporter:9100
+     ^
+[Grafana:3001(127.0.0.1)] --경보--> Slack        (아래 "모니터링" 참조)
 ```
 
 - 도메인: https://meterengine.com (Route 53 호스티드 존, A 레코드가 EC2 탄력적 IP를 가리킨다).
@@ -24,10 +28,11 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend |
+| `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend와 모니터링 셋(Prometheus, node exporter, Grafana) |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드. 디렉터리째 마운트하는 이유는 `compose.prod.yml` 주석에 있다 |
-| `compose.local-db.yml` | RDS(MS2-164)가 생길 때까지 쓰는 임시 postgres. 아래 "RDS 전환" 참조 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
+| `prometheus/` | Prometheus 수집 대상 정의 (MS2-168) |
+| `grafana/` | Grafana 데이터 소스, 대시보드, 경보의 정본. UI에서 고친 것은 재배포 때 파일 내용으로 돌아간다 |
 
 루트의 `docker-compose.yml`은 로컬 개발용이고 이것과 무관하다.
 
@@ -163,35 +168,59 @@ SSH 키도 22번 포트도 없다. 서버 안의 SSM 에이전트가 AWS로 걸�
 | `db-password` | SecureString | 같음. 배포 때 KMS로 복호화한다 |
 | `organization-id` | String | 프론트가 조회할 도입사 |
 | `organization-name` | String | 프론트 상단 바에 표시할 이름 |
+| `grafana-admin-password` | SecureString | Grafana admin 로그인 (MS2-168) |
+| `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook (MS2-168) |
 
 값을 고쳤으면 재배포해야 반영된다(같은 SHA로 `deploy.sh`를 다시 돌리면 된다).
 
-## RDS 전환 (MS2-164 완료 시)
+**모니터링 파라미터 두 개는 이 구성이 main에 머지되기 전에 만들어야 한다.** compose가 값이 없으면
+뜨지 않게 막고 있어서(`:?`), 없는 채로 머지되면 그 즉시 CD 배포가 실패한다.
 
-지금은 `db-host`가 `PLACEHOLDER`라 `deploy.sh`가 `compose.local-db.yml`을 함께 물려 임시 postgres 컨테이너를 띄운다. 배포 경로 전체를 RDS 없이 미리 검증하려고 둔 임시 조치다.
+```bash
+aws ssm put-parameter --name /meterengine/prod/grafana-admin-password --type SecureString --value '<비밀번호>'
+aws ssm put-parameter --name /meterengine/prod/slack-webhook-url --type SecureString --value '<webhook URL>'
+```
 
-RDS가 생기면:
+## 모니터링 (MS2-168)
 
-1. Parameter Store의 `db-host`, `db-username`, `db-password`를 실제 값으로 채운다
-2. 지금 돌고 있는 것과 **같은 SHA로** 배포 스크립트를 다시 돌린다. 코드가 바뀌지 않았으니 이미지를 다시 구울 필요가 없다. `deploy.sh`가 `.env`를 새 파라미터 값으로 다시 쓰고, `db-host`가 `PLACEHOLDER`가 아닌 것을 보고 임시 postgres를 떼어낸다(`--remove-orphans`가 컨테이너까지 치운다). 이미지가 이미 서버에 있어 `pull`도 즉시 끝나므로 수십 초면 된다
+Prometheus가 백엔드(`/actuator/prometheus`)와 node exporter(서버 자원)를 15초마다 긁고,
+Grafana가 그것을 대시보드와 경보로 만든다. 셋 다 서비스 트래픽을 받지 않아 어느 것이 죽어도
+서비스는 돈다.
 
-   ```bash
-   # 지금 서버에서 도는 SHA 확인
-   aws ssm send-command --instance-ids i-0f47bb1f028cd29a9 --document-name AWS-RunShellScript \
-     --parameters 'commands=["git -C /opt/meterengine rev-parse HEAD"]'
+### 대시보드 보기
 
-   # 그 SHA로 다시 배포
-   aws ssm send-command --instance-ids i-0f47bb1f028cd29a9 --document-name AWS-RunShellScript \
-     --parameters 'commands=["/opt/meterengine/deploy/deploy.sh <SHA>"]'
-   ```
+Grafana는 인터넷에 노출하지 않는다(127.0.0.1:3001 바인딩). 인증을 최후방으로 미룬 상태(MS2-126)에서
+로그인 화면 하나를 노출면으로 만들지 않으려는 결정이고, 보는 방법은 SSM 포트 포워딩이다.
 
-   CD를 쓰고 싶으면 Actions > CD > Run workflow에 같은 SHA를 넣어도 된다. 이미 올라간 이미지라 빌드 job이 건너뛰어지고 배포만 돈다. main에 push할 필요는 없다. 그러면 이미지를 새로 굽느라 시간만 더 든다
-3. 확인이 끝나면 `compose.local-db.yml`과 `deploy.sh`의 `PLACEHOLDER` 분기를 지우고, 남은 볼륨도 지운다
-   ```bash
-   docker volume rm meterengine-prod_local-db-data
-   ```
+```bash
+aws ssm start-session --target i-0f47bb1f028cd29a9 \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
+```
 
-임시 DB의 데이터는 옮기지 않는다. 스키마는 Flyway가 RDS에 다시 만들고, 시드는 `R__seed.sql`이 다시 넣는다.
+세션을 켠 채 http://localhost:3001 접속, 계정은 `admin` / Parameter Store의 `grafana-admin-password` 값.
+MeterEngine 폴더에 SLO 대시보드(가용성, p95/p99 지연, 5xx율, 서버 자원)가 있다.
+
+### 경보
+
+Slack으로 간다(`slack-webhook-url`). 임계값은 시작값이고, 조정은 UI가 아니라
+`grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
+
+| 경보 | 조건 | 뜻 |
+| --- | --- | --- |
+| 백엔드 헬스체크 실패 | `up{job="backend"} == 0` 3분 지속 | scrape 자체가 실패. 프로세스 다운이나 응답 불능 |
+| 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
+| CPU 사용률 초과 | 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
+
+새 경보를 만들었으면 임계값을 일부러 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
+한 번도 울려 보지 않은 경보는 없는 것과 같다.
+
+### 여기서 하지 않는 것
+
+외부 관점 헬스체크(blackbox exporter로 https://meterengine.com을 실제 HTTPS로 확인)와 인증서
+만료 일수 감시는 이번 범위에서 뺐다. 지금의 `up` 기반 경보는 서버 안에서 백엔드를 보는 것이라,
+Caddy가 죽거나 인증서가 만료된 상황은 잡지 못한다. 필요해지면 blackbox exporter 컨테이너 하나로
+둘 다 해결된다(`probe_ssl_earliest_cert_expiry`).
 
 ## 문제를 볼 때
 

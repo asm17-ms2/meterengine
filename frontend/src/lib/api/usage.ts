@@ -33,8 +33,9 @@ export type CustomerEntry = {
   customer_name: string;
   /**
    * 백엔드는 BigDecimal로 계산하지만 JSON에는 따옴표 없는 수로 나온다.
-   * 토큰 같은 정수 미터는 안전하다. 소수를 쓰는 미터가 생기면 문자열 직렬화로
-   * 바꾸자고 백엔드에 요청해야 한다.
+   * 소수를 쓰는 미터는 이미 있다 (network-egress, 시드에 단가 120원까지 붙어
+   * 있다). 그래서 이 값은 JS number(double)를 거치고, 유효숫자 약 16자리를
+   * 넘으면 값 자체가 어긋난다. 문자열 직렬화로 바꾸는 것은 아직 미해결이다.
    */
   quantity: number;
 };
