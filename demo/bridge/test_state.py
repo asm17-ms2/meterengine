@@ -285,5 +285,105 @@ def _git_init(path) -> bool:
     return True
 
 
+class ProjectStateTest(unittest.TestCase):
+    """목록에서 고른 상태와 allow/deny 배열 사이의 왕복."""
+
+    def test_상태를_읽는다(self):
+        config = BridgeConfig(allow=["meterengine"], deny=["비밀레포"])
+        self.assertEqual(config.project_state("meterengine"), NAMED)
+        self.assertEqual(config.project_state("비밀레포"), SKIPPED)
+        self.assertEqual(config.project_state("처음보는것"), MERGED)
+
+    def test_deny가_allow보다_먼저다(self):
+        config = BridgeConfig(allow=["둘다"], deny=["둘다"])
+        self.assertEqual(config.project_state("둘다"), SKIPPED)
+
+    def test_고른_상태가_배열로_되돌아간다(self):
+        config = BridgeConfig()
+        config.set_project_states(
+            {"meterengine": NAMED, "notes": MERGED, "비밀레포": SKIPPED, "demo": NAMED}
+        )
+        self.assertEqual(config.allow, ["demo", "meterengine"])
+        self.assertEqual(config.deny, ["비밀레포"])
+
+    def test_합침은_어느_배열에도_들어가지_않는다(self):
+        config = BridgeConfig(allow=["meterengine"])
+        config.set_project_states({"meterengine": MERGED})
+        self.assertEqual(config.allow, [])
+        self.assertEqual(config.deny, [])
+
+    def test_왕복해도_판정이_같다(self):
+        states = {"a": NAMED, "b": MERGED, "c": SKIPPED}
+        config = BridgeConfig()
+        config.set_project_states(states)
+        for name, state in states.items():
+            self.assertEqual(config.project_state(name), state)
+
+    def test_실명이_없으면_전부_실명이_된다(self):
+        """고른 것과 정반대가 되는 자리라 화면이 이 상태를 알려야 한다."""
+        config = BridgeConfig()
+        config.set_project_states({"meterengine": MERGED, "notes": MERGED})
+        self.assertTrue(config.names_everything())
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "meterengine")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "meterengine")
+
+    def test_실명이_하나라도_있으면_나머지는_합쳐진다(self):
+        config = BridgeConfig()
+        config.set_project_states({"meterengine": NAMED, "notes": MERGED})
+        self.assertFalse(config.names_everything())
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "notes")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "기타 프로젝트")
+
+
+class CustomerCacheScopeTest(unittest.TestCase):
+    """고객 캐시는 발급한 서버의 것이다. 전송 대상을 바꾸면 써서는 안 된다."""
+
+    LOCAL = "http://localhost:8080|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
+    PROD = "https://meterengine.com|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
+
+    def test_같은_서버면_캐시를_쓴다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
+            self.assertEqual(
+                BridgeState(path, self.LOCAL).cached_customer("meterengine(박성종)"), DEMO_CUSTOMER
+            )
+
+    def test_서버가_바뀌면_캐시를_버린다(self):
+        """안 버리면 로컬 UUID를 배포로 보내 이벤트가 전부 거절된다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
+            switched = BridgeState(path, self.PROD)
+            self.assertIsNone(switched.cached_customer("meterengine(박성종)"))
+
+    def test_서버가_바뀌어도_세션_매핑은_남는다(self):
+        """폴더가 어느 프로젝트인지는 서버와 무관하다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            first = BridgeState(path, self.LOCAL)
+            first.remember_session("sess-1", "meterengine")
+            first.deny_session("sess-2")
+            switched = BridgeState(path, self.PROD)
+            self.assertEqual(switched.project_of("sess-1"), "meterengine")
+            self.assertTrue(switched.is_denied("sess-2"))
+
+    def test_다시_돌아오면_새로_받는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            BridgeState(path, self.PROD).remember_customer("고객", OTHER_CUSTOMER)
+            # 배포 쪽 값으로 덮였으므로 로컬로 돌아오면 캐시가 없다
+            self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
+
+    def test_scope는_전송_대상과_도입사로_만든다(self):
+        config = BridgeConfig(base_url="http://localhost:8080/")
+        self.assertEqual(config.scope(), self.LOCAL)
+
+
 if __name__ == "__main__":
     unittest.main()
