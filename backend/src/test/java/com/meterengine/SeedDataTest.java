@@ -29,10 +29,11 @@ class SeedDataTest {
   /** 요청 헤더로 보낼 도입사 ID. 시드가 고정값으로 넣기 때문에 테스트가 값을 알 수 있다. */
   private static final String SEED_ORGANIZATION_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
-  // 시드가 넣는 행 수. 기본 시드와 데모 확장(MS2-166)을 나눠 적어 무엇이 늘었는지 보이게 한다.
-  // 시드에 행을 더하면 여기도 함께 고친다.
+  // 시드가 넣는 행 수. 기본 시드와 데모 확장(MS2-166), Claude Code 사용량(MS2-169)을 나눠
+  // 적어 무엇이 늘었는지 보이게 한다. 시드에 행을 더하면 여기도 함께 고친다.
   private static final int CUSTOMERS = 2 + 3; // 아크메, 베타 + 이슬비랩스, 도담헬스, 한들물류
-  private static final int METRICS = 1 + 3; // token-usage + input/output-tokens, network-egress
+  // token-usage + input/output-tokens, network-egress + cache-read/creation-tokens
+  private static final int METRICS = 1 + 3 + 2;
   // 미터마다 정책 1개와 단가 1행이 붙는다. 전부 무차원이라 조합이 '{}' 하나뿐이다.
   private static final int PRICE_POLICIES = METRICS;
   private static final int PRICE_RATES = METRICS;
@@ -87,7 +88,7 @@ class SeedDataTest {
             jdbc.queryForObject(
                 "SELECT unit_price FROM price_rate WHERE metric_code = 'token-usage'",
                 BigDecimal.class))
-        .isEqualByComparingTo("0.5");
+        .isEqualByComparingTo("0.007");
     assertThat(rowCount("billable_metric")).isEqualTo(METRICS);
     assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
@@ -113,7 +114,7 @@ class SeedDataTest {
 
     assertThat(rate.get("metric_code")).isEqualTo("token-usage");
     assertThat(rate.get("dimension_values")).isEqualTo("{}");
-    assertThat((BigDecimal) rate.get("unit_price")).isEqualByComparingTo("0.5");
+    assertThat((BigDecimal) rate.get("unit_price")).isEqualByComparingTo("0.007");
   }
 
   @Test
@@ -151,11 +152,35 @@ class SeedDataTest {
             "008cd6a7-6ff9-505d-9421-747e7d2d62aa",
             "8c525322-2712-5b5f-aa1a-435a7ff9fe97");
 
-    // 이벤트 하나가 미터 두 개에 잡히는 구성이 이 데모의 핵심이라 짝으로 고정한다.
+    // 이벤트 하나가 여러 미터에 잡히는 구성이 이 데모의 핵심이라 묶음으로 고정한다.
+    // 캐시 두 미터는 MS2-169가 더했다. Claude Code 실측에서 토큰의 대부분이 캐시라,
+    // 그것을 빼면 브리지가 보낸 사용량의 청구 예정액이 몇십 원에 그친다.
     assertThat(
             jdbc.queryForList(
                 "SELECT code FROM billable_metric WHERE event_type = 'llm_request'", String.class))
-        .containsExactlyInAnyOrder("input-tokens", "output-tokens");
+        .containsExactlyInAnyOrder(
+            "input-tokens", "output-tokens", "cache-read-tokens", "cache-creation-tokens");
+  }
+
+  /**
+   * demo/otel_bridge.py가 보내는 사용량이 걸릴 미터다 (MS2-169). target_property가 어긋나면 이벤트는 저장되는데 집계에서만 조용히 빠져,
+   * 화면에 0으로 보이고 원인을 찾기 어렵다.
+   */
+  @Test
+  void 캐시_미터가_브리지가_보내는_키를_잰다() {
+    var rows =
+        jdbc.queryForList(
+            "SELECT code, target_property, unit_price FROM billable_metric m"
+                + " JOIN price_rate r ON r.organization_id = m.organization_id"
+                + " AND r.metric_code = m.code"
+                + " WHERE m.code IN ('cache-read-tokens', 'cache-creation-tokens')"
+                + " ORDER BY code");
+
+    assertThat(rows).hasSize(2);
+    assertThat(rows.get(0).get("target_property")).isEqualTo("cache_creation_tokens");
+    assertThat((BigDecimal) rows.get(0).get("unit_price")).isEqualByComparingTo("0.00875");
+    assertThat(rows.get(1).get("target_property")).isEqualTo("cache_read_tokens");
+    assertThat((BigDecimal) rows.get(1).get("unit_price")).isEqualByComparingTo("0.0007");
   }
 
   private Integer rowCount(String table) {
