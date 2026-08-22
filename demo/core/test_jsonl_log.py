@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from decimal import Decimal
 
-from jsonl_log import JsonlLogWriter, read_log
+from core.jsonl_log import JsonlLogWriter, read_log
 
 
 def _write_sample(path):

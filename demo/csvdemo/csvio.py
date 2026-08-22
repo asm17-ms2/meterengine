@@ -12,7 +12,7 @@ from __future__ import annotations
 import csv
 from typing import List
 
-from model import Event
+from core.model import Event
 
 REQUIRED_COLUMNS = ["transaction_id", "customer_id", "event_type", "timestamp", "properties"]
 

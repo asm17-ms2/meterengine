@@ -7,7 +7,7 @@ code 확장 멤버는 2026-08-17(MS2-150 A-1, B-1)부터 세 엔드포인트의 
 
 import unittest
 
-from api_client import parse_problem
+from core.api_client import parse_problem
 
 
 class ParseProblemTest(unittest.TestCase):

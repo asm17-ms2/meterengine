@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from decimal import ROUND_DOWN, Decimal, localcontext
 from typing import Dict, List, Optional, Set
 
-from jsonl_log import SendRecord
-from model import Event, StoredEvent, is_uuid, kst_month, parse_properties, parse_rfc3339
+from core.jsonl_log import SendRecord
+from core.model import Event, StoredEvent, is_uuid, kst_month, parse_properties, parse_rfc3339
 
 TRANSACTION_ID_MAX_LENGTH = 255
 

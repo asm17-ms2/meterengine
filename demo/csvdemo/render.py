@@ -12,7 +12,7 @@ import sys
 import unicodedata
 from typing import Dict, List, Optional
 
-from model import Event, parse_properties, parse_rfc3339
+from core.model import Event, parse_properties, parse_rfc3339
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 

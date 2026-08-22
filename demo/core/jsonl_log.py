@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Optional
 
-from model import loads_decimal
+from core.model import loads_decimal
 
 FORMAT_VERSION = 1
 
@@ -49,11 +49,18 @@ class LogReadResult:
 
 
 class JsonlLogWriter:
-    def __init__(self, path: str):
+    """전송 기록을 쓴다.
+
+    append는 브리지(MS2-169)를 위한 것이다. 브리지는 상주 프로세스라 하루에도 여러 번
+    재시작되는데, 그때마다 새 파일을 만들면 기록이 쪼개져 verify가 하루치를 한 번에
+    대조하지 못한다. send는 실행 한 번이 파일 하나라 append가 필요 없다.
+    """
+
+    def __init__(self, path: str, append: bool = False):
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        self._file = open(path, "w", encoding="utf-8")
+        self._file = open(path, "a" if append else "w", encoding="utf-8")
         self.path = path
 
     def __enter__(self):

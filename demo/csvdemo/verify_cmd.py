@@ -12,12 +12,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-from api_client import ApiClient, ApiResult, parse_problem, roster_from_usage
-from csvio import read_csv_events
-from expected import ExpectedMonth, MetricMeta, build_expected, predict_send, stored_events_from_log
-from jsonl_log import read_log
-from model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, StoredEvent, kst_month
-from render import MISMATCH_GUIDANCE, Console, render_table
+from core.api_client import ApiClient, ApiResult, parse_problem, roster_from_usage
+from csvdemo.csvio import read_csv_events
+from csvdemo.expected import ExpectedMonth, MetricMeta, build_expected, predict_send, stored_events_from_log
+from core.jsonl_log import read_log
+from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, StoredEvent, kst_month
+from csvdemo.render import MISMATCH_GUIDANCE, Console, render_table
 
 EXIT_MATCH = 0
 EXIT_MISMATCH = 1
