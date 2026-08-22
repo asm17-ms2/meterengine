@@ -58,14 +58,13 @@ export function formatKoreanMonth(month: string): string {
   return `${year}년 ${Number(mm)}월`;
 }
 
-/** 천 단위 구분. 표의 수량 칸은 tabular-nums와 함께 쓴다. */
-export function formatNumber(value: number): string {
-  return value.toLocaleString("ko-KR");
-}
-
 /**
- * 소수가 올 수 있는 값(집계 수량, 단가). 서버가 준 자릿수만 보여주고,
- * toFixed로 가짜 정밀도를 만들지 않는다.
+ * 표시용 숫자. 천 단위 구분을 붙이고 소수는 10자리까지 보여준다.
+ * 표의 수량 칸은 tabular-nums와 함께 쓴다.
+ *
+ * 포맷터를 하나만 두는 이유는 둘이면 호출자가 의미가 아니라 이름으로 고르기
+ * 때문이다. 옵션 없는 toLocaleString은 소수 3자리에서 반올림해 집계 수량을
+ * 말없이 깎는다. 건수처럼 정수만 오는 값도 이걸 쓴다. 정수에서는 결과가 같다.
  */
 export function formatDecimal(value: number): string {
   return value.toLocaleString("ko-KR", { maximumFractionDigits: 10 });
