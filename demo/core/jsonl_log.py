@@ -1,6 +1,8 @@
 """send 실행 기록 JSONL의 쓰기와 읽기. 포맷 명세의 정본은 README다.
 
-한 파일은 헤더 라인(type=run) 하나와 전송 라인(type=send) 여럿으로 구성된다.
+한 파일은 헤더 라인(type=run)과 전송 라인(type=send) 여럿으로 구성된다. send는
+실행 하나가 파일 하나라 헤더가 하나뿐이고, 브리지(MS2-169)는 하루치를 한 파일에
+이어써서 재시작할 때마다 헤더가 하나씩 더 붙는다. 읽는 쪽은 마지막 헤더를 쓴다.
 request/response는 와이어에 실린 텍스트를 그대로 끼워 넣어(재직렬화 없음)
 소수 자릿수까지 재현 가능하게 보존한다. 중단에 대비해 라인마다 flush한다.
 """
@@ -146,9 +148,20 @@ def _spliceable(text: Optional[str]) -> Optional[str]:
 
 
 def read_log(path: str) -> LogReadResult:
+    """JSONL을 읽는다. 읽을 수 없는 라인은 건너뛰고 경고로 올린다.
+
+    마지막 라인만 봐주면 안 되는 이유는 브리지가 하루치를 이어쓰기 때문이다.
+    쓰다 만 라인이 남은 채 브리지가 다시 뜨면 그 뒤에 실행 헤더가 붙어, 잘린
+    라인이 더 이상 마지막이 아니게 된다. 그때 파일 전체를 거부하면 그날 기록이
+    통째로 검증 불가가 된다. 디스크가 차서 쓰기가 끊긴 경우도 같은 모양이다.
+
+    그렇다고 조용히 넘기지는 않는다. send는 실행 하나가 파일 하나라 중간이
+    깨졌다는 것 자체가 신호다. 건너뛴 줄을 경고로 올려 사람이 보게 한다.
+    """
     header = None
     records = []
     warnings = []
+    broken: List[int] = []
     with open(path, encoding="utf-8") as f:
         # splitlines()는 U+2028 같은 유니코드 경계로도 쪼개므로 파일 개행 기준으로만 나눈다
         lines = [line.rstrip("\n").rstrip("\r") for line in f]
@@ -160,8 +173,9 @@ def read_log(path: str) -> LogReadResult:
             if position == len(non_empty) - 1:
                 # 전송 도중 중단되면 마지막 라인이 잘릴 수 있다. 그 앞까지는 유효하다.
                 warnings.append("%s의 마지막 라인(%d행)이 잘려 있어 건너뜁니다" % (path, line_no))
-                continue
-            raise ValueError("%s의 %d행이 JSONL이 아닙니다" % (path, line_no))
+            else:
+                broken.append(line_no)
+            continue
         record_type = data.get("type")
         if record_type == "run":
             header = RunHeader(
@@ -187,4 +201,12 @@ def read_log(path: str) -> LogReadResult:
                 )
             )
         # 모르는 type은 전방 호환을 위해 조용히 건너뛴다
+    if broken:
+        listed = ", ".join(str(n) for n in broken[:5])
+        if len(broken) > 5:
+            listed += " 외 %d개" % (len(broken) - 5)
+        warnings.append(
+            "%s의 %d개 라인(%s행)이 JSONL이 아니라 건너뜁니다. 기록 일부가 손상됐습니다"
+            % (path, len(broken), listed)
+        )
     return LogReadResult(header=header, records=records, warnings=warnings)

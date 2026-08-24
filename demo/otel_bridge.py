@@ -39,7 +39,18 @@ def run_serve(args) -> int:
         config.base_url = args.base_url
     # 고객 캐시가 이 서버 것인지 판정할 수 있게 scope를 넘긴다.
     state = BridgeState(args.state, config.scope())
-    return server.serve(config, state, args.host, args.port)
+    try:
+        return server.serve(config, state, args.host, args.port)
+    except OSError as error:
+        # 대부분 브리지가 이미 떠 있는 경우다. 트레이스백 대신 무엇을 하면 되는지
+        # 적는다. 진단이 필요한 값(포트)이 메시지에 들어 있어야 한다.
+        print(
+            "%d 포트를 열지 못했습니다: %s\n"
+            "브리지가 이미 떠 있는지 보세요 (python3 demo/otel_bridge.py status)."
+            % (args.port, error),
+            file=sys.stderr,
+        )
+        return 2
 
 
 def run_config(args) -> int:

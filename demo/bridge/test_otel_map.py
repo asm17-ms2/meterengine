@@ -65,13 +65,23 @@ class ToEventTest(unittest.TestCase):
 
     def test_request_id가_멱등키다(self):
         event = otel_map.to_event(api_request(), "cid", {})
-        self.assertEqual(event.transaction_id, "req_011CeF71RPMGTvwPW6WsEw79")
+        self.assertEqual(event.transaction_id, "api_request:req_011CeF71RPMGTvwPW6WsEw79")
 
     def test_도구_이벤트는_tool_use_id가_멱등키다(self):
         data = record("tool_result", {"tool_use_id": {"stringValue": "toolu_01M3"}})
         event = otel_map.to_event(data, "cid", {})
         self.assertEqual(event.event_type, "tool_call")
-        self.assertEqual(event.transaction_id, "toolu_01M3")
+        self.assertEqual(event.transaction_id, "tool_result:toolu_01M3")
+
+    def test_같은_id를_실은_다른_이벤트가_멱등키를_나눠_갖지_않는다(self):
+        """이름을 안 붙이면 뒤엣것이 서버에서 duplicate로 조용히 사라진다.
+
+        api_refusal이 먼저 닿으면 토큰이 실린 llm_request 쪽이 버려진다.
+        """
+        same = {"request_id": {"stringValue": "req_ABC"}}
+        request = otel_map.to_event(record("api_request", same), "cid", {})
+        refusal = otel_map.to_event(record("api_refusal", same), "cid", {})
+        self.assertNotEqual(request.transaction_id, refusal.transaction_id)
 
     def test_멱등키가_없으면_세션과_순번으로_만든다(self):
         data = record(
@@ -86,6 +96,7 @@ class ToEventTest(unittest.TestCase):
             otel_map.to_event(record("api_request", {}), "cid", {})
 
     def test_transaction_id는_255자를_넘지_않는다(self):
+        # 이름을 붙인 뒤에도 서버 상한(255) 안이어야 한다.
         data = record("api_request", {"request_id": {"stringValue": "r" * 400}})
         event = otel_map.to_event(data, "cid", {})
         self.assertEqual(len(event.transaction_id), 255)
@@ -177,6 +188,19 @@ class PropertiesTest(unittest.TestCase):
         data = api_request(duration_ms={"stringValue": "빠름"})
         properties = self.properties_of(otel_map.to_event(data, "cid", {}))
         self.assertNotIn("duration_ms", properties)
+
+    def test_NaN과_Infinity는_담지_않는다(self):
+        """JSON에 표기가 없는 값이라, 실으면 본문이 JSON으로 성립하지 않는다.
+
+        서버가 거절할 뿐 아니라 로그에도 request_raw만 남아 verify가 그 줄을
+        재구성하지 못한다. Decimal("NaN")이 성립하기 때문에 걸리는 자리다.
+        """
+        for text in ("NaN", "Infinity", "-Infinity"):
+            data = api_request(duration_ms={"stringValue": text})
+            event = otel_map.to_event(data, "cid", {})
+            self.assertNotIn("duration_ms", self.properties_of(event), text)
+            # 본문 전체가 다시 읽히는지까지 본다
+            loads_decimal(event.properties_text)
 
     def test_브리지가_덧붙인_값이_들어간다(self):
         event = otel_map.to_event(api_request(), "cid", {"project": "meterengine", "owner": "박성종"})

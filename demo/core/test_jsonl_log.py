@@ -98,6 +98,25 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(len(result.records), 3)
         self.assertEqual(len(result.warnings), 1)
 
+    def test_중간이_깨진_라인도_건너뛰고_경고한다(self):
+        """브리지는 하루치를 이어쓴다. 잘린 라인 뒤에 다음 실행 헤더가 붙으면
+        그 라인은 더 이상 마지막이 아니다. 파일 전체를 거부하면 그날 기록이
+        통째로 검증 불가가 된다.
+        """
+        _write_sample(self.path)
+        with open(self.path, "a", encoding="utf-8") as f:
+            f.write('{"v": 1, "type": "send", "seq": 4, "requ')
+            f.write('{"v": 1, "type": "run", "started_at": "2026-08-24T10:00:00+09:00"}\n')
+            f.write('{"v": 1, "type": "send", "seq": 5, "sent_at": "2026-08-24T10:00:01+09:00",'
+                    ' "request": {}, "status": 200, "response": {}, "outcome": "new",'
+                    ' "error": null, "elapsed_ms": 3}\n')
+        result = read_log(self.path)
+        # 깨진 줄만 빠지고 뒤의 정상 레코드는 살아난다
+        self.assertEqual([r.seq for r in result.records], [1, 2, 3, 5])
+        # 조용히 넘기지는 않는다. send는 중간이 깨진 것 자체가 신호다
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("손상", result.warnings[0])
+
     def test_모르는_type은_건너뛴다(self):
         _write_sample(self.path)
         with open(self.path, "a", encoding="utf-8") as f:
@@ -148,14 +167,23 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         record = read_log(path).records[0]
         self.assertEqual(record.request["properties"]["token"], 7)
 
-    def test_중간_라인_손상은_오류다(self):
+    def test_중간_라인_손상은_경고로_올린다(self):
+        """예전에는 여기서 ValueError를 던져 파일 전체를 버렸다.
+
+        브리지가 하루치를 이어쓰면서 그 처리가 과해졌다. 쓰다 만 라인 하나가
+        그날 기록 전체를 검증 불가로 만들기 때문이다. 대신 그 줄만 건너뛰고
+        경고를 올린다. 손상 자체는 여전히 사람 눈에 띄어야 한다.
+        """
         _write_sample(self.path)
-        lines = open(self.path, encoding="utf-8").read().splitlines()
+        with open(self.path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
         lines[1] = lines[1][:20]
         with open(self.path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
-        with self.assertRaises(ValueError):
-            read_log(self.path)
+        result = read_log(self.path)
+        self.assertEqual([r.seq for r in result.records], [2, 3])
+        self.assertEqual(len(result.warnings), 1)
+        self.assertIn("2행", result.warnings[0])
 
 
 if __name__ == "__main__":

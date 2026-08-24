@@ -2,7 +2,7 @@
 
 Claude Code hook에는 토큰과 비용이 없다. 공식 문서가 그렇게 밝히고 OpenTelemetry를
 쓰라고 안내한다. 그래서 토큰은 OTel 이벤트 로그에서 받고, hook은 세션이 어느 폴더에서
-도는지를 알리는 데만 쓴다 (bridge_state 참조).
+도는지를 알리는 데만 쓴다 (bridge/state.py 참조).
 
 이 모듈은 부수효과가 없다. 네트워크도 파일도 건드리지 않고 페이로드만 변환한다.
 """
@@ -10,6 +10,7 @@ Claude Code hook에는 토큰과 비용이 없다. 공식 문서가 그렇게 �
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Iterator, List, Optional, Tuple
@@ -204,7 +205,7 @@ def _as_number(value: object) -> Optional[object]:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float, Decimal)):
-        return value
+        return _finite(value)
     if isinstance(value, str):
         text = value.strip()
         try:
@@ -212,10 +213,25 @@ def _as_number(value: object) -> Optional[object]:
         except ValueError:
             pass
         try:
-            return Decimal(text)
+            return _finite(Decimal(text))
         except Exception:
             return None
     return None
+
+
+def _finite(number: object) -> Optional[object]:
+    """NaN과 Infinity를 걸러낸다. 담을 수 없는 값이라 없는 셈 친다.
+
+    JSON에는 이 값들의 표기가 없다. 그대로 실으면 본문이 JSON으로 성립하지 않아
+    서버가 거절하고, 로그에도 request_raw만 남아(jsonl_log._spliceable) verify가
+    그 줄을 재구성하지 못한다. loads_decimal이 JSON 리터럴 NaN을 거부하는 것과
+    같은 이유이고, 남은 유입 경로는 수치 키가 문자열 "NaN"으로 오는 경우다.
+    """
+    if isinstance(number, Decimal):
+        return number if number.is_finite() else None
+    if isinstance(number, float) and not math.isfinite(number):
+        return None
+    return number
 
 
 def _transaction_id(name: str, attributes: Dict[str, object]) -> str:
@@ -224,11 +240,16 @@ def _transaction_id(name: str, attributes: Dict[str, object]) -> str:
     같은 요청이 두 번 전송돼도 서버가 first-write-wins로 걸러 주므로, 요청을
     고유하게 가리키는 값이면 된다. request_id가 그 값이고(req_011Ce...),
     도구 이벤트에는 tool_use_id가 있다. 둘 다 없으면 세션과 순번으로 만든다.
+
+    이벤트 이름을 앞에 붙이는 이유는 id 하나가 이벤트 여럿에 걸리기 때문이다.
+    api_request와 api_refusal이 같은 request_id를 실어 보내면 멱등키가 같아져,
+    뒤엣것이 서버에서 duplicate로 조용히 사라진다. 토큰이 실린 llm_request가
+    그렇게 버려질 수 있다. 세션/순번 폴백은 원래 이름을 붙이고 있었다.
     """
     for key in ("request_id", "client_request_id", "tool_use_id"):
         value = attributes.get(key)
         if isinstance(value, str) and value.strip():
-            return value.strip()[:MAX_TRANSACTION_ID]
+            return ("%s:%s" % (name, value.strip()))[:MAX_TRANSACTION_ID]
     session = attributes.get("session_id")
     sequence = attributes.get("event_sequence")
     if isinstance(session, str) and sequence is not None:

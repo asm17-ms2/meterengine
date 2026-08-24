@@ -19,6 +19,7 @@ python3로 돈다.
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -123,6 +124,7 @@ class ConsoleApp(App):
     def _apply_status(self, body) -> None:
         self.reachable = body is not None
         self.health = body or {}
+        self._merge_projects()
         panel = self.query_one("#status", Static)
         panel.set_class(self.reachable, "running")
         panel.set_class(not self.reachable, "stopped")
@@ -175,6 +177,31 @@ class ConsoleApp(App):
         for name in self._known_projects():
             table.add_row(name, self.config.project_state(name), key=name)
 
+    def _merge_projects(self) -> None:
+        """브리지가 새로 본 프로젝트를 목록에 덧붙인다.
+
+        기동 때 한 번만 채우면 콘솔을 켜 둔 사이에 처음 본 레포가 목록에 없다.
+        무엇을 실명으로 할지 고르려면 그것이 보여야 한다는 것이 이 화면의 요지다.
+
+        통째로 다시 채우지 않는 이유는 table.clear()가 저장하지 않은 상태 변경
+        (스페이스로 돌려 둔 값)을 지우기 때문이다. 새 이름만 붙인다. state.json을
+        다시 읽지 않고 health의 projects를 쓰는 것은 어차피 2초마다 받는 값이고,
+        브리지가 도는 동안에는 그쪽이 더 최신이기 때문이다.
+        """
+        projects = self.health.get("projects") or {}
+        if not projects:
+            return
+        table = self.query_one("#projects", DataTable)
+        existing = set(self._rows())
+        added = False
+        for name in sorted(projects):
+            if name in existing or name == self.config.fallback_project:
+                continue
+            table.add_row(name, self.config.project_state(name), key=name)
+            added = True
+        if added:
+            self._refresh_rule()
+
     def _rows(self) -> dict:
         table = self.query_one("#projects", DataTable)
         result = {}
@@ -226,18 +253,29 @@ class ConsoleApp(App):
     # ------------------------------------------------------------ 동작
 
     def action_save(self) -> None:
-        rows = self._rows()
-        self.config.owner = self.query_one("#owner", Input).value.strip()
-        self.config.base_url = self.query_one("#base_url", Input).value.strip()
-        self.config.fallback_project = (
-            self.query_one("#fallback", Input).value.strip() or self.config.fallback_project
+        """화면의 값을 설정 파일에 쓴다.
+
+        먼저 사본에 담아 저장이 끝난 뒤에 self.config로 올린다. save는 validate를
+        거치므로 스킴 없는 base_url 같은 값에 ValueError를 던지는데, 원본에 바로
+        쓰면 실패한 값이 메모리에 남아 화면과 어긋난다.
+        """
+        candidate = replace(
+            self.config,
+            owner=self.query_one("#owner", Input).value.strip(),
+            base_url=self.query_one("#base_url", Input).value.strip(),
+            fallback_project=(
+                self.query_one("#fallback", Input).value.strip() or self.config.fallback_project
+            ),
+            allow=list(self.config.allow),
+            deny=list(self.config.deny),
         )
-        self.config.set_project_states(rows)
+        candidate.set_project_states(self._rows())
         try:
-            self.config.save(self.config_path)
-        except OSError as error:
-            self.notify("저장하지 못했습니다: %s" % error, severity="error")
+            candidate.save(self.config_path)
+        except (OSError, ValueError) as error:
+            self.notify("저장하지 못했습니다: %s" % error, severity="error", timeout=8)
             return
+        self.config = candidate
 
         if self.config.base_url.rstrip("/").endswith("meterengine.com"):
             self.notify(

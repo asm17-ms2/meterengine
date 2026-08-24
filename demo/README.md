@@ -189,6 +189,11 @@ cd demo && python3 -m unittest && cd ..
 
 파일: `demo/logs/send-YYYYMMDD-HHMMSS.jsonl` (KST 타임스탬프, 실행마다 새 파일)
 
+브리지는 같은 포맷을 쓰되 파일이 다르다. `demo/logs/bridge-YYYYMMDD.jsonl` 하루 한
+파일에 이어쓴다. 상주 프로세스라 하루에도 여러 번 재시작되는데 그때마다 새 파일을
+만들면 기록이 쪼개져 verify가 하루치를 한 번에 대조하지 못하기 때문이다. 그래서
+실행마다 헤더가 하나씩 더 붙고, 읽는 쪽은 **마지막 헤더**를 그 파일의 헤더로 본다.
+
 1행은 실행 헤더, 이후 각 행이 전송 1건이다. request와 response는 와이어에 실린 JSON
 텍스트를 재직렬화 없이 그대로 담아 소수 자릿수까지 재현 가능하다.
 
@@ -201,8 +206,12 @@ cd demo && python3 -m unittest && cd ..
 - outcome: new(신규 저장) | duplicate(중복, 저장 없음) | rejected(400 거절) |
   error(전송 실패/타임아웃/5xx, 저장 여부 불명 -- status와 response는 null일 수 있다)
 - rejected의 response에는 problem+json 원문이 그대로 남는다
-- 라인마다 flush하므로 중단돼도 그 앞까지는 유효하다. 읽는 쪽은 잘린 마지막 라인을
-  경고와 함께 건너뛰고, 모르는 type은 무시한다 (전방 호환)
+- 라인마다 flush하므로 중단돼도 그 앞까지는 유효하다. 읽는 쪽은 읽히지 않는 라인을
+  위치와 무관하게 경고와 함께 건너뛰고, 모르는 type은 무시한다 (전방 호환).
+  이어쓰는 파일에서는 잘린 라인이 마지막이 아니게 되므로(뒤에 다음 실행 헤더가
+  붙는다) 마지막 라인만 봐주면 그날 기록 전체가 검증 불가가 된다. 대신 건너뛴
+  줄은 경고에 몇 행인지 함께 남는다. send는 실행 하나가 파일 하나라 중간이
+  깨졌다는 것 자체가 살펴봐야 할 신호다
 
 ## otel_bridge.py: Claude Code 사용량 보내기 (MS2-169)
 
@@ -246,7 +255,8 @@ uv run demo/console.py
 
 프로젝트 목록이 이 화면의 핵심이다. **설정에 적은 것뿐 아니라 브리지가 실제로 본
 프로젝트가 함께 뜬다.** 무엇을 실명으로 할지 고르려면 내가 어떤 레포에서 일했는지가
-먼저 보여야 하기 때문이다. 커서를 놓고 스페이스를 누르면 세 상태를 돈다.
+먼저 보여야 하기 때문이다. 콘솔을 켜 둔 사이에 브리지가 처음 본 레포도 다음 갱신
+(2초)에 목록 아래로 붙는다. 커서를 놓고 스페이스를 누르면 세 상태를 돈다.
 
 ```
 ● meterengine        실명으로 보냄
@@ -295,7 +305,10 @@ python3 demo/otel_bridge.py config --base-url https://meterengine.com
   보므로, 워크트리(MS2-169, MS2-157 ...)에서 일해도 전부 `meterengine` 하나로 모인다
 - `allow`에 적은 레포만 실명이고, 나머지는 전부 `기타 프로젝트` 하나로 합쳐진다.
   개인 프로젝트 이름이 공개된 화면에 뜨지 않게 하는 장치다. `allow`가 비면 전부 실명이다
-- `deny`에 적은 레포는 아예 보내지 않는다
+- `deny`에 적은 레포는 아예 보내지 않는다. hook이 세션을 묶을 때 한 번,
+  전송 직전에 프로젝트 이름으로 한 번 더 본다. 두 번 보는 이유는 세션이 묶인 뒤에
+  그 레포를 `deny`로 바꾸는 경우가 있어서다. 그때 hook이 다시 오기 전까지는 세션
+  쪽 표시가 아직 옛 상태다
 - 고객은 브리지가 알아서 만든다. `GET /v1/customers`로 같은 이름을 찾고 없을 때만
   `POST /v1/customers`로 등록한다. 이 API는 이름 중복을 막지 않아서 조회를 빠뜨리면
   같은 이름의 고객이 계속 늘어난다
@@ -392,7 +405,7 @@ Anthropic 공시가를 그대로 역산한다. 기준은 Claude Opus 5, 1 MTok =
 브리지는 send와 **같은 JSONL 포맷**으로 남기므로 기존 검증기가 그대로 돈다.
 
 ```
-python3 demo/meterdemo.py verify --log demo/logs/bridge-<타임스탬프>.jsonl
+python3 demo/meterdemo.py verify --log demo/logs/bridge-20260824.jsonl
 ```
 
 Python이 Decimal로 독립 계산한 값과 서버의 사용량/청구 예정액이 일치하는지 표로 보여준다.
@@ -436,3 +449,6 @@ demo/
 import 경로가 되기 때문이다. 덕분에 하위 패키지들이 `sys.path`를 건드리지 않는다.
 
 테스트는 각 패키지 안에 있다: `cd demo && python3 -m unittest discover`
+
+콘솔 테스트(`test_console.py`)만 textual이 있어야 돌고, 없으면 건너뛴다. 전부 돌리려면
+`uv run --with textual python3 -m unittest`를 쓴다. 콘솔만 uv로 실행하는 구조 그대로다.

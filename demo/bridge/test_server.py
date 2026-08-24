@@ -78,5 +78,45 @@ class LogRollTest(unittest.TestCase):
                 server._today = original
 
 
+class DenyTest(unittest.TestCase):
+    """deny에 적은 레포는 아예 보내지 않는다 (README의 약속)."""
+
+    def _sender(self, directory, config):
+        state = BridgeState(os.path.join(directory, "state.json"), "scope")
+        sender = server.Sender(config, state, directory)
+        # 여기서 네트워크가 나가면 안 된다. 나가면 테스트가 시끄럽게 깨진다.
+        sender.resolver = None
+        return sender
+
+    def test_묶인_뒤에_deny로_바뀐_프로젝트는_보내지_않는다(self):
+        """세션이 이미 묶여 있으면 is_denied가 거짓이다.
+
+        다음 hook이 와서 세션을 deny로 옮기기 전까지, 프로젝트 이름으로 다시
+        대조하지 않으면 그 사이의 이벤트가 실명 그대로 나간다.
+        """
+        config = BridgeConfig(deny=["meterengine"])
+        with tempfile.TemporaryDirectory() as directory:
+            sender = self._sender(directory, config)
+            try:
+                sender.state.remember_session("sess-1", "meterengine")
+                self.assertFalse(sender.state.is_denied("sess-1"))
+                sender._send_one({}, "api_request", "sess-1")
+            finally:
+                sender.close()
+            self.assertEqual(sender.counts["skipped"], 1)
+            self.assertEqual(sender.counts["error"], 0)
+
+    def test_deny_세션은_그대로_건너뛴다(self):
+        config = BridgeConfig(deny=["비밀레포"])
+        with tempfile.TemporaryDirectory() as directory:
+            sender = self._sender(directory, config)
+            try:
+                sender.state.deny_session("sess-2")
+                sender._send_one({}, "api_request", "sess-2")
+            finally:
+                sender.close()
+            self.assertEqual(sender.counts["skipped"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

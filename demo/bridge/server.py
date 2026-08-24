@@ -101,6 +101,13 @@ class Sender:
         # 매핑이 없으면 hook을 놓친 세션이다. 버리지 않고 폴백으로 보낸다.
         # deny와 구별되는 자리라, 위에서 먼저 걸러야 한다.
         project = self.state.project_of(session_id) or self.config.fallback_project
+        # 프로젝트 이름으로 deny를 한 번 더 본다. 세션이 묶인 뒤에 그 레포를 deny로
+        # 바꾸면, 다음 hook이 와서 세션을 옮기기 전까지 is_denied가 거짓이다. 이
+        # 줄이 없으면 그 사이의 이벤트가 실명 그대로 나간다. README가 "deny에 적은
+        # 레포는 아예 보내지 않는다"고 약속하므로 전송 시점에 다시 대조한다.
+        if project in self.config.deny:
+            self._counts["skipped"] += 1
+            return
         customer_name = self.config.customer_name(project)
         try:
             customer_id = self.resolver.resolve(customer_name)
@@ -270,10 +277,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 
 def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int:
-    """브리지를 띄우고 SIGINT/SIGTERM까지 돈다."""
+    """브리지를 띄우고 SIGINT/SIGTERM까지 돈다.
+
+    포트를 먼저 잡는다. Sender를 먼저 만들면 그 생성자가 그날 로그에 실행 헤더를
+    쓰고 워커 스레드를 띄우는데, 브리지가 이미 떠 있어 바인드가 실패하면 아무것도
+    보내지 않은 실행의 헤더만 남는다.
+    """
+    server = ThreadingHTTPServer((host, port), BridgeHandler)
     sender = Sender(config, state, LOGS_DIR)
 
-    server = ThreadingHTTPServer((host, port), BridgeHandler)
     server.config = config
     server.state = state
     server.sender = sender
@@ -325,7 +337,7 @@ def _last_seq(path: str) -> int:
                 try:
                     record = json.loads(line)
                 except ValueError:
-                    continue  # 잘린 마지막 줄
+                    continue  # 읽히지 않는 줄은 건너뛴다 (read_log와 같은 판단)
                 if record.get("type") == "send" and isinstance(record.get("seq"), int):
                     last = max(last, record["seq"])
     except (FileNotFoundError, OSError):
