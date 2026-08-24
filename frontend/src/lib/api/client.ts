@@ -23,7 +23,7 @@ export type ApiError = {
    *   response_type_not_acceptable / method_not_allowed / endpoint_not_found /
    *   customer_not_found / customer_has_events / unknown_organization
    *
-   * 여기서 만든 값: network_error / http_error / dev_forced.
+   * 여기서 만든 값: network_error / http_error / malformed_response / dev_forced.
    *
    * 닫힌 집합처럼 보이지만 열린 것으로 다룬다. 백엔드가 code를 추가해도 이 주석은
    * 따라오지 않고, 5xx와 본문이 problem+json이 아닌 응답에는 code가 없어
@@ -64,6 +64,34 @@ async function toApiError(response: Response): Promise<ApiError> {
       typeof problem.title === "string" ? problem.title : `HTTP ${response.status}`,
     detail: typeof problem.detail === "string" ? problem.detail : "",
   };
+}
+
+/**
+ * 2xx 본문을 읽는다. 파싱 실패도 던지지 않고 Result의 오류로 바꾼다.
+ *
+ * 200인데 본문이 JSON이 아닐 수 있다. 리버스 프록시나 게이트웨이가 끼어들어 HTML을
+ * 돌려주는 경우다. 여기서 던지면 serverFetch가 선언한 "던지지 않는다"가 깨지고 Next가
+ * 라우트를 error.tsx로 갈아치운다 (MS2-152). 실패 경로의 toApiError는 같은 방어를
+ * 처음부터 갖고 있었고, 이건 성공 경로에 같은 것을 두는 것이다.
+ *
+ * status에 실제 상태(대개 200)를 그대로 넣는다. '200인데 실패'가 정확한 사실이고
+ * 문의를 받을 때 진단에 쓰인다. status 0은 HTTP 응답 자체가 없었다는 뜻이라 여기엔
+ * 맞지 않는다.
+ */
+async function readJson<T>(response: Response): Promise<Result<T>> {
+  try {
+    return { ok: true, data: (await response.json()) as T };
+  } catch {
+    return {
+      ok: false,
+      error: {
+        status: response.status,
+        code: "malformed_response",
+        title: "응답을 읽지 못했습니다",
+        detail: "서버가 보낸 응답이 JSON 형식이 아닙니다.",
+      },
+    };
+  }
 }
 
 /**
@@ -132,7 +160,7 @@ export async function serverFetch<T>(
 
   const result = await call(url, { method: "GET" });
   if (!result.ok) return result;
-  return { ok: true, data: (await result.data.json()) as T };
+  return readJson<T>(result.data);
 }
 
 /**
@@ -156,7 +184,8 @@ export async function serverSend<T>(
   });
   if (!result.ok) return result;
 
-  // 204(삭제)와 본문 없는 2xx. response.json()을 그냥 부르면 빈 본문에서 던진다.
+  // 204(삭제)는 본문이 없는 것이 정상이라 파싱 자체를 건너뛴다. 나머지 2xx의 빈
+  // 본문이나 비JSON은 readJson이 오류로 바꾼다.
   if (result.data.status === 204) return { ok: true, data: undefined as T };
-  return { ok: true, data: (await result.data.json()) as T };
+  return readJson<T>(result.data);
 }
