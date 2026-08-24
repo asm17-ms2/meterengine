@@ -17,6 +17,8 @@ LOGS_DIR = os.path.join(DEMO_DIR, "logs")
 BRIDGE_SCRIPT = os.path.join(DEMO_DIR, "otel_bridge.py")
 
 HOME_DIR = os.path.join(os.path.expanduser("~"), ".meterengine")
+CONFIG_PATH = os.path.join(HOME_DIR, "bridge.json")
+STATE_PATH = os.path.join(HOME_DIR, "state.json")
 BRIDGE_LOG = os.path.join(HOME_DIR, "bridge.log")
 BRIDGE_ERR = os.path.join(HOME_DIR, "bridge.err")
 

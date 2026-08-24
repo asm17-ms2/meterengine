@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 import unittest
 
 from bridge.state import (
@@ -211,6 +212,73 @@ class BridgeStateTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as f:
                 f.write("{잘림")
             self.assertEqual(BridgeState(path).sessions, {})
+
+
+class SessionExpiryTest(unittest.TestCase):
+    """세션 매핑은 무한히 쌓이면 안 된다.
+
+    프롬프트를 칠 때마다(UserPromptSubmit hook) 이 파일 전체를 다시 쓰고 fsync
+    하므로, 커질수록 hook이 느려진다. hook 타임아웃은 5초다.
+    """
+
+    def test_하루가_지난_세션은_사라진다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_session("오래된", "meterengine")
+            state.deny_session("오래된-deny")
+            # 마지막 hook 시각을 이틀 전으로 돌린다
+            old = time.time() - 2 * 24 * 60 * 60
+            state.seen["오래된"] = old
+            state.seen["오래된-deny"] = old
+            state.remember_session("새것", "meterengine")  # 저장이 일어나며 정리된다
+
+            reloaded = BridgeState(path)
+            self.assertIsNone(reloaded.project_of("오래된"))
+            self.assertFalse(reloaded.is_denied("오래된-deny"))
+            self.assertEqual(reloaded.project_of("새것"), "meterengine")
+
+    def test_같은_매핑을_다시_받으면_파일을_건드리지_않는다(self):
+        """프롬프트마다 오는 hook이다. 매번 쓰면 그만큼 느려진다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_session("sess-1", "meterengine")
+            before = os.stat(path).st_mtime_ns
+            for _ in range(5):
+                state.remember_session("sess-1", "meterengine")
+            self.assertEqual(os.stat(path).st_mtime_ns, before)
+
+    def test_시각이_없는_옛_파일도_바로_지우지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"sessions": {"sess-1": "meterengine"}}, f)
+            self.assertEqual(BridgeState(path).project_of("sess-1"), "meterengine")
+
+
+class ForgetCustomerTest(unittest.TestCase):
+    """서버에서 고객이 지워지면 캐시한 id는 죽은 값이다."""
+
+    def test_버리면_다음에_다시_찾는다(self):
+        client = FakeClient()
+        with tempfile.TemporaryDirectory() as directory:
+            state = BridgeState(os.path.join(directory, "state.json"))
+            resolver = CustomerResolver(client, state)
+            resolver.resolve("meterengine(박성종)")
+            state.forget_customer("meterengine(박성종)")
+            self.assertIsNone(state.cached_customer("meterengine(박성종)"))
+            resolver.resolve("meterengine(박성종)")
+        # 캐시가 남아 있었다면 조회가 한 번뿐이었을 것이다
+        self.assertEqual(client.list_calls, 2)
+
+    def test_버린_것은_재시작_뒤에도_없다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_customer("고객", DEMO_CUSTOMER)
+            state.forget_customer("고객")
+            self.assertIsNone(BridgeState(path).cached_customer("고객"))
 
 
 class CustomerResolverTest(unittest.TestCase):

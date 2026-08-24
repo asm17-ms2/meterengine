@@ -11,12 +11,32 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from core.model import loads_decimal
 
 FORMAT_VERSION = 1
+
+# 전송 한 건의 판정. 이 어휘를 verify가 읽는다(csvdemo/expected.py의
+# stored_events_from_log는 new만 저장분으로 본다). 포맷이 이 파일의 소관이라
+# 판정하는 함수도 여기 둔다. 층마다 따로 구현하면 5xx를 한쪽만 거절로 접는
+# 식으로 조용히 갈라진다.
+OUTCOMES = ("new", "duplicate", "rejected", "error")
+
+
+def classify_outcome(status: Optional[int], body) -> str:
+    """서버 응답을 outcome으로 옮긴다. 브리지와 CSV 데모가 함께 쓴다.
+
+    5xx를 rejected로 접으면 안 된다. verify는 rejected를 "서버가 거절했으니 저장되지
+    않았다"로 확정 처리하는데, 응답만 실패하고 저장은 됐을 수 있다. error로 남겨야
+    verify가 "저장 여부를 알 수 없다"고 경고한다.
+    """
+    if status == 200 and isinstance(body, dict) and "duplicate" in body:
+        return "duplicate" if body["duplicate"] else "new"
+    if status == 400:
+        return "rejected"
+    return "error"
 
 
 @dataclass
@@ -48,6 +68,12 @@ class LogReadResult:
     header: Optional[RunHeader]
     records: List[SendRecord]
     warnings: List[str]
+    # 건너뛴 라인의 행 번호. 파일 끝이 잘린 것(마지막 라인)은 여기 들어가지 않는다.
+    # 부르는 쪽이 이것으로 판정을 가른다 (verify는 send 로그의 중간 손상을 오류로 본다).
+    damaged: List[int] = field(default_factory=list)
+    # 이 파일에 든 실행 헤더 수. 브리지는 재시작마다 하나씩 더 붙이므로 2 이상이 정상이고,
+    # send는 실행 하나가 파일 하나라 1이다.
+    header_count: int = 0
 
 
 class JsonlLogWriter:
@@ -62,8 +88,16 @@ class JsonlLogWriter:
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
+        # 이어쓰기 전에 앞 줄이 끝나 있는지 본다. 쓰다가 죽으면 개행 없이 끊긴
+        # 라인이 남는데, 거기에 그냥 이어 붙이면 두 레코드가 한 줄로 엉겨 둘 다
+        # 못 읽게 된다. 그 한 줄이 실행 헤더면 verify가 전송 대상을 모른 채
+        # 기본값(localhost)으로 검증한다.
+        unfinished = append and _lacks_final_newline(path)
         self._file = open(path, "a" if append else "w", encoding="utf-8")
         self.path = path
+        if unfinished:
+            self._file.write("\n")
+            self._file.flush()
 
     def __enter__(self):
         return self
@@ -131,6 +165,18 @@ class JsonlLogWriter:
         self._file.flush()
 
 
+def _lacks_final_newline(path: str) -> bool:
+    """파일이 있고, 비어 있지 않고, 개행으로 끝나지 않는가."""
+    try:
+        with open(path, "rb") as f:
+            if f.seek(0, os.SEEK_END) == 0:
+                return False
+            f.seek(-1, os.SEEK_END)
+            return f.read(1) != b"\n"
+    except OSError:
+        return False
+
+
 def _spliceable(text: Optional[str]) -> Optional[str]:
     """라인에 그대로 끼워도 되는 형태로 만든다. JSON이 아니면 None.
 
@@ -156,9 +202,12 @@ def read_log(path: str) -> LogReadResult:
     통째로 검증 불가가 된다. 디스크가 차서 쓰기가 끊긴 경우도 같은 모양이다.
 
     그렇다고 조용히 넘기지는 않는다. send는 실행 하나가 파일 하나라 중간이
-    깨졌다는 것 자체가 신호다. 건너뛴 줄을 경고로 올려 사람이 보게 한다.
+    깨졌다는 것 자체가 신호다. 건너뛴 줄을 경고로 올리고, 몇 행이 깨졌는지를
+    damaged로 함께 돌려준다. 경고는 사람이 읽고 지나칠 수 있지만 damaged는
+    부르는 쪽이 종료 코드로 바꿀 수 있다 (verify가 그렇게 한다).
     """
     header = None
+    header_count = 0
     records = []
     warnings = []
     broken: List[int] = []
@@ -176,8 +225,14 @@ def read_log(path: str) -> LogReadResult:
             else:
                 broken.append(line_no)
             continue
+        if not isinstance(data, dict):
+            # JSON으로는 읽히는데 레코드가 아니다. 잘린 라인 뒤에 숫자나 배열 조각만
+            # 남은 경우다. 확인 없이 .get을 부르면 여기서 AttributeError로 죽는다.
+            broken.append(line_no)
+            continue
         record_type = data.get("type")
         if record_type == "run":
+            header_count += 1
             header = RunHeader(
                 started_at=data.get("started_at"),
                 base_url=data.get("base_url"),
@@ -209,4 +264,10 @@ def read_log(path: str) -> LogReadResult:
             "%s의 %d개 라인(%s행)이 JSONL이 아니라 건너뜁니다. 기록 일부가 손상됐습니다"
             % (path, len(broken), listed)
         )
-    return LogReadResult(header=header, records=records, warnings=warnings)
+    return LogReadResult(
+        header=header,
+        records=records,
+        warnings=warnings,
+        damaged=broken,
+        header_count=header_count,
+    )

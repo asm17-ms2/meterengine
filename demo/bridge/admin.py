@@ -28,6 +28,7 @@ from bridge.const import (
     logs_endpoint,
     session_endpoint,
 )
+from core.files import write_json_atomic
 
 # Claude에 심을 환경 변수.
 #   메트릭을 끄는 이유: 우리가 쓰는 것은 이벤트 로그뿐이고, 메트릭까지 켜면
@@ -125,18 +126,29 @@ def plan_claude_settings(
 
 
 def apply_claude_settings(plan: SettingsPlan) -> Optional[str]:
-    """계획을 파일에 쓴다. 백업을 남겼으면 그 경로를 돌려준다."""
+    """계획을 파일에 쓴다. 백업이 있으면 그 경로를 돌려준다.
+
+    남의 설정 파일이다. 두 가지를 지킨다.
+
+    백업은 한 번만 만든다. 두 번째 실행에서 덮어쓰면 우리가 이미 고친 파일이
+    백업 자리에 들어가, 되돌릴 원본이 사라진다.
+
+    본문은 원자적으로 쓴다(core/files.py). 열자마자 지우고 쓰는 방식이면 그 사이에
+    디스크가 차거나 프로세스가 죽었을 때 빈 settings.json이 남고, Claude Code가
+    사용자 설정 없이 뜬다.
+    """
     parent = os.path.dirname(plan.path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    backup = None
-    if os.path.exists(plan.path):
-        backup = plan.path + ".bak"
+    backup = plan.path + ".bak"
+    if os.path.exists(plan.path) and not os.path.exists(backup):
         with open(plan.path, encoding="utf-8") as src, open(backup, "w", encoding="utf-8") as dst:
             dst.write(src.read())
-    with open(plan.path, "w", encoding="utf-8") as f:
-        json.dump(plan.settings, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    if not os.path.exists(backup):
+        backup = None  # 처음부터 설정 파일이 없었다
+    # 사람이 관리하는 파일이라 키 순서를 그대로 둔다. 정렬하면 손대지 않은
+    # 항목까지 전부 움직여 무엇이 바뀌었는지 보이지 않는다.
+    write_json_atomic(plan.path, plan.settings, sort_keys=False)
     return backup
 
 

@@ -19,7 +19,7 @@ from bridge import otel_map
 from bridge.const import HEALTH_PATH, LOGS_DIR, LOGS_PATH, SESSION_PATH
 from bridge.state import BridgeConfig, BridgeState, CustomerResolver, project_for_cwd
 from core.api_client import ApiClient, TransportError
-from core.jsonl_log import JsonlLogWriter
+from core.jsonl_log import OUTCOMES, JsonlLogWriter, classify_outcome
 from core.model import KST, build_body_text, loads_decimal
 
 
@@ -42,8 +42,9 @@ class Sender:
         self._seq = 0
         self.writer: Optional[JsonlLogWriter] = None
         self._roll()
-        # 키는 JSONL의 outcome 어휘와 같다. 이름이 어긋나면 성공을 거절로 세게 된다.
-        self._counts = {"new": 0, "duplicate": 0, "rejected": 0, "error": 0, "skipped": 0}
+        # 키는 JSONL의 outcome 어휘 그대로다. 손으로 적으면 이름이 어긋나
+        # 성공을 거절로 세게 된다. skipped만 우리 것이다 (전송 자체를 하지 않은 건).
+        self._counts = dict.fromkeys(OUTCOMES + ("skipped",), 0)
         self._thread = threading.Thread(target=self._run, name="sender", daemon=True)
         self._thread.start()
 
@@ -56,16 +57,24 @@ class Sender:
         그래서 쓰기 직전마다 날짜를 본다.
 
         sender 스레드 하나만 이 메서드를 부른다 (close는 큐에 신호를 넣고 기다린다).
+
+        새 파일이 열린 뒤에야 갈아탄다. 순서를 뒤집으면(날짜부터 올리고 옛 파일을
+        닫으면) 도중에 실패했을 때 self._day는 오늘인데 writer는 닫힌 상태가 된다.
+        그러면 다음 이벤트부터 이 메서드가 곧바로 반환하고 닫힌 파일에 쓰다 죽기를
+        영영 반복한다. 아래 순서면 실패해도 어제 파일에 계속 쌓이고, 다음 이벤트가
+        다시 시도한다.
         """
         day = _today()
         if day == self._day:
             return
+        path = os.path.join(self.logs_dir, "bridge-%s.jsonl" % day)
+        seq = _last_seq(path)
+        writer = JsonlLogWriter(path, append=True)
         if self.writer is not None:
             self.writer.close()
-        path = os.path.join(self.logs_dir, "bridge-%s.jsonl" % day)
         self._day = day
-        self._seq = _last_seq(path)
-        self.writer = JsonlLogWriter(path, append=True)
+        self._seq = seq
+        self.writer = writer
         self.writer.write_run_header(
             _now_text(), self.config.base_url, self.config.org_id, None,
             ["otel_bridge.py", "serve"],
@@ -109,10 +118,19 @@ class Sender:
             self._counts["skipped"] += 1
             return
         customer_name = self.config.customer_name(project)
+        self._roll()
         try:
             customer_id = self.resolver.resolve(customer_name)
         except (TransportError, RuntimeError) as error:
+            # 여기서도 기록을 남긴다. 전송 실패(아래)만 남기고 이쪽은 화면에만
+            # 찍으면, 로그에 아무 흔적이 없어 "원래 없던 이벤트"와 "잃어버린
+            # 이벤트"를 나중에 구별할 수 없다.
             self._counts["error"] += 1
+            self._seq += 1
+            self.writer.write_send(
+                self._seq, _now_text(), None, None, None, "error",
+                "고객 해석 실패(%s): %s" % (customer_name, error), None,
+            )
             _log("고객 해석 실패(%s): %s" % (customer_name, error))
             return
 
@@ -127,7 +145,6 @@ class Sender:
             return
 
         body_text = build_body_text(event)
-        self._roll()
         self._seq += 1
         try:
             result = self.client.post_event(body_text)
@@ -139,7 +156,7 @@ class Sender:
             _log("전송 실패: %s" % error)
             return
 
-        outcome = _outcome(result)
+        outcome = classify_outcome(result.status, result.body)
         self._counts[outcome] += 1
         self.writer.write_send(
             self._seq,
@@ -151,20 +168,17 @@ class Sender:
             None,
             result.elapsed_ms,
         )
+        if outcome == "rejected" and _unknown_customer(result):
+            # 서버가 그 고객을 모른다. 캐시한 id가 죽은 값이라는 뜻이라 버린다.
+            # 그대로 두면 캐시가 디스크에 있어 재시작해도 같은 id를 계속 보내고,
+            # 그 프로젝트의 이벤트가 영영 거절된다.
+            self.state.forget_customer(customer_name)
+            _log("고객 %s의 캐시를 버렸습니다. 다음 이벤트에서 다시 찾습니다." % customer_name)
 
 
-def _outcome(result) -> str:
-    """verify가 읽는 outcome 값. send_cmd._classify와 판정이 같아야 한다.
-
-    5xx를 rejected로 접으면 안 된다. verify는 rejected를 "서버가 거절했으니 저장되지
-    않았다"로 확정 처리하는데, 응답만 실패하고 저장은 됐을 수 있다. error로 남겨야
-    verify가 "저장 여부를 알 수 없다"고 경고한다.
-    """
-    if result.status == 200 and isinstance(result.body, dict) and "duplicate" in result.body:
-        return "duplicate" if result.body["duplicate"] else "new"
-    if result.status == 400:
-        return "rejected"
-    return "error"
+def _unknown_customer(result) -> bool:
+    """400의 사유가 "그런 고객이 없다"인가 (backend의 problem+json code)."""
+    return isinstance(result.body, dict) and result.body.get("code") == "unknown_customer_reference"
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
@@ -174,6 +188,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802 (BaseHTTPRequestHandler 규약)
         raw = self._read_body()
+        if not self._from_local_tool():
+            return
         if self.path.startswith(LOGS_PATH):
             self._handle_logs(raw)
         elif self.path.startswith(SESSION_PATH):
@@ -182,6 +198,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._respond(404, b"{}")
 
     def do_GET(self):  # noqa: N802
+        if not self._from_local_tool():
+            return
         if self.path.startswith(HEALTH_PATH):
             # 잠금 아래에서 한 번에 복사한다. 그대로 순회하면 hook이 매핑을 넣는
             # 순간 dict가 바뀌어 터진다.
@@ -257,6 +275,33 @@ class BridgeHandler(BaseHTTPRequestHandler):
             _log("세션 %s: %s -> %s" % (session_id[:8], cwd, project))
         self.server.state.remember_session(session_id, project)
 
+    def _from_local_tool(self) -> bool:
+        """웹 페이지가 보낸 요청이면 막는다. 아니면 True.
+
+        이 서버는 인증이 없다. 127.0.0.1에만 붙지만 그것으로는 부족하다.
+        사용자가 아무 사이트나 열어 두면 그 페이지의 스크립트가 이 포트로
+        POST할 수 있다. Content-Type을 text/plain으로 두면 CORS 사전 요청 없이
+        곧바로 나가고, 응답을 읽지 못해도 우리는 이미 처리한 뒤다. 그러면 남의
+        페이지가 지어낸 토큰 수를 우리 usage_event에 넣을 수 있고(append-only라
+        지울 수 없다) /meterengine/session으로 남의 세션 귀속까지 바꿀 수 있다.
+
+        브라우저가 붙이고 도구는 붙이지 않는 표시로 가른다. Origin은 페이지에서
+        나간 POST에 항상 붙고, Sec-Fetch-Site는 GET을 포함해 요즘 브라우저가 늘
+        붙인다(주소창으로 직접 연 경우만 none). Host까지 보는 것은 DNS 리바인딩
+        때문이다. 공격자 도메인이 127.0.0.1로 풀려도 Host에는 그 도메인이 남는다.
+        """
+        if self.headers.get("Origin"):
+            self._respond(403, b'{"error": "browser origin"}')
+            return False
+        site = self.headers.get("Sec-Fetch-Site")
+        if site and site != "none":
+            self._respond(403, b'{"error": "browser origin"}')
+            return False
+        if not _allowed_host(self.headers.get("Host"), getattr(self.server, "listen_host", "")):
+            self._respond(403, b'{"error": "host"}')
+            return False
+        return True
+
     def _read_body(self) -> bytes:
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -289,6 +334,7 @@ def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int
     server.config = config
     server.state = state
     server.sender = sender
+    server.listen_host = host
     server.daemon_threads = True
 
     _log("브리지 시작: http://%s:%d" % (host, port))
@@ -314,6 +360,27 @@ def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int
     return 0
 
 
+def _allowed_host(host: Optional[str], listen_host: str = "") -> bool:
+    """Host 헤더가 이 브리지 자신을 가리키는가.
+
+    헤더가 없으면 통과시킨다. HTTP/1.0 클라이언트에는 없을 수 있고, 이 검사가
+    막으려는 것은 브라우저인데 브라우저는 언제나 붙인다.
+
+    listen_host는 --host로 다른 주소에 붙였을 때를 위한 것이다. 기본값
+    127.0.0.1이면 아무 영향이 없다.
+    """
+    if not host:
+        return True
+    name = host.strip()
+    if name.startswith("["):  # [::1]:4318
+        name = name[1:].split("]", 1)[0]
+    elif ":" in name:
+        name = name.rsplit(":", 1)[0]
+    if listen_host and name == listen_host:
+        return True
+    return name in ("127.0.0.1", "localhost", "::1")
+
+
 def _now_text() -> str:
     return datetime.now(KST).isoformat()
 
@@ -327,10 +394,17 @@ def _last_seq(path: str) -> int:
 
     재시작해도 번호가 1로 돌아가지 않게 한다. seq는 오류 메시지가 줄을 가리키는
     데 쓰이므로(expected.py) 한 파일 안에서 겹치면 어느 줄인지 알 수 없다.
+
+    errors="replace"인 이유는 이 함수가 기동 경로에 있기 때문이다. 쓰는 도중
+    죽으면 한글 한 글자가 바이트 중간에서 잘려 남는데, 기본 설정이면 그 줄을
+    읽다가 UnicodeDecodeError가 난다. 이 함수는 Sender 생성자가 부르고 그 예외는
+    아무도 잡지 않아서, launchd가 브리지를 살릴 때마다 같은 자리에서 죽는다.
+    (KeepAlive라 10초 간격 무한 재시작이 되고, 로그 파일을 손으로 지워야 낫는다.)
+    깨진 글자는 대체 문자로 바뀌고 그 줄만 JSON 파싱에서 걸러진다.
     """
     last = 0
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -338,9 +412,11 @@ def _last_seq(path: str) -> int:
                     record = json.loads(line)
                 except ValueError:
                     continue  # 읽히지 않는 줄은 건너뛴다 (read_log와 같은 판단)
+                if not isinstance(record, dict):
+                    continue  # JSON이긴 한데 레코드가 아니다 (잘린 뒤 남은 조각)
                 if record.get("type") == "send" and isinstance(record.get("seq"), int):
                     last = max(last, record["seq"])
-    except (FileNotFoundError, OSError):
+    except OSError:
         return 0
     return last
 

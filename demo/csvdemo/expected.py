@@ -13,9 +13,15 @@ from decimal import ROUND_DOWN, Decimal, localcontext
 from typing import Dict, List, Optional, Set
 
 from core.jsonl_log import SendRecord
-from core.model import Event, StoredEvent, is_uuid, kst_month, parse_properties, parse_rfc3339
-
-TRANSACTION_ID_MAX_LENGTH = 255
+from core.model import (
+    MAX_TRANSACTION_ID,
+    Event,
+    StoredEvent,
+    is_uuid,
+    kst_month,
+    parse_properties,
+    parse_rfc3339,
+)
 
 # 서버는 PostgreSQL numeric으로 정확 계산하므로 기본 컨텍스트(유효숫자 28)의
 # 반올림이 끼지 않게 합산과 금액 계산 모두 넉넉한 정밀도로 돌린다.
@@ -139,8 +145,8 @@ def predict_send(events: List[Event], known_customer_ids: Optional[Set[str]]) ->
 def _validation_problem(event: Event) -> Optional[str]:
     if not event.transaction_id.strip():
         return "transaction_id 누락"
-    if len(event.transaction_id) > TRANSACTION_ID_MAX_LENGTH:
-        return "transaction_id가 %d자를 넘음" % TRANSACTION_ID_MAX_LENGTH
+    if len(event.transaction_id) > MAX_TRANSACTION_ID:
+        return "transaction_id가 %d자를 넘음" % MAX_TRANSACTION_ID
     if not is_uuid(event.customer_id):
         return "customer_id가 UUID가 아님"
     if not event.event_type.strip():

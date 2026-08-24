@@ -31,7 +31,7 @@ export type InvoiceLine = {
   target_property: string | null;
   /** 소수가 올 수 있다 (BigDecimal 직렬화, usage.ts의 quantity 주석 참조). */
   quantity: number;
-  /** 소수가 올 수 있다. 시드의 token-usage 단가가 0.5다. */
+  /** 소수가 올 수 있다. 시드의 token-usage 단가가 0.007이다. */
   unit_price: number;
   /** 라인별 절사(내림)가 끝난 정수 KRW. */
   amount: number;

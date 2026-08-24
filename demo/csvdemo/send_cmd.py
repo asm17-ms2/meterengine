@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 from core.api_client import ApiClient, TransportError, parse_problem, roster_from_usage
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import Prediction, predict_send
-from core.jsonl_log import JsonlLogWriter
+from core.jsonl_log import JsonlLogWriter, classify_outcome
 from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
@@ -116,7 +116,7 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
             status=None, response_text=None, outcome="error", error=str(error), elapsed_ms=None,
         )
         return "error", str(error)
-    outcome = _classify(result.status, result.body)
+    outcome = classify_outcome(result.status, result.body)
     writer.write_send(
         seq=seq, sent_at_text=sent_at, request_body_text=body_text,
         status=result.status, response_text=result.body_text or None,
@@ -146,14 +146,6 @@ def _predict(client: ApiClient, events: List[Event]) -> Prediction:
     except TransportError:
         pass
     return predict_send(events, known_customer_ids)
-
-
-def _classify(status: int, body: Optional[dict]) -> str:
-    if status == 200 and body is not None and "duplicate" in body:
-        return "duplicate" if body["duplicate"] else "new"
-    if status == 400:
-        return "rejected"
-    return "error"
 
 
 def _month_counts(events: List[Event]) -> Dict[str, int]:

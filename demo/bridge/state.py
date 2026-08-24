@@ -14,18 +14,22 @@ import json
 import os
 import subprocess
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
+from bridge.const import CONFIG_PATH, STATE_PATH
 from core.api_client import ApiClient
-from core.model import DEFAULT_ORG_ID, is_uuid
-
-HOME_DIR = os.path.join(os.path.expanduser("~"), ".meterengine")
-CONFIG_PATH = os.path.join(HOME_DIR, "bridge.json")
-STATE_PATH = os.path.join(HOME_DIR, "state.json")
+from core.files import write_json_atomic
+from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, is_uuid
 
 DEFAULT_FALLBACK_PROJECT = "기타 프로젝트"
-DEFAULT_BASE_URL = "http://localhost:8080"
+
+# 세션 매핑을 붙들고 있는 기간. 하루가 지나도록 hook이 오지 않은 세션은 끝난
+# 세션으로 본다. 지우지 않으면 매일 쌓이기만 하는데, 프롬프트를 칠 때마다
+# (UserPromptSubmit hook) 이 파일 전체를 다시 쓰고 fsync하므로 커질수록 hook이
+# 느려진다. 잘못 지워도 다음 프롬프트에서 hook이 다시 묶어 준다.
+SESSION_TTL_SECONDS = 24 * 60 * 60
 
 # 프로젝트 하나가 가질 수 있는 상태. 설정 파일에는 allow와 deny 두 배열로 저장되지만,
 # 사람이 고를 때는 셋 중 하나를 고르는 편이 자연스럽다 (console.py의 목록).
@@ -90,7 +94,7 @@ class BridgeConfig:
 
     def save(self, path: str = CONFIG_PATH) -> None:
         self.validate()
-        _write_json(
+        write_json_atomic(
             path,
             {
                 "owner": self.owner,
@@ -202,6 +206,8 @@ class BridgeState:
         # deny에 걸린 폴더의 세션. 매핑이 그냥 없는 것과 구별해야 한다. 없으면
         # hook을 놓친 세션으로 보고 폴백으로 보내는데, 그러면 deny가 무력해진다.
         self.denied: Set[str] = set()
+        # 세션별 마지막 hook 시각(epoch 초). 만료 판정에만 쓴다.
+        self.seen: Dict[str, float] = {}
         self._load()
 
     def _load(self) -> None:
@@ -215,10 +221,23 @@ class BridgeState:
         sessions = data.get("sessions")
         customers = data.get("customers")
         denied = data.get("denied")
+        seen = data.get("seen")
         if isinstance(sessions, dict):
             self.sessions = {str(k): str(v) for k, v in sessions.items()}
         if isinstance(denied, list):
             self.denied = {str(x) for x in denied}
+        if isinstance(seen, dict):
+            for key, value in seen.items():
+                try:
+                    self.seen[str(key)] = float(value)
+                except (TypeError, ValueError):
+                    continue
+        # 시각을 모르는 세션(이 필드가 생기기 전 파일)은 지금 본 것으로 친다.
+        # 하루 뒤에 정리되고, 그전에 hook이 오면 그때 다시 갱신된다.
+        now = time.time()
+        for session_id in list(self.sessions) + list(self.denied):
+            self.seen.setdefault(session_id, now)
+        self._prune(now)
         # 고객 캐시는 서버에 딸린 값이다. customer_id를 발급한 것이 그 서버라,
         # 전송 대상을 바꾸면 그 id는 저쪽에 없어 이벤트가 전부 거절된다
         # (unknown_customer_reference). 그래서 어느 서버 것인지 함께 적어 두고
@@ -228,19 +247,37 @@ class BridgeState:
         if isinstance(customers, dict):
             self.customers = {str(k): str(v) for k, v in customers.items() if is_uuid(str(v))}
 
+    def _prune(self, now: float) -> None:
+        """하루 넘게 hook이 오지 않은 세션을 버린다."""
+        stale = [
+            session_id
+            for session_id, last in self.seen.items()
+            if now - last > SESSION_TTL_SECONDS
+        ]
+        for session_id in stale:
+            self.seen.pop(session_id, None)
+            self.sessions.pop(session_id, None)
+            self.denied.discard(session_id)
+
     def _save_locked(self) -> None:
-        _write_json(
+        self._prune(time.time())
+        write_json_atomic(
             self.path,
             {
                 "scope": self.scope,
                 "sessions": self.sessions,
                 "customers": self.customers,
                 "denied": sorted(self.denied),
+                "seen": self.seen,
             },
         )
 
     def remember_session(self, session_id: str, project: str) -> None:
         with self._lock:
+            # 시각은 항상 갱신하되, 그것만 바뀌었으면 파일은 건드리지 않는다.
+            # 이 메서드는 프롬프트마다 불리므로 매번 쓰면 hook이 그만큼 느려진다.
+            # 아직 저장되지 않은 시각은 다음번 실제 변경 때 함께 나간다.
+            self.seen[session_id] = time.time()
             if self.sessions.get(session_id) == project and session_id not in self.denied:
                 return
             self.sessions[session_id] = project
@@ -250,6 +287,7 @@ class BridgeState:
     def deny_session(self, session_id: str) -> None:
         """이 세션의 이벤트는 보내지 않는다."""
         with self._lock:
+            self.seen[session_id] = time.time()
             if session_id in self.denied and session_id not in self.sessions:
                 return
             self.denied.add(session_id)
@@ -287,6 +325,19 @@ class BridgeState:
             if self.customers.get(name) == customer_id:
                 return
             self.customers[name] = customer_id
+            self._save_locked()
+
+    def forget_customer(self, name: str) -> None:
+        """캐시한 customer_id를 버린다. 다음 전송에서 다시 조회하고 없으면 등록한다.
+
+        서버에서 그 고객을 지우면(DELETE /v1/customers/{id}) 캐시한 id는 죽은
+        값인데, 캐시는 디스크에 있어 재시작해도 살아남는다. 버리지 않으면 그
+        프로젝트의 이벤트가 영영 400 unknown_customer_reference로 거절된다.
+        """
+        with self._lock:
+            if name not in self.customers:
+                return
+            del self.customers[name]
             self._save_locked()
 
 
@@ -335,17 +386,3 @@ class CustomerResolver:
         if not isinstance(customer_id, str) or not is_uuid(customer_id):
             raise RuntimeError("고객 등록 응답에 customer_id가 없습니다: " + result.body_text[:200])
         return customer_id
-
-
-def _write_json(path: str, data: dict) -> None:
-    """원자적으로 쓴다. 중간에 죽어도 반쯤 쓰인 파일이 남지 않는다."""
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
-    temporary = path + ".tmp"
-    with open(temporary, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
-        f.write("\n")
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(temporary, path)

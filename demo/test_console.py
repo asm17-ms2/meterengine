@@ -68,5 +68,88 @@ class SaveTest(unittest.TestCase):
             self.assertEqual(json.load(f)["base_url"], "https://meterengine.com")
 
 
+@unittest.skipUnless(HAS_TEXTUAL, "textual이 없다 (uv run --with textual)")
+class AdminActionTest(unittest.TestCase):
+    """브리지를 켜고 끄는 일이 앱을 죽이거나 멈추게 하면 안 된다."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.config_path = os.path.join(self.directory.name, "bridge.json")
+        self.state_path = os.path.join(self.directory.name, "state.json")
+
+    def patch(self, module, name, value):
+        original = getattr(module, name)
+        self.addCleanup(setattr, module, name, original)
+        setattr(module, name, value)
+
+    def app(self):
+        import console as console_module
+        from bridge import admin
+
+        # 기동 직후 health를 물어보러 나가지 않게 막는다. 네트워크를 쓰지 않는다.
+        self.patch(admin, "health", lambda *args, **kwargs: None)
+        return console_module.ConsoleApp(self.config_path, self.state_path)
+
+    def run_scenario(self, app, body):
+        async def scenario():
+            async with app.run_test() as pilot:
+                body(pilot)
+                await pilot.pause()
+                # 여기까지 왔으면 액션이 앱을 내리지 않았다는 뜻이다
+                self.assertTrue(app.is_running)
+
+        asyncio.run(scenario())
+
+    def test_Claude_설정을_쓰지_못해도_앱이_살아_있다(self):
+        """읽기 전용 홈이나 가득 찬 디스크에서 나는 OSError.
+
+        잡지 않으면 예외가 액션 핸들러를 빠져나가 앱이 트레이스백과 함께 내려간다.
+        저장 실패를 막아 둔 것과 같은 이유다.
+        """
+        from bridge import admin
+
+        def explode(plan):
+            raise OSError(13, "Permission denied")
+
+        # 진짜 ~/.claude/settings.json을 읽지 않게 계획도 대신 만든다.
+        plan = admin.SettingsPlan(
+            path=os.path.join(self.directory.name, "settings.json"),
+            settings={},
+            changes=[admin.Change("env.X", None, "1")],
+        )
+        self.patch(admin, "plan_claude_settings", lambda **kwargs: plan)
+        self.patch(admin, "apply_claude_settings", explode)
+        app = self.app()
+        self.run_scenario(app, lambda pilot: app.action_setup())
+
+    def test_launchctl은_이벤트_루프_밖에서_돈다(self):
+        """launchctl 한 번이 최대 15초를 잡는다. 그동안 화면이 멈추면 안 된다."""
+        import threading
+
+        from bridge import admin
+
+        called = {}
+
+        def slow_start():
+            called["thread"] = threading.current_thread().name
+
+        self.patch(admin, "start", slow_start)
+        app = self.app()
+
+        async def scenario():
+            async with app.run_test() as pilot:
+                app.action_start()
+                for _ in range(200):
+                    if "thread" in called:
+                        break
+                    await asyncio.sleep(0.01)
+                await pilot.pause()
+
+        asyncio.run(scenario())
+        self.assertIn("thread", called)
+        self.assertNotEqual(called["thread"], threading.current_thread().name)
+
+
 if __name__ == "__main__":
     unittest.main()

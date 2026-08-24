@@ -78,6 +78,18 @@ def _load_log_source(args, console: Console) -> Optional[VerifySource]:
         return None
     for warning in log.warnings:
         print(console.warn("경고: " + warning))
+    # 중간이 깨진 send 로그로는 판정하지 않는다. 레코드가 빠진 채로 남은 합계가
+    # 우연히 서버와 맞으면 "일치"로 0을 내주는데, 그 0을 보고 다음 단계로 넘어가면
+    # 손상을 통과시킨 것이 된다. 브리지 로그(헤더가 여럿)는 하루치를 이어쓰다
+    # 재시작으로 잘리는 것이 정상 범위라 경고까지만 한다.
+    if log.damaged and log.header_count <= 1:
+        print(
+            "로그 중간의 %d개 라인이 손상돼 기대값을 신뢰할 수 없습니다: %s\n"
+            "send는 실행 하나가 파일 하나라 중간이 깨지면 몇 건이 빠졌는지 알 수 없습니다."
+            % (len(log.damaged), args.log),
+            file=sys.stderr,
+        )
+        return None
     try:
         stored = stored_events_from_log(log.records)
     except ValueError as error:

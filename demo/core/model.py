@@ -20,6 +20,11 @@ KST = timezone(timedelta(hours=9))
 DEFAULT_ORG_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e"
 DEFAULT_BASE_URL = "http://localhost:8080"
 
+# transaction_id 상한. 서버가 255자를 넘기면 400이다 (EventIngestRequest).
+# 브리지는 여기에 맞춰 자르고(bridge/otel_map.py) CSV 데모는 넘는 행을 거절로
+# 예측한다(csvdemo/expected.py). 같은 서버 제한이라 한 곳에 둔다.
+MAX_TRANSACTION_ID = 255
+
 # 서버(Jackson의 OffsetDateTime, ISO_OFFSET_DATE_TIME)가 수용하는 형태와 맞춘다:
 # 초 생략, 소수초, 오프셋의 분/초 생략(+09, +09:00, +09:00:30)까지 허용하고
 # 오프셋 범위도 서버와 같이 +-18시간으로 제한한다. 더 엄격하면 서버가 저장한

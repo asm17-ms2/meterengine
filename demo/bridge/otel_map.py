@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from core.model import KST, Event
+from core.model import KST, MAX_TRANSACTION_ID, Event
 
 # OTel 이벤트 이름 -> 우리 event_type.
 #
@@ -73,9 +73,6 @@ NUMERIC_KEYS = frozenset(
         "event.sequence",
     }
 )
-
-# transaction_id 상한. 서버가 255자를 넘기면 400이다 (EventIngestRequest).
-MAX_TRANSACTION_ID = 255
 
 
 class UnmappableRecord(Exception):

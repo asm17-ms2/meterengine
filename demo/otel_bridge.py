@@ -105,7 +105,7 @@ def run_setup(args) -> int:
 
     backup = admin.apply_claude_settings(plan)
     if backup:
-        print("기존 파일을 %s로 복사했습니다." % backup)
+        print("원본 백업: %s (첫 반영 때의 사본이라 다시 실행해도 덮어쓰지 않습니다)" % backup)
     print("반영했습니다. 새 Claude 세션부터 적용됩니다.")
     return 0
 
@@ -217,6 +217,11 @@ def main(argv=None) -> int:
         return 2
     except ValueError as error:
         print(str(error), file=sys.stderr)
+        return 2
+    except OSError as error:
+        # 설정 파일이나 plist를 쓰지 못하는 경우다 (권한, 디스크). 트레이스백 대신
+        # 한 줄로 알린다 (README의 "오류 처리" 약속).
+        print("파일을 다루지 못했습니다: %s" % error, file=sys.stderr)
         return 2
     except KeyboardInterrupt:
         print()

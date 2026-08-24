@@ -31,10 +31,8 @@ from bridge import admin
 from bridge.const import DEFAULT_HOST, DEFAULT_PORT
 from bridge.state import (
     CONFIG_PATH,
-    MERGED,
     NAMED,
     PROJECT_STATES,
-    SKIPPED,
     STATE_PATH,
     BridgeConfig,
     BridgeState,
@@ -281,15 +279,12 @@ class ConsoleApp(App):
             self.notify(
                 "전송 대상이 배포 서버입니다. 보낸 이벤트는 지울 수 없습니다.", severity="warning", timeout=8
             )
+        # 저장은 여기서 끝났다고 먼저 알린다. 아래 재시작은 스레드에서 도는 별개
+        # 작업이라, 그것이 실패해도 저장이 됐는지 아닌지는 알 수 있어야 한다.
+        self.notify("저장했습니다.")
         # base_url 같은 값은 기동 때 한 번만 읽는다. 저장만 하면 도는 브리지는 옛 값을 쓴다.
         if self.reachable:
-            try:
-                admin.restart()
-                self.notify("저장하고 브리지를 재시작했습니다.")
-            except admin.AdminError:
-                self.notify("저장했습니다. 도는 브리지에 반영하려면 껐다 켜세요.", severity="warning")
-        else:
-            self.notify("저장했습니다.")
+            self._run(admin.restart, "브리지를 재시작해 새 설정을 반영했습니다.")
 
     def action_start(self) -> None:
         self._run(admin.start, "시작했습니다.")
@@ -311,25 +306,41 @@ class ConsoleApp(App):
         """~/.claude/settings.json에 OTel과 hook을 병합한다."""
         try:
             plan = admin.plan_claude_settings(host=DEFAULT_HOST, port=DEFAULT_PORT)
-        except admin.AdminError as error:
+        except (admin.AdminError, OSError) as error:
             self.notify(str(error), severity="error", timeout=10)
             return
         if not plan.needed:
             self.notify("Claude 설정은 이미 돼 있습니다.")
             return
-        admin.apply_claude_settings(plan)
+        try:
+            admin.apply_claude_settings(plan)
+        except OSError as error:
+            # 읽기 전용 홈, 가득 찬 디스크, 남의 소유인 settings.json. 잡지 않으면
+            # 예외가 액션 핸들러를 빠져나가 앱이 트레이스백과 함께 내려간다.
+            self.notify("Claude 설정을 쓰지 못했습니다: %s" % error, severity="error", timeout=10)
+            return
         self.notify(
             "Claude 설정에 %d개를 반영했습니다. 새 세션부터 적용됩니다." % len(plan.changes), timeout=8
         )
 
+    @work(thread=True, group="admin")
     def _run(self, action, message) -> None:
+        """브리지를 켜고 끄는 일을 스레드에서 한다.
+
+        launchctl 한 번이 최대 15초를 잡고 install은 두 번 부른다. 이벤트 루프에서
+        부르면 그동안 화면이 그려지지도, 종료되지도 않는다. 상태 갱신
+        (refresh_status)이 같은 이유로 스레드에 있다.
+
+        그쪽은 exclusive=True라 뒤에 온 것이 앞엣것을 자른다. 여기는 그러면 안 돼서
+        (등록이 끝나기 전에 상태 갱신이 취소해 버린다) 그룹을 따로 둔다.
+        """
         try:
             result = action()
-        except admin.AdminError as error:
-            self.notify(str(error), severity="error", timeout=10)
+        except (admin.AdminError, OSError) as error:
+            self.call_from_thread(self.notify, str(error), severity="error", timeout=10)
             return
-        self.notify(message or result or "완료했습니다.")
-        self.refresh_status()
+        self.call_from_thread(self.notify, message or result or "완료했습니다.")
+        self.call_from_thread(self.refresh_status)
 
 
 def main(argv=None) -> int:
