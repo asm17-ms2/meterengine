@@ -43,7 +43,9 @@ public record ProblemResponse(
               ErrorCodes.UNKNOWN_ORGANIZATION,
               ErrorCodes.METRIC_NOT_FOUND,
               ErrorCodes.PRICE_POLICY_ALREADY_EXISTS,
-              ErrorCodes.INVALID_PRICE_POLICY
+              ErrorCodes.INVALID_PRICE_POLICY,
+              ErrorCodes.METRIC_ALREADY_EXISTS,
+              ErrorCodes.INVALID_BILLABLE_METRIC
             })
         String code,
     @Schema(
