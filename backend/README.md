@@ -64,7 +64,7 @@ docker build -t meterengine-backend .
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
 
-현재 오퍼레이션은 아홉이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+현재 오퍼레이션은 열이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 
 | 오퍼레이션 | 내용 |
 | --- | --- |
@@ -76,6 +76,7 @@ docker build -t meterengine-backend .
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
+| `POST /v1/metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
 | `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
@@ -123,15 +124,17 @@ docker build -t meterengine-backend .
 | --- | --- | --- |
 | `validation_error` | 400 | 헤더 누락, 쿼리 파라미터 타입 불일치, 본문 필드 제약 위반 |
 | `unknown_customer_reference` | 400 | 실어 보낸 `customer_id`로 (도입사, 고객) 조합을 찾지 못했다 |
-| `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록에서만 난다) |
+| `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록과 미터 등록에서 난다) |
 | `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
 | `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
 | `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
+| `invalid_billable_metric` | 400 | 본문이 집계 미터로 성립하지 않는다 (SUM이 아닌 집계 함수, target_property 누락) |
 | `customer_not_found` | 404 | 경로가 가리킨 고객이 없거나 다른 도입사 소속이다 |
 | `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
 | `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
 | `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
+| `metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
 | `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
 | `response_type_not_acceptable` | 406 | `Accept`로 만족시킬 응답 표현이 없다 |
 | `request_type_not_supported` | 415 | 보낸 `Content-Type`을 받을 수 없다 |
@@ -146,7 +149,7 @@ docker build -t meterengine-backend .
 
 우리가 만드는 문구는 `src/main/resources/messages.properties`에 있고 넷뿐이다. 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 Hibernate Validator의 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
 
-### 예외 핸들러 넷
+### 예외 핸들러 다섯
 
 | 클래스 | 걸리는 범위 | 잡는 것 |
 | --- | --- | --- |
@@ -154,6 +157,7 @@ docker build -t meterengine-backend .
 | `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
 | `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류 셋. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `DataIntegrityViolationException` -> `unknown_organization` |
 | `PricePolicyExceptionHandler` (`pricing.controller`) | `PricePolicyController`만 | 도메인 오류 셋. `MetricNotFoundException` -> `metric_not_found`, `PricePolicyAlreadyExistsException` -> `price_policy_already_exists`, `InvalidPricePolicyException` -> `invalid_price_policy` |
+| `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류 셋. `MetricAlreadyExistsException` -> `metric_already_exists`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
 
 도메인 advice 셋을 각자 한 컨트롤러에만 건 이유는 event와 customer 쪽이 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만(잡을 도달 가능한 경우가 없다, `PricePolicyExceptionHandler` 주석 참조) 같은 원칙으로 범위를 좁혀 둔다.
 

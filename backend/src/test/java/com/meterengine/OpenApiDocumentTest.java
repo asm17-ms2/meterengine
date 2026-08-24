@@ -142,6 +142,7 @@ class OpenApiDocumentTest {
             "/v1/invoice",
             "/v1/customers",
             "/v1/customers/{id}",
+            "/v1/metrics",
             "/v1/metrics/{metricCode}/price-policy");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
