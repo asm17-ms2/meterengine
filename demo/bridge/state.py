@@ -15,7 +15,7 @@ import os
 import subprocess
 import threading
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from core.api_client import ApiClient
 from core.model import DEFAULT_ORG_ID, is_uuid
@@ -74,11 +74,22 @@ class BridgeConfig:
             fallback_project=str(data.get("fallback_project") or DEFAULT_FALLBACK_PROJECT),
             timeout_seconds=float(data.get("timeout_seconds") or 10.0),
         )
-        if not is_uuid(config.org_id):
-            raise ValueError("org_id가 UUID가 아닙니다: " + config.org_id)
+        config.validate()
         return config
 
+    def validate(self) -> None:
+        """읽을 때도 저장할 때도 통과해야 하는 조건.
+
+        save가 이것을 먼저 부른다. 잘못된 값이 파일에 남으면 그 뒤로는 load가 죽어
+        config 명령으로도 되돌릴 수 없고, 손으로 JSON을 고쳐야 하기 때문이다.
+        """
+        if not is_uuid(self.org_id):
+            raise ValueError("org_id가 UUID가 아닙니다: " + self.org_id)
+        if not self.base_url.startswith(("http://", "https://")):
+            raise ValueError("base_url이 http:// 또는 https://로 시작해야 합니다: " + self.base_url)
+
     def save(self, path: str = CONFIG_PATH) -> None:
+        self.validate()
         _write_json(
             path,
             {
@@ -244,6 +255,16 @@ class BridgeState:
             self.denied.add(session_id)
             self.sessions.pop(session_id, None)
             self._save_locked()
+
+    def snapshot(self) -> Tuple[Dict[str, str], Dict[str, str], int]:
+        """health가 보여 줄 값을 잠금 아래에서 한 번에 복사한다.
+
+        잠금 밖에서 sessions를 순회하면 hook이 매핑을 넣는 순간 dict 크기가 바뀌어
+        터진다. 그러면 health가 응답하지 못하고, 콘솔은 그것을 브리지가 꺼진 것으로
+        읽는다.
+        """
+        with self._lock:
+            return dict(self.sessions), dict(self.customers), len(self.denied)
 
     def is_denied(self, session_id: Optional[str]) -> bool:
         if not session_id:

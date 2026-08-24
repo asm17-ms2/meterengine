@@ -141,12 +141,12 @@ class ConsoleApp(App):
         lines = [
             "● 실행 중   %s   주인 %s"
             % (self.health.get("base_url", "?"), self.health.get("owner") or "(없음)"),
-            "전송  new %s · 중복 %s · 거절 %s · 실패 %s · 건너뜀 %s"
+            "전송  new %s / 중복 %s / 거절 %s / 실패 %s / 건너뜀 %s"
             % tuple(counts.get(k, 0) for k in ("new", "duplicate", "rejected", "error", "skipped")),
         ]
         if projects:
             lines.append(
-                "세션  " + " · ".join("%s %d" % (name, n) for name, n in sorted(projects.items()))
+                "세션  " + " / ".join("%s %d" % (name, n) for name, n in sorted(projects.items()))
             )
         customers = self.health.get("customers") or []
         if customers:

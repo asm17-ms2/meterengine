@@ -20,7 +20,11 @@ from core.jsonl_log import JsonlLogWriter
 from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
-LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+# demo/logs를 가리킨다. 이 파일이 demo/csvdemo/ 아래라 dirname을 두 번 벗긴다.
+# 브리지(bridge/const.py)도 같은 곳을 보고, README의 verify 안내도 이 경로다.
+LOGS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"
+)
 PREVIEW_LIMIT = 5
 
 

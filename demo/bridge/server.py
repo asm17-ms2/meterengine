@@ -31,23 +31,45 @@ class Sender:
     큐에 넣고 바로 200을 돌려준 뒤 뒤에서 보낸다.
     """
 
-    def __init__(self, config: BridgeConfig, state: BridgeState, log_path: str):
+    def __init__(self, config: BridgeConfig, state: BridgeState, logs_dir: str):
         self.config = config
         self.state = state
         self.client = ApiClient(config.base_url, config.org_id, timeout_seconds=config.timeout_seconds)
         self.resolver = CustomerResolver(self.client, state)
         self.queue: "queue.Queue[Optional[Tuple[dict, str, Optional[str]]]]" = queue.Queue()
-        # 하루치 파일에 이어쓴다. 재시작마다 새 파일을 만들면 기록이 쪼개져,
-        # verify가 파일 하나만 보는 탓에 하루 전체를 대조할 수 없다.
-        self._seq = _last_seq(log_path)
-        self.writer = JsonlLogWriter(log_path, append=True)
-        self.writer.write_run_header(
-            _now_text(), config.base_url, config.org_id, None, ["otel_bridge.py", "serve"]
-        )
+        self.logs_dir = logs_dir
+        self._day = ""
+        self._seq = 0
+        self.writer: Optional[JsonlLogWriter] = None
+        self._roll()
         # 키는 JSONL의 outcome 어휘와 같다. 이름이 어긋나면 성공을 거절로 세게 된다.
         self._counts = {"new": 0, "duplicate": 0, "rejected": 0, "error": 0, "skipped": 0}
         self._thread = threading.Thread(target=self._run, name="sender", daemon=True)
         self._thread.start()
+
+    def _roll(self) -> None:
+        """그날 파일로 갈아탄다. 이미 그 파일이면 아무것도 하지 않는다.
+
+        하루치를 한 파일에 이어쓴다. 재시작마다 새 파일을 만들면 기록이 쪼개져
+        verify가 하루 전체를 대조하지 못한다. 반대로 파일명을 기동 때 한 번만
+        정하면, 상주 프로세스가 자정을 넘겼을 때 어제 파일에 오늘 것이 쌓인다.
+        그래서 쓰기 직전마다 날짜를 본다.
+
+        sender 스레드 하나만 이 메서드를 부른다 (close는 큐에 신호를 넣고 기다린다).
+        """
+        day = _today()
+        if day == self._day:
+            return
+        if self.writer is not None:
+            self.writer.close()
+        path = os.path.join(self.logs_dir, "bridge-%s.jsonl" % day)
+        self._day = day
+        self._seq = _last_seq(path)
+        self.writer = JsonlLogWriter(path, append=True)
+        self.writer.write_run_header(
+            _now_text(), self.config.base_url, self.config.org_id, None,
+            ["otel_bridge.py", "serve"],
+        )
 
     def submit(self, record: dict, name: str, session_id: Optional[str]) -> None:
         self.queue.put((record, name, session_id))
@@ -98,6 +120,7 @@ class Sender:
             return
 
         body_text = build_body_text(event)
+        self._roll()
         self._seq += 1
         try:
             result = self.client.post_event(body_text)
@@ -124,10 +147,17 @@ class Sender:
 
 
 def _outcome(result) -> str:
-    """verify가 읽는 outcome 값. send_cmd와 같은 어휘를 쓴다."""
-    if result.status == 200 and isinstance(result.body, dict):
-        return "duplicate" if result.body.get("duplicate") else "new"
-    return "rejected"
+    """verify가 읽는 outcome 값. send_cmd._classify와 판정이 같아야 한다.
+
+    5xx를 rejected로 접으면 안 된다. verify는 rejected를 "서버가 거절했으니 저장되지
+    않았다"로 확정 처리하는데, 응답만 실패하고 저장은 됐을 수 있다. error로 남겨야
+    verify가 "저장 여부를 알 수 없다"고 경고한다.
+    """
+    if result.status == 200 and isinstance(result.body, dict) and "duplicate" in result.body:
+        return "duplicate" if result.body["duplicate"] else "new"
+    if result.status == 400:
+        return "rejected"
+    return "error"
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
@@ -146,11 +176,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802
         if self.path.startswith(HEALTH_PATH):
-            state = self.server.state
+            # 잠금 아래에서 한 번에 복사한다. 그대로 순회하면 hook이 매핑을 넣는
+            # 순간 dict가 바뀌어 터진다.
+            sessions, customers, denied = self.server.state.snapshot()
             # 세션 수가 아니라 프로젝트별로 센다. 어느 폴더가 어느 고객으로 갔는지가
             # 실제로 알고 싶은 값이라, 개수만 보여 주면 확인하러 DB를 뒤지게 된다.
             projects: dict = {}
-            for project in state.sessions.values():
+            for project in sessions.values():
                 projects[project] = projects.get(project, 0) + 1
             body = json.dumps(
                 {
@@ -159,8 +191,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     "org_id": self.server.config.org_id,
                     "owner": self.server.config.owner,
                     "projects": projects,
-                    "customers": sorted(state.customers),
-                    "denied_sessions": len(state.denied),
+                    "customers": sorted(customers),
+                    "denied_sessions": denied,
                     "counts": self.server.sender.counts,
                 },
                 ensure_ascii=False,
@@ -239,8 +271,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int:
     """브리지를 띄우고 SIGINT/SIGTERM까지 돈다."""
-    log_path = os.path.join(LOGS_DIR, "bridge-%s.jsonl" % _today())
-    sender = Sender(config, state, log_path)
+    sender = Sender(config, state, LOGS_DIR)
 
     server = ThreadingHTTPServer((host, port), BridgeHandler)
     server.config = config
@@ -251,7 +282,7 @@ def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int
     _log("브리지 시작: http://%s:%d" % (host, port))
     _log("  전송 대상 %s (도입사 %s)" % (config.base_url, config.org_id))
     _log("  주인 %s, 허용 목록 %s" % (config.owner or "(없음)", config.allow or "(전부 실명)"))
-    _log("  기록 %s" % log_path)
+    _log("  기록 %s" % os.path.join(LOGS_DIR, "bridge-<날짜>.jsonl"))
 
     stopping = threading.Event()
 

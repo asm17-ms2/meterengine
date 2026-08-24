@@ -1,4 +1,4 @@
-"""bridge_state 테스트. 네트워크 대신 가짜 클라이언트를 쓴다."""
+"""bridge/state.py 테스트. 네트워크 대신 가짜 클라이언트를 쓴다."""
 
 import json
 import os
@@ -383,6 +383,49 @@ class CustomerCacheScopeTest(unittest.TestCase):
     def test_scope는_전송_대상과_도입사로_만든다(self):
         config = BridgeConfig(base_url="http://localhost:8080/")
         self.assertEqual(config.scope(), self.LOCAL)
+
+
+class ConfigValidateTest(unittest.TestCase):
+    """save가 validate를 먼저 부른다.
+
+    잘못된 값이 파일에 남으면 그 뒤로는 load가 죽어서, config 명령으로도 되돌릴 수
+    없고 손으로 JSON을 고쳐야 한다.
+    """
+
+    def test_UUID가_아닌_org_id는_저장하지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with self.assertRaises(ValueError):
+                BridgeConfig(org_id="이건-UUID가-아님").save(path)
+            self.assertFalse(os.path.exists(path))
+
+    def test_스킴_없는_base_url은_저장하지_않는다(self):
+        # 오타를 내면 전송이 전부 조용히 실패한다. 저장 시점에 막는다.
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with self.assertRaises(ValueError):
+                BridgeConfig(base_url="meterengine.com").save(path)
+            self.assertFalse(os.path.exists(path))
+
+    def test_제대로_된_값은_저장하고_다시_읽힌다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            BridgeConfig(owner="박성종", base_url="https://meterengine.com").save(path)
+            self.assertEqual(BridgeConfig.load(path).owner, "박성종")
+
+
+class SnapshotTest(unittest.TestCase):
+    """health가 잠금 밖에서 순회하면 hook이 매핑을 넣는 순간 터진다."""
+
+    def test_스냅샷은_복사본이라_원본과_얽히지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = BridgeState(os.path.join(directory, "state.json"), "scope")
+            state.remember_session("s1", "meterengine")
+            sessions, customers, denied = state.snapshot()
+            state.remember_session("s2", "다른레포")
+            self.assertEqual(list(sessions), ["s1"])
+            self.assertEqual(customers, {})
+            self.assertEqual(denied, 0)
 
 
 if __name__ == "__main__":

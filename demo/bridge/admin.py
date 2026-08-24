@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -180,10 +181,25 @@ def worktree_root(script: str = BRIDGE_SCRIPT) -> Optional[str]:
     return None
 
 
-def plist_text(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, python: str = "") -> str:
-    import sys
+def launch_python() -> str:
+    """launchd에 박을 인터프리터 경로.
 
-    arguments = [python or sys.executable, BRIDGE_SCRIPT, "serve",
+    sys.executable을 그대로 쓰면 안 된다. 콘솔을 uv run으로 띄운 경우 그 값이
+    uv 캐시 안의 임시 venv를 가리키는데, 그 경로는 uv cache clean 한 번에 사라진다.
+    그러면 KeepAlive가 없는 인터프리터로 브리지를 되살리려 무한히 재시도한다.
+
+    브리지는 표준 라이브러리만 쓰므로 그 venv를 만든 원래 python이면 충분하다.
+    """
+    if sys.prefix != sys.base_prefix:  # venv 안에서 돌고 있다
+        for name in ("python3", "python"):
+            candidate = os.path.join(sys.base_prefix, "bin", name)
+            if os.path.exists(candidate):
+                return candidate
+    return sys.executable
+
+
+def plist_text(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, python: str = "") -> str:
+    arguments = [python or launch_python(), BRIDGE_SCRIPT, "serve",
                  "--host", host, "--port", str(port)]
     items = "\n".join("      <string>%s</string>" % _xml_escape(a) for a in arguments)
     return """<?xml version="1.0" encoding="UTF-8"?>
