@@ -6,8 +6,9 @@ info:
     도입사는 X-Organization-Id 헤더로 받는다. 이 헤더는 임시물이며 MS2-126이 Bearer API 키 인증을
     붙이면서 인증 주체에서 꺼내는 형태로 바뀐다.
 
-    오류 응답은 RFC 9457 problem+json이다. 다만 code 확장 멤버는 /v1/events에만 있다.
-    /v1/usage는 도메인 예외가 없어 프레임워크 기본 형식을 그대로 쓴다.
+    오류 응답은 RFC 9457 problem+json이고 4xx에는 code 확장 멤버가 붙는다. 화면 문구는 이 값으로
+    고른다. title과 detail은 영어이고 로그와 개발자용이라 그대로 띄우지 않는다. 5xx는 본문 형식을
+    약속하지 않으므로 클라이언트는 상태 코드만 본다.
   title: MeterEngine API
   version: v1
 servers:
