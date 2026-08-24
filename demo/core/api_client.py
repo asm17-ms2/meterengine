@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import http.client
+import json
 import socket
 import time
 import urllib.error
@@ -14,7 +15,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from model import loads_decimal
+from core.model import loads_decimal
 
 
 class TransportError(Exception):
@@ -94,6 +95,19 @@ class ApiClient:
         query = _month_query(month)
         query.update({"page": "0", "size": "1"})
         return self._request("GET", "/v1/events", query=query)
+
+    def get_customers(self) -> ApiResult:
+        """이 도입사의 고객 전부. 페이지를 나누지 않는 응답이다."""
+        return self._request("GET", "/v1/customers")
+
+    def create_customer(self, name: str) -> ApiResult:
+        """고객을 등록하고 서버가 발급한 customer_id를 받는다 (201).
+
+        이름 중복을 막지 않는 API라, 부르기 전에 목록에서 같은 이름을 찾아야 한다
+        (bridge/state.py의 CustomerResolver 참조).
+        """
+        body = json.dumps({"name": name}, ensure_ascii=False).encode("utf-8")
+        return self._request("POST", "/v1/customers", body=body, content_type="application/json")
 
     def _request(self, method, path, query=None, body=None, content_type=None) -> ApiResult:
         url = self.base_url + path

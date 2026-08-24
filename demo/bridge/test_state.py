@@ -1,0 +1,500 @@
+"""bridge/state.py 테스트. 네트워크 대신 가짜 클라이언트를 쓴다."""
+
+import json
+import os
+import subprocess
+import tempfile
+import time
+import unittest
+
+from bridge.state import (
+    MERGED,
+    NAMED,
+    SKIPPED,
+    BridgeConfig,
+    BridgeState,
+    CustomerResolver,
+    project_for_cwd,
+    repo_name,
+)
+
+DEMO_CUSTOMER = "35bc8d12-9d38-57ab-bc9b-bbd35d779a26"
+OTHER_CUSTOMER = "008cd6a7-6ff9-505d-9421-747e7d2d62aa"
+
+
+class FakeResult:
+    def __init__(self, status, body):
+        self.status = status
+        self.body = body
+        self.body_text = json.dumps(body, ensure_ascii=False) if body is not None else ""
+        self.elapsed_ms = 1
+
+
+class FakeClient:
+    """ApiClient 대역. 고객 목록과 등록만 흉내 낸다."""
+
+    def __init__(self, customers=None):
+        self.customers = list(customers or [])
+        self.created = []
+        self.list_calls = 0
+
+    def get_customers(self):
+        self.list_calls += 1
+        return FakeResult(200, {"customers": list(self.customers)})
+
+    def create_customer(self, name):
+        self.created.append(name)
+        customer_id = OTHER_CUSTOMER if len(self.created) > 1 else DEMO_CUSTOMER
+        self.customers.append({"customer_id": customer_id, "name": name})
+        return FakeResult(201, {"customer_id": customer_id, "name": name})
+
+
+class ConfigTest(unittest.TestCase):
+    def test_파일이_없으면_기본값이다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = BridgeConfig.load(os.path.join(directory, "없음.json"))
+        self.assertEqual(config.base_url, "http://localhost:8080")
+        self.assertEqual(config.allow, [])
+
+    def test_기본_전송_대상은_로컬이다(self):
+        """usage_event는 지울 수 없다. 배포 주소는 손으로 적게 한다."""
+        self.assertNotIn("meterengine.com", BridgeConfig().base_url)
+
+    def test_저장한_것을_그대로_읽는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            BridgeConfig(owner="박성종", allow=["meterengine"], deny=["비밀"]).save(path)
+            config = BridgeConfig.load(path)
+        self.assertEqual(config.owner, "박성종")
+        self.assertEqual(config.allow, ["meterengine"])
+        self.assertEqual(config.deny, ["비밀"])
+
+    def test_org_id가_UUID가_아니면_거부한다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"org_id": "아무거나"}, f)
+            with self.assertRaises(ValueError):
+                BridgeConfig.load(path)
+
+    def test_고객_이름에_주인이_들어간다(self):
+        config = BridgeConfig(owner="박성종")
+        self.assertEqual(config.customer_name("meterengine"), "meterengine(박성종)")
+
+    def test_주인이_없으면_프로젝트_이름만_쓴다(self):
+        self.assertEqual(BridgeConfig().customer_name("meterengine"), "meterengine")
+
+    def test_고객_이름은_255자를_넘지_않는다(self):
+        config = BridgeConfig(owner="박" * 200)
+        self.assertLessEqual(len(config.customer_name("p" * 200)), 255)
+
+
+class ProjectForCwdTest(unittest.TestCase):
+    def test_허용_목록_밖은_폴백으로_합친다(self):
+        config = BridgeConfig(allow=["meterengine"], fallback_project="기타 프로젝트")
+        with tempfile.TemporaryDirectory() as directory:
+            secret = os.path.join(directory, "내-비밀-사이드프로젝트")
+            os.makedirs(secret)
+            self.assertEqual(project_for_cwd(secret, config), "기타 프로젝트")
+
+    def test_허용_목록에_있으면_실명이다(self):
+        config = BridgeConfig(allow=["meterengine"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "meterengine")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "meterengine")
+
+    def test_허용_목록이_비면_전부_실명이다(self):
+        config = BridgeConfig()
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "아무프로젝트")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "아무프로젝트")
+
+    def test_deny는_None이라_보내지_않는다(self):
+        config = BridgeConfig(deny=["비밀레포"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "비밀레포")
+            os.makedirs(path)
+            self.assertIsNone(project_for_cwd(path, config))
+
+    def test_deny가_allow보다_먼저다(self):
+        config = BridgeConfig(allow=["비밀레포"], deny=["비밀레포"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "비밀레포")
+            os.makedirs(path)
+            self.assertIsNone(project_for_cwd(path, config))
+
+    def test_폴더가_비면_폴백이다(self):
+        self.assertEqual(project_for_cwd("", BridgeConfig()), "기타 프로젝트")
+
+
+class RepoNameTest(unittest.TestCase):
+    def test_git이_아니면_None이다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(repo_name(directory))
+
+    def test_없는_폴더면_None이다(self):
+        self.assertIsNone(repo_name("/이런/폴더는/없다"))
+
+    def test_워크트리도_본_레포_이름으로_모인다(self):
+        """워크트리마다 다른 고객이 생기면 안 된다. MS2-169, MS2-157이 한 이름으로 모여야 한다."""
+        with tempfile.TemporaryDirectory() as directory:
+            main = os.path.join(directory, "메인레포")
+            os.makedirs(main)
+            if not _git_init(main):
+                self.skipTest("git을 쓸 수 없습니다")
+            worktree = os.path.join(directory, "워크트리들", "MS2-169")
+            result = subprocess.run(
+                ["git", "-C", main, "worktree", "add", "-b", "feat/x", worktree],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                self.skipTest("워크트리를 만들 수 없습니다: " + result.stderr.strip())
+            self.assertEqual(repo_name(main), "메인레포")
+            self.assertEqual(repo_name(worktree), "메인레포")
+            # 하위 폴더에서도 같은 이름이어야 한다
+            nested = os.path.join(worktree, "demo")
+            os.makedirs(nested, exist_ok=True)
+            self.assertEqual(repo_name(nested), "메인레포")
+
+
+class BridgeStateTest(unittest.TestCase):
+    def state(self, directory):
+        return BridgeState(os.path.join(directory, "state.json"))
+
+    def test_세션_매핑이_재시작을_넘어_남는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path).remember_session("sess-1", "meterengine")
+            self.assertEqual(BridgeState(path).project_of("sess-1"), "meterengine")
+
+    def test_모르는_세션은_None이다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(self.state(directory).project_of("모름"))
+            self.assertIsNone(self.state(directory).project_of(None))
+
+    def test_deny한_세션은_매핑_없음과_구별된다(self):
+        """구별하지 않으면 워커가 폴백으로 보내 deny가 무력해진다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.deny_session("sess-비밀")
+            self.assertTrue(state.is_denied("sess-비밀"))
+            self.assertFalse(state.is_denied("sess-다른"))
+            self.assertTrue(BridgeState(path).is_denied("sess-비밀"))
+
+    def test_deny했다가_허용하면_풀린다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = self.state(directory)
+            state.deny_session("sess-1")
+            state.remember_session("sess-1", "meterengine")
+            self.assertFalse(state.is_denied("sess-1"))
+            self.assertEqual(state.project_of("sess-1"), "meterengine")
+
+    def test_고객_캐시가_남는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
+            self.assertEqual(BridgeState(path).cached_customer("meterengine(박성종)"), DEMO_CUSTOMER)
+
+    def test_UUID가_아닌_캐시는_읽지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"customers": {"이상함": "UUID아님"}}, f)
+            self.assertIsNone(BridgeState(path).cached_customer("이상함"))
+
+    def test_깨진_상태_파일은_빈_상태로_시작한다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("{잘림")
+            self.assertEqual(BridgeState(path).sessions, {})
+
+
+class SessionExpiryTest(unittest.TestCase):
+    """세션 매핑은 무한히 쌓이면 안 된다.
+
+    프롬프트를 칠 때마다(UserPromptSubmit hook) 이 파일 전체를 다시 쓰고 fsync
+    하므로, 커질수록 hook이 느려진다. hook 타임아웃은 5초다.
+    """
+
+    def test_하루가_지난_세션은_사라진다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_session("오래된", "meterengine")
+            state.deny_session("오래된-deny")
+            # 마지막 hook 시각을 이틀 전으로 돌린다
+            old = time.time() - 2 * 24 * 60 * 60
+            state.seen["오래된"] = old
+            state.seen["오래된-deny"] = old
+            state.remember_session("새것", "meterengine")  # 저장이 일어나며 정리된다
+
+            reloaded = BridgeState(path)
+            self.assertIsNone(reloaded.project_of("오래된"))
+            self.assertFalse(reloaded.is_denied("오래된-deny"))
+            self.assertEqual(reloaded.project_of("새것"), "meterengine")
+
+    def test_같은_매핑을_다시_받으면_파일을_건드리지_않는다(self):
+        """프롬프트마다 오는 hook이다. 매번 쓰면 그만큼 느려진다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_session("sess-1", "meterengine")
+            before = os.stat(path).st_mtime_ns
+            for _ in range(5):
+                state.remember_session("sess-1", "meterengine")
+            self.assertEqual(os.stat(path).st_mtime_ns, before)
+
+    def test_시각이_없는_옛_파일도_바로_지우지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"sessions": {"sess-1": "meterengine"}}, f)
+            self.assertEqual(BridgeState(path).project_of("sess-1"), "meterengine")
+
+
+class ForgetCustomerTest(unittest.TestCase):
+    """서버에서 고객이 지워지면 캐시한 id는 죽은 값이다."""
+
+    def test_버리면_다음에_다시_찾는다(self):
+        client = FakeClient()
+        with tempfile.TemporaryDirectory() as directory:
+            state = BridgeState(os.path.join(directory, "state.json"))
+            resolver = CustomerResolver(client, state)
+            resolver.resolve("meterengine(박성종)")
+            state.forget_customer("meterengine(박성종)")
+            self.assertIsNone(state.cached_customer("meterengine(박성종)"))
+            resolver.resolve("meterengine(박성종)")
+        # 캐시가 남아 있었다면 조회가 한 번뿐이었을 것이다
+        self.assertEqual(client.list_calls, 2)
+
+    def test_버린_것은_재시작_뒤에도_없다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            state = BridgeState(path)
+            state.remember_customer("고객", DEMO_CUSTOMER)
+            state.forget_customer("고객")
+            self.assertIsNone(BridgeState(path).cached_customer("고객"))
+
+
+class CustomerResolverTest(unittest.TestCase):
+    def resolver(self, directory, client):
+        return CustomerResolver(client, BridgeState(os.path.join(directory, "state.json")))
+
+    def test_이미_있으면_등록하지_않는다(self):
+        """등록 API가 이름 중복을 막지 않으므로, 조회를 빠뜨리면 고객이 계속 늘어난다."""
+        client = FakeClient([{"customer_id": DEMO_CUSTOMER, "name": "meterengine(박성종)"}])
+        with tempfile.TemporaryDirectory() as directory:
+            customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
+        self.assertEqual(customer_id, DEMO_CUSTOMER)
+        self.assertEqual(client.created, [])
+
+    def test_없으면_등록한다(self):
+        client = FakeClient()
+        with tempfile.TemporaryDirectory() as directory:
+            customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
+        self.assertEqual(customer_id, DEMO_CUSTOMER)
+        self.assertEqual(client.created, ["meterengine(박성종)"])
+
+    def test_두_번째부터는_조회하지_않는다(self):
+        client = FakeClient()
+        with tempfile.TemporaryDirectory() as directory:
+            resolver = self.resolver(directory, client)
+            resolver.resolve("meterengine(박성종)")
+            resolver.resolve("meterengine(박성종)")
+        self.assertEqual(client.list_calls, 1)
+        self.assertEqual(client.created, ["meterengine(박성종)"])
+
+    def test_다른_이름은_따로_등록한다(self):
+        client = FakeClient()
+        with tempfile.TemporaryDirectory() as directory:
+            resolver = self.resolver(directory, client)
+            first = resolver.resolve("meterengine(박성종)")
+            second = resolver.resolve("기타 프로젝트(박성종)")
+        self.assertNotEqual(first, second)
+        self.assertEqual(client.created, ["meterengine(박성종)", "기타 프로젝트(박성종)"])
+
+    def test_조회가_실패하면_알린다(self):
+        class Broken(FakeClient):
+            def get_customers(self):
+                return FakeResult(500, None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(RuntimeError):
+                self.resolver(directory, Broken()).resolve("아무개")
+
+    def test_등록_응답에_customer_id가_없으면_알린다(self):
+        class Broken(FakeClient):
+            def create_customer(self, name):
+                return FakeResult(201, {"name": name})
+
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(RuntimeError):
+                self.resolver(directory, Broken()).resolve("아무개")
+
+
+def _git_init(path) -> bool:
+    result = subprocess.run(
+        ["git", "-C", path, "init", "-q"], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return False
+    for arguments in (
+        ["config", "user.email", "t@example.com"],
+        ["config", "user.name", "t"],
+        ["commit", "-q", "--allow-empty", "-m", "init"],
+    ):
+        if subprocess.run(["git", "-C", path] + arguments, capture_output=True).returncode != 0:
+            return False
+    return True
+
+
+class ProjectStateTest(unittest.TestCase):
+    """목록에서 고른 상태와 allow/deny 배열 사이의 왕복."""
+
+    def test_상태를_읽는다(self):
+        config = BridgeConfig(allow=["meterengine"], deny=["비밀레포"])
+        self.assertEqual(config.project_state("meterengine"), NAMED)
+        self.assertEqual(config.project_state("비밀레포"), SKIPPED)
+        self.assertEqual(config.project_state("처음보는것"), MERGED)
+
+    def test_deny가_allow보다_먼저다(self):
+        config = BridgeConfig(allow=["둘다"], deny=["둘다"])
+        self.assertEqual(config.project_state("둘다"), SKIPPED)
+
+    def test_고른_상태가_배열로_되돌아간다(self):
+        config = BridgeConfig()
+        config.set_project_states(
+            {"meterengine": NAMED, "notes": MERGED, "비밀레포": SKIPPED, "demo": NAMED}
+        )
+        self.assertEqual(config.allow, ["demo", "meterengine"])
+        self.assertEqual(config.deny, ["비밀레포"])
+
+    def test_합침은_어느_배열에도_들어가지_않는다(self):
+        config = BridgeConfig(allow=["meterengine"])
+        config.set_project_states({"meterengine": MERGED})
+        self.assertEqual(config.allow, [])
+        self.assertEqual(config.deny, [])
+
+    def test_왕복해도_판정이_같다(self):
+        states = {"a": NAMED, "b": MERGED, "c": SKIPPED}
+        config = BridgeConfig()
+        config.set_project_states(states)
+        for name, state in states.items():
+            self.assertEqual(config.project_state(name), state)
+
+    def test_실명이_없으면_전부_실명이_된다(self):
+        """고른 것과 정반대가 되는 자리라 화면이 이 상태를 알려야 한다."""
+        config = BridgeConfig()
+        config.set_project_states({"meterengine": MERGED, "notes": MERGED})
+        self.assertTrue(config.names_everything())
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "meterengine")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "meterengine")
+
+    def test_실명이_하나라도_있으면_나머지는_합쳐진다(self):
+        config = BridgeConfig()
+        config.set_project_states({"meterengine": NAMED, "notes": MERGED})
+        self.assertFalse(config.names_everything())
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "notes")
+            os.makedirs(path)
+            self.assertEqual(project_for_cwd(path, config), "기타 프로젝트")
+
+
+class CustomerCacheScopeTest(unittest.TestCase):
+    """고객 캐시는 발급한 서버의 것이다. 전송 대상을 바꾸면 써서는 안 된다."""
+
+    LOCAL = "http://localhost:8080|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
+    PROD = "https://meterengine.com|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
+
+    def test_같은_서버면_캐시를_쓴다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
+            self.assertEqual(
+                BridgeState(path, self.LOCAL).cached_customer("meterengine(박성종)"), DEMO_CUSTOMER
+            )
+
+    def test_서버가_바뀌면_캐시를_버린다(self):
+        """안 버리면 로컬 UUID를 배포로 보내 이벤트가 전부 거절된다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
+            switched = BridgeState(path, self.PROD)
+            self.assertIsNone(switched.cached_customer("meterengine(박성종)"))
+
+    def test_서버가_바뀌어도_세션_매핑은_남는다(self):
+        """폴더가 어느 프로젝트인지는 서버와 무관하다."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            first = BridgeState(path, self.LOCAL)
+            first.remember_session("sess-1", "meterengine")
+            first.deny_session("sess-2")
+            switched = BridgeState(path, self.PROD)
+            self.assertEqual(switched.project_of("sess-1"), "meterengine")
+            self.assertTrue(switched.is_denied("sess-2"))
+
+    def test_다시_돌아오면_새로_받는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            BridgeState(path, self.PROD).remember_customer("고객", OTHER_CUSTOMER)
+            # 배포 쪽 값으로 덮였으므로 로컬로 돌아오면 캐시가 없다
+            self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
+
+    def test_scope는_전송_대상과_도입사로_만든다(self):
+        config = BridgeConfig(base_url="http://localhost:8080/")
+        self.assertEqual(config.scope(), self.LOCAL)
+
+
+class ConfigValidateTest(unittest.TestCase):
+    """save가 validate를 먼저 부른다.
+
+    잘못된 값이 파일에 남으면 그 뒤로는 load가 죽어서, config 명령으로도 되돌릴 수
+    없고 손으로 JSON을 고쳐야 한다.
+    """
+
+    def test_UUID가_아닌_org_id는_저장하지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with self.assertRaises(ValueError):
+                BridgeConfig(org_id="이건-UUID가-아님").save(path)
+            self.assertFalse(os.path.exists(path))
+
+    def test_스킴_없는_base_url은_저장하지_않는다(self):
+        # 오타를 내면 전송이 전부 조용히 실패한다. 저장 시점에 막는다.
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with self.assertRaises(ValueError):
+                BridgeConfig(base_url="meterengine.com").save(path)
+            self.assertFalse(os.path.exists(path))
+
+    def test_제대로_된_값은_저장하고_다시_읽힌다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            BridgeConfig(owner="박성종", base_url="https://meterengine.com").save(path)
+            self.assertEqual(BridgeConfig.load(path).owner, "박성종")
+
+
+class SnapshotTest(unittest.TestCase):
+    """health가 잠금 밖에서 순회하면 hook이 매핑을 넣는 순간 터진다."""
+
+    def test_스냅샷은_복사본이라_원본과_얽히지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = BridgeState(os.path.join(directory, "state.json"), "scope")
+            state.remember_session("s1", "meterengine")
+            sessions, customers, denied = state.snapshot()
+            state.remember_session("s2", "다른레포")
+            self.assertEqual(list(sessions), ["s1"])
+            self.assertEqual(customers, {})
+            self.assertEqual(denied, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

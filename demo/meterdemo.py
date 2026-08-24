@@ -16,10 +16,10 @@ if sys.version_info < MINIMUM_PYTHON:
 
 import argparse
 
-from api_client import TransportError
-from render import Console, color_enabled
-import send_cmd
-import verify_cmd
+from core.api_client import TransportError
+from csvdemo.render import Console, color_enabled
+from csvdemo import send_cmd
+from csvdemo import verify_cmd
 
 
 def build_parser() -> argparse.ArgumentParser:

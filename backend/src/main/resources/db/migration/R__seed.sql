@@ -87,8 +87,12 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
 -- 정책은 무차원('{}')이다. 모델별 단가 같은 차원은 다차원 후속 스토리에서 이 두 행의
 -- 값만 바꿔 켠다 (dimension_properties에 키를 선언하고 조합별 rate 행을 추가).
 --
--- 단가는 토큰당 0.5원. MS2-128의 "100건 중 80건 반영" 검증에서 토큰 500짜리
--- 이벤트면 40,000토큰에 20,000원이라 기댓값이 암산된다.
+-- 단가는 Anthropic 공시가에서 역산한다(MS2-169). Claude Opus 5 입력 $5/MTok을
+-- 1 MTok = 100만 토큰, 1달러 1,400원으로 환산하면 토큰당 0.007원이다
+-- (5 x 1400 / 1,000,000). 아래 미터들도 같은 방식으로 계산했다.
+--
+-- 근거 없는 값을 쓰지 않는 이유는 이 데모의 주장 자체가 "실제로 쓴 만큼 이만큼
+-- 청구된다"이기 때문이다. 임의의 단가면 화면의 숫자가 아무것도 말하지 못한다.
 --
 -- ON CONFLICT 대상이 도입사/고객 시드와 달리 고정 id가 아닌 이유: 두 테이블의 PK가
 -- 자연 키(도입사, 미터, 조합)라 값 자체로 충돌이 성립한다. id를 박아야 재실행이
@@ -99,7 +103,7 @@ ON CONFLICT (organization_id, metric_code) DO UPDATE SET
   dimension_properties = EXCLUDED.dimension_properties;
 
 INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.5)
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.007)
 ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
@@ -155,8 +159,59 @@ ON CONFLICT (organization_id, metric_code) DO UPDATE SET
   dimension_properties = EXCLUDED.dimension_properties;
 
 INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.5),
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 2.5),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.007),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 0.035),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '{}', 120.0)
+ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+  unit_price = EXCLUDED.unit_price;
+
+
+-- ============================================================================
+-- Claude Code 사용량 (MS2-169)
+--
+-- demo/otel_bridge.py가 보내는 이벤트를 받을 미터다. event_type이 llm_request라
+-- 위 "데모 확장"의 input-tokens/output-tokens와 같은 이벤트를 함께 잰다.
+-- 이벤트 하나가 미터 넷에 잡히는 셈이고, 그 자체가 미터링 엔진의 동작을 보여준다.
+--
+-- 캐시 미터가 필요한 이유는 실측 때문이다. Claude Code 요청 한 건을 재 보면
+-- input_tokens 2, output_tokens 75인데 cache_read_tokens 33661,
+-- cache_creation_tokens 23672였다. 토큰 수로도 비용으로도 대부분이 캐시 쪽이라,
+-- 캐시를 빼면 그 요청에서 잴 것이 사실상 없다.
+--
+-- 단가는 위와 같이 Claude Opus 5 공시가에서 역산했다 (1달러 1,400원).
+--   캐시 쓰기(5분) $6.25/MTok -> 0.00875원   캐시 읽기 $0.50/MTok -> 0.0007원
+-- 캐시 쓰기가 5분 기준인 이유는 OTel의 cache_creation_tokens가 5분과 1시간을
+-- 구분하지 않아서다. 기본값인 5분 쪽을 쓴다.
+-- 소수 넷째 자리가 성립하는 것은 unit_price가 NUMERIC이어서다(V2).
+--
+-- 이 미터들도 무차원('{}')이다. 모델별 단가를 켜려면 dimension_properties에
+-- 'model'을 선언하고 조합별 rate를 추가해야 하는데, 지금은 넣어도 읽히지 않는다.
+-- DraftInvoiceService가 단가를 얻는 유일한 통로가 PriceRateRepository의
+-- findBaseUnitPrices이고 그것이 dimension_values='{}' 행만 읽기 때문이다.
+-- 차원별 조회는 MS2-178이 붙인다. 브리지가 properties에 model을 실어 보내므로
+-- 그때 필요한 것은 rate 행과 계산 로직뿐이다.
+-- ============================================================================
+
+INSERT INTO billable_metric
+  (organization_id, code, name, event_type, aggregation, target_property) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '캐시 읽기 토큰',
+   'llm_request', 'SUM', 'cache_read_tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '캐시 생성 토큰',
+   'llm_request', 'SUM', 'cache_creation_tokens')
+ON CONFLICT (organization_id, code) DO UPDATE SET
+  name            = EXCLUDED.name,
+  event_type      = EXCLUDED.event_type,
+  aggregation     = EXCLUDED.aggregation,
+  target_property = EXCLUDED.target_property;
+
+INSERT INTO price_policy (organization_id, metric_code) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens'),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens')
+ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+  dimension_properties = EXCLUDED.dimension_properties;
+
+INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '{}', 0.0007),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '{}', 0.00875)
 ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;

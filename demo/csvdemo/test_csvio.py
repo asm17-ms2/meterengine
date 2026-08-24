@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from csvio import read_csv_events
+from csvdemo.csvio import read_csv_events
 
 
 class ReadCsvEventsTest(unittest.TestCase):

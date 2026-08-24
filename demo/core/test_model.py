@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from model import (
+from core.model import (
     KST,
     Event,
     build_body_text,
