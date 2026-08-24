@@ -28,7 +28,7 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 ## 현재 상태 (중요)
 
 - 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 구성은 `backend/README.md`와 `frontend/README.md`가 정본이다
-- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로), 브랜치 네이밍, squash 머지 모두 확정됐고 GitHub 브랜치 보호로 강제된다. 정본은 CONTRIBUTING.md
+- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로), 브랜치 네이밍, squash 머지 모두 확정됐고 GitHub 브랜치 보호로 강제된다. PR 크기 상한(300줄)과 쪼개는 축, 스택 PR 절차도 같이 확정됐다. 정본은 CONTRIBUTING.md
 - 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
 - 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
 
@@ -45,6 +45,40 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 - 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다
 - 명세서나 정책 문서를 작성할 때 현재 슬라이스 범위와 미정 범위를 구분해 쓴다
+- 슬라이스를 얇게 만드는 것과 PR을 작게 내는 것은 다른 축이다. 슬라이스가 300줄을 넘으면 동작 단위로 조각내 스택 PR로 쌓는다. 쪼개는 축과 머지 순서는 CONTRIBUTING.md "PR 크기와 쪼개기", "스택 PR"에 있다
+
+## 스택 PR
+
+**GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.** 2026-08 기준 public preview라 학습 데이터에 없는 기능이고, 익숙한 수동 rebase로 되돌아가면 스택으로 인식되지 않는 PR이 생기거나 히스토리가 어긋난다.
+
+| 하려는 일 | 쓰지 않는다 | 대신 쓴다 |
+| --- | --- | --- |
+| 선행 브랜치 위에 새 작업 시작 | `git checkout -b`로 그냥 따기 | `gh stack init` |
+| 이미 있는 스택에 합류 | 브랜치 이름으로 checkout | `gh stack checkout <PR번호>` |
+| PR 올리기 | `gh pr create --base <부모브랜치>` (diff만 맞고 스택으로 인식되지 않는다) | `gh stack submit` |
+| 부모가 갱신됐을 때 맞추기 | `git rebase --onto`, `git rebase --update-refs`, `git rebase -i` | `gh stack sync` |
+| 부모가 머지된 뒤 | 손으로 base 바꾸기, 손으로 rebase | 아무것도 하지 않는다. GitHub가 base를 다시 잡는다. 로컬만 `gh stack sync` |
+| 스택 브랜치 push | `git push --force` | `gh stack submit` |
+| 구조 확인 | `git log --graph`로 추정 | `gh stack view` |
+| 이미 올린 PR을 스택으로 묶기 | base만 바꾸기 | `gh stack link` 또는 웹에서 묶기 |
+
+확장이 없으면 `gh extension install github/gh-stack`으로 설치한다. 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 추측하지 말고 `gh stack --help`나 아래 문서를 본다.
+
+- 개념과 머지 동작: https://github.github.com/gh-stack/introduction/overview/
+- CLI 레퍼런스: https://github.github.com/gh-stack/reference/cli/
+- GitHub 공식 문서: https://docs.github.com/ko/pull-requests/get-started/about-stacked-prs
+
+## 주석
+
+주석을 쓰지 않는다. 코드만 읽어도 이해되게 쓰고, 코드가 맞게 도는지는 테스트로 관리한다.
+
+- 왜 이렇게 설계했는지는 노션에, 이 변경을 왜 했는지는 커밋 메시지와 PR 본문에, "고치면 깨진다"는 테스트에 넣는다
+- 주석을 붙이고 싶어지면 대개 이름이나 분리가 잘못된 것이다. 주석 대신 그쪽을 고친다
+- 도구 지시문(`@SuppressWarnings`, `// eslint-disable-next-line`)과 `@Schema`/`@Operation`의 description은 대상이 아니다. description은 주석이 아니라 API 계약이다. 다만 거기에 Jira 키를 넣지 않는다 (`openapi.yaml`로 외부에 나간다)
+- 지금부터 새로 쓰거나 고치는 코드에 적용한다. 기존 주석은 소급 정리하지 않고, 그 파일을 다른 이유로 편집할 때 함께 정리한다
+- **주변 코드에 주석이 많아도 그것을 근거로 삼지 않는다.** 기존 파일의 주석 밀도는 규칙 이전 상태이지 따라야 할 본보기가 아니다
+
+전체 규칙은 CONTRIBUTING.md "주석과 javadoc"에 있다.
 
 ## 문서 흐름
 
