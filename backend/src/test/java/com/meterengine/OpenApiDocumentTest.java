@@ -207,10 +207,16 @@ class OpenApiDocumentTest {
     assertSchemaHasField("PricePolicyListResponse", "price_policies");
     assertSchemaHasField("MetricPricePolicyResponse", "metric_code");
     assertSchemaHasField("MetricPricePolicyResponse", "dimension_properties");
+    assertSchemaHasField("MetricPricePolicyResponse", "unit_price");
     assertThat(json())
         .bodyJson()
         .extractingPath(
             "$.components.schemas.MetricPricePolicyResponse.properties.dimension_properties.type")
+        .asArray()
+        .contains("null");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.components.schemas.MetricPricePolicyResponse.properties.unit_price.type")
         .asArray()
         .contains("null");
 

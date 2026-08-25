@@ -78,7 +78,7 @@ docker build -t meterengine-backend .
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
 | `POST /v1/metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
 | `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
-| `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다 |
+| `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 

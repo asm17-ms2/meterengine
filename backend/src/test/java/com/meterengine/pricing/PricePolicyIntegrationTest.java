@@ -260,7 +260,66 @@ class PricePolicyIntegrationTest {
         .isEqualTo(ErrorCodes.VALIDATION_ERROR);
   }
 
+  @Test
+  void 단가가_없는_정책은_unit_price가_JSON_null이고_0이_아니다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+
+    MvcTestResult result = get(orgId);
+
+    assertThat(result)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0]")
+        .asMap()
+        .containsEntry("unit_price", null);
+  }
+
+  @Test
+  void 기본_단가가_있으면_unit_price에_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+    insertBaseRate(orgId, "token-usage", "0.007");
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].unit_price")
+        .asNumber()
+        .extracting(Number::doubleValue)
+        .isEqualTo(0.007);
+  }
+
+  @Test
+  void 단가가_0이면_null이_아니라_0으로_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+    insertBaseRate(orgId, "token-usage", "0");
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].unit_price")
+        .asNumber()
+        .extracting(Number::doubleValue)
+        .isEqualTo(0.0);
+  }
+
   // --- 헬퍼 ---
+
+  private void insertBaseRate(UUID orgId, String metricCode, String unitPrice) {
+    jdbc.update(
+        """
+        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        VALUES (?, ?, '{}'::jsonb, ?::numeric)
+        """,
+        orgId,
+        metricCode,
+        unitPrice);
+  }
 
   private MvcTestResult get(UUID organizationId) {
     return mvc.get()

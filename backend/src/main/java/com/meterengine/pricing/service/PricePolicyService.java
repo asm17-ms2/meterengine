@@ -13,6 +13,8 @@ import com.meterengine.pricing.exception.InvalidPricePolicyException;
 import com.meterengine.pricing.exception.MetricNotFoundException;
 import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
+import com.meterengine.pricing.repository.PriceRateRepository;
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +31,13 @@ public class PricePolicyService {
 
   private final PricePolicyRepository policies;
   private final BillableMetricRepository metrics;
+  private final PriceRateRepository rates;
 
-  PricePolicyService(PricePolicyRepository policies, BillableMetricRepository metrics) {
+  PricePolicyService(
+      PricePolicyRepository policies, BillableMetricRepository metrics, PriceRateRepository rates) {
     this.policies = policies;
     this.metrics = metrics;
+    this.rates = rates;
   }
 
   @Transactional(readOnly = true)
@@ -40,10 +45,11 @@ public class PricePolicyService {
     Map<String, PricePolicy> policyByMetricCode =
         policies.findByOrganizationId(organizationId).stream()
             .collect(Collectors.toMap(PricePolicy::getMetricCode, Function.identity()));
+    Map<String, BigDecimal> unitPriceByMetricCode = rates.findBaseUnitPrices(organizationId);
 
     return new PricePolicyListResponse(
         metrics.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
-            .map(metric -> toResponse(metric, policyByMetricCode))
+            .map(metric -> toResponse(metric, policyByMetricCode, unitPriceByMetricCode))
             .toList());
   }
 
@@ -71,8 +77,13 @@ public class PricePolicyService {
   }
 
   private static MetricPricePolicyResponse toResponse(
-      BillableMetric metric, Map<String, PricePolicy> policyByMetricCode) {
-    return MetricPricePolicyResponse.of(metric.getCode(), policyByMetricCode.get(metric.getCode()));
+      BillableMetric metric,
+      Map<String, PricePolicy> policyByMetricCode,
+      Map<String, BigDecimal> unitPriceByMetricCode) {
+    return MetricPricePolicyResponse.of(
+        metric.getCode(),
+        policyByMetricCode.get(metric.getCode()),
+        unitPriceByMetricCode.get(metric.getCode()));
   }
 
   private void validate(List<String> dimensionProperties) {
