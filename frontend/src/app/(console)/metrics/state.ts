@@ -1,0 +1,17 @@
+export type MetricRowView = {
+  code: string;
+  name: string;
+  eventType: string;
+  aggregation: string;
+  targetProperty: string;
+};
+
+export type MetricField = "code" | "name" | "event_type" | "target_property";
+
+export type MetricFormState =
+  | { status: "idle" }
+  | { status: "invalid"; fieldErrors: Partial<Record<MetricField, string>> }
+  | { status: "failed"; message: string }
+  | { status: "done"; metric: MetricRowView };
+
+export const METRIC_FORM_IDLE: MetricFormState = { status: "idle" };
