@@ -63,7 +63,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다")
   })
-  public BillableMetricResponse register(
+  public BillableMetricResponse registerMetric(
       @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,

@@ -358,7 +358,7 @@ paths:
         집계 함수는 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
         target_property가 필수다.
         코드는 도입사 안에서 유일하고, 등록 뒤 바꿀 수 없다.
-      operationId: register
+      operationId: registerMetric
       parameters:
       - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -406,7 +406,7 @@ paths:
         단가는 이 API가 받지 않고 별도의 단가 API(MS2-177 예정)가 등록한다.
         단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
         미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
-      operationId: register_1
+      operationId: register
       parameters:
       - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
         in: header
