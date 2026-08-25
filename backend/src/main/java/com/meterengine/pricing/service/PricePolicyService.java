@@ -1,7 +1,10 @@
 package com.meterengine.pricing.service;
 
+import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import com.meterengine.pricing.dto.MetricPricePolicyResponse;
+import com.meterengine.pricing.dto.PricePolicyListResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.entity.PricePolicy;
@@ -12,21 +15,15 @@ import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 가격 정책 등록 (MS2-157).
- *
- * <p>정책(축 선언)만 등록한다. 단가는 유효 기간 같은 자체 수명을 가질 예정이라 정책과 등록 시점이 다르고, MS2-177의 단가 API가 따로 붙인다 (PR 43 리뷰
- * 결정). 단가가 아직 없는 미터는 청구 예정액 계산이 라인에서 제외하므로 정책만 있는 상태가 안전하다.
- *
- * <p><b>{@link BillableMetricRepository}를 참조한다.</b> 미터 존재를 확인해 404를 주는 몫이다. 확인 없이 FK 위반에 맡기면 "없는
- * 미터"와 "미등록 도입사"가 모두 같은 예외 타입이라 상태 코드를 갈라낼 수 없다. 이 참조로 pricing이 metric에 의존하게 된다 (README의 의존 방향 참조).
- */
 @Service
 public class PricePolicyService {
 
@@ -36,6 +33,18 @@ public class PricePolicyService {
   PricePolicyService(PricePolicyRepository policies, BillableMetricRepository metrics) {
     this.policies = policies;
     this.metrics = metrics;
+  }
+
+  @Transactional(readOnly = true)
+  public PricePolicyListResponse list(UUID organizationId) {
+    Map<String, PricePolicy> policyByMetricCode =
+        policies.findByOrganizationId(organizationId).stream()
+            .collect(Collectors.toMap(PricePolicy::getMetricCode, Function.identity()));
+
+    return new PricePolicyListResponse(
+        metrics.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .map(metric -> toResponse(metric, policyByMetricCode))
+            .toList());
   }
 
   @Transactional
@@ -53,8 +62,6 @@ public class PricePolicyService {
 
     PricePolicy policy = new PricePolicy(organizationId, metricCode, request.dimensionProperties());
     try {
-      // flush까지 해야 확인과 INSERT 사이에 커밋된 경합이 여기서 제약 위반으로 터진다.
-      // 커밋 시점으로 미루면 예외가 이 메서드 밖에서 나 409로 바꿀 수 없다.
       policies.saveAndFlush(policy);
     } catch (DataIntegrityViolationException exception) {
       throw new PricePolicyAlreadyExistsException(metricCode);
@@ -63,12 +70,11 @@ public class PricePolicyService {
     return PricePolicyResponse.from(policy);
   }
 
-  /**
-   * 선언 안의 관계를 검증한다. 필드 형식은 Bean Validation이 먼저 본다.
-   *
-   * <p>중복 키와 빈 키를 여기서 잡는 이유: TEXT[]는 DB가 못 막고, 저장된 선언은 조합별 단가(MS2-177)의 키 집합 검증 기준이 되므로 여기가 방어선이다
-   * (V2 마이그레이션 주석).
-   */
+  private static MetricPricePolicyResponse toResponse(
+      BillableMetric metric, Map<String, PricePolicy> policyByMetricCode) {
+    return MetricPricePolicyResponse.of(metric.getCode(), policyByMetricCode.get(metric.getCode()));
+  }
+
   private void validate(List<String> dimensionProperties) {
     Set<String> declared = new HashSet<>(dimensionProperties);
     if (declared.size() < dimensionProperties.size()) {
