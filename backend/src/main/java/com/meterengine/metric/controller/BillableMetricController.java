@@ -1,6 +1,7 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.ProblemResponse;
+import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.SaveBillableMetricRequest;
 import com.meterengine.metric.service.BillableMetricService;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -69,5 +71,31 @@ public class BillableMetricController {
           UUID organizationId,
       @Valid @RequestBody SaveBillableMetricRequest request) {
     return billableMetricService.register(organizationId, request);
+  }
+
+  @GetMapping
+  @Operation(
+      summary = "미터 목록 조회",
+      description =
+          """
+          이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
+          미터가 없거나 등록되지 않은 도입사면 metrics가 빈 배열이다.
+          페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 metrics가 빈 배열이다"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
+  })
+  public BillableMetricListResponse listMetrics(
+      @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
+          @RequestHeader("X-Organization-Id")
+          UUID organizationId) {
+    return billableMetricService.list(organizationId);
   }
 }

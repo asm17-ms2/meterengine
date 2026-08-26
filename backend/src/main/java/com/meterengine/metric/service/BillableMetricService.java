@@ -1,5 +1,6 @@
 package com.meterengine.metric.service;
 
+import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.SaveBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
@@ -52,6 +53,14 @@ public class BillableMetricService {
     }
 
     return BillableMetricResponse.from(metric);
+  }
+
+  @Transactional(readOnly = true)
+  public BillableMetricListResponse list(UUID organizationId) {
+    return new BillableMetricListResponse(
+        metrics.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .map(BillableMetricResponse::from)
+            .toList());
   }
 
   private void validate(SaveBillableMetricRequest request) {
