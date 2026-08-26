@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/usage", label: "사용량 집계" },
   { href: "/billing", label: "청구 예정액" },
   { href: "/customers", label: "고객" },
+  { href: "/metrics", label: "미터" },
 ] as const;
 
 export function SideNav() {
