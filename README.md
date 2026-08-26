@@ -47,7 +47,17 @@ docker compose up -d
 
 MS2-31 완료 조건이던 "클론 후 한 명령으로 로컬 실행"은 backend + DB 기준 `./gradlew bootRun` 한 명령으로 충족한다 (DB가 자동 기동된다). frontend는 별도 명령으로 실행한다.
 
-자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조. API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다). CI는 `.github/workflows/ci.yml`에서 PR마다 backend 빌드/테스트와 frontend lint/빌드를 실행한다. main에 머지되면 `.github/workflows/cd.yml`이 배포까지 한다.
+자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조. API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
+
+`.github/workflows/`에서 도는 것은 다음과 같다.
+
+| 워크플로 | 언제 | 무엇을 |
+| --- | --- | --- |
+| `ci.yml` | PR과 main push | backend 빌드/테스트, frontend lint/빌드. main 룰셋의 필수 체크다 |
+| `cd.yml` | main 머지 | 이미지를 굽고 ECR에 올린 뒤 배포한다 |
+| `claude-code-review.yml` | PR과 push | Claude 리뷰. 인라인 코멘트로 달리고 머지를 막지 않는다 |
+| `claude.yml` | `@claude` 호출 | 이슈나 PR 코멘트에 응답한다 |
+| `aws-access-check.yml` | 수동 | OIDC 신뢰 관계와 ECR 접근이 살아 있는지 본다 |
 
 ## 배포
 
