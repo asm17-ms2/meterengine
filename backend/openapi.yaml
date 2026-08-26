@@ -351,6 +351,53 @@ paths:
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
+  /v1/metrics:
+    post:
+      description: |
+        집계 미터를 등록한다. event_type이 같은 사용량 이벤트가 이 미터의 집계 대상이 된다.
+        집계 함수는 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
+        target_property가 필수다.
+        코드는 도입사 안에서 유일하고, 등록 뒤 바꿀 수 없다.
+      operationId: registerMetric
+      parameters:
+      - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBillableMetricRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BillableMetricResponse"
+          description: 등록된 미터. 반영 결과를 확인하는 창구다
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: |
+            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=invalid_billable_metric: aggregation이 SUM이 아니거나, SUM인데 target_property가 없다. 사유는 detail에 있다.
+            code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: "code=metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다"
+      summary: 집계 미터 등록
+      tags:
+      - billable-metric-controller
   /v1/metrics/{metricCode}/price-policy:
     post:
       description: |
@@ -455,6 +502,19 @@ paths:
       - metric-usage-controller
 components:
   schemas:
+    BillableMetricResponse:
+      type: object
+      properties:
+        aggregation:
+          type: string
+        code:
+          type: string
+        event_type:
+          type: string
+        name:
+          type: string
+        target_property:
+          type: string
     CustomerEntry:
       type: object
       properties:
@@ -639,6 +699,8 @@ components:
           - metric_not_found
           - price_policy_already_exists
           - invalid_price_policy
+          - metric_already_exists
+          - invalid_billable_metric
           example: validation_error
         detail:
           type: string
@@ -669,6 +731,28 @@ components:
           example: Bad Request
       required:
       - status
+    SaveBillableMetricRequest:
+      type: object
+      properties:
+        aggregation:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+        event_type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        target_property:
+          type: string
+      required:
+      - aggregation
+      - code
+      - event_type
+      - name
     SaveCustomerRequest:
       type: object
       properties:
