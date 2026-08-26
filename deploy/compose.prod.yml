@@ -54,6 +54,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?DB_USERNAME이 없다}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 없다}
+      TOSSPAYMENTS_SECRET_KEY: ${TOSSPAYMENTS_SECRET_KEY:?TOSSPAYMENTS_SECRET_KEY가 없다}
     ports:
       # 127.0.0.1에만 묶는다. 배포 스크립트가 서버 안에서 헬스체크를 부르기 위한 통로이고,
       # 인터넷에서는 닿지 않는다(보안 그룹도 80/443만 열려 있어 이중으로 막힌다).
