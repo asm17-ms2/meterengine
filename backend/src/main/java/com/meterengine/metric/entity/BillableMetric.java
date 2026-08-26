@@ -4,7 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Transient;
 import java.util.UUID;
+import org.springframework.data.domain.Persistable;
 
 /**
  * 과금 지표 (MS2-129에서 집계가 쓰는 범위).
@@ -18,7 +22,7 @@ import java.util.UUID;
  */
 @Entity
 @IdClass(BillableMetricId.class)
-public class BillableMetric {
+public class BillableMetric implements Persistable<BillableMetricId> {
 
   /** 이번 슬라이스가 구현한 유일한 집계 방식이다 (MS2-129 팀 결정). */
   public static final String SUM = "SUM";
@@ -42,6 +46,8 @@ public class BillableMetric {
   @Column(name = "target_property")
   private String targetProperty;
 
+  @Transient private boolean isNew = true;
+
   /** Hibernate 전용. */
   protected BillableMetric() {}
 
@@ -58,6 +64,22 @@ public class BillableMetric {
     this.eventType = eventType;
     this.aggregation = aggregation;
     this.targetProperty = targetProperty;
+  }
+
+  @PostLoad
+  @PostPersist
+  private void markNotNew() {
+    this.isNew = false;
+  }
+
+  @Override
+  public BillableMetricId getId() {
+    return new BillableMetricId(organizationId, code);
+  }
+
+  @Override
+  public boolean isNew() {
+    return isNew;
   }
 
   public boolean isSum() {
