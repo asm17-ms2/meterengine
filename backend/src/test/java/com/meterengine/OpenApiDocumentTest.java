@@ -142,6 +142,7 @@ class OpenApiDocumentTest {
             "/v1/invoice",
             "/v1/customers",
             "/v1/customers/{id}",
+            "/v1/metrics",
             "/v1/metrics/{metricCode}/price-policy");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
@@ -164,6 +165,7 @@ class OpenApiDocumentTest {
         .bodyJson()
         .extractingPath("$.paths['/v1/customers/{id}'].delete.summary")
         .isNotNull();
+    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/metrics'].post.summary").isNotNull();
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/metrics/{metricCode}/price-policy'].post.summary")
@@ -247,6 +249,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers", "post", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
+    assertProblemSchema("/v1/metrics", "post", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "ProblemResponse");
   }
 
@@ -257,10 +260,11 @@ class OpenApiDocumentTest {
    * 아무도 알아채지 못한다. 삭제의 204는 본문이 없어 볼 것이 없다.
    */
   @Test
-  void 고객과_가격_API의_404와_409도_200_스키마를_물려받지_않는다() {
+  void 다른_오류_상태도_200_스키마를_물려받지_않는다() {
     assertProblemSchema("/v1/customers/{id}", "put", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
+    assertProblemSchema("/v1/metrics", "post", "409", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "404", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "409", "ProblemResponse");
   }
