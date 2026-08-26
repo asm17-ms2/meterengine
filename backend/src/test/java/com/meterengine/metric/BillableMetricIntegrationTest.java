@@ -85,7 +85,7 @@ class BillableMetricIntegrationTest {
                 orgId,
                 """
                 {"code": "call-count", "name": "호출 수", "event_type": "chat_completion",
-                 "aggregation": "COUNT"}
+                 "aggregation": "COUNT", "target_property": "calls"}
                 """))
         .hasStatus(400)
         .bodyJson()
