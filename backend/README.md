@@ -117,7 +117,7 @@ docker build -t meterengine-backend .
 
 ### code 목록
 
-값의 정본은 `ErrorCodes`다. **code를 늘리거나 없앨 때 고치는 곳은 그 파일 하나다.** 운영 코드, 문서 스키마의 `allowableValues`, 통합 테스트 단언이 전부 이 상수를 거친다.
+값의 정본은 `ErrorCodes`다. **code를 늘리거나 없앨 때 고치는 곳은 그 파일 하나다.** 운영 코드, 문서 스키마의 `allowableValues`, 통합 테스트 단언이 전부 이 상수를 거친다. 예외가 하나 있다. 테스트 **메서드 이름**에 code가 박힌 자리(`...code가_unknown_customer_reference다` 같은)는 자바 식별자라 상수를 거치지 못하므로, code를 개명하면 컴파일도 테스트도 통과한 채 이름만 옛 값으로 남는다. 개명할 때 메서드 이름을 grep으로 찾아 손으로 같이 고친다.
 
 | code | 상태 | 언제 |
 | --- | --- | --- |
