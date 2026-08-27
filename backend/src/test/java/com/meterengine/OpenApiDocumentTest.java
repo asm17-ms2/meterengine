@@ -143,7 +143,8 @@ class OpenApiDocumentTest {
             "/v1/customers",
             "/v1/customers/{id}",
             "/v1/metrics",
-            "/v1/metrics/{metricCode}/price-policy");
+            "/v1/metrics/{metricCode}/price-policy",
+            "/v1/price-policies");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
@@ -169,6 +170,10 @@ class OpenApiDocumentTest {
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/metrics/{metricCode}/price-policy'].post.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/price-policies'].get.summary")
         .isNotNull();
   }
 
@@ -199,6 +204,15 @@ class OpenApiDocumentTest {
     assertSchemaHasField("SavePricePolicyRequest", "dimension_properties");
     assertSchemaHasField("PricePolicyResponse", "metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");
+    assertSchemaHasField("PricePolicyListResponse", "price_policies");
+    assertSchemaHasField("MetricPricePolicyResponse", "metric_code");
+    assertSchemaHasField("MetricPricePolicyResponse", "dimension_properties");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            "$.components.schemas.MetricPricePolicyResponse.properties.dimension_properties.type")
+        .asArray()
+        .contains("null");
 
     // 자바 필드명이 문서 어디로도 새지 않는다.
     assertThat(body(json()))
@@ -215,6 +229,7 @@ class OpenApiDocumentTest {
             "dimensionProperties",
             "dimensionValues",
             "unitPrice",
+            "pricePolicies",
             "createdAt");
   }
 
@@ -251,6 +266,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
     assertProblemSchema("/v1/metrics", "post", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "ProblemResponse");
+    assertProblemSchema("/v1/price-policies", "get", "ProblemResponse");
   }
 
   /**

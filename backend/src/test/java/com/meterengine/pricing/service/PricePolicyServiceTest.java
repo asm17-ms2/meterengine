@@ -7,8 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import com.meterengine.pricing.dto.MetricPricePolicyResponse;
+import com.meterengine.pricing.dto.PricePolicyListResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.entity.PricePolicy;
@@ -27,11 +30,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-/**
- * 등록의 검증과 예외 분기를 본다 (MS2-157).
- *
- * <p>저장이 실제로 되는지, HTTP 상태로 어떻게 나가는지는 {@code PricePolicyIntegrationTest}의 몫이다.
- */
 @ExtendWith(MockitoExtension.class)
 class PricePolicyServiceTest {
 
@@ -103,6 +101,28 @@ class PricePolicyServiceTest {
     assertThat(saved.getValue().getDimensionProperties()).containsExactly("model");
     assertThat(response.metricCode()).isEqualTo(METRIC);
     assertThat(response.dimensionProperties()).containsExactly("model");
+  }
+
+  @Test
+  void 목록의_순서는_미터_조회가_정한다() {
+    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(metric("input-tokens"), metric("token-usage")));
+    when(policies.findByOrganizationId(ORG_ID))
+        .thenReturn(List.of(policy("token-usage", List.of()), policy("input-tokens", List.of())));
+
+    PricePolicyListResponse response = service.list(ORG_ID);
+
+    assertThat(response.pricePolicies())
+        .extracting(MetricPricePolicyResponse::metricCode)
+        .containsExactly("input-tokens", "token-usage");
+  }
+
+  private static BillableMetric metric(String code) {
+    return new BillableMetric(ORG_ID, code, "토큰 사용량", "chat_completion", "SUM", "token");
+  }
+
+  private static PricePolicy policy(String code, List<String> dimensionProperties) {
+    return new PricePolicy(ORG_ID, code, dimensionProperties);
   }
 
   private void metricExists() {
