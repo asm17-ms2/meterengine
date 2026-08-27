@@ -64,7 +64,7 @@ docker build -t meterengine-backend .
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
 
-현재 오퍼레이션은 열이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+현재 오퍼레이션은 아래와 같다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 
 | 오퍼레이션 | 내용 |
 | --- | --- |
@@ -77,7 +77,9 @@ docker build -t meterengine-backend .
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
 | `POST /v1/metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
+| `GET /v1/metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
 | `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
+| `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 
@@ -172,9 +174,9 @@ docker build -t meterengine-backend .
 단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 다섯을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
-- `metric`: 과금 지표와 고객별 월 사용량 집계 (`/v1/usage`)
+- `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/metrics`, `/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`)
-- `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 정책 등록 API를 얹었다. 조회는 MS2-176, 단가 등록/수정/삭제는 MS2-177 예정이다
+- `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`, `/v1/price-policies`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 정책 등록 API를, MS2-176이 목록 조회를 얹었다. 단가 등록/수정/삭제는 MS2-177 예정이다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
