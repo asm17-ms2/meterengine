@@ -12,6 +12,6 @@ export type MetricFormState =
   | { status: "idle" }
   | { status: "invalid"; fieldErrors: Partial<Record<MetricField, string>> }
   | { status: "failed"; message: string }
-  | { status: "done"; metric: MetricRowView };
+  | { status: "done" };
 
 export const METRIC_FORM_IDLE: MetricFormState = { status: "idle" };
