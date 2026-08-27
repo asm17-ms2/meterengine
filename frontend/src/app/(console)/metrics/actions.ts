@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import type {
+  MetricDeleteState,
   MetricField,
   MetricFormState,
 } from "@/app/(console)/metrics/state";
 import type { ApiError } from "@/lib/api/client";
-import { registerMetric } from "@/lib/api/metrics";
+import { deleteMetric, registerMetric, updateMetric } from "@/lib/api/metrics";
 
 const AGGREGATION = "SUM";
 
@@ -101,6 +102,96 @@ export async function registerMetricAction(
     target_property: values.target_property,
   });
   if (!result.ok) return failureState(result.error);
+
+  revalidatePath("/metrics");
+  return { status: "done" };
+}
+
+const UPDATE_FIELDS: readonly MetricField[] = [
+  "name",
+  "event_type",
+  "target_property",
+];
+
+function updateFailureState(error: ApiError): MetricFormState {
+  if (error.code === "metric_not_found") {
+    return {
+      status: "failed",
+      message: "이미 삭제된 미터입니다. 목록을 새로 고쳐주세요.",
+    };
+  }
+  if (error.code === "metric_basis_has_events") {
+    return {
+      status: "failed",
+      message:
+        "이벤트가 잡히는 미터라 이벤트 타입과 집계 대상 속성을 바꿀 수 없습니다. 이름만 고치거나, 지우고 다시 등록하세요.",
+    };
+  }
+  return failureState(error);
+}
+
+export async function updateMetricAction(
+  _prev: MetricFormState,
+  formData: FormData,
+): Promise<MetricFormState> {
+  const code = formData.get("code");
+  if (typeof code !== "string" || code === "") {
+    return { status: "failed", message: "미터를 특정하지 못했습니다." };
+  }
+
+  const fieldErrors: Partial<Record<MetricField, string>> = {};
+  const values = {} as Record<MetricField, string>;
+  for (const field of UPDATE_FIELDS) {
+    values[field] = readField(formData, field);
+    if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { status: "invalid", fieldErrors };
+  }
+
+  const result = await updateMetric(code, {
+    name: values.name,
+    event_type: values.event_type,
+    aggregation: AGGREGATION,
+    target_property: values.target_property,
+  });
+  if (!result.ok) return updateFailureState(result.error);
+
+  revalidatePath("/metrics");
+  return { status: "done" };
+}
+
+export async function deleteMetricAction(
+  _prev: MetricDeleteState,
+  formData: FormData,
+): Promise<MetricDeleteState> {
+  const code = formData.get("code");
+  const name = formData.get("name");
+  const label = typeof name === "string" ? name : "";
+  if (typeof code !== "string" || code === "") {
+    return { status: "failed", message: "미터를 특정하지 못했습니다." };
+  }
+
+  const result = await deleteMetric(code);
+  if (!result.ok) {
+    if (result.error.code === "metric_has_events") {
+      return { status: "rejected", reason: "events", name: label };
+    }
+    if (result.error.code === "metric_has_price_policy") {
+      return { status: "rejected", reason: "policy", name: label };
+    }
+    if (result.error.code === "metric_not_found") {
+      revalidatePath("/metrics");
+      return { status: "gone", name: label };
+    }
+    return {
+      status: "failed",
+      message:
+        result.error.code === "network_error"
+          ? result.error.title
+          : "삭제하지 못했습니다. 잠시 후 다시 시도해주세요.",
+    };
+  }
 
   revalidatePath("/metrics");
   return { status: "done" };
