@@ -14,9 +14,11 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
+import com.meterengine.metric.exception.MetricNotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,6 +126,26 @@ class BillableMetricServiceTest {
     assertThat(response.metrics())
         .extracting(BillableMetricResponse::code)
         .containsExactly("api-calls", CODE);
+  }
+
+  @Test
+  void 단건_조회는_찾은_미터를_응답으로_바꾼다() {
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE)))
+        .thenReturn(
+            Optional.of(
+                new BillableMetric(ORG_ID, CODE, "토큰 사용량", "chat_completion", "SUM", "token")));
+
+    BillableMetricResponse response = service.get(ORG_ID, CODE);
+
+    assertThat(response.code()).isEqualTo(CODE);
+    assertThat(response.targetProperty()).isEqualTo("token");
+  }
+
+  @Test
+  void 없는_미터의_단건_조회는_NotFound다() {
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.get(ORG_ID, CODE)).isInstanceOf(MetricNotFoundException.class);
   }
 
   private BillableMetricResponse register(String aggregation, String targetProperty) {

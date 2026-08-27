@@ -146,6 +146,7 @@ class BillableMetricIntegrationTest {
                 .exchange())
         .hasStatus(400);
     assertThat(mvc.get().uri("/v1/metrics").exchange()).hasStatus(400);
+    assertThat(mvc.get().uri("/v1/metrics/{code}", "token-usage").exchange()).hasStatus(400);
   }
 
   @Test
@@ -191,6 +192,40 @@ class BillableMetricIntegrationTest {
         .containsExactly("token-usage");
   }
 
+  @Test
+  void 단건_조회는_등록한_미터를_그대로_돌려준다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    MvcTestResult result = getOne(orgId, "token-usage");
+
+    assertThat(result).hasStatus(200).bodyJson().extractingPath("$.code").isEqualTo("token-usage");
+    assertThat(result).bodyJson().extractingPath("$.event_type").isEqualTo("chat_completion");
+    assertThat(result).bodyJson().extractingPath("$.target_property").isEqualTo("token");
+  }
+
+  @Test
+  void 없는_미터의_단건_조회는_404_metric_not_found다() {
+    UUID orgId = insertOrganization();
+
+    assertThat(getOne(orgId, "nope"))
+        .hasStatus(404)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.METRIC_NOT_FOUND);
+  }
+
+  @Test
+  void 다른_도입사의_미터는_단건_조회도_404다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(getOne(otherOrgId, "token-usage")).hasStatus(404);
+  }
+
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/metrics")
@@ -203,6 +238,13 @@ class BillableMetricIntegrationTest {
   private MvcTestResult getList(UUID organizationId) {
     return mvc.get()
         .uri("/v1/metrics")
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
+  }
+
+  private MvcTestResult getOne(UUID organizationId, String code) {
+    return mvc.get()
+        .uri("/v1/metrics/{code}", code)
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }

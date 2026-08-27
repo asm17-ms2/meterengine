@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -97,5 +98,32 @@ public class BillableMetricController {
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {
     return billableMetricService.list(organizationId);
+  }
+
+  @GetMapping("/{code}")
+  @Operation(summary = "미터 단건 조회", description = "code가 가리키는 이 도입사의 미터 하나를 돌려준다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "조회된 미터"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description = "code=metric_not_found: 그런 미터가 없거나 다른 도입사 소속이다")
+  })
+  public BillableMetricResponse getMetric(
+      @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
+          @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "조회할 미터의 code.") @PathVariable String code) {
+    return billableMetricService.get(organizationId, code);
   }
 }

@@ -7,6 +7,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
+import com.meterengine.metric.exception.MetricNotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
@@ -59,6 +60,14 @@ public class BillableMetricService {
   public BillableMetricListResponse list(UUID organizationId) {
     return BillableMetricListResponse.from(
         metrics.findByOrganizationIdOrderByCodeAsc(organizationId));
+  }
+
+  @Transactional(readOnly = true)
+  public BillableMetricResponse get(UUID organizationId, String code) {
+    return metrics
+        .findById(new BillableMetricId(organizationId, code))
+        .map(BillableMetricResponse::from)
+        .orElseThrow(() -> new MetricNotFoundException(organizationId, code));
   }
 
   private void validate(SaveBillableMetricRequest request) {

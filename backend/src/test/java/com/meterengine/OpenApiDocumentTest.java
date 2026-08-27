@@ -143,6 +143,7 @@ class OpenApiDocumentTest {
             "/v1/customers",
             "/v1/customers/{id}",
             "/v1/metrics",
+            "/v1/metrics/{code}",
             "/v1/metrics/{metricCode}/price-policy",
             "/v1/price-policies");
 
@@ -168,6 +169,10 @@ class OpenApiDocumentTest {
         .isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/metrics'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/metrics'].get.summary").isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/metrics/{code}'].get.summary")
+        .isNotNull();
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/metrics/{metricCode}/price-policy'].post.summary")
@@ -273,6 +278,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
     assertProblemSchema("/v1/metrics", "post", "ProblemResponse");
     assertProblemSchema("/v1/metrics", "get", "ProblemResponse");
+    assertProblemSchema("/v1/metrics/{code}", "get", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "ProblemResponse");
     assertProblemSchema("/v1/price-policies", "get", "ProblemResponse");
   }
@@ -289,6 +295,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
     assertProblemSchema("/v1/metrics", "post", "409", "ProblemResponse");
+    assertProblemSchema("/v1/metrics/{code}", "get", "404", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "404", "ProblemResponse");
     assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "409", "ProblemResponse");
   }
