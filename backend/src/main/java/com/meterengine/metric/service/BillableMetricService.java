@@ -10,6 +10,8 @@ import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.exception.MetricBasisHasEventsException;
+import com.meterengine.metric.exception.MetricHasEventsException;
+import com.meterengine.metric.exception.MetricHasPricePolicyException;
 import com.meterengine.metric.exception.MetricNotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.util.UUID;
@@ -82,6 +84,25 @@ public class BillableMetricService {
     metric.update(
         request.name(), request.eventType(), request.aggregation(), request.targetProperty());
     return BillableMetricResponse.from(metric);
+  }
+
+  @Transactional
+  public void delete(UUID organizationId, String code) {
+    BillableMetric metric =
+        metrics
+            .findById(new BillableMetricId(organizationId, code))
+            .orElseThrow(() -> new MetricNotFoundException(organizationId, code));
+
+    if (events.existsForBasis(organizationId, metric.getEventType(), metric.getTargetProperty())) {
+      throw new MetricHasEventsException(code);
+    }
+
+    try {
+      metrics.delete(metric);
+      metrics.flush();
+    } catch (DataIntegrityViolationException exception) {
+      throw new MetricHasPricePolicyException(code);
+    }
   }
 
   private void rejectIfBasisHasEvents(

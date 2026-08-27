@@ -3,6 +3,7 @@ package com.meterengine.metric.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,8 @@ import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.exception.MetricBasisHasEventsException;
+import com.meterengine.metric.exception.MetricHasEventsException;
+import com.meterengine.metric.exception.MetricHasPricePolicyException;
 import com.meterengine.metric.exception.MetricNotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.sql.SQLException;
@@ -198,6 +201,45 @@ class BillableMetricServiceTest {
                     new UpdateBillableMetricRequest("이름", "chat_completion", "COUNT", "token")))
         .isInstanceOf(InvalidBillableMetricException.class);
     verify(metrics, never()).findById(any());
+  }
+
+  @Test
+  void 없는_미터_삭제는_NotFound다() {
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.delete(ORG_ID, CODE))
+        .isInstanceOf(MetricNotFoundException.class);
+    verify(metrics, never()).delete(any(BillableMetric.class));
+  }
+
+  @Test
+  void 이벤트가_잡히는_미터의_삭제는_거절된다() {
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE))).thenReturn(Optional.of(stored()));
+    when(events.existsForBasis(ORG_ID, "chat_completion", "token")).thenReturn(true);
+
+    assertThatThrownBy(() -> service.delete(ORG_ID, CODE))
+        .isInstanceOf(MetricHasEventsException.class);
+    verify(metrics, never()).delete(any(BillableMetric.class));
+  }
+
+  @Test
+  void 참조와_이벤트가_없는_미터는_지워지고_flush된다() {
+    BillableMetric stored = stored();
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE))).thenReturn(Optional.of(stored));
+
+    service.delete(ORG_ID, CODE);
+
+    verify(metrics).delete(stored);
+    verify(metrics).flush();
+  }
+
+  @Test
+  void 가격_정책_FK_위반은_HasPricePolicy로_바뀐다() {
+    when(metrics.findById(new BillableMetricId(ORG_ID, CODE))).thenReturn(Optional.of(stored()));
+    doThrow(violation("price_policy_metric_same_org")).when(metrics).flush();
+
+    assertThatThrownBy(() -> service.delete(ORG_ID, CODE))
+        .isInstanceOf(MetricHasPricePolicyException.class);
   }
 
   private BillableMetric stored() {
