@@ -428,6 +428,46 @@ paths:
       summary: 집계 미터 등록
       tags:
       - billable-metric-controller
+  /v1/metrics/{code}:
+    get:
+      description: code가 가리키는 이 도입사의 미터 하나를 돌려준다.
+      operationId: getMetric
+      parameters:
+      - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 조회할 미터의 code.
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BillableMetricResponse"
+          description: 조회된 미터
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemResponse"
+          description: "code=metric_not_found: 그런 미터가 없거나 다른 도입사 소속이다"
+      summary: 미터 단건 조회
+      tags:
+      - billable-metric-controller
   /v1/metrics/{metricCode}/price-policy:
     post:
       description: |

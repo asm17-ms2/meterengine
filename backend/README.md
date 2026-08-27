@@ -78,6 +78,7 @@ docker build -t meterengine-backend .
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
 | `POST /v1/metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
 | `GET /v1/metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
+| `GET /v1/metrics/{code}` | 미터 단건. 없거나 다른 도입사 소속이면 404 |
 | `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
 | `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
 
@@ -159,7 +160,7 @@ docker build -t meterengine-backend .
 | `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
 | `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류 셋. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `DataIntegrityViolationException` -> `unknown_organization` |
 | `PricePolicyExceptionHandler` (`pricing.controller`) | `PricePolicyController`만 | 도메인 오류 셋. `MetricNotFoundException` -> `metric_not_found`, `PricePolicyAlreadyExistsException` -> `price_policy_already_exists`, `InvalidPricePolicyException` -> `invalid_price_policy` |
-| `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류 셋. `MetricAlreadyExistsException` -> `metric_already_exists`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
+| `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류. `MetricAlreadyExistsException` -> `metric_already_exists`, `MetricNotFoundException` -> `metric_not_found`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
 
 도메인 advice 셋을 각자 한 컨트롤러에만 건 이유는 event와 customer 쪽이 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만(미등록 도입사는 미터 존재 확인이 404로 먼저 걸러 organization FK 위반에 도달하지 못하고, 정책 PK 경합은 서비스가 409 예외로 바꾼다) 같은 원칙으로 범위를 좁혀 둔다.
 
