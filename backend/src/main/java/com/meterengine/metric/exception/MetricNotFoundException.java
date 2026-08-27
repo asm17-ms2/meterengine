@@ -1,4 +1,4 @@
-package com.meterengine.pricing.exception;
+package com.meterengine.metric.exception;
 
 import java.util.UUID;
 
