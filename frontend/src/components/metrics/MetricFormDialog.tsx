@@ -2,23 +2,34 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import { registerMetricAction } from "@/app/(console)/metrics/actions";
+import {
+  registerMetricAction,
+  updateMetricAction,
+} from "@/app/(console)/metrics/actions";
 import {
   METRIC_FORM_IDLE,
   type MetricField,
+  type MetricRowView,
 } from "@/app/(console)/metrics/state";
 import { Dialog } from "@/components/screen/Dialog";
 
-export function MetricFormDialog({ onClose }: { onClose: () => void }) {
+export function MetricFormDialog({
+  metric,
+  onClose,
+}: {
+  metric: MetricRowView | null;
+  onClose: () => void;
+}) {
+  const isEdit = metric !== null;
   const [state, formAction, pending] = useActionState(
-    registerMetricAction,
+    isEdit ? updateMetricAction : registerMetricAction,
     METRIC_FORM_IDLE,
   );
   const [values, setValues] = useState<Record<MetricField, string>>({
-    code: "",
-    name: "",
-    event_type: "",
-    target_property: "",
+    code: isEdit ? metric.code : "",
+    name: isEdit ? metric.name : "",
+    event_type: isEdit ? metric.eventType : "",
+    target_property: isEdit ? metric.targetProperty : "",
   });
 
   useEffect(() => {
@@ -45,24 +56,29 @@ export function MetricFormDialog({ onClose }: { onClose: () => void }) {
       action={formAction}
     >
       <div className="dialog-title" id="metric-form-title">
-        미터 등록
+        {isEdit ? "미터 수정" : "미터 등록"}
       </div>
 
-      <TextField
-        id="metric-code"
-        name="code"
-        label="코드"
-        placeholder="input-tokens"
-        hint="조직 내에서 유일해야 합니다."
-        mono
-        autoFocus
-        {...fieldProps("code")}
-      />
+      {isEdit ? (
+        <input type="hidden" name="code" value={metric.code} />
+      ) : (
+        <TextField
+          id="metric-code"
+          name="code"
+          label="코드"
+          placeholder="input-tokens"
+          hint="조직 내에서 유일해야 합니다. 등록 뒤 바꿀 수 없습니다."
+          mono
+          autoFocus
+          {...fieldProps("code")}
+        />
+      )}
       <TextField
         id="metric-name"
         name="name"
         label="이름"
         placeholder="입력 토큰"
+        autoFocus={isEdit}
         {...fieldProps("name")}
       />
       <TextField
@@ -111,6 +127,16 @@ export function MetricFormDialog({ onClose }: { onClose: () => void }) {
         mono
         {...fieldProps("target_property")}
       />
+
+      {isEdit ? (
+        <dl
+          className="detail-grid"
+          style={{ gridTemplateColumns: "88px minmax(0, 1fr)" }}
+        >
+          <dt>코드</dt>
+          <dd className="detail-grid__mono">{metric.code}</dd>
+        </dl>
+      ) : null}
 
       <p
         className="screen-note"
