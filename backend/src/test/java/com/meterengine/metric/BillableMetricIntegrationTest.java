@@ -145,6 +145,50 @@ class BillableMetricIntegrationTest {
                 .content(sumBody("token-usage"))
                 .exchange())
         .hasStatus(400);
+    assertThat(mvc.get().uri("/v1/metrics").exchange()).hasStatus(400);
+  }
+
+  @Test
+  void 등록한_미터가_code_오름차순_목록으로_나온다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(post(orgId, sumBody("api-calls"))).hasStatus(201);
+
+    MvcTestResult result = getList(orgId);
+
+    assertThat(result).hasStatus(200);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.metrics[*].code")
+        .asArray()
+        .containsExactly("api-calls", "token-usage");
+  }
+
+  @Test
+  void 미터가_없으면_목록이_빈_배열이다() {
+    UUID orgId = insertOrganization();
+
+    assertThat(getList(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.metrics")
+        .asArray()
+        .isEmpty();
+  }
+
+  @Test
+  void 목록은_자기_도입사의_미터만_담는다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(post(otherOrgId, sumBody("api-calls"))).hasStatus(201);
+
+    assertThat(getList(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.metrics[*].code")
+        .asArray()
+        .containsExactly("token-usage");
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
@@ -153,6 +197,13 @@ class BillableMetricIntegrationTest {
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
+        .exchange();
+  }
+
+  private MvcTestResult getList(UUID organizationId) {
+    return mvc.get()
+        .uri("/v1/metrics")
+        .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }
 

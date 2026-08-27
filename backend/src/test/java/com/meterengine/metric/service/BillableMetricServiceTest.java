@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.SaveBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
@@ -15,6 +16,7 @@ import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,6 +109,21 @@ class BillableMetricServiceTest {
     assertThat(saved.getValue().getTargetProperty()).isEqualTo("token");
     assertThat(response.code()).isEqualTo(CODE);
     assertThat(response.targetProperty()).isEqualTo("token");
+  }
+
+  @Test
+  void 목록_조회는_저장소의_code_순_목록을_응답으로_바꾼다() {
+    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(
+            List.of(
+                new BillableMetric(ORG_ID, "api-calls", "호출 수", "chat_completion", "SUM", "calls"),
+                new BillableMetric(ORG_ID, CODE, "토큰 사용량", "chat_completion", "SUM", "token")));
+
+    BillableMetricListResponse response = service.list(ORG_ID);
+
+    assertThat(response.metrics())
+        .extracting(BillableMetricResponse::code)
+        .containsExactly("api-calls", CODE);
   }
 
   private BillableMetricResponse register(String aggregation, String targetProperty) {
