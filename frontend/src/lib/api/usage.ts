@@ -9,10 +9,6 @@ import type { DevState } from "@/lib/dev-state";
  *
  * 응답은 미터 중심(미터 안에 고객)인데 화면은 고객 중심(고객 안에 미터)이다.
  * 뒤집는 것은 toCustomerGroups가 한다.
- *
- * 금액은 없다. unit_price를 어떤 엔드포인트도 내려주지 않고, 화면에서 금액을
- * 계산하지 않는다 (백엔드 MonthlyUsageResponse javadoc 참조). 금액은 MS2-127에서
- * 청구 예정액 API로 받는다.
  */
 export type MonthlyUsage = {
   month: string;

@@ -20,7 +20,10 @@ import com.meterengine.pricing.exception.InvalidPricePolicyException;
 import com.meterengine.pricing.exception.MetricNotFoundException;
 import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
+import com.meterengine.pricing.repository.PriceRateRepository;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,12 +41,13 @@ class PricePolicyServiceTest {
 
   @Mock private PricePolicyRepository policies;
   @Mock private BillableMetricRepository metrics;
+  @Mock private PriceRateRepository rates;
 
   private PricePolicyService service;
 
   @BeforeEach
   void setUp() {
-    service = new PricePolicyService(policies, metrics);
+    service = new PricePolicyService(policies, metrics, rates);
   }
 
   @Test
@@ -109,12 +113,53 @@ class PricePolicyServiceTest {
         .thenReturn(List.of(metric("input-tokens"), metric("token-usage")));
     when(policies.findByOrganizationId(ORG_ID))
         .thenReturn(List.of(policy("token-usage", List.of()), policy("input-tokens", List.of())));
+    when(rates.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
 
     PricePolicyListResponse response = service.list(ORG_ID);
 
     assertThat(response.pricePolicies())
         .extracting(MetricPricePolicyResponse::metricCode)
         .containsExactly("input-tokens", "token-usage");
+  }
+
+  @Test
+  void 정책과_단가가_모두_있으면_둘_다_실린다() {
+    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(metric("input-tokens")));
+    when(policies.findByOrganizationId(ORG_ID))
+        .thenReturn(List.of(policy("input-tokens", List.of("model"))));
+    when(rates.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
+
+    MetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
+
+    assertThat(only.dimensionProperties()).containsExactly("model");
+    assertThat(only.unitPrice()).isEqualByComparingTo("0.007");
+  }
+
+  @Test
+  void 정책이_없는_미터는_단가가_있어도_싣지_않는다() {
+    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(metric("input-tokens")));
+    when(policies.findByOrganizationId(ORG_ID)).thenReturn(List.of());
+    when(rates.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
+
+    MetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
+
+    assertThat(only.dimensionProperties()).isNull();
+    assertThat(only.unitPrice()).isNull();
+  }
+
+  @Test
+  void 다른_미터의_단가가_섞이지_않는다() {
+    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(metric("input-tokens")));
+    when(policies.findByOrganizationId(ORG_ID))
+        .thenReturn(List.of(policy("input-tokens", List.of())));
+    when(rates.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of("token-usage", new BigDecimal("99")));
+
+    assertThat(service.list(ORG_ID).pricePolicies().getFirst().unitPrice()).isNull();
   }
 
   private static BillableMetric metric(String code) {
