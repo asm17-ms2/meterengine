@@ -57,10 +57,8 @@ public class BillableMetricService {
 
   @Transactional(readOnly = true)
   public BillableMetricListResponse list(UUID organizationId) {
-    return new BillableMetricListResponse(
-        metrics.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
-            .map(BillableMetricResponse::from)
-            .toList());
+    return BillableMetricListResponse.from(
+        metrics.findByOrganizationIdOrderByCodeAsc(organizationId));
   }
 
   private void validate(SaveBillableMetricRequest request) {
