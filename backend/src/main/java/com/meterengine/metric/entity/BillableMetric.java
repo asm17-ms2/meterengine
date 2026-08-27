@@ -7,6 +7,7 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
@@ -84,6 +85,19 @@ public class BillableMetric implements Persistable<BillableMetricId> {
 
   public boolean isSum() {
     return SUM.equals(aggregation);
+  }
+
+  public boolean hasSameBasis(String eventType, String aggregation, String targetProperty) {
+    return Objects.equals(this.eventType, eventType)
+        && Objects.equals(this.aggregation, aggregation)
+        && Objects.equals(this.targetProperty, targetProperty);
+  }
+
+  public void update(String name, String eventType, String aggregation, String targetProperty) {
+    this.name = name;
+    this.eventType = eventType;
+    this.aggregation = aggregation;
+    this.targetProperty = targetProperty;
   }
 
   public UUID getOrganizationId() {
