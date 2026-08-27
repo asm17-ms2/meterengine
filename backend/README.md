@@ -161,7 +161,7 @@ docker build -t meterengine-backend .
 | `PricePolicyExceptionHandler` (`pricing.controller`) | `PricePolicyController`만 | 도메인 오류 셋. `MetricNotFoundException` -> `metric_not_found`, `PricePolicyAlreadyExistsException` -> `price_policy_already_exists`, `InvalidPricePolicyException` -> `invalid_price_policy` |
 | `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류 셋. `MetricAlreadyExistsException` -> `metric_already_exists`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
 
-도메인 advice 셋을 각자 한 컨트롤러에만 건 이유는 event와 customer 쪽이 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만(잡을 도달 가능한 경우가 없다, `PricePolicyExceptionHandler` 주석 참조) 같은 원칙으로 범위를 좁혀 둔다.
+도메인 advice 셋을 각자 한 컨트롤러에만 건 이유는 event와 customer 쪽이 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만(미등록 도입사는 미터 존재 확인이 404로 먼저 걸러 organization FK 위반에 도달하지 못하고, 정책 PK 경합은 서비스가 409 예외로 바꾼다) 같은 원칙으로 범위를 좁혀 둔다.
 
 고객 삭제에서 나는 FK 위반은 advice까지 가지 않는다. `CustomerService.delete`가 `CustomerHasEventsException`으로 바꿔 던져 409가 된다. 그 자리가 뜻을 아는 유일한 곳이라서다.
 
