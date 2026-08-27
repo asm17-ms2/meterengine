@@ -146,6 +146,81 @@ class BillableMetricIntegrationTest {
                 .exchange())
         .hasStatus(400);
     assertThat(mvc.get().uri("/v1/metrics").exchange()).hasStatus(400);
+    assertThat(
+            mvc.put()
+                .uri("/v1/metrics/token-usage")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateBody("토큰 사용량", "chat_completion", "token"))
+                .exchange())
+        .hasStatus(400);
+  }
+
+  @Test
+  void 미터를_고치면_200이고_목록에_반영된다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    MvcTestResult result =
+        put(orgId, "token-usage", updateBody("입력 토큰", "llm_request", "input_tokens"));
+
+    assertThat(result).hasStatus(200).bodyJson().extractingPath("$.name").isEqualTo("입력 토큰");
+    assertThat(result).bodyJson().extractingPath("$.event_type").isEqualTo("llm_request");
+    assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("token-usage");
+    assertThat(getList(orgId))
+        .bodyJson()
+        .extractingPath("$.metrics[*].name")
+        .asArray()
+        .containsExactly("입력 토큰");
+  }
+
+  @Test
+  void 없는_미터를_수정하면_404_metric_not_found다() {
+    UUID orgId = insertOrganization();
+
+    assertThat(put(orgId, "nope", updateBody("이름", "chat_completion", "token")))
+        .hasStatus(404)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.METRIC_NOT_FOUND);
+  }
+
+  @Test
+  void 다른_도입사의_미터는_수정도_404다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(put(otherOrgId, "token-usage", updateBody("남의 이름", "chat_completion", "token")))
+        .hasStatus(404);
+    assertThat(storedName(orgId, "token-usage")).isEqualTo("토큰 사용량");
+  }
+
+  @Test
+  void 이벤트가_잡히는_미터의_집계_기준_변경은_409다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    insertEvent(orgId, "chat_completion", "{\"token\": 10}");
+
+    assertThat(put(orgId, "token-usage", updateBody("토큰 사용량", "llm_request", "input_tokens")))
+        .hasStatus(409)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.METRIC_BASIS_HAS_EVENTS);
+    assertThat(storedEventType(orgId, "token-usage")).isEqualTo("chat_completion");
+  }
+
+  @Test
+  void 대상_속성이_없는_이벤트는_기준_변경을_막지_않는다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    insertEvent(orgId, "chat_completion", "{\"other_property\": 10}");
+
+    assertThat(put(orgId, "token-usage", updateBody("토큰 사용량", "llm_request", "input_tokens")))
+        .hasStatus(200);
   }
 
   @Test
@@ -205,6 +280,49 @@ class BillableMetricIntegrationTest {
         .uri("/v1/metrics")
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
+  }
+
+  private MvcTestResult put(UUID organizationId, String code, String jsonBody) {
+    return mvc.put()
+        .uri("/v1/metrics/{code}", code)
+        .header("X-Organization-Id", organizationId.toString())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(jsonBody)
+        .exchange();
+  }
+
+  private String updateBody(String name, String eventType, String targetProperty) {
+    return """
+        {"name": "%s", "event_type": "%s", "aggregation": "SUM", "target_property": "%s"}
+        """
+        .formatted(name, eventType, targetProperty);
+  }
+
+  private void insertEvent(UUID orgId, String eventType, String propertiesJson) {
+    UUID customerId =
+        jdbc.queryForObject(
+            "INSERT INTO customer (organization_id, name) VALUES (?, '테스트 고객') RETURNING id",
+            UUID.class,
+            orgId);
+    jdbc.update(
+        """
+        INSERT INTO usage_event
+          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        VALUES (?, ?, ?, ?, ?::jsonb, now())
+        """,
+        orgId,
+        UUID.randomUUID().toString(),
+        customerId,
+        eventType,
+        propertiesJson);
+  }
+
+  private String storedEventType(UUID orgId, String code) {
+    return jdbc.queryForObject(
+        "SELECT event_type FROM billable_metric WHERE organization_id = ? AND code = ?",
+        String.class,
+        orgId,
+        code);
   }
 
   private String sumBody(String code) {

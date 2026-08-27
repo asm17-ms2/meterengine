@@ -4,6 +4,8 @@ import com.meterengine.ErrorCodes;
 import com.meterengine.ProblemMembers;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
+import com.meterengine.metric.exception.MetricBasisHasEventsException;
+import com.meterengine.metric.exception.MetricNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,6 +33,24 @@ class BillableMetricExceptionHandler {
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     problem.setTitle("Invalid billable metric");
     problem.setProperty(ProblemMembers.CODE, ErrorCodes.INVALID_BILLABLE_METRIC);
+    return problem;
+  }
+
+  @ExceptionHandler(MetricNotFoundException.class)
+  ProblemDetail handleMetricNotFound(MetricNotFoundException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+    problem.setTitle("Metric not found");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.METRIC_NOT_FOUND);
+    return problem;
+  }
+
+  @ExceptionHandler(MetricBasisHasEventsException.class)
+  ProblemDetail handleBasisHasEvents(MetricBasisHasEventsException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Metric basis has usage events");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.METRIC_BASIS_HAS_EVENTS);
     return problem;
   }
 

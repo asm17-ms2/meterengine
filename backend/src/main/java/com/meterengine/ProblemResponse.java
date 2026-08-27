@@ -45,6 +45,7 @@ public record ProblemResponse(
               ErrorCodes.PRICE_POLICY_ALREADY_EXISTS,
               ErrorCodes.INVALID_PRICE_POLICY,
               ErrorCodes.METRIC_ALREADY_EXISTS,
+              ErrorCodes.METRIC_BASIS_HAS_EVENTS,
               ErrorCodes.INVALID_BILLABLE_METRIC
             })
         String code,

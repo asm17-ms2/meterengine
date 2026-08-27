@@ -32,6 +32,8 @@ public final class ErrorCodes {
 
   public static final String METRIC_ALREADY_EXISTS = "metric_already_exists";
 
+  public static final String METRIC_BASIS_HAS_EVENTS = "metric_basis_has_events";
+
   public static final String INVALID_BILLABLE_METRIC = "invalid_billable_metric";
 
   private ErrorCodes() {}
