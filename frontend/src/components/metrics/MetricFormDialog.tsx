@@ -6,17 +6,10 @@ import { registerMetricAction } from "@/app/(console)/metrics/actions";
 import {
   METRIC_FORM_IDLE,
   type MetricField,
-  type MetricRowView,
 } from "@/app/(console)/metrics/state";
 import { Dialog } from "@/components/screen/Dialog";
 
-export function MetricFormDialog({
-  onClose,
-  onRegistered,
-}: {
-  onClose: () => void;
-  onRegistered: (metric: MetricRowView) => void;
-}) {
+export function MetricFormDialog({ onClose }: { onClose: () => void }) {
   const [state, formAction, pending] = useActionState(
     registerMetricAction,
     METRIC_FORM_IDLE,
@@ -30,10 +23,9 @@ export function MetricFormDialog({
 
   useEffect(() => {
     if (state.status === "done") {
-      onRegistered(state.metric);
       onClose();
     }
-  }, [state, onRegistered, onClose]);
+  }, [state, onClose]);
 
   const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
   const message = state.status === "failed" ? state.message : null;

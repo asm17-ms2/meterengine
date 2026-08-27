@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import type {
   MetricField,
   MetricFormState,
@@ -100,14 +102,6 @@ export async function registerMetricAction(
   });
   if (!result.ok) return failureState(result.error);
 
-  return {
-    status: "done",
-    metric: {
-      code: result.data.code,
-      name: result.data.name,
-      eventType: result.data.event_type,
-      aggregation: result.data.aggregation,
-      targetProperty: result.data.target_property,
-    },
-  };
+  revalidatePath("/metrics");
+  return { status: "done" };
 }
