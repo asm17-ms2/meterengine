@@ -161,6 +161,23 @@ public class EventRepository {
             customerId));
   }
 
+  public boolean existsForBasis(UUID organizationId, String eventType, String targetProperty) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM usage_event
+              WHERE organization_id = ?
+                AND event_type = ?
+                AND jsonb_typeof(properties -> ?::text) = 'number'
+            )
+            """,
+            Boolean.class,
+            organizationId,
+            eventType,
+            targetProperty));
+  }
+
   /**
    * 두 쿼리가 같은 조건을 보도록 WHERE 절을 한 곳에서 만든다.
    *
