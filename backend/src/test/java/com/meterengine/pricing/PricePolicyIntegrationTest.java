@@ -18,12 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * 가격 정책 등록 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-157).
+ * 가격 정책 등록과 목록 조회를 HTTP 계층부터 DB까지 관통해 검증한다.
  *
  * <p>MockMvc를 직접 구성하는 이유는 {@code EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
- *
- * <p>조회 API가 없으므로(MS2-176 예정) 저장 결과는 DB를 직접 읽어 확인한다. 단가 없는 미터가 청구 예정액에서 어떻게 나가는지는 {@code
- * DraftInvoiceIntegrationTest}의 몫이다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -162,7 +159,174 @@ class PricePolicyIntegrationTest {
         .hasStatus(400);
   }
 
+  // --- 목록 조회 ---
+
+  @Test
+  void 미터가_없는_도입사를_조회하면_200이고_빈_배열이다() {
+    UUID orgId = insertOrganization();
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies")
+        .asArray()
+        .isEmpty();
+  }
+
+  @Test
+  void 정책이_없는_미터는_dimension_properties가_JSON_null로_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+
+    MvcTestResult result = get(orgId);
+
+    assertThat(result)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].metric_code")
+        .isEqualTo("token-usage");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.price_policies[0]")
+        .asMap()
+        .containsEntry("dimension_properties", null);
+  }
+
+  @Test
+  void 등록한_정책이_목록에_그대로_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"model\"]}"))
+        .hasStatus(201);
+
+    MvcTestResult result = get(orgId);
+
+    assertThat(result)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].dimension_properties")
+        .isEqualTo(java.util.List.of("model"));
+  }
+
+  @Test
+  void 무차원_정책은_dimension_properties가_빈_배열이다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].dimension_properties")
+        .asArray()
+        .isEmpty();
+  }
+
+  @Test
+  void 목록은_미터_code_오름차순이다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    insertMetric(orgId, "input-tokens");
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[*].metric_code")
+        .isEqualTo(java.util.List.of("input-tokens", "token-usage"));
+  }
+
+  @Test
+  void 다른_도입사의_미터와_정책은_조회되지_않는다() {
+    UUID otherOrgId = insertOrganization();
+    insertMetric(otherOrgId, "token-usage");
+    assertThat(post(otherOrgId, "token-usage", dimensionlessBody())).hasStatus(201);
+    UUID orgId = insertOrganization();
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies")
+        .asArray()
+        .isEmpty();
+  }
+
+  @Test
+  void 조회에_도입사_헤더가_없으면_400이고_validation_error다() {
+    assertThat(mvc.get().uri("/v1/price-policies").exchange())
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+  }
+
+  @Test
+  void 단가가_없는_정책은_unit_price가_JSON_null이고_0이_아니다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+
+    MvcTestResult result = get(orgId);
+
+    assertThat(result)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0]")
+        .asMap()
+        .containsEntry("unit_price", null);
+  }
+
+  @Test
+  void 기본_단가가_있으면_unit_price에_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+    insertBaseRate(orgId, "token-usage", "0.007");
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].unit_price")
+        .asNumber()
+        .extracting(Number::doubleValue)
+        .isEqualTo(0.007);
+  }
+
+  @Test
+  void 단가가_0이면_null이_아니라_0으로_실린다() {
+    UUID orgId = insertOrganization();
+    insertMetric(orgId, "token-usage");
+    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
+    insertBaseRate(orgId, "token-usage", "0");
+
+    assertThat(get(orgId))
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.price_policies[0].unit_price")
+        .asNumber()
+        .extracting(Number::doubleValue)
+        .isEqualTo(0.0);
+  }
+
   // --- 헬퍼 ---
+
+  private void insertBaseRate(UUID orgId, String metricCode, String unitPrice) {
+    jdbc.update(
+        """
+        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        VALUES (?, ?, '{}'::jsonb, ?::numeric)
+        """,
+        orgId,
+        metricCode,
+        unitPrice);
+  }
+
+  private MvcTestResult get(UUID organizationId) {
+    return mvc.get()
+        .uri("/v1/price-policies")
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
+  }
 
   private MvcTestResult post(UUID organizationId, String metricCode, String jsonBody) {
     return mvc.post()
