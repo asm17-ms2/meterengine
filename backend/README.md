@@ -101,7 +101,7 @@ docker build -t meterengine-backend .
 | `GET /v1/customers` | 고객 목록. 이름 오름차순, 페이지 나누지 않음 |
 | `POST /v1/customers` | 고객 등록. 서버가 customer_id와 등록 시각을 만든다 |
 | `PUT /v1/customers/{id}` | 고객 이름 수정 |
-| `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
+| `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트나 확정 인보이스가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
@@ -165,6 +165,7 @@ docker build -t meterengine-backend .
 | `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
 | `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
+| `customer_has_invoices` | 409 | 확정된 인보이스가 있어 고객을 지울 수 없다. 이벤트가 한 건도 없는 고객도 금액 0으로 확정된 달이 있으면 여기 걸린다 |
 | `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
 | `metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
 | `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
@@ -187,13 +188,13 @@ docker build -t meterengine-backend .
 | --- | --- | --- |
 | `FrameworkExceptionHandler` (루트) | 전역 | 프레임워크가 내는 예외 20종. 본문이 나가는 19종이 `handleExceptionInternal` 한 자리를 지나므로 거기서 4xx에만 `code`를 얹는다. 상태 코드와 응답 헤더(405의 `Allow`, 415의 `Accept`) 결정은 프레임워크에 남긴다 |
 | `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
-| `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류 셋. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `DataIntegrityViolationException` -> `unknown_organization` |
+| `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `CustomerHasInvoicesException` -> `customer_has_invoices`, `DataIntegrityViolationException` -> `unknown_organization` |
 | `PricePolicyExceptionHandler` (`pricing.controller`) | `PricePolicyController`만 | 도메인 오류 셋. `MetricNotFoundException` -> `metric_not_found`, `PricePolicyAlreadyExistsException` -> `price_policy_already_exists`, `InvalidPricePolicyException` -> `invalid_price_policy` |
 | `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류 셋. `MetricAlreadyExistsException` -> `metric_already_exists`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
 
 도메인 advice 셋을 각자 한 컨트롤러에만 건 이유는 event와 customer 쪽이 둘 다 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 두 곳에서 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만(잡을 도달 가능한 경우가 없다, `PricePolicyExceptionHandler` 주석 참조) 같은 원칙으로 범위를 좁혀 둔다.
 
-고객 삭제에서 나는 FK 위반은 advice까지 가지 않는다. `CustomerService.delete`가 `CustomerHasEventsException`으로 바꿔 던져 409가 된다. 그 자리가 뜻을 아는 유일한 곳이라서다.
+고객 삭제에서 나는 FK 위반은 advice까지 가지 않는다. `CustomerService.delete`가 409로 바꿔 던진다. 그 자리가 뜻을 아는 유일한 곳이라서다. `invoice_customer_same_org` 위반은 `CustomerHasInvoicesException`이 되고 나머지는 `CustomerHasEventsException`이 된다. customer를 참조하는 FK가 그 둘뿐이라는 사실이 이 갈래를 성립시키므로, 셋째가 생기거나 이름이 바뀌면 `CustomerCrudIntegrationTest`의 pg_constraint 단언이 먼저 깨진다.
 
 **[주의] `ResponseEntityExceptionHandler`를 상속하는 클래스를 또 만들지 않는다.** Boot 자동 설정이 `@ConditionalOnMissingBean(ResponseEntityExceptionHandler.class)`라, 그 타입의 빈이 둘이면 하나만 등록되고 프레임워크 예외 처리의 절반이 조용히 사라진다. 그 자리는 `FrameworkExceptionHandler`가 의도적으로 차지하고 있다. 새 오류를 붙이려면 그 클래스를 고치거나, 도메인 예외를 잡는 별도 advice(상속 없는 `@RestControllerAdvice`)를 쓴다.
 

@@ -22,6 +22,8 @@ public final class ErrorCodes {
 
   public static final String CUSTOMER_HAS_EVENTS = "customer_has_events";
 
+  public static final String CUSTOMER_HAS_INVOICES = "customer_has_invoices";
+
   public static final String UNKNOWN_ORGANIZATION = "unknown_organization";
 
   public static final String METRIC_NOT_FOUND = "metric_not_found";

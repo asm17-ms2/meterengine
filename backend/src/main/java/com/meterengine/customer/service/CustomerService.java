@@ -2,11 +2,14 @@ package com.meterengine.customer.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.exception.CustomerHasEventsException;
+import com.meterengine.customer.exception.CustomerHasInvoicesException;
 import com.meterengine.customer.exception.CustomerNotFoundException;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.invoice.repository.InvoiceExistenceRepository;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,20 +22,25 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>도입사 존재 여부를 확인하지 않는다. 등록 때 없는 도입사를 보내면 FK가 거절하고 그것을 컨트롤러 쪽 advice가 400으로 바꾼다. 미리 조회해 봐야 그 조회와
  * INSERT 사이가 다시 경합 구간이라 어차피 FK를 신뢰해야 한다. 삭제도 같은 태도다 ({@link #delete} 참조).
  *
- * <p><b>{@link EventRepository}를 참조한다.</b> 삭제가 이벤트 유무를 물어야 해서인데, event 쪽도 수집할 때 {@link
- * CustomerRepository}를 보므로 두 패키지가 서로를 참조하게 된다. 그 조회를 이쪽에 SQL로 두면 참조는 없어지지만 usage_event를 모르는 패키지가 그
- * 테이블을 읽게 되어, 스키마가 바뀔 때 컴파일러도 event 쪽 테스트도 잡지 못한다. 참조가 실제로 걸림돌이 되는 시점(모듈 경계를 강제할 때)에는 필요한 조회를 이
- * 패키지의 인터페이스로 선언하고 event가 구현하게 해서 방향을 되돌릴 수 있다.
+ * <p><b>{@link EventRepository}와 {@link InvoiceExistenceRepository}를 참조한다.</b> 삭제가 이벤트와 확정 인보이스 유무를
+ * 물어야 해서인데, 저쪽도 수집과 청구 예정액에서 {@link CustomerRepository}를 보므로 패키지가 서로를 참조하게 된다. 그 조회를 이쪽에 SQL로 두면
+ * 참조는 없어지지만 usage_event와 invoice를 모르는 패키지가 그 테이블을 읽게 되어, 스키마가 바뀔 때 컴파일러도 저쪽 테스트도 잡지 못한다. 참조가 실제로
+ * 걸림돌이 되는 시점(모듈 경계를 강제할 때)에는 필요한 조회를 이 패키지의 인터페이스로 선언하고 저쪽이 구현하게 해서 방향을 되돌릴 수 있다.
  */
 @Service
 public class CustomerService {
 
+  private static final String INVOICE_CONSTRAINT = "invoice_customer_same_org";
+
   private final CustomerRepository customers;
   private final EventRepository events;
+  private final InvoiceExistenceRepository invoices;
 
-  CustomerService(CustomerRepository customers, EventRepository events) {
+  CustomerService(
+      CustomerRepository customers, EventRepository events, InvoiceExistenceRepository invoices) {
     this.customers = customers;
     this.events = events;
+    this.invoices = invoices;
   }
 
   /** 이 도입사의 고객 전부를 이름순으로. 없으면 빈 목록이다. */
@@ -80,18 +88,18 @@ public class CustomerService {
   }
 
   /**
-   * 고객을 지운다. 이벤트가 한 건이라도 있으면 지우지 않고 거절한다.
+   * 고객을 지운다. 이벤트나 확정 인보이스가 한 건이라도 있으면 지우지 않고 거절한다.
    *
-   * <p><b>행을 실제로 지운다.</b> 지워진 표시를 남기는 방식(소프트 삭제)을 쓰지 않는 이유는, 지워도 되는 고객이 곧 이벤트가 하나도 없는 고객이라 남길 것이
-   * 없어서다. 행이 남으면 모든 조회가 "지워진 것은 빼고"라는 조건을 들고 다녀야 하고, 그 조건을 한 곳에서 빠뜨리면 지운 고객이 화면에 되살아난다.
+   * <p><b>행을 실제로 지운다.</b> 지워진 표시를 남기는 방식(소프트 삭제)을 쓰지 않는 이유는, 지워도 되는 고객이 곧 이벤트도 확정 인보이스도 없는 고객이라 남길
+   * 것이 없어서다. 행이 남으면 모든 조회가 "지워진 것은 빼고"라는 조건을 들고 다녀야 하고, 그 조건을 한 곳에서 빠뜨리면 지운 고객이 화면에 되살아난다.
    *
-   * <p><b>막는 층이 둘이다.</b> 아래 {@code existsFor} 확인이 하나이고, V1의 복합 FK {@code
-   * usage_event_customer_same_org}가 다른 하나다. 앱의 확인은 사용자에게 쓸 만한 409를 주는 몫이고, FK는 앱을 거치지 않는 경로까지 막는
-   * 몫이다.
+   * <p><b>막는 층이 둘이다.</b> 아래 {@code existsForCustomer} 확인이 하나이고, 복합 FK {@code
+   * usage_event_customer_same_org}와 {@code invoice_customer_same_org}가 다른 하나다. 앱의 확인은 사용자에게 쓸 만한
+   * 409를 주는 몫이고, FK는 앱을 거치지 않는 경로까지 막는 몫이다.
    *
-   * <p><b>확인과 DELETE 사이에 이벤트가 커밋되는 창은 FK가 닫는다.</b> 그래서 행 잠금을 따로 걸지 않는다. 이벤트를 넣는 트랜잭션이 고객 행에 FK 검사용
-   * 잠금(FOR KEY SHARE)을 잡고 있으면 DELETE는 그것과 충돌해 기다리다가 FK 위반으로 실패한다. 그 실패를 아래에서 409로 바꾼다. 소프트 삭제였다면
-   * deleted_at 갱신이 키 컬럼을 건드리지 않아 그 잠금과 충돌하지 않고, 그래서 앱이 직접 잠가야 했다.
+   * <p><b>확인과 DELETE 사이에 참조가 커밋되는 창은 FK가 닫는다.</b> 그래서 행 잠금을 따로 걸지 않는다. 이벤트나 인보이스를 넣는 트랜잭션이 고객 행에 FK
+   * 검사용 잠금(FOR KEY SHARE)을 잡고 있으면 DELETE는 그것과 충돌해 기다리다가 FK 위반으로 실패한다. 그 실패를 아래에서 409로 바꾼다. 소프트
+   * 삭제였다면 deleted_at 갱신이 키 컬럼을 건드리지 않아 그 잠금과 충돌하지 않고, 그래서 앱이 직접 잠가야 했다.
    *
    * <p>{@code flush}가 필요한 이유는 등록과 같다. 없으면 DELETE가 트랜잭션이 끝날 때 나가서 FK 위반이 이 메서드 밖에서 터지고, 아래 {@code
    * catch}를 비껴간다.
@@ -106,14 +114,23 @@ public class CustomerService {
     if (events.existsForCustomer(organizationId, customerId)) {
       throw new CustomerHasEventsException(customerId);
     }
+    if (invoices.existsForCustomer(organizationId, customerId)) {
+      throw new CustomerHasInvoicesException(customerId);
+    }
 
     try {
       customers.delete(customer);
       customers.flush();
     } catch (DataIntegrityViolationException exception) {
-      // customer 행을 참조하는 제약은 usage_event의 복합 FK 하나뿐이다. 그래서 여기 오는 경우도 하나다.
-      // 위 확인을 통과한 뒤 DELETE 전에 그 고객의 이벤트가 커밋된 것. 결과는 확인에 걸린 것과 같아야 한다.
+      if (violatesInvoiceForeignKey(exception)) {
+        throw new CustomerHasInvoicesException(customerId);
+      }
       throw new CustomerHasEventsException(customerId);
     }
+  }
+
+  private boolean violatesInvoiceForeignKey(DataIntegrityViolationException exception) {
+    return exception.getCause() instanceof ConstraintViolationException violation
+        && INVOICE_CONSTRAINT.equals(violation.getConstraintName());
   }
 }

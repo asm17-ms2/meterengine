@@ -3,6 +3,7 @@ package com.meterengine.customer.controller;
 import com.meterengine.ErrorCodes;
 import com.meterengine.ProblemMembers;
 import com.meterengine.customer.exception.CustomerHasEventsException;
+import com.meterengine.customer.exception.CustomerHasInvoicesException;
 import com.meterengine.customer.exception.CustomerNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -27,8 +28,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 프레임워크 예외와 겹치는 도메인 예외가 생기면 도메인이 이겨야 한다.
  *
  * <p>{@code code} 값의 정본은 {@link ErrorCodes}이고 멤버 이름은 {@link ProblemMembers}에 있다. 문서에 나가는 오류 스키마는
- * {@link com.meterengine.ProblemResponse}이며, 그쪽 {@code allowableValues}에 아래 세 code가 함께 올라가 있어야 문서와
- * 응답이 갈리지 않는다.
+ * {@link com.meterengine.ProblemResponse}이며, 그쪽 {@code allowableValues}에 아래 핸들러가 쓰는 code가 모두 올라가
+ * 있어야 문서와 응답이 갈리지 않는다.
  */
 @RestControllerAdvice(assignableTypes = CustomerController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -59,6 +60,15 @@ class CustomerExceptionHandler {
     return problem;
   }
 
+  @ExceptionHandler(CustomerHasInvoicesException.class)
+  ProblemDetail handleHasInvoices(CustomerHasInvoicesException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Customer has finalized invoices");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.CUSTOMER_HAS_INVOICES);
+    return problem;
+  }
+
   /**
    * DB가 거부한 등록을 400으로 돌려준다.
    *
@@ -68,9 +78,9 @@ class CustomerExceptionHandler {
    *
    * <p>MS2-126이 Bearer 인증을 붙이면 인증 단계에서 걸러져 이 경우는 사라진다.
    *
-   * <p>삭제의 FK 위반은 여기 오지 않는다. 이벤트가 있는 고객을 지우려 할 때 나는 그 위반은 {@code CustomerService.delete}가 {@link
-   * CustomerHasEventsException}으로 바꿔 던져 409가 된다. 두 경우가 같은 예외 타입이라 여기서는 갈라낼 수 없어서, 뜻을 아는 자리에서 미리
-   * 바꾼다.
+   * <p>삭제의 FK 위반은 여기 오지 않는다. 이벤트나 확정 인보이스가 있는 고객을 지우려 할 때 나는 그 위반은 {@code CustomerService.delete}가
+   * {@link CustomerHasEventsException}이나 {@link CustomerHasInvoicesException}으로 바꿔 던져 409가 된다. 여기
+   * 오는 것과 같은 예외 타입이라 이 자리에서는 갈라낼 수 없어서, 뜻을 아는 자리에서 미리 바꾼다.
    *
    * <p>고객 이름 중복도 여기 오지 않는다. 유니크 제약 자체가 없어 중복 등록이 정상 동작이다.
    */
