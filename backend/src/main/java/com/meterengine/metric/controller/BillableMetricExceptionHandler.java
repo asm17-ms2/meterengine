@@ -5,6 +5,8 @@ import com.meterengine.ProblemMembers;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
 import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.exception.MetricBasisHasEventsException;
+import com.meterengine.metric.exception.MetricHasEventsException;
+import com.meterengine.metric.exception.MetricHasPricePolicyException;
 import com.meterengine.metric.exception.MetricNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -51,6 +53,24 @@ class BillableMetricExceptionHandler {
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     problem.setTitle("Metric basis has usage events");
     problem.setProperty(ProblemMembers.CODE, ErrorCodes.METRIC_BASIS_HAS_EVENTS);
+    return problem;
+  }
+
+  @ExceptionHandler(MetricHasEventsException.class)
+  ProblemDetail handleHasEvents(MetricHasEventsException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Metric has usage events");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.METRIC_HAS_EVENTS);
+    return problem;
+  }
+
+  @ExceptionHandler(MetricHasPricePolicyException.class)
+  ProblemDetail handleHasPricePolicy(MetricHasPricePolicyException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Metric has price policy");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.METRIC_HAS_PRICE_POLICY);
     return problem;
   }
 

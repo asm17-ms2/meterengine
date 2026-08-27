@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -224,6 +225,80 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
+  void 미터를_지우면_204이고_목록에서_사라진다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(delete(orgId, "token-usage")).hasStatus(204);
+
+    assertThat(getList(orgId)).bodyJson().extractingPath("$.metrics").asArray().isEmpty();
+  }
+
+  @Test
+  void 같은_미터를_두_번_지우면_두_번째는_404다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(delete(orgId, "token-usage")).hasStatus(204);
+
+    assertThat(delete(orgId, "token-usage"))
+        .hasStatus(404)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.METRIC_NOT_FOUND);
+  }
+
+  @Test
+  void 다른_도입사의_미터는_삭제도_404다() {
+    UUID orgId = insertOrganization();
+    UUID otherOrgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(delete(otherOrgId, "token-usage")).hasStatus(404);
+    assertThat(metricCount(orgId, "token-usage")).isEqualTo(1);
+  }
+
+  @Test
+  void 이벤트가_잡히는_미터의_삭제는_409_metric_has_events다() {
+    UUID orgId = insertOrganization();
+    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    insertEvent(orgId, "chat_completion", "{\"token\": 10}");
+
+    assertThat(delete(orgId, "token-usage"))
+        .hasStatus(409)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.METRIC_HAS_EVENTS);
+    assertThat(metricCount(orgId, "token-usage")).isEqualTo(1);
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void 가격_정책이_참조하는_미터의_삭제는_409_metric_has_price_policy다() {
+    UUID orgId = insertOrganization();
+    try {
+      assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+      insertPricePolicy(orgId, "token-usage");
+
+      assertThat(delete(orgId, "token-usage"))
+          .hasStatus(409)
+          .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+          .bodyJson()
+          .extractingPath("$.code")
+          .asString()
+          .isEqualTo(ErrorCodes.METRIC_HAS_PRICE_POLICY);
+      assertThat(metricCount(orgId, "token-usage")).isEqualTo(1);
+    } finally {
+      jdbc.update("DELETE FROM price_policy WHERE organization_id = ?", orgId);
+      jdbc.update("DELETE FROM billable_metric WHERE organization_id = ?", orgId);
+      jdbc.update("DELETE FROM organization WHERE id = ?", orgId);
+    }
+  }
+
+  @Test
   void 등록한_미터가_code_오름차순_목록으로_나온다() {
     UUID orgId = insertOrganization();
     assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
@@ -315,6 +390,18 @@ class BillableMetricIntegrationTest {
         customerId,
         eventType,
         propertiesJson);
+  }
+
+  private MvcTestResult delete(UUID organizationId, String code) {
+    return mvc.delete()
+        .uri("/v1/metrics/{code}", code)
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
+  }
+
+  private void insertPricePolicy(UUID orgId, String metricCode) {
+    jdbc.update(
+        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, ?)", orgId, metricCode);
   }
 
   private String storedEventType(UUID orgId, String code) {

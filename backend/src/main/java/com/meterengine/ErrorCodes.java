@@ -34,6 +34,10 @@ public final class ErrorCodes {
 
   public static final String METRIC_BASIS_HAS_EVENTS = "metric_basis_has_events";
 
+  public static final String METRIC_HAS_EVENTS = "metric_has_events";
+
+  public static final String METRIC_HAS_PRICE_POLICY = "metric_has_price_policy";
+
   public static final String INVALID_BILLABLE_METRIC = "invalid_billable_metric";
 
   private ErrorCodes() {}

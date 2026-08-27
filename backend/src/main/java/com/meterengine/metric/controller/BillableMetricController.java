@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -149,5 +150,54 @@ public class BillableMetricController {
       @Parameter(description = "고칠 미터의 code.") @PathVariable String code,
       @Valid @RequestBody UpdateBillableMetricRequest request) {
     return billableMetricService.update(organizationId, code, request);
+  }
+
+  @DeleteMapping("/{code}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Operation(
+      summary = "미터 삭제",
+      description =
+          """
+          미터를 지운다. 행이 실제로 사라져 목록과 사용량, 청구 예정액에서 빠진다. 되돌리는 API는 없다.
+          이벤트가 잡히는 미터는 지우지 않고 409로 거절한다. 이벤트는 청구 근거이고 지울 수 없어서,
+          미터만 사라지면 그 사용량이 어느 청구서에도 오르지 않는다.
+          가격 정책이 참조하는 미터도 409로 거절한다. 정책을 지우는 API가 아직 없으므로
+          그런 미터는 지금은 지울 수 없다.
+          같은 미터를 두 번 지우면 두 번째는 204가 아니라 404다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description = "code=metric_not_found: 그런 미터가 없거나 다른 도입사 소속이다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/problem+json",
+                schema = @Schema(implementation = ProblemResponse.class)),
+        description =
+            """
+            code=metric_has_events: 이벤트가 잡히는 미터라 지울 수 없다.
+            code=metric_has_price_policy: 가격 정책이 참조하는 미터라 지울 수 없다.
+            """)
+  })
+  public void deleteMetric(
+      @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
+          @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "지울 미터의 code.") @PathVariable String code) {
+    billableMetricService.delete(organizationId, code);
   }
 }
