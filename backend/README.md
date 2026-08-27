@@ -64,7 +64,7 @@ docker build -t meterengine-backend .
 
 `openapi.yaml`이 API 계약의 정본이다. 컨트롤러와 DTO에서 자동 생성되므로 손으로 고치지 않는다.
 
-현재 오퍼레이션은 열이다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+현재 오퍼레이션은 아래와 같다. 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 
 | 오퍼레이션 | 내용 |
 | --- | --- |
