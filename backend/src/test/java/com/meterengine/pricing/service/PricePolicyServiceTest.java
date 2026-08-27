@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.exception.MetricNotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.MetricPricePolicyResponse;
 import com.meterengine.pricing.dto.PricePolicyListResponse;
@@ -17,7 +18,6 @@ import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.exception.InvalidPricePolicyException;
-import com.meterengine.pricing.exception.MetricNotFoundException;
 import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
