@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 마이그레이션이 만든 스키마가 팀 정책을 DB 수준에서 강제하는지 검증한다. 앱을 거치지 않아도 지켜지는 것만 여기서 본다.
  *
- * <p>이벤트 append-only와 received_at 강제는 스토리 MS2-121의 정책이고 현재 슬라이스 인수 기준(MS2-123)에 명시된 것으로 한정한다. 고객 삭제
- * 가드는 MS2-155가 기대는 성질이라 아래에 따로 묶었다.
+ * <p>이벤트 append-only와 received_at 강제는 수집 정책이고 그 슬라이스의 인수 기준에 명시된 것으로 한정한다. 고객 삭제 가드는 고객 삭제 API가 기대는
+ * 성질이라 아래에 따로 묶었다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -89,7 +90,7 @@ class SchemaConstraintTest {
     assertThat(receivedAt).isAfter(clientSuppliedTime);
   }
 
-  // --- 고객 삭제 가드 (MS2-155) ---
+  // --- 고객 삭제 가드 ---
 
   /**
    * 이벤트가 있는 고객은 지울 수 없다.
@@ -128,7 +129,7 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
-  // --- 가격 정책 / 단가 (MS2-158) ---
+  // --- 가격 정책 / 단가 ---
 
   /**
    * 단가 행(price_rate)의 FK 과녁이 미터가 아니라 정책(price_policy)인 이유: 단가는 축 선언 없이는 해석할 수 없어서, 선언 없는 단가가 존재하는
@@ -225,7 +226,7 @@ class SchemaConstraintTest {
         code);
   }
 
-  // --- 이름 collation (MS2-143) ---
+  // --- 이름 collation ---
 
   /**
    * 사람이 읽는 이름 컬럼이 한국어 collation을 쓰는지 본다.
@@ -251,6 +252,210 @@ class SchemaConstraintTest {
     assertThat(collationOf("usage_event", "event_type")).isNull();
   }
 
+  // --- 인보이스 확정본 ---
+
+  @Test
+  void 같은_고객의_같은_달은_두_번_확정되지_않는다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+    insertInvoice(orgId, customerId, "2026-08");
+
+    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-08"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 확정_인보이스는_고객마다_그리고_달마다_따로_저장된다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+    insertInvoice(orgId, customerId, "2026-08");
+    insertInvoice(orgId, customerId, "2026-09");
+    insertInvoice(orgId, insertCustomer(orgId, "beta"), "2026-08");
+
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM invoice WHERE organization_id = ?", Integer.class, orgId))
+        .isEqualTo(3);
+  }
+
+  @Test
+  void 청구_기간은_월을_두_자리로_적은_표기만_저장된다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+
+    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-8"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 존재하지_않는_달은_청구_기간이_될_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+
+    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-13"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 다른_도입사의_고객에는_인보이스를_붙일_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+    UUID otherOrgId = insertOrganization();
+
+    assertThatThrownBy(() -> insertInvoice(otherOrgId, customerId, "2026-08"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 확정_시각은_생략하면_DB가_대신_채우지_않는다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, period, supply_amount, tax_amount)
+                    VALUES (?, ?, '2026-08', 12000, 1200)
+                    """,
+                    orgId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 다른_도입사의_인보이스에는_라인을_붙일_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    UUID otherOrgId = insertOrganization();
+
+    assertThatThrownBy(() -> insertInvoiceLine(otherOrgId, invoiceId, "token-usage"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 같은_인보이스에_같은_미터의_라인은_두_번_저장되지_않는다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    insertInvoiceLine(orgId, invoiceId, "token-usage");
+
+    assertThatThrownBy(() -> insertInvoiceLine(orgId, invoiceId, "token-usage"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 라인이_있는_인보이스는_지울_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    insertInvoiceLine(orgId, invoiceId, "token-usage");
+
+    assertThatThrownBy(() -> jdbc.update("DELETE FROM invoice WHERE id = ?", invoiceId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 확정_인보이스가_있는_고객은_지울_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = insertCustomer(orgId, "acme");
+    insertInvoice(orgId, customerId, "2026-08");
+
+    assertThatThrownBy(() -> deleteCustomer(customerId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 라인의_단가는_음수일_수_없다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+
+    assertThatThrownBy(() -> insertInvoiceLine(orgId, invoiceId, "token-usage", "-0.5"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 확정_라인은_등록되지_않은_미터_코드와_빈_집계_기준으로도_저장된다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+
+    jdbc.update(
+        """
+        INSERT INTO invoice_line
+          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+           quantity, unit_price, amount)
+        VALUES (?, ?, 'deleted-metric', NULL, '{}', 1200, 0.5, 600)
+        """,
+        orgId,
+        invoiceId);
+
+    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+  }
+
+  @Test
+  void 확정_라인에서_비울_수_있는_열은_집계_기준뿐이다() {
+    assertThat(
+            jdbc.queryForList(
+                """
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'invoice_line'
+                  AND is_nullable = 'YES'
+                """,
+                String.class))
+        .containsExactly("target_property");
+  }
+
+  @Test
+  void 라인의_수량과_금액에는_음수를_막는_제약을_걸지_않는다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+
+    jdbc.update(
+        """
+        INSERT INTO invoice_line
+          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+           quantity, unit_price, amount)
+        VALUES (?, ?, 'token-usage', 'token', '{}', -1200, 0.5, -600)
+        """,
+        orgId,
+        invoiceId);
+
+    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+  }
+
+  @Test
+  void 라인은_인보이스로_찾는_인덱스를_가진다() {
+    Boolean indexExists =
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM pg_index i
+              JOIN pg_class t ON t.oid = i.indrelid
+              WHERE t.relname = 'invoice_line'
+                AND pg_get_indexdef(i.indexrelid, 1, true) = 'organization_id'
+                AND pg_get_indexdef(i.indexrelid, 2, true) = 'invoice_id')
+            """,
+            Boolean.class);
+
+    assertThat(indexExists).isTrue();
+  }
+
+  @Test
+  void 확정된_인보이스는_공급가액과_세액을_따로_담는다() {
+    UUID orgId = insertOrganization();
+    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    insertInvoiceLine(orgId, invoiceId, "token-usage");
+
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT supply_amount + tax_amount FROM invoice WHERE id = ?",
+                Long.class,
+                invoiceId))
+        .isEqualTo(13200L);
+    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+    assertThat(amountColumnsOf("invoice")).containsExactly("supply_amount", "tax_amount");
+    assertThat(amountColumnsOf("invoice_line")).containsExactly("amount");
+  }
+
   private String collationOf(String table, String column) {
     return jdbc.queryForObject(
         """
@@ -260,6 +465,53 @@ class SchemaConstraintTest {
         String.class,
         table,
         column);
+  }
+
+  private UUID insertInvoice(UUID orgId, UUID customerId, String period) {
+    return jdbc.queryForObject(
+        """
+        INSERT INTO invoice
+          (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
+        VALUES (?, ?, ?, 12000, 1200, now())
+        RETURNING id
+        """,
+        UUID.class,
+        orgId,
+        customerId,
+        period);
+  }
+
+  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String metricCode) {
+    insertInvoiceLine(orgId, invoiceId, metricCode, "0.5");
+  }
+
+  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String metricCode, String unitPrice) {
+    jdbc.update(
+        """
+        INSERT INTO invoice_line
+          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+           quantity, unit_price, amount)
+        VALUES (?, ?, ?, 'token', '{}', 1200, ?::numeric, 600)
+        """,
+        orgId,
+        invoiceId,
+        metricCode,
+        unitPrice);
+  }
+
+  private int lineCountOf(UUID invoiceId) {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM invoice_line WHERE invoice_id = ?", Integer.class, invoiceId);
+  }
+
+  private List<String> amountColumnsOf(String table) {
+    return jdbc.queryForList(
+        """
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ? AND column_name LIKE '%amount%'
+        ORDER BY ordinal_position
+        """,
+        String.class, table);
   }
 
   private void insertPricePolicy(UUID orgId, String metricCode) {
