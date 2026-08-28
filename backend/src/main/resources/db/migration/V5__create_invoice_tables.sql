@@ -2,7 +2,8 @@ CREATE TABLE invoice (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organization(id),
   customer_id     UUID NOT NULL,
-  period          VARCHAR NOT NULL CHECK (period ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+  period          VARCHAR NOT NULL CONSTRAINT invoice_period_format
+                    CHECK (period ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
   supply_amount   BIGINT NOT NULL,
   tax_amount      BIGINT NOT NULL,
   finalized_at    TIMESTAMPTZ NOT NULL,
