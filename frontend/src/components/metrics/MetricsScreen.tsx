@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import type { MetricRowView } from "@/app/(console)/metrics/state";
+import { MetricDeleteDialog } from "@/components/metrics/MetricDeleteDialog";
 import { MetricFormDialog } from "@/components/metrics/MetricFormDialog";
 import { MetricTable } from "@/components/metrics/MetricTable";
 import { FilterBar } from "@/components/screen/FilterBar";
@@ -10,9 +11,13 @@ import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
 export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
   const [search, setSearch] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<{ metric: MetricRowView | null } | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState<MetricRowView | null>(null);
 
-  const closeForm = useCallback(() => setFormOpen(false), []);
+  const closeForm = useCallback(() => setForm(null), []);
+  const closeDelete = useCallback(() => setDeleting(null), []);
 
   const query = search.trim().toLowerCase();
   const visible =
@@ -30,7 +35,7 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => setFormOpen(true)}
+            onClick={() => setForm({ metric: null })}
           >
             미터 등록
           </button>
@@ -60,7 +65,7 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
             type="button"
             className="btn btn-secondary"
             style={{ marginTop: 4 }}
-            onClick={() => setFormOpen(true)}
+            onClick={() => setForm({ metric: null })}
           >
             미터 등록
           </button>
@@ -83,14 +88,28 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
         </div>
       ) : (
         <>
-          <MetricTable rows={visible} />
+          <MetricTable
+            rows={visible}
+            onEdit={(row) => setForm({ metric: row })}
+            onDelete={(row) => setDeleting(row)}
+          />
           <div className="screen-footer">
             <span className="screen-note">정렬: 코드 오름차순</span>
           </div>
         </>
       )}
 
-      {formOpen ? <MetricFormDialog onClose={closeForm} /> : null}
+      {form ? (
+        <MetricFormDialog
+          key={form.metric?.code ?? "new"}
+          metric={form.metric}
+          onClose={closeForm}
+        />
+      ) : null}
+
+      {deleting ? (
+        <MetricDeleteDialog metric={deleting} onClose={closeDelete} />
+      ) : null}
     </>
   );
 }
