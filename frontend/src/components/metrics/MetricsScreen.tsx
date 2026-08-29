@@ -100,7 +100,11 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
       )}
 
       {form ? (
-        <MetricFormDialog metric={form.metric} onClose={closeForm} />
+        <MetricFormDialog
+          key={form.metric?.code ?? "new"}
+          metric={form.metric}
+          onClose={closeForm}
+        />
       ) : null}
 
       {deleting ? (
