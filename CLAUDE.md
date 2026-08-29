@@ -9,13 +9,12 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 - `backend/`: 미터링 엔진 API 서버
 - `frontend/`: 관리자 화면
 - `demo/`: 시연용 CLI와 OTel 브리지 (Python)
-- `docs/`: 무엇을 둘지 미정 (아래 "문서 흐름" 참조)
 - `work/`: 개인 작업 공간 (.gitignore로 제외, 아래 참조)
 
 ## 개인 작업 공간 (work/)
 
 - `/work`는 .gitignore로 제외된 개인 공간이다. 팀원 각자 자기 work/를 만들어 자유롭게 쓴다. 개인 계정의 별도 레포로 백업해도 된다 (이 경우 work/ 안에서만 해당 레포의 git 명령을 실행한다)
-- 커밋 대상이 아닌 개인 산출물(메모, 조사 자료, 스크래치 파일, 개인 보고서)은 팀 레포 트리(backend/, frontend/, demo/, docs/, 루트)에 만들지 않고 work/ 아래에 만든다. 팀 레포에는 팀이 리뷰하고 커밋할 파일만 둔다
+- 커밋 대상이 아닌 개인 산출물(메모, 조사 자료, 스크래치 파일, 개인 보고서)은 팀 레포 트리(backend/, frontend/, demo/, 루트)에 만들지 않고 work/ 아래에 만든다. 팀 레포에는 팀이 리뷰하고 커밋할 파일만 둔다
 
 ## 커밋 / PR 사전 승인
 
@@ -32,7 +31,7 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 ## 현재 상태
 
 - 기술 스택: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 구성은 `backend/README.md`와 `frontend/README.md`가 정본이다
-- 브랜치, 커밋, PR 규칙의 정본은 CONTRIBUTING.md다
+- 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙의 정본은 CONTRIBUTING.md다
 - 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
 - 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
 
@@ -88,9 +87,9 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 ## 문서 흐름
 
-코드를 고칠 때 같이 고쳐야 하면 레포, 논의해서 정하는 것이면 Notion MS2 팀 위키다. 규칙의 정본은 `docs/document-rules.md`이며, 새 문서를 만들기 전에 그 파일을 보고 없는 내용이면 먼저 물어본다.
+코드를 고칠 때 같이 고쳐야 하면 레포, 논의해서 정하는 것이면 Notion MS2 팀 위키다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
 
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. `docs/` 아래에 무엇을 둘지는 아직 정하지 않았다.
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다.
 
 PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 
