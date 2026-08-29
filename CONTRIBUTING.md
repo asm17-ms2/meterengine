@@ -13,7 +13,7 @@
 - 머지 방식: squash merge. PR 하나가 main 커밋 하나로 남아 이슈 단위 추적이 쉽고, 브랜치 안 커밋 정리에 힘 쓰지 않아도 된다. main 룰셋의 Allowed merge methods를 squash만 허용으로 설정해 강제한다. squash로 원본 커밋과의 연결이 끊기는 문제는 아래 "머지 후 브랜치 삭제"와 "선행 브랜치 위 작업" 규칙이 안전장치다
 - 고정 브랜치 도입 시 전환 계획: 이후 테스트서버 운영 등으로 develop/staging 같은 고정 브랜치가 생기면, develop 룰셋은 squash만, main 룰셋은 merge commit만 허용으로 전환한다. 오래 사는 브랜치를 main과 반복 머지할 때 squash를 쓰면 히스토리가 꼬이기 때문이다. 시점은 릴리스/태그 규칙 논의와 함께 정한다
 - 머지 후 브랜치 삭제: 머지된 브랜치는 삭제하고, 이어지는 작업은 main에서 새 브랜치를 딴다. 다만 아직 머지되지 않은 선행 작업에 의존하면 main이 아니라 그 브랜치 위에 쌓는다(아래 "스택 PR"). GitHub 저장소 설정(Automatically delete head branches)으로 자동화한다. 로컬 브랜치는 각자 `git fetch --prune`으로 정리한다
-- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제하며, 승인 후 새 커밋을 올리면 기존 승인은 무효화된다(Dismiss stale approvals)
+- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다
 - main 상태: main은 항상 빌드/테스트가 통과하는 상태를 유지한다. 깨진 코드나 반쯤 만든 기능은 브랜치에만 둔다. CI 실패 시 머지를 금지한다. 필수 체크 항목은 CI 워크플로(`.github/workflows/ci.yml`)의 `backend`, `frontend` job이다. main 룰셋의 Required status checks에 그 job을 등록해 강제한다
 - 선행 브랜치 위 작업: 브랜치 A가 리뷰 대기 중이고 B가 A 없이는 성립하지 않으면 A 위에 쌓는다. 따로 머지돼도 되면 독립 PR로 낸다. 절차는 아래 "스택 PR"에 있고, GitHub 네이티브 기능만 쓴다
 - 릴리스/태그 규칙: 버전 태그는 두지 않는다. 배포 단위는 커밋이고, 배포된 것을 가리키는 이름은 그 커밋의 git SHA다(ECR 이미지 태그가 SHA다). 롤백도 이전 SHA로 다시 배포하는 것이라 semver 태그 없이 성립한다. 외부에 버전 번호를 알려야 하는 일이 생기면 그때 다시 논의한다
