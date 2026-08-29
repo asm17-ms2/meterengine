@@ -14,7 +14,7 @@
   - `V5__create_invoice_tables.sql` - 확정 인보이스와 인보이스 라인 두 테이블. 고객 x 달로 한 장을 강제하고, 라인은 인보이스 안에서 미터와 단가 조합으로 유일하다. 확정본을 되돌리는 수단은 두지 않았고, 확정된 행을 지우거나 고치는 것을 DB가 막지는 않는다
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터 등록 API가 없어서(MS2-159 예정) 지금은 고객 API(MS2-155)와 가격 정책 API(MS2-157)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다. 미터는 여섯 개이고 그중 `llm_request` 이벤트 하나를 입력/출력/캐시 읽기/캐시 생성 토큰 네 미터가 함께 잰다. 캐시 두 미터는 MS2-169에서 추가했는데, Claude Code 실측에서 토큰의 대부분이 캐시라 그것을 빼면 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
-- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
+- API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (CONTRIBUTING.md "문서의 정본")
 - 오류 응답: RFC 9457 problem+json 하나로 통일하고 `code` 확장 멤버로 종류를 고른다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
 - API 문서 UI: Scalar. 앱을 띄우면 `/scalar`에 뜬다. 원본 문서는 `/v3/api-docs`(JSON)와 `/v3/api-docs.yaml`이다. Swagger UI는 쓰지 않는다. 두 UI가 같은 문서를 보여줄 이유가 없어 `springdoc-openapi-starter-webmvc-ui` 대신 `-scalar`를 쓴다. 렌더링 JS가 jar에 번들되어 앱이 직접 서빙하므로 CDN을 타지 않고 버전이 의존성에 고정된다
 - 테스트: JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 실제 PostgreSQL 컨테이너로 돌린다

@@ -10,7 +10,6 @@
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
 | `demo/` | 수집-조회 데모/검증 CLI와 Claude Code 사용량 브리지. Python 3.9+, 표준 라이브러리만 쓴다 |
 | `deploy/` | 운영 배포 구성. compose, Caddy, 배포 스크립트 |
-| `docs/` | 무엇을 둘지 미정 (`docs/document-rules.md`) |
 | `work/` | 개인 작업 공간. .gitignore로 제외되며 각자 만들어 쓴다 (CLAUDE.md 참조) |
 
 ## 개발 방식
@@ -19,9 +18,9 @@
 
 ## 문서 위치 규칙
 
-코드를 고칠 때 같이 고쳐야 하는 문서는 레포에, 논의해서 정하는 것은 Notion MS2 팀 위키에 둔다. 규칙의 정본은 [`docs/document-rules.md`](docs/document-rules.md)이며, 새 문서를 만들기 전에 그 파일을 본다.
+코드를 고칠 때 같이 고쳐야 하는 문서는 레포에, 논의해서 정하는 것은 Notion MS2 팀 위키에 둔다. 규칙의 정본은 [`CONTRIBUTING.md`](CONTRIBUTING.md) "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 본다.
 
-레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 브랜치와 PR 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md), 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
+레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md), 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
 
 ## 시작하기
 
