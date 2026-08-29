@@ -170,22 +170,64 @@ SSH 키도 22번 포트도 없다. 서버 안의 SSM 에이전트가 AWS로 걸�
 | `organization-name` | String | 프론트 상단 바에 표시할 이름 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 (MS2-168) |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook (MS2-168) |
+| `tosspayments-secret-key` | SecureString | 백엔드가 토스페이먼츠 API를 부를 때 쓰는 Basic 인증 키 |
+| `tosspayments-client-key` | String | 브라우저에서 토스페이먼츠 SDK를 초기화할 때 쓴다. 아직 읽는 곳이 없다 |
 
 값을 고쳤으면 재배포해야 반영된다(같은 SHA로 `deploy.sh`를 다시 돌리면 된다).
 
-**모니터링 파라미터 두 개는 이 구성이 main에 머지되기 전에 만들어야 한다.** compose가 값이 없으면
+**아래 파라미터들은 각 구성이 main에 머지되기 전에 만들어야 한다.** compose가 값이 없으면
 뜨지 않게 막고 있어서(`:?`), 없는 채로 머지되면 그 즉시 CD 배포가 실패한다.
 
 ```bash
 aws ssm put-parameter --name /meterengine/prod/grafana-admin-password --type SecureString --value '<비밀번호>'
 aws ssm put-parameter --name /meterengine/prod/slack-webhook-url --type SecureString --value '<webhook URL>'
+aws ssm put-parameter --name /meterengine/prod/tosspayments-secret-key --type SecureString --value '<시크릿 키>'
+aws ssm put-parameter --name /meterengine/prod/tosspayments-client-key --type String --value '<클라이언트 키>'
 ```
+
+값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다. 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
+
+## 토스페이먼츠
+
+결제는 토스페이먼츠 **테스트 상점**으로 붙는다. 아직 전자결제 계약 전이라 실제 돈은 움직이지 않는다.
+개발자센터에 회원가입하면 사업자등록번호 없이 테스트 상점이 생기고, 테스트 결제내역과 웹훅까지 쓸 수 있다.
+
+레포 밖에 있어서 코드만 봐서는 알 수 없는 상점 설정은 아래와 같다. 바꾸면 배포된 백엔드의 동작이 바뀐다.
+
+| 설정 | 값 | 어디서 바꾸나 |
+| --- | --- | --- |
+| 연동 키 종류 | **API 개별 연동 키** (`test_ck_` / `test_sk_`) | 개발자센터 > API 키 |
+| API 버전 | `2024-06-01` | 개발자센터 > API 키 |
+| 시크릿 키 | Parameter Store `tosspayments-secret-key` | 위 `put-parameter` |
+| 클라이언트 키 | Parameter Store `tosspayments-client-key` | 위 `put-parameter` |
+
+두 키는 **같은 상점에서 함께 받은 한 쌍이어야 한다.** 짝이 맞지 않으면 API가 `UNAUTHORIZED_KEY`로 거절한다.
+
+클라이언트 키는 브라우저에 노출되는 값이라 SecureString이 아니다. 지금은 파라미터만 있고 읽는 곳이 없다.
+`deploy.sh`가 경로 아래를 통째로 읽으므로 `TOSSPAYMENTS_CLIENT_KEY`로 `prod.env`에는 들어가지만,
+`compose.prod.yml`이 어느 컨테이너에도 넘기지 않는다. 프론트에 붙이는 것은 아직 안 했는데, 이 레포의
+프론트 설정(`frontend/src/lib/config.ts`)이 전부 `server-only`라서 브라우저로 값을 내보내는 방법을
+그때 처음 정해야 하기 때문이다. 여기서 환경변수 이름을 미리 박으면 그 결정을 잘못 가둔다.
+
+**연동 키 종류를 주문서형/결제창형(`test_gck_` / `test_gsk_`)으로 바꾸면 안 된다.** 그 키에는 자동결제가
+붙어 있지 않아 빌링키 발급이 `NOT_SUPPORTED_METHOD`로 막힌다.
+
+**API 버전을 바꾸면 응답 필드가 바뀐다.** 아직 토스페이먼츠 API를 부르는 코드가 없어서 지금 당장은
+영향이 없지만, 응답을 파싱하는 코드가 붙고 나면 콘솔에서 버전만 올렸을 때 코드는 그대로인데 파싱이
+조용히 어긋난다. 그때부터는 버전을 올릴 때 백엔드 매핑을 같이 고친다.
+
+자동결제 승인 API는 `Idempotency-Key` 헤더를 받는다. 같은 키로 다시 부르면 첫 응답을 그대로 돌려주고
+카드사에 다시 가지 않으며, 유효기간은 첫 요청부터 15일이다. **성공이든 실패든 응답이 캐시되므로,
+실패한 결제를 재시도할 때는 반드시 새 키를 써야 한다.** 15일이 지나면 키가 만료되어 새 결제로 처리되니,
+이중 결제 방어를 이 헤더에만 맡기지 않는다.
 
 ## 모니터링 (MS2-168)
 
 Prometheus가 백엔드(`/actuator/prometheus`)와 node exporter(서버 자원)를 15초마다 긁고,
 Grafana가 그것을 대시보드와 경보로 만든다. 셋 다 서비스 트래픽을 받지 않아 어느 것이 죽어도
 서비스는 돈다.
+
+지표 보관은 15일 또는 2GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. EBS가 20GB뿐이라 둘 다 건다.
 
 ### 대시보드 보기
 

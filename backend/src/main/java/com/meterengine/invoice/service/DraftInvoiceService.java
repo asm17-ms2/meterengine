@@ -119,9 +119,6 @@ public class DraftInvoiceService {
   /**
    * 수량 x 단가를 원 단위 정수로 만든다.
    *
-   * <p>원 미만은 라인마다 절사한다 (팀 결정 2026-08-13). 합산 후에 한 번만 절사하면 라인 금액의 합과 고객 소계가 어긋나, 화면에 보이는 줄을 다 더해도
-   * 소계가 안 맞는 표가 된다.
-   *
    * <p>{@code longValueExact()}라서 long 범위를 넘으면 조용히 잘리는 대신 예외로 터진다. 청구 금액이 잘못 나가는 것보다 500이 낫다.
    */
   private static long charge(BigDecimal quantity, BigDecimal unitPrice) {

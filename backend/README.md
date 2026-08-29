@@ -6,11 +6,12 @@
 
 - Java 25 + Spring Boot 4.1 + Gradle Kotlin DSL. 버전은 `gradle/libs.versions.toml`에서 관리한다
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
-- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다. 현재 다섯 개다
+- 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다
   - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 네 테이블
   - `V2__split_price_policy_from_billable_metric.sql` - 미터의 unit_price를 price_policy(가격 정책)와 price_rate(단가)로 분리 (MS2-158). 다차원 가격 대비 형태지만 이번 슬라이스는 전부 무차원('{}')이다
   - `V3__add_customer_created_at.sql` - customer에 등록 시각 `created_at` 추가 (MS2-171). 새 행은 DB가 `clock_timestamp()`로 채운다. **이미 있던 행은 마이그레이션 시각 하나를 나눠 받았고 그 값은 실제 등록 시각이 아니다** (등록 시각을 기록하기 전에 만들어진 행이라 그 사실이 남아 있지 않다. 값이 전부 같다는 것이 백필 표식이다). API로는 이 값을 보낼 통로가 없고, raw SQL이 값을 실어 보내면 그대로 저장된다 - `usage_event.received_at`과 달리 덮어쓰는 트리거를 두지 않았다 (사유는 파일 주석에 있다)
   - `V4__collate_names_for_korean.sql` - 고객, 도입사, 미터의 이름 컬럼에 ICU 한국어(ko-KR) collation을 지정 (MS2-143). 정렬을 DB가 하는데 DB 기본 collation이 en_US.utf8이라 고객 목록이 한국어 사전순이 아니었다. 컬럼 레벨이라 볼륨을 지우지 않아도 적용된다
+  - `V5__create_invoice_tables.sql` - 확정 인보이스와 인보이스 라인 두 테이블. 고객 x 달로 한 장을 강제하고, 라인은 인보이스 안에서 미터와 단가 조합으로 유일하다. 확정본을 되돌리는 수단은 두지 않았고, 확정된 행을 지우거나 고치는 것을 DB가 막지는 않는다
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터 등록 API가 없어서(MS2-159 예정) 지금은 고객 API(MS2-155)와 가격 정책 API(MS2-157)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다. 미터는 여섯 개이고 그중 `llm_request` 이벤트 하나를 입력/출력/캐시 읽기/캐시 생성 토큰 네 미터가 함께 잰다. 캐시 두 미터는 MS2-169에서 추가했는데, Claude Code 실측에서 토큰의 대부분이 캐시라 그것을 빼면 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (`docs/document-rules.md`)
@@ -35,6 +36,35 @@ Docker Desktop(Compose 포함)과 JDK 25가 필요하다.
 ./gradlew build          # 컴파일 + 포맷 검사 + 테스트 + OpenAPI 생성물 (Docker 필요)
 ./gradlew spotlessApply  # 포맷 자동 적용
 ```
+
+## 외부 서비스 키
+
+| 프로퍼티 | 환경변수 | 운영 값의 출처 |
+| --- | --- | --- |
+| `tosspayments.secret-key` | `TOSSPAYMENTS_SECRET_KEY` | SSM Parameter Store `/meterengine/prod/tosspayments-secret-key` |
+
+운영에서 값이 흐르는 경로는 이렇다. Parameter Store에 넣은 이름이 그대로 환경변수가 되고
+(`tosspayments-secret-key` -> `TOSSPAYMENTS_SECRET_KEY`), 그것을 Spring이 완화 바인딩으로
+`tosspayments.secret-key`에 꽂는다. 중간에 이름을 갈아끼우는 곳이 없다. 등록 방법은
+`deploy/README.md`의 "Parameter Store"와 "토스페이먼츠"에 있다.
+
+`TossPaymentsProperties`가 `@NotBlank`라 값이 비면 기동 자체가 실패한다. 배포 스크립트가
+`/actuator/health`를 기다리므로 **CD가 초록불이면 키가 실제로 전달됐다는 뜻**이다. 노출된 actuator
+엔드포인트가 health와 prometheus뿐이라 밖에서 설정값을 들여다볼 방법이 없는데, 이 방식은 확인 절차를
+따로 두지 않고도 같은 것을 보증한다.
+
+`application.properties`의 기본값은 **자리표시자다.** 실제 키가 아니라서 이 값으로 토스페이먼츠
+API를 부르면 거절당한다. 하는 일은 로컬과 CI가 아무 설정 없이 기동되게 하는 것뿐이고, 운영에서는
+compose가 `:?`로 주입을 강제하므로 쓰일 일이 없다.
+
+**실제 키를 기본값으로 두지 않는다.** 토스페이먼츠는 클라이언트 키와 시크릿 키가 같은 상점의 짝이어야
+하는데 이 레포에는 클라이언트 키가 없다. 시크릿 키만 박아 두면 나중에 그 값이 낡았을 때 개발자가 받는
+신호가 `UNAUTHORIZED_KEY` 하나뿐이라, 자기가 복사해 온 클라이언트 키를 의심하며 헤매게 된다.
+
+로컬에서 실제로 결제를 시험하려면 `TOSSPAYMENTS_SECRET_KEY`를 환경변수로 주고, 클라이언트 키도 같은
+상점의 것으로 함께 갖춘다. 빌링키 발급은 브라우저에서 클라이언트 키로 카드를 등록하는 단계부터
+시작하므로 시크릿 키만으로는 시작할 수 없다. 어느 상점을 쓰는지는 `deploy/README.md`의 "토스페이먼츠"에
+있다.
 
 ## 컨테이너 이미지
 
@@ -171,13 +201,14 @@ docker build -t meterengine-backend .
 
 ## 구조
 
-단일 Gradle 모듈이다. `com.meterengine` 아래 도메인 패키지 다섯을 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다 (MS2-149).
+단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다.
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
 - `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/metrics`, `/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`)
 - `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`, `/v1/price-policies`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 정책 등록 API를, MS2-176이 목록 조회를 얹었다. 단가 등록/수정/삭제는 MS2-177 예정이다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
+- `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
 경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 여덟이다.
