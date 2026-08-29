@@ -25,10 +25,14 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 - 계획(plan) 승인은 작업 내용에 대한 승인이지 커밋/PR 실행 승인이 아니다. 계획에 커밋/PR이 포함되어 있어도 실행 직전에 다시 확인한다
 - 로컬 파일 편집, 브랜치 생성/전환, 조회는 이 규칙의 대상이 아니다
 
+## 커밋 메시지
+
+CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, PR 하나에 커밋 하나를 최대한 유지한다.
+
 ## 현재 상태 (중요)
 
 - 기술 스택 확정: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 구성은 `backend/README.md`와 `frontend/README.md`가 정본이다
-- 브랜치 전략: main 직접 push 금지(모든 변경은 PR로), 브랜치 네이밍, squash 머지 모두 확정됐고 GitHub 브랜치 보호로 강제된다. PR 크기 상한(300줄)과 쪼개는 축, 스택 PR 절차도 같이 확정됐다. 정본은 CONTRIBUTING.md
+- 브랜치, 커밋, PR 규칙의 정본은 CONTRIBUTING.md다
 - 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
 - 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
 
@@ -86,7 +90,7 @@ MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw
 
 코드를 고칠 때 같이 고쳐야 하면 레포, 논의해서 정하는 것이면 Notion MS2 팀 위키다. 규칙의 정본은 `docs/document-rules.md`이며, 새 문서를 만들기 전에 그 파일을 보고 없는 내용이면 먼저 물어본다.
 
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치와 PR 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. `docs/` 아래에 무엇을 둘지는 아직 정하지 않았다.
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. `docs/` 아래에 무엇을 둘지는 아직 정하지 않았다.
 
 PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 
