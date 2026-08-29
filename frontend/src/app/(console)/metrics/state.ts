@@ -15,3 +15,12 @@ export type MetricFormState =
   | { status: "done" };
 
 export const METRIC_FORM_IDLE: MetricFormState = { status: "idle" };
+
+export type MetricDeleteState =
+  | { status: "idle" }
+  | { status: "failed"; message: string }
+  | { status: "rejected"; reason: "events" | "policy"; name: string }
+  | { status: "gone"; name: string }
+  | { status: "done" };
+
+export const METRIC_DELETE_IDLE: MetricDeleteState = { status: "idle" };

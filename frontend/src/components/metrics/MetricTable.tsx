@@ -1,8 +1,8 @@
 import type { MetricRowView } from "@/app/(console)/metrics/state";
 import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
 
-const COLUMNS = "190px minmax(0, 1fr) 170px 110px 220px";
-const MIN_WIDTH = 860;
+const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 110px";
+const MIN_WIDTH = 940;
 
 const HEAD = [
   "코드",
@@ -10,14 +10,23 @@ const HEAD = [
   "이벤트 타입",
   "집계 함수",
   "집계 대상 속성",
+  { label: "작업", right: true },
 ] as const;
 
-export function MetricTable({ rows }: { rows: MetricRowView[] }) {
+export function MetricTable({
+  rows,
+  onEdit,
+  onDelete,
+}: {
+  rows: MetricRowView[];
+  onEdit: (row: MetricRowView) => void;
+  onDelete: (row: MetricRowView) => void;
+}) {
   return (
     <GridTable minWidth={MIN_WIDTH}>
       <GridHead columns={COLUMNS} labels={HEAD} />
       {rows.map((row) => (
-        <GridRow key={row.code} columns={COLUMNS}>
+        <GridRow key={row.code} columns={COLUMNS} className="grid-row--actions">
           <GridCell className="grid-cell--mono grid-cell--strong grid-cell--truncate">
             {row.code}
           </GridCell>
@@ -28,6 +37,26 @@ export function MetricTable({ rows }: { rows: MetricRowView[] }) {
           <GridCell>{row.aggregation}</GridCell>
           <GridCell className="grid-cell--mono grid-cell--muted grid-cell--truncate">
             {row.targetProperty}
+          </GridCell>
+          <GridCell className="grid-cell--actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ fontSize: 13 }}
+              aria-label={`${row.name} 수정`}
+              onClick={() => onEdit(row)}
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ fontSize: 13 }}
+              aria-label={`${row.name} 삭제`}
+              onClick={() => onDelete(row)}
+            >
+              삭제
+            </button>
           </GridCell>
         </GridRow>
       ))}

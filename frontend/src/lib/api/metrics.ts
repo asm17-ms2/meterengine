@@ -43,3 +43,24 @@ export async function registerMetric(metric: Metric): Promise<Result<Metric>> {
     body: metric,
   });
 }
+
+export type MetricUpdate = Omit<Metric, "code">;
+
+export async function updateMetric(
+  code: string,
+  metric: MetricUpdate,
+): Promise<Result<Metric>> {
+  return serverSend<Metric>(
+    config.apiBaseUrl,
+    `/v1/metrics/${encodeURIComponent(code)}`,
+    { method: "PUT", body: metric },
+  );
+}
+
+export async function deleteMetric(code: string): Promise<Result<void>> {
+  return serverSend<void>(
+    config.apiBaseUrl,
+    `/v1/metrics/${encodeURIComponent(code)}`,
+    { method: "DELETE" },
+  );
+}
