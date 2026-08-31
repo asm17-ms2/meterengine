@@ -3,8 +3,8 @@ package com.meterengine.invoice.service;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.CustomerEntry;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.LineEntry;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomerEntry;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.MetricLineItem;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.service.MetricUsageService;
@@ -47,21 +47,22 @@ public class DraftInvoiceService {
             .map(usage -> MetricQuantities.from(usage, unitPrices))
             .toList();
 
-    List<CustomerEntry> entries =
+    List<DraftInvoiceCustomerEntry> entries =
         organizationCustomers.stream()
             .map(customer -> customerEntry(customer, metricQuantities))
             .toList();
-    long totalAmount = entries.stream().mapToLong(CustomerEntry::amount).reduce(0L, Math::addExact);
+    long totalAmount =
+        entries.stream().mapToLong(DraftInvoiceCustomerEntry::amount).reduce(0L, Math::addExact);
 
     return new DraftInvoiceResponse(month.toString(), calculatedAt, totalAmount, entries);
   }
 
-  private static CustomerEntry customerEntry(
+  private static DraftInvoiceCustomerEntry customerEntry(
       Customer customer, List<MetricQuantities> metricQuantities) {
-    List<LineEntry> lines =
+    List<MetricLineItem> lines =
         metricQuantities.stream().map(metric -> metric.lineFor(customer.getId())).toList();
-    long amount = lines.stream().mapToLong(LineEntry::amount).reduce(0L, Math::addExact);
-    return new CustomerEntry(customer.getId(), customer.getName(), amount, lines);
+    long amount = lines.stream().mapToLong(MetricLineItem::amount).reduce(0L, Math::addExact);
+    return new DraftInvoiceCustomerEntry(customer.getId(), customer.getName(), amount, lines);
   }
 
   private record MetricQuantities(
@@ -80,9 +81,9 @@ public class DraftInvoiceService {
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
 
-    LineEntry lineFor(UUID customerId) {
+    MetricLineItem lineFor(UUID customerId) {
       BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
-      return new LineEntry(
+      return new MetricLineItem(
           metricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
   }

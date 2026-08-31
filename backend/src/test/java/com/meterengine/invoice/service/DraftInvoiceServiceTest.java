@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.CustomerEntry;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.LineEntry;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomerEntry;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.MetricLineItem;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
@@ -65,11 +65,11 @@ class DraftInvoiceServiceTest {
     assertThat(response.calculatedAt()).isNotNull();
     assertThat(response.calculatedAt().getOffset()).isEqualTo(ZoneOffset.ofHours(9));
     assertThat(response.totalAmount()).isEqualTo(1645);
-    CustomerEntry entry = response.customers().getFirst();
+    DraftInvoiceCustomerEntry entry = response.customers().getFirst();
     assertThat(entry.customerId()).isEqualTo(acme.getId());
     assertThat(entry.customerName()).isEqualTo("아크메");
     assertThat(entry.amount()).isEqualTo(1645);
-    LineEntry line = entry.lines().getFirst();
+    MetricLineItem line = entry.lines().getFirst();
     assertThat(line.metricCode()).isEqualTo("token-usage");
     assertThat(line.targetProperty()).isEqualTo("token");
     assertThat(line.quantity()).isEqualByComparingTo("3290");
@@ -111,8 +111,8 @@ class DraftInvoiceServiceTest {
 
     // 1645.5원과 2.5원. 라인마다 절사한 뒤 합산하므로 1645 + 2 = 1647원이다.
     // 합산 후 한 번만 절사하면 1648원이 되어, 화면의 라인 금액을 다 더해도 소계와 안 맞는 표가 된다.
-    CustomerEntry entry = response.customers().getFirst();
-    assertThat(entry.lines()).extracting(LineEntry::amount).containsExactly(1645L, 2L);
+    DraftInvoiceCustomerEntry entry = response.customers().getFirst();
+    assertThat(entry.lines()).extracting(MetricLineItem::amount).containsExactly(1645L, 2L);
     assertThat(entry.amount()).isEqualTo(1647);
     assertThat(response.totalAmount()).isEqualTo(1647);
   }
@@ -133,11 +133,11 @@ class DraftInvoiceServiceTest {
     when(prices.findBaseUnitPrices(ORG_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    List<CustomerEntry> entries = service.preview(ORG_ID, AUGUST).customers();
+    List<DraftInvoiceCustomerEntry> entries = service.preview(ORG_ID, AUGUST).customers();
 
-    CustomerEntry betaEntry = entries.get(1);
+    DraftInvoiceCustomerEntry betaEntry = entries.get(1);
     assertThat(betaEntry.amount()).isZero();
-    LineEntry betaLine = betaEntry.lines().getFirst();
+    MetricLineItem betaLine = betaEntry.lines().getFirst();
     assertThat(betaLine.quantity()).isEqualByComparingTo("0");
     assertThat(betaLine.amount()).isZero();
     // 단가는 사용량과 무관한 미터의 속성이라 0이 아니라 실제 값이 나간다 (화면 목업과 동일)
@@ -156,7 +156,7 @@ class DraftInvoiceServiceTest {
 
     assertThat(response.totalAmount()).isZero();
     assertThat(response.customers())
-        .extracting(CustomerEntry::customerName)
+        .extracting(DraftInvoiceCustomerEntry::customerName)
         .containsExactly("아크메", "베타");
     assertThat(response.customers())
         .allSatisfy(

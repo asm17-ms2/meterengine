@@ -616,6 +616,21 @@ components:
           format: uuid
         name:
           type: string
+    DraftInvoiceCustomerEntry:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricLineItem"
     DraftInvoiceResponse:
       type: object
       properties:
@@ -625,7 +640,7 @@ components:
         customers:
           type: array
           items:
-            $ref: "#/components/schemas/CustomerEntry"
+            $ref: "#/components/schemas/DraftInvoiceCustomerEntry"
         month:
           type: string
         total_amount:
@@ -719,6 +734,20 @@ components:
           type: string
         target_property:
           type: string
+    MetricLineItem:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        metric_code:
+          type: string
+        quantity:
+          type: number
+        target_property:
+          type: string
+        unit_price:
+          type: number
     MetricPricePolicyResponse:
       type: object
       properties:
