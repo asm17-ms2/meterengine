@@ -111,8 +111,6 @@ public class CustomerService {
       customers.delete(customer);
       customers.flush();
     } catch (DataIntegrityViolationException exception) {
-      // customer 행을 참조하는 제약은 usage_event의 복합 FK 하나뿐이다. 그래서 여기 오는 경우도 하나다.
-      // 위 확인을 통과한 뒤 DELETE 전에 그 고객의 이벤트가 커밋된 것. 결과는 확인에 걸린 것과 같아야 한다.
       throw new CustomerHasEventsException(customerId);
     }
   }
