@@ -42,7 +42,9 @@ public class DraftInvoiceService {
 
     List<Customer> organizationCustomers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+
     Map<String, BigDecimal> baseUnitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
+
     List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers =
         metricUsageService.aggregate(organizationId, month).stream()
             .filter(usage -> baseUnitPrices.containsKey(usage.metric().getCode()))
@@ -53,6 +55,7 @@ public class DraftInvoiceService {
         organizationCustomers.stream()
             .map(customer -> customerEntry(customer, metricQuantitiesByCustomers))
             .toList();
+
     long totalAmount =
         customerEntries.stream()
             .mapToLong(DraftInvoiceCustomerEntry::amount)
@@ -67,8 +70,10 @@ public class DraftInvoiceService {
         metricQuantitiesByCustomers.stream()
             .map(metric -> metric.lineFor(customer.getId()))
             .toList();
+
     long amount =
         metricLineItems.stream().mapToLong(MetricLineItem::amount).reduce(0L, Math::addExact);
+
     return new DraftInvoiceCustomerEntry(
         customer.getId(), customer.getName(), amount, metricLineItems);
   }
@@ -82,6 +87,7 @@ public class DraftInvoiceService {
     static MetricQuantitiesByCustomer from(
         MetricUsage metricUsage, Map<String, BigDecimal> unitPrices) {
       String metricCode = metricUsage.metric().getCode();
+
       return new MetricQuantitiesByCustomer(
           metricCode,
           metricUsage.metric().getTargetProperty(),
@@ -92,6 +98,7 @@ public class DraftInvoiceService {
 
     MetricLineItem lineFor(UUID customerId) {
       BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
+
       return new MetricLineItem(
           metricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
