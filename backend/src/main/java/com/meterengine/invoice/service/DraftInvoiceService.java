@@ -42,44 +42,51 @@ public class DraftInvoiceService {
 
     List<Customer> organizationCustomers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
-    Map<String, BigDecimal> unitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
-    List<MetricQuantities> metricQuantities =
+    Map<String, BigDecimal> baseUnitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
+    List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers =
         metricUsageService.aggregate(organizationId, month).stream()
-            .filter(usage -> unitPrices.containsKey(usage.metric().getCode()))
-            .map(usage -> MetricQuantities.from(usage, unitPrices))
+            .filter(usage -> baseUnitPrices.containsKey(usage.metric().getCode()))
+            .map(usage -> MetricQuantitiesByCustomer.from(usage, baseUnitPrices))
             .toList();
 
-    List<DraftInvoiceCustomerEntry> entries =
+    List<DraftInvoiceCustomerEntry> customerEntries =
         organizationCustomers.stream()
-            .map(customer -> customerEntry(customer, metricQuantities))
+            .map(customer -> customerEntry(customer, metricQuantitiesByCustomers))
             .toList();
     long totalAmount =
-        entries.stream().mapToLong(DraftInvoiceCustomerEntry::amount).reduce(0L, Math::addExact);
+        customerEntries.stream()
+            .mapToLong(DraftInvoiceCustomerEntry::amount)
+            .reduce(0L, Math::addExact);
 
-    return new DraftInvoiceResponse(month.toString(), calculatedAt, totalAmount, entries);
+    return new DraftInvoiceResponse(month.toString(), calculatedAt, totalAmount, customerEntries);
   }
 
   private static DraftInvoiceCustomerEntry customerEntry(
-      Customer customer, List<MetricQuantities> metricQuantities) {
-    List<MetricLineItem> lines =
-        metricQuantities.stream().map(metric -> metric.lineFor(customer.getId())).toList();
-    long amount = lines.stream().mapToLong(MetricLineItem::amount).reduce(0L, Math::addExact);
-    return new DraftInvoiceCustomerEntry(customer.getId(), customer.getName(), amount, lines);
+      Customer customer, List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers) {
+    List<MetricLineItem> metricLineItems =
+        metricQuantitiesByCustomers.stream()
+            .map(metric -> metric.lineFor(customer.getId()))
+            .toList();
+    long amount =
+        metricLineItems.stream().mapToLong(MetricLineItem::amount).reduce(0L, Math::addExact);
+    return new DraftInvoiceCustomerEntry(
+        customer.getId(), customer.getName(), amount, metricLineItems);
   }
 
-  private record MetricQuantities(
+  private record MetricQuantitiesByCustomer(
       String metricCode,
       String targetProperty,
       BigDecimal unitPrice,
       Map<UUID, BigDecimal> byCustomer) {
 
-    static MetricQuantities from(MetricUsage usage, Map<String, BigDecimal> unitPrices) {
-      String metricCode = usage.metric().getCode();
-      return new MetricQuantities(
+    static MetricQuantitiesByCustomer from(
+        MetricUsage metricUsage, Map<String, BigDecimal> unitPrices) {
+      String metricCode = metricUsage.metric().getCode();
+      return new MetricQuantitiesByCustomer(
           metricCode,
-          usage.metric().getTargetProperty(),
+          metricUsage.metric().getTargetProperty(),
           unitPrices.get(metricCode),
-          usage.customers().stream()
+          metricUsage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
 
