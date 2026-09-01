@@ -25,18 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 고객 등록/수정/삭제와 목록 조회 (MS2-155).
- *
- * <p>이 API가 생기기 전까지 고객을 만드는 통로는 시드 스크립트뿐이었다. 수집, 집계, 청구 예정액이 전부 고객을 전제로 도는데 그 고객을 화면에서 만들 수 없었다.
- *
- * <p><b>X-Organization-Id는 임시물이다.</b> 지금은 요청이 도입사를 자칭하기만 하면 통과하므로 누구나 아무 도입사를 사칭할 수 있다. MS2-126이
- * Bearer API 키 인증을 붙이면서 이 헤더를 인증 주체에서 꺼내는 형태로 바꾼다. 그때 헤더 누락은 400이 아니라 401이 되고, 없는 도입사를 가리키는 400도
- * 사라진다 (수집, 사용량, 청구 예정액 API와 같은 사정).
- *
- * <p><b>단건 조회를 만들지 않는다.</b> 고객이 가진 정보가 목록에 이미 전부 들어 있어 같은 것을 두 경로로 내게 된다. 대신 수정의 응답이 갱신된 고객 전체를
- * 담는다. 그것이 화면이 반영 결과를 확인하는 창구다.
- */
 @RestController
 @RequestMapping("/v1/customers")
 public class CustomerController {
@@ -60,7 +48,6 @@ public class CustomerController {
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "고객 목록. 한 명도 없으면 customers가 빈 배열이다"),
-    // content를 주지 않으면 오류 스키마가 200의 것으로 문서에 나간다 (MS2-140 실측).
     @ApiResponse(
         responseCode = "400",
         content =
@@ -70,8 +57,7 @@ public class CustomerController {
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public CustomerListResponse list(
-      @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId) {
     return CustomerListResponse.from(customerService.list(organizationId));
   }
@@ -101,8 +87,7 @@ public class CustomerController {
             """)
   })
   public CustomerResponse create(
-      @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Valid @RequestBody SaveCustomerRequest request) {
     return CustomerResponse.from(customerService.create(organizationId, request.name()));
@@ -136,8 +121,7 @@ public class CustomerController {
         description = "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다")
   })
   public CustomerResponse update(
-      @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "고칠 고객의 ID.") @PathVariable UUID id,
       @Valid @RequestBody SaveCustomerRequest request) {
@@ -181,8 +165,7 @@ public class CustomerController {
         description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
   })
   public void delete(
-      @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "지울 고객의 ID.") @PathVariable UUID id) {
     customerService.delete(organizationId, id);
