@@ -313,6 +313,51 @@ class CustomerCrudIntegrationTest {
   }
 
   @Test
+  void 확정_인보이스가_있으면_이벤트가_없어도_code가_customer_has_invoices다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = createCustomer(orgId, "인보이스 있는 고객");
+    insertFinalizedInvoice(orgId, customerId);
+
+    assertThat(delete(orgId, customerId))
+        .hasStatus(409)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.CUSTOMER_HAS_INVOICES);
+
+    assertThat(customerCount(orgId)).isEqualTo(1);
+  }
+
+  @Test
+  void 이벤트와_확정_인보이스가_모두_있으면_code가_customer_has_events다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = createCustomer(orgId, "둘 다 있는 고객");
+    insertEvent(orgId, customerId);
+    insertFinalizedInvoice(orgId, customerId);
+
+    assertThat(delete(orgId, customerId))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCodes.CUSTOMER_HAS_EVENTS);
+  }
+
+  @Test
+  void customer를_참조하는_외래키는_삭제가_아는_이름뿐이다() {
+    assertThat(
+            jdbc.queryForList(
+                """
+                SELECT conname FROM pg_constraint
+                WHERE contype = 'f' AND confrelid = 'customer'::regclass
+                ORDER BY conname
+                """,
+                String.class))
+        .containsExactly("invoice_customer_same_org", "usage_event_customer_same_org");
+  }
+
+  @Test
   void 같은_고객을_두_번_지우면_두_번째는_404다() {
     UUID orgId = insertOrganization();
     UUID customerId = createCustomer(orgId, "지울 고객");
@@ -439,6 +484,17 @@ class CustomerCrudIntegrationTest {
         INSERT INTO usage_event
           (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
         VALUES (?, 'tx-1', ?, 'chat_completion', '{"token": 1200}', now())
+        """,
+        organizationId,
+        customerId);
+  }
+
+  private void insertFinalizedInvoice(UUID organizationId, UUID customerId) {
+    jdbc.update(
+        """
+        INSERT INTO invoice
+          (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
+        VALUES (?, ?, '2026-08', 0, 0, now())
         """,
         organizationId,
         customerId);

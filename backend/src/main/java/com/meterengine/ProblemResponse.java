@@ -40,6 +40,7 @@ public record ProblemResponse(
               ErrorCodes.ENDPOINT_NOT_FOUND,
               ErrorCodes.CUSTOMER_NOT_FOUND,
               ErrorCodes.CUSTOMER_HAS_EVENTS,
+              ErrorCodes.CUSTOMER_HAS_INVOICES,
               ErrorCodes.UNKNOWN_ORGANIZATION,
               ErrorCodes.METRIC_NOT_FOUND,
               ErrorCodes.PRICE_POLICY_ALREADY_EXISTS,

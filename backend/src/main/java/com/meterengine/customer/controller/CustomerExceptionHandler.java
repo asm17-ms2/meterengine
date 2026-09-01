@@ -3,6 +3,7 @@ package com.meterengine.customer.controller;
 import com.meterengine.ErrorCodes;
 import com.meterengine.ProblemMembers;
 import com.meterengine.customer.exception.CustomerHasEventsException;
+import com.meterengine.customer.exception.CustomerHasInvoicesException;
 import com.meterengine.customer.exception.CustomerNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -31,6 +32,15 @@ class CustomerExceptionHandler {
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     problem.setTitle("Customer has usage events");
     problem.setProperty(ProblemMembers.CODE, ErrorCodes.CUSTOMER_HAS_EVENTS);
+    return problem;
+  }
+
+  @ExceptionHandler(CustomerHasInvoicesException.class)
+  ProblemDetail handleHasInvoices(CustomerHasInvoicesException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Customer has finalized invoices");
+    problem.setProperty(ProblemMembers.CODE, ErrorCodes.CUSTOMER_HAS_INVOICES);
     return problem;
   }
 

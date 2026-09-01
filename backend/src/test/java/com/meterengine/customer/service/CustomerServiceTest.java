@@ -8,11 +8,15 @@ import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.exception.CustomerHasEventsException;
+import com.meterengine.customer.exception.CustomerHasInvoicesException;
 import com.meterengine.customer.exception.CustomerNotFoundException;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.invoice.repository.InvoiceExistenceRepository;
+import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,12 +32,13 @@ class CustomerServiceTest {
 
   @Mock private CustomerRepository customers;
   @Mock private EventRepository events;
+  @Mock private InvoiceExistenceRepository invoices;
 
   private CustomerService customerService;
 
   @BeforeEach
   void setUp() {
-    customerService = new CustomerService(customers, events);
+    customerService = new CustomerService(customers, events, invoices);
   }
 
   @Test
@@ -59,6 +64,26 @@ class CustomerServiceTest {
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
         .isInstanceOf(CustomerHasEventsException.class);
+  }
+
+  @Test
+  void 확인_뒤에_인보이스_FK가_거절하면_인보이스_예외로_바뀐다() {
+    when(customers.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(customer()));
+    when(events.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
+    when(invoices.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
+    doThrow(
+            new DataIntegrityViolationException(
+                "could not execute statement",
+                new ConstraintViolationException(
+                    "could not execute statement",
+                    new SQLException(),
+                    "invoice_customer_same_org")))
+        .when(customers)
+        .flush();
+
+    assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
+        .isInstanceOf(CustomerHasInvoicesException.class);
   }
 
   @Test

@@ -138,6 +138,9 @@ public class CustomerController {
           그 고객 id를 실은 이벤트는 미등록 고객으로 거절된다. 되돌리는 API는 없다.
           사용량 이벤트가 한 건이라도 있으면 지우지 않고 409로 거절한다. 이벤트는 청구 근거이고
           지울 수 없어서, 고객만 지우면 그 사용량이 어느 청구서에도 오르지 않는다.
+          확정된 인보이스가 있어도 409다. 확정은 되돌리지 않으므로 고객만 지우면
+          발행한 청구서가 가리킬 대상을 잃는다. 사용량 이벤트가 한 건도 없는 고객도
+          금액 0으로 확정된 달이 있으면 여기 걸린다. 두 경우는 code로 구분한다.
           같은 고객을 두 번 지우면 두 번째는 204가 아니라 404다.
           """)
   @ApiResponses({
@@ -162,7 +165,12 @@ public class CustomerController {
             @Content(
                 mediaType = "application/problem+json",
                 schema = @Schema(implementation = ProblemResponse.class)),
-        description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
+        description =
+            """
+            code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다.
+            code=customer_has_invoices: 확정된 인보이스가 있어 지울 수 없다.
+            둘 다 요청을 고쳐서 될 일이 아니다.
+            """)
   })
   public void delete(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
