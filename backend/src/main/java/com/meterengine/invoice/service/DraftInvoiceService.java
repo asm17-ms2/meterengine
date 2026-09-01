@@ -23,15 +23,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DraftInvoiceService {
 
-  private final MetricUsageService aggregation;
-  private final CustomerRepository customers;
-  private final PriceRateRepository prices;
+  private final MetricUsageService metricUsageService;
+  private final CustomerRepository customerRepository;
+  private final PriceRateRepository priceRateRepository;
 
   DraftInvoiceService(
-      MetricUsageService aggregation, CustomerRepository customers, PriceRateRepository prices) {
-    this.aggregation = aggregation;
-    this.customers = customers;
-    this.prices = prices;
+      MetricUsageService metricUsageService,
+      CustomerRepository customerRepository,
+      PriceRateRepository priceRateRepository) {
+    this.metricUsageService = metricUsageService;
+    this.customerRepository = customerRepository;
+    this.priceRateRepository = priceRateRepository;
   }
 
   @Transactional(readOnly = true)
@@ -39,10 +41,10 @@ public class DraftInvoiceService {
     OffsetDateTime calculatedAt = OffsetDateTime.now(MetricUsageService.BILLING_ZONE);
 
     List<Customer> organizationCustomers =
-        customers.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
-    Map<String, BigDecimal> unitPrices = prices.findBaseUnitPrices(organizationId);
+        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+    Map<String, BigDecimal> unitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
     List<MetricQuantities> metricQuantities =
-        aggregation.aggregate(organizationId, month).stream()
+        metricUsageService.aggregate(organizationId, month).stream()
             .filter(usage -> unitPrices.containsKey(usage.metric().getCode()))
             .map(usage -> MetricQuantities.from(usage, unitPrices))
             .toList();
