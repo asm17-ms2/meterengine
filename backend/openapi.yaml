@@ -25,7 +25,7 @@ paths:
         같은 고객 집합을 한 번에 담는다.
       operationId: list
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -55,7 +55,7 @@ paths:
         Location 헤더를 주지 않는다. 단건 조회 경로가 없어 가리킬 곳이 없다.
       operationId: create
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -96,7 +96,7 @@ paths:
         같은 고객을 두 번 지우면 두 번째는 204가 아니라 404다.
       operationId: delete
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -143,7 +143,7 @@ paths:
         다른 도입사 소속이거나 이미 지워진 고객은 404다. 지운 고객은 행 자체가 없어 없는 고객과 구별되지 않는다.
       operationId: update
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
