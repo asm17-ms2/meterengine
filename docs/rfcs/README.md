@@ -25,7 +25,7 @@ MS2 팀의 설계와 정책 방향 결정을 제안하고 기록하는 폴더입
 
 결정을 뒤집을 때는 옛 파일을 지우지 않고 새 RFC를 씁니다. 새 문서에는 어느 결정을 대체하는지를(frontmatter `supersedes`), 옛 문서에는 대체됐다는 상태(`status: superseded`)와 어느 결정으로 대체됐는지를(`superseded-by`) 적습니다. 옛 문서는 새 RFC의 PR에서 같이 고칩니다.
 
-RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다.
+RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다. RFC를 쓰기엔 가벼운 제안은 라벨 `proposal`을 붙인 일반 PR로 올립니다.
 
 ## 상태
 
