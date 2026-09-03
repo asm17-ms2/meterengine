@@ -90,7 +90,7 @@ domain: process
 
 ### RFC (docs/rfcs/)
 
-- PR 하나 = 제안 하나. `template.md`를 복사해 `NNN-하이픈-연결-제목.md`. 번호는 세 자리, 재사용 없음. 이 문서가 000
+- PR 하나 = 제안 하나. `template.md`를 복사해 `NNN-short-english-title.md`. 제목은 영어 소문자와 하이픈만 쓴다. 번호는 세 자리, 재사용 없음. 이 문서가 000
 - frontmatter `domain`에 그 결정을 바꾸면 무너지는 도메인을 적는다. 값은 process거나 백엔드 패키지명(customer, event, metric, pricing, invoice, payment). 여럿이면 리스트로 전부 적고 순서에 뜻을 두지 않는다. README 표의 도메인 열은 같은 값
 - PR 제목 `RFC-NNN: 제목`, 라벨 `rfc`. 라벨은 이것 하나만 쓴다. type은 브랜치명과 제목 접두사에 이미 있다
 - 전용 PR 템플릿 `.github/PULL_REQUEST_TEMPLATE/rfc.md`. 웹에는 템플릿 선택창이 없어 README의 링크 형식(`?template=rfc.md&labels=rfc`)으로 연다

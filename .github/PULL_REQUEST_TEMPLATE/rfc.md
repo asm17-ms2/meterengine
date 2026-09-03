@@ -8,7 +8,7 @@
 
 ## 체크리스트
 
-- [ ] 파일명이 `docs/rfcs/NNN-하이픈-연결-제목.md`이고 NNN이 목록의 다음 번호다. `docs/rfcs/README.md` 표에 draft로 한 줄을 추가했다
+- [ ] 파일명이 `docs/rfcs/NNN-short-english-title.md`(영어 소문자와 하이픈)이고 NNN이 목록의 다음 번호다. `docs/rfcs/README.md` 표에 draft로 한 줄을 추가했다
 - [ ] frontmatter의 status가 draft다
 - [ ] PR 제목이 `RFC-NNN: 제목` 형식이고 라벨 `rfc`가 붙어 있다
 - [ ] 채택 시 같이 바뀌어야 하는 문서나 규칙(CONTRIBUTING.md 등)이 있으면 스택 PR로 준비해 연결했다
