@@ -1,0 +1,22 @@
+name: RFC checklist
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  rfc-checklist:
+    name: rfc-checklist
+    if: contains(github.event.pull_request.labels.*.name, 'rfc')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any checklist item is unchecked
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          unchecked=$(printf '%s\n' "$BODY" | grep -E '^[[:space:]]*[-*+] \[ \]' || true)
+          if [ -n "$unchecked" ]; then
+            echo "체크 안 된 항목이 있습니다"
+            echo "$unchecked"
+            exit 1
+          fi
