@@ -18,9 +18,9 @@
 
 ## 문서 위치 규칙
 
-코드를 고칠 때 같이 고쳐야 하는 문서는 레포에, 논의해서 정하는 것은 Notion MS2 팀 위키에 둔다. 규칙의 정본은 [`CONTRIBUTING.md`](CONTRIBUTING.md) "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 본다.
+결정과 규칙은 레포(docs/)에, 회의록과 일정과 초안은 Miro에 둔다. 규칙의 정본은 [`CONTRIBUTING.md`](CONTRIBUTING.md) "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 본다.
 
-레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md), 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
+레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 결정과 정책은 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md), 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
 
 ## 시작하기
 

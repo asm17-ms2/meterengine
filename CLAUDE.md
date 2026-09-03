@@ -39,7 +39,8 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 - 팀: 박성종(팀 리드), 문인호, 양성지 / 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기)
 - Jira/Confluence: https://asm17-ms2.atlassian.net (Jira 프로젝트 키 MS2, Confluence의 MS2 스페이스)
-- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (정책과 스프린트 범위의 정본, 아래 "문서 흐름" 참조)
+- Miro: 회의록, 일정, 브레인스토밍 초안 (아래 "문서 흐름" 참조)
+- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (과거 결정 기록. 이관은 추후 결정)
 - 팀 GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling)
 
 ## 개발 방법론
@@ -77,7 +78,7 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 주석을 쓰지 않는다. javadoc도 주석이다. 코드만 읽어도 이해되게 쓰고, 코드가 맞게 도는지는 테스트로 관리한다.
 
-- 왜 이렇게 설계했는지는 노션에, 이 변경을 왜 했는지는 커밋 메시지와 PR 본문에, "고치면 깨진다"는 테스트에 넣는다
+- 왜 이렇게 설계했는지는 docs/(RFC와 정책)에, 이 변경을 왜 했는지는 커밋 메시지와 PR 본문에, "고치면 깨진다"는 테스트에 넣는다
 - 주석을 붙이고 싶어지면 대개 이름이나 분리가 잘못된 것이다. 주석 대신 그쪽을 고친다
 - 도구 지시문(`@SuppressWarnings`, `// eslint-disable-next-line`)과 `@Schema`/`@Operation`의 description은 대상이 아니다. description은 주석이 아니라 API 계약이다. 다만 거기에 Jira 키를 넣지 않는다 (`openapi.yaml`로 외부에 나간다)
 - 지금부터 새로 쓰거나 고치는 코드에 적용한다. 기존 주석과 javadoc은 소급 정리하지 않는다. 작업 중에 편집한 파일에 주석이나 javadoc이 있으면 그 파일의 주석과 javadoc 정리를 맡되, 하던 PR에 섞지 않고 그 정리만 하는 PR을 따로 연다
@@ -87,9 +88,9 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 ## 문서 흐름
 
-코드를 고칠 때 같이 고쳐야 하면 레포, 논의해서 정하는 것이면 Notion MS2 팀 위키다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
+결정과 규칙은 레포(docs/), 회의록과 일정과 초안은 Miro다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
 
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다.
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다.
 
 PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 
