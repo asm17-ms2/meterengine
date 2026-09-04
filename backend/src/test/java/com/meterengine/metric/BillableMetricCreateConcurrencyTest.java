@@ -27,7 +27,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
-class BillableMetricRegisterConcurrencyTest {
+class BillableMetricCreateConcurrencyTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private DataSource dataSource;
@@ -73,7 +73,7 @@ class BillableMetricRegisterConcurrencyTest {
 
   private MvcTestResult post(UUID organizationId) {
     return mvc.post()
-        .uri("/v1/metrics")
+        .uri("/v1/billable-metrics")
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(

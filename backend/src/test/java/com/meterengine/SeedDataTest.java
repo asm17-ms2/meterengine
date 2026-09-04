@@ -80,13 +80,13 @@ class SeedDataTest {
     // EXCLUDED가 생략된 컬럼에 DEFAULT('{}')를 싣는다는 사실에 기댄다. 그 미묘한 지점을 여기서 고정한다.
     assertThat(
             jdbc.queryForObject(
-                "SELECT dimension_properties::text FROM price_policy WHERE metric_code ="
+                "SELECT dimension_properties::text FROM price_policy WHERE billable_metric_code ="
                     + " 'token-usage'",
                 String.class))
         .isEqualTo("{}");
     assertThat(
             jdbc.queryForObject(
-                "SELECT unit_price FROM price_rate WHERE metric_code = 'token-usage'",
+                "SELECT unit_price FROM price_rate WHERE billable_metric_code = 'token-usage'",
                 BigDecimal.class))
         .isEqualByComparingTo("0.007");
     assertThat(rowCount("billable_metric")).isEqualTo(METRICS);
@@ -109,10 +109,10 @@ class SeedDataTest {
 
     var rate =
         jdbc.queryForMap(
-            "SELECT metric_code, dimension_values::text, unit_price FROM price_rate"
-                + " WHERE metric_code = 'token-usage'");
+            "SELECT billable_metric_code, dimension_values::text, unit_price FROM price_rate"
+                + " WHERE billable_metric_code = 'token-usage'");
 
-    assertThat(rate.get("metric_code")).isEqualTo("token-usage");
+    assertThat(rate.get("billable_metric_code")).isEqualTo("token-usage");
     assertThat(rate.get("dimension_values")).isEqualTo("{}");
     assertThat((BigDecimal) rate.get("unit_price")).isEqualByComparingTo("0.007");
   }
@@ -172,7 +172,7 @@ class SeedDataTest {
         jdbc.queryForList(
             "SELECT code, target_property, unit_price FROM billable_metric m"
                 + " JOIN price_rate r ON r.organization_id = m.organization_id"
-                + " AND r.metric_code = m.code"
+                + " AND r.billable_metric_code = m.code"
                 + " WHERE m.code IN ('cache-read-tokens', 'cache-creation-tokens')"
                 + " ORDER BY code");
 

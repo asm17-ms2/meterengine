@@ -1,9 +1,9 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
-import com.meterengine.metric.dto.SaveBillableMetricRequest;
+import com.meterengine.metric.dto.CreateBillableMetricRequest;
+import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.service.BillableMetricService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/v1/metrics")
+@RequestMapping("/v1/billable-metrics")
 public class BillableMetricController {
 
   private final BillableMetricService billableMetricService;
@@ -65,12 +65,12 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다")
   })
-  public BillableMetricResponse registerMetric(
+  public BillableMetricResponse createBillableMetric(
       @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody SaveBillableMetricRequest request) {
-    return billableMetricService.register(organizationId, request);
+      @Valid @RequestBody CreateBillableMetricRequest request) {
+    return billableMetricService.create(organizationId, request);
   }
 
   @GetMapping
@@ -79,11 +79,11 @@ public class BillableMetricController {
       description =
           """
           이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
-          미터가 없거나 등록되지 않은 도입사면 metrics가 빈 배열이다.
+          미터가 없거나 등록되지 않은 도입사면 billable_metrics가 빈 배열이다.
           페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 metrics가 빈 배열이다"),
+    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 billable_metrics가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -92,7 +92,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public BillableMetricListResponse listMetrics(
+  public ListBillableMetricsResponse listBillableMetrics(
       @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {

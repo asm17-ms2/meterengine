@@ -174,7 +174,7 @@ def roster_from_usage(usage_body: Optional[dict]) -> dict:
     응답은 등록 고객 전원을 0 채움으로 포함하므로 이것이 전체 명단이다.
     """
     roster = {}
-    for metric in (usage_body or {}).get("metrics") or []:
+    for metric in (usage_body or {}).get("billable_metric_usages") or []:
         for customer in metric.get("customers") or []:
             roster[customer["customer_id"]] = customer["customer_name"]
     return roster

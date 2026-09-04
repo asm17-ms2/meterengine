@@ -140,12 +140,12 @@ class BillableMetricIntegrationTest {
   void 도입사_헤더가_없으면_400이다() {
     assertThat(
             mvc.post()
-                .uri("/v1/metrics")
+                .uri("/v1/billable-metrics")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(sumBody("token-usage"))
                 .exchange())
         .hasStatus(400);
-    assertThat(mvc.get().uri("/v1/metrics").exchange()).hasStatus(400);
+    assertThat(mvc.get().uri("/v1/billable-metrics").exchange()).hasStatus(400);
   }
 
   @Test
@@ -159,7 +159,7 @@ class BillableMetricIntegrationTest {
     assertThat(result).hasStatus(200);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[*].code")
+        .extractingPath("$.billable_metrics[*].code")
         .asArray()
         .containsExactly("api-calls", "token-usage");
   }
@@ -171,7 +171,7 @@ class BillableMetricIntegrationTest {
     assertThat(getList(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.metrics")
+        .extractingPath("$.billable_metrics")
         .asArray()
         .isEmpty();
   }
@@ -186,14 +186,14 @@ class BillableMetricIntegrationTest {
     assertThat(getList(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.metrics[*].code")
+        .extractingPath("$.billable_metrics[*].code")
         .asArray()
         .containsExactly("token-usage");
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
-        .uri("/v1/metrics")
+        .uri("/v1/billable-metrics")
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
@@ -202,7 +202,7 @@ class BillableMetricIntegrationTest {
 
   private MvcTestResult getList(UUID organizationId) {
     return mvc.get()
-        .uri("/v1/metrics")
+        .uri("/v1/billable-metrics")
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }

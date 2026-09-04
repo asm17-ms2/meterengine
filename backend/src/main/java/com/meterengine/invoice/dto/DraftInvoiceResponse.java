@@ -42,7 +42,7 @@ public record DraftInvoiceResponse(
    * @param amount 이 라인의 금액(원). quantity x unitPrice에서 원 미만을 절사한 값이다
    */
   public record MetricLineItem(
-      @JsonProperty("metric_code") String metricCode,
+      @JsonProperty("billable_metric_code") String billableMetricCode,
       @JsonProperty("target_property") String targetProperty,
       BigDecimal quantity,
       @JsonProperty("unit_price") BigDecimal unitPrice,

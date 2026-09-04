@@ -3,7 +3,7 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.metric.dto.MetricUsageResponse;
+import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class MetricUsageIntegrationTest {
+class BillableMetricUsageIntegrationTest {
 
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final String AUGUST = "2026-08";
@@ -122,9 +122,9 @@ class MetricUsageIntegrationTest {
     UUID beta = insertCustomer(orgId, "베타");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    MetricUsageResponse response = usageOf(orgId, AUGUST);
+    ListBillableMetricUsagesResponse response = usageOf(orgId, AUGUST);
 
-    assertThat(response.metrics().getFirst().customers())
+    assertThat(response.billableMetricUsages().getFirst().customers())
         .extracting(customer -> customer.customerId())
         .containsExactlyInAnyOrder(acme, beta);
     assertThat(quantityOf(orgId, AUGUST, beta)).isEqualByComparingTo("0");
@@ -141,7 +141,7 @@ class MetricUsageIntegrationTest {
     insertEvent(otherOrgId, "tx-1", otherCustomer, 999999, "2026-08-10T12:00:00+09:00");
 
     assertThat(quantityOf(orgId, AUGUST, acme)).isEqualByComparingTo("500");
-    assertThat(usageOf(orgId, AUGUST).metrics().getFirst().customers()).hasSize(1);
+    assertThat(usageOf(orgId, AUGUST).billableMetricUsages().getFirst().customers()).hasSize(1);
   }
 
   @Test
@@ -200,11 +200,11 @@ class MetricUsageIntegrationTest {
   }
 
   @Test
-  void 미터가_없는_도입사는_metrics가_빈_배열이다() {
+  void 미터가_없는_도입사는_billable_metric_usages가_빈_배열이다() {
     UUID orgId = insertOrganization();
     insertCustomer(orgId, "아크메");
 
-    assertThat(usageOf(orgId, AUGUST).metrics()).isEmpty();
+    assertThat(usageOf(orgId, AUGUST).billableMetricUsages()).isEmpty();
   }
 
   @Test
@@ -216,21 +216,30 @@ class MetricUsageIntegrationTest {
     MvcTestResult result = get(orgId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo(AUGUST);
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].code").isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0].event_type")
+        .extractingPath("$.billable_metric_usages[0].code")
+        .isEqualTo("token-usage");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].event_type")
         .isEqualTo("chat_completion");
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].aggregation").isEqualTo("SUM");
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].target_property").isEqualTo("token");
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0].customers[0].customer_name")
+        .extractingPath("$.billable_metric_usages[0].aggregation")
+        .isEqualTo("SUM");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].target_property")
+        .isEqualTo("token");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].customers[0].customer_name")
         .isEqualTo("아크메");
     // 단가는 금액을 내는 MS2-124의 몫이라 사용량 응답에 넣지 않는다.
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0]")
+        .extractingPath("$.billable_metric_usages[0]")
         .asMap()
         .doesNotContainKey("unit_price");
   }
@@ -256,7 +265,7 @@ class MetricUsageIntegrationTest {
         .bodyJson()
         .extractingPath("$.month")
         .isEqualTo(YearMonth.now(KST).toString());
-    assertThat(readBody(result).metrics().getFirst().customers().getFirst().quantity())
+    assertThat(readBody(result).billableMetricUsages().getFirst().customers().getFirst().quantity())
         .isEqualByComparingTo("500");
   }
 
@@ -280,7 +289,7 @@ class MetricUsageIntegrationTest {
   void 등록되지_않은_도입사로_조회하면_빈_결과다() {
     // 인증이 붙기 전이라 아무 UUID나 자칭할 수 있다. 그 경우 미터도 고객도 없어 빈 결과가 된다
     // (MS2-126이 붙으면 이 요청 자체가 401로 막힌다).
-    assertThat(usageOf(UUID.randomUUID(), AUGUST).metrics()).isEmpty();
+    assertThat(usageOf(UUID.randomUUID(), AUGUST).billableMetricUsages()).isEmpty();
   }
 
   // ---------------------------------------------------------------------------
@@ -294,24 +303,24 @@ class MetricUsageIntegrationTest {
         .exchange();
   }
 
-  private MetricUsageResponse usageOf(UUID organizationId, String month) {
+  private ListBillableMetricUsagesResponse usageOf(UUID organizationId, String month) {
     MvcTestResult result = get(organizationId, month);
     assertThat(result).hasStatusOk();
     return readBody(result);
   }
 
-  private MetricUsageResponse readBody(MvcTestResult result) {
+  private ListBillableMetricUsagesResponse readBody(MvcTestResult result) {
     try {
       return jsonMapper.readValue(
           result.getResponse().getContentAsString(StandardCharsets.UTF_8),
-          MetricUsageResponse.class);
+          ListBillableMetricUsagesResponse.class);
     } catch (UnsupportedEncodingException e) {
       throw new IllegalStateException("응답 본문을 읽지 못했다", e);
     }
   }
 
   private BigDecimal quantityOf(UUID organizationId, String month, UUID customerId) {
-    return usageOf(organizationId, month).metrics().stream()
+    return usageOf(organizationId, month).billableMetricUsages().stream()
         .flatMap(metric -> metric.customers().stream())
         .filter(customer -> customer.customerId().equals(customerId))
         .findFirst()

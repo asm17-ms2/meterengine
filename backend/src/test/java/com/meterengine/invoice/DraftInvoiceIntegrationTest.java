@@ -23,7 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
  * 청구 예정액 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-124).
  *
  * <p>실제 Postgres여야 하는 이유와 MockMvc를 직접 구성하는 이유는 {@link
- * com.meterengine.metric.MetricUsageIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
+ * com.meterengine.metric.BillableMetricUsageIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
  *
  * <p>월 경계 자체(8월 마지막 순간과 9월 첫 순간)는 MS2-129의 테스트가 소유하므로 여기서 반복하지 않는다.
  */
@@ -65,7 +65,7 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(1645);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.customers[0].lines[0].metric_code")
+        .extractingPath("$.customers[0].lines[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
@@ -151,7 +151,7 @@ class DraftInvoiceIntegrationTest {
         orgId);
     assertThat(
             mvc.post()
-                .uri("/v1/metrics/api-calls/price-policy")
+                .uri("/v1/billable-metrics/api-calls/price-policy")
                 .header("X-Organization-Id", orgId.toString())
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .content("{\"dimension_properties\": []}")
@@ -172,7 +172,7 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(1);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.customers[0].lines[0].metric_code")
+        .extractingPath("$.customers[0].lines[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
   }
@@ -233,7 +233,7 @@ class DraftInvoiceIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 헬퍼 (MetricUsageIntegrationTest와 같은 방식)
+  // 헬퍼 (BillableMetricUsageIntegrationTest와 같은 방식)
   // ---------------------------------------------------------------------------
 
   private MvcTestResult get(UUID organizationId, String month) {
@@ -255,11 +255,11 @@ class DraftInvoiceIntegrationTest {
         organizationId);
     // 단가는 MS2-158부터 분리 테이블에 있다. 무차원 정책 + '{}' 기본 단가 행이 시드와 같은 규약이다.
     jdbc.update(
-        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, 'token-usage')",
+        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
         organizationId);
     jdbc.update(
         """
-        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, 'token-usage', '{}', 0.5)
         """,
         organizationId);

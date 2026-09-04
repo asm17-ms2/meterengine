@@ -1,4 +1,4 @@
-import type { MetricRowView } from "@/app/(console)/metrics/state";
+import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
 import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
 
 const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 110px";
@@ -13,14 +13,14 @@ const HEAD = [
   { label: "작업", right: true },
 ] as const;
 
-export function MetricTable({
+export function BillableMetricsTable({
   rows,
   onEdit,
   onDelete,
 }: {
-  rows: MetricRowView[];
-  onEdit: (row: MetricRowView) => void;
-  onDelete: (row: MetricRowView) => void;
+  rows: BillableMetricRowView[];
+  onEdit: (row: BillableMetricRowView) => void;
+  onDelete: (row: BillableMetricRowView) => void;
 }) {
   return (
     <GridTable minWidth={MIN_WIDTH}>

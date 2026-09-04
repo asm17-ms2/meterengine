@@ -27,7 +27,7 @@ export type InvoiceCustomer = {
 };
 
 export type InvoiceLine = {
-  metric_code: string;
+  billable_metric_code: string;
   target_property: string | null;
   /** 소수가 올 수 있다 (BigDecimal 직렬화, usage.ts의 quantity 주석 참조). */
   quantity: number;

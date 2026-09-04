@@ -189,9 +189,9 @@ def _derive_metrics(usage: ApiResult, invoice: ApiResult) -> List[MetricMeta]:
     unit_prices: Dict[str, Decimal] = {}
     for customer in invoice.body.get("customers") or []:
         for line in customer.get("lines") or []:
-            unit_prices.setdefault(line["metric_code"], Decimal(line["unit_price"]))
+            unit_prices.setdefault(line["billable_metric_code"], Decimal(line["unit_price"]))
     metrics = []
-    for metric in usage.body.get("metrics") or []:
+    for metric in usage.body.get("billable_metric_usages") or []:
         metrics.append(
             MetricMeta(
                 code=metric["code"],
@@ -206,13 +206,13 @@ def _derive_metrics(usage: ApiResult, invoice: ApiResult) -> List[MetricMeta]:
 
 def _print_quantity_table(console, metric, expected: ExpectedMonth, usage, invoice, roster, customer_ids) -> bool:
     usage_quantities = {}
-    for usage_metric in usage.body.get("metrics") or []:
+    for usage_metric in usage.body.get("billable_metric_usages") or []:
         if usage_metric["code"] == metric.code:
             usage_quantities = {c["customer_id"]: Decimal(c["quantity"]) for c in usage_metric.get("customers") or []}
     invoice_quantities = {}
     for customer in invoice.body.get("customers") or []:
         for line in customer.get("lines") or []:
-            if line["metric_code"] == metric.code:
+            if line["billable_metric_code"] == metric.code:
                 invoice_quantities[customer["customer_id"]] = Decimal(line["quantity"])
 
     rows = []

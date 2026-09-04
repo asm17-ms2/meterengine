@@ -1,8 +1,8 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.metric.dto.MetricUsageResponse;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,12 +31,12 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/v1/usage")
-public class MetricUsageController {
+public class BillableMetricUsageController {
 
-  private final MetricUsageService aggregationService;
+  private final BillableMetricUsageService billableMetricUsageService;
 
-  MetricUsageController(MetricUsageService aggregationService) {
-    this.aggregationService = aggregationService;
+  BillableMetricUsageController(BillableMetricUsageService billableMetricUsageService) {
+    this.billableMetricUsageService = billableMetricUsageService;
   }
 
   @GetMapping
@@ -52,8 +52,10 @@ public class MetricUsageController {
           금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다"),
-    // content를 주지 않으면 400 스키마가 200의 것(MetricUsageResponse)으로 문서에 나간다 (MS2-140 실측).
+    @ApiResponse(
+        responseCode = "200",
+        description = "미터별/고객별 사용량. 미터가 없는 도입사는 billable_metric_usages가 빈 배열이다"),
+    // content를 주지 않으면 400 스키마가 200의 것(ListBillableMetricUsagesResponse)으로 문서에 나간다 (MS2-140 실측).
     // 실제로는 spring.mvc.problemdetails.enabled=true가 problem+json을 내보낸다.
     //
     // [2026-08-17, MS2-150 7단계] 예전 주석은 "전용 advice가 없어 code 확장 멤버가 붙지 않는다"고 적었는데
@@ -68,7 +70,7 @@ public class MetricUsageController {
         description =
             "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
   })
-  public MetricUsageResponse usage(
+  public ListBillableMetricUsagesResponse aggregateBillableMetricUsages(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
@@ -76,7 +78,8 @@ public class MetricUsageController {
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month) {
-    YearMonth target = month == null ? MetricUsageService.currentMonth() : month;
-    return MetricUsageResponse.from(target, aggregationService.aggregate(organizationId, target));
+    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
+    return ListBillableMetricUsagesResponse.from(
+        target, billableMetricUsageService.aggregate(organizationId, target));
   }
 }

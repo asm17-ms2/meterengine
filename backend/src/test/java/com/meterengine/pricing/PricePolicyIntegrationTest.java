@@ -49,7 +49,7 @@ class PricePolicyIntegrationTest {
     assertThat(result)
         .hasStatus(201)
         .bodyJson()
-        .extractingPath("$.metric_code")
+        .extractingPath("$.billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.dimension_properties").asArray().isEmpty();
 
@@ -152,7 +152,7 @@ class PricePolicyIntegrationTest {
   void 도입사_헤더가_없으면_400이다() {
     assertThat(
             mvc.post()
-                .uri("/v1/metrics/token-usage/price-policy")
+                .uri("/v1/billable-metrics/token-usage/price-policy")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(dimensionlessBody())
                 .exchange())
@@ -183,7 +183,7 @@ class PricePolicyIntegrationTest {
     assertThat(result)
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].metric_code")
+        .extractingPath("$.price_policies[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
@@ -231,7 +231,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[*].metric_code")
+        .extractingPath("$.price_policies[*].billable_metric_code")
         .isEqualTo(java.util.List.of("input-tokens", "token-usage"));
   }
 
@@ -310,14 +310,14 @@ class PricePolicyIntegrationTest {
 
   // --- 헬퍼 ---
 
-  private void insertBaseRate(UUID orgId, String metricCode, String unitPrice) {
+  private void insertBaseRate(UUID orgId, String billableMetricCode, String unitPrice) {
     jdbc.update(
         """
-        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, ?, '{}'::jsonb, ?::numeric)
         """,
         orgId,
-        metricCode,
+        billableMetricCode,
         unitPrice);
   }
 
@@ -328,9 +328,9 @@ class PricePolicyIntegrationTest {
         .exchange();
   }
 
-  private MvcTestResult post(UUID organizationId, String metricCode, String jsonBody) {
+  private MvcTestResult post(UUID organizationId, String billableMetricCode, String jsonBody) {
     return mvc.post()
-        .uri("/v1/metrics/%s/price-policy".formatted(metricCode))
+        .uri("/v1/billable-metrics/%s/price-policy".formatted(billableMetricCode))
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
@@ -367,22 +367,22 @@ class PricePolicyIntegrationTest {
         code);
   }
 
-  private Integer policyCount(UUID orgId, String metricCode) {
+  private Integer policyCount(UUID orgId, String billableMetricCode) {
     return jdbc.queryForObject(
-        "SELECT count(*) FROM price_policy WHERE organization_id = ? AND metric_code = ?",
+        "SELECT count(*) FROM price_policy WHERE organization_id = ? AND billable_metric_code = ?",
         Integer.class,
         orgId,
-        metricCode);
+        billableMetricCode);
   }
 
-  private String storedProperties(UUID orgId, String metricCode) {
+  private String storedProperties(UUID orgId, String billableMetricCode) {
     return jdbc.queryForObject(
         """
         SELECT array_to_string(dimension_properties, ',') FROM price_policy
-        WHERE organization_id = ? AND metric_code = ?
+        WHERE organization_id = ? AND billable_metric_code = ?
         """,
         String.class,
         orgId,
-        metricCode);
+        billableMetricCode);
   }
 }

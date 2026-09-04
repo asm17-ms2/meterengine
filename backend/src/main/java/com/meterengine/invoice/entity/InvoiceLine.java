@@ -19,8 +19,8 @@ public class InvoiceLine {
   @Column(name = "invoice_id", nullable = false)
   private UUID invoiceId;
 
-  @Column(name = "metric_code", nullable = false)
-  private String metricCode;
+  @Column(name = "billable_metric_code", nullable = false)
+  private String billableMetricCode;
 
   @Column(name = "target_property")
   private String targetProperty;
@@ -44,7 +44,7 @@ public class InvoiceLine {
       UUID id,
       UUID organizationId,
       UUID invoiceId,
-      String metricCode,
+      String billableMetricCode,
       String targetProperty,
       String dimensionValues,
       BigDecimal quantity,
@@ -53,7 +53,7 @@ public class InvoiceLine {
     this.id = id;
     this.organizationId = organizationId;
     this.invoiceId = invoiceId;
-    this.metricCode = metricCode;
+    this.billableMetricCode = billableMetricCode;
     this.targetProperty = targetProperty;
     this.dimensionValues = dimensionValues;
     this.quantity = quantity;
@@ -73,8 +73,8 @@ public class InvoiceLine {
     return invoiceId;
   }
 
-  public String getMetricCode() {
-    return metricCode;
+  public String getBillableMetricCode() {
+    return billableMetricCode;
   }
 
   public String getTargetProperty() {

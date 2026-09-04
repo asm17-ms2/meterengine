@@ -1,31 +1,31 @@
-import type { MetricRowView } from "@/app/(console)/metrics/state";
-import { MetricsScreen } from "@/components/metrics/MetricsScreen";
+import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
+import { BillableMetricsScreen } from "@/components/billable-metrics/BillableMetricsScreen";
 import { ErrorState } from "@/components/screen/ErrorState";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import type { Result } from "@/lib/api/client";
-import type { MetricList } from "@/lib/api/metrics";
+import type { ListBillableMetricsResponse } from "@/lib/api/billable-metrics";
 
-export async function MetricsSection({
-  metrics,
+export async function BillableMetricsSection({
+  billableMetrics,
 }: {
-  metrics: Promise<Result<MetricList>>;
+  billableMetrics: Promise<Result<ListBillableMetricsResponse>>;
 }) {
-  const result = await metrics;
+  const result = await billableMetrics;
 
   if (!result.ok) {
     return (
-      <MetricsFrame>
+      <BillableMetricsFrame>
         <ErrorState
           title="미터 목록을 불러오지 못했습니다"
           error={result.error}
         />
-      </MetricsFrame>
+      </BillableMetricsFrame>
     );
   }
 
-  const rows: MetricRowView[] = result.data.metrics.map((entry) => ({
+  const rows: BillableMetricRowView[] = result.data.billable_metrics.map((entry) => ({
     code: entry.code,
     name: entry.name,
     eventType: entry.event_type,
@@ -33,18 +33,18 @@ export async function MetricsSection({
     targetProperty: entry.target_property,
   }));
 
-  return <MetricsScreen rows={rows} />;
+  return <BillableMetricsScreen rows={rows} />;
 }
 
-export function MetricsLoading() {
+export function BillableMetricsLoading() {
   return (
-    <MetricsFrame>
+    <BillableMetricsFrame>
       <TableSkeleton />
-    </MetricsFrame>
+    </BillableMetricsFrame>
   );
 }
 
-function MetricsFrame({ children }: { children: React.ReactNode }) {
+function BillableMetricsFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ScreenHeader title="미터" />

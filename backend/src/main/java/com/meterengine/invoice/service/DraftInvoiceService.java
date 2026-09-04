@@ -5,9 +5,9 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomerEntry;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.MetricLineItem;
+import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
-import com.meterengine.metric.dto.MetricUsage;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,22 +23,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DraftInvoiceService {
 
-  private final MetricUsageService metricUsageService;
+  private final BillableMetricUsageService billableMetricUsageService;
   private final CustomerRepository customerRepository;
   private final PriceRateRepository priceRateRepository;
 
   DraftInvoiceService(
-      MetricUsageService metricUsageService,
+      BillableMetricUsageService billableMetricUsageService,
       CustomerRepository customerRepository,
       PriceRateRepository priceRateRepository) {
-    this.metricUsageService = metricUsageService;
+    this.billableMetricUsageService = billableMetricUsageService;
     this.customerRepository = customerRepository;
     this.priceRateRepository = priceRateRepository;
   }
 
   @Transactional(readOnly = true)
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
-    OffsetDateTime calculatedAt = OffsetDateTime.now(MetricUsageService.BILLING_ZONE);
+    OffsetDateTime calculatedAt = OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
     List<Customer> organizationCustomers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
@@ -46,8 +46,8 @@ public class DraftInvoiceService {
     Map<String, BigDecimal> baseUnitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
 
     List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers =
-        metricUsageService.aggregate(organizationId, month).stream()
-            .filter(usage -> baseUnitPrices.containsKey(usage.metric().getCode()))
+        billableMetricUsageService.aggregate(organizationId, month).stream()
+            .filter(usage -> baseUnitPrices.containsKey(usage.billableMetric().getCode()))
             .map(usage -> MetricQuantitiesByCustomer.from(usage, baseUnitPrices))
             .toList();
 
@@ -79,20 +79,20 @@ public class DraftInvoiceService {
   }
 
   private record MetricQuantitiesByCustomer(
-      String metricCode,
+      String billableMetricCode,
       String targetProperty,
       BigDecimal unitPrice,
       Map<UUID, BigDecimal> byCustomer) {
 
     static MetricQuantitiesByCustomer from(
-        MetricUsage metricUsage, Map<String, BigDecimal> unitPrices) {
-      String metricCode = metricUsage.metric().getCode();
+        BillableMetricUsage billableMetricUsage, Map<String, BigDecimal> unitPrices) {
+      String billableMetricCode = billableMetricUsage.billableMetric().getCode();
 
       return new MetricQuantitiesByCustomer(
-          metricCode,
-          metricUsage.metric().getTargetProperty(),
-          unitPrices.get(metricCode),
-          metricUsage.customers().stream()
+          billableMetricCode,
+          billableMetricUsage.billableMetric().getTargetProperty(),
+          unitPrices.get(billableMetricCode),
+          billableMetricUsage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
 
@@ -100,7 +100,7 @@ public class DraftInvoiceService {
       BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
 
       return new MetricLineItem(
-          metricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
+          billableMetricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
   }
 

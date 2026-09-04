@@ -2,19 +2,19 @@
 
 import { useCallback, useState } from "react";
 
-import type { MetricRowView } from "@/app/(console)/metrics/state";
-import { MetricDeleteDialog } from "@/components/metrics/MetricDeleteDialog";
-import { MetricFormDialog } from "@/components/metrics/MetricFormDialog";
-import { MetricTable } from "@/components/metrics/MetricTable";
+import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
+import { BillableMetricDeleteDialog } from "@/components/billable-metrics/BillableMetricDeleteDialog";
+import { BillableMetricFormDialog } from "@/components/billable-metrics/BillableMetricFormDialog";
+import { BillableMetricsTable } from "@/components/billable-metrics/BillableMetricsTable";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
-export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
+export function BillableMetricsScreen({ rows }: { rows: BillableMetricRowView[] }) {
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState<{ metric: MetricRowView | null } | null>(
+  const [form, setForm] = useState<{ billableMetric: BillableMetricRowView | null } | null>(
     null,
   );
-  const [deleting, setDeleting] = useState<MetricRowView | null>(null);
+  const [deleting, setDeleting] = useState<BillableMetricRowView | null>(null);
 
   const closeForm = useCallback(() => setForm(null), []);
   const closeDelete = useCallback(() => setDeleting(null), []);
@@ -35,7 +35,7 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => setForm({ metric: null })}
+            onClick={() => setForm({ billableMetric: null })}
           >
             미터 등록
           </button>
@@ -65,7 +65,7 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
             type="button"
             className="btn btn-secondary"
             style={{ marginTop: 4 }}
-            onClick={() => setForm({ metric: null })}
+            onClick={() => setForm({ billableMetric: null })}
           >
             미터 등록
           </button>
@@ -88,9 +88,9 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
         </div>
       ) : (
         <>
-          <MetricTable
+          <BillableMetricsTable
             rows={visible}
-            onEdit={(row) => setForm({ metric: row })}
+            onEdit={(row) => setForm({ billableMetric: row })}
             onDelete={(row) => setDeleting(row)}
           />
           <div className="screen-footer">
@@ -100,15 +100,15 @@ export function MetricsScreen({ rows }: { rows: MetricRowView[] }) {
       )}
 
       {form ? (
-        <MetricFormDialog
-          key={form.metric?.code ?? "new"}
-          metric={form.metric}
+        <BillableMetricFormDialog
+          key={form.billableMetric?.code ?? "new"}
+          billableMetric={form.billableMetric}
           onClose={closeForm}
         />
       ) : null}
 
       {deleting ? (
-        <MetricDeleteDialog metric={deleting} onClose={closeDelete} />
+        <BillableMetricDeleteDialog billableMetric={deleting} onClose={closeDelete} />
       ) : null}
     </>
   );

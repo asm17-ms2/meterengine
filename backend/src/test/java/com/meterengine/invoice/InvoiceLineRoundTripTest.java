@@ -48,11 +48,11 @@ class InvoiceLineRoundTripTest {
     flushAndClear();
 
     List<InvoiceLine> reloadedLines =
-        invoiceLineRepository.findByOrganizationIdAndInvoiceIdOrderByMetricCodeAsc(
+        invoiceLineRepository.findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAsc(
             organizationId, invoiceId);
 
     assertThat(reloadedLines)
-        .extracting(InvoiceLine::getMetricCode)
+        .extracting(InvoiceLine::getBillableMetricCode)
         .containsExactly("api-call", "storage-gb", "token-usage");
   }
 
@@ -70,13 +70,17 @@ class InvoiceLineRoundTripTest {
   }
 
   private InvoiceLine saveLine(
-      UUID organizationId, UUID invoiceId, String metricCode, String quantity, String unitPrice) {
+      UUID organizationId,
+      UUID invoiceId,
+      String billableMetricCode,
+      String quantity,
+      String unitPrice) {
     InvoiceLine line =
         new InvoiceLine(
             UUID.randomUUID(),
             organizationId,
             invoiceId,
-            metricCode,
+            billableMetricCode,
             "token",
             "{}",
             new BigDecimal(quantity),

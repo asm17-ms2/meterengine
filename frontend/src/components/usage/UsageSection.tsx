@@ -3,9 +3,9 @@ import { ErrorState } from "@/components/screen/ErrorState";
 import { UsageTable, type UsageGroupView } from "@/components/usage/UsageTable";
 import type { Result } from "@/lib/api/client";
 import {
-  countMeterLines,
+  countBillableMetricLines,
   toCustomerGroups,
-  type MonthlyUsage,
+  type ListBillableMetricUsagesResponse,
 } from "@/lib/api/usage";
 import { formatDecimal } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
@@ -18,7 +18,7 @@ export async function UsageSection({
   usage,
   month,
 }: {
-  usage: Promise<Result<MonthlyUsage>>;
+  usage: Promise<Result<ListBillableMetricUsagesResponse>>;
   month: string;
 }) {
   const result = await usage;
@@ -39,7 +39,7 @@ export async function UsageSection({
   // 어느 한쪽이 0이면 라인이 0인데, 원인을 뭉뚱그리면 멀쩡한 쪽 설정 화면으로
   // 보내게 된다. 수집된 이벤트 유무는 둘 다와 무관하다. 백엔드가 이벤트 0건인
   // 고객도 수량 0으로 남기기 때문이다.
-  if (result.data.metrics.length === 0) {
+  if (result.data.billable_metric_usages.length === 0) {
     return (
       <EmptyState
         title="등록된 미터가 없습니다"
@@ -55,7 +55,7 @@ export async function UsageSection({
     return (
       <EmptyState
         title="등록된 고객이 없습니다"
-        body={`미터 ${result.data.metrics.length}개가 등록돼 있지만 이 도입사에 고객이 없어 ${month} 집계 라인이 만들어지지 않았습니다. 고객을 먼저 등록하세요.`}
+        body={`미터 ${result.data.billable_metric_usages.length}개가 등록돼 있지만 이 도입사에 고객이 없어 ${month} 집계 라인이 만들어지지 않았습니다. 고객을 먼저 등록하세요.`}
         resetHref="/usage"
       />
     );
@@ -64,9 +64,9 @@ export async function UsageSection({
   const view: UsageGroupView[] = groups.map((group) => ({
     customerId: group.customerId,
     customerName: group.customerName,
-    meters: group.meters.map((meter) => ({
-      label: meter.label,
-      quantity: formatDecimal(meter.quantity),
+    billableMetricLines: group.billableMetricLines.map((billableMetricLine) => ({
+      label: billableMetricLine.label,
+      quantity: formatDecimal(billableMetricLine.quantity),
     })),
   }));
 
@@ -87,7 +87,7 @@ export async function UsageSection({
 export async function UsageMeta({
   usage,
 }: {
-  usage: Promise<Result<MonthlyUsage>>;
+  usage: Promise<Result<ListBillableMetricUsagesResponse>>;
 }) {
   const result = await usage;
   if (!result.ok) return null;
@@ -96,7 +96,7 @@ export async function UsageMeta({
   return (
     <>
       고객 <b>{groups.length}</b>곳, 미터 라인{" "}
-      <b>{countMeterLines(groups)}</b>줄
+      <b>{countBillableMetricLines(groups)}</b>줄
     </>
   );
 }

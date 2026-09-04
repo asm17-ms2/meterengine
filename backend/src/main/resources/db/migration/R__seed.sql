@@ -97,14 +97,14 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
 -- ON CONFLICT 대상이 도입사/고객 시드와 달리 고정 id가 아닌 이유: 두 테이블의 PK가
 -- 자연 키(도입사, 미터, 조합)라 값 자체로 충돌이 성립한다. id를 박아야 재실행이
 -- 성립하던 organization/customer와 층이 다르다.
-INSERT INTO price_policy (organization_id, metric_code) VALUES
+INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage')
-ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
   dimension_properties = EXCLUDED.dimension_properties;
 
-INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.007)
-ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
 
@@ -151,18 +151,18 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
   aggregation     = EXCLUDED.aggregation,
   target_property = EXCLUDED.target_property;
 
-INSERT INTO price_policy (organization_id, metric_code) VALUES
+INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress')
-ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
   dimension_properties = EXCLUDED.dimension_properties;
 
-INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.007),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 0.035),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '{}', 120.0)
-ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
 
@@ -204,14 +204,14 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
   aggregation     = EXCLUDED.aggregation,
   target_property = EXCLUDED.target_property;
 
-INSERT INTO price_policy (organization_id, metric_code) VALUES
+INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens')
-ON CONFLICT (organization_id, metric_code) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
   dimension_properties = EXCLUDED.dimension_properties;
 
-INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price) VALUES
+INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '{}', 0.0007),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '{}', 0.00875)
-ON CONFLICT (organization_id, metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;

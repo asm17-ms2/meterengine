@@ -62,7 +62,7 @@ public class PricePolicyController {
     return pricePolicyService.list(organizationId);
   }
 
-  @PostMapping("/v1/metrics/{metricCode}/price-policy")
+  @PostMapping("/v1/billable-metrics/{code}/price-policy")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "가격 정책 등록",
@@ -106,8 +106,8 @@ public class PricePolicyController {
       @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Parameter(description = "정책을 붙일 미터의 code.") @PathVariable String metricCode,
+      @Parameter(description = "정책을 붙일 미터의 code.") @PathVariable String code,
       @Valid @RequestBody SavePricePolicyRequest request) {
-    return pricePolicyService.register(organizationId, metricCode, request);
+    return pricePolicyService.register(organizationId, code, request);
   }
 }

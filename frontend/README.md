@@ -120,9 +120,9 @@ CSP를 걸거나 폐쇄망에 배포하게 되면 폰트를 레포로 가져와�
 | `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` |
 | `/billing` | 청구 예정액 | `GET /v1/invoice` |
 | `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) | `GET/POST/PUT/DELETE /v1/customers` |
-| `/metrics` | 미터 (목록, 이름 검색, 등록/수정 다이얼로그, 삭제) | `GET/POST /v1/metrics`, `PUT/DELETE /v1/metrics/{code}` |
+| `/billable-metrics` | 미터 (목록, 이름 검색, 등록/수정 다이얼로그, 삭제) | `GET/POST /v1/billable-metrics`, `PUT/DELETE /v1/billable-metrics/{code}` |
 
-`/customers`와 `/metrics`는 쓰기 화면이다. 저장 버튼은 브라우저에서 시작하므로 서버로
+`/customers`와 `/billable-metrics`는 쓰기 화면이다. 저장 버튼은 브라우저에서 시작하므로 서버로
 돌아올 길이 필요하고, 그 길이 Server Action이다 (각 라우트의 `actions.ts`). 브라우저는
 여전히 백엔드를 직접 부르지 않는다 - 아래 "백엔드 연동"의 이유가 쓰기에도 그대로 적용된다.
 
