@@ -1,6 +1,6 @@
 <!--
 제목: <type>: <요약> (MS2-xxx). 티켓이 없으면 키를 생략합니다.
-올리기 전에 CONTRIBUTING.md의 "PR 크기와 쪼개기"와 "README 점검"을 확인합니다.
+올리기 전에 docs/contributing/pull-requests.md와 documentation.md의 "README 점검"을 확인합니다.
 사소한 변경(오타, 링크, 버전 올리기)이면 아래를 지우고 한 줄 요약만 써도 됩니다.
 -->
 
