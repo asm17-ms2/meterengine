@@ -28,8 +28,8 @@ public class PricePolicy implements Persistable<PricePolicyId> {
   private UUID organizationId;
 
   @Id
-  @Column(name = "metric_code")
-  private String metricCode;
+  @Column(name = "billable_metric_code")
+  private String billableMetricCode;
 
   @JdbcTypeCode(SqlTypes.ARRAY)
   @Column(name = "dimension_properties", nullable = false)
@@ -38,9 +38,10 @@ public class PricePolicy implements Persistable<PricePolicyId> {
   /** Hibernate 전용. */
   protected PricePolicy() {}
 
-  public PricePolicy(UUID organizationId, String metricCode, List<String> dimensionProperties) {
+  public PricePolicy(
+      UUID organizationId, String billableMetricCode, List<String> dimensionProperties) {
     this.organizationId = organizationId;
-    this.metricCode = metricCode;
+    this.billableMetricCode = billableMetricCode;
     this.dimensionProperties = List.copyOf(dimensionProperties);
   }
 
@@ -48,8 +49,8 @@ public class PricePolicy implements Persistable<PricePolicyId> {
     return organizationId;
   }
 
-  public String getMetricCode() {
-    return metricCode;
+  public String getBillableMetricCode() {
+    return billableMetricCode;
   }
 
   public List<String> getDimensionProperties() {
@@ -58,7 +59,7 @@ public class PricePolicy implements Persistable<PricePolicyId> {
 
   @Override
   public PricePolicyId getId() {
-    return new PricePolicyId(organizationId, metricCode);
+    return new PricePolicyId(organizationId, billableMetricCode);
   }
 
   @Override

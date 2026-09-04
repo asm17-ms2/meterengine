@@ -101,9 +101,9 @@ class PricePolicyServiceTest {
     ArgumentCaptor<PricePolicy> saved = ArgumentCaptor.forClass(PricePolicy.class);
     verify(policies).saveAndFlush(saved.capture());
     assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORG_ID);
-    assertThat(saved.getValue().getMetricCode()).isEqualTo(METRIC);
+    assertThat(saved.getValue().getBillableMetricCode()).isEqualTo(METRIC);
     assertThat(saved.getValue().getDimensionProperties()).containsExactly("model");
-    assertThat(response.metricCode()).isEqualTo(METRIC);
+    assertThat(response.billableMetricCode()).isEqualTo(METRIC);
     assertThat(response.dimensionProperties()).containsExactly("model");
   }
 
@@ -118,7 +118,7 @@ class PricePolicyServiceTest {
     PricePolicyListResponse response = service.list(ORG_ID);
 
     assertThat(response.pricePolicies())
-        .extracting(MetricPricePolicyResponse::metricCode)
+        .extracting(MetricPricePolicyResponse::billableMetricCode)
         .containsExactly("input-tokens", "token-usage");
   }
 

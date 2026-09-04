@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * {@link PriceRate}의 복합 PK (organization_id, metric_code, dimension_values).
+ * {@link PriceRate}의 복합 PK (organization_id, billable_metric_code, dimension_values).
  *
  * <p>record가 아니라 클래스인 이유: JPA 스펙이 IdClass에 public no-arg 생성자를 요구하는데 record에는 없다 ({@code
  * BillableMetricId}와 같은 사정).
@@ -13,14 +13,14 @@ import java.util.UUID;
 public class PriceRateId implements Serializable {
 
   private UUID organizationId;
-  private String metricCode;
+  private String billableMetricCode;
   private String dimensionValues;
 
   public PriceRateId() {}
 
-  public PriceRateId(UUID organizationId, String metricCode, String dimensionValues) {
+  public PriceRateId(UUID organizationId, String billableMetricCode, String dimensionValues) {
     this.organizationId = organizationId;
-    this.metricCode = metricCode;
+    this.billableMetricCode = billableMetricCode;
     this.dimensionValues = dimensionValues;
   }
 
@@ -28,8 +28,8 @@ public class PriceRateId implements Serializable {
     return organizationId;
   }
 
-  public String getMetricCode() {
-    return metricCode;
+  public String getBillableMetricCode() {
+    return billableMetricCode;
   }
 
   public String getDimensionValues() {
@@ -40,12 +40,12 @@ public class PriceRateId implements Serializable {
   public boolean equals(Object other) {
     return other instanceof PriceRateId id
         && Objects.equals(organizationId, id.organizationId)
-        && Objects.equals(metricCode, id.metricCode)
+        && Objects.equals(billableMetricCode, id.billableMetricCode)
         && Objects.equals(dimensionValues, id.dimensionValues);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(organizationId, metricCode, dimensionValues);
+    return Objects.hash(organizationId, billableMetricCode, dimensionValues);
   }
 }

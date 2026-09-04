@@ -549,7 +549,11 @@ class EventQueryIntegrationTest {
             .header("X-Organization-Id", organizationId.toString())
             .exchange();
     for (JsonNode customer :
-        jsonMapper.readTree(bodyText(result)).get("metrics").get(0).get("customers")) {
+        jsonMapper
+            .readTree(bodyText(result))
+            .get("billable_metric_usages")
+            .get(0)
+            .get("customers")) {
       if (customerId.toString().equals(customer.get("customer_id").asString())) {
         return customer.get("quantity").decimalValue();
       }

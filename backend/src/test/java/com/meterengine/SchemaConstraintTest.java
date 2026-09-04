@@ -381,7 +381,7 @@ class SchemaConstraintTest {
     jdbc.update(
         """
         INSERT INTO invoice_line
-          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+          (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, 'deleted-metric', NULL, '{}', 1200, 0.5, 600)
         """,
@@ -412,7 +412,7 @@ class SchemaConstraintTest {
     jdbc.update(
         """
         INSERT INTO invoice_line
-          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+          (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, 'token-usage', 'token', '{}', -1200, 0.5, -600)
         """,
@@ -481,21 +481,22 @@ class SchemaConstraintTest {
         period);
   }
 
-  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String metricCode) {
-    insertInvoiceLine(orgId, invoiceId, metricCode, "0.5");
+  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String billableMetricCode) {
+    insertInvoiceLine(orgId, invoiceId, billableMetricCode, "0.5");
   }
 
-  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String metricCode, String unitPrice) {
+  private void insertInvoiceLine(
+      UUID orgId, UUID invoiceId, String billableMetricCode, String unitPrice) {
     jdbc.update(
         """
         INSERT INTO invoice_line
-          (organization_id, invoice_id, metric_code, target_property, dimension_values,
+          (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, ?, 'token', '{}', 1200, ?::numeric, 600)
         """,
         orgId,
         invoiceId,
-        metricCode,
+        billableMetricCode,
         unitPrice);
   }
 
@@ -514,20 +515,22 @@ class SchemaConstraintTest {
         String.class, table);
   }
 
-  private void insertPricePolicy(UUID orgId, String metricCode) {
+  private void insertPricePolicy(UUID orgId, String billableMetricCode) {
     jdbc.update(
-        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, ?)", orgId, metricCode);
+        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, ?)",
+        orgId,
+        billableMetricCode);
   }
 
   private void insertPriceRate(
-      UUID orgId, String metricCode, String dimensionValues, String price) {
+      UUID orgId, String billableMetricCode, String dimensionValues, String price) {
     jdbc.update(
         """
-        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, ?, ?::jsonb, ?::numeric)
         """,
         orgId,
-        metricCode,
+        billableMetricCode,
         dimensionValues,
         price);
   }

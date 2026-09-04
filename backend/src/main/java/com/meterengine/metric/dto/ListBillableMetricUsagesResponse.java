@@ -5,7 +5,9 @@ import java.time.YearMonth;
 import java.util.List;
 
 public record ListBillableMetricUsagesResponse(
-    String month, @JsonProperty("metrics") List<BillableMetricUsageResponse> billableMetricUsages) {
+    String month,
+    @JsonProperty("billable_metric_usages")
+        List<BillableMetricUsageResponse> billableMetricUsages) {
 
   public static ListBillableMetricUsagesResponse of(
       YearMonth month, List<BillableMetricUsage> billableMetricUsages) {

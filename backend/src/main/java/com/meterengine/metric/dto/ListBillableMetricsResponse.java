@@ -5,7 +5,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import java.util.List;
 
 public record ListBillableMetricsResponse(
-    @JsonProperty("metrics") List<BillableMetricResponse> billableMetrics) {
+    @JsonProperty("billable_metrics") List<BillableMetricResponse> billableMetrics) {
 
   public static ListBillableMetricsResponse from(List<BillableMetric> billableMetrics) {
     return new ListBillableMetricsResponse(

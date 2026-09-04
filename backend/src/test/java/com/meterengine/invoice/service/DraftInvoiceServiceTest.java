@@ -70,7 +70,7 @@ class DraftInvoiceServiceTest {
     assertThat(entry.customerName()).isEqualTo("아크메");
     assertThat(entry.amount()).isEqualTo(1645);
     MetricLineItem line = entry.lines().getFirst();
-    assertThat(line.metricCode()).isEqualTo("token-usage");
+    assertThat(line.billableMetricCode()).isEqualTo("token-usage");
     assertThat(line.targetProperty()).isEqualTo("token");
     assertThat(line.quantity()).isEqualByComparingTo("3290");
     assertThat(line.unitPrice()).isEqualByComparingTo("0.5");
@@ -186,7 +186,7 @@ class DraftInvoiceServiceTest {
 
     assertThat(response.customers().getFirst().lines())
         .singleElement()
-        .satisfies(line -> assertThat(line.metricCode()).isEqualTo("token-usage"));
+        .satisfies(line -> assertThat(line.billableMetricCode()).isEqualTo("token-usage"));
     assertThat(response.totalAmount()).isEqualTo(1645);
   }
 

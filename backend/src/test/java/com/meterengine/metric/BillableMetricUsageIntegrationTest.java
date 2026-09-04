@@ -200,7 +200,7 @@ class BillableMetricUsageIntegrationTest {
   }
 
   @Test
-  void 미터가_없는_도입사는_metrics가_빈_배열이다() {
+  void 미터가_없는_도입사는_billable_metric_usages가_빈_배열이다() {
     UUID orgId = insertOrganization();
     insertCustomer(orgId, "아크메");
 
@@ -216,21 +216,30 @@ class BillableMetricUsageIntegrationTest {
     MvcTestResult result = get(orgId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo(AUGUST);
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].code").isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0].event_type")
+        .extractingPath("$.billable_metric_usages[0].code")
+        .isEqualTo("token-usage");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].event_type")
         .isEqualTo("chat_completion");
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].aggregation").isEqualTo("SUM");
-    assertThat(result).bodyJson().extractingPath("$.metrics[0].target_property").isEqualTo("token");
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0].customers[0].customer_name")
+        .extractingPath("$.billable_metric_usages[0].aggregation")
+        .isEqualTo("SUM");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].target_property")
+        .isEqualTo("token");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.billable_metric_usages[0].customers[0].customer_name")
         .isEqualTo("아크메");
     // 단가는 금액을 내는 MS2-124의 몫이라 사용량 응답에 넣지 않는다.
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.metrics[0]")
+        .extractingPath("$.billable_metric_usages[0]")
         .asMap()
         .doesNotContainKey("unit_price");
   }
