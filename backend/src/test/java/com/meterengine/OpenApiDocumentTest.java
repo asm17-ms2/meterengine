@@ -198,7 +198,7 @@ class OpenApiDocumentTest {
     assertSchemaHasField("EventEntry", "customer_name");
     assertSchemaHasField("EventIngestRequest", "customer_id");
     assertSchemaHasField("EventIngestResponse", "transaction_id");
-    assertSchemaHasField("MetricEntry", "target_property");
+    assertSchemaHasField("BillableMetricUsageResponse", "target_property");
     assertSchemaHasField("DraftInvoiceCustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "customer_id");

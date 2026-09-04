@@ -16,11 +16,11 @@ import org.springframework.stereotype.Repository;
  * 파라미터로 고른 키를 합산하는 이 쿼리는 JPQL로 표현할 수 없다.
  */
 @Repository
-public class MetricUsageRepository {
+public class BillableMetricUsageRepository {
 
   private final JdbcTemplate jdbc;
 
-  MetricUsageRepository(JdbcTemplate jdbc) {
+  BillableMetricUsageRepository(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -42,7 +42,7 @@ public class MetricUsageRepository {
    *
    * @return 합이 0보다 큰 고객만이 아니라 이벤트가 한 건이라도 잡힌 고객의 합. 이벤트가 없는 고객은 키 자체가 없으므로 호출자가 0으로 채운다
    */
-  public Map<UUID, BigDecimal> sumByCustomer(
+  public Map<UUID, BigDecimal> sumQuantityByCustomerId(
       UUID organizationId,
       String eventType,
       String targetProperty,
@@ -69,8 +69,8 @@ public class MetricUsageRepository {
             end,
             targetProperty);
 
-    Map<UUID, BigDecimal> sums = new HashMap<>();
-    rows.forEach(row -> sums.put(row.getKey(), row.getValue()));
-    return sums;
+    Map<UUID, BigDecimal> quantityByCustomerId = new HashMap<>();
+    rows.forEach(row -> quantityByCustomerId.put(row.getKey(), row.getValue()));
+    return quantityByCustomerId;
   }
 }

@@ -1,9 +1,9 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
-import com.meterengine.metric.dto.SaveBillableMetricRequest;
+import com.meterengine.metric.dto.CreateBillableMetricRequest;
+import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.service.BillableMetricService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -65,12 +65,12 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다")
   })
-  public BillableMetricResponse registerMetric(
+  public BillableMetricResponse createBillableMetric(
       @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody SaveBillableMetricRequest request) {
-    return billableMetricService.register(organizationId, request);
+      @Valid @RequestBody CreateBillableMetricRequest request) {
+    return billableMetricService.create(organizationId, request);
   }
 
   @GetMapping
@@ -92,7 +92,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public BillableMetricListResponse listMetrics(
+  public ListBillableMetricsResponse listBillableMetrics(
       @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {

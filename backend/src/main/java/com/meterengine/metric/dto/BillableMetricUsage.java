@@ -11,4 +11,4 @@ import java.util.List;
  *
  * @param customers 도입사의 모든 고객. 이벤트가 한 건도 없는 고객도 quantity 0으로 들어 있다 (MS2-129 팀 결정)
  */
-public record MetricUsage(BillableMetric metric, List<CustomerUsage> customers) {}
+public record BillableMetricUsage(BillableMetric billableMetric, List<CustomerUsage> customers) {}

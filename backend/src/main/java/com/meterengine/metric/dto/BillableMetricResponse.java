@@ -10,12 +10,12 @@ public record BillableMetricResponse(
     String aggregation,
     @JsonProperty("target_property") String targetProperty) {
 
-  public static BillableMetricResponse from(BillableMetric metric) {
+  public static BillableMetricResponse from(BillableMetric billableMetric) {
     return new BillableMetricResponse(
-        metric.getCode(),
-        metric.getName(),
-        metric.getEventType(),
-        metric.getAggregation(),
-        metric.getTargetProperty());
+        billableMetric.getCode(),
+        billableMetric.getName(),
+        billableMetric.getEventType(),
+        billableMetric.getAggregation(),
+        billableMetric.getTargetProperty());
   }
 }

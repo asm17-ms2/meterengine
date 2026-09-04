@@ -1,8 +1,8 @@
 package com.meterengine.metric.service;
 
-import com.meterengine.metric.dto.BillableMetricListResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
-import com.meterengine.metric.dto.SaveBillableMetricRequest;
+import com.meterengine.metric.dto.CreateBillableMetricRequest;
+import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.exception.InvalidBillableMetricException;
@@ -19,22 +19,22 @@ public class BillableMetricService {
 
   private static final String DUPLICATE_CODE_CONSTRAINT = "billable_metric_pkey";
 
-  private final BillableMetricRepository metrics;
+  private final BillableMetricRepository billableMetricRepository;
 
-  BillableMetricService(BillableMetricRepository metrics) {
-    this.metrics = metrics;
+  BillableMetricService(BillableMetricRepository billableMetricRepository) {
+    this.billableMetricRepository = billableMetricRepository;
   }
 
   @Transactional
-  public BillableMetricResponse register(UUID organizationId, SaveBillableMetricRequest request) {
+  public BillableMetricResponse create(UUID organizationId, CreateBillableMetricRequest request) {
     validate(request);
 
     BillableMetricId id = new BillableMetricId(organizationId, request.code());
-    if (metrics.existsById(id)) {
+    if (billableMetricRepository.existsById(id)) {
       throw new MetricAlreadyExistsException(request.code());
     }
 
-    BillableMetric metric =
+    BillableMetric billableMetric =
         new BillableMetric(
             organizationId,
             request.code(),
@@ -43,7 +43,7 @@ public class BillableMetricService {
             request.aggregation(),
             request.targetProperty());
     try {
-      metrics.saveAndFlush(metric);
+      billableMetricRepository.saveAndFlush(billableMetric);
     } catch (DataIntegrityViolationException exception) {
       if (exception.getCause() instanceof ConstraintViolationException cause
           && DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
@@ -52,16 +52,16 @@ public class BillableMetricService {
       throw exception;
     }
 
-    return BillableMetricResponse.from(metric);
+    return BillableMetricResponse.from(billableMetric);
   }
 
   @Transactional(readOnly = true)
-  public BillableMetricListResponse list(UUID organizationId) {
-    return BillableMetricListResponse.from(
-        metrics.findByOrganizationIdOrderByCodeAsc(organizationId));
+  public ListBillableMetricsResponse list(UUID organizationId) {
+    return ListBillableMetricsResponse.from(
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId));
   }
 
-  private void validate(SaveBillableMetricRequest request) {
+  private void validate(CreateBillableMetricRequest request) {
     if (!BillableMetric.SUM.equals(request.aggregation())) {
       throw new InvalidBillableMetricException(
           "aggregation %s is not supported; only SUM is available"

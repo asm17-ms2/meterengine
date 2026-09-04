@@ -41,7 +41,7 @@ class BillableMetricIntegrationTest {
     assertThat(result).hasStatus(201).bodyJson().extractingPath("$.code").isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.event_type").isEqualTo("chat_completion");
     assertThat(result).bodyJson().extractingPath("$.target_property").isEqualTo("token");
-    assertThat(metricCount(orgId, "token-usage")).isEqualTo(1);
+    assertThat(billableMetricCount(orgId, "token-usage")).isEqualTo(1);
     assertThat(storedAggregation(orgId, "token-usage")).isEqualTo("SUM");
   }
 
@@ -92,7 +92,7 @@ class BillableMetricIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCodes.INVALID_BILLABLE_METRIC);
-    assertThat(metricCount(orgId, "call-count")).isZero();
+    assertThat(billableMetricCount(orgId, "call-count")).isZero();
   }
 
   @Test
@@ -123,7 +123,7 @@ class BillableMetricIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCodes.VALIDATION_ERROR);
-    assertThat(metricCount(orgId, "token-usage")).isZero();
+    assertThat(billableMetricCount(orgId, "token-usage")).isZero();
   }
 
   @Test
@@ -220,7 +220,7 @@ class BillableMetricIntegrationTest {
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private Integer metricCount(UUID orgId, String code) {
+  private Integer billableMetricCount(UUID orgId, String code) {
     return jdbc.queryForObject(
         "SELECT count(*) FROM billable_metric WHERE organization_id = ? AND code = ?",
         Integer.class,

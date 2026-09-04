@@ -17,7 +17,7 @@ import java.util.UUID;
  * (수집 API의 DTO와 같은 규칙).
  *
  * @param month 조회 기준 월. yyyy-MM, KST다. 요청이 month를 생략했을 때 서버가 어느 달로 계산했는지 응답만 보고 알 수 있어야 한다 (사용량 조회
- *     API의 {@code MetricUsageResponse.month}와 같은 이유, 같은 형식).
+ *     API의 {@code ListBillableMetricUsagesResponse.month}와 같은 이유, 같은 형식).
  * @param total 필터를 적용한 뒤의 전체 건수. 이 페이지에 담긴 개수가 아니다. 화면이 마지막 페이지 번호를 그리려면 필요하다.
  */
 public record EventPageResponse(

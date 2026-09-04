@@ -8,10 +8,10 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomerEntry;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.MetricLineItem;
+import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
-import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -39,7 +39,7 @@ class DraftInvoiceServiceTest {
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
-  @Mock private MetricUsageService aggregation;
+  @Mock private BillableMetricUsageService aggregation;
   @Mock private CustomerRepository customers;
   @Mock private PriceRateRepository prices;
 
@@ -125,7 +125,7 @@ class DraftInvoiceServiceTest {
     when(aggregation.aggregate(ORG_ID, AUGUST))
         .thenReturn(
             List.of(
-                new MetricUsage(
+                new BillableMetricUsage(
                     metric("token-usage", "token"),
                     List.of(
                         new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500")),
@@ -198,8 +198,9 @@ class DraftInvoiceServiceTest {
     return new BillableMetric(ORG_ID, code, code + " 미터", "chat_completion", "SUM", targetProperty);
   }
 
-  private static MetricUsage usage(BillableMetric metric, Customer customer, String quantity) {
-    return new MetricUsage(
+  private static BillableMetricUsage usage(
+      BillableMetric metric, Customer customer, String quantity) {
+    return new BillableMetricUsage(
         metric,
         List.of(new CustomerUsage(customer.getId(), customer.getName(), new BigDecimal(quantity))));
   }

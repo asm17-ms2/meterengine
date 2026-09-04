@@ -3,7 +3,7 @@ package com.meterengine.invoice.controller;
 import com.meterengine.ProblemResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.service.DraftInvoiceService;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -75,7 +75,7 @@ public class DraftInvoiceController {
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month) {
-    YearMonth target = month == null ? MetricUsageService.currentMonth() : month;
+    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
     return invoiceService.preview(organizationId, target);
   }
 }
