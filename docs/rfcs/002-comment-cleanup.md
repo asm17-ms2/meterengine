@@ -1,6 +1,6 @@
 ---
-status: "draft"
-date: "2026-09-02"
+status: "accepted"
+date: "2026-09-04"
 author: "양성지"
 domain: "process"
 ---
