@@ -21,7 +21,7 @@ MS2 팀의 설계와 정책 방향 결정을 제안하고 기록하는 폴더입
    https://github.com/asm17-ms2/meterengine/compare/main...<브랜치>?quick_pull=1&template=rfc.md&labels=rfc
    ```
 3. 리뷰어는 줄 댓글로 질문과 반론을 단다. 작성자는 답하면서 유효한 반론을 "검토한 선택지"에 옮겨 적는다.
-4. 작성자를 제외한 팀원 전원이 Approve하면 작성자가 frontmatter의 `status`를 `accepted`로, `date`를 그날로 바꾸고, 아래 표의 상태와 날짜를 맞춘 뒤 squash merge한다. "당장은 이대로 가도 될 것 같다"는 판단 유보 동의도 승인으로 치고 Approve를 누른다. 토의 끝에 채택하지 않기로 하면 같은 정족수로 `status`를 `rejected`로 바꾸고 기록으로 남기기 위해 merge한다.
+4. 작성자를 제외한 팀원 전원이 Approve하면 작성자가 frontmatter의 `status`를 `accepted`로, `date`를 그날로 바꾸고, 아래 표의 상태와 날짜를 맞춘 뒤 PR 본문의 체크리스트를 모두 체크하고 squash merge한다. 체크 안 된 항목이 남아 있으면 `rfc-checklist` 체크가 실패해 머지되지 않는다. "당장은 이대로 가도 될 것 같다"는 판단 유보 동의도 승인으로 치고 Approve를 누른다. 토의 끝에 채택하지 않기로 하면 같은 정족수로 `status`를 `rejected`로 바꾸고 기록으로 남기기 위해 merge한다.
 
 결정을 뒤집을 때는 옛 파일을 지우지 않고 새 RFC를 씁니다. 새 문서에는 어느 결정을 대체하는지를(frontmatter `supersedes`), 옛 문서에는 대체됐다는 상태(`status: superseded`)와 어느 결정으로 대체됐는지를(`superseded-by`) 적습니다. 옛 문서는 새 RFC의 PR에서 같이 고칩니다.
 
