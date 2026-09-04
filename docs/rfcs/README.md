@@ -43,3 +43,4 @@ RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다.
 | 번호 | 제목 | 도메인 | 상태 | 날짜 |
 |---|---|---|---|---|
 | [000](000-documentation-and-decision-process.md) | 문서와 결정 프로세스 도입 | process | accepted | 2026-09-02 |
+| [001](001-naming-convention.md) | 이름 규칙을 표준 관례에 맞춰 정한다 | process | accepted | 2026-09-04 |
