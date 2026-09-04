@@ -1,7 +1,7 @@
 """소스 이벤트로부터 기대 사용량과 기대 예정액을 독립 계산한다.
 
 서버 계산 규칙의 정본:
-- 합산 필터: UsageEventRepository.sumByCustomer (jsonb_typeof = 'number', KST 반열린 월 구간)
+- 합산 필터: BillableMetricUsageRepository.sumQuantityByCustomerId (jsonb_typeof = 'number', KST 반열린 월 구간)
 - 라인 금액: DraftInvoiceService (quantity x unit_price를 RoundingMode.DOWN 절사)
 이 모듈은 그 규칙을 Decimal 연산으로 복제한다. float를 쓰지 않는다.
 """

@@ -5,26 +5,26 @@ import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
 /**
- * GET /v1/usage 응답. 백엔드의 MonthlyUsageResponse와 1:1이다.
+ * GET /v1/usage 응답. 백엔드의 ListBillableMetricUsagesResponse와 1:1이다.
  *
  * 응답은 미터 중심(미터 안에 고객)인데 화면은 고객 중심(고객 안에 미터)이다.
  * 뒤집는 것은 toCustomerGroups가 한다.
  */
-export type MonthlyUsage = {
+export type ListBillableMetricUsagesResponse = {
   month: string;
-  metrics: MetricEntry[];
+  billable_metric_usages: BillableMetricUsageResponse[];
 };
 
-export type MetricEntry = {
+export type BillableMetricUsageResponse = {
   code: string;
   name: string;
   event_type: string;
   aggregation: string;
   target_property: string | null;
-  customers: CustomerEntry[];
+  customers: BillableMetricUsageCustomer[];
 };
 
-export type CustomerEntry = {
+export type BillableMetricUsageCustomer = {
   customer_id: string;
   customer_name: string;
   /**
@@ -40,10 +40,10 @@ export type CustomerEntry = {
 export type CustomerGroup = {
   customerId: string;
   customerName: string;
-  meters: MeterLine[];
+  billableMetricLines: BillableMetricLine[];
 };
 
-export type MeterLine = {
+export type BillableMetricLine = {
   /** `token-usage (token)` 형태. 디자인의 미터 라인 표기다. */
   label: string;
   quantity: number;
@@ -56,25 +56,25 @@ export type MeterLine = {
  * 모든 미터가 도입사의 전체 고객을 담는다 (이벤트가 없으면 quantity 0). 그래서
  * 첫 미터의 고객 순서를 그대로 쓰면 정렬이 유지되고, 여기서 다시 정렬하지 않는다.
  */
-export function toCustomerGroups(usage: MonthlyUsage): CustomerGroup[] {
+export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): CustomerGroup[] {
   const groups = new Map<string, CustomerGroup>();
 
-  for (const metric of usage.metrics) {
-    const label = metric.target_property
-      ? `${metric.code} (${metric.target_property})`
-      : metric.code;
+  for (const billableMetricUsage of usage.billable_metric_usages) {
+    const label = billableMetricUsage.target_property
+      ? `${billableMetricUsage.code} (${billableMetricUsage.target_property})`
+      : billableMetricUsage.code;
 
-    for (const customer of metric.customers) {
+    for (const customer of billableMetricUsage.customers) {
       let group = groups.get(customer.customer_id);
       if (!group) {
         group = {
           customerId: customer.customer_id,
           customerName: customer.customer_name,
-          meters: [],
+          billableMetricLines: [],
         };
         groups.set(customer.customer_id, group);
       }
-      group.meters.push({ label, quantity: customer.quantity });
+      group.billableMetricLines.push({ label, quantity: customer.quantity });
     }
   }
 
@@ -82,8 +82,8 @@ export function toCustomerGroups(usage: MonthlyUsage): CustomerGroup[] {
 }
 
 /** 표에 그려질 미터 라인 총 개수. 화면 헤더의 '미터 라인 N줄'이다. */
-export function countMeterLines(groups: CustomerGroup[]): number {
-  return groups.reduce((sum, group) => sum + group.meters.length, 0);
+export function countBillableMetricLines(groups: CustomerGroup[]): number {
+  return groups.reduce((sum, group) => sum + group.billableMetricLines.length, 0);
 }
 
 /**
@@ -96,9 +96,9 @@ export function countMeterLines(groups: CustomerGroup[]): number {
 export async function loadUsage(
   month: string,
   devState: DevState,
-): Promise<Result<MonthlyUsage>> {
+): Promise<Result<ListBillableMetricUsagesResponse>> {
   if (devState === "empty") {
-    return { ok: true, data: { month, metrics: [] } };
+    return { ok: true, data: { month, billable_metric_usages: [] } };
   }
   if (devState === "error") {
     return {
@@ -111,5 +111,5 @@ export async function loadUsage(
       },
     };
   }
-  return serverFetch<MonthlyUsage>(config.apiBaseUrl, "/v1/usage", { month });
+  return serverFetch<ListBillableMetricUsagesResponse>(config.apiBaseUrl, "/v1/usage", { month });
 }

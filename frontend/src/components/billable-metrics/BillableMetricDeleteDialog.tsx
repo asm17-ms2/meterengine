@@ -2,23 +2,23 @@
 
 import { useActionState, useEffect } from "react";
 
-import { deleteMetricAction } from "@/app/(console)/metrics/actions";
+import { deleteBillableMetricAction } from "@/app/(console)/billable-metrics/actions";
 import {
-  METRIC_DELETE_IDLE,
-  type MetricRowView,
-} from "@/app/(console)/metrics/state";
+  BILLABLE_METRIC_DELETE_IDLE,
+  type BillableMetricRowView,
+} from "@/app/(console)/billable-metrics/state";
 import { Dialog } from "@/components/screen/Dialog";
 
-export function MetricDeleteDialog({
-  metric,
+export function BillableMetricDeleteDialog({
+  billableMetric,
   onClose,
 }: {
-  metric: MetricRowView;
+  billableMetric: BillableMetricRowView;
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(
-    deleteMetricAction,
-    METRIC_DELETE_IDLE,
+    deleteBillableMetricAction,
+    BILLABLE_METRIC_DELETE_IDLE,
   );
 
   useEffect(() => {
@@ -64,15 +64,15 @@ export function MetricDeleteDialog({
         미터를 삭제할까요?
       </div>
 
-      <input type="hidden" name="code" value={metric.code} />
-      <input type="hidden" name="name" value={metric.name} />
+      <input type="hidden" name="code" value={billableMetric.code} />
+      <input type="hidden" name="name" value={billableMetric.name} />
 
-      <div style={{ fontSize: 15 }}>{metric.name}</div>
+      <div style={{ fontSize: 15 }}>{billableMetric.name}</div>
       <div
         className="detail-grid__mono"
         style={{ fontSize: 12.5, color: "var(--text-55)" }}
       >
-        {metric.code}
+        {billableMetric.code}
       </div>
       <p className="dialog-body" style={{ margin: 0 }}>
         삭제하면 이 미터의 사용량 집계와 청구 예정액 라인이 함께 사라집니다.
