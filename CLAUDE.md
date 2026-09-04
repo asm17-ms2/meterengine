@@ -40,7 +40,7 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 - 팀: 박성종(팀 리드), 문인호, 양성지 / 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기)
 - Jira/Confluence: https://asm17-ms2.atlassian.net (Jira 프로젝트 키 MS2, Confluence의 MS2 스페이스)
 - Miro: 회의록, 일정, 브레인스토밍 초안 (아래 "문서 흐름" 참조)
-- Notion: MS2 팀 위키, https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 (과거 결정 기록. 이관은 추후 결정)
+- Notion: 쓰지 않는다. 남은 내용을 레포로 옮기고 나면 삭제한다 (`docs/contributing/governance.md` "그 밖의 위치"). 옮길 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다
 - 팀 GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling)
 
 ## 개발 방법론
