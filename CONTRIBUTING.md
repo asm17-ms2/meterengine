@@ -44,5 +44,6 @@
 | [decisions.md](docs/contributing/decisions.md) | 문서의 층과 가르는 기준, RFC와 proposal과 정책 PR, 규칙 신설과 개정 |
 | [pull-requests.md](docs/contributing/pull-requests.md) | PR 크기 상한, 티켓 없이 가는 작업, 쪼개는 축 |
 | [stacked-prs.md](docs/contributing/stacked-prs.md) | 스택 PR을 쓰는 조건, 머지 순서, gh stack 명령 |
+| [naming.md](docs/contributing/naming.md) | 백엔드, 프론트엔드, API, DB 이름 규칙 |
 | [comments.md](docs/contributing/comments.md) | 주석과 javadoc |
 | [documentation.md](docs/contributing/documentation.md) | 시간이 지나면 틀리는 값, Jira 키, 개수 표현, README 점검 |
