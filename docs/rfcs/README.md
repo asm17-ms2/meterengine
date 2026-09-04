@@ -45,3 +45,4 @@ RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다.
 | [000](000-documentation-and-decision-process.md) | 문서와 결정 프로세스 도입 | process | accepted | 2026-09-02 |
 | [001](001-naming-convention.md) | 이름 규칙을 표준 관례에 맞춰 정한다 | process | accepted | 2026-09-04 |
 | [002](002-comment-cleanup.md) | 주석 전수 정리와 함수 위 한 줄 설명 허용 | process | accepted | 2026-09-04 |
+| [005](005-rule-management.md) | RFC는 방향 결정 한 장으로 좁히고 팀 규칙은 살아 있는 문서로 둔다 | process | draft | 2026-09-04 |
