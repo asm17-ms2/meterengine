@@ -27,7 +27,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
-class BillableMetricRegisterConcurrencyTest {
+class BillableMetricCreateConcurrencyTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private DataSource dataSource;
@@ -51,7 +51,7 @@ class BillableMetricRegisterConcurrencyTest {
 
     try (Connection first = dataSource.getConnection()) {
       first.setAutoCommit(false);
-      insertMetric(first, orgId);
+      insertBillableMetric(first, orgId);
 
       CompletableFuture<MvcTestResult> late = CompletableFuture.supplyAsync(() -> post(orgId));
 
@@ -84,7 +84,7 @@ class BillableMetricRegisterConcurrencyTest {
         .exchange();
   }
 
-  private void insertMetric(Connection connection, UUID orgId) throws SQLException {
+  private void insertBillableMetric(Connection connection, UUID orgId) throws SQLException {
     try (PreparedStatement statement =
         connection.prepareStatement(
             """

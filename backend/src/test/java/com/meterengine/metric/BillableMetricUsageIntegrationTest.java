@@ -3,7 +3,7 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.metric.dto.MetricUsageResponse;
+import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class MetricUsageIntegrationTest {
+class BillableMetricUsageIntegrationTest {
 
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
   private static final String AUGUST = "2026-08";
@@ -58,7 +58,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 팔월_마지막_순간의_이벤트는_팔월에_귀속된다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, 500, "2026-08-31T23:59:59+09:00");
 
@@ -68,7 +68,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 구월_첫_순간의_이벤트는_구월에_귀속된다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, 500, "2026-09-01T00:00:00+09:00");
 
@@ -78,7 +78,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 칠월_마지막_순간의_이벤트는_팔월에_들어오지_않는다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, 500, "2026-07-31T23:59:59+09:00");
 
@@ -87,7 +87,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 같은_순간을_UTC로_보낸_이벤트도_같은_달에_귀속된다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(orgId, "아크메");
     // 2026-08-31T14:59:59Z == 2026-08-31T23:59:59+09:00. 표기가 달라도 같은 순간이다.
     insertEvent(orgId, "tx-1", customerId, 500, "2026-08-31T14:59:59Z");
@@ -104,7 +104,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 합은_고객별로_나뉜다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     UUID beta = insertCustomer(orgId, "베타");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
@@ -117,14 +117,14 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 이벤트가_없는_고객도_사용량_0으로_응답에_들어간다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     UUID beta = insertCustomer(orgId, "베타");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    MetricUsageResponse response = usageOf(orgId, AUGUST);
+    ListBillableMetricUsagesResponse response = usageOf(orgId, AUGUST);
 
-    assertThat(response.metrics().getFirst().customers())
+    assertThat(response.billableMetricUsages().getFirst().customers())
         .extracting(customer -> customer.customerId())
         .containsExactlyInAnyOrder(acme, beta);
     assertThat(quantityOf(orgId, AUGUST, beta)).isEqualByComparingTo("0");
@@ -132,21 +132,21 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 다른_도입사의_이벤트는_섞이지_않는다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    UUID otherOrgId = organizationWithTokenMetric();
+    UUID otherOrgId = organizationWithTokenBillableMetric();
     UUID otherCustomer = insertCustomer(otherOrgId, "남의 고객");
     insertEvent(otherOrgId, "tx-1", otherCustomer, 999999, "2026-08-10T12:00:00+09:00");
 
     assertThat(quantityOf(orgId, AUGUST, acme)).isEqualByComparingTo("500");
-    assertThat(usageOf(orgId, AUGUST).metrics().getFirst().customers()).hasSize(1);
+    assertThat(usageOf(orgId, AUGUST).billableMetricUsages().getFirst().customers()).hasSize(1);
   }
 
   @Test
   void 미터의_event_type과_다른_이벤트는_합에서_빠진다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
     insertEvent(
@@ -157,7 +157,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void token이_숫자가_아니거나_없는_이벤트는_합에서_빠진다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
     // 수집 API는 properties의 내용을 검증하지 않아 이런 이벤트가 실제로 저장돼 있을 수 있다.
@@ -179,7 +179,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void 소수_사용량은_자릿수가_잘리지_않고_합산된다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(
         orgId,
@@ -204,12 +204,12 @@ class MetricUsageIntegrationTest {
     UUID orgId = insertOrganization();
     insertCustomer(orgId, "아크메");
 
-    assertThat(usageOf(orgId, AUGUST).metrics()).isEmpty();
+    assertThat(usageOf(orgId, AUGUST).billableMetricUsages()).isEmpty();
   }
 
   @Test
   void 응답에_미터_정보와_고객_이름이_함께_나온다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
@@ -241,7 +241,7 @@ class MetricUsageIntegrationTest {
 
   @Test
   void month를_생략하면_이번_달_KST로_집계한다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     // 이번 달 1일 정오(KST). 지금이 월말 자정 직전이어도 같은 달 안이다.
     OffsetDateTime thisMonth =
@@ -256,13 +256,13 @@ class MetricUsageIntegrationTest {
         .bodyJson()
         .extractingPath("$.month")
         .isEqualTo(YearMonth.now(KST).toString());
-    assertThat(readBody(result).metrics().getFirst().customers().getFirst().quantity())
+    assertThat(readBody(result).billableMetricUsages().getFirst().customers().getFirst().quantity())
         .isEqualByComparingTo("500");
   }
 
   @Test
   void month_형식이_틀리면_400이다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
 
     assertThat(get(orgId, "2026-13")).hasStatus(400);
     assertThat(get(orgId, "2026")).hasStatus(400);
@@ -280,7 +280,7 @@ class MetricUsageIntegrationTest {
   void 등록되지_않은_도입사로_조회하면_빈_결과다() {
     // 인증이 붙기 전이라 아무 UUID나 자칭할 수 있다. 그 경우 미터도 고객도 없어 빈 결과가 된다
     // (MS2-126이 붙으면 이 요청 자체가 401로 막힌다).
-    assertThat(usageOf(UUID.randomUUID(), AUGUST).metrics()).isEmpty();
+    assertThat(usageOf(UUID.randomUUID(), AUGUST).billableMetricUsages()).isEmpty();
   }
 
   // ---------------------------------------------------------------------------
@@ -294,25 +294,25 @@ class MetricUsageIntegrationTest {
         .exchange();
   }
 
-  private MetricUsageResponse usageOf(UUID organizationId, String month) {
+  private ListBillableMetricUsagesResponse usageOf(UUID organizationId, String month) {
     MvcTestResult result = get(organizationId, month);
     assertThat(result).hasStatusOk();
     return readBody(result);
   }
 
-  private MetricUsageResponse readBody(MvcTestResult result) {
+  private ListBillableMetricUsagesResponse readBody(MvcTestResult result) {
     try {
       return jsonMapper.readValue(
           result.getResponse().getContentAsString(StandardCharsets.UTF_8),
-          MetricUsageResponse.class);
+          ListBillableMetricUsagesResponse.class);
     } catch (UnsupportedEncodingException e) {
       throw new IllegalStateException("응답 본문을 읽지 못했다", e);
     }
   }
 
   private BigDecimal quantityOf(UUID organizationId, String month, UUID customerId) {
-    return usageOf(organizationId, month).metrics().stream()
-        .flatMap(metric -> metric.customers().stream())
+    return usageOf(organizationId, month).billableMetricUsages().stream()
+        .flatMap(billableMetricUsage -> billableMetricUsage.customers().stream())
         .filter(customer -> customer.customerId().equals(customerId))
         .findFirst()
         .orElseThrow(() -> new AssertionError("고객 %s가 응답에 없다".formatted(customerId)))
@@ -320,7 +320,7 @@ class MetricUsageIntegrationTest {
   }
 
   /** 시드와 같은 모양의 미터(chat_completion의 token을 SUM)를 가진 도입사를 만든다. */
-  private UUID organizationWithTokenMetric() {
+  private UUID organizationWithTokenBillableMetric() {
     UUID organizationId = insertOrganization();
     jdbc.update(
         """

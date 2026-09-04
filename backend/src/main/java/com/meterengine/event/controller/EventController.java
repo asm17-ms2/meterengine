@@ -6,7 +6,7 @@ import com.meterengine.event.dto.EventIngestResponse;
 import com.meterengine.event.dto.EventPageResponse;
 import com.meterengine.event.service.EventIngestService;
 import com.meterengine.event.service.EventQueryService;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -139,7 +139,7 @@ public class EventController {
       @Parameter(description = "이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.")
           @RequestParam(name = "event_type", required = false)
           String eventType) {
-    YearMonth target = month == null ? MetricUsageService.currentMonth() : month;
+    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
     return queryService.query(organizationId, customerId, target, eventType, page, size);
   }
 }

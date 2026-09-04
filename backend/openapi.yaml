@@ -357,7 +357,7 @@ paths:
         이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
         미터가 없거나 등록되지 않은 도입사면 metrics가 빈 배열이다.
         페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
-      operationId: listMetrics
+      operationId: listBillableMetrics
       parameters:
       - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -371,7 +371,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/BillableMetricListResponse"
+                $ref: "#/components/schemas/ListBillableMetricsResponse"
           description: 미터 목록. 미터가 없으면 metrics가 빈 배열이다
         "400":
           content:
@@ -388,7 +388,7 @@ paths:
         집계 함수는 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
         target_property가 필수다.
         코드는 도입사 안에서 유일하고, 등록 뒤 바꿀 수 없다.
-      operationId: registerMetric
+      operationId: createBillableMetric
       parameters:
       - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -401,7 +401,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SaveBillableMetricRequest"
+              $ref: "#/components/schemas/CreateBillableMetricRequest"
         required: true
       responses:
         "201":
@@ -533,7 +533,7 @@ paths:
         도입사의 모든 고객이 응답에 들어가며, 이벤트가 없는 고객은 quantity가 0이다.
         properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
         금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
-      operationId: usage
+      operationId: aggregateBillableMetricUsages
       parameters:
       - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -554,7 +554,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/MetricUsageResponse"
+                $ref: "#/components/schemas/ListBillableMetricUsagesResponse"
           description: 미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다
         "400":
           content:
@@ -565,16 +565,9 @@ paths:
             고 errors에 필드명과 사유가 들어 있다"
       summary: 고객별 월 사용량 조회
       tags:
-      - metric-usage-controller
+      - billable-metric-usage-controller
 components:
   schemas:
-    BillableMetricListResponse:
-      type: object
-      properties:
-        metrics:
-          type: array
-          items:
-            $ref: "#/components/schemas/BillableMetricResponse"
     BillableMetricResponse:
       type: object
       properties:
@@ -588,7 +581,7 @@ components:
           type: string
         target_property:
           type: string
-    CustomerEntry:
+    BillableMetricUsageCustomer:
       type: object
       properties:
         customer_id:
@@ -598,6 +591,45 @@ components:
           type: string
         quantity:
           type: number
+    BillableMetricUsageResponse:
+      type: object
+      properties:
+        aggregation:
+          type: string
+        code:
+          type: string
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricUsageCustomer"
+        event_type:
+          type: string
+        name:
+          type: string
+        target_property:
+          type: string
+    CreateBillableMetricRequest:
+      type: object
+      properties:
+        aggregation:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+        event_type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        target_property:
+          type: string
+      required:
+      - aggregation
+      - code
+      - event_type
+      - name
     CustomerListResponse:
       type: object
       properties:
@@ -717,23 +749,22 @@ components:
         total:
           type: integer
           format: int64
-    MetricEntry:
+    ListBillableMetricUsagesResponse:
       type: object
       properties:
-        aggregation:
-          type: string
-        code:
-          type: string
-        customers:
+        metrics:
           type: array
           items:
-            $ref: "#/components/schemas/CustomerEntry"
-        event_type:
+            $ref: "#/components/schemas/BillableMetricUsageResponse"
+        month:
           type: string
-        name:
-          type: string
-        target_property:
-          type: string
+    ListBillableMetricsResponse:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricResponse"
     MetricLineItem:
       type: object
       properties:
@@ -767,15 +798,6 @@ components:
           - "null"
           description: "무차원 조합('{}')에 붙은 기본 단가. 단가 행이 아직 없으면 null이고, 그 미터는 청구 예정액\
             \ 계산에서 라인이 빠진다. 0은 무료를 뜻하는 값이라 null과 다르다"
-    MetricUsageResponse:
-      type: object
-      properties:
-        metrics:
-          type: array
-          items:
-            $ref: "#/components/schemas/MetricEntry"
-        month:
-          type: string
     PricePolicyListResponse:
       type: object
       properties:
@@ -859,28 +881,6 @@ components:
           example: Bad Request
       required:
       - status
-    SaveBillableMetricRequest:
-      type: object
-      properties:
-        aggregation:
-          type: string
-          minLength: 1
-        code:
-          type: string
-          minLength: 1
-        event_type:
-          type: string
-          minLength: 1
-        name:
-          type: string
-          minLength: 1
-        target_property:
-          type: string
-      required:
-      - aggregation
-      - code
-      - event_type
-      - name
     SaveCustomerRequest:
       type: object
       properties:

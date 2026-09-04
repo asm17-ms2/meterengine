@@ -5,7 +5,7 @@ import com.meterengine.event.dto.EventPageResponse;
 import com.meterengine.event.dto.EventRow;
 import com.meterengine.event.exception.UnknownCustomerException;
 import com.meterengine.event.repository.EventRepository;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -32,8 +32,8 @@ public class EventQueryService {
   /**
    * 지정 월의 이벤트를 최신순 한 페이지 돌려준다.
    *
-   * <p><b>기간 계산을 여기서 하지 않고 집계와 공유한다.</b> {@link MetricUsageService#BILLING_ZONE}과 반열린 구간 [start,
-   * end)를 그대로 쓴다. 같은 상수를 두 벌 두면 한쪽만 고쳐질 때 사용량 집계 화면과 이벤트 로그가 서로 다른 달을 보게 된다.
+   * <p><b>기간 계산을 여기서 하지 않고 집계와 공유한다.</b> {@link BillableMetricUsageService#BILLING_ZONE}과 반열린 구간
+   * [start, end)를 그대로 쓴다. 같은 상수를 두 벌 두면 한쪽만 고쳐질 때 사용량 집계 화면과 이벤트 로그가 서로 다른 달을 보게 된다.
    *
    * <p><b>읽기 트랜잭션으로 묶되, 두 쿼리의 스냅샷이 같다고 보장하지는 않는다.</b> 기본 격리 수준이 READ COMMITTED라 문장마다 새 스냅샷을 뜨므로,
    * count와 findPage 사이에 수집이 커밋되면 total과 목록이 한 눈금 어긋날 수 있다. 이 슬라이스는 그것을 감수한다. offset 방식이 이미 같은 종류의
@@ -55,12 +55,12 @@ public class EventQueryService {
     }
 
     OffsetDateTime start =
-        month.atDay(1).atStartOfDay(MetricUsageService.BILLING_ZONE).toOffsetDateTime();
+        month.atDay(1).atStartOfDay(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime();
     OffsetDateTime end =
         month
             .plusMonths(1)
             .atDay(1)
-            .atStartOfDay(MetricUsageService.BILLING_ZONE)
+            .atStartOfDay(BillableMetricUsageService.BILLING_ZONE)
             .toOffsetDateTime();
 
     long total = usageEvents.count(organizationId, customerId, eventType, start, end);

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.dto.EventPageResponse;
-import com.meterengine.metric.service.MetricUsageService;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -289,7 +289,7 @@ class EventQueryIntegrationTest {
   @Test
   void month를_생략하면_이번_달이고_응답이_어느_달인지_알려준다() {
     UUID orgId = insertOrganization("도입사");
-    String thisMonth = MetricUsageService.currentMonth().toString();
+    String thisMonth = BillableMetricUsageService.currentMonth().toString();
 
     // 생략했을 때 서버가 어느 달을 골랐는지 응답만 보고 알 수 있어야 한다.
     assertThat(get(orgId, ""))

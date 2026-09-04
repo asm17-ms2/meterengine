@@ -2,11 +2,11 @@ package com.meterengine.metric.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
-import com.meterengine.metric.dto.MetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.metric.repository.MetricUsageRepository;
+import com.meterengine.metric.repository.BillableMetricUsageRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -23,11 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>도입사의 미터를 하나씩 돌면서, 그 미터의 event_type과 맞는 이벤트를 고객별로 합산한다. 금액은 내지 않는다. 사용량에 단가를 곱하는 일은 MS2-124 청구
  * 예정액 API의 몫이고, 이 서비스의 결과가 그 입력이 된다.
  *
- * <p>public인 이유: 그 MS2-124가 invoice 패키지에서 이 서비스를 직접 호출한다. 결과 모델({@link MetricUsage})이 처음부터
+ * <p>public인 이유: 그 MS2-124가 invoice 패키지에서 이 서비스를 직접 호출한다. 결과 모델({@link BillableMetricUsage})이 처음부터
  * public이었던 것과 같은 사정이다.
  */
 @Service
-public class MetricUsageService {
+public class BillableMetricUsageService {
 
   /**
    * 청구 기간을 자르는 기준 시간대다. "8월 사용량"이 무슨 뜻인지는 시간대를 정해야 답이 나온다 (스토리 MS2-121은 국내 도입사 대상이라 KST).
@@ -36,17 +36,17 @@ public class MetricUsageService {
    */
   public static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
 
-  private final MetricUsageRepository usageEvents;
-  private final BillableMetricRepository metrics;
-  private final CustomerRepository customers;
+  private final BillableMetricUsageRepository billableMetricUsageRepository;
+  private final BillableMetricRepository billableMetricRepository;
+  private final CustomerRepository customerRepository;
 
-  MetricUsageService(
-      MetricUsageRepository usageEvents,
-      BillableMetricRepository metrics,
-      CustomerRepository customers) {
-    this.usageEvents = usageEvents;
-    this.metrics = metrics;
-    this.customers = customers;
+  BillableMetricUsageService(
+      BillableMetricUsageRepository billableMetricUsageRepository,
+      BillableMetricRepository billableMetricRepository,
+      CustomerRepository customerRepository) {
+    this.billableMetricUsageRepository = billableMetricUsageRepository;
+    this.billableMetricRepository = billableMetricRepository;
+    this.customerRepository = customerRepository;
   }
 
   /** 지금이 속한 달(KST). 기간을 지정하지 않은 조회의 기본값이다. */
@@ -64,43 +64,44 @@ public class MetricUsageService {
    * JPA 레포지토리와 JdbcTemplate이 같은 커넥션과 같은 스냅샷을 쓴다.
    */
   @Transactional(readOnly = true)
-  public List<MetricUsage> aggregate(UUID organizationId, YearMonth month) {
-    List<BillableMetric> organizationMetrics =
-        metrics.findByOrganizationIdOrderByCodeAsc(organizationId);
-    if (organizationMetrics.isEmpty()) {
+  public List<BillableMetricUsage> aggregate(UUID organizationId, YearMonth month) {
+    List<BillableMetric> billableMetrics =
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId);
+    if (billableMetrics.isEmpty()) {
       return List.of();
     }
 
     // 기간은 반열린 구간 [start, end)다. occurred_at이 TIMESTAMPTZ라 이 비교가 절대 시각으로 이뤄져서,
-    // 같은 순간을 어느 오프셋으로 표기해 보냈든 같은 달에 귀속된다 (MetricUsageRepository.sumByCustomer 참조).
+    // 같은 순간을 어느 오프셋으로 표기해 보냈든 같은 달에 귀속된다 (BillableMetricUsageRepository.sumQuantityByCustomerId
+    // 참조).
     OffsetDateTime start = month.atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
     OffsetDateTime end = month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
 
-    List<Customer> organizationCustomers =
-        customers.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+    List<Customer> customers =
+        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
 
-    return organizationMetrics.stream()
-        .map(metric -> aggregateMetric(metric, organizationCustomers, start, end))
+    return billableMetrics.stream()
+        .map(billableMetric -> aggregateBillableMetric(billableMetric, customers, start, end))
         .toList();
   }
 
-  private MetricUsage aggregateMetric(
-      BillableMetric metric,
-      List<Customer> organizationCustomers,
+  private BillableMetricUsage aggregateBillableMetric(
+      BillableMetric billableMetric,
+      List<Customer> customers,
       OffsetDateTime start,
       OffsetDateTime end) {
-    requireSupported(metric);
+    requireSupported(billableMetric);
 
-    Map<UUID, BigDecimal> sums =
-        usageEvents.sumByCustomer(
-            metric.getOrganizationId(),
-            metric.getEventType(),
-            metric.getTargetProperty(),
+    Map<UUID, BigDecimal> quantityByCustomerId =
+        billableMetricUsageRepository.sumQuantityByCustomerId(
+            billableMetric.getOrganizationId(),
+            billableMetric.getEventType(),
+            billableMetric.getTargetProperty(),
             start,
             end);
 
-    List<CustomerUsage> usages =
-        organizationCustomers.stream()
+    List<CustomerUsage> customerUsages =
+        customers.stream()
             .map(
                 customer ->
                     new CustomerUsage(
@@ -108,10 +109,10 @@ public class MetricUsageService {
                         // 검토해야한다.
                         customer.getId(),
                         customer.getName(),
-                        sums.getOrDefault(customer.getId(), BigDecimal.ZERO)))
+                        quantityByCustomerId.getOrDefault(customer.getId(), BigDecimal.ZERO)))
             .toList();
 
-    return new MetricUsage(metric, usages);
+    return new BillableMetricUsage(billableMetric, customerUsages);
   }
 
   /**
@@ -122,16 +123,17 @@ public class MetricUsageService {
    *
    * <p>미터를 만들 통로가 아직 시드뿐이라 실제로는 발생하지 않는다. 미터 등록 API가 생기는 슬라이스에서 COUNT를 구현하거나, 등록 시점에 막게 된다.
    */
-  private void requireSupported(BillableMetric metric) {
-    if (!metric.isSum()) {
+  private void requireSupported(BillableMetric billableMetric) {
+    if (!billableMetric.isSum()) {
       throw new IllegalStateException(
           "metric %s uses aggregation %s, which is not implemented yet (only SUM)"
-              .formatted(metric.getCode(), metric.getAggregation()));
+              .formatted(billableMetric.getCode(), billableMetric.getAggregation()));
     }
-    if (metric.getTargetProperty() == null || metric.getTargetProperty().isBlank()) {
+    if (billableMetric.getTargetProperty() == null
+        || billableMetric.getTargetProperty().isBlank()) {
       throw new IllegalStateException(
           "metric %s aggregates with SUM but has no target_property to sum"
-              .formatted(metric.getCode()));
+              .formatted(billableMetric.getCode()));
     }
   }
 }
