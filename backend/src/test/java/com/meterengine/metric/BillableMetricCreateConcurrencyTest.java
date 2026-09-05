@@ -73,7 +73,7 @@ class BillableMetricCreateConcurrencyTest {
 
   private MvcTestResult post(UUID organizationId) {
     return mvc.post()
-        .uri("/v1/metrics")
+        .uri("/v1/billable-metrics")
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(

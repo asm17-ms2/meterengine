@@ -30,8 +30,8 @@ public class PriceRate {
   private UUID organizationId;
 
   @Id
-  @Column(name = "metric_code")
-  private String metricCode;
+  @Column(name = "billable_metric_code")
+  private String billableMetricCode;
 
   @Id
   @JdbcTypeCode(SqlTypes.JSON)
@@ -48,8 +48,8 @@ public class PriceRate {
     return organizationId;
   }
 
-  public String getMetricCode() {
-    return metricCode;
+  public String getBillableMetricCode() {
+    return billableMetricCode;
   }
 
   public String getDimensionValues() {

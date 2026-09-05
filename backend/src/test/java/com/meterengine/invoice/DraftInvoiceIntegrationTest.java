@@ -65,7 +65,7 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(1645);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.customers[0].lines[0].metric_code")
+        .extractingPath("$.customers[0].lines[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
@@ -151,7 +151,7 @@ class DraftInvoiceIntegrationTest {
         orgId);
     assertThat(
             mvc.post()
-                .uri("/v1/metrics/api-calls/price-policy")
+                .uri("/v1/billable-metrics/api-calls/price-policy")
                 .header("X-Organization-Id", orgId.toString())
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .content("{\"dimension_properties\": []}")
@@ -172,7 +172,7 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(1);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.customers[0].lines[0].metric_code")
+        .extractingPath("$.customers[0].lines[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
   }
@@ -255,11 +255,11 @@ class DraftInvoiceIntegrationTest {
         organizationId);
     // 단가는 MS2-158부터 분리 테이블에 있다. 무차원 정책 + '{}' 기본 단가 행이 시드와 같은 규약이다.
     jdbc.update(
-        "INSERT INTO price_policy (organization_id, metric_code) VALUES (?, 'token-usage')",
+        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
         organizationId);
     jdbc.update(
         """
-        INSERT INTO price_rate (organization_id, metric_code, dimension_values, unit_price)
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, 'token-usage', '{}', 0.5)
         """,
         organizationId);

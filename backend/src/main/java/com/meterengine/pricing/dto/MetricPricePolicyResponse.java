@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record MetricPricePolicyResponse(
-    @JsonProperty("metric_code") String metricCode,
+    @JsonProperty("billable_metric_code") String billableMetricCode,
     @Schema(
             nullable = true,
             description = "가격을 가르는 이벤트 속성 키의 선언. 정책이 아직 없는 미터는 null이고, 정책이 있는 무차원 미터는 빈 배열이다")
@@ -21,9 +21,10 @@ public record MetricPricePolicyResponse(
         BigDecimal unitPrice) {
 
   public static MetricPricePolicyResponse of(
-      String metricCode, PricePolicy policy, BigDecimal unitPrice) {
+      String billableMetricCode, PricePolicy policy, BigDecimal unitPrice) {
     return policy == null
-        ? new MetricPricePolicyResponse(metricCode, null, null)
-        : new MetricPricePolicyResponse(metricCode, policy.getDimensionProperties(), unitPrice);
+        ? new MetricPricePolicyResponse(billableMetricCode, null, null)
+        : new MetricPricePolicyResponse(
+            billableMetricCode, policy.getDimensionProperties(), unitPrice);
   }
 }

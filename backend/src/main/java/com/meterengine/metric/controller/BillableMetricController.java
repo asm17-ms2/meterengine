@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/v1/metrics")
+@RequestMapping("/v1/billable-metrics")
 public class BillableMetricController {
 
   private final BillableMetricService billableMetricService;
@@ -79,11 +79,11 @@ public class BillableMetricController {
       description =
           """
           이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
-          미터가 없거나 등록되지 않은 도입사면 metrics가 빈 배열이다.
+          미터가 없거나 등록되지 않은 도입사면 billable_metrics가 빈 배열이다.
           페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 metrics가 빈 배열이다"),
+    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 billable_metrics가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
         content =

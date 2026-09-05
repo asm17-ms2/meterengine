@@ -142,8 +142,8 @@ class OpenApiDocumentTest {
             "/v1/invoice",
             "/v1/customers",
             "/v1/customers/{id}",
-            "/v1/metrics",
-            "/v1/metrics/{metricCode}/price-policy",
+            "/v1/billable-metrics",
+            "/v1/billable-metrics/{code}/price-policy",
             "/v1/price-policies");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
@@ -166,11 +166,17 @@ class OpenApiDocumentTest {
         .bodyJson()
         .extractingPath("$.paths['/v1/customers/{id}'].delete.summary")
         .isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/metrics'].post.summary").isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/metrics'].get.summary").isNotNull();
     assertThat(json())
         .bodyJson()
-        .extractingPath("$.paths['/v1/metrics/{metricCode}/price-policy'].post.summary")
+        .extractingPath("$.paths['/v1/billable-metrics'].post.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/billable-metrics'].get.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/billable-metrics/{code}/price-policy'].post.summary")
         .isNotNull();
     assertThat(json())
         .bodyJson()
@@ -203,10 +209,10 @@ class OpenApiDocumentTest {
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "customer_id");
     assertSchemaHasField("SavePricePolicyRequest", "dimension_properties");
-    assertSchemaHasField("PricePolicyResponse", "metric_code");
+    assertSchemaHasField("PricePolicyResponse", "billable_metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");
     assertSchemaHasField("PricePolicyListResponse", "price_policies");
-    assertSchemaHasField("MetricPricePolicyResponse", "metric_code");
+    assertSchemaHasField("MetricPricePolicyResponse", "billable_metric_code");
     assertSchemaHasField("MetricPricePolicyResponse", "dimension_properties");
     assertSchemaHasField("MetricPricePolicyResponse", "unit_price");
     assertThat(json())
@@ -271,9 +277,9 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers", "post", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
-    assertProblemSchema("/v1/metrics", "post", "ProblemResponse");
-    assertProblemSchema("/v1/metrics", "get", "ProblemResponse");
-    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "ProblemResponse");
+    assertProblemSchema("/v1/billable-metrics", "post", "ProblemResponse");
+    assertProblemSchema("/v1/billable-metrics", "get", "ProblemResponse");
+    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "ProblemResponse");
     assertProblemSchema("/v1/price-policies", "get", "ProblemResponse");
   }
 
@@ -288,9 +294,11 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/customers/{id}", "put", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
-    assertProblemSchema("/v1/metrics", "post", "409", "ProblemResponse");
-    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "404", "ProblemResponse");
-    assertProblemSchema("/v1/metrics/{metricCode}/price-policy", "post", "409", "ProblemResponse");
+    assertProblemSchema("/v1/billable-metrics", "post", "409", "ProblemResponse");
+    assertProblemSchema(
+        "/v1/billable-metrics/{code}/price-policy", "post", "404", "ProblemResponse");
+    assertProblemSchema(
+        "/v1/billable-metrics/{code}/price-policy", "post", "409", "ProblemResponse");
   }
 
   @Test

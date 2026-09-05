@@ -79,19 +79,19 @@ public class DraftInvoiceService {
   }
 
   private record MetricQuantitiesByCustomer(
-      String metricCode,
+      String billableMetricCode,
       String targetProperty,
       BigDecimal unitPrice,
       Map<UUID, BigDecimal> byCustomer) {
 
     static MetricQuantitiesByCustomer from(
         BillableMetricUsage billableMetricUsage, Map<String, BigDecimal> unitPrices) {
-      String metricCode = billableMetricUsage.billableMetric().getCode();
+      String billableMetricCode = billableMetricUsage.billableMetric().getCode();
 
       return new MetricQuantitiesByCustomer(
-          metricCode,
+          billableMetricCode,
           billableMetricUsage.billableMetric().getTargetProperty(),
-          unitPrices.get(metricCode),
+          unitPrices.get(billableMetricCode),
           billableMetricUsage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
@@ -100,7 +100,7 @@ public class DraftInvoiceService {
       BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
 
       return new MetricLineItem(
-          metricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
+          billableMetricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
   }
 

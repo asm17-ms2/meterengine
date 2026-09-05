@@ -44,7 +44,7 @@ public class PricePolicyService {
   public PricePolicyListResponse list(UUID organizationId) {
     Map<String, PricePolicy> policyByMetricCode =
         policies.findByOrganizationId(organizationId).stream()
-            .collect(Collectors.toMap(PricePolicy::getMetricCode, Function.identity()));
+            .collect(Collectors.toMap(PricePolicy::getBillableMetricCode, Function.identity()));
     Map<String, BigDecimal> unitPriceByMetricCode = rates.findBaseUnitPrices(organizationId);
 
     return new PricePolicyListResponse(
@@ -55,22 +55,23 @@ public class PricePolicyService {
 
   @Transactional
   public PricePolicyResponse register(
-      UUID organizationId, String metricCode, SavePricePolicyRequest request) {
-    if (!metrics.existsById(new BillableMetricId(organizationId, metricCode))) {
-      throw new MetricNotFoundException(organizationId, metricCode);
+      UUID organizationId, String billableMetricCode, SavePricePolicyRequest request) {
+    if (!metrics.existsById(new BillableMetricId(organizationId, billableMetricCode))) {
+      throw new MetricNotFoundException(organizationId, billableMetricCode);
     }
 
     validate(request.dimensionProperties());
 
-    if (policies.existsById(new PricePolicyId(organizationId, metricCode))) {
-      throw new PricePolicyAlreadyExistsException(metricCode);
+    if (policies.existsById(new PricePolicyId(organizationId, billableMetricCode))) {
+      throw new PricePolicyAlreadyExistsException(billableMetricCode);
     }
 
-    PricePolicy policy = new PricePolicy(organizationId, metricCode, request.dimensionProperties());
+    PricePolicy policy =
+        new PricePolicy(organizationId, billableMetricCode, request.dimensionProperties());
     try {
       policies.saveAndFlush(policy);
     } catch (DataIntegrityViolationException exception) {
-      throw new PricePolicyAlreadyExistsException(metricCode);
+      throw new PricePolicyAlreadyExistsException(billableMetricCode);
     }
 
     return PricePolicyResponse.from(policy);

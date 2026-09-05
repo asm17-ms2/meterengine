@@ -5,10 +5,10 @@ import com.meterengine.pricing.entity.PricePolicy;
 import java.util.List;
 
 public record PricePolicyResponse(
-    @JsonProperty("metric_code") String metricCode,
+    @JsonProperty("billable_metric_code") String billableMetricCode,
     @JsonProperty("dimension_properties") List<String> dimensionProperties) {
 
   public static PricePolicyResponse from(PricePolicy policy) {
-    return new PricePolicyResponse(policy.getMetricCode(), policy.getDimensionProperties());
+    return new PricePolicyResponse(policy.getBillableMetricCode(), policy.getDimensionProperties());
   }
 }

@@ -30,6 +30,6 @@ public interface PriceRateRepository extends JpaRepository<PriceRate, PriceRateI
   default Map<String, BigDecimal> findBaseUnitPrices(UUID organizationId) {
     return findByOrganizationIdAndDimensionValues(organizationId, PriceRate.BASE_COMBINATION)
         .stream()
-        .collect(Collectors.toMap(PriceRate::getMetricCode, PriceRate::getUnitPrice));
+        .collect(Collectors.toMap(PriceRate::getBillableMetricCode, PriceRate::getUnitPrice));
   }
 }

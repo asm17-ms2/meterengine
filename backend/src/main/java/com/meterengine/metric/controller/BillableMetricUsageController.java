@@ -52,7 +52,9 @@ public class BillableMetricUsageController {
           금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터별/고객별 사용량. 미터가 없는 도입사는 metrics가 빈 배열이다"),
+    @ApiResponse(
+        responseCode = "200",
+        description = "미터별/고객별 사용량. 미터가 없는 도입사는 billable_metric_usages가 빈 배열이다"),
     // content를 주지 않으면 400 스키마가 200의 것(ListBillableMetricUsagesResponse)으로 문서에 나간다 (MS2-140 실측).
     // 실제로는 spring.mvc.problemdetails.enabled=true가 problem+json을 내보낸다.
     //

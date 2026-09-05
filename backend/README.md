@@ -12,6 +12,7 @@
   - `V3__add_customer_created_at.sql` - customer에 등록 시각 `created_at` 추가 (MS2-171). 새 행은 DB가 `clock_timestamp()`로 채운다. **이미 있던 행은 마이그레이션 시각 하나를 나눠 받았고 그 값은 실제 등록 시각이 아니다** (등록 시각을 기록하기 전에 만들어진 행이라 그 사실이 남아 있지 않다. 값이 전부 같다는 것이 백필 표식이다). API로는 이 값을 보낼 통로가 없고, raw SQL이 값을 실어 보내면 그대로 저장된다 - `usage_event.received_at`과 달리 덮어쓰는 트리거를 두지 않았다 (사유는 파일 주석에 있다)
   - `V4__collate_names_for_korean.sql` - 고객, 도입사, 미터의 이름 컬럼에 ICU 한국어(ko-KR) collation을 지정 (MS2-143). 정렬을 DB가 하는데 DB 기본 collation이 en_US.utf8이라 고객 목록이 한국어 사전순이 아니었다. 컬럼 레벨이라 볼륨을 지우지 않아도 적용된다
   - `V5__create_invoice_tables.sql` - 확정 인보이스와 인보이스 라인 두 테이블. 고객 x 달로 한 장을 강제하고, 라인은 인보이스 안에서 미터와 단가 조합으로 유일하다. 확정본을 되돌리는 수단은 두지 않았고, 확정된 행을 지우거나 고치는 것을 DB가 막지는 않는다
+  - `V6__rename_metric_code_to_billable_metric_code.sql` - price_policy, price_rate, invoice_line의 `metric_code`를 `billable_metric_code`로 개명. 다른 테이블을 가리키는 컬럼은 참조 테이블 이름을 붙인다는 이름 규칙(RFC-001)을 따른 것이다
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터 등록 API가 없어서(MS2-159 예정) 지금은 고객 API(MS2-155)와 가격 정책 API(MS2-157)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다. 미터는 여섯 개이고 그중 `llm_request` 이벤트 하나를 입력/출력/캐시 읽기/캐시 생성 토큰 네 미터가 함께 잰다. 캐시 두 미터는 MS2-169에서 추가했는데, Claude Code 실측에서 토큰의 대부분이 캐시라 그것을 빼면 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (CONTRIBUTING.md "문서의 정본")
@@ -106,9 +107,9 @@ docker build -t meterengine-backend .
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
-| `POST /v1/metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
-| `GET /v1/metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
-| `POST /v1/metrics/{metricCode}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가는 MS2-177의 단가 API 몫이고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
+| `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
+| `GET /v1/billable-metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
+| `POST /v1/billable-metrics/{code}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가 등록 API는 아직 없고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
 | `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
@@ -204,9 +205,9 @@ docker build -t meterengine-backend .
 단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다.
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
-- `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/metrics`, `/v1/usage`)
+- `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/billable-metrics`, `/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`). 확정 인보이스는 엔티티와 리포지토리만 있고, 저장하는 서비스와 API는 아직 없다
-- `pricing`: 가격 정책과 단가 (`/v1/metrics/{metricCode}/price-policy`, `/v1/price-policies`). MS2-158에서 미터의 unit_price를 분리했고 MS2-157이 정책 등록 API를, MS2-176이 목록 조회를 얹었다. 단가 등록/수정/삭제는 MS2-177 예정이다
+- `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/price-policies`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 목록 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
