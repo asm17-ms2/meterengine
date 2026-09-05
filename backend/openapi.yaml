@@ -447,7 +447,7 @@ paths:
       summary: 사용량 이벤트 수집
       tags:
       - event-controller
-  /v1/invoice:
+  /v1/invoices/draft:
     get:
       description: |
         도입사의 모든 고객에 대해 미터별 사용량 x 단가로 청구 예정액을 계산해 돌려준다.

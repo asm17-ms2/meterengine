@@ -147,7 +147,7 @@ class FrameworkExceptionHandlerIntegrationTest {
 
   @Test
   void 세_엔드포인트의_400이_모두_같은_code를_갖는다() {
-    for (String path : new String[] {"/v1/usage", "/v1/invoice", "/v1/events"}) {
+    for (String path : new String[] {"/v1/usage", "/v1/invoices/draft", "/v1/events"}) {
       MvcTestResult result =
           mvc.get()
               .uri(path)
@@ -160,9 +160,9 @@ class FrameworkExceptionHandlerIntegrationTest {
 
   @Test
   void 도입사가_보낸_값이_응답에_돌아오지_않는다() {
-    // MS2-150 B-4. 예전에는 /v1/usage와 /v1/invoice가 "Failed to convert 'month' with
+    // MS2-150 B-4. 예전에는 /v1/usage와 /v1/invoices/draft가 "Failed to convert 'month' with
     // value: '2026-13'"으로 값을 되돌려줬다. 전역 핸들러가 detail을 우리 문구로 덮어 막는다.
-    for (String path : new String[] {"/v1/usage", "/v1/invoice", "/v1/events"}) {
+    for (String path : new String[] {"/v1/usage", "/v1/invoices/draft", "/v1/events"}) {
       MvcTestResult result =
           mvc.get()
               .uri(path)
@@ -365,7 +365,7 @@ class FrameworkExceptionHandlerIntegrationTest {
           .header("X-Organization-Id", ORGANIZATION)
           .exchange(),
       mvc.get()
-          .uri("/v1/invoice")
+          .uri("/v1/invoices/draft")
           .param("month", "2026-13")
           .header("X-Organization-Id", ORGANIZATION)
           .exchange()

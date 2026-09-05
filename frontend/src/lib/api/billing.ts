@@ -5,7 +5,7 @@ import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
 /**
- * GET /v1/invoice 응답. 백엔드의 DraftInvoiceResponse와 1:1이다.
+ * GET /v1/invoices/draft 응답. 백엔드의 DraftInvoiceResponse와 1:1이다.
  *
  * /v1/usage와 달리 응답이 이미 고객 중심(고객 안에 라인)이라 뒤집을 것이 없다.
  * 금액 계산은 전부 서버 몫이다. 라인별 절사 규칙이 서버에 있으므로 화면은
@@ -75,5 +75,5 @@ export async function loadDraftInvoice(
       },
     };
   }
-  return serverFetch<DraftInvoiceResponse>(config.apiBaseUrl, "/v1/invoice", { month });
+  return serverFetch<DraftInvoiceResponse>(config.apiBaseUrl, "/v1/invoices/draft", { month });
 }
