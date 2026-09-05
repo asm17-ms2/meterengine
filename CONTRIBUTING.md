@@ -31,6 +31,7 @@
 | API 계약 | `backend/openapi.yaml` (컨트롤러와 DTO에서 자동 생성) |
 | 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙 | 이 파일 |
 | 결정과 규칙을 어디에 두고 어떻게 바꾸나 | `docs/contributing/governance.md` |
+| 이름 규칙 | `docs/contributing/naming.md` |
 | 각 디렉터리의 실행법, 구조, 그 안에서 내린 판단 | 그 디렉터리의 `README.md` |
 
 한 내용을 두 곳에 쓰지 않는다. 정본이 아닌 곳에서 언급해야 하면 정본을 가리킨다. 표에 없는 종류의 문서는 만들기 전에 어디에 둘지 먼저 합의한다.
