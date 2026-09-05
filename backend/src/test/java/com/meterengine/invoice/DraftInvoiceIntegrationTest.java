@@ -19,14 +19,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-/**
- * 청구 예정액 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-124).
- *
- * <p>실제 Postgres여야 하는 이유와 MockMvc를 직접 구성하는 이유는 {@link
- * com.meterengine.metric.BillableMetricUsageIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
- *
- * <p>월 경계 자체(8월 마지막 순간과 9월 첫 순간)는 MS2-129의 테스트가 소유하므로 여기서 반복하지 않는다.
- */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
@@ -55,7 +47,6 @@ class DraftInvoiceIntegrationTest {
     MvcTestResult result = get(orgId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo(AUGUST);
-    // 3291 x 0.5 = 1645.5원 -> 절사 1645원. JSON에 정수로 실리는지까지 겸해서 본다 (인수 조건 "금액은 정수 타입").
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(1645);
     assertThat(result)
         .bodyJson()
@@ -80,7 +71,6 @@ class DraftInvoiceIntegrationTest {
         .extractingPath("$.customers[0].lines[0].unit_price")
         .isEqualTo(0.5);
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(1645);
-    // 계산 시각은 조회마다 달라서 값이 아니라 형식만 본다: KST 오프셋의 ISO-8601이어야 화면이 그대로 표시한다
     assertThat(result)
         .bodyJson()
         .extractingPath("$.calculated_at")
@@ -105,7 +95,6 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[1].amount").isEqualTo(0);
     assertThat(result).bodyJson().extractingPath("$.customers[1].lines[0].quantity").isEqualTo(0);
     assertThat(result).bodyJson().extractingPath("$.customers[1].lines[0].amount").isEqualTo(0);
-    // 단가는 사용량과 무관한 미터의 속성이라 0이 아니라 실제 값이 나간다 (화면 목업과 동일)
     assertThat(result)
         .bodyJson()
         .extractingPath("$.customers[1].lines[0].unit_price")
@@ -119,7 +108,6 @@ class DraftInvoiceIntegrationTest {
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    // 도입사 ID만 다르고 고객 이름, 미터, transaction_id, 수량, 시각이 전부 같은 쌍둥이 (인수 조건의 오집계 방지)
     UUID twinOrgId = organizationWithTokenMetric();
     UUID twinCustomer = insertCustomer(twinOrgId, "아크메");
     insertEvent(twinOrgId, "tx-1", twinCustomer, 500, "2026-08-10T12:00:00+09:00");
@@ -140,8 +128,6 @@ class DraftInvoiceIntegrationTest {
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    // 정책 등록 API(MS2-157)는 정책만 만들고 단가는 MS2-177이 붙인다. 그 사이의 미터가
-    // 사용량을 가져도 청구 예정액은 죽거나 0원을 내보내지 않고 라인을 뺀다 (PR 43 리뷰 결정).
     jdbc.update(
         """
         INSERT INTO billable_metric
@@ -200,7 +186,6 @@ class DraftInvoiceIntegrationTest {
   void month를_생략하면_이번_달_KST로_집계한다() {
     UUID orgId = organizationWithTokenMetric();
     UUID acme = insertCustomer(orgId, "아크메");
-    // 이번 달 1일 정오(KST). 지금이 월말 자정 직전이어도 같은 달 안이다.
     OffsetDateTime thisMonth =
         YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
     insertEvent(orgId, "tx-1", acme, 500, thisMonth);
@@ -232,9 +217,7 @@ class DraftInvoiceIntegrationTest {
         .hasStatus(400);
   }
 
-  // ---------------------------------------------------------------------------
-  // 헬퍼 (BillableMetricUsageIntegrationTest와 같은 방식)
-  // ---------------------------------------------------------------------------
+  // --- 헬퍼 ---
 
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
@@ -243,7 +226,7 @@ class DraftInvoiceIntegrationTest {
         .exchange();
   }
 
-  /** 시드와 같은 모양의 미터(chat_completion의 token을 SUM, 단가 0.5원)를 가진 도입사를 만든다. */
+  // 토큰 사용량 미터와 그 기본 단가를 가진 도입사를 만든다.
   private UUID organizationWithTokenMetric() {
     UUID organizationId = insertOrganization();
     jdbc.update(
@@ -253,7 +236,6 @@ class DraftInvoiceIntegrationTest {
         VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token')
         """,
         organizationId);
-    // 단가는 MS2-158부터 분리 테이블에 있다. 무차원 정책 + '{}' 기본 단가 행이 시드와 같은 규약이다.
     jdbc.update(
         "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
         organizationId);

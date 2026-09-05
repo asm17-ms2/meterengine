@@ -25,14 +25,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * 청구 예정액 계산의 분기 검증 (MS2-124).
- *
- * <p>집계 자체가 맞는지는 MS2-129의 테스트가 맡는다. 여기서는 집계 결과에 단가를 곱해 응답으로 조립하는 부분만 본다.
- *
- * <p>TODO: 목 사용 정책은 멘토 답변 후 확정한다 (스프린트 플래닝 회의6). 목 금지로 결정되면 계산 테스트는 순수 계산 직접 호출로, 피벗 테스트는 통합 테스트로
- * 옮긴다.
- */
 @ExtendWith(MockitoExtension.class)
 class DraftInvoiceServiceTest {
 
@@ -88,7 +80,6 @@ class DraftInvoiceServiceTest {
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
-    // 3291 x 0.5 = 1645.5원. 반올림이 아니라 절사라 1645원이다.
     assertThat(response.customers().getFirst().amount()).isEqualTo(1645);
   }
 
@@ -109,8 +100,6 @@ class DraftInvoiceServiceTest {
 
     DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
 
-    // 1645.5원과 2.5원. 라인마다 절사한 뒤 합산하므로 1645 + 2 = 1647원이다.
-    // 합산 후 한 번만 절사하면 1648원이 되어, 화면의 라인 금액을 다 더해도 소계와 안 맞는 표가 된다.
     DraftInvoiceCustomerEntry entry = response.customers().getFirst();
     assertThat(entry.lines()).extracting(MetricLineItem::amount).containsExactly(1645L, 2L);
     assertThat(entry.amount()).isEqualTo(1647);
@@ -140,7 +129,6 @@ class DraftInvoiceServiceTest {
     MetricLineItem betaLine = betaEntry.lines().getFirst();
     assertThat(betaLine.quantity()).isEqualByComparingTo("0");
     assertThat(betaLine.amount()).isZero();
-    // 단가는 사용량과 무관한 미터의 속성이라 0이 아니라 실제 값이 나간다 (화면 목업과 동일)
     assertThat(betaLine.unitPrice()).isEqualByComparingTo("0.5");
   }
 
@@ -166,10 +154,6 @@ class DraftInvoiceServiceTest {
             });
   }
 
-  /**
-   * 정책 등록(MS2-157)과 단가 등록(MS2-177)이 분리돼 "단가가 아직 없는 미터"는 정상 상태다. 조용한 0원 라인은 단가 누락을 화면에서 숨기므로, 라인 자체를
-   * 뺀다 (PR 43 리뷰 결정).
-   */
   @Test
   void 단가가_없는_미터는_라인에서_빠진다() {
     Customer acme = customer("아크메");
