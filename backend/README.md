@@ -100,7 +100,7 @@ docker build -t meterengine-backend .
 | 오퍼레이션 | 내용 |
 | --- | --- |
 | `GET /v1/customers` | 고객 목록. 이름 오름차순, 페이지 나누지 않음 |
-| `POST /v1/customers` | 고객 등록. 서버가 customer_id와 등록 시각을 만든다 |
+| `POST /v1/customers` | 고객 등록. 서버가 id와 등록 시각을 만든다 |
 | `PUT /v1/customers/{id}` | 고객 이름 수정 |
 | `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |

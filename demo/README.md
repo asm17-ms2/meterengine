@@ -318,7 +318,7 @@ python3 demo/otel_bridge.py config --base-url https://meterengine.com
 - 고객은 브리지가 알아서 만든다. `GET /v1/customers`로 같은 이름을 찾고 없을 때만
   `POST /v1/customers`로 등록한다. 이 API는 이름 중복을 막지 않아서 조회를 빠뜨리면
   같은 이름의 고객이 계속 늘어난다
-- 찾아낸 `customer_id`는 `~/.meterengine/state.json`에 담아 둔다. 서버가 그 고객을
+- 찾아낸 고객의 id는 `~/.meterengine/state.json`에 담아 둔다. 서버가 그 고객을
   모른다고 답하면(400 `unknown_customer_reference`) 그 자리에서 캐시를 버리고 다음
   이벤트에서 다시 찾는다. 남겨 두면 죽은 id를 계속 보내 그 프로젝트가 영영 거절된다
 
