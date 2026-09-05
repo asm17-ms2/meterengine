@@ -45,3 +45,4 @@ RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다. RFC를 �
 | [000](000-documentation-and-decision-process.md) | 문서와 결정 프로세스 도입 | process | accepted | 2026-09-02 |
 | [001](001-naming-convention.md) | 이름 규칙을 표준 관례에 맞춰 정한다 | process | accepted | 2026-09-04 |
 | [002](002-comment-cleanup.md) | 주석 전수 정리와 함수 위 한 줄 설명 허용 | process | accepted | 2026-09-04 |
+| [004](004-notion-archive.md) | 노션 내용 이관과 노션 폐기 | process | draft | 2026-09-04 |
