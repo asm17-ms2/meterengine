@@ -104,7 +104,7 @@ docker build -t meterengine-backend .
 | `PUT /v1/customers/{id}` | 고객 이름 수정 |
 | `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
-| `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
+| `GET /v1/events` | 이벤트 조회. 월/고객/type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
 | `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
@@ -140,7 +140,7 @@ docker build -t meterengine-backend .
   "detail": "the request could not be accepted as sent",
   "instance": "/v1/events",
   "code": "validation_error",
-  "errors": [{ "field": "event_type", "message": "공백일 수 없습니다" }]
+  "errors": [{ "field": "transaction_id", "message": "공백일 수 없습니다" }]
 }
 ```
 
@@ -159,7 +159,7 @@ docker build -t meterengine-backend .
 | `unknown_customer_reference` | 400 | 실어 보낸 `customer_id`로 (도입사, 고객) 조합을 찾지 못했다 |
 | `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록과 미터 등록에서 난다) |
 | `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
-| `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
+| `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 occurred_at) |
 | `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
 | `invalid_billable_metric` | 400 | 본문이 집계 미터로 성립하지 않는다 (SUM이 아닌 집계 함수, target_property 누락) |
 | `customer_not_found` | 404 | 경로가 가리킨 고객이 없거나 다른 도입사 소속이다 |

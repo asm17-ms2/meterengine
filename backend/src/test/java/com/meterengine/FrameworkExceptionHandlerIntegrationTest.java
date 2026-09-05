@@ -36,13 +36,13 @@ class FrameworkExceptionHandlerIntegrationTest {
   /**
    * 자바 이름과 와이어 이름이 갈리는 세 필드를 한꺼번에 비운 본문.
    *
-   * <p>{@code eventType -> event_type} 변환이 5단계의 핵심이고, 나머지 둘은 변환이 한 필드에만 걸리지 않았는지 본다. 6단계의 문구 단언도 같은
-   * 응답을 쓴다.
+   * <p>{@code occurredAt -> occurred_at} 변환이 5단계의 핵심이고, 나머지 둘은 변환이 한 필드에만 걸리지 않았는지 본다. 6단계의 문구 단언도
+   * 같은 응답을 쓴다.
    */
   private static final String INVALID_BODY =
       """
-      {"transaction_id":"","customer_id":null,"event_type":"",
-       "timestamp":"2026-08-17T12:00:00Z","properties":{"token":1}}
+      {"transaction_id":"","customer_id":null,"type":"",
+       "occurred_at":null,"properties":{"token":1}}
       """;
 
   /**
@@ -53,7 +53,7 @@ class FrameworkExceptionHandlerIntegrationTest {
   private static final String UNKNOWN_CUSTOMER_BODY =
       """
       {"transaction_id":"probe-1","customer_id":"11111111-2222-3333-4444-555555555555",
-       "event_type":"chat_completion","timestamp":"2026-08-17T12:00:00Z","properties":{"token":1}}
+       "type":"chat_completion","occurred_at":"2026-08-17T12:00:00Z","properties":{"token":1}}
       """;
 
   @Autowired private WebApplicationContext webApplicationContext;
@@ -80,13 +80,13 @@ class FrameworkExceptionHandlerIntegrationTest {
   }
 
   @Test
-  void timestamp에_오프셋이_없으면_400이고_code가_malformed_request_body다() {
+  void occurred_at에_오프셋이_없으면_400이고_code가_malformed_request_body다() {
     // Jackson이 OffsetDateTime으로 못 바꿔서 파싱 단계에서 끊긴다. 필드를 짚을 수 없으므로
     // validation_error가 아니다 (ErrorCodes.MALFORMED_REQUEST_BODY javadoc 참조).
     String body =
         """
         {"transaction_id":"t","customer_id":"a728e7b6-d82b-4f3c-a960-a66a02794c1d",
-         "event_type":"chat_completion","timestamp":"2026-08-17T12:00:00","properties":{"token":1}}
+         "type":"chat_completion","occurred_at":"2026-08-17T12:00:00","properties":{"token":1}}
         """;
     assertCode(post(body), 400, ErrorCodes.MALFORMED_REQUEST_BODY);
   }
@@ -183,8 +183,8 @@ class FrameworkExceptionHandlerIntegrationTest {
         .bodyJson()
         .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.FIELD))
         .asArray()
-        .contains("transaction_id", "customer_id", "event_type")
-        .doesNotContain("transactionId", "customerId", "eventType");
+        .contains("transaction_id", "customer_id", "occurred_at")
+        .doesNotContain("transactionId", "customerId", "occurredAt");
   }
 
   @Test

@@ -216,7 +216,7 @@ class EventListIntegrationTest {
 
     assertThat(transactionIds(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, acme))))
         .containsExactlyInAnyOrder("tx-acme-chat", "tx-acme-embed");
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=embedding".formatted(AUGUST))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=embedding".formatted(AUGUST))))
         .containsExactly("tx-acme-embed");
     assertThat(transactionIds(get(orgId, "?month=2026-07"))).containsExactly("tx-acme-july");
 
@@ -225,7 +225,7 @@ class EventListIntegrationTest {
             transactionIds(
                 get(
                     orgId,
-                    "?month=%s&customer_id=%s&event_type=chat_completion".formatted(AUGUST, acme))))
+                    "?month=%s&customer_id=%s&type=chat_completion".formatted(AUGUST, acme))))
         .containsExactly("tx-acme-chat");
   }
 
@@ -257,7 +257,7 @@ class EventListIntegrationTest {
     // 로그는 원문 보존이므로 집계에 안 잡히는 값도 화면에는 보여야 한다.
     insertEvent(orgId, "tx-unknown", customerId, "정체불명", 1, "2026-08-10T12:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=%s".formatted(AUGUST, "정체불명"))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=%s".formatted(AUGUST, "정체불명"))))
         .containsExactly("tx-unknown");
   }
 
@@ -400,14 +400,14 @@ class EventListIntegrationTest {
   }
 
   @Test
-  void event_type을_빈_값으로_보내면_필터가_걸리지_않는다() {
+  void type을_빈_값으로_보내면_필터가_걸리지_않는다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
     // FE가 필터를 비우며 빈 값을 그대로 붙이는 구현이 흔하다. 그때 event_type = '' 로 걸리면
     // 데이터가 있는데도 화면이 빈다. customer_id와 month는 스프링이 알아서 null로 바꾼다.
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=".formatted(AUGUST))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=".formatted(AUGUST))))
         .containsExactly("tx-1");
   }
 

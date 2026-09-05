@@ -59,7 +59,7 @@ public class EventController {
           재전송도 200이며 duplicate가 true로 내려온다.
           properties의 내용은 검증하지 않는다. 저장 타입이 jsonb라 키 순서와 공백은 보존되지 않지만,
           숫자는 정수/소수 모두 자릿수가 잘리지 않는다.
-          timestamp는 이벤트 발생 시각이며 occurred_at으로 저장된다.
+          occurred_at은 이벤트 발생 시각이다.
           received_at은 서버가 찍으며 요청에 담긴 값은 무시된다.
           """)
   @ApiResponses({
@@ -94,7 +94,7 @@ public class EventController {
           transaction_id 내림차순으로 순서가 고정돼, 같은 요청을 여러 번 보내도 결과가 같다.
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다 (사용량 조회와 같은 판정).
-          customer_id, month, event_type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
+          customer_id, month, type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
           properties는 저장된 값을 그대로 낸다. 서버가 키를 고르거나 값을 해석하지 않는다.
           저장 타입이 jsonb라 키 순서와 공백은 수집 때와 달라질 수 있고, 숫자 자릿수는 그대로다.
 
@@ -134,9 +134,9 @@ public class EventController {
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month,
       @Parameter(description = "이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.")
-          @RequestParam(name = "event_type", required = false)
-          String eventType) {
+          @RequestParam(required = false)
+          String type) {
     YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return eventService.list(organizationId, customerId, target, eventType, page, size);
+    return eventService.list(organizationId, customerId, target, type, page, size);
   }
 }

@@ -228,9 +228,9 @@ class WireBodyTest(unittest.TestCase):
         event = otel_map.to_event(api_request(), "35bc8d12-9d38-57ab-bc9b-bbd35d779a26", {"project": "p"})
         body = loads_decimal(build_body_text(event))
         self.assertEqual(body["customer_id"], "35bc8d12-9d38-57ab-bc9b-bbd35d779a26")
-        self.assertEqual(body["event_type"], "llm_request")
+        self.assertEqual(body["type"], "llm_request")
         self.assertEqual(body["properties"]["input_tokens"], 2)
-        self.assertEqual(set(body), {"transaction_id", "customer_id", "event_type", "properties", "timestamp"})
+        self.assertEqual(set(body), {"transaction_id", "customer_id", "type", "properties", "occurred_at"})
 
     def test_한글이_그대로_실린다(self):
         event = otel_map.to_event(api_request(), "cid", {"owner": "박성종"})

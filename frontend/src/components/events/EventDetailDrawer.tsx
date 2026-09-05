@@ -63,7 +63,7 @@ export function EventDetailDrawer({
             <dd className="detail-grid__mono">{row.transactionId}</dd>
             <dt>고객</dt>
             <dd>{row.customerName}</dd>
-            <dt>event_type</dt>
+            <dt>type</dt>
             <dd>{row.eventType}</dd>
             <dt>occurred_at</dt>
             <dd>{row.occurredAt}</dd>

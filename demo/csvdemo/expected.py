@@ -93,8 +93,8 @@ def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
                     # 서버는 UUID를 대소문자 무관으로 파싱하고 응답은 소문자로 내려주므로
                     # 기대값 계산도 소문자로 정규화해야 서버 응답과 키가 맞는다
                     customer_id=str(request["customer_id"]).lower(),
-                    event_type=request["event_type"],
-                    occurred_at=parse_rfc3339(request["timestamp"]),
+                    event_type=request["type"],
+                    occurred_at=parse_rfc3339(request["occurred_at"]),
                     properties=request.get("properties") or {},
                 )
             )

@@ -190,7 +190,7 @@ class OpenApiDocumentTest {
         .bodyJson()
         .extractingPath("$.paths['/v1/events'].get.parameters[*].name")
         .asArray()
-        .contains("X-Organization-Id", "page", "size", "customer_id", "month", "event_type");
+        .contains("X-Organization-Id", "page", "size", "customer_id", "month", "type");
   }
 
   @Test

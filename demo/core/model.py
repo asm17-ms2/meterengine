@@ -113,9 +113,9 @@ def build_body_text(event: Event) -> str:
         "{"
         + '"transaction_id": ' + json.dumps(event.transaction_id, ensure_ascii=False)
         + ', "customer_id": ' + json.dumps(event.customer_id)
-        + ', "event_type": ' + json.dumps(event.event_type, ensure_ascii=False)
+        + ', "type": ' + json.dumps(event.event_type, ensure_ascii=False)
         + ', "properties": ' + event.properties_text.strip()
-        + ', "timestamp": ' + json.dumps(event.timestamp_text)
+        + ', "occurred_at": ' + json.dumps(event.timestamp_text)
         + "}"
     )
 

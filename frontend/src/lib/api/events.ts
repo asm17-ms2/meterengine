@@ -20,7 +20,7 @@ export type EventResponse = {
   transaction_id: string;
   customer_id: string;
   customer_name: string;
-  event_type: string;
+  type: string;
   /**
    * 백엔드는 jsonb 문자열을 @JsonRawValue로 그대로 박아 넣는다. 파싱과 재직렬화를
    * 한 번도 거치지 않으려는 것인데, 그 보호는 여기서 끝난다. 우리 쪽 response.json()이
@@ -100,7 +100,7 @@ export function toRawJson(event: EventResponse): string {
     {
       transaction_id: event.transaction_id,
       customer_id: event.customer_id,
-      event_type: event.event_type,
+      type: event.type,
       occurred_at: event.occurred_at,
       received_at: event.received_at,
       properties: event.properties,

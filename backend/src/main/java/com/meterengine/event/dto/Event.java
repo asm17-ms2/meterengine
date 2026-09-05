@@ -15,7 +15,7 @@ public record Event(
     String transactionId,
     UUID customerId,
     String customerName,
-    String eventType,
+    String type,
     String propertiesJson,
     OffsetDateTime occurredAt,
     OffsetDateTime receivedAt) {}

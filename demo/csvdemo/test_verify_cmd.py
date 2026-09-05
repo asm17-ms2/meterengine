@@ -40,8 +40,8 @@ def _send(writer, seq):
         seq=seq,
         sent_at_text="2026-08-24T10:00:0%d+09:00" % seq,
         request_body_text='{"transaction_id": "evt-%d", "customer_id": "c", '
-        '"event_type": "llm_request", "properties": {"input_tokens": 5}, '
-        '"timestamp": "2026-08-24T10:00:00+09:00"}' % seq,
+        '"type": "llm_request", "properties": {"input_tokens": 5}, '
+        '"occurred_at": "2026-08-24T10:00:00+09:00"}' % seq,
         status=200,
         response_text='{"transaction_id": "evt-%d", "duplicate": false}' % seq,
         outcome="new",

@@ -84,7 +84,7 @@ class BuildBodyTextTest(unittest.TestCase):
         body = build_body_text(event)
         self.assertIn('"properties": {"token": 500.00, "model": "claude"}', body)
         self.assertIn('"transaction_id": "evt-001"', body)
-        self.assertIn('"timestamp": "2026-08-14T09:30:00+09:00"', body)
+        self.assertIn('"occurred_at": "2026-08-14T09:30:00+09:00"', body)
 
 
 class ParsePropertiesTest(unittest.TestCase):

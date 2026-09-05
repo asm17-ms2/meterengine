@@ -33,12 +33,8 @@ public record IngestEventRequest(
      */
     @JsonProperty("transaction_id") @NotBlank @Size(max = 255) String transactionId,
     @JsonProperty("customer_id") @NotNull UUID customerId,
-    @JsonProperty("event_type") @NotBlank String eventType,
+    @JsonProperty("type") @NotBlank String type,
     @NotNull Map<String, Object> properties,
 
-    /**
-     * 이벤트 발생 시각. usage_event.occurred_at에 저장된다.
-     *
-     * <p>요청 필드명과 컬럼명이 다른 유일한 지점이다. 이름을 맞추려면 API와 스키마 중 하나를 고쳐야 하는데, 둘 다 이미 확정된 이름이라 경계에서 변환한다.
-     */
-    @NotNull OffsetDateTime timestamp) {}
+    /** 이벤트 발생 시각. usage_event.occurred_at에 저장된다. */
+    @JsonProperty("occurred_at") @NotNull OffsetDateTime occurredAt) {}
