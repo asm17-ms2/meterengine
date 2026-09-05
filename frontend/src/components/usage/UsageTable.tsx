@@ -10,7 +10,7 @@ import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid"
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
-  meters: { label: string; quantity: string }[];
+  billableMetricLines: { label: string; quantity: string }[];
 };
 
 const COLUMNS = "minmax(0, 1fr) 200px";
@@ -41,19 +41,19 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                미터 {group.meters.length}개
+                미터 {group.billableMetricLines.length}개
               </div>
             </button>
 
             {collapsed
               ? null
-              : group.meters.map((meter) => (
-                  <GridRow key={meter.label} columns={COLUMNS}>
+              : group.billableMetricLines.map((billableMetricLine) => (
+                  <GridRow key={billableMetricLine.label} columns={COLUMNS}>
                     <GridCell className="grid-cell--child grid-cell--mono">
-                      {meter.label}
+                      {billableMetricLine.label}
                     </GridCell>
                     <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
-                      {meter.quantity}
+                      {billableMetricLine.quantity}
                     </GridCell>
                   </GridRow>
                 ))}

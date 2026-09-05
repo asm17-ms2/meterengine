@@ -3,49 +3,49 @@
 import { revalidatePath } from "next/cache";
 
 import type {
-  MetricDeleteState,
-  MetricField,
-  MetricFormState,
-} from "@/app/(console)/metrics/state";
+  BillableMetricDeleteState,
+  BillableMetricField,
+  BillableMetricFormState,
+} from "@/app/(console)/billable-metrics/state";
 import type { ApiError } from "@/lib/api/client";
-import { deleteMetric, registerMetric, updateMetric } from "@/lib/api/metrics";
+import { createBillableMetric, deleteBillableMetric, updateBillableMetric } from "@/lib/api/billable-metrics";
 
 const AGGREGATION = "SUM";
 
-const METRIC_FIELDS: readonly MetricField[] = [
+const BILLABLE_METRIC_FIELDS: readonly BillableMetricField[] = [
   "code",
   "name",
   "event_type",
   "target_property",
 ];
 
-const REQUIRED_MESSAGES: Record<MetricField, string> = {
+const REQUIRED_MESSAGES: Record<BillableMetricField, string> = {
   code: "코드를 입력하세요",
   name: "이름을 입력하세요",
   event_type: "이벤트 타입을 입력하세요",
   target_property: "집계 대상 속성을 입력하세요. SUM 집계는 필수입니다",
 };
 
-function readField(formData: FormData, field: MetricField): string {
+function readField(formData: FormData, field: BillableMetricField): string {
   const raw = formData.get(field);
   return typeof raw === "string" ? raw.trim() : "";
 }
 
-function isMetricField(field: string): field is MetricField {
-  return (METRIC_FIELDS as readonly string[]).includes(field);
+function isBillableMetricField(field: string): field is BillableMetricField {
+  return (BILLABLE_METRIC_FIELDS as readonly string[]).includes(field);
 }
 
 function serverFieldErrors(
   error: ApiError,
-): Partial<Record<MetricField, string>> {
-  const fieldErrors: Partial<Record<MetricField, string>> = {};
+): Partial<Record<BillableMetricField, string>> {
+  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
   for (const entry of error.errors ?? []) {
-    if (isMetricField(entry.field)) fieldErrors[entry.field] = entry.message;
+    if (isBillableMetricField(entry.field)) fieldErrors[entry.field] = entry.message;
   }
   return fieldErrors;
 }
 
-function failureState(error: ApiError): MetricFormState {
+function failureState(error: ApiError): BillableMetricFormState {
   if (error.code === "metric_already_exists") {
     return {
       status: "invalid",
@@ -80,13 +80,13 @@ function failureState(error: ApiError): MetricFormState {
   }
 }
 
-export async function registerMetricAction(
-  _prev: MetricFormState,
+export async function createBillableMetricAction(
+  _prev: BillableMetricFormState,
   formData: FormData,
-): Promise<MetricFormState> {
-  const fieldErrors: Partial<Record<MetricField, string>> = {};
-  const values = {} as Record<MetricField, string>;
-  for (const field of METRIC_FIELDS) {
+): Promise<BillableMetricFormState> {
+  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
+  const values = {} as Record<BillableMetricField, string>;
+  for (const field of BILLABLE_METRIC_FIELDS) {
     values[field] = readField(formData, field);
     if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
   }
@@ -94,7 +94,7 @@ export async function registerMetricAction(
     return { status: "invalid", fieldErrors };
   }
 
-  const result = await registerMetric({
+  const result = await createBillableMetric({
     code: values.code,
     name: values.name,
     event_type: values.event_type,
@@ -103,17 +103,17 @@ export async function registerMetricAction(
   });
   if (!result.ok) return failureState(result.error);
 
-  revalidatePath("/metrics");
+  revalidatePath("/billable-metrics");
   return { status: "done" };
 }
 
-const UPDATE_FIELDS: readonly MetricField[] = [
+const UPDATE_FIELDS: readonly BillableMetricField[] = [
   "name",
   "event_type",
   "target_property",
 ];
 
-function updateFailureState(error: ApiError): MetricFormState {
+function updateFailureState(error: ApiError): BillableMetricFormState {
   if (error.code === "metric_not_found") {
     return {
       status: "failed",
@@ -130,17 +130,17 @@ function updateFailureState(error: ApiError): MetricFormState {
   return failureState(error);
 }
 
-export async function updateMetricAction(
-  _prev: MetricFormState,
+export async function updateBillableMetricAction(
+  _prev: BillableMetricFormState,
   formData: FormData,
-): Promise<MetricFormState> {
+): Promise<BillableMetricFormState> {
   const code = formData.get("code");
   if (typeof code !== "string" || code === "") {
     return { status: "failed", message: "미터를 특정하지 못했습니다." };
   }
 
-  const fieldErrors: Partial<Record<MetricField, string>> = {};
-  const values = {} as Record<MetricField, string>;
+  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
+  const values = {} as Record<BillableMetricField, string>;
   for (const field of UPDATE_FIELDS) {
     values[field] = readField(formData, field);
     if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
@@ -149,7 +149,7 @@ export async function updateMetricAction(
     return { status: "invalid", fieldErrors };
   }
 
-  const result = await updateMetric(code, {
+  const result = await updateBillableMetric(code, {
     name: values.name,
     event_type: values.event_type,
     aggregation: AGGREGATION,
@@ -157,14 +157,14 @@ export async function updateMetricAction(
   });
   if (!result.ok) return updateFailureState(result.error);
 
-  revalidatePath("/metrics");
+  revalidatePath("/billable-metrics");
   return { status: "done" };
 }
 
-export async function deleteMetricAction(
-  _prev: MetricDeleteState,
+export async function deleteBillableMetricAction(
+  _prev: BillableMetricDeleteState,
   formData: FormData,
-): Promise<MetricDeleteState> {
+): Promise<BillableMetricDeleteState> {
   const code = formData.get("code");
   const name = formData.get("name");
   const label = typeof name === "string" ? name : "";
@@ -172,7 +172,7 @@ export async function deleteMetricAction(
     return { status: "failed", message: "미터를 특정하지 못했습니다." };
   }
 
-  const result = await deleteMetric(code);
+  const result = await deleteBillableMetric(code);
   if (!result.ok) {
     if (result.error.code === "metric_has_events") {
       return { status: "rejected", reason: "events", name: label };
@@ -181,7 +181,7 @@ export async function deleteMetricAction(
       return { status: "rejected", reason: "policy", name: label };
     }
     if (result.error.code === "metric_not_found") {
-      revalidatePath("/metrics");
+      revalidatePath("/billable-metrics");
       return { status: "gone", name: label };
     }
     return {
@@ -193,6 +193,6 @@ export async function deleteMetricAction(
     };
   }
 
-  revalidatePath("/metrics");
+  revalidatePath("/billable-metrics");
   return { status: "done" };
 }

@@ -3,33 +3,33 @@
 import { useActionState, useEffect, useState } from "react";
 
 import {
-  registerMetricAction,
-  updateMetricAction,
-} from "@/app/(console)/metrics/actions";
+  createBillableMetricAction,
+  updateBillableMetricAction,
+} from "@/app/(console)/billable-metrics/actions";
 import {
-  METRIC_FORM_IDLE,
-  type MetricField,
-  type MetricRowView,
-} from "@/app/(console)/metrics/state";
+  BILLABLE_METRIC_FORM_IDLE,
+  type BillableMetricField,
+  type BillableMetricRowView,
+} from "@/app/(console)/billable-metrics/state";
 import { Dialog } from "@/components/screen/Dialog";
 
-export function MetricFormDialog({
-  metric,
+export function BillableMetricFormDialog({
+  billableMetric,
   onClose,
 }: {
-  metric: MetricRowView | null;
+  billableMetric: BillableMetricRowView | null;
   onClose: () => void;
 }) {
-  const isEdit = metric !== null;
+  const isEdit = billableMetric !== null;
   const [state, formAction, pending] = useActionState(
-    isEdit ? updateMetricAction : registerMetricAction,
-    METRIC_FORM_IDLE,
+    isEdit ? updateBillableMetricAction : createBillableMetricAction,
+    BILLABLE_METRIC_FORM_IDLE,
   );
-  const [values, setValues] = useState<Record<MetricField, string>>({
-    code: isEdit ? metric.code : "",
-    name: isEdit ? metric.name : "",
-    event_type: isEdit ? metric.eventType : "",
-    target_property: isEdit ? metric.targetProperty : "",
+  const [values, setValues] = useState<Record<BillableMetricField, string>>({
+    code: isEdit ? billableMetric.code : "",
+    name: isEdit ? billableMetric.name : "",
+    event_type: isEdit ? billableMetric.eventType : "",
+    target_property: isEdit ? billableMetric.targetProperty : "",
   });
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export function MetricFormDialog({
   const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
   const message = state.status === "failed" ? state.message : null;
 
-  const fieldProps = (field: MetricField) => ({
+  const fieldProps = (field: BillableMetricField) => ({
     value: values[field],
     onChange: (value: string) =>
       setValues((prev) => ({ ...prev, [field]: value })),
@@ -60,7 +60,7 @@ export function MetricFormDialog({
       </div>
 
       {isEdit ? (
-        <input type="hidden" name="code" value={metric.code} />
+        <input type="hidden" name="code" value={billableMetric.code} />
       ) : (
         <TextField
           id="metric-code"
@@ -134,7 +134,7 @@ export function MetricFormDialog({
           style={{ gridTemplateColumns: "88px minmax(0, 1fr)" }}
         >
           <dt>코드</dt>
-          <dd className="detail-grid__mono">{metric.code}</dd>
+          <dd className="detail-grid__mono">{billableMetric.code}</dd>
         </dl>
       ) : null}
 

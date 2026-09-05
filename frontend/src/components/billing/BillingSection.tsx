@@ -106,8 +106,8 @@ function toBillingGroupViews(customers: InvoiceCustomer[]): BillingGroupView[] {
     amount: formatKrw(customer.amount),
     lines: customer.lines.map((line) => ({
       label: line.target_property
-        ? `${line.metric_code} (${line.target_property})`
-        : line.metric_code,
+        ? `${line.billable_metric_code} (${line.target_property})`
+        : line.billable_metric_code,
       quantity: formatDecimal(line.quantity),
       unitPrice: formatKrw(line.unit_price),
       amount: formatKrw(line.amount),
