@@ -139,7 +139,7 @@ class OpenApiDocumentTest {
         .containsOnlyKeys(
             "/v1/events",
             "/v1/usage",
-            "/v1/invoice",
+            "/v1/invoices/draft",
             "/v1/customers",
             "/v1/customers/{id}",
             "/v1/billable-metrics",
@@ -149,7 +149,10 @@ class OpenApiDocumentTest {
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/usage'].get.summary").isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/invoice'].get.summary").isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/invoices/draft'].get.summary")
+        .isNotNull();
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/customers'].get.summary")
@@ -272,7 +275,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/events", "get", "ProblemResponse");
     assertProblemSchema("/v1/events", "post", "ProblemResponse");
     assertProblemSchema("/v1/usage", "get", "ProblemResponse");
-    assertProblemSchema("/v1/invoice", "get", "ProblemResponse");
+    assertProblemSchema("/v1/invoices/draft", "get", "ProblemResponse");
     assertProblemSchema("/v1/customers", "get", "ProblemResponse");
     assertProblemSchema("/v1/customers", "post", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");

@@ -118,7 +118,7 @@ CSP를 걸거나 폐쇄망에 배포하게 되면 폰트를 레포로 가져와�
 | --- | --- | --- |
 | `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) | `GET /v1/events` |
 | `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` |
-| `/billing` | 청구 예정액 | `GET /v1/invoice` |
+| `/billing` | 청구 예정액 | `GET /v1/invoices/draft` |
 | `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) | `GET/POST/PUT/DELETE /v1/customers` |
 | `/billable-metrics` | 미터 (목록, 이름 검색, 등록/수정 다이얼로그, 삭제) | `GET/POST /v1/billable-metrics`, `PUT/DELETE /v1/billable-metrics/{code}` |
 
