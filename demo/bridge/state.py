@@ -38,7 +38,7 @@ MERGED = "기타 프로젝트로 합침"
 SKIPPED = "보내지 않음"
 PROJECT_STATES = [NAMED, MERGED, SKIPPED]
 
-# 고객 이름 상한. 서버가 255자를 넘기면 400이다 (SaveCustomerRequest).
+# 고객 이름 상한. 서버가 255자를 넘기면 400이다 (CreateCustomerRequest).
 MAX_CUSTOMER_NAME = 255
 
 

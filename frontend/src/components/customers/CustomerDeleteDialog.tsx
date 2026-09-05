@@ -3,8 +3,8 @@
 import { useActionState, useEffect } from "react";
 
 import { deleteCustomerAction } from "@/app/(console)/customers/actions";
-import { DELETE_IDLE } from "@/app/(console)/customers/state";
-import type { CustomerRowView } from "@/components/customers/CustomerTable";
+import { CUSTOMER_DELETE_IDLE } from "@/app/(console)/customers/state";
+import type { CustomerRowView } from "@/components/customers/CustomersTable";
 import { Dialog } from "@/components/screen/Dialog";
 
 /**
@@ -23,7 +23,7 @@ export function CustomerDeleteDialog({
 }) {
   const [state, formAction, pending] = useActionState(
     deleteCustomerAction,
-    DELETE_IDLE,
+    CUSTOMER_DELETE_IDLE,
   );
 
   useEffect(() => {

@@ -234,8 +234,8 @@ class SchemaConstraintTest {
    * <p>여기서 보는 이유: {@code ddl-auto=validate}는 컬럼의 존재와 타입만 확인하고 collation은 검사 항목이 아니다. 마이그레이션 V4가
    * 되돌려져도 앱은 아무 말 없이 뜬다. 이 단언이 유일한 직접 가드다.
    *
-   * <p>정렬 결과 자체는 {@code CustomerCrudIntegrationTest}가 API를 관통해 본다. 그쪽이 깨졌을 때 원인이 collation인지 다른 것인지
-   * 이 테스트가 갈라 준다.
+   * <p>정렬 결과 자체는 {@code CustomerIntegrationTest}가 API를 관통해 본다. 그쪽이 깨졌을 때 원인이 collation인지 다른 것인지 이
+   * 테스트가 갈라 준다.
    */
   @Test
   void 사람이_읽는_이름_컬럼은_한국어_collation을_쓴다() {

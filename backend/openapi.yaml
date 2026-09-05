@@ -160,7 +160,7 @@ paths:
         고객이 없거나 등록되지 않은 도입사면 customers가 빈 배열이다.
         페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의이며, 사용량과 청구 예정액 응답도
         같은 고객 집합을 한 번에 담는다.
-      operationId: list
+      operationId: listCustomers
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
@@ -174,7 +174,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/CustomerListResponse"
+                $ref: "#/components/schemas/ListCustomersResponse"
           description: 고객 목록. 한 명도 없으면 customers가 빈 배열이다
         "400":
           content:
@@ -190,7 +190,7 @@ paths:
         고객을 만들고 서버가 발급한 customer_id와 함께 돌려준다. 이벤트 수집은 이 id를 실어 보낸다.
         이름 중복을 막지 않는다. 같은 이름의 계열사나 부서를 따로 관리할 수 있고, 구별은 customer_id가 한다.
         Location 헤더를 주지 않는다. 단건 조회 경로가 없어 가리킬 곳이 없다.
-      operationId: create
+      operationId: createCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
@@ -203,7 +203,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SaveCustomerRequest"
+              $ref: "#/components/schemas/CreateCustomerRequest"
         required: true
       responses:
         "201":
@@ -231,7 +231,7 @@ paths:
         사용량 이벤트가 한 건이라도 있으면 지우지 않고 409로 거절한다. 이벤트는 청구 근거이고
         지울 수 없어서, 고객만 지우면 그 사용량이 어느 청구서에도 오르지 않는다.
         같은 고객을 두 번 지우면 두 번째는 204가 아니라 404다.
-      operationId: delete
+      operationId: deleteCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
@@ -278,7 +278,7 @@ paths:
         PATCH가 아닌 이유는 고칠 수 있는 것이 이름 하나이고 그것이 항상 필수라, 부분 갱신이라 부를 것이 없어서다.
         필드가 늘면서 일부만 보내는 요청이 필요해지면 그때 PATCH를 따로 추가한다.
         다른 도입사 소속이거나 이미 지워진 고객은 404다. 지운 고객은 행 자체가 없어 없는 고객과 구별되지 않는다.
-      operationId: update
+      operationId: updateCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
@@ -298,7 +298,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SaveCustomerRequest"
+              $ref: "#/components/schemas/UpdateCustomerRequest"
         required: true
       responses:
         "200":
@@ -630,13 +630,15 @@ components:
       - code
       - event_type
       - name
-    CustomerListResponse:
+    CreateCustomerRequest:
       type: object
       properties:
-        customers:
-          type: array
-          items:
-            $ref: "#/components/schemas/CustomerResponse"
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - name
     CustomerResponse:
       type: object
       properties:
@@ -765,6 +767,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BillableMetricResponse"
+    ListCustomersResponse:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerResponse"
     MetricLineItem:
       type: object
       properties:
@@ -881,15 +890,6 @@ components:
           example: Bad Request
       required:
       - status
-    SaveCustomerRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 255
-          minLength: 0
-      required:
-      - name
     SavePricePolicyRequest:
       type: object
       properties:
@@ -899,3 +899,12 @@ components:
             type: string
       required:
       - dimension_properties
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - name
