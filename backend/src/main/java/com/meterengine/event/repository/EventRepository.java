@@ -1,6 +1,6 @@
 package com.meterengine.event.repository;
 
-import com.meterengine.event.dto.EventRow;
+import com.meterengine.event.dto.Event;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +73,7 @@ public class EventRepository {
    * @param customerId null이면 고객을 좁히지 않는다
    * @param eventType null이거나 공백뿐이면 종류를 좁히지 않는다
    */
-  public List<EventRow> findPage(
+  public List<Event> findPage(
       UUID organizationId,
       UUID customerId,
       String eventType,
@@ -100,7 +100,7 @@ public class EventRepository {
         LIMIT ? OFFSET ?
         """,
         (rs, rowNum) ->
-            new EventRow(
+            new Event(
                 rs.getString("transaction_id"),
                 rs.getObject("customer_id", UUID.class),
                 rs.getString("customer_name"),

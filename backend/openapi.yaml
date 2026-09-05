@@ -337,7 +337,7 @@ paths:
         FE 규약 둘은 서버가 강제할 수 없어 여기 적어 둔다.
         page는 0부터다(화면의 1페이지 = page=0). 필터를 바꾸면 page를 0으로 되돌린다.
         안 그러면 3페이지를 보다가 조건을 좁혔을 때 그만큼 페이지가 없어 빈 화면이 뜬다.
-      operationId: query
+      operationId: listEvents
       parameters:
       - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -390,7 +390,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/EventPageResponse"
+                $ref: "#/components/schemas/ListEventsResponse"
           description: 한 페이지 분량의 이벤트. 조건에 맞는 것이 없으면 events가 빈 배열이다
         "400":
           content:
@@ -413,7 +413,7 @@ paths:
         숫자는 정수/소수 모두 자릿수가 잘리지 않는다.
         timestamp는 이벤트 발생 시각이며 occurred_at으로 저장된다.
         received_at은 서버가 찍으며 요청에 담긴 값은 무시된다.
-      operationId: ingest
+      operationId: ingestEvent
       parameters:
       - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -426,14 +426,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EventIngestRequest"
+              $ref: "#/components/schemas/IngestEventRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/EventIngestResponse"
+                $ref: "#/components/schemas/IngestEventResponse"
           description: 저장했거나(duplicate=false) 이미 저장돼 있다(true)
         "400":
           content:
@@ -678,7 +678,7 @@ components:
         total_amount:
           type: integer
           format: int64
-    EventEntry:
+    EventResponse:
       type: object
       properties:
         customer_id:
@@ -699,7 +699,7 @@ components:
           format: date-time
         transaction_id:
           type: string
-    EventIngestRequest:
+    IngestEventRequest:
       type: object
       properties:
         customer_id:
@@ -724,31 +724,13 @@ components:
       - properties
       - timestamp
       - transaction_id
-    EventIngestResponse:
+    IngestEventResponse:
       type: object
       properties:
         duplicate:
           type: boolean
         transaction_id:
           type: string
-    EventPageResponse:
-      type: object
-      properties:
-        events:
-          type: array
-          items:
-            $ref: "#/components/schemas/EventEntry"
-        month:
-          type: string
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        total:
-          type: integer
-          format: int64
     ListBillableMetricUsagesResponse:
       type: object
       properties:
@@ -765,6 +747,24 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BillableMetricResponse"
+    ListEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventResponse"
+        month:
+          type: string
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int64
     MetricLineItem:
       type: object
       properties:

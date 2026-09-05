@@ -204,7 +204,7 @@ docker build -t meterengine-backend .
 
 단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다.
 
-- `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
+- `event`: 사용량 이벤트 수집과 조회 (`/v1/events`)
 - `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/billable-metrics`, `/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoice`). 확정 인보이스는 엔티티와 리포지토리만 있고, 저장하는 서비스와 API는 아직 없다
 - `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/price-policies`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 목록 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다

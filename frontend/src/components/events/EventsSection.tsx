@@ -1,4 +1,4 @@
-import { EventTable, type EventRowView } from "@/components/events/EventTable";
+import { EventsTable, type EventRowView } from "@/components/events/EventsTable";
 import { Pagination } from "@/components/events/Pagination";
 import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
@@ -7,7 +7,7 @@ import {
   summarizeProperties,
   toRawJson,
   totalPages,
-  type EventPage,
+  type ListEventsResponse,
 } from "@/lib/api/events";
 import { formatKstDateTime, formatDecimal } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
@@ -21,7 +21,7 @@ export async function EventsSection({
   month,
   hrefFor,
 }: {
-  events: Promise<Result<EventPage>>;
+  events: Promise<Result<ListEventsResponse>>;
   month: string;
   /** 0부터 세는 page 번호를 받아 이 화면의 주소를 만든다. */
   hrefFor: (page: number) => string;
@@ -59,19 +59,19 @@ export async function EventsSection({
     );
   }
 
-  const rows: EventRowView[] = page.events.map((entry) => ({
-    transactionId: entry.transaction_id,
-    customerName: entry.customer_name,
-    eventType: entry.event_type,
-    occurredAt: formatKstDateTime(entry.occurred_at),
-    receivedAt: formatKstDateTime(entry.received_at),
-    propertiesPreview: summarizeProperties(entry.properties),
-    rawJson: toRawJson(entry),
+  const rows: EventRowView[] = page.events.map((event) => ({
+    transactionId: event.transaction_id,
+    customerName: event.customer_name,
+    eventType: event.event_type,
+    occurredAt: formatKstDateTime(event.occurred_at),
+    receivedAt: formatKstDateTime(event.received_at),
+    propertiesPreview: summarizeProperties(event.properties),
+    rawJson: toRawJson(event),
   }));
 
   return (
     <>
-      <EventTable rows={rows} />
+      <EventsTable rows={rows} />
       <div className="screen-footer">
         <Pagination
           current={page.page + 1}
@@ -92,7 +92,7 @@ export async function EventsSection({
 export async function EventsMeta({
   events,
 }: {
-  events: Promise<Result<EventPage>>;
+  events: Promise<Result<ListEventsResponse>>;
 }) {
   const result = await events;
   if (!result.ok) return null;
