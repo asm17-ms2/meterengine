@@ -48,9 +48,9 @@ public class EventService {
               organizationId,
               request.transactionId(),
               request.customerId(),
-              request.eventType(),
+              request.type(),
               propertiesJson,
-              request.timestamp());
+              request.occurredAt());
       return inserted == 1
           ? IngestEventResponse.stored(request.transactionId())
           : IngestEventResponse.alreadyStored(request.transactionId());
@@ -84,7 +84,7 @@ public class EventService {
    */
   @Transactional(readOnly = true)
   public ListEventsResponse list(
-      UUID organizationId, UUID customerId, YearMonth month, String eventType, int page, int size) {
+      UUID organizationId, UUID customerId, YearMonth month, String type, int page, int size) {
     // 고객 판정을 먼저 한다. 빈 목록은 이미 "이 고객은 이벤트가 없다"는 뜻을 갖고 있어서(시드의 베타 스튜디오가 그 경우다),
     // 잘못된 ID에도 빈 목록을 주면 두 경우가 화면에서 똑같아진다. 그러면 FE 버그가 정상 화면으로 위장된다.
     // 조건에 organization_id가 함께 들어가므로 미등록과 타 도입사 소속은 구별되지 않는다. 남의 도입사에 그 고객이
@@ -103,9 +103,9 @@ public class EventService {
             .atStartOfDay(BillableMetricUsageService.BILLING_ZONE)
             .toOffsetDateTime();
 
-    long total = eventRepository.count(organizationId, customerId, eventType, start, end);
+    long total = eventRepository.count(organizationId, customerId, type, start, end);
     List<Event> events =
-        eventRepository.findPage(organizationId, customerId, eventType, start, end, page, size);
+        eventRepository.findPage(organizationId, customerId, type, start, end, page, size);
 
     return new ListEventsResponse(
         month.toString(),
@@ -120,7 +120,7 @@ public class EventService {
         event.transactionId(),
         event.customerId(),
         event.customerName(),
-        event.eventType(),
+        event.type(),
         event.propertiesJson(),
         event.occurredAt(),
         event.receivedAt());

@@ -104,7 +104,7 @@ docker build -t meterengine-backend .
 | `PUT /v1/customers/{id}` | 고객 이름 수정 |
 | `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409로 거절 |
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
-| `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
+| `GET /v1/events` | 이벤트 조회. 월/고객/type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
 | `GET /v1/invoices/draft` | 고객별 청구 예정액 (draft) |
 | `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
@@ -140,7 +140,7 @@ docker build -t meterengine-backend .
   "detail": "the request could not be accepted as sent",
   "instance": "/v1/events",
   "code": "validation_error",
-  "errors": [{ "field": "event_type", "message": "공백일 수 없습니다" }]
+  "errors": [{ "field": "transaction_id", "message": "공백일 수 없습니다" }]
 }
 ```
 

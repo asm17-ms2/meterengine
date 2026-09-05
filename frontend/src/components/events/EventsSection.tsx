@@ -62,7 +62,7 @@ export async function EventsSection({
   const rows: EventRowView[] = page.events.map((event) => ({
     transactionId: event.transaction_id,
     customerName: event.customer_name,
-    eventType: event.event_type,
+    eventType: event.type,
     occurredAt: formatKstDateTime(event.occurred_at),
     receivedAt: formatKstDateTime(event.received_at),
     propertiesPreview: summarizeProperties(event.properties),

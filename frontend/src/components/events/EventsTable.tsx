@@ -41,7 +41,7 @@ const HEAD = [
   "occurred_at",
   "received_at",
   "고객",
-  "event_type",
+  "type",
   "properties",
 ] as const;
 
