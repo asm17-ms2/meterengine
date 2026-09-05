@@ -402,7 +402,7 @@ class EventIngestIntegrationTest {
     // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
     // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
     // 겪었다. INSERT 문 자체가 실패했으니 저장은 0건이고, 운영에서는 ingest()가 트랜잭션 밖에서 돌아
-    // 다음 요청에 영향이 없다. 이 제약이 EventIngestService의 DuplicateKeyException catch에
+    // 다음 요청에 영향이 없다. 이 제약이 EventService의 DuplicateKeyException catch에
     // 달아 둔 경고와 같은 사실이다.
   }
 

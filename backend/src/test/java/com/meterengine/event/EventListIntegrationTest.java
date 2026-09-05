@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.event.dto.EventPageResponse;
+import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class EventQueryIntegrationTest {
+class EventListIntegrationTest {
 
   private static final String AUGUST = "2026-08";
 
@@ -517,7 +517,7 @@ class EventQueryIntegrationTest {
   /**
    * 응답에서 transaction_id만 순서대로 뽑는다. 정렬과 필터 검증이 대부분 이 목록 비교로 끝난다.
    *
-   * <p>{@link EventPageResponse}로 역직렬화하지 않는다. properties가 {@code @JsonRawValue}라 그 DTO는 쓰기 전용이고,
+   * <p>{@link ListEventsResponse}로 역직렬화하지 않는다. properties가 {@code @JsonRawValue}라 그 DTO는 쓰기 전용이고,
    * 읽으려 들면 객체를 String에 넣지 못해 터진다. 트리로 읽으면 그 필드를 건드리지 않는다.
    */
   private List<String> transactionIds(MvcTestResult result) {

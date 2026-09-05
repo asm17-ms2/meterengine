@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.repository.CustomerRepository;
-import com.meterengine.event.dto.EventIngestRequest;
-import com.meterengine.event.dto.EventIngestResponse;
+import com.meterengine.event.dto.IngestEventRequest;
+import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.exception.UnknownCustomerException;
 import com.meterengine.event.repository.EventRepository;
 import java.time.OffsetDateTime;
@@ -32,27 +32,27 @@ import tools.jackson.databind.json.JsonMapper;
  * 갈음한다 (하위작업 인수 기준).
  */
 @ExtendWith(MockitoExtension.class)
-class EventIngestServiceTest {
+class EventServiceTest {
 
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
 
-  @Mock private EventRepository usageEvents;
-  @Mock private CustomerRepository customers;
+  @Mock private EventRepository eventRepository;
+  @Mock private CustomerRepository customerRepository;
 
-  private EventIngestService service;
+  private EventService service;
 
   @BeforeEach
   void setUp() {
-    service = new EventIngestService(usageEvents, customers, JsonMapper.builder().build());
+    service = new EventService(eventRepository, customerRepository, JsonMapper.builder().build());
   }
 
   @Test
   void 저장에_성공하면_중복이_아니라고_응답한다() {
-    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
-    when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
+    when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
-    EventIngestResponse response = service.ingest(ORG_ID, request("tx-1"));
+    IngestEventResponse response = service.ingest(ORG_ID, request("tx-1"));
 
     assertThat(response.transactionId()).isEqualTo("tx-1");
     assertThat(response.duplicate()).isFalse();
@@ -60,50 +60,50 @@ class EventIngestServiceTest {
 
   @Test
   void 이미_있는_키라_저장이_건너뛰어지면_중복이라고_응답한다() {
-    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
-    when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
+    when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     assertThat(service.ingest(ORG_ID, request("tx-1")).duplicate()).isTrue();
   }
 
   @Test
   void 유니크_제약_위반_예외가_터져도_중복_성공으로_응답한다() {
-    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
-    when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any()))
+    when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any()))
         .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
 
-    EventIngestResponse response = service.ingest(ORG_ID, request("tx-1"));
+    IngestEventResponse response = service.ingest(ORG_ID, request("tx-1"));
 
     assertThat(response.duplicate()).isTrue();
   }
 
   @Test
   void 이_도입사의_고객이_아니면_저장하지_않고_예외를_던진다() {
-    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(false);
+    when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> service.ingest(ORG_ID, request("tx-1")))
         .isInstanceOf(UnknownCustomerException.class)
         .hasMessageContaining(CUSTOMER_ID.toString())
         .hasMessageContaining(ORG_ID.toString());
 
-    verify(usageEvents, never()).insertIfAbsent(any(), any(), any(), any(), any(), any());
+    verify(eventRepository, never()).insertIfAbsent(any(), any(), any(), any(), any(), any());
   }
 
   @Test
   void properties는_판정_없이_그대로_직렬화해_넘긴다() {
-    when(customers.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
-    when(usageEvents.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
+    when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     service.ingest(
         ORG_ID,
-        new EventIngestRequest(
+        new IngestEventRequest(
             "tx-1",
             CUSTOMER_ID,
             "chat_completion",
             Map.of("whatever", "value"),
             OffsetDateTime.parse("2026-08-10T12:00:00+09:00")));
 
-    verify(usageEvents)
+    verify(eventRepository)
         .insertIfAbsent(
             eq(ORG_ID),
             eq("tx-1"),
@@ -113,8 +113,8 @@ class EventIngestServiceTest {
             eq(OffsetDateTime.parse("2026-08-10T12:00:00+09:00")));
   }
 
-  private EventIngestRequest request(String transactionId) {
-    return new EventIngestRequest(
+  private IngestEventRequest request(String transactionId) {
+    return new IngestEventRequest(
         transactionId,
         CUSTOMER_ID,
         "chat_completion",
