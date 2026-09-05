@@ -9,7 +9,7 @@ import {
   countDraftInvoiceLines,
   type DraftInvoiceResponse,
   type DraftInvoiceCustomer,
-} from "@/lib/api/invoice";
+} from "@/lib/api/billing";
 import { formatDecimal, formatKrw, formatKstStamp } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
