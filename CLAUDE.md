@@ -92,7 +92,7 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 결정과 규칙은 레포(docs/), 회의록과 일정과 초안은 Miro다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
 
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다.
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`와 `docs/contributing/`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. RFC와 규칙과 정책을 가르는 기준은 `docs/contributing/governance.md`다.
 
 PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 
