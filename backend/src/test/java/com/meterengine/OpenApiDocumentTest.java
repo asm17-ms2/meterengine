@@ -200,10 +200,10 @@ class OpenApiDocumentTest {
     //
     // 문서 전체 문자열에서 찾으면 안 된다. @Operation(description)의 산문에 "transaction_id 내림차순"
     // 같은 문장이 있어서, @JsonProperty를 전부 지워도 통과한다 (실측). 스키마 안을 봐야 한다.
-    assertSchemaHasField("EventEntry", "transaction_id");
-    assertSchemaHasField("EventEntry", "customer_name");
-    assertSchemaHasField("EventIngestRequest", "customer_id");
-    assertSchemaHasField("EventIngestResponse", "transaction_id");
+    assertSchemaHasField("EventResponse", "transaction_id");
+    assertSchemaHasField("EventResponse", "customer_name");
+    assertSchemaHasField("IngestEventRequest", "customer_id");
+    assertSchemaHasField("IngestEventResponse", "transaction_id");
     assertSchemaHasField("BillableMetricUsageResponse", "target_property");
     assertSchemaHasField("DraftInvoiceCustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
@@ -255,7 +255,7 @@ class OpenApiDocumentTest {
     // @JsonRawValue를 붙인 String이라 자바 타입만 보면 type: string으로 나간다. @Schema로 덮어 뒀다.
     assertThat(json())
         .bodyJson()
-        .extractingPath("$.components.schemas.EventEntry.properties.properties.type")
+        .extractingPath("$.components.schemas.EventResponse.properties.properties.type")
         .isEqualTo("object");
   }
 

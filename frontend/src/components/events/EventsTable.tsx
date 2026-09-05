@@ -45,7 +45,7 @@ const HEAD = [
   "properties",
 ] as const;
 
-export function EventTable({ rows }: { rows: EventRowView[] }) {
+export function EventsTable({ rows }: { rows: EventRowView[] }) {
   const [selected, setSelected] = useState<EventRowView | null>(null);
 
   return (

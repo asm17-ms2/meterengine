@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import type { EventRowView } from "@/components/events/EventTable";
+import type { EventRowView } from "@/components/events/EventsTable";
 
 /**
  * 이벤트 한 건의 상세. 오른쪽에서 덮는 패널이다.

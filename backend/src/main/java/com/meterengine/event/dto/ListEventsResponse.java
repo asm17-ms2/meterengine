@@ -20,8 +20,8 @@ import java.util.UUID;
  *     API의 {@code ListBillableMetricUsagesResponse.month}와 같은 이유, 같은 형식).
  * @param total 필터를 적용한 뒤의 전체 건수. 이 페이지에 담긴 개수가 아니다. 화면이 마지막 페이지 번호를 그리려면 필요하다.
  */
-public record EventPageResponse(
-    String month, int page, int size, long total, List<EventEntry> events) {
+public record ListEventsResponse(
+    String month, int page, int size, long total, List<EventResponse> events) {
 
   /**
    * 이벤트 한 건. 표의 한 행이 된다.
@@ -34,7 +34,7 @@ public record EventPageResponse(
    *     타입(String)을 덮지 못해 문서에 {@code type: string}으로 나가기 때문이다(실측). 그러면 생성기가 만든 클라이언트가 이 필드를 문자열로 받아
    *     실제 응답과 어긋난다.
    */
-  public record EventEntry(
+  public record EventResponse(
       @JsonProperty("transaction_id") String transactionId,
       @JsonProperty("customer_id") UUID customerId,
       @JsonProperty("customer_name") String customerName,
