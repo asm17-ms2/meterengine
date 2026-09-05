@@ -98,9 +98,9 @@ class StoredEventsFromLogTest(unittest.TestCase):
             request={
                 "transaction_id": tx,
                 "customer_id": ACME,
-                "event_type": "chat_completion",
+                "type": "chat_completion",
                 "properties": {"token": Decimal("500")},
-                "timestamp": "2026-08-10T12:00:00+09:00",
+                "occurred_at": "2026-08-10T12:00:00+09:00",
             },
             status=200,
             response=None,

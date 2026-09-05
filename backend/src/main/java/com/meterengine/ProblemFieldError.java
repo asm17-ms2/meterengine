@@ -27,4 +27,5 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "형식 검증에 걸린 필드 하나")
 public record ProblemFieldError(
-    @Schema(example = "event_type") String field, @Schema(example = "공백일 수 없습니다") String message) {}
+    @Schema(example = "transaction_id") String field,
+    @Schema(example = "공백일 수 없습니다") String message) {}

@@ -24,13 +24,13 @@ class ParseProblemTest(unittest.TestCase):
                 # (MS2-150 6단계). 2026-08-17까지 이 픽스처는 둘을 정확히 반대로 담고 있었다.
                 "detail": "the request could not be accepted as sent",
                 "code": "validation_error",
-                "errors": [{"field": "event_type", "message": "공백일 수 없습니다"}],
+                "errors": [{"field": "type", "message": "공백일 수 없습니다"}],
             },
         )
         self.assertEqual(problem.code, "validation_error")
         # 와이어 이름이다. 2026-08-17까지 이 픽스처는 자바 이름(eventType)을 담고 있었는데,
         # 서버가 A-2로 바뀐 뒤에도 그대로여서 데모가 없는 계약을 예시로 보여주고 있었다.
-        self.assertEqual(problem.errors[0]["field"], "event_type")
+        self.assertEqual(problem.errors[0]["field"], "type")
 
     def test_code가_없는_본문도_다룬다(self):
         problem = parse_problem(

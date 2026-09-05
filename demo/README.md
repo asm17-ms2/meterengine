@@ -83,7 +83,7 @@ GET /v1/usage, GET /v1/invoice 응답과 표로 나란히 비교하고 일치/�
   못하며 그 한계를 출력에 명시한다
 - 독립 계산 규칙 (서버 코드와 동일한 규칙을 Decimal 연산으로 복제, float 미사용):
   - 중복 transaction_id 제거: 로그 소스는 서버 판정 그대로 outcome=new만 집계한다
-  - occurred_at(요청의 timestamp)의 KST 자정 경계 월 귀속
+  - occurred_at(CSV의 timestamp)의 KST 자정 경계 월 귀속
   - 400 거절분 제외
   - target_property 값이 JSON number가 아닌 이벤트 제외 (저장은 되지만 합산에서 빠진다)
   - 청구 예정액은 수량 x 단가를 라인마다 절사한 정수

@@ -38,7 +38,7 @@ public record ListEventsResponse(
       @JsonProperty("transaction_id") String transactionId,
       @JsonProperty("customer_id") UUID customerId,
       @JsonProperty("customer_name") String customerName,
-      @JsonProperty("event_type") String eventType,
+      @JsonProperty("type") String type,
       @JsonRawValue @Schema(implementation = Map.class) String properties,
       @JsonProperty("occurred_at") OffsetDateTime occurredAt,
       @JsonProperty("received_at") OffsetDateTime receivedAt) {}
