@@ -1,9 +1,9 @@
 package com.meterengine.pricing.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.pricing.dto.PricePolicyListResponse;
+import com.meterengine.pricing.dto.CreatePricePolicyRequest;
+import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
-import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.service.PricePolicyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -55,7 +55,7 @@ public class PricePolicyController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public PricePolicyListResponse listPricePolicies(
+  public ListPricePoliciesResponse listPricePolicies(
       @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {
@@ -102,12 +102,12 @@ public class PricePolicyController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=price_policy_already_exists: 이 미터에 정책이 이미 있다. 요청을 고쳐서 될 일이 아니다")
   })
-  public PricePolicyResponse register(
+  public PricePolicyResponse createPricePolicy(
       @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "정책을 붙일 미터의 code.") @PathVariable String code,
-      @Valid @RequestBody SavePricePolicyRequest request) {
-    return pricePolicyService.register(organizationId, code, request);
+      @Valid @RequestBody CreatePricePolicyRequest request) {
+    return pricePolicyService.create(organizationId, code, request);
   }
 }
