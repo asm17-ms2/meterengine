@@ -46,3 +46,4 @@ RFC PR만 모아 보려면 PR 목록에서 `label:rfc`로 거릅니다. RFC를 �
 | [001](001-naming-convention.md) | 이름 규칙을 표준 관례에 맞춰 정한다 | process | accepted | 2026-09-04 |
 | [002](002-comment-cleanup.md) | 주석 전수 정리와 함수 위 한 줄 설명 허용 | process | accepted | 2026-09-04 |
 | [003](003-rule-management.md) | RFC는 되돌리면 계약, 데이터, 기술 선택이 같이 움직이는 결정에만 쓴다 | process | accepted | 2026-09-05 |
+| [005](005-error-handling.md) | 오류 응답을 problem+json 대신 code와 message를 든 자체 스키마로 낸다 | global | draft | 2026-09-03 |
