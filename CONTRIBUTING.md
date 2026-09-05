@@ -13,7 +13,7 @@
 - 고정 브랜치 도입 시 전환 계획: 이후 테스트서버 운영 등으로 develop/staging 같은 고정 브랜치가 생기면, develop 룰셋은 squash만, main 룰셋은 merge commit만 허용으로 전환한다. 오래 사는 브랜치를 main과 반복 머지할 때 squash를 쓰면 히스토리가 꼬이기 때문이다. 시점은 릴리스/태그 규칙 논의와 함께 정한다
 - 머지 후 브랜치 삭제: 머지된 브랜치는 삭제하고, 이어지는 작업은 main에서 새 브랜치를 딴다. 다만 아직 머지되지 않은 선행 작업에 의존하면 main이 아니라 그 브랜치 위에 쌓는다(아래 "스택 PR"). GitHub 저장소 설정(Automatically delete head branches)으로 자동화한다. 로컬 브랜치는 각자 `git fetch --prune`으로 정리한다
 - PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다
-- 제안: 리팩터나 아키텍처 변경처럼 방향을 바꾸는 것은 RFC PR로 올려 합의한 뒤 작업한다 (쓰는 법은 `docs/rfcs/README.md`). RFC PR의 정족수는 작성자를 제외한 전원이다. 정책(`docs/policies/`) 변경은 코드와 같은 PR로 올리고 일반 PR과 같은 절차로 리뷰한다. RFC를 쓰기엔 가벼운데 합의가 안 된 변경은 라벨 `proposal`을 붙여 바로 열고 본문 첫 줄에 합의가 필요한 점을 적는다. Draft로 열지 않는다. Draft PR은 슬랙 알림이 가지 않아 반대할 사람이 제안을 보지 못한다. 반대가 없으면 평소대로 리뷰하고 머지한다. 제안 PR만 모아 보려면 `label:proposal`로 거른다
+- 제안: 무엇을 RFC PR로, 규칙 PR로, `proposal` PR로 올리고 정족수가 얼마인지는 `docs/contributing/governance.md` "제안"과 "규칙 개정"이 정본이다. Draft로 열지 않는다. 제안 PR만 모아 보려면 `label:proposal`, RFC PR은 `label:rfc`로 거른다
 - main 상태: main은 항상 빌드/테스트가 통과하는 상태를 유지한다. 깨진 코드나 반쯤 만든 기능은 브랜치에만 둔다. CI 실패 시 머지를 금지한다. 필수 체크 항목은 CI 워크플로(`.github/workflows/ci.yml`)의 `backend`, `frontend` job과 RFC 체크리스트 워크플로(`.github/workflows/rfc-checklist.yml`)의 `rfc-checklist` job이다. main 룰셋의 Required status checks에 그 job을 등록해 강제한다. `rfc-checklist`는 `rfc` 라벨이 붙은 PR에서만 돌고 PR 본문에 체크 안 된 항목이 있으면 실패한다. 라벨이 없는 PR에서는 건너뛰므로 필수 체크에 걸려도 막히지 않는다
 - 선행 브랜치 위 작업: 브랜치 A가 리뷰 대기 중이고 B가 A 없이는 성립하지 않으면 A 위에 쌓는다. 따로 머지돼도 되면 독립 PR로 낸다. 절차는 아래 "스택 PR"에 있고, GitHub 네이티브 기능만 쓴다
 - 릴리스/태그 규칙: 버전 태그는 두지 않는다. 배포 단위는 커밋이고, 배포된 것을 가리키는 이름은 그 커밋의 git SHA다(ECR 이미지 태그가 SHA다). 롤백도 이전 SHA로 다시 배포하는 것이라 semver 태그 없이 성립한다. 외부에 버전 번호를 알려야 하는 일이 생기면 그때 다시 논의한다
@@ -24,12 +24,12 @@
 
 | 종류 | 정본 |
 | --- | --- |
-| 방향을 정하는 결정 | `docs/rfcs/` (RFC-000, 쓰는 법은 그 README) |
+| 되돌리기 비싼 방향 결정 | `docs/rfcs/` (쓰는 법은 그 README, 기준은 `docs/contributing/governance.md`) |
 | 방향 안의 세부 규칙(정책) | `docs/policies/` (도메인당 파일 하나, 쓰는 법은 그 README) |
 | 스프린트 범위(이번에 하기로 한 것과 안 하기로 한 것) | Jira(MS2 프로젝트)의 스프린트 |
 | 회의록, 일정, 브레인스토밍 초안 | Miro |
 | API 계약 | `backend/openapi.yaml` (컨트롤러와 DTO에서 자동 생성) |
-| 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙 | 이 파일 |
+| 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙 | 이 파일과 `docs/contributing/` (주제당 파일 하나) |
 | 결정과 규칙을 어디에 두고 어떻게 바꾸나 | `docs/contributing/governance.md` |
 | 각 디렉터리의 실행법, 구조, 그 안에서 내린 판단 | 그 디렉터리의 `README.md` |
 
