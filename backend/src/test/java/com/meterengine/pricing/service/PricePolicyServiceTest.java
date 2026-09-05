@@ -10,10 +10,10 @@ import static org.mockito.Mockito.when;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.dto.MetricPricePolicyResponse;
-import com.meterengine.pricing.dto.PricePolicyListResponse;
+import com.meterengine.pricing.dto.BillableMetricPricePolicyResponse;
+import com.meterengine.pricing.dto.CreatePricePolicyRequest;
+import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
-import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.exception.InvalidPricePolicyException;
@@ -37,101 +37,109 @@ import org.springframework.dao.DataIntegrityViolationException;
 class PricePolicyServiceTest {
 
   private static final UUID ORG_ID = UUID.randomUUID();
-  private static final String METRIC = "token-usage";
+  private static final String BILLABLE_METRIC_CODE = "token-usage";
 
-  @Mock private PricePolicyRepository policies;
-  @Mock private BillableMetricRepository metrics;
-  @Mock private PriceRateRepository rates;
+  @Mock private PricePolicyRepository pricePolicyRepository;
+  @Mock private BillableMetricRepository billableMetricRepository;
+  @Mock private PriceRateRepository priceRateRepository;
 
   private PricePolicyService service;
 
   @BeforeEach
   void setUp() {
-    service = new PricePolicyService(policies, metrics, rates);
+    service =
+        new PricePolicyService(
+            pricePolicyRepository, billableMetricRepository, priceRateRepository);
   }
 
   @Test
   void 미터가_없으면_MetricNotFound다() {
-    when(metrics.existsById(new BillableMetricId(ORG_ID, METRIC))).thenReturn(false);
+    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
 
-    assertThatThrownBy(() -> register(List.of())).isInstanceOf(MetricNotFoundException.class);
-    verify(policies, never()).saveAndFlush(any());
+    assertThatThrownBy(() -> create(List.of())).isInstanceOf(MetricNotFoundException.class);
+    verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 
   @Test
   void 정책이_이미_있으면_AlreadyExists다() {
-    metricExists();
-    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(true);
+    billableMetricExists();
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(true);
 
-    assertThatThrownBy(() -> register(List.of()))
+    assertThatThrownBy(() -> create(List.of()))
         .isInstanceOf(PricePolicyAlreadyExistsException.class);
-    verify(policies, never()).saveAndFlush(any());
+    verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 
   @Test
   void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
-    metricExists();
-    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(false);
-    when(policies.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("pk"));
+    billableMetricExists();
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
+    when(pricePolicyRepository.saveAndFlush(any()))
+        .thenThrow(new DataIntegrityViolationException("pk"));
 
-    assertThatThrownBy(() -> register(List.of()))
+    assertThatThrownBy(() -> create(List.of()))
         .isInstanceOf(PricePolicyAlreadyExistsException.class);
   }
 
   @Test
   void 선언의_중복이나_빈_키는_Invalid다() {
-    metricExists();
+    billableMetricExists();
 
-    assertThatThrownBy(() -> register(List.of("model", "model")))
+    assertThatThrownBy(() -> create(List.of("model", "model")))
         .isInstanceOf(InvalidPricePolicyException.class)
         .hasMessageContaining("duplicate");
-    assertThatThrownBy(() -> register(List.of(" ")))
+    assertThatThrownBy(() -> create(List.of(" ")))
         .isInstanceOf(InvalidPricePolicyException.class)
         .hasMessageContaining("blank");
-    verify(policies, never()).saveAndFlush(any());
+    verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 
   @Test
   void 정상_등록이면_정책이_저장되고_저장된_모양이_응답이_된다() {
-    metricExists();
-    when(policies.existsById(new PricePolicyId(ORG_ID, METRIC))).thenReturn(false);
+    billableMetricExists();
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
 
-    PricePolicyResponse response = register(List.of("model"));
+    PricePolicyResponse response = create(List.of("model"));
 
     ArgumentCaptor<PricePolicy> saved = ArgumentCaptor.forClass(PricePolicy.class);
-    verify(policies).saveAndFlush(saved.capture());
+    verify(pricePolicyRepository).saveAndFlush(saved.capture());
     assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORG_ID);
-    assertThat(saved.getValue().getBillableMetricCode()).isEqualTo(METRIC);
+    assertThat(saved.getValue().getBillableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(saved.getValue().getDimensionProperties()).containsExactly("model");
-    assertThat(response.billableMetricCode()).isEqualTo(METRIC);
+    assertThat(response.billableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(response.dimensionProperties()).containsExactly("model");
   }
 
   @Test
   void 목록의_순서는_미터_조회가_정한다() {
-    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
-        .thenReturn(List.of(metric("input-tokens"), metric("token-usage")));
-    when(policies.findByOrganizationId(ORG_ID))
-        .thenReturn(List.of(policy("token-usage", List.of()), policy("input-tokens", List.of())));
-    when(rates.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(billableMetric("input-tokens"), billableMetric("token-usage")));
+    when(pricePolicyRepository.findByOrganizationId(ORG_ID))
+        .thenReturn(
+            List.of(pricePolicy("token-usage", List.of()), pricePolicy("input-tokens", List.of())));
+    when(priceRateRepository.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
 
-    PricePolicyListResponse response = service.list(ORG_ID);
+    ListPricePoliciesResponse response = service.list(ORG_ID);
 
     assertThat(response.pricePolicies())
-        .extracting(MetricPricePolicyResponse::billableMetricCode)
+        .extracting(BillableMetricPricePolicyResponse::billableMetricCode)
         .containsExactly("input-tokens", "token-usage");
   }
 
   @Test
   void 정책과_단가가_모두_있으면_둘_다_실린다() {
-    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
-        .thenReturn(List.of(metric("input-tokens")));
-    when(policies.findByOrganizationId(ORG_ID))
-        .thenReturn(List.of(policy("input-tokens", List.of("model"))));
-    when(rates.findBaseUnitPrices(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(billableMetric("input-tokens")));
+    when(pricePolicyRepository.findByOrganizationId(ORG_ID))
+        .thenReturn(List.of(pricePolicy("input-tokens", List.of("model"))));
+    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
         .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
 
-    MetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
+    BillableMetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
 
     assertThat(only.dimensionProperties()).containsExactly("model");
     assertThat(only.unitPrice()).isEqualByComparingTo("0.007");
@@ -139,13 +147,13 @@ class PricePolicyServiceTest {
 
   @Test
   void 정책이_없는_미터는_단가가_있어도_싣지_않는다() {
-    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
-        .thenReturn(List.of(metric("input-tokens")));
-    when(policies.findByOrganizationId(ORG_ID)).thenReturn(List.of());
-    when(rates.findBaseUnitPrices(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(billableMetric("input-tokens")));
+    when(pricePolicyRepository.findByOrganizationId(ORG_ID)).thenReturn(List.of());
+    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
         .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
 
-    MetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
+    BillableMetricPricePolicyResponse only = service.list(ORG_ID).pricePolicies().getFirst();
 
     assertThat(only.dimensionProperties()).isNull();
     assertThat(only.unitPrice()).isNull();
@@ -153,28 +161,30 @@ class PricePolicyServiceTest {
 
   @Test
   void 다른_미터의_단가가_섞이지_않는다() {
-    when(metrics.findByOrganizationIdOrderByCodeAsc(ORG_ID))
-        .thenReturn(List.of(metric("input-tokens")));
-    when(policies.findByOrganizationId(ORG_ID))
-        .thenReturn(List.of(policy("input-tokens", List.of())));
-    when(rates.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of("token-usage", new BigDecimal("99")));
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+        .thenReturn(List.of(billableMetric("input-tokens")));
+    when(pricePolicyRepository.findByOrganizationId(ORG_ID))
+        .thenReturn(List.of(pricePolicy("input-tokens", List.of())));
+    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("99")));
 
     assertThat(service.list(ORG_ID).pricePolicies().getFirst().unitPrice()).isNull();
   }
 
-  private static BillableMetric metric(String code) {
+  private static BillableMetric billableMetric(String code) {
     return new BillableMetric(ORG_ID, code, "토큰 사용량", "chat_completion", "SUM", "token");
   }
 
-  private static PricePolicy policy(String code, List<String> dimensionProperties) {
+  private static PricePolicy pricePolicy(String code, List<String> dimensionProperties) {
     return new PricePolicy(ORG_ID, code, dimensionProperties);
   }
 
-  private void metricExists() {
-    when(metrics.existsById(new BillableMetricId(ORG_ID, METRIC))).thenReturn(true);
+  private void billableMetricExists() {
+    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(true);
   }
 
-  private PricePolicyResponse register(List<String> properties) {
-    return service.register(ORG_ID, METRIC, new SavePricePolicyRequest(properties));
+  private PricePolicyResponse create(List<String> properties) {
+    return service.create(ORG_ID, BILLABLE_METRIC_CODE, new CreatePricePolicyRequest(properties));
   }
 }

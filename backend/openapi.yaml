@@ -100,7 +100,7 @@ paths:
         단가는 이 API가 받지 않고 별도의 단가 API가 등록한다.
         단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
         미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
-      operationId: register
+      operationId: createPricePolicy
       parameters:
       - description: 도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.
         in: header
@@ -119,7 +119,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SavePricePolicyRequest"
+              $ref: "#/components/schemas/CreatePricePolicyRequest"
         required: true
       responses:
         "201":
@@ -513,7 +513,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/PricePolicyListResponse"
+                $ref: "#/components/schemas/ListPricePoliciesResponse"
           description: 미터별 가격 정책. 미터가 없으면 price_policies가 빈 배열이다
         "400":
           content:
@@ -568,6 +568,25 @@ paths:
       - billable-metric-usage-controller
 components:
   schemas:
+    BillableMetricPricePolicyResponse:
+      type: object
+      properties:
+        billable_metric_code:
+          type: string
+        dimension_properties:
+          type:
+          - array
+          - "null"
+          description: "가격을 가르는 이벤트 속성 키의 선언. 정책이 아직 없는 미터는 null이고, 정책이 있는 무차원 미터는\
+            \ 빈 배열이다"
+          items:
+            type: string
+        unit_price:
+          type:
+          - number
+          - "null"
+          description: "무차원 조합('{}')에 붙은 기본 단가. 단가 행이 아직 없으면 null이고, 그 미터는 청구 예정액\
+            \ 계산에서 라인이 빠진다. 0은 무료를 뜻하는 값이라 null과 다르다"
     BillableMetricResponse:
       type: object
       properties:
@@ -630,6 +649,15 @@ components:
       - code
       - event_type
       - name
+    CreatePricePolicyRequest:
+      type: object
+      properties:
+        dimension_properties:
+          type: array
+          items:
+            type: string
+      required:
+      - dimension_properties
     CustomerListResponse:
       type: object
       properties:
@@ -765,6 +793,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BillableMetricResponse"
+    ListPricePoliciesResponse:
+      type: object
+      properties:
+        price_policies:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricPricePolicyResponse"
     MetricLineItem:
       type: object
       properties:
@@ -779,32 +814,6 @@ components:
           type: string
         unit_price:
           type: number
-    MetricPricePolicyResponse:
-      type: object
-      properties:
-        billable_metric_code:
-          type: string
-        dimension_properties:
-          type:
-          - array
-          - "null"
-          description: "가격을 가르는 이벤트 속성 키의 선언. 정책이 아직 없는 미터는 null이고, 정책이 있는 무차원 미터는\
-            \ 빈 배열이다"
-          items:
-            type: string
-        unit_price:
-          type:
-          - number
-          - "null"
-          description: "무차원 조합('{}')에 붙은 기본 단가. 단가 행이 아직 없으면 null이고, 그 미터는 청구 예정액\
-            \ 계산에서 라인이 빠진다. 0은 무료를 뜻하는 값이라 null과 다르다"
-    PricePolicyListResponse:
-      type: object
-      properties:
-        price_policies:
-          type: array
-          items:
-            $ref: "#/components/schemas/MetricPricePolicyResponse"
     PricePolicyResponse:
       type: object
       properties:
@@ -890,12 +899,3 @@ components:
           minLength: 0
       required:
       - name
-    SavePricePolicyRequest:
-      type: object
-      properties:
-        dimension_properties:
-          type: array
-          items:
-            type: string
-      required:
-      - dimension_properties

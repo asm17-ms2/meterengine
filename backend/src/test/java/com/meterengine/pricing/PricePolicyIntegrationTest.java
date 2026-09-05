@@ -42,7 +42,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 무차원_정책을_등록하면_201이고_빈_선언이_저장된다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
 
     MvcTestResult result = post(orgId, "token-usage", "{\"dimension_properties\": []}");
 
@@ -60,7 +60,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 다차원_선언을_등록하면_선언이_순서대로_저장된다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
 
     MvcTestResult result =
         post(orgId, "token-usage", "{\"dimension_properties\": [\"model\", \"region\"]}");
@@ -79,7 +79,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 선언에_중복_키나_빈_키가_있으면_400이고_저장은_0건이다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
 
     assertInvalid(orgId, "{\"dimension_properties\": [\"model\", \"model\"]}");
     assertInvalid(orgId, "{\"dimension_properties\": [\" \"]}");
@@ -90,7 +90,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 선언이_없으면_400이고_저장은_0건이다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
 
     assertThat(post(orgId, "token-usage", "{}"))
         .hasStatus(400)
@@ -118,7 +118,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 다른_도입사의_미터에는_등록할_수_없다() {
     UUID otherOrgId = insertOrganization();
-    insertMetric(otherOrgId, "token-usage");
+    insertBillableMetric(otherOrgId, "token-usage");
     UUID orgId = insertOrganization();
 
     assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(404);
@@ -130,7 +130,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 정책이_이미_있는_미터에_다시_등록하면_409이고_기존_정책은_그대로다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"model\"]}"))
         .hasStatus(201);
 
@@ -176,7 +176,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 정책이_없는_미터는_dimension_properties가_JSON_null로_실린다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
 
     MvcTestResult result = get(orgId);
 
@@ -195,7 +195,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 등록한_정책이_목록에_그대로_실린다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"model\"]}"))
         .hasStatus(201);
 
@@ -211,7 +211,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 무차원_정책은_dimension_properties가_빈_배열이다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
 
     assertThat(get(orgId))
@@ -225,8 +225,8 @@ class PricePolicyIntegrationTest {
   @Test
   void 목록은_미터_code_오름차순이다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
-    insertMetric(orgId, "input-tokens");
+    insertBillableMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "input-tokens");
 
     assertThat(get(orgId))
         .hasStatus(200)
@@ -238,7 +238,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 다른_도입사의_미터와_정책은_조회되지_않는다() {
     UUID otherOrgId = insertOrganization();
-    insertMetric(otherOrgId, "token-usage");
+    insertBillableMetric(otherOrgId, "token-usage");
     assertThat(post(otherOrgId, "token-usage", dimensionlessBody())).hasStatus(201);
     UUID orgId = insertOrganization();
 
@@ -263,7 +263,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 단가가_없는_정책은_unit_price가_JSON_null이고_0이_아니다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
 
     MvcTestResult result = get(orgId);
@@ -279,7 +279,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 기본_단가가_있으면_unit_price에_실린다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
     insertBaseRate(orgId, "token-usage", "0.007");
 
@@ -295,7 +295,7 @@ class PricePolicyIntegrationTest {
   @Test
   void 단가가_0이면_null이_아니라_0으로_실린다() {
     UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    insertBillableMetric(orgId, "token-usage");
     assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(201);
     insertBaseRate(orgId, "token-usage", "0");
 
@@ -356,7 +356,7 @@ class PricePolicyIntegrationTest {
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private void insertMetric(UUID orgId, String code) {
+  private void insertBillableMetric(UUID orgId, String code) {
     jdbc.update(
         """
         INSERT INTO billable_metric

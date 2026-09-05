@@ -208,22 +208,23 @@ class OpenApiDocumentTest {
     assertSchemaHasField("DraftInvoiceCustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "customer_id");
-    assertSchemaHasField("SavePricePolicyRequest", "dimension_properties");
+    assertSchemaHasField("CreatePricePolicyRequest", "dimension_properties");
     assertSchemaHasField("PricePolicyResponse", "billable_metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");
-    assertSchemaHasField("PricePolicyListResponse", "price_policies");
-    assertSchemaHasField("MetricPricePolicyResponse", "billable_metric_code");
-    assertSchemaHasField("MetricPricePolicyResponse", "dimension_properties");
-    assertSchemaHasField("MetricPricePolicyResponse", "unit_price");
+    assertSchemaHasField("ListPricePoliciesResponse", "price_policies");
+    assertSchemaHasField("BillableMetricPricePolicyResponse", "billable_metric_code");
+    assertSchemaHasField("BillableMetricPricePolicyResponse", "dimension_properties");
+    assertSchemaHasField("BillableMetricPricePolicyResponse", "unit_price");
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.components.schemas.MetricPricePolicyResponse.properties.dimension_properties.type")
+            "$.components.schemas.BillableMetricPricePolicyResponse.properties.dimension_properties.type")
         .asArray()
         .contains("null");
     assertThat(json())
         .bodyJson()
-        .extractingPath("$.components.schemas.MetricPricePolicyResponse.properties.unit_price.type")
+        .extractingPath(
+            "$.components.schemas.BillableMetricPricePolicyResponse.properties.unit_price.type")
         .asArray()
         .contains("null");
 

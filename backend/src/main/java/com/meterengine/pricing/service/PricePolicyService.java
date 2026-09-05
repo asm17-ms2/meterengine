@@ -3,10 +3,10 @@ package com.meterengine.pricing.service;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.dto.MetricPricePolicyResponse;
-import com.meterengine.pricing.dto.PricePolicyListResponse;
+import com.meterengine.pricing.dto.BillableMetricPricePolicyResponse;
+import com.meterengine.pricing.dto.CreatePricePolicyRequest;
+import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
-import com.meterengine.pricing.dto.SavePricePolicyRequest;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.exception.InvalidPricePolicyException;
@@ -29,62 +29,69 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PricePolicyService {
 
-  private final PricePolicyRepository policies;
-  private final BillableMetricRepository metrics;
-  private final PriceRateRepository rates;
+  private final PricePolicyRepository pricePolicyRepository;
+  private final BillableMetricRepository billableMetricRepository;
+  private final PriceRateRepository priceRateRepository;
 
   PricePolicyService(
-      PricePolicyRepository policies, BillableMetricRepository metrics, PriceRateRepository rates) {
-    this.policies = policies;
-    this.metrics = metrics;
-    this.rates = rates;
+      PricePolicyRepository pricePolicyRepository,
+      BillableMetricRepository billableMetricRepository,
+      PriceRateRepository priceRateRepository) {
+    this.pricePolicyRepository = pricePolicyRepository;
+    this.billableMetricRepository = billableMetricRepository;
+    this.priceRateRepository = priceRateRepository;
   }
 
   @Transactional(readOnly = true)
-  public PricePolicyListResponse list(UUID organizationId) {
-    Map<String, PricePolicy> policyByMetricCode =
-        policies.findByOrganizationId(organizationId).stream()
+  public ListPricePoliciesResponse list(UUID organizationId) {
+    Map<String, PricePolicy> policyByBillableMetricCode =
+        pricePolicyRepository.findByOrganizationId(organizationId).stream()
             .collect(Collectors.toMap(PricePolicy::getBillableMetricCode, Function.identity()));
-    Map<String, BigDecimal> unitPriceByMetricCode = rates.findBaseUnitPrices(organizationId);
+    Map<String, BigDecimal> unitPriceByBillableMetricCode =
+        priceRateRepository.findBaseUnitPrices(organizationId);
 
-    return new PricePolicyListResponse(
-        metrics.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
-            .map(metric -> toResponse(metric, policyByMetricCode, unitPriceByMetricCode))
+    return new ListPricePoliciesResponse(
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .map(
+                billableMetric ->
+                    toResponse(
+                        billableMetric, policyByBillableMetricCode, unitPriceByBillableMetricCode))
             .toList());
   }
 
   @Transactional
-  public PricePolicyResponse register(
-      UUID organizationId, String billableMetricCode, SavePricePolicyRequest request) {
-    if (!metrics.existsById(new BillableMetricId(organizationId, billableMetricCode))) {
+  public PricePolicyResponse create(
+      UUID organizationId, String billableMetricCode, CreatePricePolicyRequest request) {
+    if (!billableMetricRepository.existsById(
+        new BillableMetricId(organizationId, billableMetricCode))) {
       throw new MetricNotFoundException(organizationId, billableMetricCode);
     }
 
     validate(request.dimensionProperties());
 
-    if (policies.existsById(new PricePolicyId(organizationId, billableMetricCode))) {
+    if (pricePolicyRepository.existsById(new PricePolicyId(organizationId, billableMetricCode))) {
       throw new PricePolicyAlreadyExistsException(billableMetricCode);
     }
 
-    PricePolicy policy =
+    PricePolicy pricePolicy =
         new PricePolicy(organizationId, billableMetricCode, request.dimensionProperties());
     try {
-      policies.saveAndFlush(policy);
+      pricePolicyRepository.saveAndFlush(pricePolicy);
     } catch (DataIntegrityViolationException exception) {
       throw new PricePolicyAlreadyExistsException(billableMetricCode);
     }
 
-    return PricePolicyResponse.from(policy);
+    return PricePolicyResponse.from(pricePolicy);
   }
 
-  private static MetricPricePolicyResponse toResponse(
-      BillableMetric metric,
-      Map<String, PricePolicy> policyByMetricCode,
-      Map<String, BigDecimal> unitPriceByMetricCode) {
-    return MetricPricePolicyResponse.of(
-        metric.getCode(),
-        policyByMetricCode.get(metric.getCode()),
-        unitPriceByMetricCode.get(metric.getCode()));
+  private static BillableMetricPricePolicyResponse toResponse(
+      BillableMetric billableMetric,
+      Map<String, PricePolicy> policyByBillableMetricCode,
+      Map<String, BigDecimal> unitPriceByBillableMetricCode) {
+    return BillableMetricPricePolicyResponse.of(
+        billableMetric.getCode(),
+        policyByBillableMetricCode.get(billableMetric.getCode()),
+        unitPriceByBillableMetricCode.get(billableMetric.getCode()));
   }
 
   private void validate(List<String> dimensionProperties) {
