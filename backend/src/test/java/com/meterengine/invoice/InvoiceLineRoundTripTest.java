@@ -29,29 +29,30 @@ class InvoiceLineRoundTripTest {
   void 저장한_라인은_수량과_단가를_적은_자릿수_그대로_되읽는다() {
     UUID organizationId = insertOrganization();
     UUID invoiceId = insertInvoice(organizationId);
-    UUID lineId = saveLine(organizationId, invoiceId, "token-usage", "1234.500", "0.0007").getId();
+    UUID invoiceLineId =
+        saveInvoiceLine(organizationId, invoiceId, "token-usage", "1234.500", "0.0007").getId();
     flushAndClear();
 
-    InvoiceLine reloadedLine = invoiceLineRepository.findById(lineId).orElseThrow();
+    InvoiceLine reloadedInvoiceLine = invoiceLineRepository.findById(invoiceLineId).orElseThrow();
 
-    assertThat(reloadedLine.getQuantity()).isEqualTo(new BigDecimal("1234.500"));
-    assertThat(reloadedLine.getUnitPrice()).isEqualTo(new BigDecimal("0.0007"));
+    assertThat(reloadedInvoiceLine.getQuantity()).isEqualTo(new BigDecimal("1234.500"));
+    assertThat(reloadedInvoiceLine.getUnitPrice()).isEqualTo(new BigDecimal("0.0007"));
   }
 
   @Test
   void 라인은_삽입_순서와_무관하게_미터_코드_순으로_되읽힌다() {
     UUID organizationId = insertOrganization();
     UUID invoiceId = insertInvoice(organizationId);
-    saveLine(organizationId, invoiceId, "token-usage", "1200", "0.5");
-    saveLine(organizationId, invoiceId, "api-call", "34", "10");
-    saveLine(organizationId, invoiceId, "storage-gb", "7", "100");
+    saveInvoiceLine(organizationId, invoiceId, "token-usage", "1200", "0.5");
+    saveInvoiceLine(organizationId, invoiceId, "api-call", "34", "10");
+    saveInvoiceLine(organizationId, invoiceId, "storage-gb", "7", "100");
     flushAndClear();
 
-    List<InvoiceLine> reloadedLines =
+    List<InvoiceLine> reloadedInvoiceLines =
         invoiceLineRepository.findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAsc(
             organizationId, invoiceId);
 
-    assertThat(reloadedLines)
+    assertThat(reloadedInvoiceLines)
         .extracting(InvoiceLine::getBillableMetricCode)
         .containsExactly("api-call", "storage-gb", "token-usage");
   }
@@ -69,13 +70,13 @@ class InvoiceLineRoundTripTest {
         insertCustomer(organizationId));
   }
 
-  private InvoiceLine saveLine(
+  private InvoiceLine saveInvoiceLine(
       UUID organizationId,
       UUID invoiceId,
       String billableMetricCode,
       String quantity,
       String unitPrice) {
-    InvoiceLine line =
+    InvoiceLine invoiceLine =
         new InvoiceLine(
             UUID.randomUUID(),
             organizationId,
@@ -86,7 +87,7 @@ class InvoiceLineRoundTripTest {
             new BigDecimal(quantity),
             new BigDecimal(unitPrice),
             600L);
-    return invoiceLineRepository.save(line);
+    return invoiceLineRepository.save(invoiceLine);
   }
 
   private void flushAndClear() {

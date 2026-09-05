@@ -455,7 +455,7 @@ paths:
         금액은 원 단위 정수이고, 라인(고객 x 미터)마다 원 미만을 절사한 뒤 합산한다.
         이벤트가 없는 고객도 모든 미터 라인이 수량 0, 금액 0으로 들어간다.
         고객 순서는 이름 오름차순, 라인 순서는 미터 code 오름차순으로 고정이다.
-      operationId: preview
+      operationId: previewDraftInvoice
       parameters:
       - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
         in: header
@@ -648,7 +648,7 @@ components:
           format: uuid
         name:
           type: string
-    DraftInvoiceCustomerEntry:
+    DraftInvoiceCustomer:
       type: object
       properties:
         amount:
@@ -662,7 +662,21 @@ components:
         lines:
           type: array
           items:
-            $ref: "#/components/schemas/MetricLineItem"
+            $ref: "#/components/schemas/DraftInvoiceLine"
+    DraftInvoiceLine:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        billable_metric_code:
+          type: string
+        quantity:
+          type: number
+        target_property:
+          type: string
+        unit_price:
+          type: number
     DraftInvoiceResponse:
       type: object
       properties:
@@ -672,7 +686,7 @@ components:
         customers:
           type: array
           items:
-            $ref: "#/components/schemas/DraftInvoiceCustomerEntry"
+            $ref: "#/components/schemas/DraftInvoiceCustomer"
         month:
           type: string
         total_amount:
@@ -765,20 +779,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BillableMetricResponse"
-    MetricLineItem:
-      type: object
-      properties:
-        amount:
-          type: integer
-          format: int64
-        billable_metric_code:
-          type: string
-        quantity:
-          type: number
-        target_property:
-          type: string
-        unit_price:
-          type: number
     MetricPricePolicyResponse:
       type: object
       properties:
