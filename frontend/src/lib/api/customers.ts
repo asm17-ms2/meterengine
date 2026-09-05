@@ -5,17 +5,17 @@ import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
 /**
- * GET /v1/customers 응답. 백엔드의 CustomerListResponse(MS2-155)와 1:1이다.
+ * GET /v1/customers 응답. 백엔드의 ListCustomersResponse(MS2-155)와 1:1이다.
  *
  * 페이지를 나누지 않는다. 이 도입사의 고객 전부가 응답의 정의이고 total도 없다.
  * 그래서 화면에도 페이지 나누기가 없다 (디자인의 페이저는 프로토타입이 1페이지로
  * 고정해 둔 자리표시자였다).
  */
-export type CustomerList = {
-  customers: CustomerEntry[];
+export type ListCustomersResponse = {
+  customers: CustomerResponse[];
 };
 
-export type CustomerEntry = {
+export type CustomerResponse = {
   customer_id: string;
   name: string;
   /**
@@ -28,16 +28,13 @@ export type CustomerEntry = {
   created_at: string;
 };
 
-/** POST /v1/customers, PUT /v1/customers/{id} 응답. 목록 항목과 같은 레코드다. */
-export type Customer = CustomerEntry;
-
 /**
  * 개발 모드 상태 스위치는 네트워크 호출 전에 갈린다 (loadEvents와 같은 구조).
  * 'loading'은 여기 오지 않는다. 페이지가 로더를 부르지 않고 스켈레톤으로 단락한다.
  */
 export async function loadCustomers(
   devState: DevState,
-): Promise<Result<CustomerList>> {
+): Promise<Result<ListCustomersResponse>> {
   if (devState === "empty") {
     return { ok: true, data: { customers: [] } };
   }
@@ -53,12 +50,12 @@ export async function loadCustomers(
     };
   }
 
-  return serverFetch<CustomerList>(config.apiBaseUrl, "/v1/customers");
+  return serverFetch<ListCustomersResponse>(config.apiBaseUrl, "/v1/customers");
 }
 
-/** 이름 하나만 보낸다. 백엔드의 SaveCustomerRequest와 같은 모양이다. */
-export async function createCustomer(name: string): Promise<Result<Customer>> {
-  return serverSend<Customer>(config.apiBaseUrl, "/v1/customers", {
+/** 이름 하나만 보낸다. 백엔드의 CreateCustomerRequest와 같은 모양이다. */
+export async function createCustomer(name: string): Promise<Result<CustomerResponse>> {
+  return serverSend<CustomerResponse>(config.apiBaseUrl, "/v1/customers", {
     method: "POST",
     body: { name },
   });
@@ -68,11 +65,11 @@ export async function createCustomer(name: string): Promise<Result<Customer>> {
  * 이름을 고친다. PUT인 이유는 고칠 수 있는 것이 이름 하나이고 그것이 항상 필수라
  * 부분 갱신이라 부를 것이 없어서다 (백엔드 결정, openapi.yaml).
  */
-export async function renameCustomer(
+export async function updateCustomer(
   id: string,
   name: string,
-): Promise<Result<Customer>> {
-  return serverSend<Customer>(config.apiBaseUrl, `/v1/customers/${id}`, {
+): Promise<Result<CustomerResponse>> {
+  return serverSend<CustomerResponse>(config.apiBaseUrl, `/v1/customers/${id}`, {
     method: "PUT",
     body: { name },
   });

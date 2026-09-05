@@ -14,28 +14,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CustomerService {
 
-  private final CustomerRepository customers;
-  private final EventRepository events;
+  private final CustomerRepository customerRepository;
+  private final EventRepository eventRepository;
 
-  CustomerService(CustomerRepository customers, EventRepository events) {
-    this.customers = customers;
-    this.events = events;
+  CustomerService(CustomerRepository customerRepository, EventRepository eventRepository) {
+    this.customerRepository = customerRepository;
+    this.eventRepository = eventRepository;
   }
 
   @Transactional(readOnly = true)
   public List<Customer> list(UUID organizationId) {
-    return customers.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+    return customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
   }
 
   @Transactional
   public Customer create(UUID organizationId, String name) {
-    return customers.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
+    return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
   }
 
   @Transactional
-  public Customer rename(UUID organizationId, UUID customerId, String name) {
+  public Customer update(UUID organizationId, UUID customerId, String name) {
     Customer customer =
-        customers
+        customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
             .orElseThrow(() -> new CustomerNotFoundException(organizationId, customerId));
     customer.rename(name);
@@ -45,17 +45,17 @@ public class CustomerService {
   @Transactional
   public void delete(UUID organizationId, UUID customerId) {
     Customer customer =
-        customers
+        customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
             .orElseThrow(() -> new CustomerNotFoundException(organizationId, customerId));
 
-    if (events.existsForCustomer(organizationId, customerId)) {
+    if (eventRepository.existsForCustomer(organizationId, customerId)) {
       throw new CustomerHasEventsException(customerId);
     }
 
     try {
-      customers.delete(customer);
-      customers.flush();
+      customerRepository.delete(customer);
+      customerRepository.flush();
     } catch (DataIntegrityViolationException exception) {
       throw new CustomerHasEventsException(customerId);
     }

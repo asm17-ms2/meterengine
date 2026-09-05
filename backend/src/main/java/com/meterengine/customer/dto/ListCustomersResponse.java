@@ -16,9 +16,9 @@ import java.util.List;
  *
  * @param customers 이름 오름차순. 한 명도 없으면 빈 배열이다
  */
-public record CustomerListResponse(@JsonProperty("customers") List<CustomerResponse> customers) {
+public record ListCustomersResponse(@JsonProperty("customers") List<CustomerResponse> customers) {
 
-  public static CustomerListResponse from(List<Customer> customers) {
-    return new CustomerListResponse(customers.stream().map(CustomerResponse::from).toList());
+  public static ListCustomersResponse from(List<Customer> customers) {
+    return new ListCustomersResponse(customers.stream().map(CustomerResponse::from).toList());
   }
 }

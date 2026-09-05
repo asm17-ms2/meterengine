@@ -22,6 +22,8 @@ import org.hibernate.generator.EventType;
 @Entity
 public class Customer {
 
+  public static final int NAME_MAX_LENGTH = 255;
+
   @Id private UUID id;
 
   @Column(name = "organization_id", nullable = false)
