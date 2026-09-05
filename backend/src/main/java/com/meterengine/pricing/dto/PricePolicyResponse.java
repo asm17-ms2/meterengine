@@ -8,7 +8,8 @@ public record PricePolicyResponse(
     @JsonProperty("billable_metric_code") String billableMetricCode,
     @JsonProperty("dimension_properties") List<String> dimensionProperties) {
 
-  public static PricePolicyResponse from(PricePolicy policy) {
-    return new PricePolicyResponse(policy.getBillableMetricCode(), policy.getDimensionProperties());
+  public static PricePolicyResponse from(PricePolicy pricePolicy) {
+    return new PricePolicyResponse(
+        pricePolicy.getBillableMetricCode(), pricePolicy.getDimensionProperties());
   }
 }
