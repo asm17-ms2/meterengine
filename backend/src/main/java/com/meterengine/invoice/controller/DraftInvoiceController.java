@@ -33,10 +33,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/invoice")
 public class DraftInvoiceController {
 
-  private final DraftInvoiceService invoiceService;
+  private final DraftInvoiceService draftInvoiceService;
 
-  DraftInvoiceController(DraftInvoiceService invoiceService) {
-    this.invoiceService = invoiceService;
+  DraftInvoiceController(DraftInvoiceService draftInvoiceService) {
+    this.draftInvoiceService = draftInvoiceService;
   }
 
   @GetMapping
@@ -67,7 +67,7 @@ public class DraftInvoiceController {
         description =
             "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
   })
-  public DraftInvoiceResponse preview(
+  public DraftInvoiceResponse previewDraftInvoice(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
@@ -76,6 +76,6 @@ public class DraftInvoiceController {
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month) {
     YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return invoiceService.preview(organizationId, target);
+    return draftInvoiceService.preview(organizationId, target);
   }
 }
