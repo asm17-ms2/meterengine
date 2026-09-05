@@ -11,22 +11,22 @@ import type { DevState } from "@/lib/dev-state";
  * 금액 계산은 전부 서버 몫이다. 라인별 절사 규칙이 서버에 있으므로 화면은
  * amount와 total_amount를 그대로 그린다 (MS2-127 인수 조건).
  */
-export type DraftInvoice = {
+export type DraftInvoiceResponse = {
   month: string;
   calculated_at: string;
   total_amount: number;
-  customers: InvoiceCustomer[];
+  customers: DraftInvoiceCustomer[];
 };
 
-export type InvoiceCustomer = {
+export type DraftInvoiceCustomer = {
   customer_id: string;
   customer_name: string;
   /** 고객 소계. 라인 amount의 합을 서버가 계산해 준다. 정수 KRW다. */
   amount: number;
-  lines: InvoiceLine[];
+  lines: DraftInvoiceLine[];
 };
 
-export type InvoiceLine = {
+export type DraftInvoiceLine = {
   billable_metric_code: string;
   target_property: string | null;
   /** 소수가 올 수 있다 (BigDecimal 직렬화, usage.ts의 quantity 주석 참조). */
@@ -38,7 +38,7 @@ export type InvoiceLine = {
 };
 
 /** 표에 그려질 청구 라인 총 개수. 화면 헤더의 '청구 라인 N줄'이다. */
-export function countInvoiceLines(customers: InvoiceCustomer[]): number {
+export function countDraftInvoiceLines(customers: DraftInvoiceCustomer[]): number {
   return customers.reduce((sum, customer) => sum + customer.lines.length, 0);
 }
 
@@ -52,7 +52,7 @@ export function countInvoiceLines(customers: InvoiceCustomer[]): number {
 export async function loadDraftInvoice(
   month: string,
   devState: DevState,
-): Promise<Result<DraftInvoice>> {
+): Promise<Result<DraftInvoiceResponse>> {
   if (devState === "empty") {
     return {
       ok: true,
@@ -75,5 +75,5 @@ export async function loadDraftInvoice(
       },
     };
   }
-  return serverFetch<DraftInvoice>(config.apiBaseUrl, "/v1/invoice", { month });
+  return serverFetch<DraftInvoiceResponse>(config.apiBaseUrl, "/v1/invoice", { month });
 }

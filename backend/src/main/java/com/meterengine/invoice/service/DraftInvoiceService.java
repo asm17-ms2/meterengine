@@ -3,8 +3,8 @@ package com.meterengine.invoice.service;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomerEntry;
-import com.meterengine.invoice.dto.DraftInvoiceResponse.MetricLineItem;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.service.BillableMetricUsageService;
@@ -45,61 +45,67 @@ public class DraftInvoiceService {
 
     Map<String, BigDecimal> baseUnitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
 
-    List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers =
+    List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers =
         billableMetricUsageService.aggregate(organizationId, month).stream()
-            .filter(usage -> baseUnitPrices.containsKey(usage.billableMetric().getCode()))
-            .map(usage -> MetricQuantitiesByCustomer.from(usage, baseUnitPrices))
+            .filter(
+                billableMetricUsage ->
+                    baseUnitPrices.containsKey(billableMetricUsage.billableMetric().getCode()))
+            .map(
+                billableMetricUsage ->
+                    BillableMetricQuantitiesByCustomer.from(billableMetricUsage, baseUnitPrices))
             .toList();
 
-    List<DraftInvoiceCustomerEntry> customerEntries =
+    List<DraftInvoiceCustomer> draftInvoiceCustomers =
         organizationCustomers.stream()
-            .map(customer -> customerEntry(customer, metricQuantitiesByCustomers))
+            .map(customer -> draftInvoiceCustomer(customer, billableMetricQuantitiesByCustomers))
             .toList();
 
     long totalAmount =
-        customerEntries.stream()
-            .mapToLong(DraftInvoiceCustomerEntry::amount)
+        draftInvoiceCustomers.stream()
+            .mapToLong(DraftInvoiceCustomer::amount)
             .reduce(0L, Math::addExact);
 
-    return new DraftInvoiceResponse(month.toString(), calculatedAt, totalAmount, customerEntries);
+    return new DraftInvoiceResponse(
+        month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
   }
 
-  private static DraftInvoiceCustomerEntry customerEntry(
-      Customer customer, List<MetricQuantitiesByCustomer> metricQuantitiesByCustomers) {
-    List<MetricLineItem> metricLineItems =
-        metricQuantitiesByCustomers.stream()
-            .map(metric -> metric.lineFor(customer.getId()))
+  private static DraftInvoiceCustomer draftInvoiceCustomer(
+      Customer customer,
+      List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers) {
+    List<DraftInvoiceLine> draftInvoiceLines =
+        billableMetricQuantitiesByCustomers.stream()
+            .map(quantities -> quantities.toDraftInvoiceLine(customer.getId()))
             .toList();
 
     long amount =
-        metricLineItems.stream().mapToLong(MetricLineItem::amount).reduce(0L, Math::addExact);
+        draftInvoiceLines.stream().mapToLong(DraftInvoiceLine::amount).reduce(0L, Math::addExact);
 
-    return new DraftInvoiceCustomerEntry(
-        customer.getId(), customer.getName(), amount, metricLineItems);
+    return new DraftInvoiceCustomer(
+        customer.getId(), customer.getName(), amount, draftInvoiceLines);
   }
 
-  private record MetricQuantitiesByCustomer(
+  private record BillableMetricQuantitiesByCustomer(
       String billableMetricCode,
       String targetProperty,
       BigDecimal unitPrice,
-      Map<UUID, BigDecimal> byCustomer) {
+      Map<UUID, BigDecimal> quantityByCustomerId) {
 
-    static MetricQuantitiesByCustomer from(
-        BillableMetricUsage billableMetricUsage, Map<String, BigDecimal> unitPrices) {
+    static BillableMetricQuantitiesByCustomer from(
+        BillableMetricUsage billableMetricUsage, Map<String, BigDecimal> baseUnitPrices) {
       String billableMetricCode = billableMetricUsage.billableMetric().getCode();
 
-      return new MetricQuantitiesByCustomer(
+      return new BillableMetricQuantitiesByCustomer(
           billableMetricCode,
           billableMetricUsage.billableMetric().getTargetProperty(),
-          unitPrices.get(billableMetricCode),
+          baseUnitPrices.get(billableMetricCode),
           billableMetricUsage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
 
-    MetricLineItem lineFor(UUID customerId) {
-      BigDecimal quantity = byCustomer.getOrDefault(customerId, BigDecimal.ZERO);
+    DraftInvoiceLine toDraftInvoiceLine(UUID customerId) {
+      BigDecimal quantity = quantityByCustomerId.getOrDefault(customerId, BigDecimal.ZERO);
 
-      return new MetricLineItem(
+      return new DraftInvoiceLine(
           billableMetricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
     }
   }

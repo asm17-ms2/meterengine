@@ -6,9 +6,9 @@ import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
 import type { Result } from "@/lib/api/client";
 import {
-  countInvoiceLines,
-  type DraftInvoice,
-  type InvoiceCustomer,
+  countDraftInvoiceLines,
+  type DraftInvoiceResponse,
+  type DraftInvoiceCustomer,
 } from "@/lib/api/invoice";
 import { formatDecimal, formatKrw, formatKstStamp } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
@@ -21,7 +21,7 @@ export async function BillingSection({
   invoice,
   month,
 }: {
-  invoice: Promise<Result<DraftInvoice>>;
+  invoice: Promise<Result<DraftInvoiceResponse>>;
   month: string;
 }) {
   const result = await invoice;
@@ -50,7 +50,7 @@ export async function BillingSection({
     );
   }
 
-  if (countInvoiceLines(result.data.customers) === 0) {
+  if (countDraftInvoiceLines(result.data.customers) === 0) {
     return (
       <EmptyState
         title="등록된 미터가 없습니다"
@@ -80,7 +80,7 @@ export async function BillingSection({
 export async function BillingMeta({
   invoice,
 }: {
-  invoice: Promise<Result<DraftInvoice>>;
+  invoice: Promise<Result<DraftInvoiceResponse>>;
 }) {
   const result = await invoice;
   if (!result.ok) return null;
@@ -88,7 +88,7 @@ export async function BillingMeta({
   return (
     <>
       고객 <b>{result.data.customers.length}</b>곳, 청구 라인{" "}
-      <b>{countInvoiceLines(result.data.customers)}</b>줄
+      <b>{countDraftInvoiceLines(result.data.customers)}</b>줄
       <br />
       계산 시각 {formatKstStamp(new Date(result.data.calculated_at))}
     </>
@@ -99,7 +99,7 @@ export async function BillingMeta({
  * 와이어 응답을 표가 그릴 문자열로 바꾼다. 수량과 단가는 소수가 올 수 있어
  * formatDecimal을 쓰고, 금액은 서버가 절사까지 끝낸 정수라 원화 표기만 한다.
  */
-function toBillingGroupViews(customers: InvoiceCustomer[]): BillingGroupView[] {
+function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupView[] {
   return customers.map((customer) => ({
     customerId: customer.customer_id,
     customerName: customer.customer_name,
