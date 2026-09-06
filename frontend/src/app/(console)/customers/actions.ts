@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import type {
-  DeleteState,
-  FormState,
+  CustomerDeleteState,
+  CustomerFormState,
 } from "@/app/(console)/customers/state";
 import type { ApiError } from "@/lib/api/client";
 import {
   createCustomer,
   deleteCustomer,
-  renameCustomer,
+  updateCustomer,
 } from "@/lib/api/customers";
 
 /**
@@ -32,7 +32,7 @@ import {
  */
 
 /**
- * 이름 길이 상한. 백엔드 SaveCustomerRequest의 maxLength와 같은 값이다.
+ * 이름 길이 상한. 백엔드 CreateCustomerRequest의 maxLength와 같은 값이다.
  *
  * 이 파일이 상수를 export하지 못해서(위 주석 참조) 바깥으로 내보내지 않는다.
  * 입력칸의 maxLength는 CustomerFormDialog가 따로 들고 있다.
@@ -78,9 +78,9 @@ function saveFailureMessage(error: ApiError): string {
 
 /** 고객 등록. 서버가 customer_id와 등록 시각을 발급한다. */
 export async function createCustomerAction(
-  _prev: FormState,
+  _prev: CustomerFormState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<CustomerFormState> {
   const name = readName(formData);
   const invalid = validateName(name);
   if (invalid) return { status: "invalid", message: invalid };
@@ -95,10 +95,10 @@ export async function createCustomerAction(
 }
 
 /** 고객 이름 수정. 고칠 수 있는 것은 이름 하나다. */
-export async function renameCustomerAction(
-  _prev: FormState,
+export async function updateCustomerAction(
+  _prev: CustomerFormState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<CustomerFormState> {
   const id = formData.get("id");
   if (typeof id !== "string" || id === "") {
     return { status: "failed", message: "고객을 특정하지 못했습니다." };
@@ -108,7 +108,7 @@ export async function renameCustomerAction(
   const invalid = validateName(name);
   if (invalid) return { status: "invalid", message: invalid };
 
-  const result = await renameCustomer(id, name);
+  const result = await updateCustomer(id, name);
   if (!result.ok) {
     return { status: "failed", message: saveFailureMessage(result.error) };
   }
@@ -125,9 +125,9 @@ export async function renameCustomerAction(
  * 없어졌으니 목록을 새로 보면 된다"이다.
  */
 export async function deleteCustomerAction(
-  _prev: DeleteState,
+  _prev: CustomerDeleteState,
   formData: FormData,
-): Promise<DeleteState> {
+): Promise<CustomerDeleteState> {
   const id = formData.get("id");
   const name = formData.get("name");
   const label = typeof name === "string" ? name : "";

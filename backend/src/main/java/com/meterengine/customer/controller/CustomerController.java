@@ -1,9 +1,10 @@
 package com.meterengine.customer.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.customer.dto.CustomerListResponse;
+import com.meterengine.customer.dto.CreateCustomerRequest;
 import com.meterengine.customer.dto.CustomerResponse;
-import com.meterengine.customer.dto.SaveCustomerRequest;
+import com.meterengine.customer.dto.ListCustomersResponse;
+import com.meterengine.customer.dto.UpdateCustomerRequest;
 import com.meterengine.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -56,10 +57,10 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public CustomerListResponse list(
+  public ListCustomersResponse listCustomers(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId) {
-    return CustomerListResponse.from(customerService.list(organizationId));
+    return ListCustomersResponse.from(customerService.list(organizationId));
   }
 
   @PostMapping
@@ -86,10 +87,10 @@ public class CustomerController {
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """)
   })
-  public CustomerResponse create(
+  public CustomerResponse createCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody SaveCustomerRequest request) {
+      @Valid @RequestBody CreateCustomerRequest request) {
     return CustomerResponse.from(customerService.create(organizationId, request.name()));
   }
 
@@ -120,12 +121,12 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다")
   })
-  public CustomerResponse update(
+  public CustomerResponse updateCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "고칠 고객의 ID.") @PathVariable UUID id,
-      @Valid @RequestBody SaveCustomerRequest request) {
-    return CustomerResponse.from(customerService.rename(organizationId, id, request.name()));
+      @Valid @RequestBody UpdateCustomerRequest request) {
+    return CustomerResponse.from(customerService.update(organizationId, id, request.name()));
   }
 
   @DeleteMapping("/{id}")
@@ -164,7 +165,7 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
   })
-  public void delete(
+  public void deleteCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "지울 고객의 ID.") @PathVariable UUID id) {

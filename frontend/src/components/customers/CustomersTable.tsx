@@ -29,7 +29,7 @@ const HEAD = [
   { label: "작업", right: true },
 ] as const;
 
-export function CustomerTable({
+export function CustomersTable({
   rows,
   onEdit,
   onDelete,

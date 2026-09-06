@@ -5,9 +5,9 @@ import { useCallback, useState } from "react";
 import { CustomerDeleteDialog } from "@/components/customers/CustomerDeleteDialog";
 import { CustomerFormDialog } from "@/components/customers/CustomerFormDialog";
 import {
-  CustomerTable,
+  CustomersTable,
   type CustomerRowView,
-} from "@/components/customers/CustomerTable";
+} from "@/components/customers/CustomersTable";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
@@ -106,7 +106,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
         </div>
       ) : (
         <>
-          <CustomerTable
+          <CustomersTable
             rows={visible}
             onEdit={(row) => setForm({ customer: row })}
             onDelete={(row) => setDeleting(row)}

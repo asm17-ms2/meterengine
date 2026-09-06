@@ -26,35 +26,35 @@ class CustomerServiceTest {
   private static final UUID ORG_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
 
-  @Mock private CustomerRepository customers;
-  @Mock private EventRepository events;
+  @Mock private CustomerRepository customerRepository;
+  @Mock private EventRepository eventRepository;
 
   private CustomerService customerService;
 
   @BeforeEach
   void setUp() {
-    customerService = new CustomerService(customers, events);
+    customerService = new CustomerService(customerRepository, eventRepository);
   }
 
   @Test
   void 이벤트가_있으면_지우지_않고_409_예외다() {
-    when(customers.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
-    when(events.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(true);
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
         .isInstanceOf(CustomerHasEventsException.class);
 
-    verify(customers, never()).delete(org.mockito.ArgumentMatchers.any());
+    verify(customerRepository, never()).delete(org.mockito.ArgumentMatchers.any());
   }
 
   @Test
   void 확인_뒤에_DB가_거절하면_같은_409_예외로_바뀐다() {
-    when(customers.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
-    when(events.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
+    when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
     doThrow(new DataIntegrityViolationException("usage_event_customer_same_org"))
-        .when(customers)
+        .when(customerRepository)
         .flush();
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
@@ -63,12 +63,13 @@ class CustomerServiceTest {
 
   @Test
   void 없는_고객을_지우면_404_예외다() {
-    when(customers.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
+    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
         .isInstanceOf(CustomerNotFoundException.class);
 
-    verify(events, never()).existsForCustomer(ORG_ID, CUSTOMER_ID);
+    verify(eventRepository, never()).existsForCustomer(ORG_ID, CUSTOMER_ID);
   }
 
   private Customer customer() {
