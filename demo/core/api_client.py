@@ -101,7 +101,7 @@ class ApiClient:
         return self._request("GET", "/v1/customers")
 
     def create_customer(self, name: str) -> ApiResult:
-        """고객을 등록하고 서버가 발급한 customer_id를 받는다 (201).
+        """고객을 등록하고 서버가 발급한 id를 받는다 (201).
 
         이름 중복을 막지 않는 API라, 부르기 전에 목록에서 같은 이름을 찾아야 한다
         (bridge/state.py의 CustomerResolver 참조).

@@ -16,7 +16,7 @@ export type ListCustomersResponse = {
 };
 
 export type CustomerResponse = {
-  customer_id: string;
+  id: string;
   name: string;
   /**
    * ISO 8601. 서버가 행을 만든 시각을 DB가 찍는다 (MS2-171).

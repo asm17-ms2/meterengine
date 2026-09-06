@@ -114,7 +114,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
           <div className="screen-footer">
             {/*
               응답이 정렬 기준을 에코하지 않아서 화면에 고정한다. 백엔드는 고객명
-              오름차순으로 주고, 동명이 있으면 customer_id가 두 번째 키다.
+              오름차순으로 주고, 동명이 있으면 id가 두 번째 키다.
               페이지 나누기는 없다 - 이 도입사의 전부가 응답의 정의다.
             */}
             <span className="screen-note">정렬: 고객명 오름차순</span>

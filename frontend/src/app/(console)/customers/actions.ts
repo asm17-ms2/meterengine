@@ -76,7 +76,7 @@ function saveFailureMessage(error: ApiError): string {
   }
 }
 
-/** 고객 등록. 서버가 customer_id와 등록 시각을 발급한다. */
+/** 고객 등록. 서버가 id와 등록 시각을 발급한다. */
 export async function createCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,

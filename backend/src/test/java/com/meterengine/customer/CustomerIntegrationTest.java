@@ -52,7 +52,7 @@ class CustomerIntegrationTest {
         """);
 
     assertThat(created).hasStatus(201).bodyJson().extractingPath("$.name").isEqualTo("아크메 주식회사");
-    assertThat(created).bodyJson().extractingPath("$.customer_id").asString().isNotEmpty();
+    assertThat(created).bodyJson().extractingPath("$.id").asString().isNotEmpty();
 
     OffsetDateTime createdAt =
         OffsetDateTime.parse(jsonMapper.readTree(bodyText(created)).get("created_at").asString());
@@ -212,8 +212,7 @@ class CustomerIntegrationTest {
             """
         {"name":"옛 이름"}
         """);
-    UUID customerId =
-        UUID.fromString(jsonMapper.readTree(bodyText(created)).get("customer_id").asString());
+    UUID customerId = UUID.fromString(jsonMapper.readTree(bodyText(created)).get("id").asString());
     String createdAt = jsonMapper.readTree(bodyText(created)).get("created_at").asString();
 
     MvcTestResult renamed =
@@ -466,7 +465,7 @@ class CustomerIntegrationTest {
         {"name":"%s"}
         """
                 .formatted(name));
-    return UUID.fromString(jsonMapper.readTree(bodyText(result)).get("customer_id").asString());
+    return UUID.fromString(jsonMapper.readTree(bodyText(result)).get("id").asString());
   }
 
   private String bodyText(MvcTestResult result) {
