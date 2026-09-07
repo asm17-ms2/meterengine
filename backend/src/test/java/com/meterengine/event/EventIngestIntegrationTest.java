@@ -80,11 +80,11 @@ class EventIngestIntegrationTest {
     // 다섯 필드를 하나씩 빼 본다. V1 스키마의 NOT NULL 컬럼 목록과 같은 집합이다.
     String[] incompleteBodies = {
       """
-      {"customer_id":"%s","event_type":"chat_completion","properties":{},"timestamp":"%s"}
+      {"customer_id":"%s","type":"chat_completion","properties":{},"timestamp":"%s"}
       """
           .formatted(customerId, OCCURRED_AT),
       """
-      {"transaction_id":"tx-1","event_type":"chat_completion","properties":{},"timestamp":"%s"}
+      {"transaction_id":"tx-1","type":"chat_completion","properties":{},"timestamp":"%s"}
       """
           .formatted(OCCURRED_AT),
       """
@@ -92,11 +92,11 @@ class EventIngestIntegrationTest {
       """
           .formatted(customerId, OCCURRED_AT),
       """
-      {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion","timestamp":"%s"}
+      {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion","timestamp":"%s"}
       """
           .formatted(customerId, OCCURRED_AT),
       """
-      {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion","properties":{}}
+      {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion","properties":{}}
       """
           .formatted(customerId)
     };
@@ -135,13 +135,13 @@ class EventIngestIntegrationTest {
 
     String emptyProperties =
         """
-        {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
          "properties":{},"timestamp":"%s"}
         """
             .formatted(customerId, OCCURRED_AT);
     String unrelatedProperties =
         """
-        {"transaction_id":"tx-2","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"tx-2","customer_id":"%s","type":"chat_completion",
          "properties":{"whatever":"value"},"timestamp":"%s"}
         """
             .formatted(customerId, OCCURRED_AT);
@@ -191,7 +191,7 @@ class EventIngestIntegrationTest {
     // received_at은 DTO에 필드가 없어 매핑되지 않고, DB 트리거가 서버 시각으로 덮어쓴다.
     String withReceivedAt =
         """
-        {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
          "properties":{},"timestamp":"%s","received_at":"2020-01-01T00:00:00Z"}
         """
             .formatted(customerId, OCCURRED_AT);
@@ -236,7 +236,7 @@ class EventIngestIntegrationTest {
 
     String different =
         """
-        {"transaction_id":"tx-1","customer_id":"%s","event_type":"embedding",
+        {"transaction_id":"tx-1","customer_id":"%s","type":"embedding",
          "properties":{"token":999999},"timestamp":"2026-08-11T00:00:00+09:00"}
         """
             .formatted(customerId);
@@ -305,7 +305,7 @@ class EventIngestIntegrationTest {
     // 상속하면 전자의 자동 설정이 물러나므로, 둘이 공존하는지 확인한다.
     String withoutTransactionId =
         """
-        {"customer_id":"%s","event_type":"chat_completion","properties":{},"timestamp":"%s"}
+        {"customer_id":"%s","type":"chat_completion","properties":{},"timestamp":"%s"}
         """
             .formatted(UUID.randomUUID(), OCCURRED_AT);
 
@@ -343,7 +343,7 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .asString()
-        .isEqualTo("event_type");
+        .isEqualTo("type");
   }
 
   @Test
@@ -355,7 +355,7 @@ class EventIngestIntegrationTest {
     // 이 값이 청구 근거가 된다.
     String preciseDecimal =
         """
-        {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
          "properties":{"cost":0.1234567890123456789,"token":12345678901234567890123},
          "timestamp":"%s"}
         """
@@ -386,7 +386,7 @@ class EventIngestIntegrationTest {
     // 수집 클라이언트가 저장되지도 않을 이벤트를 영원히 재전송한다.
     String withNulCharacter =
         """
-        {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
          "properties":{"prompt":"a\\u0000b"},"timestamp":"%s"}
         """
             .formatted(customerId, OCCURRED_AT);
@@ -402,7 +402,7 @@ class EventIngestIntegrationTest {
     // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
     // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
     // 겪었다. INSERT 문 자체가 실패했으니 저장은 0건이고, 운영에서는 ingest()가 트랜잭션 밖에서 돌아
-    // 다음 요청에 영향이 없다. 이 제약이 EventIngestService의 DuplicateKeyException catch에
+    // 다음 요청에 영향이 없다. 이 제약이 EventService의 DuplicateKeyException catch에
     // 달아 둔 경고와 같은 사실이다.
   }
 
@@ -450,7 +450,7 @@ class EventIngestIntegrationTest {
 
   private String body(String transactionId, String customerId) {
     return """
-        {"transaction_id":"%s","customer_id":"%s","event_type":"chat_completion",
+        {"transaction_id":"%s","customer_id":"%s","type":"chat_completion",
          "properties":{"model":"gpt-4o-mini","token":1200},"timestamp":"%s"}
         """
         .formatted(transactionId, customerId, OCCURRED_AT);

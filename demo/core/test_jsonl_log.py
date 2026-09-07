@@ -21,7 +21,7 @@ def _write_sample(path):
             seq=1,
             sent_at_text="2026-08-14T10:00:01+09:00",
             request_body_text='{"transaction_id": "evt-1", "customer_id": "c", '
-            '"event_type": "chat_completion", "properties": {"token": 500.00}, '
+            '"type": "chat_completion", "properties": {"token": 500.00}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=200,
             response_text='{"transaction_id": "evt-1", "duplicate": false}',
@@ -33,7 +33,7 @@ def _write_sample(path):
             seq=2,
             sent_at_text="2026-08-14T10:00:02+09:00",
             request_body_text='{"transaction_id": "evt-2", "customer_id": "x", '
-            '"event_type": "chat_completion", "properties": {"token": 1}, '
+            '"type": "chat_completion", "properties": {"token": 1}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=400,
             response_text='{"status": 400, "code": "unknown_customer_reference"}',
@@ -45,7 +45,7 @@ def _write_sample(path):
             seq=3,
             sent_at_text="2026-08-14T10:00:03+09:00",
             request_body_text='{"transaction_id": "evt-3", "customer_id": "c", '
-            '"event_type": "chat_completion", "properties": {"token": 2}, '
+            '"type": "chat_completion", "properties": {"token": 2}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=None,
             response_text=None,
@@ -133,7 +133,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
                 seq=1,
                 sent_at_text="2026-08-14T10:00:01+09:00",
                 request_body_text='{"transaction_id": "evt-x", "customer_id": "c", '
-                '"event_type": "e", "properties": {token: 5}, "timestamp": "t"}',
+                '"type": "e", "properties": {token: 5}, "timestamp": "t"}',
                 status=400,
                 response_text='{"status": 400, "code": "validation_error"}',
                 outcome="rejected",
@@ -154,7 +154,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
                 seq=1,
                 sent_at_text="2026-08-14T10:00:01+09:00",
                 request_body_text='{"transaction_id": "evt-n", "customer_id": "c", '
-                '"event_type": "e", "properties": {"token": 7,\n "model": "m"}, '
+                '"type": "e", "properties": {"token": 7,\n "model": "m"}, '
                 '"timestamp": "2026-08-01T00:00:00+09:00"}',
                 status=200,
                 response_text='{"transaction_id": "evt-n", "duplicate": false}',

@@ -41,11 +41,11 @@ const HEAD = [
   "occurred_at",
   "received_at",
   "고객",
-  "event_type",
+  "type",
   "properties",
 ] as const;
 
-export function EventTable({ rows }: { rows: EventRowView[] }) {
+export function EventsTable({ rows }: { rows: EventRowView[] }) {
   const [selected, setSelected] = useState<EventRowView | null>(null);
 
   return (
