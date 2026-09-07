@@ -15,5 +15,5 @@ import java.util.List;
  *
  * @param dimensionProperties 이 미터의 가격을 가르는 이벤트 속성 키의 집합. 무차원이면 빈 배열이다
  */
-public record SavePricePolicyRequest(
+public record CreatePricePolicyRequest(
     @NotNull @JsonProperty("dimension_properties") List<String> dimensionProperties) {}

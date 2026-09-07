@@ -12,7 +12,7 @@ import {
   CollapseProvider,
   ExpandControls,
 } from "@/components/table/CollapseProvider";
-import { loadDraftInvoice } from "@/lib/api/invoice";
+import { loadDraftInvoice } from "@/lib/api/billing";
 import { readDevState } from "@/lib/dev-state";
 import { formatKoreanMonth } from "@/lib/format";
 import { monthOptionsFor, readMonth } from "@/lib/month";

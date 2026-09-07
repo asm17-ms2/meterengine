@@ -78,7 +78,7 @@ class CustomerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
-                    {"transaction_id":"tx-1","customer_id":"%s","event_type":"chat_completion",
+                    {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
                      "properties":{"token":1200},"timestamp":"2026-08-10T12:00:00+09:00"}
                     """
                         .formatted(customerId))

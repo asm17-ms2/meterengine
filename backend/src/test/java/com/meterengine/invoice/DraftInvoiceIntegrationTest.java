@@ -47,7 +47,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 응답에_월과_고객별_금액이_함께_나온다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
     insertEvent(orgId, "tx-2", acme, 2791, "2026-08-11T12:00:00+09:00");
@@ -93,7 +93,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 이벤트가_없는_고객도_금액_0으로_응답에_들어간다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertCustomer(orgId, "제타상사");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
@@ -115,12 +115,12 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 다른_도입사의_동일한_데이터는_섞이지_않는다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
     // 도입사 ID만 다르고 고객 이름, 미터, transaction_id, 수량, 시각이 전부 같은 쌍둥이 (인수 조건의 오집계 방지)
-    UUID twinOrgId = organizationWithTokenMetric();
+    UUID twinOrgId = organizationWithTokenBillableMetric();
     UUID twinCustomer = insertCustomer(twinOrgId, "아크메");
     insertEvent(twinOrgId, "tx-1", twinCustomer, 500, "2026-08-10T12:00:00+09:00");
 
@@ -136,7 +136,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 단가가_아직_없는_미터는_라인에서_빠진다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
@@ -179,7 +179,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month를_지정하면_그_달로_집계한다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
     insertEvent(orgId, "tx-2", acme, 700, "2026-09-10T12:00:00+09:00");
@@ -198,7 +198,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month를_생략하면_이번_달_KST로_집계한다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     // 이번 달 1일 정오(KST). 지금이 월말 자정 직전이어도 같은 달 안이다.
     OffsetDateTime thisMonth =
@@ -206,7 +206,10 @@ class DraftInvoiceIntegrationTest {
     insertEvent(orgId, "tx-1", acme, 500, thisMonth);
 
     MvcTestResult result =
-        mvc.get().uri("/v1/invoice").header("X-Organization-Id", orgId.toString()).exchange();
+        mvc.get()
+            .uri("/v1/invoices/draft")
+            .header("X-Organization-Id", orgId.toString())
+            .exchange();
 
     assertThat(result)
         .hasStatusOk()
@@ -218,7 +221,7 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month_형식이_틀리면_400이다() {
-    UUID orgId = organizationWithTokenMetric();
+    UUID orgId = organizationWithTokenBillableMetric();
 
     assertThat(get(orgId, "2026-13")).hasStatus(400);
     assertThat(get(orgId, "2026")).hasStatus(400);
@@ -227,8 +230,12 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 도입사_헤더가_없거나_형식이_틀리면_400이다() {
-    assertThat(mvc.get().uri("/v1/invoice").exchange()).hasStatus(400);
-    assertThat(mvc.get().uri("/v1/invoice").header("X-Organization-Id", "not-a-uuid").exchange())
+    assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(400);
+    assertThat(
+            mvc.get()
+                .uri("/v1/invoices/draft")
+                .header("X-Organization-Id", "not-a-uuid")
+                .exchange())
         .hasStatus(400);
   }
 
@@ -238,13 +245,13 @@ class DraftInvoiceIntegrationTest {
 
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
-        .uri("/v1/invoice?month={month}", month)
+        .uri("/v1/invoices/draft?month={month}", month)
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }
 
   /** 시드와 같은 모양의 미터(chat_completion의 token을 SUM, 단가 0.5원)를 가진 도입사를 만든다. */
-  private UUID organizationWithTokenMetric() {
+  private UUID organizationWithTokenBillableMetric() {
     UUID organizationId = insertOrganization();
     jdbc.update(
         """
