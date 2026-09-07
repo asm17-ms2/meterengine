@@ -36,13 +36,13 @@ class FrameworkExceptionHandlerIntegrationTest {
   /**
    * 자바 이름과 와이어 이름이 갈리는 세 필드를 한꺼번에 비운 본문.
    *
-   * <p>{@code eventType -> event_type} 변환이 5단계의 핵심이고, 나머지 둘은 변환이 한 필드에만 걸리지 않았는지 본다. 6단계의 문구 단언도 같은
+   * <p>{@code occurredAt -> timestamp} 변환이 5단계의 핵심이고, 나머지 둘은 변환이 한 필드에만 걸리지 않았는지 본다. 6단계의 문구 단언도 같은
    * 응답을 쓴다.
    */
   private static final String INVALID_BODY =
       """
-      {"transaction_id":"","customer_id":null,"event_type":"",
-       "timestamp":"2026-08-17T12:00:00Z","properties":{"token":1}}
+      {"transaction_id":"","customer_id":null,"type":"",
+       "timestamp":null,"properties":{"token":1}}
       """;
 
   /**
@@ -53,7 +53,7 @@ class FrameworkExceptionHandlerIntegrationTest {
   private static final String UNKNOWN_CUSTOMER_BODY =
       """
       {"transaction_id":"probe-1","customer_id":"11111111-2222-3333-4444-555555555555",
-       "event_type":"chat_completion","timestamp":"2026-08-17T12:00:00Z","properties":{"token":1}}
+       "type":"chat_completion","timestamp":"2026-08-17T12:00:00Z","properties":{"token":1}}
       """;
 
   @Autowired private WebApplicationContext webApplicationContext;
@@ -86,7 +86,7 @@ class FrameworkExceptionHandlerIntegrationTest {
     String body =
         """
         {"transaction_id":"t","customer_id":"a728e7b6-d82b-4f3c-a960-a66a02794c1d",
-         "event_type":"chat_completion","timestamp":"2026-08-17T12:00:00","properties":{"token":1}}
+         "type":"chat_completion","timestamp":"2026-08-17T12:00:00","properties":{"token":1}}
         """;
     assertCode(post(body), 400, ErrorCodes.MALFORMED_REQUEST_BODY);
   }
@@ -183,8 +183,8 @@ class FrameworkExceptionHandlerIntegrationTest {
         .bodyJson()
         .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.FIELD))
         .asArray()
-        .contains("transaction_id", "customer_id", "event_type")
-        .doesNotContain("transactionId", "customerId", "eventType");
+        .contains("transaction_id", "customer_id", "timestamp")
+        .doesNotContain("transactionId", "customerId", "occurredAt");
   }
 
   @Test
