@@ -1,6 +1,6 @@
 package com.meterengine.pricing.controller;
 
-import com.meterengine.ProblemResponse;
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.pricing.dto.CreatePricePolicyRequest;
 import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
@@ -51,8 +51,8 @@ public class PricePolicyController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public ListPricePoliciesResponse listPricePolicies(
@@ -80,8 +80,8 @@ public class PricePolicyController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
@@ -91,15 +91,15 @@ public class PricePolicyController {
         responseCode = "404",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=price_policy_already_exists: 이 미터에 정책이 이미 있다. 요청을 고쳐서 될 일이 아니다")
   })
   public PricePolicyResponse createPricePolicy(

@@ -297,7 +297,7 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void 형식_오류와_고객_매핑_실패는_둘_다_problem_json이고_서로_구별된다() {
+  void 형식_오류와_고객_매핑_실패는_code로_서로_구별된다() {
     UUID orgId = insertOrganization("도입사 A");
 
     // 형식 오류는 Boot의 ProblemDetailsExceptionHandler가, 고객 매핑 실패는
@@ -311,7 +311,7 @@ class EventIngestIntegrationTest {
 
     assertThat(post(orgId, withoutTransactionId))
         .hasStatus(400)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()

@@ -1,11 +1,11 @@
 package com.meterengine.customer.controller;
 
-import com.meterengine.ProblemResponse;
 import com.meterengine.customer.dto.CreateCustomerRequest;
 import com.meterengine.customer.dto.CustomerResponse;
 import com.meterengine.customer.dto.ListCustomersResponse;
 import com.meterengine.customer.dto.UpdateCustomerRequest;
 import com.meterengine.customer.service.CustomerService;
+import com.meterengine.global.error.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -53,8 +53,8 @@ public class CustomerController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public ListCustomersResponse listCustomers(
@@ -79,8 +79,8 @@ public class CustomerController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
             code=validation_error: name이 비었거나 255자를 넘거나, X-Organization-Id가 없거나 UUID가 아니다.
@@ -110,15 +110,15 @@ public class CustomerController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: name이 비었거나 255자를 넘거나, 헤더나 경로의 UUID 형식이 틀렸다"),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다")
   })
   public CustomerResponse updateCustomer(
@@ -147,22 +147,22 @@ public class CustomerController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: 헤더나 경로의 UUID 형식이 틀렸다"),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=customer_not_found: 없거나 다른 도입사 소속이다"),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
   })
   public void deleteCustomer(
