@@ -106,7 +106,7 @@ docker build -t meterengine-backend .
 | `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
 | `GET /v1/events` | 이벤트 조회. 월/고객/event_type 필터, 페이지 나누기 |
 | `GET /v1/usage` | 고객별 월 사용량 집계 |
-| `GET /v1/invoice` | 고객별 청구 예정액 (draft) |
+| `GET /v1/invoices/draft` | 고객별 청구 예정액 (draft) |
 | `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
 | `GET /v1/billable-metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
 | `POST /v1/billable-metrics/{code}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가 등록 API는 아직 없고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
@@ -206,7 +206,7 @@ docker build -t meterengine-backend .
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`). 클래스 이름은 Event 접두어로 통일한다
 - `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/billable-metrics`, `/v1/usage`)
-- `invoice`: 청구 예정액 조회 (`/v1/invoice`). 확정 인보이스는 엔티티와 리포지토리만 있고, 저장하는 서비스와 API는 아직 없다
+- `invoice`: 청구 예정액 조회 (`/v1/invoices/draft`). 확정 인보이스는 엔티티와 리포지토리만 있고, 저장하는 서비스와 API는 아직 없다
 - `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/price-policies`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 목록 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조

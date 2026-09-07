@@ -147,7 +147,7 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
 def _verify_month(client: ApiClient, console: Console, stored: List[StoredEvent], month: str) -> Optional[bool]:
     usage = client.get_usage(month)
     invoice = client.get_invoice(month)
-    for name, result in (("/v1/usage", usage), ("/v1/invoice", invoice)):
+    for name, result in (("/v1/usage", usage), ("/v1/invoices/draft", invoice)):
         if result.status != 200:
             print("%s %s 응답이 200이 아닙니다: %s" % (name, month, parse_problem(result.status, result.body).summary()), file=sys.stderr)
             return None
@@ -233,7 +233,7 @@ def _print_quantity_table(console, metric, expected: ExpectedMonth, usage, invoi
     print()
     print("[%s] 고객별 사용량" % metric.code)
     for line in render_table(
-        ["고객", "기대값", "/v1/usage", "/v1/invoice", "판정"],
+        ["고객", "기대값", "/v1/usage", "/v1/invoices/draft", "판정"],
         rows,
         ["left", "right", "right", "right", "left"],
     ):
@@ -275,7 +275,7 @@ def _print_amount_table(console, expected: ExpectedMonth, invoice, roster, custo
     print()
     print("고객별 청구 예정액")
     for line in render_table(
-        ["고객", "기대값", "/v1/invoice", "판정"],
+        ["고객", "기대값", "/v1/invoices/draft", "판정"],
         rows,
         ["left", "right", "right", "left"],
     ):

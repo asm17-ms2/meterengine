@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 결과가 된다 (사용량 API와 같은 동작).
  */
 @RestController
-@RequestMapping("/v1/invoice")
+@RequestMapping("/v1/invoices/draft")
 public class DraftInvoiceController {
 
   private final DraftInvoiceService draftInvoiceService;

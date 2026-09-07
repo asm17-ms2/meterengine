@@ -206,7 +206,10 @@ class DraftInvoiceIntegrationTest {
     insertEvent(orgId, "tx-1", acme, 500, thisMonth);
 
     MvcTestResult result =
-        mvc.get().uri("/v1/invoice").header("X-Organization-Id", orgId.toString()).exchange();
+        mvc.get()
+            .uri("/v1/invoices/draft")
+            .header("X-Organization-Id", orgId.toString())
+            .exchange();
 
     assertThat(result)
         .hasStatusOk()
@@ -227,8 +230,12 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 도입사_헤더가_없거나_형식이_틀리면_400이다() {
-    assertThat(mvc.get().uri("/v1/invoice").exchange()).hasStatus(400);
-    assertThat(mvc.get().uri("/v1/invoice").header("X-Organization-Id", "not-a-uuid").exchange())
+    assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(400);
+    assertThat(
+            mvc.get()
+                .uri("/v1/invoices/draft")
+                .header("X-Organization-Id", "not-a-uuid")
+                .exchange())
         .hasStatus(400);
   }
 
@@ -238,7 +245,7 @@ class DraftInvoiceIntegrationTest {
 
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
-        .uri("/v1/invoice?month={month}", month)
+        .uri("/v1/invoices/draft?month={month}", month)
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }

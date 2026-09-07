@@ -88,7 +88,7 @@ class ApiClient:
         return self._request("GET", "/v1/usage", query=_month_query(month))
 
     def get_invoice(self, month: Optional[str]) -> ApiResult:
-        return self._request("GET", "/v1/invoice", query=_month_query(month))
+        return self._request("GET", "/v1/invoices/draft", query=_month_query(month))
 
     def get_events_page(self, month: Optional[str]) -> ApiResult:
         """total(월 필터 적용 건수)만 필요하므로 가장 작은 페이지를 받는다."""
