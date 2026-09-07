@@ -51,7 +51,7 @@ def run_verify(args, console: Console) -> int:
         return EXIT_ERROR
 
     print(
-        "소스: %s (신규 %d건이 기대값에 기여, 400 거절 %d건은 제외)"
+        "소스: %s (신규 %d건이 기대값에 기여, 거절 %d건은 제외)"
         % (source.label, len(source.stored), source.rejected_count)
     )
     if source.error_count:

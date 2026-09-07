@@ -12,8 +12,10 @@ import static org.mockito.Mockito.when;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
-import com.meterengine.event.exception.UnknownCustomerException;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.BusinessException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -82,9 +84,9 @@ class EventServiceTest {
     when(customerRepository.existsByOrganizationIdAndId(ORG_ID, CUSTOMER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> service.ingest(ORG_ID, request("tx-1")))
-        .isInstanceOf(UnknownCustomerException.class)
-        .hasMessageContaining(CUSTOMER_ID.toString())
-        .hasMessageContaining(ORG_ID.toString());
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND);
 
     verify(eventRepository, never()).insertIfAbsent(any(), any(), any(), any(), any(), any());
   }

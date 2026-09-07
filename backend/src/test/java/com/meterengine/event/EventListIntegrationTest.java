@@ -2,9 +2,9 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.dto.ListEventsResponse;
+import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -76,13 +76,13 @@ class EventListIntegrationTest {
         .asArray()
         .containsExactly("tx-mine");
 
-    // 남의 고객 ID를 알고 있어도 못 본다. 고객 판정이 organization_id와 함께 걸려 400이 된다.
+    // 남의 고객 ID를 알고 있어도 못 본다. 고객 판정이 organization_id와 함께 걸려 404가 된다.
     assertThat(get(mine, "?customer_id=" + theirCustomer))
-        .hasStatus(400)
+        .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
   }
 
   // ---------------------------------------------------------------------------
@@ -343,16 +343,16 @@ class EventListIntegrationTest {
   }
 
   @Test
-  void 미등록_고객으로_필터하면_400이고_code가_unknown_customer_reference다() {
+  void 미등록_고객으로_필터하면_404이고_code가_customer_not_found다() {
     UUID orgId = insertOrganization("도입사");
 
     assertThat(get(orgId, "?customer_id=" + UUID.randomUUID()))
-        .hasStatus(400)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasStatus(404)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
   }
 
   // ---------------------------------------------------------------------------
@@ -369,13 +369,13 @@ class EventListIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     assertThat(get(orgId, "?size=0"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   @Test
@@ -396,7 +396,7 @@ class EventListIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   @Test
@@ -421,7 +421,7 @@ class EventListIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   @Test
@@ -434,13 +434,13 @@ class EventListIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     assertThat(get(orgId, "?month=2026-13"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   // ---------------------------------------------------------------------------
