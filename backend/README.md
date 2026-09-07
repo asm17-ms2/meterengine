@@ -16,7 +16,7 @@
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 미터 등록 API가 없어서(MS2-159 예정) 지금은 고객 API(MS2-155)와 가격 정책 API(MS2-157)를 빼면 데이터가 들어오는 통로가 이 파일뿐이다. 미터는 여섯 개이고 그중 `llm_request` 이벤트 하나를 입력/출력/캐시 읽기/캐시 생성 토큰 네 미터가 함께 잰다. 캐시 두 미터는 MS2-169에서 추가했는데, Claude Code 실측에서 토큰의 대부분이 캐시라 그것을 빼면 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (CONTRIBUTING.md "문서의 정본")
-- 오류 응답: RFC 9457 problem+json 하나로 통일하고 `code` 확장 멤버로 종류를 고른다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
+- 오류 응답: `code`, `message`, `errors[]`를 든 자체 스키마 하나로 통일한다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
 - API 문서 UI: Scalar. 앱을 띄우면 `/scalar`에 뜬다. 원본 문서는 `/v3/api-docs`(JSON)와 `/v3/api-docs.yaml`이다. Swagger UI는 쓰지 않는다. 두 UI가 같은 문서를 보여줄 이유가 없어 `springdoc-openapi-starter-webmvc-ui` 대신 `-scalar`를 쓴다. 렌더링 JS가 jar에 번들되어 앱이 직접 서빙하므로 CDN을 타지 않고 버전이 의존성에 고정된다
 - 테스트: JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 실제 PostgreSQL 컨테이너로 돌린다
 - 코드 포맷: Spotless + google-java-format. CI에서 검사한다
@@ -131,78 +131,65 @@ docker build -t meterengine-backend .
 
 ## 오류 응답
 
-오류는 형식 하나로 나간다. RFC 9457 problem+json에 `code` 확장 멤버를 얹은 것이고, 스키마는 `openapi.yaml`의 `ProblemResponse`다 (MS2-150).
+오류는 형식 하나로 나간다. 스키마는 `openapi.yaml`의 `ErrorResponse`이고, 왜 이 모양인지는 `docs/rfcs/004-error-handling.md`, 채울 때 따르는 규칙은 `docs/contributing/error-handling.md`에 있다.
 
 ```json
 {
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "the request could not be accepted as sent",
-  "instance": "/v1/events",
   "code": "validation_error",
+  "message": "요청 값이 올바르지 않습니다",
   "errors": [{ "field": "transaction_id", "message": "공백일 수 없습니다" }]
 }
 ```
 
-- `code`가 기계 판독용이다. 화면 문구는 이 값으로 고른다. `title`과 `detail`은 영어이고 로그와 개발자용이라 그대로 띄우지 않는다
-- `errors`는 `code=validation_error`일 때만 실린다. `field`는 도입사가 보낸 이름이다 (자바 필드명이 아니다)
-- `type`은 나가지 않는다. 값이 기본값 `about:blank`라 직렬화에서 빠지고, 우리가 `setType`을 부르는 곳이 없다
-- **5xx는 본문 형식을 약속하지 않는다.** 일부 5xx가 problem+json으로, 일부가 Boot 기본 형식으로 나가는데 클라이언트가 둘을 구분할 방법이 없다. 5xx에는 `code`를 붙이지 않는다. 클라이언트는 상태 코드만 보고, `code`가 없을 때 쓸 기본 문구를 갖고 있어야 한다
+- `code`가 기계 판독용이다. 오류별 처리는 이 값으로 분기한다
+- `message`는 code마다 하나인 한국어 문구다. 예고 없이 바뀌므로 분기에 쓰지 않는다
+- `errors`는 400에만 실리고 비면 나가지 않는다. `field`는 도입사가 보낸 이름이다 (자바 필드명이 아니다)
+- **5xx도 같은 형식이다.** 나열되지 않은 예외는 `code`가 `internal_server_error`인 같은 본문으로 나간다
 
 ### code 목록
 
-값의 정본은 `ErrorCodes`다. **code를 늘리거나 없앨 때 고치는 곳은 그 파일 하나다.** 운영 코드, 문서 스키마의 `allowableValues`, 통합 테스트 단언이 전부 이 상수를 거친다. 예외가 하나 있다. 테스트 **메서드 이름**에 code가 박힌 자리(`...code가_unknown_customer_reference다` 같은)는 자바 식별자라 상수를 거치지 못하므로, code를 개명하면 컴파일도 테스트도 통과한 채 이름만 옛 값으로 남는다. 개명할 때 메서드 이름을 grep으로 찾아 손으로 같이 고친다.
+값의 정본은 `ErrorCode` enum이다. **code를 늘리거나 없앨 때 고치는 곳은 그 파일 하나다.** 운영 코드, `openapi.yaml`의 `enum`, 통합 테스트 단언이 전부 이 상수를 거친다. 예외가 하나 있다. 테스트 **메서드 이름**에 code가 박힌 자리(`...code가_customer_not_found다` 같은)는 자바 식별자라 상수를 거치지 못하므로, code를 개명하면 컴파일도 테스트도 통과한 채 이름만 옛 값으로 남는다. 개명할 때 메서드 이름을 grep으로 찾아 손으로 같이 고친다.
 
 | code | 상태 | 언제 |
 | --- | --- | --- |
 | `validation_error` | 400 | 헤더 누락, 쿼리 파라미터 타입 불일치, 본문 필드 제약 위반 |
-| `unknown_customer_reference` | 400 | 실어 보낸 `customer_id`로 (도입사, 고객) 조합을 찾지 못했다 |
+| `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
 | `unknown_organization` | 400 | `X-Organization-Id`가 등록된 도입사가 아니다 (고객 등록과 미터 등록에서 난다) |
 | `invalid_event` | 400 | DB가 저장을 거부했다. 같은 본문을 다시 보내도 성공하지 않는다 |
-| `malformed_request_body` | 400 | 본문을 JSON으로 읽지 못했다 (깨진 JSON, 빈 본문, 오프셋 없는 timestamp) |
-| `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
 | `invalid_billable_metric` | 400 | 본문이 집계 미터로 성립하지 않는다 (SUM이 아닌 집계 함수, target_property 누락) |
-| `customer_not_found` | 404 | 경로가 가리킨 고객이 없거나 다른 도입사 소속이다 |
+| `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
+| `customer_not_found` | 404 | 가리킨 고객이 없거나 다른 도입사 소속이다. 경로의 고객, 이벤트 수집 본문의 `customer_id`, 이벤트 조회 필터의 `customer_id`가 모두 같다 |
 | `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
-| `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
-| `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
-| `metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
 | `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
 | `response_type_not_acceptable` | 406 | `Accept`로 만족시킬 응답 표현이 없다 |
+| `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
+| `metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
+| `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
 | `request_type_not_supported` | 415 | 보낸 `Content-Type`을 받을 수 없다 |
+| `internal_server_error` | 500 | 핸들러에 나열되지 않은 예외가 올라왔다 |
 
-**code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.** 그래서 옛 이름 `customer_not_found`를 `unknown_customer_reference`로 개명했다. 그 오류는 주소(`/v1/events`)가 아니라 실어 보낸 값이 잘못된 경우라 404가 아니라 400이다. 옛 이름은 MS2-155가 가져갔다. `PUT`/`DELETE /v1/customers/{id}`가 가리킨 고객이 없을 때의 404다. 단건 조회(`GET /v1/customers/{id}`)는 만들지 않았다. 고객이 가진 정보가 목록에 이미 다 들어 있어서다.
+### 오류를 새로 붙일 때
+
+- `ErrorCode`에 상수를 더한다. HTTP 상태, code 문자열, 문구를 그 한 줄이 든다
+- 서비스에서 종류 클래스(`NotFoundException`, `ConflictException`, `InvalidRequestException`)에 그 상수를 넣어 던진다. DB 제약 위반은 뜻을 아는 서비스가 잡아서 바꿔 던진다
+- 통합 테스트에서 상태와 `code`를 단언한다
+
+### 핸들러 구조
+
+`@RestControllerAdvice`는 `GlobalExceptionHandler` 하나다. 도메인별 advice가 없고, 도메인 예외(`BusinessException`)와 프레임워크 예외를 한 자리에서 받는다. 프레임워크 예외는 정확한 타입으로 하나씩 나열하고 나열하지 않은 것은 `Exception` 핸들러가 500으로 받는다. `ResponseEntityExceptionHandler`를 상속하지 않으므로 405의 `Allow`와 415의 `Accept` 헤더는 붙지 않는다. 왜 이렇게 했는지는 `docs/contributing/error-handling.md`에 있다.
 
 ### 문구의 언어
 
-도입사가 읽는 자리는 `errors[].message` 하나다. 여기만 한국어이고 `title`과 `detail`은 영어로 둔다. 로그와 지원 문의에서 검색 가능한 고정 문자열이 낫기 때문이다.
+도입사가 읽는 자리는 `message`와 `errors[].message`이고 둘 다 한국어다.
 
 `spring.web.locale=ko`와 `spring.web.locale-resolver=fixed`로 못박아서 `Accept-Language`가 무엇이든 한국어가 나간다. 리졸버를 열어 두면 한 응답 안에 두 언어가 섞인다. Hibernate Validator는 en 번들을 갖고 있어 "must not be blank"로 답하는데 우리 문구는 ko 하나뿐이라 한국어가 그대로 나가기 때문이다. 다국어가 필요해지면 번들을 갖추고 그때 연다.
 
-우리가 만드는 문구는 `src/main/resources/messages.properties`에 있고 넷뿐이다. 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 Hibernate Validator의 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
-
-### 예외 핸들러 다섯
-
-| 클래스 | 걸리는 범위 | 잡는 것 |
-| --- | --- | --- |
-| `FrameworkExceptionHandler` (루트) | 전역 | 프레임워크가 내는 예외 20종. 본문이 나가는 19종이 `handleExceptionInternal` 한 자리를 지나므로 거기서 4xx에만 `code`를 얹는다. 상태 코드와 응답 헤더(405의 `Allow`, 415의 `Accept`) 결정은 프레임워크에 남긴다 |
-| `EventExceptionHandler` (`event.controller`) | `EventController`만 | 도메인 오류 둘. `UnknownCustomerException` -> `unknown_customer_reference`, `DataIntegrityViolationException` -> `invalid_event` |
-| `CustomerExceptionHandler` (`customer.controller`) | `CustomerController`만 | 도메인 오류 셋. `CustomerNotFoundException` -> `customer_not_found`, `CustomerHasEventsException` -> `customer_has_events`, `DataIntegrityViolationException` -> `unknown_organization` |
-| `PricePolicyExceptionHandler` (`pricing.controller`) | `PricePolicyController`만 | 도메인 오류 셋. `MetricNotFoundException` -> `metric_not_found`, `PricePolicyAlreadyExistsException` -> `price_policy_already_exists`, `InvalidPricePolicyException` -> `invalid_price_policy` |
-| `BillableMetricExceptionHandler` (`metric.controller`) | `BillableMetricController`만 | 도메인 오류 셋. `MetricAlreadyExistsException` -> `metric_already_exists`, `InvalidBillableMetricException` -> `invalid_billable_metric`, `DataIntegrityViolationException` -> `unknown_organization` (PK 경합은 서비스가 제약 이름으로 갈라 409로 바꾼다) |
-
-도메인 advice를 각자 한 컨트롤러에만 건 이유는 여러 advice가 잡는 `DataIntegrityViolationException`이 제약 위반 전반을 덮는 넓은 타입이라서다. 전역에 걸면 관계없는 제약 위반까지 "보낸 이벤트가 잘못됐다"거나 "도입사가 등록되지 않았다"로 둔갑한다. 같은 예외가 자리마다 다른 뜻인 것이 범위를 좁혀야 하는 이유다. pricing advice는 그 예외를 잡지 않지만 같은 원칙으로 범위를 좁혀 둔다. 잡을 경우가 없는 것은 미등록 도입사가 미터 존재 확인에서 404로 먼저 걸러져 FK 위반에 닿지 않고, 정책 PK 경합은 서비스가 409로 바꾸기 때문이다.
-
-고객 삭제에서 나는 FK 위반은 advice까지 가지 않는다. `CustomerService.delete`가 `CustomerHasEventsException`으로 바꿔 던져 409가 된다. 그 자리가 뜻을 아는 유일한 곳이라서다.
-
-**[주의] `ResponseEntityExceptionHandler`를 상속하는 클래스를 또 만들지 않는다.** Boot 자동 설정이 `@ConditionalOnMissingBean(ResponseEntityExceptionHandler.class)`라, 그 타입의 빈이 둘이면 하나만 등록되고 프레임워크 예외 처리의 절반이 조용히 사라진다. 그 자리는 `FrameworkExceptionHandler`가 의도적으로 차지하고 있다. 새 오류를 붙이려면 그 클래스를 고치거나, 도메인 예외를 잡는 별도 advice(상속 없는 `@RestControllerAdvice`)를 쓴다.
-
-프레임워크 4xx까지 같은 형식으로 끌어오는 스위치가 `spring.mvc.problemdetails.enabled=true`다. 끄면 한 엔드포인트가 400을 두 스키마로 낸다.
+`message`는 `ErrorCode` 상수가 든다. `errors[].message`는 던지는 자리가 넘긴 문구이거나 Hibernate Validator의 ko 번들 문구다. 우리가 만드는 것은 `src/main/resources/messages.properties`의 `problem.field.*`뿐이고, 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
 
 ## 구조
 
-단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity, exception)로 나눈다.
+단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 종류별 하위 패키지(controller, service, repository, dto, 필요하면 entity)로 나눈다.
 
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`)
 - `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/billable-metrics`, `/v1/usage`)
@@ -210,7 +197,8 @@ docker build -t meterengine-backend .
 - `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/price-policies`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 목록 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조
-- 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`), 설정(`OpenApiConfig`), 오류 계약(`ErrorCodes`, `ProblemMembers`, `ProblemResponse`, `ProblemFieldError`, `FrameworkExceptionHandler`)이다. 오류 계약을 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
+- 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다
+- 오류 계약은 `global.error`에 둔다. `ErrorCode`, `ErrorResponse`, `BusinessException`과 종류 클래스(`NotFoundException`, `ConflictException`, `InvalidRequestException`), `GlobalExceptionHandler`다. 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
 경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 여덟이다.
 

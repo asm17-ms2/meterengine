@@ -36,7 +36,7 @@ def _write_sample(path):
             '"type": "chat_completion", "properties": {"token": 1}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=400,
-            response_text='{"status": 404, "code": "customer_not_found"}',
+            response_text='{"code": "customer_not_found", "message": "고객을 찾을 수 없습니다"}',
             outcome="rejected",
             error=None,
             elapsed_ms=8,
@@ -77,7 +77,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(record.request["properties"]["token"], Decimal("500.00"))
         self.assertEqual(str(record.request["properties"]["token"]), "500.00")
 
-    def test_거절_응답의_problem_json이_보존된다(self):
+    def test_거절_응답의_오류_본문이_보존된다(self):
         _write_sample(self.path)
         record = read_log(self.path).records[1]
         self.assertEqual(record.status, 400)

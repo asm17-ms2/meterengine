@@ -70,8 +70,8 @@ export async function previewDraftInvoice(
       error: {
         status: 503,
         code: "dev_forced",
-        title: "개발 모드에서 강제한 에러 상태입니다",
-        detail: "사이드바의 표 상태 스위치를 정상으로 되돌리면 사라집니다.",
+        message:
+          "개발 모드에서 강제한 에러 상태입니다. 사이드바의 표 상태 스위치를 정상으로 되돌리면 사라집니다.",
       },
     };
   }
