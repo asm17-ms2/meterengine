@@ -3,7 +3,10 @@
 import { useState } from "react";
 
 import { EventDetailDrawer } from "@/components/events/EventDetailDrawer";
-import { GridCell, GridHead, GridRowButton, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRowButton } from "@/components/table/GridRowButton";
+import { GridTable } from "@/components/table/GridTable";
 
 /**
  * 화면이 그리는 뷰모델. 시각과 JSON 문자열은 서버에서 다 만들어 온다.

@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 
-import { EventsMeta, EventsSection } from "@/components/events/EventsSection";
-import { FilterBar, QueryStamp } from "@/components/screen/FilterBar";
+import { EventsMeta } from "@/components/events/EventsMeta";
+import { EventsSection } from "@/components/events/EventsSection";
+import { FilterBar } from "@/components/screen/FilterBar";
 import { MonthSelect } from "@/components/screen/MonthSelect";
+import { QueryStamp } from "@/components/screen/QueryStamp";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import { listEvents, readPage } from "@/lib/api/events";

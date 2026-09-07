@@ -1,17 +1,13 @@
 import { Suspense } from "react";
 
-import {
-  BillingMeta,
-  BillingSection,
-} from "@/components/billing/BillingSection";
+import { BillingMeta } from "@/components/billing/BillingMeta";
+import { BillingSection } from "@/components/billing/BillingSection";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { MonthSelect } from "@/components/screen/MonthSelect";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
-import {
-  CollapseProvider,
-  ExpandControls,
-} from "@/components/table/CollapseProvider";
+import { CollapseProvider } from "@/components/table/CollapseProvider";
+import { ExpandControls } from "@/components/table/ExpandControls";
 import { previewDraftInvoice } from "@/lib/api/billing";
 import { readDevState } from "@/lib/dev-state";
 import { formatKoreanMonth } from "@/lib/format";

@@ -1,7 +1,10 @@
 "use client";
 
 import { useCollapse } from "@/components/table/CollapseProvider";
-import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRow } from "@/components/table/GridRow";
+import { GridTable } from "@/components/table/GridTable";
 
 /**
  * 화면이 그리는 뷰모델. 숫자 포맷은 서버에서 끝내고 문자열로 받는다.

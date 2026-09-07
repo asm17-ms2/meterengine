@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 
-import {
-  CustomersLoading,
-  CustomersSection,
-} from "@/components/customers/CustomersSection";
+import { CustomersLoading } from "@/components/customers/CustomersLoading";
+import { CustomersSection } from "@/components/customers/CustomersSection";
 import { listCustomers } from "@/lib/api/customers";
 import { readDevState } from "@/lib/dev-state";
 
