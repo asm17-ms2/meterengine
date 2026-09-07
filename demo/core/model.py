@@ -20,7 +20,7 @@ KST = timezone(timedelta(hours=9))
 DEFAULT_ORG_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e"
 DEFAULT_BASE_URL = "http://localhost:8080"
 
-# transaction_id 상한. 서버가 255자를 넘기면 400이다 (EventIngestRequest).
+# transaction_id 상한. 서버가 255자를 넘기면 400이다 (IngestEventRequest).
 # 브리지는 여기에 맞춰 자르고(bridge/otel_map.py) CSV 데모는 넘는 행을 거절로
 # 예측한다(csvdemo/expected.py). 같은 서버 제한이라 한 곳에 둔다.
 MAX_TRANSACTION_ID = 255
@@ -113,7 +113,7 @@ def build_body_text(event: Event) -> str:
         "{"
         + '"transaction_id": ' + json.dumps(event.transaction_id, ensure_ascii=False)
         + ', "customer_id": ' + json.dumps(event.customer_id)
-        + ', "event_type": ' + json.dumps(event.event_type, ensure_ascii=False)
+        + ', "type": ' + json.dumps(event.event_type, ensure_ascii=False)
         + ', "properties": ' + event.properties_text.strip()
         + ', "timestamp": ' + json.dumps(event.timestamp_text)
         + "}"

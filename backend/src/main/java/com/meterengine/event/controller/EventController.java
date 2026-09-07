@@ -1,11 +1,10 @@
 package com.meterengine.event.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.event.dto.EventIngestRequest;
-import com.meterengine.event.dto.EventIngestResponse;
-import com.meterengine.event.dto.EventPageResponse;
-import com.meterengine.event.service.EventIngestService;
-import com.meterengine.event.service.EventQueryService;
+import com.meterengine.event.dto.IngestEventRequest;
+import com.meterengine.event.dto.IngestEventResponse;
+import com.meterengine.event.dto.ListEventsResponse;
+import com.meterengine.event.service.EventService;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,12 +44,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/events")
 public class EventController {
 
-  private final EventIngestService ingestService;
-  private final EventQueryService queryService;
+  private final EventService eventService;
 
-  EventController(EventIngestService ingestService, EventQueryService queryService) {
-    this.ingestService = ingestService;
-    this.queryService = queryService;
+  EventController(EventService eventService) {
+    this.eventService = eventService;
   }
 
   @PostMapping
@@ -80,12 +77,12 @@ public class EventController {
             code=invalid_event: DB가 담을 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
             """)
   })
-  public EventIngestResponse ingest(
+  public IngestEventResponse ingestEvent(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody EventIngestRequest request) {
-    return ingestService.ingest(organizationId, request);
+      @Valid @RequestBody IngestEventRequest request) {
+    return eventService.ingest(organizationId, request);
   }
 
   @GetMapping
@@ -97,7 +94,7 @@ public class EventController {
           transaction_id 내림차순으로 순서가 고정돼, 같은 요청을 여러 번 보내도 결과가 같다.
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다 (사용량 조회와 같은 판정).
-          customer_id, month, event_type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
+          customer_id, month, type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
           properties는 저장된 값을 그대로 낸다. 서버가 키를 고르거나 값을 해석하지 않는다.
           저장 타입이 jsonb라 키 순서와 공백은 수집 때와 달라질 수 있고, 숫자 자릿수는 그대로다.
 
@@ -121,7 +118,7 @@ public class EventController {
             소속은 구별되지 않는다.
             """)
   })
-  public EventPageResponse query(
+  public ListEventsResponse listEvents(
       @Parameter(description = "도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId,
@@ -137,9 +134,9 @@ public class EventController {
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month,
       @Parameter(description = "이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.")
-          @RequestParam(name = "event_type", required = false)
-          String eventType) {
+          @RequestParam(required = false)
+          String type) {
     YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return queryService.query(organizationId, customerId, target, eventType, page, size);
+    return eventService.list(organizationId, customerId, target, type, page, size);
   }
 }

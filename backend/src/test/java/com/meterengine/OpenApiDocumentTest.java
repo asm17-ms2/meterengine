@@ -139,7 +139,7 @@ class OpenApiDocumentTest {
         .containsOnlyKeys(
             "/v1/events",
             "/v1/usage",
-            "/v1/invoice",
+            "/v1/invoices/draft",
             "/v1/customers",
             "/v1/customers/{id}",
             "/v1/billable-metrics",
@@ -149,7 +149,10 @@ class OpenApiDocumentTest {
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/usage'].get.summary").isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/invoice'].get.summary").isNotNull();
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.paths['/v1/invoices/draft'].get.summary")
+        .isNotNull();
     assertThat(json())
         .bodyJson()
         .extractingPath("$.paths['/v1/customers'].get.summary")
@@ -190,7 +193,7 @@ class OpenApiDocumentTest {
         .bodyJson()
         .extractingPath("$.paths['/v1/events'].get.parameters[*].name")
         .asArray()
-        .contains("X-Organization-Id", "page", "size", "customer_id", "month", "event_type");
+        .contains("X-Organization-Id", "page", "size", "customer_id", "month", "type");
   }
 
   @Test
@@ -200,12 +203,12 @@ class OpenApiDocumentTest {
     //
     // 문서 전체 문자열에서 찾으면 안 된다. @Operation(description)의 산문에 "transaction_id 내림차순"
     // 같은 문장이 있어서, @JsonProperty를 전부 지워도 통과한다 (실측). 스키마 안을 봐야 한다.
-    assertSchemaHasField("EventEntry", "transaction_id");
-    assertSchemaHasField("EventEntry", "customer_name");
-    assertSchemaHasField("EventIngestRequest", "customer_id");
-    assertSchemaHasField("EventIngestResponse", "transaction_id");
+    assertSchemaHasField("EventResponse", "transaction_id");
+    assertSchemaHasField("EventResponse", "customer_name");
+    assertSchemaHasField("IngestEventRequest", "customer_id");
+    assertSchemaHasField("IngestEventResponse", "transaction_id");
     assertSchemaHasField("BillableMetricUsageResponse", "target_property");
-    assertSchemaHasField("DraftInvoiceCustomerEntry", "customer_id");
+    assertSchemaHasField("DraftInvoiceCustomer", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
     assertSchemaHasField("CustomerResponse", "id");
     assertSchemaHasField("CreatePricePolicyRequest", "dimension_properties");
@@ -256,7 +259,7 @@ class OpenApiDocumentTest {
     // @JsonRawValue를 붙인 String이라 자바 타입만 보면 type: string으로 나간다. @Schema로 덮어 뒀다.
     assertThat(json())
         .bodyJson()
-        .extractingPath("$.components.schemas.EventEntry.properties.properties.type")
+        .extractingPath("$.components.schemas.EventResponse.properties.properties.type")
         .isEqualTo("object");
   }
 
@@ -273,7 +276,7 @@ class OpenApiDocumentTest {
     assertProblemSchema("/v1/events", "get", "ProblemResponse");
     assertProblemSchema("/v1/events", "post", "ProblemResponse");
     assertProblemSchema("/v1/usage", "get", "ProblemResponse");
-    assertProblemSchema("/v1/invoice", "get", "ProblemResponse");
+    assertProblemSchema("/v1/invoices/draft", "get", "ProblemResponse");
     assertProblemSchema("/v1/customers", "get", "ProblemResponse");
     assertProblemSchema("/v1/customers", "post", "ProblemResponse");
     assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");

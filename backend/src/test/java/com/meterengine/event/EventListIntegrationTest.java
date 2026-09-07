@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.event.dto.EventPageResponse;
+import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class EventQueryIntegrationTest {
+class EventListIntegrationTest {
 
   private static final String AUGUST = "2026-08";
 
@@ -216,7 +216,7 @@ class EventQueryIntegrationTest {
 
     assertThat(transactionIds(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, acme))))
         .containsExactlyInAnyOrder("tx-acme-chat", "tx-acme-embed");
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=embedding".formatted(AUGUST))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=embedding".formatted(AUGUST))))
         .containsExactly("tx-acme-embed");
     assertThat(transactionIds(get(orgId, "?month=2026-07"))).containsExactly("tx-acme-july");
 
@@ -225,7 +225,7 @@ class EventQueryIntegrationTest {
             transactionIds(
                 get(
                     orgId,
-                    "?month=%s&customer_id=%s&event_type=chat_completion".formatted(AUGUST, acme))))
+                    "?month=%s&customer_id=%s&type=chat_completion".formatted(AUGUST, acme))))
         .containsExactly("tx-acme-chat");
   }
 
@@ -257,7 +257,7 @@ class EventQueryIntegrationTest {
     // 로그는 원문 보존이므로 집계에 안 잡히는 값도 화면에는 보여야 한다.
     insertEvent(orgId, "tx-unknown", customerId, "정체불명", 1, "2026-08-10T12:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=%s".formatted(AUGUST, "정체불명"))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=%s".formatted(AUGUST, "정체불명"))))
         .containsExactly("tx-unknown");
   }
 
@@ -400,14 +400,14 @@ class EventQueryIntegrationTest {
   }
 
   @Test
-  void event_type을_빈_값으로_보내면_필터가_걸리지_않는다() {
+  void type을_빈_값으로_보내면_필터가_걸리지_않는다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
     // FE가 필터를 비우며 빈 값을 그대로 붙이는 구현이 흔하다. 그때 event_type = '' 로 걸리면
     // 데이터가 있는데도 화면이 빈다. customer_id와 month는 스프링이 알아서 null로 바꾼다.
-    assertThat(transactionIds(get(orgId, "?month=%s&event_type=".formatted(AUGUST))))
+    assertThat(transactionIds(get(orgId, "?month=%s&type=".formatted(AUGUST))))
         .containsExactly("tx-1");
   }
 
@@ -517,7 +517,7 @@ class EventQueryIntegrationTest {
   /**
    * 응답에서 transaction_id만 순서대로 뽑는다. 정렬과 필터 검증이 대부분 이 목록 비교로 끝난다.
    *
-   * <p>{@link EventPageResponse}로 역직렬화하지 않는다. properties가 {@code @JsonRawValue}라 그 DTO는 쓰기 전용이고,
+   * <p>{@link ListEventsResponse}로 역직렬화하지 않는다. properties가 {@code @JsonRawValue}라 그 DTO는 쓰기 전용이고,
    * 읽으려 들면 객체를 String에 넣지 못해 터진다. 트리로 읽으면 그 필드를 건드리지 않는다.
    */
   private List<String> transactionIds(MvcTestResult result) {
