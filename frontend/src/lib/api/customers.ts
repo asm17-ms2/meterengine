@@ -29,10 +29,10 @@ export type CustomerResponse = {
 };
 
 /**
- * 개발 모드 상태 스위치는 네트워크 호출 전에 갈린다 (loadEvents와 같은 구조).
+ * 개발 모드 상태 스위치는 네트워크 호출 전에 갈린다 (listEvents와 같은 구조).
  * 'loading'은 여기 오지 않는다. 페이지가 로더를 부르지 않고 스켈레톤으로 단락한다.
  */
-export async function loadCustomers(
+export async function listCustomers(
   devState: DevState,
 ): Promise<Result<ListCustomersResponse>> {
   if (devState === "empty") {

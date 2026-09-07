@@ -32,12 +32,12 @@ export function GridHead({
 }) {
   return (
     <div className="grid-head" style={{ gridTemplateColumns: columns }}>
-      {labels.map((entry, i) => {
+      {labels.map((headLabel, index) => {
         const { label, right } =
-          typeof entry === "string" ? { label: entry, right: false } : entry;
+          typeof headLabel === "string" ? { label: headLabel, right: false } : headLabel;
         return (
           <div
-            key={i}
+            key={index}
             className={right ? "grid-cell grid-cell--right" : "grid-cell"}
           >
             {label}

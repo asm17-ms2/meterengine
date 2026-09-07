@@ -22,7 +22,7 @@ export type CustomerRowView = {
 const COLUMNS = "minmax(0, 1fr) 320px 130px 100px";
 const MIN_WIDTH = 860;
 
-const HEAD = [
+const HEAD_LABELS = [
   "고객명",
   "고객 ID",
   "등록일",
@@ -40,7 +40,7 @@ export function CustomersTable({
 }) {
   return (
     <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD} />
+      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {rows.map((row) => (
         // 행 전체가 클릭 대상이 아니다. 행 안에 버튼이 둘 있어서 행까지 누를 수
         // 있게 하면 어디를 눌렀는지에 따라 다른 일이 일어난다.

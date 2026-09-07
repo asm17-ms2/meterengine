@@ -33,7 +33,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
   const closeDelete = useCallback(() => setDeleting(null), []);
 
   const query = search.trim().toLowerCase();
-  const visible =
+  const visibleRows =
     query === ""
       ? rows
       : rows.filter((row) => row.name.toLowerCase().includes(query));
@@ -43,7 +43,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
       <ScreenHeader title="고객">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span>
-            총 <b>{visible.length}</b>명
+            총 <b>{visibleRows.length}</b>명
           </span>
           <button
             type="button"
@@ -85,7 +85,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
             고객 등록
           </button>
         </div>
-      ) : visible.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         // 검색이 다 걸러낸 경우. 위의 빈 상태와 할 말이 다르다. 고객은 있고
         // 지금 친 글자에 맞는 것이 없을 뿐이라, 등록이 아니라 검색어를 지우는
         // 것이 다음 행동이다. EmptyState는 초기화가 링크라 여기 쓸 수 없다.
@@ -107,7 +107,7 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
       ) : (
         <>
           <CustomersTable
-            rows={visible}
+            rows={visibleRows}
             onEdit={(row) => setForm({ customer: row })}
             onDelete={(row) => setDeleting(row)}
           />

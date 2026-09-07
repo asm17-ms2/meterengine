@@ -61,7 +61,7 @@ export async function UsageSection({
     );
   }
 
-  const view: UsageGroupView[] = groups.map((group) => ({
+  const usageGroupViews: UsageGroupView[] = groups.map((group) => ({
     customerId: group.customerId,
     customerName: group.customerName,
     billableMetricLines: group.billableMetricLines.map((billableMetricLine) => ({
@@ -72,7 +72,7 @@ export async function UsageSection({
 
   return (
     <>
-      <UsageTable groups={view} />
+      <UsageTable groups={usageGroupViews} />
       <div className="screen-footer">
         <p className="screen-note">
           사용량이 0인 미터와 이벤트가 0건인 고객도 0으로 표시됩니다. 계약된

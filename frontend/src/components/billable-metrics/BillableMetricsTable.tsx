@@ -4,7 +4,7 @@ import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid"
 const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 110px";
 const MIN_WIDTH = 940;
 
-const HEAD = [
+const HEAD_LABELS = [
   "코드",
   "이름",
   "이벤트 타입",
@@ -24,7 +24,7 @@ export function BillableMetricsTable({
 }) {
   return (
     <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD} />
+      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {rows.map((row) => (
         <GridRow key={row.code} columns={COLUMNS} className="grid-row--actions">
           <GridCell className="grid-cell--mono grid-cell--strong grid-cell--truncate">

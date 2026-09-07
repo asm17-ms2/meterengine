@@ -5,7 +5,7 @@
  * 빈 상태, 로딩, 에러를 실제 백엔드 상황을 만들지 않고도 눈으로 확인하려고 둔다.
  *
  * 프로덕션에서는 흔적이 남지 않는다. Next가 process.env.NODE_ENV를 인라인하므로
- * devStateEnabled가 상수 false가 되고 아래 분기가 통째로 제거된다.
+ * isDevStateEnabled가 상수 false가 되고 아래 분기가 통째로 제거된다.
  */
 
 export const DEV_STATES = ["normal", "empty", "loading", "error"] as const;
@@ -18,11 +18,11 @@ export const DEV_STATE_LABELS: Record<DevState, string> = {
   error: "에러",
 };
 
-export const devStateEnabled = process.env.NODE_ENV === "development";
+export const isDevStateEnabled = process.env.NODE_ENV === "development";
 
 /** 개발 모드가 아니면 무엇이 오든 'normal'이다. */
 export function readDevState(raw: string | string[] | undefined): DevState {
-  if (!devStateEnabled) return "normal";
+  if (!isDevStateEnabled) return "normal";
   const value = Array.isArray(raw) ? raw[0] : raw;
   return DEV_STATES.includes(value as DevState) ? (value as DevState) : "normal";
 }

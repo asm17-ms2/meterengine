@@ -25,29 +25,29 @@ const CollapseContext = createContext<CollapseState | null>(null);
 
 export function CollapseProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<CollapseMode>("expanded");
-  const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
+  const [flippedIds, setFlippedIds] = useState<ReadonlySet<string>>(new Set());
 
   const isCollapsed = useCallback(
-    (id: string) => (mode === "collapsed") !== flipped.has(id),
-    [mode, flipped],
+    (id: string) => (mode === "collapsed") !== flippedIds.has(id),
+    [mode, flippedIds],
   );
 
   const toggle = useCallback((id: string) => {
-    setFlipped((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
+    setFlippedIds((prev) => {
+      const nextFlippedIds = new Set(prev);
+      if (!nextFlippedIds.delete(id)) nextFlippedIds.add(id);
+      return nextFlippedIds;
     });
   }, []);
 
   const expandAll = useCallback(() => {
     setMode("expanded");
-    setFlipped(new Set());
+    setFlippedIds(new Set());
   }, []);
 
   const collapseAll = useCallback(() => {
     setMode("collapsed");
-    setFlipped(new Set());
+    setFlippedIds(new Set());
   }, []);
 
   const value = useMemo(

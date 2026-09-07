@@ -38,11 +38,11 @@ export function Dialog({
 
   useEffect(() => {
     if (!onClose) return;
-    function onKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose?.();
     }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   useEffect(() => {
@@ -56,8 +56,8 @@ export function Dialog({
   }, []);
 
   const panelProps = {
-    ref: (el: HTMLElement | null) => {
-      panelRef.current = el;
+    ref: (element: HTMLElement | null) => {
+      panelRef.current = element;
     },
     className: className ? `dialog elev-lg ${className}` : "dialog elev-lg",
     style,

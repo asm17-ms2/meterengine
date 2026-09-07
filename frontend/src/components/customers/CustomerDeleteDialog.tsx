@@ -21,7 +21,7 @@ export function CustomerDeleteDialog({
   customer: CustomerRowView;
   onClose: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     deleteCustomerAction,
     CUSTOMER_DELETE_IDLE,
   );
@@ -62,7 +62,7 @@ export function CustomerDeleteDialog({
   return (
     <Dialog
       labelledBy="customer-delete-title"
-      onClose={pending ? undefined : onClose}
+      onClose={isPending ? undefined : onClose}
       action={formAction}
     >
       <div className="dialog-title" id="customer-delete-title">
@@ -96,13 +96,13 @@ export function CustomerDeleteDialog({
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={pending}
+          disabled={isPending}
           onClick={onClose}
         >
           취소
         </button>
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "삭제 중..." : "삭제"}
+        <button type="submit" className="btn btn-primary" disabled={isPending}>
+          {isPending ? "삭제 중..." : "삭제"}
         </button>
       </div>
     </Dialog>

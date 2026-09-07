@@ -36,7 +36,7 @@ export type EventRowView = {
 const COLUMNS = "170px 165px 165px 130px 140px minmax(0, 1fr)";
 const MIN_WIDTH = 1000;
 
-const HEAD = [
+const HEAD_LABELS = [
   "transaction_id",
   "occurred_at",
   "received_at",
@@ -51,7 +51,7 @@ export function EventsTable({ rows }: { rows: EventRowView[] }) {
   return (
     <>
       <GridTable minWidth={MIN_WIDTH}>
-        <GridHead columns={COLUMNS} labels={HEAD} />
+        <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
         {rows.map((row) => (
           <GridRowButton
             key={row.transactionId}

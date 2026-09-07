@@ -18,13 +18,13 @@ import { shiftMonth } from "@/lib/month";
  * 표 영역만 스켈레톤으로 바뀌고 화면 제목과 필터 행은 남는다.
  */
 export async function BillingSection({
-  invoice,
+  draftInvoice,
   month,
 }: {
-  invoice: Promise<Result<DraftInvoiceResponse>>;
+  draftInvoice: Promise<Result<DraftInvoiceResponse>>;
   month: string;
 }) {
-  const result = await invoice;
+  const result = await draftInvoice;
 
   if (!result.ok) {
     return (
@@ -78,11 +78,11 @@ export async function BillingSection({
 
 /** 화면 제목 오른쪽 메타. 같은 프라미스를 보되 Suspense 경계가 따로다. */
 export async function BillingMeta({
-  invoice,
+  draftInvoice,
 }: {
-  invoice: Promise<Result<DraftInvoiceResponse>>;
+  draftInvoice: Promise<Result<DraftInvoiceResponse>>;
 }) {
-  const result = await invoice;
+  const result = await draftInvoice;
   if (!result.ok) return null;
 
   return (
