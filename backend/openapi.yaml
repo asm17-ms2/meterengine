@@ -135,7 +135,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 사유는 detail에 있다.
+            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "404":
           content:
             application/json:
@@ -746,12 +746,15 @@ components:
           - unknown_organization
           - invalid_event
           - invalid_billable_metric
+          - invalid_price_policy
           - customer_not_found
+          - metric_not_found
           - endpoint_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - customer_has_events
           - metric_already_exists
+          - price_policy_already_exists
           - request_type_not_supported
           - internal_server_error
         errors:
