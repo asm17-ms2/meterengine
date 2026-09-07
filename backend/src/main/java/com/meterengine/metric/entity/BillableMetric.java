@@ -13,7 +13,7 @@ import org.springframework.data.domain.Persistable;
 /**
  * 과금 지표 (MS2-129에서 집계가 쓰는 범위).
  *
- * <p>이벤트의 event_type이 이 미터의 eventType과 맞으면 그 이벤트가 이 미터의 집계 대상이 된다. FK 없는 논리 매칭이다 (V1 마이그레이션 주석 참조).
+ * <p>이벤트의 type이 이 미터의 eventType과 맞으면 그 이벤트가 이 미터의 집계 대상이 된다. FK 없는 논리 매칭이다 (V1 마이그레이션 주석 참조).
  *
  * <p>aggregation을 enum이 아니라 String으로 두는 이유: enum이면 DB에 SUM 아닌 값이 있을 때 매핑 시점에 터진다. 그러면 그 미터와 무관한
  * 조회까지 같이 실패한다. 지원 여부 판정은 집계 서비스가 미터 단위로 한다.

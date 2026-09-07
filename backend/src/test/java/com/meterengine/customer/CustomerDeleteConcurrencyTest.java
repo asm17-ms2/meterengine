@@ -44,11 +44,11 @@ class CustomerDeleteConcurrencyTest {
 
   @AfterEach
   void cleanUp() {
-    // usage_event는 append-only라 지울 수 없다. 이 테스트가 만든 이벤트는 남으므로 도입사를 새로 만들어
+    // event 테이블은 append-only라 지울 수 없다. 이 테스트가 만든 이벤트는 남으므로 도입사를 새로 만들어
     // 테스트끼리 섞이지 않게 하고, 여기서는 지울 수 있는 것만 지운다.
     jdbc.update(
         "DELETE FROM customer WHERE name = '동시성 테스트 고객' AND NOT EXISTS ("
-            + "SELECT 1 FROM usage_event e WHERE e.customer_id = customer.id)");
+            + "SELECT 1 FROM event e WHERE e.customer_id = customer.id)");
   }
 
   /**
@@ -98,8 +98,8 @@ class CustomerDeleteConcurrencyTest {
     try (PreparedStatement statement =
         connection.prepareStatement(
             """
-            INSERT INTO usage_event
-              (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+            INSERT INTO event
+              (organization_id, transaction_id, customer_id, type, properties, occurred_at)
             VALUES (?, ?, ?, 'chat_completion', '{"token": 1200}', now())
             """)) {
       statement.setObject(1, orgId);
@@ -129,7 +129,7 @@ class CustomerDeleteConcurrencyTest {
 
   private Integer eventCount(UUID orgId, UUID customerId) {
     return jdbc.queryForObject(
-        "SELECT count(*) FROM usage_event WHERE organization_id = ? AND customer_id = ?",
+        "SELECT count(*) FROM event WHERE organization_id = ? AND customer_id = ?",
         Integer.class,
         orgId,
         customerId);

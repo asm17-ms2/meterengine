@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 /**
  * 사용량 이벤트 저장 (MS2-130), 로그 조회 (MS2-131).
  *
- * <p>JPA를 쓰지 않는다. usage_event는 append-only 트리거가 걸려 있어 영속성 컨텍스트의 dirty checking이 UPDATE를 내보내는 순간 예외가
+ * <p>JPA를 쓰지 않는다. event 테이블은 append-only 트리거가 걸려 있어 영속성 컨텍스트의 dirty checking이 UPDATE를 내보내는 순간 예외가
  * 난다. ON CONFLICT DO NOTHING은 save()로 표현할 수 없고, PK가 복합이라 @IdClass도 필요하다. 얻을 것보다 우회할 것이 많다.
  */
 @Repository
@@ -37,20 +37,20 @@ public class EventRepository {
       UUID organizationId,
       String transactionId,
       UUID customerId,
-      String eventType,
+      String type,
       String propertiesJson,
       OffsetDateTime occurredAt) {
     return jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, ?, ?, ?, ?::jsonb, ?)
         ON CONFLICT (organization_id, transaction_id) DO NOTHING
         """,
         organizationId,
         transactionId,
         customerId,
-        eventType,
+        type,
         propertiesJson,
         occurredAt);
   }
@@ -71,26 +71,26 @@ public class EventRepository {
    * <p>{@code properties}는 {@code ::text}로 꺼내 파싱하지 않고 그대로 응답에 싣는다.
    *
    * @param customerId null이면 고객을 좁히지 않는다
-   * @param eventType null이거나 공백뿐이면 종류를 좁히지 않는다
+   * @param type null이거나 공백뿐이면 종류를 좁히지 않는다
    */
   public List<Event> findPage(
       UUID organizationId,
       UUID customerId,
-      String eventType,
+      String type,
       OffsetDateTime start,
       OffsetDateTime end,
       int page,
       int size) {
     List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, eventType, start, end, params);
+    String where = buildWhere(organizationId, customerId, type, start, end, params);
     params.add(size);
     params.add((long) page * size);
 
     return jdbc.query(
         """
-        SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.event_type,
+        SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
                e.properties::text AS properties, e.occurred_at, e.received_at
-        FROM usage_event e
+        FROM event e
         LEFT JOIN customer c
           ON c.organization_id = e.organization_id AND c.id = e.customer_id
         """
@@ -104,7 +104,7 @@ public class EventRepository {
                 rs.getString("transaction_id"),
                 rs.getObject("customer_id", UUID.class),
                 rs.getString("customer_name"),
-                rs.getString("event_type"),
+                rs.getString("type"),
                 rs.getString("properties"),
                 rs.getObject("occurred_at", OffsetDateTime.class),
                 rs.getObject("received_at", OffsetDateTime.class)),
@@ -117,17 +117,12 @@ public class EventRepository {
    * <p>화면이 마지막 페이지 번호를 그리려면 페이지 하나가 아니라 총량이 필요하다. 조인은 안 건다. 이름으로 거르지 않으므로 셀 때는 필요 없다.
    */
   public long count(
-      UUID organizationId,
-      UUID customerId,
-      String eventType,
-      OffsetDateTime start,
-      OffsetDateTime end) {
+      UUID organizationId, UUID customerId, String type, OffsetDateTime start, OffsetDateTime end) {
     List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, eventType, start, end, params);
+    String where = buildWhere(organizationId, customerId, type, start, end, params);
 
     Long total =
-        jdbc.queryForObject(
-            "SELECT count(*) FROM usage_event e " + where, Long.class, params.toArray());
+        jdbc.queryForObject("SELECT count(*) FROM event e " + where, Long.class, params.toArray());
     return total == null ? 0 : total;
   }
 
@@ -140,7 +135,7 @@ public class EventRepository {
    * <p><b>{@link #count}로 갈음하지 않는다.</b> 필터를 전부 null로 넘기면 같은 범위가 나오지만, 그쪽은 조건에 걸리는 행을 끝까지 센다. 여기서
    * 필요한 답은 "있다/없다"뿐이라 {@code EXISTS}가 첫 행에서 멈춘다. 이벤트가 수백만 건인 고객에서 차이가 난다.
    *
-   * <p><b>이 메서드가 customer 쪽이 아니라 여기 있는 이유.</b> usage_event를 아는 것은 이 패키지다. 고객 쪽에 SQL을 두면 테이블이 바뀔 때 그
+   * <p><b>이 메서드가 customer 쪽이 아니라 여기 있는 이유.</b> event 테이블을 아는 것은 이 패키지다. 고객 쪽에 SQL을 두면 테이블이 바뀔 때 그
    * 사실이 이 도메인 밖에서 조용히 깨진다. 대신 customer -> event 참조가 생겨 두 패키지가 서로를 참조하게 되는데, 그것이 문제가 되는 시점(모듈 경계를
    * 강제할 때)에는 customer가 필요한 조회를 인터페이스로 선언하고 이 패키지가 구현하는 식으로 방향을 되돌릴 수 있다. 호출부는 그대로 둔 채로 된다.
    *
@@ -152,7 +147,7 @@ public class EventRepository {
         jdbc.queryForObject(
             """
             SELECT EXISTS(
-              SELECT 1 FROM usage_event
+              SELECT 1 FROM event
               WHERE organization_id = ? AND customer_id = ?
             )
             """,
@@ -169,13 +164,13 @@ public class EventRepository {
    * <p>선택 필터를 {@code (? IS NULL OR col = ?)}로 쓰지 않고 절을 빼는 이유는, 그 형태가 파라미터 타입을 모호하게 만들어 UUID와 text에
    * 명시적 캐스팅을 요구하기 때문이다. 값은 전부 바인딩 파라미터라 문자열을 이어 붙여도 주입 경로가 생기지 않는다.
    *
-   * <p><b>조건은 usage_event 별칭 {@code e}만 쓴다.</b> {@link #count}는 조인 없이 이 절을 붙이므로, 여기에 고객 이름 검색 같은
-   * {@code c.} 조건을 더하면 count 쪽이 missing FROM-clause로 터진다. 조인이 필요한 조건은 두 쿼리에 함께 넣어야 한다.
+   * <p><b>조건은 event 별칭 {@code e}만 쓴다.</b> {@link #count}는 조인 없이 이 절을 붙이므로, 여기에 고객 이름 검색 같은 {@code
+   * c.} 조건을 더하면 count 쪽이 missing FROM-clause로 터진다. 조인이 필요한 조건은 두 쿼리에 함께 넣어야 한다.
    */
   private String buildWhere(
       UUID organizationId,
       UUID customerId,
-      String eventType,
+      String type,
       OffsetDateTime start,
       OffsetDateTime end,
       List<Object> params) {
@@ -191,11 +186,11 @@ public class EventRepository {
       params.add(customerId);
     }
     // 빈 문자열을 필터로 받지 않는다. customer_id와 month는 스프링이 빈 값을 null로 바꾸는데
-    // event_type만 String이라 ""가 그대로 내려와, FE가 필터를 비우며 빈 값을 보내면
-    // event_type = '' 조건이 걸려 데이터가 있는데도 화면이 빈다.
-    if (eventType != null && !eventType.isBlank()) {
-      where.append(" AND e.event_type = ?");
-      params.add(eventType);
+    // type만 String이라 ""가 그대로 내려와, FE가 필터를 비우며 빈 값을 보내면
+    // type = '' 조건이 걸려 데이터가 있는데도 화면이 빈다.
+    if (type != null && !type.isBlank()) {
+      where.append(" AND e.type = ?");
+      params.add(type);
     }
     return where.append('\n').toString();
   }

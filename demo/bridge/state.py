@@ -46,7 +46,7 @@ MAX_CUSTOMER_NAME = 255
 class BridgeConfig:
     """~/.meterengine/bridge.json의 내용.
 
-    base_url 기본값이 로컬인 것은 일부러다. usage_event는 append-only라 배포
+    base_url 기본값이 로컬인 것은 일부러다. event 테이블은 append-only라 배포
     서버로 잘못 보낸 이벤트를 지울 수 없다. 배포 주소는 손으로 적어 넣게 한다.
     """
 

@@ -57,7 +57,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.allow, [])
 
     def test_기본_전송_대상은_로컬이다(self):
-        """usage_event는 지울 수 없다. 배포 주소는 손으로 적게 한다."""
+        """event 테이블은 지울 수 없다. 배포 주소는 손으로 적게 한다."""
         self.assertNotIn("meterengine.com", BridgeConfig().base_url)
 
     def test_저장한_것을_그대로_읽는다(self):

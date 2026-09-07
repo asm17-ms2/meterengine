@@ -69,7 +69,7 @@ class CustomerServiceTest {
     when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
     when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
-    doThrow(new DataIntegrityViolationException("usage_event_customer_same_org"))
+    doThrow(new DataIntegrityViolationException("event_customer_same_org"))
         .when(customerRepository)
         .flush();
 
