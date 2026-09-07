@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class CustomerCrudIntegrationTest {
+class CustomerIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbc;
@@ -52,7 +52,7 @@ class CustomerCrudIntegrationTest {
         """);
 
     assertThat(created).hasStatus(201).bodyJson().extractingPath("$.name").isEqualTo("아크메 주식회사");
-    assertThat(created).bodyJson().extractingPath("$.customer_id").asString().isNotEmpty();
+    assertThat(created).bodyJson().extractingPath("$.id").asString().isNotEmpty();
 
     OffsetDateTime createdAt =
         OffsetDateTime.parse(jsonMapper.readTree(bodyText(created)).get("created_at").asString());
@@ -212,8 +212,7 @@ class CustomerCrudIntegrationTest {
             """
         {"name":"옛 이름"}
         """);
-    UUID customerId =
-        UUID.fromString(jsonMapper.readTree(bodyText(created)).get("customer_id").asString());
+    UUID customerId = UUID.fromString(jsonMapper.readTree(bodyText(created)).get("id").asString());
     String createdAt = jsonMapper.readTree(bodyText(created)).get("created_at").asString();
 
     MvcTestResult renamed =
@@ -237,6 +236,43 @@ class CustomerCrudIntegrationTest {
         .extractingPath("$.customers[0].created_at")
         .asString()
         .isEqualTo(createdAt);
+  }
+
+  @Test
+  void 수정도_이름을_255자까지_받는다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = createCustomer(orgId, "옛 이름");
+    String longest = "가".repeat(255);
+
+    assertThat(put(orgId, customerId, "{\"name\":\"%s\"}".formatted(longest)))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.name")
+        .isEqualTo(longest);
+    assertThat(list(orgId))
+        .bodyJson()
+        .extractingPath("$.customers[*].name")
+        .asArray()
+        .containsExactly(longest);
+  }
+
+  @Test
+  void 수정도_이름이_비었거나_256자를_넘으면_400이고_이름은_그대로다() {
+    UUID orgId = insertOrganization();
+    UUID customerId = createCustomer(orgId, "옛 이름");
+
+    for (String invalid :
+        new String[] {
+          "{\"name\":\"\"}", "{\"name\":\"   \"}", "{\"name\":\"%s\"}".formatted("가".repeat(256))
+        }) {
+      assertThat(put(orgId, customerId, invalid))
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.code")
+          .asString()
+          .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+    }
+    assertThat(nameOf(customerId)).isEqualTo("옛 이름");
   }
 
   @Test
@@ -429,7 +465,7 @@ class CustomerCrudIntegrationTest {
         {"name":"%s"}
         """
                 .formatted(name));
-    return UUID.fromString(jsonMapper.readTree(bodyText(result)).get("customer_id").asString());
+    return UUID.fromString(jsonMapper.readTree(bodyText(result)).get("id").asString());
   }
 
   private String bodyText(MvcTestResult result) {

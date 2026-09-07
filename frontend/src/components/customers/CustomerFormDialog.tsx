@@ -4,10 +4,10 @@ import { useActionState, useEffect, useState } from "react";
 
 import {
   createCustomerAction,
-  renameCustomerAction,
+  updateCustomerAction,
 } from "@/app/(console)/customers/actions";
-import { FORM_IDLE } from "@/app/(console)/customers/state";
-import type { CustomerRowView } from "@/components/customers/CustomerTable";
+import { CUSTOMER_FORM_IDLE } from "@/app/(console)/customers/state";
+import type { CustomerRowView } from "@/components/customers/CustomersTable";
 import { Dialog } from "@/components/screen/Dialog";
 
 /**
@@ -30,8 +30,8 @@ export function CustomerFormDialog({
 }) {
   const isEdit = customer !== null;
   const [state, formAction, pending] = useActionState(
-    isEdit ? renameCustomerAction : createCustomerAction,
-    FORM_IDLE,
+    isEdit ? updateCustomerAction : createCustomerAction,
+    CUSTOMER_FORM_IDLE,
   );
 
   /*

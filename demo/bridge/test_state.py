@@ -45,8 +45,8 @@ class FakeClient:
     def create_customer(self, name):
         self.created.append(name)
         customer_id = OTHER_CUSTOMER if len(self.created) > 1 else DEMO_CUSTOMER
-        self.customers.append({"customer_id": customer_id, "name": name})
-        return FakeResult(201, {"customer_id": customer_id, "name": name})
+        self.customers.append({"id": customer_id, "name": name})
+        return FakeResult(201, {"id": customer_id, "name": name})
 
 
 class ConfigTest(unittest.TestCase):
@@ -287,7 +287,7 @@ class CustomerResolverTest(unittest.TestCase):
 
     def test_이미_있으면_등록하지_않는다(self):
         """등록 API가 이름 중복을 막지 않으므로, 조회를 빠뜨리면 고객이 계속 늘어난다."""
-        client = FakeClient([{"customer_id": DEMO_CUSTOMER, "name": "meterengine(박성종)"}])
+        client = FakeClient([{"id": DEMO_CUSTOMER, "name": "meterengine(박성종)"}])
         with tempfile.TemporaryDirectory() as directory:
             customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
         self.assertEqual(customer_id, DEMO_CUSTOMER)
@@ -327,7 +327,7 @@ class CustomerResolverTest(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 self.resolver(directory, Broken()).resolve("아무개")
 
-    def test_등록_응답에_customer_id가_없으면_알린다(self):
+    def test_등록_응답에_id가_없으면_알린다(self):
         class Broken(FakeClient):
             def create_customer(self, name):
                 return FakeResult(201, {"name": name})

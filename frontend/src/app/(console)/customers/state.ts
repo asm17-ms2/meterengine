@@ -13,13 +13,13 @@
  * 'done'이 필요한 이유: 성공했을 때 다이얼로그를 닫아야 하는데, 서버 액션은
  * 화면을 조작할 수 없다. 상태로 알리고 닫는 것은 클라이언트가 한다.
  */
-export type FormState =
+export type CustomerFormState =
   | { status: "idle" }
   | { status: "invalid"; message: string }
   | { status: "failed"; message: string }
   | { status: "done" };
 
-export const FORM_IDLE: FormState = { status: "idle" };
+export const CUSTOMER_FORM_IDLE: CustomerFormState = { status: "idle" };
 
 /**
  * 삭제의 상태.
@@ -28,11 +28,11 @@ export const FORM_IDLE: FormState = { status: "idle" };
  * 것을 서버가 확인하고 거절한 것이라, 에러 블록이 아니라 안내 다이얼로그로 간다.
  * 'gone'(404)은 목록을 열어 둔 사이에 다른 곳에서 이미 지워진 경우다.
  */
-export type DeleteState =
+export type CustomerDeleteState =
   | { status: "idle" }
   | { status: "rejected"; name: string }
   | { status: "gone"; name: string }
   | { status: "failed"; message: string }
   | { status: "done" };
 
-export const DELETE_IDLE: DeleteState = { status: "idle" };
+export const CUSTOMER_DELETE_IDLE: CustomerDeleteState = { status: "idle" };

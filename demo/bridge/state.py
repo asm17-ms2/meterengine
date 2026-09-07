@@ -38,7 +38,7 @@ MERGED = "기타 프로젝트로 합침"
 SKIPPED = "보내지 않음"
 PROJECT_STATES = [NAMED, MERGED, SKIPPED]
 
-# 고객 이름 상한. 서버가 255자를 넘기면 400이다 (SaveCustomerRequest).
+# 고객 이름 상한. 서버가 255자를 넘기면 400이다 (CreateCustomerRequest).
 MAX_CUSTOMER_NAME = 255
 
 
@@ -373,7 +373,7 @@ class CustomerResolver:
             raise RuntimeError("고객 목록 조회 실패: HTTP %d %s" % (result.status, result.body_text[:200]))
         for customer in result.body.get("customers") or []:
             if customer.get("name") == name:
-                customer_id = customer.get("customer_id")
+                customer_id = customer.get("id")
                 if isinstance(customer_id, str) and is_uuid(customer_id):
                     return customer_id
         return None
@@ -382,7 +382,7 @@ class CustomerResolver:
         result = self.client.create_customer(name)
         if result.status != 201 or not isinstance(result.body, dict):
             raise RuntimeError("고객 등록 실패: HTTP %d %s" % (result.status, result.body_text[:200]))
-        customer_id = result.body.get("customer_id")
+        customer_id = result.body.get("id")
         if not isinstance(customer_id, str) or not is_uuid(customer_id):
-            raise RuntimeError("고객 등록 응답에 customer_id가 없습니다: " + result.body_text[:200])
+            raise RuntimeError("고객 등록 응답에 id가 없습니다: " + result.body_text[:200])
         return customer_id

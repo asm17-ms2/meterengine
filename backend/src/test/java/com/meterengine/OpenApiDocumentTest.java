@@ -207,7 +207,7 @@ class OpenApiDocumentTest {
     assertSchemaHasField("BillableMetricUsageResponse", "target_property");
     assertSchemaHasField("DraftInvoiceCustomerEntry", "customer_id");
     assertSchemaHasField("DraftInvoiceResponse", "total_amount");
-    assertSchemaHasField("CustomerResponse", "customer_id");
+    assertSchemaHasField("CustomerResponse", "id");
     assertSchemaHasField("SavePricePolicyRequest", "dimension_properties");
     assertSchemaHasField("PricePolicyResponse", "billable_metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");

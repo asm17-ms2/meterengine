@@ -1,11 +1,11 @@
 import { CustomersScreen } from "@/components/customers/CustomersScreen";
-import type { CustomerRowView } from "@/components/customers/CustomerTable";
+import type { CustomerRowView } from "@/components/customers/CustomersTable";
 import { ErrorState } from "@/components/screen/ErrorState";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import type { Result } from "@/lib/api/client";
-import type { CustomerList } from "@/lib/api/customers";
+import type { ListCustomersResponse } from "@/lib/api/customers";
 import { formatKstDate } from "@/lib/format";
 
 /**
@@ -18,7 +18,7 @@ import { formatKstDate } from "@/lib/format";
 export async function CustomersSection({
   customers,
 }: {
-  customers: Promise<Result<CustomerList>>;
+  customers: Promise<Result<ListCustomersResponse>>;
 }) {
   const result = await customers;
 
@@ -34,7 +34,7 @@ export async function CustomersSection({
   }
 
   const rows: CustomerRowView[] = result.data.customers.map((entry) => ({
-    id: entry.customer_id,
+    id: entry.id,
     name: entry.name,
     createdAt: formatKstDate(entry.created_at),
   }));

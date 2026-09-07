@@ -1,9 +1,10 @@
 package com.meterengine.customer.controller;
 
 import com.meterengine.ProblemResponse;
-import com.meterengine.customer.dto.CustomerListResponse;
+import com.meterengine.customer.dto.CreateCustomerRequest;
 import com.meterengine.customer.dto.CustomerResponse;
-import com.meterengine.customer.dto.SaveCustomerRequest;
+import com.meterengine.customer.dto.ListCustomersResponse;
+import com.meterengine.customer.dto.UpdateCustomerRequest;
 import com.meterengine.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,7 +42,7 @@ public class CustomerController {
       description =
           """
           이 도입사의 고객을 이름 오름차순으로 전부 돌려준다. 동명이인이 있어도 순서가 흔들리지 않게
-          customer_id가 두 번째 정렬 키다. 사용량 조회, 청구 예정액과 같은 순서다.
+          id가 두 번째 정렬 키다. 사용량 조회, 청구 예정액과 같은 순서다.
           고객이 없거나 등록되지 않은 도입사면 customers가 빈 배열이다.
           페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의이며, 사용량과 청구 예정액 응답도
           같은 고객 집합을 한 번에 담는다.
@@ -56,10 +57,10 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public CustomerListResponse list(
+  public ListCustomersResponse listCustomers(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId) {
-    return CustomerListResponse.from(customerService.list(organizationId));
+    return ListCustomersResponse.from(customerService.list(organizationId));
   }
 
   @PostMapping
@@ -68,8 +69,8 @@ public class CustomerController {
       summary = "고객 등록",
       description =
           """
-          고객을 만들고 서버가 발급한 customer_id와 함께 돌려준다. 이벤트 수집은 이 id를 실어 보낸다.
-          이름 중복을 막지 않는다. 같은 이름의 계열사나 부서를 따로 관리할 수 있고, 구별은 customer_id가 한다.
+          고객을 만들고 서버가 발급한 id와 함께 돌려준다. 이벤트 수집은 이 값을 customer_id로 실어 보낸다.
+          이름 중복을 막지 않는다. 같은 이름의 계열사나 부서를 따로 관리할 수 있고, 구별은 id가 한다.
           Location 헤더를 주지 않는다. 단건 조회 경로가 없어 가리킬 곳이 없다.
           """)
   @ApiResponses({
@@ -86,10 +87,10 @@ public class CustomerController {
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """)
   })
-  public CustomerResponse create(
+  public CustomerResponse createCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Valid @RequestBody SaveCustomerRequest request) {
+      @Valid @RequestBody CreateCustomerRequest request) {
     return CustomerResponse.from(customerService.create(organizationId, request.name()));
   }
 
@@ -120,12 +121,12 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다")
   })
-  public CustomerResponse update(
+  public CustomerResponse updateCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "고칠 고객의 ID.") @PathVariable UUID id,
-      @Valid @RequestBody SaveCustomerRequest request) {
-    return CustomerResponse.from(customerService.rename(organizationId, id, request.name()));
+      @Valid @RequestBody UpdateCustomerRequest request) {
+    return CustomerResponse.from(customerService.update(organizationId, id, request.name()));
   }
 
   @DeleteMapping("/{id}")
@@ -164,7 +165,7 @@ public class CustomerController {
                 schema = @Schema(implementation = ProblemResponse.class)),
         description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
   })
-  public void delete(
+  public void deleteCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "지울 고객의 ID.") @PathVariable UUID id) {
