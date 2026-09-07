@@ -1,10 +1,12 @@
 package com.meterengine.customer.service;
 
 import com.meterengine.customer.entity.Customer;
-import com.meterengine.customer.exception.CustomerHasEventsException;
-import com.meterengine.customer.exception.CustomerNotFoundException;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,7 +31,11 @@ public class CustomerService {
 
   @Transactional
   public Customer create(UUID organizationId, String name) {
-    return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
+    try {
+      return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
+    } catch (DataIntegrityViolationException exception) {
+      throw new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
+    }
   }
 
   @Transactional
@@ -37,7 +43,7 @@ public class CustomerService {
     Customer customer =
         customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
-            .orElseThrow(() -> new CustomerNotFoundException(organizationId, customerId));
+            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
     customer.rename(name);
     return customer;
   }
@@ -47,17 +53,17 @@ public class CustomerService {
     Customer customer =
         customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
-            .orElseThrow(() -> new CustomerNotFoundException(organizationId, customerId));
+            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
 
     if (eventRepository.existsForCustomer(organizationId, customerId)) {
-      throw new CustomerHasEventsException(customerId);
+      throw new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS);
     }
 
     try {
       customerRepository.delete(customer);
       customerRepository.flush();
     } catch (DataIntegrityViolationException exception) {
-      throw new CustomerHasEventsException(customerId);
+      throw new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS);
     }
   }
 }
