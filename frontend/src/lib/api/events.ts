@@ -4,8 +4,8 @@ import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
-/** GET /v1/events 응답. 백엔드의 EventPageResponse(MS2-131)와 1:1이다. */
-export type EventPage = {
+/** GET /v1/events 응답. 백엔드의 ListEventsResponse(MS2-131)와 1:1이다. */
+export type ListEventsResponse = {
   /** 서버가 계산한 조회 월. 요청이 month를 생략했을 때 어느 달로 갔는지 알려준다. */
   month: string;
   /** 0부터 센다. 화면의 1페이지가 page=0이다. */
@@ -13,10 +13,10 @@ export type EventPage = {
   size: number;
   /** 필터를 적용한 뒤의 전체 건수. 이 페이지의 개수가 아니다. */
   total: number;
-  events: EventEntry[];
+  events: EventResponse[];
 };
 
-export type EventEntry = {
+export type EventResponse = {
   transaction_id: string;
   customer_id: string;
   customer_name: string;
@@ -67,7 +67,7 @@ export function readPage(raw: string | string[] | undefined): number {
 }
 
 /** 응답의 total과 size로 마지막 페이지 번호를 만든다. 백엔드는 total만 준다. */
-export function totalPages(page: EventPage): number {
+export function totalPages(page: ListEventsResponse): number {
   if (page.total <= 0) return 1;
   return Math.ceil(page.total / Math.max(page.size, 1));
 }
@@ -95,15 +95,15 @@ export function summarizeProperties(properties: Record<string, unknown>): string
  * customer_name은 뺀다. 그건 customer 테이블을 조인해 붙여 준 표시용 값이라
  * 저장된 이벤트에는 없다. 드로어 위쪽 정의 목록이 이미 고객 이름을 보여주고 있다.
  */
-export function toRawJson(entry: EventEntry): string {
+export function toRawJson(event: EventResponse): string {
   return JSON.stringify(
     {
-      transaction_id: entry.transaction_id,
-      customer_id: entry.customer_id,
-      event_type: entry.event_type,
-      occurred_at: entry.occurred_at,
-      received_at: entry.received_at,
-      properties: entry.properties,
+      transaction_id: event.transaction_id,
+      customer_id: event.customer_id,
+      event_type: event.event_type,
+      occurred_at: event.occurred_at,
+      received_at: event.received_at,
+      properties: event.properties,
     },
     null,
     2,
@@ -117,7 +117,7 @@ export function toRawJson(entry: EventEntry): string {
 export async function loadEvents(
   query: EventQuery,
   devState: DevState,
-): Promise<Result<EventPage>> {
+): Promise<Result<ListEventsResponse>> {
   if (devState === "empty") {
     return {
       ok: true,
@@ -142,7 +142,7 @@ export async function loadEvents(
     };
   }
 
-  return serverFetch<EventPage>(config.apiBaseUrl, "/v1/events", {
+  return serverFetch<ListEventsResponse>(config.apiBaseUrl, "/v1/events", {
     month: query.month,
     page: String(query.page),
     size: String(PAGE_SIZE),
