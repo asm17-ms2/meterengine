@@ -1,10 +1,10 @@
 package com.meterengine.event.controller;
 
-import com.meterengine.ProblemResponse;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.service.EventService;
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -68,8 +68,8 @@ public class EventController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
             code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
@@ -108,8 +108,8 @@ public class EventController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
