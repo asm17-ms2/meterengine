@@ -732,9 +732,12 @@ components:
           enum:
           - validation_error
           - malformed_request_body
+          - unknown_organization
+          - customer_not_found
           - endpoint_not_found
           - method_not_allowed
           - response_type_not_acceptable
+          - customer_has_events
           - request_type_not_supported
           - internal_server_error
         errors:

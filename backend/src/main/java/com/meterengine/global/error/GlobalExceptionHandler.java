@@ -38,6 +38,13 @@ class GlobalExceptionHandler {
     this.messageSource = messageSource;
   }
 
+  // 도메인 예외
+  @ExceptionHandler(BusinessException.class)
+  ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
+    return respond(exception.getErrorCode(), exception.getErrors());
+  }
+
+  // 400 요청 본문 검증 실패
   @ExceptionHandler(MethodArgumentNotValidException.class)
   ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
       MethodArgumentNotValidException exception) {
@@ -52,6 +59,7 @@ class GlobalExceptionHandler {
     return respond(ErrorCode.VALIDATION_ERROR, errors);
   }
 
+  // 400 쿼리 파라미터와 헤더 검증 실패
   @ExceptionHandler(HandlerMethodValidationException.class)
   ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
       HandlerMethodValidationException exception) {
@@ -69,6 +77,7 @@ class GlobalExceptionHandler {
     return respond(ErrorCode.VALIDATION_ERROR, errors);
   }
 
+  // 400 필수 헤더 누락
   @ExceptionHandler(MissingRequestHeaderException.class)
   ResponseEntity<ErrorResponse> handleMissingRequestHeaderException(
       MissingRequestHeaderException exception) {
@@ -77,6 +86,7 @@ class GlobalExceptionHandler {
         List.of(new FieldError(exception.getHeaderName(), message("problem.field.required"))));
   }
 
+  // 400 경로 변수와 쿼리 파라미터 형식 불일치
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
       MethodArgumentTypeMismatchException exception) {
@@ -85,35 +95,41 @@ class GlobalExceptionHandler {
         List.of(new FieldError(exception.getName(), cannotBeParsed(exception.getRequiredType()))));
   }
 
+  // 400 읽을 수 없는 요청 본문
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
       HttpMessageNotReadableException exception) {
     return respond(ErrorCode.MALFORMED_REQUEST_BODY);
   }
 
+  // 415 지원하지 않는 요청 Content-Type
   @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
   ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(
       HttpMediaTypeNotSupportedException exception) {
     return respond(ErrorCode.REQUEST_TYPE_NOT_SUPPORTED);
   }
 
+  // 406 Accept에 맞는 응답 형식 없음
   @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
   ResponseEntity<ErrorResponse> handleHttpMediaTypeNotAcceptableException(
       HttpMediaTypeNotAcceptableException exception) {
     return respond(ErrorCode.RESPONSE_TYPE_NOT_ACCEPTABLE);
   }
 
+  // 405 허용하지 않는 메서드
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
       HttpRequestMethodNotSupportedException exception) {
     return respond(ErrorCode.METHOD_NOT_ALLOWED);
   }
 
+  // 404 없는 경로
   @ExceptionHandler(NoResourceFoundException.class)
   ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException exception) {
     return respond(ErrorCode.ENDPOINT_NOT_FOUND);
   }
 
+  // 500 나열되지 않은 예외
   @ExceptionHandler(Exception.class)
   ResponseEntity<ErrorResponse> handleException(Exception exception) {
     logger.error("unhandled exception", exception);

@@ -7,10 +7,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
-import com.meterengine.customer.exception.CustomerHasEventsException;
-import com.meterengine.customer.exception.CustomerNotFoundException;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.BusinessException;
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,13 +40,26 @@ class CustomerServiceTest {
   }
 
   @Test
+  void 등록되지_않은_도입사로_DB가_거절하면_400_예외로_바뀐다() {
+    when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new DataIntegrityViolationException("customer_organization_id_fkey"));
+
+    assertThatThrownBy(() -> customerService.create(ORG_ID, "아크메"))
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
+  }
+
+  @Test
   void 이벤트가_있으면_지우지_않고_409_예외다() {
     when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
     when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(true);
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
-        .isInstanceOf(CustomerHasEventsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
 
     verify(customerRepository, never()).delete(org.mockito.ArgumentMatchers.any());
   }
@@ -58,7 +74,9 @@ class CustomerServiceTest {
         .flush();
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
-        .isInstanceOf(CustomerHasEventsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
   }
 
   @Test
@@ -67,7 +85,9 @@ class CustomerServiceTest {
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
-        .isInstanceOf(CustomerNotFoundException.class);
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND);
 
     verify(eventRepository, never()).existsForCustomer(ORG_ID, CUSTOMER_ID);
   }

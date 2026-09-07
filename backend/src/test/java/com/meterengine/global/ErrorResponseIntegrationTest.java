@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -345,6 +346,10 @@ class ErrorResponseIntegrationTest {
           .content("{}")
           .exchange(),
       mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION).exchange(),
+      mvc.delete()
+          .uri("/v1/customers/" + UUID.randomUUID())
+          .header("X-Organization-Id", ORGANIZATION)
+          .exchange(),
       mvc.method(HttpMethod.DELETE)
           .uri("/v1/events")
           .header("X-Organization-Id", ORGANIZATION)
