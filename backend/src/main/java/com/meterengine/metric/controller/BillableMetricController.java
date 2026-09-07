@@ -54,7 +54,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_billable_metric: aggregation이 SUM이 아니거나, SUM인데 target_property가 없다. 사유는 detail에 있다.
+            code=invalid_billable_metric: aggregation이 SUM이 아니거나, SUM인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """),
     @ApiResponse(
