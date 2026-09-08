@@ -12,10 +12,10 @@
 - 머지 방식: squash merge. PR 하나가 main 커밋 하나로 남아 이슈 단위 추적이 쉽고, 브랜치 안 커밋 정리에 힘 쓰지 않아도 된다. main 룰셋의 Allowed merge methods를 squash만 허용으로 설정해 강제한다. squash로 원본 커밋과의 연결이 끊기는 문제는 아래 "머지 후 브랜치 삭제"와 "선행 브랜치 위 작업" 규칙이 안전장치다
 - 고정 브랜치 도입 시 전환 계획: 이후 테스트서버 운영 등으로 develop/staging 같은 고정 브랜치가 생기면, develop 룰셋은 squash만, main 룰셋은 merge commit만 허용으로 전환한다. 오래 사는 브랜치를 main과 반복 머지할 때 squash를 쓰면 히스토리가 꼬이기 때문이다. 시점은 릴리스/태그 규칙 논의와 함께 정한다
 - 머지 후 브랜치 삭제: 머지된 브랜치는 삭제하고, 이어지는 작업은 main에서 새 브랜치를 딴다. 다만 아직 머지되지 않은 선행 작업에 의존하면 main이 아니라 그 브랜치 위에 쌓는다(`docs/contributing/pull-request.md` "스택 PR"). GitHub 저장소 설정(Automatically delete head branches)으로 자동화한다. 로컬 브랜치는 각자 `git fetch --prune`으로 정리한다
-- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다
+- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다. 누가 리뷰하는지는 `docs/contributing/pull-request.md` "리뷰어 배정"이 정한다
 - 제안: 무엇을 RFC PR로, 규칙 PR로, `proposal` PR로 올리고 정족수가 얼마인지는 `docs/contributing/governance.md` "제안"과 "규칙 개정"이 정본이다. Draft로 열지 않는다. 제안 PR만 모아 보려면 `label:proposal`, RFC PR은 `label:rfc`로 거른다
 - main 상태: main은 항상 빌드/테스트가 통과하는 상태를 유지한다. 깨진 코드나 반쯤 만든 기능은 브랜치에만 둔다. CI 실패 시 머지를 금지한다. 필수 체크 항목은 CI 워크플로(`.github/workflows/ci.yml`)의 `backend`, `frontend` job과 RFC 체크리스트 워크플로(`.github/workflows/rfc-checklist.yml`)의 `rfc-checklist` job이다. main 룰셋의 Required status checks에 그 job을 등록해 강제한다. `rfc-checklist`는 `rfc` 라벨이 붙은 PR에서만 돌고 PR 본문에 체크 안 된 항목이 있으면 실패한다. 라벨이 없는 PR에서는 건너뛰므로 필수 체크에 걸려도 막히지 않는다
-- 선행 브랜치 위 작업: 브랜치 A가 리뷰 대기 중이고 B가 A 없이는 성립하지 않으면 A 위에 쌓는다. 따로 머지돼도 되면 독립 PR로 낸다. 절차는 `docs/contributing/pull-request.md` "스택 PR"에 있고, GitHub 네이티브 기능만 쓴다
+- 선행 브랜치 위 작업: 브랜치 A가 리뷰 대기 중이고 B가 A 없이는 성립하지 않으면 A 위에 쌓는다. 따로 머지돼도 되면 독립 PR로 낸다. 절차는 `docs/contributing/pull-request.md` "스택 PR"에 있고, GitHub 네이티브 기능만 쓴다. 한 부모에 여러 자식이 기대면 같은 파일 "가지"를 따른다
 - 릴리스/태그 규칙: 버전 태그는 두지 않는다. 배포 단위는 커밋이고, 배포된 것을 가리키는 이름은 그 커밋의 git SHA다(ECR 이미지 태그가 SHA다). 롤백도 이전 SHA로 다시 배포하는 것이라 semver 태그 없이 성립한다. 외부에 버전 번호를 알려야 하는 일이 생기면 그때 다시 논의한다
 
 ## 문서의 정본
@@ -31,7 +31,7 @@
 | API 계약 | `backend/openapi.yaml` (컨트롤러와 DTO에서 자동 생성) |
 | 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙 | 이 파일과 `docs/contributing/` (주제당 파일 하나) |
 | 결정과 규칙을 어디에 두고 어떻게 바꾸나 | `docs/contributing/governance.md` |
-| PR 크기, 쪼개기, 스택 PR과 머지 순서 | `docs/contributing/pull-request.md` |
+| PR 크기, 쪼개기, 스택 PR과 머지 순서, 가지, 리뷰어 배정 | `docs/contributing/pull-request.md` |
 | 이름 규칙 | `docs/contributing/naming.md` |
 | 오류 code, 문구, 예외와 핸들러의 자리 | `docs/contributing/error-handling.md` |
 | 주석과 javadoc | `docs/contributing/comments.md` |
