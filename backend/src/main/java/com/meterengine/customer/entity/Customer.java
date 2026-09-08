@@ -25,7 +25,6 @@ public class Customer {
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
 
-  /** Hibernate 전용. */
   protected Customer() {}
 
   public Customer(UUID id, UUID organizationId, String name) {
