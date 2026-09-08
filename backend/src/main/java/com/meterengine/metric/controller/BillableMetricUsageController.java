@@ -1,6 +1,6 @@
 package com.meterengine.metric.controller;
 
-import com.meterengine.ProblemResponse;
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -65,8 +65,8 @@ public class BillableMetricUsageController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
   })

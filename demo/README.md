@@ -33,11 +33,11 @@ python3 demo/otel_bridge.py serve | install | start | stop | status
 ### send
 
 CSV의 이벤트를 POST /v1/events로 순차 전송한다. 전송마다 요청 요약과 서버 응답을
-[NEW] [DUP] [400] 태그로 구분해 출력하고, 모든 요청:응답 쌍을 demo/logs/ 아래
+[NEW] [DUP] [REJ] 태그로 구분해 출력하고, 모든 요청:응답 쌍을 demo/logs/ 아래
 JSONL 파일로 항상 저장한다 (옵션이 아니다).
 
 - 전송 전 확인 게이트: 대상 서버, 도입사, 건수, KST 월별 분포, 서버에 이미 있는 건수와
-  CSV 기준 예상 결과(신규/중복/400 거절)를 보여주고 y 입력을 기다린다. 문제로 예측된
+  CSV 기준 예상 결과(신규/중복/거절)를 보여주고 y 입력을 기다린다. 문제로 예측된
   행은 미리보기 범위 밖이어도 사유와 함께 반드시 표시된다. --yes로 생략한다.
   --dry-run은 게이트와 미리보기만 하고 전송도 로그 기록도 하지 않는다
 - CSV에 선택 컬럼 note로 행 설명을 적어두면 그 행을 출력할 때 transaction_id보다
@@ -69,7 +69,7 @@ demo-001,35bc8d12-9d38-57ab-bc9b-bbd35d779a26,llm_request,2026-08-05T10:00:00+09
 demo-bad,9f31c2aa-0000-0000-0000-000000000000,llm_request,2026-08-05T11:00:00+09:00,"{""input_tokens"": 120}",미등록 고객
 ```
 
-잘못된 값(빈 필드, 미등록 고객 등)도 거르지 않고 그대로 보낸다. 400 거절을
+잘못된 값(빈 필드, 미등록 고객 등)도 거르지 않고 그대로 보낸다. 4xx 거절을
 시연하는 것도 이 툴의 목적이라 판정은 서버가 한다.
 
 ### verify
@@ -84,7 +84,7 @@ GET /v1/usage, GET /v1/invoices/draft 응답과 표로 나란히 비교하고 �
 - 독립 계산 규칙 (서버 코드와 동일한 규칙을 Decimal 연산으로 복제, float 미사용):
   - 중복 transaction_id 제거: 로그 소스는 서버 판정 그대로 outcome=new만 집계한다
   - occurred_at(요청의 timestamp)의 KST 자정 경계 월 귀속
-  - 400 거절분 제외
+  - 거절분(4xx) 제외
   - target_property 값이 JSON number가 아닌 이벤트 제외 (저장은 되지만 합산에서 빠진다)
   - 청구 예정액은 수량 x 단가를 라인마다 절사한 정수
 - 미터 정의(event_type, target_property, 단가)는 서버 응답에서 유도하고 화면에 출력해
@@ -127,7 +127,7 @@ python3 demo/meterdemo.py send --help
 python3 demo/meterdemo.py send --csv demo/sample-events.csv --dry-run
 
 # 3. 전송: --yes 없이 실행하면 y 입력 게이트를 거친다.
-#    [NEW] [DUP] [400] 태그로 요청:응답이 쌍으로 흐르고 로그 경로가 마지막에 찍힌다
+#    [NEW] [DUP] [REJ] 태그로 요청:응답이 쌍으로 흐르고 로그 경로가 마지막에 찍힌다
 python3 demo/meterdemo.py send --csv demo/sample-events.csv
 
 # 4. 실시간 유입처럼 천천히 (시연용 시간 조절, 100건이라 2분쯤 걸린다)
@@ -203,7 +203,7 @@ cd demo && python3 -m unittest && cd ..
  "status": 200, "response": {...응답 원문...}, "outcome": "new", "error": null, "elapsed_ms": 12}
 ```
 
-- outcome: new(신규 저장) | duplicate(중복, 저장 없음) | rejected(400 거절) |
+- outcome: new(신규 저장) | duplicate(중복, 저장 없음) | rejected(4xx 거절) |
   error(전송 실패/타임아웃/5xx, 저장 여부 불명 -- status와 response는 null일 수 있다)
 - rejected의 response에는 problem+json 원문이 그대로 남는다
 - 라인마다 flush하므로 중단돼도 그 앞까지는 유효하다. 읽는 쪽은 읽히지 않는 라인을
@@ -319,7 +319,7 @@ python3 demo/otel_bridge.py config --base-url https://meterengine.com
   `POST /v1/customers`로 등록한다. 이 API는 이름 중복을 막지 않아서 조회를 빠뜨리면
   같은 이름의 고객이 계속 늘어난다
 - 찾아낸 고객의 id는 `~/.meterengine/state.json`에 담아 둔다. 서버가 그 고객을
-  모른다고 답하면(400 `unknown_customer_reference`) 그 자리에서 캐시를 버리고 다음
+  모른다고 답하면(404 `customer_not_found`) 그 자리에서 캐시를 버리고 다음
   이벤트에서 다시 찾는다. 남겨 두면 죽은 id를 계속 보내 그 프로젝트가 영영 거절된다
 
 브리지가 꺼져 있으면 Claude는 그대로 동작하고 사용량만 수집되지 않는다. hook의 연결 실패는

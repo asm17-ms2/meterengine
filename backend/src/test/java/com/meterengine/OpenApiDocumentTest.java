@@ -273,18 +273,18 @@ class OpenApiDocumentTest {
     // [2026-08-17, MS2-150 7단계] 예전에는 "code가 붙는 쪽(/v1/events)과 안 붙는 쪽이 갈린다"고 적혀
     // 있었다. 4단계가 프레임워크 4xx 전부에 code를 붙여 그 구분이 없어졌고, 7단계가 스키마를 하나로
     // 합쳤다. 다시 갈리면 그것은 회귀이므로 넷을 같은 이름으로 못박아 둔다.
-    assertProblemSchema("/v1/events", "get", "ProblemResponse");
-    assertProblemSchema("/v1/events", "post", "ProblemResponse");
-    assertProblemSchema("/v1/usage", "get", "ProblemResponse");
-    assertProblemSchema("/v1/invoices/draft", "get", "ProblemResponse");
-    assertProblemSchema("/v1/customers", "get", "ProblemResponse");
-    assertProblemSchema("/v1/customers", "post", "ProblemResponse");
-    assertProblemSchema("/v1/customers/{id}", "put", "ProblemResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "ProblemResponse");
-    assertProblemSchema("/v1/billable-metrics", "post", "ProblemResponse");
-    assertProblemSchema("/v1/billable-metrics", "get", "ProblemResponse");
-    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "ProblemResponse");
-    assertProblemSchema("/v1/price-policies", "get", "ProblemResponse");
+    assertProblemSchema("/v1/events", "get", "ErrorResponse");
+    assertProblemSchema("/v1/events", "post", "ErrorResponse");
+    assertProblemSchema("/v1/usage", "get", "ErrorResponse");
+    assertProblemSchema("/v1/invoices/draft", "get", "ErrorResponse");
+    assertProblemSchema("/v1/customers", "get", "ErrorResponse");
+    assertProblemSchema("/v1/customers", "post", "ErrorResponse");
+    assertProblemSchema("/v1/customers/{id}", "put", "ErrorResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics", "post", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics", "get", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
+    assertProblemSchema("/v1/price-policies", "get", "ErrorResponse");
   }
 
   /**
@@ -295,14 +295,12 @@ class OpenApiDocumentTest {
    */
   @Test
   void 다른_오류_상태도_200_스키마를_물려받지_않는다() {
-    assertProblemSchema("/v1/customers/{id}", "put", "404", "ProblemResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "404", "ProblemResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "409", "ProblemResponse");
-    assertProblemSchema("/v1/billable-metrics", "post", "409", "ProblemResponse");
-    assertProblemSchema(
-        "/v1/billable-metrics/{code}/price-policy", "post", "404", "ProblemResponse");
-    assertProblemSchema(
-        "/v1/billable-metrics/{code}/price-policy", "post", "409", "ProblemResponse");
+    assertProblemSchema("/v1/customers/{id}", "put", "404", "ErrorResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "404", "ErrorResponse");
+    assertProblemSchema("/v1/customers/{id}", "delete", "409", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics", "post", "409", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "404", "ErrorResponse");
+    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "409", "ErrorResponse");
   }
 
   @Test
@@ -310,10 +308,10 @@ class OpenApiDocumentTest {
     // ProblemDetail을 그대로 물리면 springdoc이 확장 멤버를 담는 Map 필드를 그대로 읽어, 응답에 없는
     // properties 객체가 스키마에 생기고 정작 최상위로 나가는 code와 errors는 빠진다 (PR #31 리뷰).
     // Jackson이 @JsonAnyGetter로 맵을 펼치는 것을 springdoc이 모르기 때문이다.
-    assertSchemaHasField("ProblemResponse", ProblemMembers.CODE);
-    assertSchemaHasField("ProblemResponse", ProblemMembers.ERRORS);
-    assertSchemaHasField("ProblemFieldError", ProblemMembers.FIELD);
-    assertSchemaHasField("ProblemFieldError", ProblemMembers.MESSAGE);
+    assertSchemaHasField("ErrorResponse", "code");
+    assertSchemaHasField("ErrorResponse", "errors");
+    assertSchemaHasField("FieldError", "field");
+    assertSchemaHasField("FieldError", "message");
 
     // [2026-08-17, 8단계] assertSchemaHasNoField(..., "properties") 두 줄을 지웠다 (MS2-150 [0-B] 21).
     // ProblemResponse에 properties 컴포넌트가 없으니 그 단언은 어떤 변경으로도 빨개지지 않는다. 잡으려던
@@ -346,7 +344,7 @@ class OpenApiDocumentTest {
     // 이유가 "컨텍스트 재사용"이었는데, 두 테스트가 같은 @SpringBootTest 컨텍스트를 쓰므로 그 이득은 어느
     // 쪽에 둬도 같다. 반면 대조하려면 문서와 응답이 <b>둘 다</b> 필요하고 문서를 꺼내는 json()이 여기 있다.
     // 저쪽에 두면 문서 조회 코드를 복제하게 된다.
-    Set<String> documented = keysOf(json(), "$.components.schemas.ProblemResponse.properties");
+    Set<String> documented = keysOf(json(), "$.components.schemas.ErrorResponse.properties");
     Set<String> actual = new TreeSet<>();
     actual.addAll(keysOf(mvc.get().uri("/v1/events").exchange(), "$")); // 400, errors 있음
     actual.addAll(keysOf(mvc.get().uri("/v1/nope").exchange(), "$")); // 404, errors 없음
@@ -368,8 +366,8 @@ class OpenApiDocumentTest {
     // javadoc에 적는 것으로는 안 된다. 계약을 읽는 쪽은 openapi.yaml만 보고 javadoc은 거기 실리지 않는다.
     // code와 errors는 응답마다 있고 없고가 갈리므로, 사유가 없으면 FE가 "가끔 없는 필드"를 만나 놓고
     // 그것이 규약인지 버그인지 판단할 근거가 없다.
-    assertSchemaFieldHasDescription("ProblemResponse", ProblemMembers.CODE);
-    assertSchemaFieldHasDescription("ProblemResponse", ProblemMembers.ERRORS);
+    assertSchemaFieldHasDescription("ErrorResponse", "code");
+    assertSchemaFieldHasDescription("ErrorResponse", "errors");
   }
 
   // ---------------------------------------------------------------------------
@@ -401,7 +399,7 @@ class OpenApiDocumentTest {
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.paths['%s'].%s.responses['%s'].content['application/problem+json'].schema.$ref"
+            "$.paths['%s'].%s.responses['%s'].content['application/json'].schema.$ref"
                 .formatted(path, method, status))
         .asString()
         .isEqualTo("#/components/schemas/%s".formatted(schema));

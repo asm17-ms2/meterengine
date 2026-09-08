@@ -177,8 +177,8 @@ class Sender:
 
 
 def _unknown_customer(result) -> bool:
-    """400의 사유가 "그런 고객이 없다"인가 (backend의 problem+json code)."""
-    return isinstance(result.body, dict) and result.body.get("code") == "unknown_customer_reference"
+    """거절 사유가 "그런 고객이 없다"인가 (backend의 오류 code)."""
+    return isinstance(result.body, dict) and result.body.get("code") == "customer_not_found"
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
