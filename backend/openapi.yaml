@@ -542,7 +542,7 @@ paths:
         금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
       operationId: aggregateBillableMetricUsages
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙으면 대체될 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
