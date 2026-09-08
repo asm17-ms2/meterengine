@@ -36,7 +36,7 @@ def _write_sample(path):
             '"type": "chat_completion", "properties": {"token": 1}, '
             '"timestamp": "2026-08-01T00:00:00+09:00"}',
             status=400,
-            response_text='{"status": 400, "code": "unknown_customer_reference"}',
+            response_text='{"status": 404, "code": "customer_not_found"}',
             outcome="rejected",
             error=None,
             elapsed_ms=8,
@@ -81,7 +81,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         _write_sample(self.path)
         record = read_log(self.path).records[1]
         self.assertEqual(record.status, 400)
-        self.assertEqual(record.response["code"], "unknown_customer_reference")
+        self.assertEqual(record.response["code"], "customer_not_found")
 
     def test_error_레코드는_status와_response가_없다(self):
         _write_sample(self.path)
@@ -193,8 +193,10 @@ class ClassifyOutcomeTest(unittest.TestCase):
         self.assertEqual(classify_outcome(200, {"duplicate": False}), "new")
         self.assertEqual(classify_outcome(200, {"duplicate": True}), "duplicate")
 
-    def test_400만_rejected다(self):
-        self.assertEqual(classify_outcome(400, {"title": "잘못된 요청"}), "rejected")
+    def test_4xx는_rejected다(self):
+        self.assertEqual(classify_outcome(400, {"code": "validation_error"}), "rejected")
+        self.assertEqual(classify_outcome(404, {"code": "customer_not_found"}), "rejected")
+        self.assertEqual(classify_outcome(499, None), "rejected")
 
     def test_5xx는_error다(self):
         # rejected로 접으면 verify가 "거절됐으니 저장 안 됨"으로 확정한다. 실제로는
