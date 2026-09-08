@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   DEV_STATES,
   DEV_STATE_LABELS,
-  devStateEnabled,
+  isDevStateEnabled,
   readDevState,
 } from "@/lib/dev-state";
 
@@ -16,21 +16,21 @@ import {
  * 상태를 URL(?state=)에만 쓴다. 실제 데이터 경로는 각 화면의 로더가
  * 네트워크 호출 전에 이 값을 보고 분기한다.
  *
- * 프로덕션 빌드에서는 devStateEnabled가 상수 false라 이 컴포넌트가 통째로 죽는다.
+ * 프로덕션 빌드에서는 isDevStateEnabled가 상수 false라 이 컴포넌트가 통째로 죽는다.
  * useSearchParams()를 쓰므로 호출부에서 <Suspense>로 감싸야 prerender가 막히지 않는다.
  */
 export function DevStateSwitch() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const current = readDevState(searchParams.get("state") ?? undefined);
+  const currentState = readDevState(searchParams.get("state") ?? undefined);
 
-  if (!devStateEnabled) return null;
+  if (!isDevStateEnabled) return null;
 
-  function hrefFor(state: string): string {
-    const next = new URLSearchParams(searchParams.toString());
-    if (state === "normal") next.delete("state");
-    else next.set("state", state);
-    const query = next.toString();
+  function buildHref(state: string): string {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (state === "normal") nextParams.delete("state");
+    else nextParams.set("state", state);
+    const query = nextParams.toString();
     return query ? `${pathname}?${query}` : pathname;
   }
 
@@ -41,9 +41,9 @@ export function DevStateSwitch() {
         {DEV_STATES.map((state) => (
           <Link
             key={state}
-            href={hrefFor(state)}
+            href={buildHref(state)}
             className="dev-switch__btn"
-            aria-current={current === state ? "true" : undefined}
+            aria-current={currentState === state ? "true" : undefined}
             replace
           >
             {DEV_STATE_LABELS[state]}

@@ -3,7 +3,10 @@
 import { useState } from "react";
 
 import { EventDetailDrawer } from "@/components/events/EventDetailDrawer";
-import { GridCell, GridHead, GridRowButton, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRowButton } from "@/components/table/GridRowButton";
+import { GridTable } from "@/components/table/GridTable";
 
 /**
  * 화면이 그리는 뷰모델. 시각과 JSON 문자열은 서버에서 다 만들어 온다.
@@ -36,7 +39,7 @@ export type EventRowView = {
 const COLUMNS = "170px 165px 165px 130px 140px minmax(0, 1fr)";
 const MIN_WIDTH = 1000;
 
-const HEAD = [
+const HEAD_LABELS = [
   "transaction_id",
   "occurred_at",
   "received_at",
@@ -51,7 +54,7 @@ export function EventsTable({ rows }: { rows: EventRowView[] }) {
   return (
     <>
       <GridTable minWidth={MIN_WIDTH}>
-        <GridHead columns={COLUMNS} labels={HEAD} />
+        <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
         {rows.map((row) => (
           <GridRowButton
             key={row.transactionId}

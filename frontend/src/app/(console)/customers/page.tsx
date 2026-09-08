@@ -1,10 +1,8 @@
 import { Suspense } from "react";
 
-import {
-  CustomersLoading,
-  CustomersSection,
-} from "@/components/customers/CustomersSection";
-import { loadCustomers } from "@/lib/api/customers";
+import { CustomersLoading } from "@/components/customers/CustomersLoading";
+import { CustomersSection } from "@/components/customers/CustomersSection";
+import { listCustomers } from "@/lib/api/customers";
 import { readDevState } from "@/lib/dev-state";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -25,7 +23,7 @@ export default async function CustomersPage({
   const devState = readDevState(params.state);
 
   // await하지 않고 넘긴다. 'loading'은 로더를 부르지 않고 스켈레톤으로 단락한다.
-  const customers = devState === "loading" ? null : loadCustomers(devState);
+  const customers = devState === "loading" ? null : listCustomers(devState);
 
   if (!customers) return <CustomersLoading />;
 

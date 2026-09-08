@@ -21,7 +21,7 @@ export function BillableMetricFormDialog({
   onClose: () => void;
 }) {
   const isEdit = billableMetric !== null;
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     isEdit ? updateBillableMetricAction : createBillableMetricAction,
     BILLABLE_METRIC_FORM_IDLE,
   );
@@ -41,18 +41,18 @@ export function BillableMetricFormDialog({
   const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
   const message = state.status === "failed" ? state.message : null;
 
-  const fieldProps = (field: BillableMetricField) => ({
+  const buildFieldProps = (field: BillableMetricField) => ({
     value: values[field],
     onChange: (value: string) =>
       setValues((prev) => ({ ...prev, [field]: value })),
     error: fieldErrors[field],
-    disabled: pending,
+    disabled: isPending,
   });
 
   return (
     <Dialog
       labelledBy="metric-form-title"
-      onClose={pending ? undefined : onClose}
+      onClose={isPending ? undefined : onClose}
       action={formAction}
     >
       <div className="dialog-title" id="metric-form-title">
@@ -70,7 +70,7 @@ export function BillableMetricFormDialog({
           hint="조직 내에서 유일해야 합니다. 등록 뒤 바꿀 수 없습니다."
           mono
           autoFocus
-          {...fieldProps("code")}
+          {...buildFieldProps("code")}
         />
       )}
       <TextField
@@ -79,7 +79,7 @@ export function BillableMetricFormDialog({
         label="이름"
         placeholder="입력 토큰"
         autoFocus={isEdit}
-        {...fieldProps("name")}
+        {...buildFieldProps("name")}
       />
       <TextField
         id="metric-event-type"
@@ -88,7 +88,7 @@ export function BillableMetricFormDialog({
         placeholder="llm_request"
         hint="어떤 사용량 이벤트를 집계할지 정하는 매칭 키입니다."
         mono
-        {...fieldProps("event_type")}
+        {...buildFieldProps("event_type")}
       />
 
       <div className="field">
@@ -125,7 +125,7 @@ export function BillableMetricFormDialog({
         placeholder="input_tokens"
         hint="이벤트 properties에서 합산할 키입니다. SUM 집계는 필수입니다."
         mono
-        {...fieldProps("target_property")}
+        {...buildFieldProps("target_property")}
       />
 
       {isEdit ? (
@@ -169,13 +169,13 @@ export function BillableMetricFormDialog({
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={pending}
+          disabled={isPending}
           onClick={onClose}
         >
           취소
         </button>
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "저장 중..." : "저장"}
+        <button type="submit" className="btn btn-primary" disabled={isPending}>
+          {isPending ? "저장 중..." : "저장"}
         </button>
       </div>
     </Dialog>

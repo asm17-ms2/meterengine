@@ -4,12 +4,6 @@ import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * {@link PriceRate}의 복합 PK (organization_id, billable_metric_code, dimension_values).
- *
- * <p>record가 아니라 클래스인 이유: JPA 스펙이 IdClass에 public no-arg 생성자를 요구하는데 record에는 없다 ({@code
- * BillableMetricId}와 같은 사정).
- */
 public class PriceRateId implements Serializable {
 
   private UUID organizationId;

@@ -17,20 +17,20 @@ export function EventDetailDrawer({
   row: EventRowView;
   onClose: () => void;
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // 열자마자 포커스를 패널 안으로 옮긴다. 그러지 않으면 방금 누른 표의 행에
     // 포커스가 남아, Tab이 패널이 아니라 뒤쪽 목록을 훑는다.
-    closeRef.current?.focus();
+    closeButtonRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   return (
@@ -47,7 +47,7 @@ export function EventDetailDrawer({
             이벤트 상세
           </h4>
           <button
-            ref={closeRef}
+            ref={closeButtonRef}
             type="button"
             className="btn btn-secondary"
             style={{ padding: "6px 10px" }}

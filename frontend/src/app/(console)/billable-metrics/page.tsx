@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 
-import {
-  BillableMetricsLoading,
-  BillableMetricsSection,
-} from "@/components/billable-metrics/BillableMetricsSection";
+import { BillableMetricsLoading } from "@/components/billable-metrics/BillableMetricsLoading";
+import { BillableMetricsSection } from "@/components/billable-metrics/BillableMetricsSection";
 import { listBillableMetrics } from "@/lib/api/billable-metrics";
 import { readDevState } from "@/lib/dev-state";
 

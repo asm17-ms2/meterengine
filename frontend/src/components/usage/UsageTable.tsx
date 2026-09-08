@@ -1,7 +1,10 @@
 "use client";
 
 import { useCollapse } from "@/components/table/CollapseProvider";
-import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRow } from "@/components/table/GridRow";
+import { GridTable } from "@/components/table/GridTable";
 
 /**
  * 화면이 그리는 뷰모델. 숫자 포맷은 서버에서 끝내고 문자열로 받는다.
@@ -16,27 +19,27 @@ export type UsageGroupView = {
 const COLUMNS = "minmax(0, 1fr) 200px";
 const MIN_WIDTH = 640;
 
-const HEAD = ["고객 / 미터", { label: "집계 수량", right: true }] as const;
+const HEAD_LABELS = ["고객 / 미터", { label: "집계 수량", right: true }] as const;
 
 export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
   const { isCollapsed, toggle } = useCollapse();
 
   return (
     <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD} />
+      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {groups.map((group) => {
-        const collapsed = isCollapsed(group.customerId);
+        const isGroupCollapsed = isCollapsed(group.customerId);
         return (
           <div key={group.customerId}>
             <button
               type="button"
               className="grid-row grid-row--clickable grid-row--group"
               style={{ gridTemplateColumns: COLUMNS }}
-              aria-expanded={!collapsed}
+              aria-expanded={!isGroupCollapsed}
               onClick={() => toggle(group.customerId)}
             >
               <div className="grid-cell grid-cell--group">
-                <span aria-hidden>{collapsed ? "▸" : "▾"}</span>{" "}
+                <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
@@ -45,7 +48,7 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
               </div>
             </button>
 
-            {collapsed
+            {isGroupCollapsed
               ? null
               : group.billableMetricLines.map((billableMetricLine) => (
                   <GridRow key={billableMetricLine.label} columns={COLUMNS}>

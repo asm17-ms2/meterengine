@@ -17,11 +17,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-/**
- * 가격 정책 등록과 목록 조회를 HTTP 계층부터 DB까지 관통해 검증한다.
- *
- * <p>MockMvc를 직접 구성하는 이유는 {@code EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
- */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
@@ -70,7 +65,6 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.dimension_properties")
         .isEqualTo(java.util.List.of("model", "region"));
-    // 저장된 선언은 조합별 단가(MS2-177)의 키 집합 검증 기준이 되므로 DB에 실린 값까지 본다.
     assertThat(storedProperties(orgId, "token-usage")).isEqualTo("model,region");
   }
 
@@ -142,7 +136,6 @@ class PricePolicyIntegrationTest {
         .asString()
         .isEqualTo(ErrorCodes.PRICE_POLICY_ALREADY_EXISTS);
 
-    // 덮어쓰지 않는다. 단가 해석의 기준인 축 선언이 등록 요청으로 조용히 바뀌면 안 된다.
     assertThat(storedProperties(orgId, "token-usage")).isEqualTo("model");
   }
 
