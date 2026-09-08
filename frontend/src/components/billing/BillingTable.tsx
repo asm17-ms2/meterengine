@@ -25,7 +25,7 @@ export type BillingLineView = {
 const COLUMNS = "minmax(0, 1fr) 170px 130px 180px";
 const MIN_WIDTH = 760;
 
-const HEAD = [
+const HEAD_LABELS = [
   "고객 / 미터 라인",
   { label: "집계 수량", right: true },
   { label: "단가", right: true },
@@ -44,20 +44,20 @@ export function BillingTable({
 
   return (
     <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD} />
+      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {groups.map((group) => {
-        const collapsed = isCollapsed(group.customerId);
+        const isGroupCollapsed = isCollapsed(group.customerId);
         return (
           <div key={group.customerId}>
             <button
               type="button"
               className="grid-row grid-row--clickable grid-row--group"
               style={{ gridTemplateColumns: COLUMNS }}
-              aria-expanded={!collapsed}
+              aria-expanded={!isGroupCollapsed}
               onClick={() => toggle(group.customerId)}
             >
               <div className="grid-cell grid-cell--group">
-                <span aria-hidden>{collapsed ? "▸" : "▾"}</span>{" "}
+                <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
@@ -70,7 +70,7 @@ export function BillingTable({
               </div>
             </button>
 
-            {collapsed
+            {isGroupCollapsed
               ? null
               : group.lines.map((line) => (
                   <GridRow key={line.label} columns={COLUMNS}>

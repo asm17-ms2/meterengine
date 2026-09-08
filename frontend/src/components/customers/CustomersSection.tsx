@@ -33,10 +33,10 @@ export async function CustomersSection({
     );
   }
 
-  const rows: CustomerRowView[] = result.data.customers.map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    createdAt: formatKstDate(entry.created_at),
+  const rows: CustomerRowView[] = result.data.customers.map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    createdAt: formatKstDate(customer.created_at),
   }));
 
   return <CustomersScreen rows={rows} />;

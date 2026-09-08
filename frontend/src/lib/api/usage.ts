@@ -57,7 +57,7 @@ export type BillableMetricLine = {
  * 첫 미터의 고객 순서를 그대로 쓰면 정렬이 유지되고, 여기서 다시 정렬하지 않는다.
  */
 export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): CustomerGroup[] {
-  const groups = new Map<string, CustomerGroup>();
+  const customerGroupByCustomerId = new Map<string, CustomerGroup>();
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
     const label = billableMetricUsage.target_property
@@ -65,20 +65,20 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
       : billableMetricUsage.code;
 
     for (const customer of billableMetricUsage.customers) {
-      let group = groups.get(customer.customer_id);
+      let group = customerGroupByCustomerId.get(customer.customer_id);
       if (!group) {
         group = {
           customerId: customer.customer_id,
           customerName: customer.customer_name,
           billableMetricLines: [],
         };
-        groups.set(customer.customer_id, group);
+        customerGroupByCustomerId.set(customer.customer_id, group);
       }
       group.billableMetricLines.push({ label, quantity: customer.quantity });
     }
   }
 
-  return [...groups.values()];
+  return [...customerGroupByCustomerId.values()];
 }
 
 /** 표에 그려질 미터 라인 총 개수. 화면 헤더의 '미터 라인 N줄'이다. */
@@ -93,7 +93,7 @@ export function countBillableMetricLines(groups: CustomerGroup[]): number {
  * 'loading'은 여기 오지 않는다. 페이지가 로더를 부르지 않고 스켈레톤으로 단락한다.
  * 영원히 resolve되지 않는 프라미스를 만들면 SSR 응답이 멈춘다.
  */
-export async function loadUsage(
+export async function aggregateBillableMetricUsages(
   month: string,
   devState: DevState,
 ): Promise<Result<ListBillableMetricUsagesResponse>> {

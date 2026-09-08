@@ -16,27 +16,27 @@ export type UsageGroupView = {
 const COLUMNS = "minmax(0, 1fr) 200px";
 const MIN_WIDTH = 640;
 
-const HEAD = ["고객 / 미터", { label: "집계 수량", right: true }] as const;
+const HEAD_LABELS = ["고객 / 미터", { label: "집계 수량", right: true }] as const;
 
 export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
   const { isCollapsed, toggle } = useCollapse();
 
   return (
     <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD} />
+      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {groups.map((group) => {
-        const collapsed = isCollapsed(group.customerId);
+        const isGroupCollapsed = isCollapsed(group.customerId);
         return (
           <div key={group.customerId}>
             <button
               type="button"
               className="grid-row grid-row--clickable grid-row--group"
               style={{ gridTemplateColumns: COLUMNS }}
-              aria-expanded={!collapsed}
+              aria-expanded={!isGroupCollapsed}
               onClick={() => toggle(group.customerId)}
             >
               <div className="grid-cell grid-cell--group">
-                <span aria-hidden>{collapsed ? "▸" : "▾"}</span>{" "}
+                <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
@@ -45,7 +45,7 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
               </div>
             </button>
 
-            {collapsed
+            {isGroupCollapsed
               ? null
               : group.billableMetricLines.map((billableMetricLine) => (
                   <GridRow key={billableMetricLine.label} columns={COLUMNS}>

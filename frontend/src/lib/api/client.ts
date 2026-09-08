@@ -168,14 +168,14 @@ async function call(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (cause) {
-    const timedOut = cause instanceof Error && cause.name === "TimeoutError";
+    const isTimedOut = cause instanceof Error && cause.name === "TimeoutError";
     return {
       ok: false,
       error: {
         status: 0,
         code: "network_error",
-        title: timedOut ? "응답 시간 초과" : "서버에 연결하지 못했습니다",
-        detail: timedOut
+        title: isTimedOut ? "응답 시간 초과" : "서버에 연결하지 못했습니다",
+        detail: isTimedOut
           ? `${TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다.`
           : "백엔드가 실행 중인지 확인해주세요.",
       },

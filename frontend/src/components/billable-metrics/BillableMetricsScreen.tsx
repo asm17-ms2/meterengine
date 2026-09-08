@@ -20,7 +20,7 @@ export function BillableMetricsScreen({ rows }: { rows: BillableMetricRowView[] 
   const closeDelete = useCallback(() => setDeleting(null), []);
 
   const query = search.trim().toLowerCase();
-  const visible =
+  const visibleRows =
     query === ""
       ? rows
       : rows.filter((row) => row.name.toLowerCase().includes(query));
@@ -30,7 +30,7 @@ export function BillableMetricsScreen({ rows }: { rows: BillableMetricRowView[] 
       <ScreenHeader title="미터">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span>
-            총 <b>{visible.length}</b>개
+            총 <b>{visibleRows.length}</b>개
           </span>
           <button
             type="button"
@@ -70,7 +70,7 @@ export function BillableMetricsScreen({ rows }: { rows: BillableMetricRowView[] 
             미터 등록
           </button>
         </div>
-      ) : visible.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state__title">검색 결과가 없습니다</div>
           <p className="empty-state__body">
@@ -89,7 +89,7 @@ export function BillableMetricsScreen({ rows }: { rows: BillableMetricRowView[] 
       ) : (
         <>
           <BillableMetricsTable
-            rows={visible}
+            rows={visibleRows}
             onEdit={(row) => setForm({ billableMetric: row })}
             onDelete={(row) => setDeleting(row)}
           />

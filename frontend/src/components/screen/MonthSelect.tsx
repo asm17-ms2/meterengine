@@ -19,9 +19,9 @@ export function MonthSelect({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  function onChange(next: string) {
+  function handleChange(nextMonth: string) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("month", next);
+    params.set("month", nextMonth);
     params.delete("page");
     router.push(`${pathname}?${params.toString()}`);
   }
@@ -32,7 +32,7 @@ export function MonthSelect({
       style={{ width: "auto" }}
       aria-label="조회 기간"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(event) => handleChange(event.target.value)}
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>

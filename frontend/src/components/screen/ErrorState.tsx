@@ -15,7 +15,7 @@ import type { ApiError } from "@/lib/api/client";
  * 값은 default로 떨어지는데, 5xx가 그리로 온다 - 백엔드가 5xx의 본문 형식을
  * 약속하지 않으므로 클라이언트가 기본 문구를 갖고 있어야 한다.
  */
-function bodyMessage(error: ApiError): string {
+function toBodyMessage(error: ApiError): string {
   switch (error.code) {
     // 우리가 만든 code는 title과 detail이 둘 다 한국어다 (client.ts의 "여기서 만든
     // 값"). 계약이 막는 것은 백엔드가 준 영어 문구이지 이 자리가 아니라서 둘 다 쓴다.
@@ -27,7 +27,7 @@ function bodyMessage(error: ApiError): string {
     // 보여준다 - 하나만 고쳐 다시 눌렀다가 또 막히는 것보다 낫다.
     case "validation_error":
       return error.errors?.length
-        ? error.errors.map((it) => it.message).join(" / ")
+        ? error.errors.map((fieldError) => fieldError.message).join(" / ")
         : "조회 조건을 확인해주세요.";
     case "unknown_organization":
       return "도입사를 찾을 수 없습니다. 설정을 확인해주세요.";
@@ -59,15 +59,15 @@ export function ErrorState({
    */
   narrowerHref?: string;
 }) {
-  const detail = bodyMessage(error);
-  const status = error.status > 0 ? ` (${error.status})` : "";
+  const bodyMessage = toBodyMessage(error);
+  const statusSuffix = error.status > 0 ? ` (${error.status})` : "";
 
   return (
     <div className="error-state">
       <div className="error-state__title">{title}</div>
       <p className="error-state__body">
-        {detail}
-        {status}
+        {bodyMessage}
+        {statusSuffix}
       </p>
       <div className="error-state__actions">
         <RetryButton />

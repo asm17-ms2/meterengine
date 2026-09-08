@@ -37,7 +37,7 @@ import {
  * 이 파일이 상수를 export하지 못해서(위 주석 참조) 바깥으로 내보내지 않는다.
  * 입력칸의 maxLength는 CustomerFormDialog가 따로 들고 있다.
  */
-const NAME_MAX = 255;
+const NAME_MAX_LENGTH = 255;
 
 /**
  * 이름을 읽고 다듬는다. 서버 액션은 브라우저를 거치지 않고도 불릴 수 있으므로
@@ -50,7 +50,7 @@ function readName(formData: FormData): string {
 
 function validateName(name: string): string | null {
   if (name === "") return "고객명을 입력하세요";
-  if (name.length > NAME_MAX) return `고객명은 ${NAME_MAX}자를 넘을 수 없습니다`;
+  if (name.length > NAME_MAX_LENGTH) return `고객명은 ${NAME_MAX_LENGTH}자를 넘을 수 없습니다`;
   return null;
 }
 
@@ -61,10 +61,10 @@ function validateName(name: string): string | null {
  * 띄우지 말라고 백엔드 계약이 명시한다 (openapi.yaml ProblemResponse).
  * 모르는 code는 기본 문구로 떨어진다 - code 집합은 닫혀 있지 않다.
  */
-function saveFailureMessage(error: ApiError): string {
+function toSaveFailureMessage(error: ApiError): string {
   switch (error.code) {
     case "validation_error":
-      return `고객명을 확인해주세요. ${NAME_MAX}자 이내여야 합니다.`;
+      return `고객명을 확인해주세요. ${NAME_MAX_LENGTH}자 이내여야 합니다.`;
     case "customer_not_found":
       return "이미 삭제된 고객입니다. 목록을 새로 고쳐주세요.";
     case "unknown_organization":
@@ -82,12 +82,12 @@ export async function createCustomerAction(
   formData: FormData,
 ): Promise<CustomerFormState> {
   const name = readName(formData);
-  const invalid = validateName(name);
-  if (invalid) return { status: "invalid", message: invalid };
+  const invalidMessage = validateName(name);
+  if (invalidMessage) return { status: "invalid", message: invalidMessage };
 
   const result = await createCustomer(name);
   if (!result.ok) {
-    return { status: "failed", message: saveFailureMessage(result.error) };
+    return { status: "failed", message: toSaveFailureMessage(result.error) };
   }
 
   revalidatePath("/customers");
@@ -105,12 +105,12 @@ export async function updateCustomerAction(
   }
 
   const name = readName(formData);
-  const invalid = validateName(name);
-  if (invalid) return { status: "invalid", message: invalid };
+  const invalidMessage = validateName(name);
+  if (invalidMessage) return { status: "invalid", message: invalidMessage };
 
   const result = await updateCustomer(id, name);
   if (!result.ok) {
-    return { status: "failed", message: saveFailureMessage(result.error) };
+    return { status: "failed", message: toSaveFailureMessage(result.error) };
   }
 
   revalidatePath("/customers");
@@ -130,7 +130,7 @@ export async function deleteCustomerAction(
 ): Promise<CustomerDeleteState> {
   const id = formData.get("id");
   const name = formData.get("name");
-  const label = typeof name === "string" ? name : "";
+  const customerName = typeof name === "string" ? name : "";
   if (typeof id !== "string" || id === "") {
     return { status: "failed", message: "고객을 특정하지 못했습니다." };
   }
@@ -138,13 +138,13 @@ export async function deleteCustomerAction(
   const result = await deleteCustomer(id);
   if (!result.ok) {
     if (result.error.code === "customer_has_events") {
-      return { status: "rejected", name: label };
+      return { status: "rejected", name: customerName };
     }
     if (result.error.code === "customer_not_found") {
       // 지우려던 것이 이미 없다. 목록에서 사라지는 것이 사용자가 원한 결과와
       // 같으므로 목록을 새로 읽어 둔다.
       revalidatePath("/customers");
-      return { status: "gone", name: label };
+      return { status: "gone", name: customerName };
     }
     return {
       status: "failed",

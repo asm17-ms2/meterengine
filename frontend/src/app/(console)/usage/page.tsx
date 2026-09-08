@@ -9,10 +9,10 @@ import {
   ExpandControls,
 } from "@/components/table/CollapseProvider";
 import { UsageMeta, UsageSection } from "@/components/usage/UsageSection";
-import { loadUsage } from "@/lib/api/usage";
+import { aggregateBillableMetricUsages } from "@/lib/api/usage";
 import { readDevState } from "@/lib/dev-state";
 import { formatKoreanMonth, formatKstStamp } from "@/lib/format";
-import { monthOptionsFor, readMonth } from "@/lib/month";
+import { buildMonthOptionsFor, readMonth } from "@/lib/month";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -28,7 +28,7 @@ export default async function UsagePage({
   // await하지 않고 넘긴다. 헤더 메타와 표가 같은 응답을 보되 각자의 Suspense
   // 경계에서 기다린다.
   const usage =
-    devState === "loading" ? null : loadUsage(month, devState);
+    devState === "loading" ? null : aggregateBillableMetricUsages(month, devState);
 
   return (
     <CollapseProvider>
@@ -41,7 +41,7 @@ export default async function UsagePage({
       </ScreenHeader>
 
       <FilterBar>
-        <MonthSelect value={month} options={monthOptionsFor(month)} />
+        <MonthSelect value={month} options={buildMonthOptionsFor(month)} />
         <QueryStamp text={formatKstStamp(new Date())} />
         <ExpandControls />
       </FilterBar>
