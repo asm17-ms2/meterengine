@@ -10,6 +10,7 @@ public enum ErrorCode {
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
   UNKNOWN_ORGANIZATION(HttpStatus.BAD_REQUEST, "등록되지 않은 도입사입니다"),
   INVALID_EVENT(HttpStatus.BAD_REQUEST, "이벤트를 저장할 수 없습니다"),
+  INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -23,6 +24,7 @@ public enum ErrorCode {
 
   // 409 Conflict
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
+  METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
 
   // 415 Unsupported Media Type
   REQUEST_TYPE_NOT_SUPPORTED(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 Content-Type입니다"),
