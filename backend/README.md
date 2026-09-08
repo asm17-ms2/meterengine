@@ -159,12 +159,12 @@ docker build -t meterengine-backend .
 | `invalid_billable_metric` | 400 | 본문이 집계 미터로 성립하지 않는다 (SUM이 아닌 집계 함수, target_property 누락) |
 | `invalid_price_policy` | 400 | 본문이 가격 정책으로 성립하지 않는다 (선언의 중복 키, 빈 키) |
 | `customer_not_found` | 404 | 가리킨 고객이 없거나 다른 도입사 소속이다. 경로의 고객, 이벤트 수집 본문의 `customer_id`, 이벤트 조회 필터의 `customer_id`가 모두 같다 |
-| `metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
+| `billable_metric_not_found` | 404 | 경로가 가리킨 미터가 없거나 다른 도입사 소속이다 |
 | `endpoint_not_found` | 404 | 그 경로에 대응하는 엔드포인트가 없다 |
 | `method_not_allowed` | 405 | 경로는 있고 HTTP 메서드가 틀렸다 |
 | `response_type_not_acceptable` | 406 | `Accept`로 만족시킬 응답 표현이 없다 |
 | `customer_has_events` | 409 | 사용량 이벤트가 있어 고객을 지울 수 없다 |
-| `metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
+| `billable_metric_already_exists` | 409 | 같은 코드의 미터가 이미 있다 |
 | `price_policy_already_exists` | 409 | 그 미터에 가격 정책이 이미 있다 |
 | `request_type_not_supported` | 415 | 보낸 `Content-Type`을 받을 수 없다 |
 | `internal_server_error` | 500 | 핸들러에 나열되지 않은 예외가 올라왔다 |

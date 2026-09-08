@@ -93,7 +93,7 @@ public class PricePolicyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
+        description = "code=billable_metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =

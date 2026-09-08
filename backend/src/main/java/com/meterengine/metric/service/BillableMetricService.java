@@ -34,7 +34,7 @@ public class BillableMetricService {
 
     BillableMetricId id = new BillableMetricId(organizationId, request.code());
     if (billableMetricRepository.existsById(id)) {
-      throw new ConflictException(ErrorCode.METRIC_ALREADY_EXISTS);
+      throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     }
 
     BillableMetric billableMetric =
@@ -50,7 +50,7 @@ public class BillableMetricService {
     } catch (DataIntegrityViolationException exception) {
       if (exception.getCause() instanceof ConstraintViolationException cause
           && DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
-        throw new ConflictException(ErrorCode.METRIC_ALREADY_EXISTS);
+        throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
       }
       throw new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
     }

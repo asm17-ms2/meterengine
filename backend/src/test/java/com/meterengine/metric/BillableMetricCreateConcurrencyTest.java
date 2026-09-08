@@ -65,7 +65,7 @@ class BillableMetricCreateConcurrencyTest {
           .bodyJson()
           .extractingPath("$.code")
           .asString()
-          .isEqualTo(ErrorCode.METRIC_ALREADY_EXISTS.getCode());
+          .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
     }
 
     assertThat(storedName(orgId)).isEqualTo("먼저 등록한 미터");

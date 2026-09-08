@@ -26,9 +26,9 @@ export type ApiError = {
    * 오류 종류를 가르는 값. 정본은 openapi.yaml ErrorResponse의 enum이다:
    *   validation_error / malformed_request_body / unknown_organization /
    *   invalid_event / invalid_billable_metric / invalid_price_policy /
-   *   customer_not_found / metric_not_found / endpoint_not_found /
+   *   customer_not_found / billable_metric_not_found / endpoint_not_found /
    *   method_not_allowed / response_type_not_acceptable / customer_has_events /
-   *   metric_already_exists / price_policy_already_exists /
+   *   billable_metric_already_exists / price_policy_already_exists /
    *   request_type_not_supported / internal_server_error
    *
    * 여기서 만든 값: network_error / http_error / malformed_response / dev_forced.
