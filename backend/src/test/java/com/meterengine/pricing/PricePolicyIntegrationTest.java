@@ -161,7 +161,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies")
+        .extractingPath("$.billable_metric_prices")
         .asArray()
         .isEmpty();
   }
@@ -176,11 +176,11 @@ class PricePolicyIntegrationTest {
     assertThat(result)
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].billable_metric_code")
+        .extractingPath("$.billable_metric_prices[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.price_policies[0]")
+        .extractingPath("$.billable_metric_prices[0]")
         .asMap()
         .containsEntry("dimension_properties", null);
   }
@@ -197,7 +197,7 @@ class PricePolicyIntegrationTest {
     assertThat(result)
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].dimension_properties")
+        .extractingPath("$.billable_metric_prices[0].dimension_properties")
         .isEqualTo(java.util.List.of("model"));
   }
 
@@ -210,7 +210,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].dimension_properties")
+        .extractingPath("$.billable_metric_prices[0].dimension_properties")
         .asArray()
         .isEmpty();
   }
@@ -224,7 +224,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[*].billable_metric_code")
+        .extractingPath("$.billable_metric_prices[*].billable_metric_code")
         .isEqualTo(java.util.List.of("input-tokens", "token-usage"));
   }
 
@@ -238,14 +238,14 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies")
+        .extractingPath("$.billable_metric_prices")
         .asArray()
         .isEmpty();
   }
 
   @Test
   void 조회에_도입사_헤더가_없으면_400이고_validation_error다() {
-    assertThat(mvc.get().uri("/v1/price-policies").exchange())
+    assertThat(mvc.get().uri("/v1/billable-metric-prices").exchange())
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
@@ -264,7 +264,7 @@ class PricePolicyIntegrationTest {
     assertThat(result)
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0]")
+        .extractingPath("$.billable_metric_prices[0]")
         .asMap()
         .containsEntry("unit_price", null);
   }
@@ -279,7 +279,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].unit_price")
+        .extractingPath("$.billable_metric_prices[0].unit_price")
         .asNumber()
         .extracting(Number::doubleValue)
         .isEqualTo(0.007);
@@ -295,7 +295,7 @@ class PricePolicyIntegrationTest {
     assertThat(get(orgId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.price_policies[0].unit_price")
+        .extractingPath("$.billable_metric_prices[0].unit_price")
         .asNumber()
         .extracting(Number::doubleValue)
         .isEqualTo(0.0);
@@ -316,7 +316,7 @@ class PricePolicyIntegrationTest {
 
   private MvcTestResult get(UUID organizationId) {
     return mvc.get()
-        .uri("/v1/price-policies")
+        .uri("/v1/billable-metric-prices")
         .header("X-Organization-Id", organizationId.toString())
         .exchange();
   }

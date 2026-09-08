@@ -111,7 +111,7 @@ docker build -t meterengine-backend .
 | `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일(중복 409) |
 | `GET /v1/billable-metrics` | 미터 목록. code 오름차순으로 전부, 페이지 나누지 않음 |
 | `POST /v1/billable-metrics/{code}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 1개(중복 409). 단가 등록 API는 아직 없고, 단가 없는 미터는 청구 예정액 라인에서 빠진다 |
-| `GET /v1/price-policies` | 미터별 가격 정책 목록. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
+| `GET /v1/billable-metric-prices` | 미터별 가격 목록. 미터마다 정책과 기본 단가를 싣는다. 미터 code 오름차순, 페이지 나누지 않음. 정책 없는 미터는 dimension_properties가 null이고 무차원 정책은 빈 배열이다. unit_price는 무차원 조합의 기본 단가이며 단가 행이 없으면 null이다 |
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 
@@ -195,7 +195,7 @@ docker build -t meterengine-backend .
 - `event`: 사용량 이벤트 수집과 조회 (`/v1/events`)
 - `metric`: 과금 지표의 등록과 조회, 고객별 월 사용량 집계 (`/v1/billable-metrics`, `/v1/usage`)
 - `invoice`: 청구 예정액 조회 (`/v1/invoices/draft`). 확정 인보이스는 엔티티와 리포지토리만 있고, 저장하는 서비스와 API는 아직 없다
-- `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/price-policies`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 목록 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
+- `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 미터별 가격 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다

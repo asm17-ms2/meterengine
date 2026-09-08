@@ -184,7 +184,7 @@
 
 | 식별자 | 케이스 | 형식 | 예 | 근거 |
 | --- | --- | --- | --- | --- |
-| URL 경로 | kebab-case | 복수 명사, 동사 없음. 부모 아래 하나뿐인 하위 리소스는 단수 | `/v1/price-policies`, `/v1/billable-metrics/{code}/price-policy` | 스타일 가이드: [Zalando 규칙 129][zalando-129], [134][zalando-134], [141][zalando-141]. [AIP-122][aip-122], 단수 하위 리소스는 [AIP-156][aip-156] |
+| URL 경로 | kebab-case | 복수 명사, 동사 없음. 부모 아래 하나뿐인 하위 리소스는 단수 | `/v1/billable-metric-prices`, `/v1/billable-metrics/{code}/price-policy` | 스타일 가이드: [Zalando 규칙 129][zalando-129], [134][zalando-134], [141][zalando-141]. [AIP-122][aip-122], 단수 하위 리소스는 [AIP-156][aip-156] |
 | 쿼리 파라미터 | snake_case | JSON 키와 같은 이름 | `customer_id` | 스타일 가이드: [Zalando 규칙 130][zalando-130] |
 | 경로 변수 | snake_case | 바로 앞 세그먼트가 가리키는 리소스의 식별 JSON 키와 같은 이름. 앞 세그먼트가 리소스를 말하므로 리소스명을 되풀이하지 않는다(`{customer_id}` 아니고 `{id}`). 한 경로에 식별자가 둘 이상이면 모두 `<리소스 단수>_<키>`로 한정한다(OpenAPI가 같은 이름을 허용하지 않음). URL의 이름은 snake_case로 어노테이션 값에 적고, 그 값을 받는 자바 변수는 변수 규칙대로 camelCase로 짓는다(`{transaction_id}`는 `@PathVariable("transaction_id") String transactionId`, 한 단어라 둘이 같으면 `@PathVariable String code`). 쿼리 파라미터의 `@RequestParam(name = "customer_id") UUID customerId`와 같은 방식 | `/v1/customers/{id}`, `/v1/billable-metrics/{code}/price-policy`, `/v1/events/{transaction_id}`(아직 없는 경로, 이벤트의 식별 키가 `transaction_id`) | 스타일 가이드: [Zalando 규칙 129][zalando-129]는 세그먼트만 kebab으로 정하고 변수는 예제가 kebab(`{shipment-order-id}`), [AIP-122][aip-122]는 `{book}`(리소스 단수, 접미사 없음). 표준이 갈려 쿼리 파라미터 행([Zalando 규칙 130][zalando-130])에 맞춘 것과 되풀이하지 않는 것은 RFC-001 |
 | JSON 키 | snake_case | `@JsonProperty`로 지정, boolean은 접두사 없는 형용사 | `customer_id`, `active` | 스타일 가이드: [Zalando 규칙 118][zalando-118], boolean 접두사 생략은 [AIP-140][aip-140]. 관례: [Stripe][stripe]. Google REST와 Azure는 camelCase라 Stripe/Zalando 계열을 택함 |
