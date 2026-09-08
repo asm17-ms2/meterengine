@@ -29,7 +29,7 @@ export function CustomerFormDialog({
   onClose: () => void;
 }) {
   const isEdit = customer !== null;
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     isEdit ? updateCustomerAction : createCustomerAction,
     CUSTOMER_FORM_IDLE,
   );
@@ -56,7 +56,7 @@ export function CustomerFormDialog({
     <Dialog
       labelledBy="customer-form-title"
       // 저장 중에는 닫히지 않는다. 요청이 날아간 뒤 창만 사라지면 결과를 알 수 없다.
-      onClose={pending ? undefined : onClose}
+      onClose={isPending ? undefined : onClose}
       action={formAction}
     >
       <div className="dialog-title" id="customer-form-title">
@@ -75,7 +75,7 @@ export function CustomerFormDialog({
           className="input"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          disabled={pending}
+          disabled={isPending}
           autoFocus
           maxLength={255}
           aria-invalid={message !== null}
@@ -121,13 +121,13 @@ export function CustomerFormDialog({
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={pending}
+          disabled={isPending}
           onClick={onClose}
         >
           취소
         </button>
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "저장 중..." : "저장"}
+        <button type="submit" className="btn btn-primary" disabled={isPending}>
+          {isPending ? "저장 중..." : "저장"}
         </button>
       </div>
     </Dialog>

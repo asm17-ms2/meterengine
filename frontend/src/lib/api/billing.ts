@@ -49,7 +49,7 @@ export function countDraftInvoiceLines(customers: DraftInvoiceCustomer[]): numbe
  * 'loading'은 여기 오지 않는다. 페이지가 로더를 부르지 않고 스켈레톤으로 단락한다.
  * 영원히 resolve되지 않는 프라미스를 만들면 SSR 응답이 멈춘다.
  */
-export async function loadDraftInvoice(
+export async function previewDraftInvoice(
   month: string,
   devState: DevState,
 ): Promise<Result<DraftInvoiceResponse>> {

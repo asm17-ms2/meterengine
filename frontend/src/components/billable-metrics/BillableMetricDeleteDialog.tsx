@@ -16,7 +16,7 @@ export function BillableMetricDeleteDialog({
   billableMetric: BillableMetricRowView;
   onClose: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     deleteBillableMetricAction,
     BILLABLE_METRIC_DELETE_IDLE,
   );
@@ -57,7 +57,7 @@ export function BillableMetricDeleteDialog({
   return (
     <Dialog
       labelledBy="metric-delete-title"
-      onClose={pending ? undefined : onClose}
+      onClose={isPending ? undefined : onClose}
       action={formAction}
     >
       <div className="dialog-title" id="metric-delete-title">
@@ -91,13 +91,13 @@ export function BillableMetricDeleteDialog({
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={pending}
+          disabled={isPending}
           onClick={onClose}
         >
           취소
         </button>
-        <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "삭제 중..." : "삭제"}
+        <button type="submit" className="btn btn-primary" disabled={isPending}>
+          {isPending ? "삭제 중..." : "삭제"}
         </button>
       </div>
     </Dialog>

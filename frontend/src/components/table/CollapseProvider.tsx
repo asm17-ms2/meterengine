@@ -25,29 +25,29 @@ const CollapseContext = createContext<CollapseState | null>(null);
 
 export function CollapseProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<CollapseMode>("expanded");
-  const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
+  const [flippedIds, setFlippedIds] = useState<ReadonlySet<string>>(new Set());
 
   const isCollapsed = useCallback(
-    (id: string) => (mode === "collapsed") !== flipped.has(id),
-    [mode, flipped],
+    (id: string) => (mode === "collapsed") !== flippedIds.has(id),
+    [mode, flippedIds],
   );
 
   const toggle = useCallback((id: string) => {
-    setFlipped((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
+    setFlippedIds((prev) => {
+      const nextFlippedIds = new Set(prev);
+      if (!nextFlippedIds.delete(id)) nextFlippedIds.add(id);
+      return nextFlippedIds;
     });
   }, []);
 
   const expandAll = useCallback(() => {
     setMode("expanded");
-    setFlipped(new Set());
+    setFlippedIds(new Set());
   }, []);
 
   const collapseAll = useCallback(() => {
     setMode("collapsed");
-    setFlipped(new Set());
+    setFlippedIds(new Set());
   }, []);
 
   const value = useMemo(
@@ -62,29 +62,4 @@ export function useCollapse(): CollapseState {
   const value = useContext(CollapseContext);
   if (!value) throw new Error("CollapseProvider 안에서만 쓸 수 있다");
   return value;
-}
-
-/** 필터 행 오른쪽에 붙는 두 버튼. */
-export function ExpandControls() {
-  const { expandAll, collapseAll } = useCollapse();
-  return (
-    <div className="filter-bar__actions">
-      <button
-        type="button"
-        className="btn btn-ghost"
-        style={{ fontSize: 12.5 }}
-        onClick={expandAll}
-      >
-        모두 펼치기
-      </button>
-      <button
-        type="button"
-        className="btn btn-ghost"
-        style={{ fontSize: 12.5 }}
-        onClick={collapseAll}
-      >
-        모두 접기
-      </button>
-    </div>
-  );
 }

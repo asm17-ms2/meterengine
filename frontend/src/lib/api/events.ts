@@ -67,9 +67,9 @@ export function readPage(raw: string | string[] | undefined): number {
 }
 
 /** 응답의 total과 size로 마지막 페이지 번호를 만든다. 백엔드는 total만 준다. */
-export function totalPages(page: ListEventsResponse): number {
-  if (page.total <= 0) return 1;
-  return Math.ceil(page.total / Math.max(page.size, 1));
+export function countPages(listEventsResponse: ListEventsResponse): number {
+  if (listEventsResponse.total <= 0) return 1;
+  return Math.ceil(listEventsResponse.total / Math.max(listEventsResponse.size, 1));
 }
 
 /**
@@ -111,10 +111,10 @@ export function toRawJson(event: EventResponse): string {
 }
 
 /**
- * 개발 모드 상태 스위치는 네트워크 호출 전에 갈린다 (loadUsage와 같은 구조).
+ * 개발 모드 상태 스위치는 네트워크 호출 전에 갈린다 (aggregateBillableMetricUsages와 같은 구조).
  * 'loading'은 여기 오지 않는다. 페이지가 로더를 부르지 않고 스켈레톤으로 단락한다.
  */
-export async function loadEvents(
+export async function listEvents(
   query: EventQuery,
   devState: DevState,
 ): Promise<Result<ListEventsResponse>> {

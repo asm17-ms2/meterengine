@@ -11,7 +11,7 @@
 
 const KST = "Asia/Seoul";
 
-const dateTimeParts = new Intl.DateTimeFormat("ko-KR", {
+const KST_DATE_TIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
   timeZone: KST,
   year: "numeric",
   month: "2-digit",
@@ -22,18 +22,18 @@ const dateTimeParts = new Intl.DateTimeFormat("ko-KR", {
   hour12: false,
 });
 
-function partsOf(value: Date): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const p of dateTimeParts.formatToParts(value)) out[p.type] = p.value;
+function toDateTimeParts(value: Date): Record<string, string> {
+  const parts: Record<string, string> = {};
+  for (const part of KST_DATE_TIME_FORMAT.formatToParts(value)) parts[part.type] = part.value;
   // Intl은 자정을 '24'로 낼 수 있다 (hour12: false + hourCycle 기본값).
-  if (out.hour === "24") out.hour = "00";
-  return out;
+  if (parts.hour === "24") parts.hour = "00";
+  return parts;
 }
 
 /** `2026-08-09 14:11:02` - 표 셀에 쓰는 형태. */
 export function formatKstDateTime(iso: string): string {
-  const p = partsOf(new Date(iso));
-  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+  const parts = toDateTimeParts(new Date(iso));
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
 /**
@@ -43,8 +43,8 @@ export function formatKstDateTime(iso: string): string {
  * 필요해지면 formatKstDateTime을 쓰면 된다.
  */
 export function formatKstDate(iso: string): string {
-  const p = partsOf(new Date(iso));
-  return `${p.year}-${p.month}-${p.day}`;
+  const parts = toDateTimeParts(new Date(iso));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 /** `2026-08-09 14:12:04 KST` - 필터 행의 조회 시각. */
@@ -54,8 +54,8 @@ export function formatKstStamp(value: Date): string {
 
 /** `2026년 8월` - 화면 제목용. `yyyy-MM`을 받는다. */
 export function formatKoreanMonth(month: string): string {
-  const [year, mm] = month.split("-");
-  return `${year}년 ${Number(mm)}월`;
+  const [year, monthOfYear] = month.split("-");
+  return `${year}년 ${Number(monthOfYear)}월`;
 }
 
 /**
