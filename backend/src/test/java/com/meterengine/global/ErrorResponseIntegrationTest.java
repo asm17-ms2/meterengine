@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
@@ -29,7 +31,7 @@ import org.springframework.web.context.WebApplicationContext;
  * <p><b>문서 검사로 대신할 수 없다.</b> {@code OpenApiDocumentTest}가 보는 것은 {@code ProblemFieldError}의 example
  * 문자열이고, 그것은 사람이 적은 값이라 변환이 깨져도 그대로 있는다. 이름이 실제로 변환되는지는 응답을 받아 봐야 안다.
  */
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, ErrorResponseIntegrationTest.ThrowingController.class})
 @SpringBootTest
 @Transactional
 class ErrorResponseIntegrationTest {
@@ -400,7 +402,42 @@ class ErrorResponseIntegrationTest {
         .hasStatus(200);
   }
 
+  @Test
+  void 모르는_예외는_500과_internal_server_error로_나간다() {
+    MvcTestResult result = throwUnknown();
+
+    assertThat(result).hasStatus(500).hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.message")
+        .asString()
+        .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getMessage());
+  }
+
+  @Test
+  void 오류_본문에는_code와_message만_실린다() {
+    MvcTestResult result = throwUnknown();
+
+    assertThat(result).bodyJson().extractingPath("$").asMap().containsOnlyKeys("code", "message");
+  }
+
+  @Test
+  void 예외의_원인은_본문에_실리지_않는다() {
+    MvcTestResult result = throwUnknown();
+
+    assertThat(result).bodyText().doesNotContain(ThrowingController.CAUSE);
+  }
+
   // ---------------------------------------------------------------------------
+
+  private MvcTestResult throwUnknown() {
+    return mvc.get().uri(ThrowingController.PATH).exchange();
+  }
 
   private MvcTestResult post(String body) {
     return mvc.post()
@@ -432,5 +469,17 @@ class ErrorResponseIntegrationTest {
   private void assertCode(MvcTestResult result, int status, String code) {
     assertThat(result).hasStatus(status);
     assertThat(result).bodyJson().extractingPath("$.code").asString().isEqualTo(code);
+  }
+
+  @RestController
+  static class ThrowingController {
+
+    static final String PATH = "/test/throw";
+    static final String CAUSE = "thrown on purpose by the test";
+
+    @GetMapping(PATH)
+    void throwUnknown() {
+      throw new IllegalStateException(CAUSE);
+    }
   }
 }
