@@ -31,10 +31,13 @@ import org.springframework.web.context.WebApplicationContext;
  * <p><b>문서 검사로 대신할 수 없다.</b> {@code OpenApiDocumentTest}가 보는 것은 {@code ProblemFieldError}의 example
  * 문자열이고, 그것은 사람이 적은 값이라 변환이 깨져도 그대로 있는다. 이름이 실제로 변환되는지는 응답을 받아 봐야 안다.
  */
-@Import({TestcontainersConfiguration.class, ErrorResponseIntegrationTest.ThrowingController.class})
+@Import({
+  TestcontainersConfiguration.class,
+  GlobalExceptionHandlerIntegrationTest.ThrowingController.class
+})
 @SpringBootTest
 @Transactional
-class ErrorResponseIntegrationTest {
+class GlobalExceptionHandlerIntegrationTest {
 
   private static final String ORGANIZATION = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
