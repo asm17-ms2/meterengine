@@ -1,5 +1,8 @@
 import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
-import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRow } from "@/components/table/GridRow";
+import { GridTable } from "@/components/table/GridTable";
 
 const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 110px";
 const MIN_WIDTH = 940;

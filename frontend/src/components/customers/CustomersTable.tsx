@@ -1,6 +1,9 @@
 "use client";
 
-import { GridCell, GridHead, GridRow, GridTable } from "@/components/table/Grid";
+import { GridCell } from "@/components/table/GridCell";
+import { GridHead } from "@/components/table/GridHead";
+import { GridRow } from "@/components/table/GridRow";
+import { GridTable } from "@/components/table/GridTable";
 
 /**
  * 화면이 그리는 뷰모델. 등록일은 서버에서 이미 포맷해 온다.
