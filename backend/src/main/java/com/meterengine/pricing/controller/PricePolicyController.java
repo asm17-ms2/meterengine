@@ -85,7 +85,7 @@ public class PricePolicyController {
         description =
             """
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 사유는 detail에 있다.
+            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "404",

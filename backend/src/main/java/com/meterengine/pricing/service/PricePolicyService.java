@@ -1,5 +1,10 @@
 package com.meterengine.pricing.service;
 
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
@@ -9,9 +14,6 @@ import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
-import com.meterengine.pricing.exception.InvalidPricePolicyException;
-import com.meterengine.pricing.exception.MetricNotFoundException;
-import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
@@ -66,13 +68,13 @@ public class PricePolicyService {
       UUID organizationId, String billableMetricCode, CreatePricePolicyRequest request) {
     if (!billableMetricRepository.existsById(
         new BillableMetricId(organizationId, billableMetricCode))) {
-      throw new MetricNotFoundException(organizationId, billableMetricCode);
+      throw new NotFoundException(ErrorCode.METRIC_NOT_FOUND);
     }
 
     validate(request.dimensionProperties());
 
     if (pricePolicyRepository.existsById(new PricePolicyId(organizationId, billableMetricCode))) {
-      throw new PricePolicyAlreadyExistsException(billableMetricCode);
+      throw new ConflictException(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
     }
 
     PricePolicy pricePolicy =
@@ -80,7 +82,7 @@ public class PricePolicyService {
     try {
       pricePolicyRepository.saveAndFlush(pricePolicy);
     } catch (DataIntegrityViolationException exception) {
-      throw new PricePolicyAlreadyExistsException(billableMetricCode);
+      throw new ConflictException(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
     }
 
     return PricePolicyResponse.from(pricePolicy);
@@ -99,10 +101,14 @@ public class PricePolicyService {
   private void validate(List<String> dimensionProperties) {
     Set<String> declared = new HashSet<>(dimensionProperties);
     if (declared.size() < dimensionProperties.size()) {
-      throw new InvalidPricePolicyException("dimension_properties has duplicate keys");
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_PRICE_POLICY,
+          List.of(new FieldError("dimension_properties", "같은 키가 두 번 있습니다")));
     }
     if (dimensionProperties.stream().anyMatch(key -> key == null || key.isBlank())) {
-      throw new InvalidPricePolicyException("dimension_properties has a blank key");
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_PRICE_POLICY,
+          List.of(new FieldError("dimension_properties", "빈 키를 담을 수 없습니다")));
     }
   }
 }
