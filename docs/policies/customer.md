@@ -35,7 +35,7 @@
 |---|---|---|---|
 | 값을 만드는 쪽 | DB. 앱은 되읽기만 한다 | `Customer.createdAt`의 `@Generated(EventType.INSERT)`, `CustomerIntegrationTest.등록하면_201과_발급된_id와_등록시각이_오고_목록에_보인다` | PR #44 |
 | 기본값 | `clock_timestamp()` | `V3__add_customer_created_at.sql` | PR #44 |
-| 수정 | UPDATE 문에 싣지 않는다 | `Customer.createdAt`의 `updatable = false` | 초기 관례 |
+| 수정 | UPDATE 문에 싣지 않는다 | `Customer.createdAt`의 `updatable = false` | PR #44 |
 | 응답에 실리는 곳 | 등록, 수정, 목록 | `CustomerResponse.createdAt`, `openapi.yaml`의 `CustomerResponse` | PR #44 |
 
 왜 값을 만드는 자리를 자바에 두지 않나: setter도 초기화식도 없고 생성자에서도 받지 않아서, 애노테이션이 어떤 이유로든 안 먹으면 INSERT가 `null`을 보내고 DB가 거절한다. 이 구조가 애노테이션 오류를 조용한 오작동이 아니라 빨간불로 만드는 전제라, 여기에 setter나 초기화식을 더하면 그 전제가 깨진다.
@@ -69,8 +69,8 @@
 
 | 항목 | 값 | 코드 위치 | 근거 |
 |---|---|---|---|
-| 이벤트가 있는 고객 | 지우지 않는다 | `CustomerService.delete`, `CustomerIntegrationTest.이벤트가_있는_고객을_지우면_409이고_고객은_그대로다` | PR #39 |
-| 삭제 방식 | 물리 DELETE | `V1__create_initial_tables.sql`의 `usage_event.customer_id` FK | 초기 관례 |
+| 이벤트가 있는 고객 | 지우지 않는다 | `V1__create_initial_tables.sql`의 `usage_event_customer_same_org` 복합 FK, `CustomerIntegrationTest.이벤트가_있는_고객을_지우면_409이고_고객은_그대로다` | PR #39 |
+| 삭제 방식 | 물리 DELETE | `CustomerIntegrationTest.이벤트가_없는_고객은_삭제되고_목록에서_빠진다` | PR #39 |
 | 확인과 DELETE 사이의 경합 | 앱이 잠그지 않고 DB에 맡긴다 | `CustomerDeleteConcurrencyTest.이벤트가_커밋되기_전에_들어온_삭제는_대기하다_FK_위반으로_끝난다` | PR #39 |
 | 확인을 통과한 뒤 DB가 거절할 때 | 확인 단계와 같은 예외로 바꾼다 | `CustomerServiceTest.확인_뒤에_DB가_거절하면_같은_409_예외로_바뀐다` | PR #39 |
 
