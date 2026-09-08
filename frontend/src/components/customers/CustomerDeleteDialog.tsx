@@ -33,8 +33,8 @@ export function CustomerDeleteDialog({
   // 서버가 거절했다 (409). 오류가 아니라 규칙이라 에러 블록이 아닌 안내다.
   //
   // 디자인은 여기에 이벤트 건수를 적었지만("...이벤트가 328건 있습니다") 그 값을
-  // 채울 곳이 없다. 409 응답은 건수를 주지 않고, ProblemResponse의 detail은
-  // 영어이고 개발자용이라 화면에 그대로 쓰지 말라고 계약에 적혀 있다.
+  // 채울 곳이 없다. 409 응답은 건수를 주지 않고, ErrorResponse의 message는
+  // code마다 하나인 고정 문구라 건수가 들어 있지 않다.
   if (state.status === "rejected") {
     return (
       <Notice

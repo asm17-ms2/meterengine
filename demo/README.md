@@ -205,7 +205,7 @@ cd demo && python3 -m unittest && cd ..
 
 - outcome: new(신규 저장) | duplicate(중복, 저장 없음) | rejected(4xx 거절) |
   error(전송 실패/타임아웃/5xx, 저장 여부 불명 -- status와 response는 null일 수 있다)
-- rejected의 response에는 problem+json 원문이 그대로 남는다
+- rejected의 response에는 오류 응답 원문이 그대로 남는다
 - 라인마다 flush하므로 중단돼도 그 앞까지는 유효하다. 읽는 쪽은 읽히지 않는 라인을
   위치와 무관하게 경고와 함께 건너뛰고, 모르는 type은 무시한다 (전방 호환).
   이어쓰는 파일에서는 잘린 라인이 마지막이 아니게 되므로(뒤에 다음 실행 헤더가
@@ -448,7 +448,7 @@ demo/
 
   core/             양쪽이 함께 쓰는 것
     model.py        KST 상수, Event, RFC3339 파싱, 와이어 바디 조립
-    api_client.py   백엔드 HTTP 래퍼 (problem+json 파싱 포함)
+    api_client.py   백엔드 HTTP 래퍼 (오류 응답 파싱 포함)
     jsonl_log.py    전송 기록 JSONL 쓰기/읽기, outcome 판정
     files.py        JSON 파일 원자적 쓰기 (상태 파일과 Claude 설정)
 

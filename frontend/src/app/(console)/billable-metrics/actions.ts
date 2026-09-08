@@ -71,7 +71,7 @@ function toFailureState(error: ApiError): BillableMetricFormState {
         message: "도입사를 찾을 수 없습니다. 설정을 확인해주세요.",
       };
     case "network_error":
-      return { status: "failed", message: error.title };
+      return { status: "failed", message: error.message };
     default:
       return {
         status: "failed",
@@ -188,7 +188,7 @@ export async function deleteBillableMetricAction(
       status: "failed",
       message:
         result.error.code === "network_error"
-          ? result.error.title
+          ? result.error.message
           : "삭제하지 못했습니다. 잠시 후 다시 시도해주세요.",
     };
   }
