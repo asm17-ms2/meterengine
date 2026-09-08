@@ -5,13 +5,16 @@ import com.meterengine.event.dto.Event;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
-import com.meterengine.event.exception.UnknownCustomerException;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +39,7 @@ public class EventService {
   /** 이벤트 수집 (MS2-130). 형식은 컨트롤러가 검증하고, 여기는 고객 판정과 멱등 저장만 한다. */
   public IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
     if (!customerRepository.existsByOrganizationIdAndId(organizationId, request.customerId())) {
-      throw new UnknownCustomerException(organizationId, request.customerId());
+      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
 
     // properties는 원문 그대로 넘긴다. 어느 키가 사용량 값인지 판정하지 않는다.
@@ -63,6 +66,8 @@ public class EventService {
       // 트랜잭션을 abort 상태로 만들어서, 배치 엔드포인트 같은 것이 ingest()를 한 트랜잭션으로 감싸면
       // 여기서 삼키고 200을 답해도 커밋이 롤백된다. 그때는 이 catch를 걷어내야 한다.
       return IngestEventResponse.alreadyStored(request.transactionId());
+    } catch (DataIntegrityViolationException rejected) {
+      throw new InvalidRequestException(ErrorCode.INVALID_EVENT);
     }
   }
 
@@ -80,7 +85,6 @@ public class EventService {
    * 이유가 아직 없다. 트랜잭션은 두 쿼리가 같은 커넥션을 쓰게 하는 몫만 한다.
    *
    * @param customerId null이면 고객을 좁히지 않는다. 값이 있으면 이 도입사 고객인지 먼저 판정한다
-   * @throws UnknownCustomerException 미등록이거나 다른 도입사 소속인 customerId
    */
   @Transactional(readOnly = true)
   public ListEventsResponse list(
@@ -91,7 +95,7 @@ public class EventService {
     // 있다는 사실을 흘리지 않는다 (수집 API와 같은 판정, 같은 예외).
     if (customerId != null
         && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId)) {
-      throw new UnknownCustomerException(organizationId, customerId);
+      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
 
     OffsetDateTime start =

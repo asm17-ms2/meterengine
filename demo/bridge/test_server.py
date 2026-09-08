@@ -199,7 +199,7 @@ class SendOneTest(SenderTestCase):
 
         class Rejecting:
             def post_event(self, body_text):
-                return FakeResult(400, {"code": "unknown_customer_reference"})
+                return FakeResult(404, {"code": "customer_not_found"})
 
         sender = self.sender(resolver=FakeResolver(), client=Rejecting())
         sender.state.remember_session("sess-1", "meterengine")

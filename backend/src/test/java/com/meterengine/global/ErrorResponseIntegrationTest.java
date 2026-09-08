@@ -336,6 +336,7 @@ class ErrorResponseIntegrationTest {
     // 코드 8종과 4xx 네 상태, 두 핸들러(프레임워크/도메인), 세 엔드포인트를 함께 태운다.
     MvcTestResult[] responses = {
       post(INVALID_BODY),
+      post(UNKNOWN_CUSTOMER_BODY),
       post("{\"bad"),
       mvc.get().uri("/v1/events").exchange(),
       mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange(),

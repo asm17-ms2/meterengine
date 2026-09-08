@@ -34,7 +34,7 @@ def classify_outcome(status: Optional[int], body) -> str:
     """
     if status == 200 and isinstance(body, dict) and "duplicate" in body:
         return "duplicate" if body["duplicate"] else "new"
-    if status == 400:
+    if status is not None and 400 <= status < 500:
         return "rejected"
     return "error"
 

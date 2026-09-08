@@ -2,8 +2,8 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -152,22 +152,22 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void 등록되지_않은_고객이면_400이고_저장은_0건이다() {
+  void 등록되지_않은_고객이면_404이고_저장은_0건이다() {
     UUID orgId = insertOrganization("도입사 A");
 
     MvcTestResult result = post(orgId, body("tx-1", UUID.randomUUID().toString()));
 
     assertThat(result)
-        .hasStatus(400)
+        .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
     assertThat(totalCount(orgId)).isZero();
   }
 
   @Test
-  void 다른_도입사_소속_고객이면_400이고_저장은_0건이다() {
+  void 다른_도입사_소속_고객이면_404이고_저장은_0건이다() {
     UUID orgId = insertOrganization("도입사 A");
     UUID otherOrgId = insertOrganization("도입사 B");
     UUID otherCustomerId = insertCustomer(otherOrgId, "다른 도입사의 고객");
@@ -175,11 +175,11 @@ class EventIngestIntegrationTest {
     MvcTestResult result = post(orgId, body("tx-1", otherCustomerId.toString()));
 
     assertThat(result)
-        .hasStatus(400)
+        .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
     assertThat(totalCount(orgId)).isZero();
   }
 
@@ -315,15 +315,15 @@ class EventIngestIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
 
     assertThat(post(orgId, body("tx-1", UUID.randomUUID().toString())))
-        .hasStatus(400)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasStatus(404)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_CUSTOMER_REFERENCE);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
   }
 
   @Test
@@ -391,13 +391,16 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
-    assertThat(post(orgId, withNulCharacter))
+    MvcTestResult result = post(orgId, withNulCharacter);
+
+    assertThat(result)
         .hasStatus(400)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.INVALID_EVENT);
+        .isEqualTo(ErrorCode.INVALID_EVENT.getCode());
+    assertThat(result).bodyJson().doesNotHavePath("$.errors");
 
     // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
     // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
@@ -407,20 +410,22 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void 도입사를_잘못_보내도_고객만_지목하지_않는다() {
+  void 도입사를_잘못_보내면_404이고_보낸_값은_본문에_없다() {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
     UUID wrongOrgId = UUID.randomUUID();
 
     // customer_id는 멀쩡한데 X-Organization-Id가 틀린 경우다. 고객만 지목하면 도입사는 고객 등록을
     // 의심하며 엉뚱한 곳을 디버깅한다.
-    assertThat(post(wrongOrgId, body("tx-1", customerId.toString())))
-        .hasStatus(400)
+    MvcTestResult result = post(wrongOrgId, body("tx-1", customerId.toString()));
+
+    assertThat(result)
+        .hasStatus(404)
         .bodyJson()
-        .extractingPath("$.detail")
+        .extractingPath("$.code")
         .asString()
-        .contains(wrongOrgId.toString())
-        .contains("X-Organization-Id");
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
+    assertThat(result).bodyText().doesNotContain(wrongOrgId.toString());
   }
 
   @Test

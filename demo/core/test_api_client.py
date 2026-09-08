@@ -47,8 +47,8 @@ class ParseProblemTest(unittest.TestCase):
         self.assertEqual(problem.errors, [])
 
     def test_요약문은_code와_detail을_담는다(self):
-        problem = parse_problem(400, {"code": "unknown_customer_reference", "detail": "customer x"})
-        self.assertIn("unknown_customer_reference", problem.summary())
+        problem = parse_problem(404, {"code": "customer_not_found", "detail": "customer x"})
+        self.assertIn("customer_not_found", problem.summary())
         self.assertIn("customer x", problem.summary())
 
 

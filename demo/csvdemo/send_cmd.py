@@ -128,7 +128,7 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
     if outcome in ("new", "duplicate"):
         summary = "200 duplicate=%s (%dms)" % (str(result.body.get("duplicate")).lower(), result.elapsed_ms)
     elif outcome == "rejected":
-        summary = "400 " + parse_problem(result.status, result.body).summary()
+        summary = "%d %s" % (result.status, parse_problem(result.status, result.body).summary())
     else:
         summary = "HTTP %d %s" % (result.status, parse_problem(result.status, result.body).summary())
     return outcome, summary

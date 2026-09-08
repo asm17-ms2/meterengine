@@ -19,7 +19,7 @@ _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 _TAG_STYLES = {
     "new": ("[NEW]", "32"),
     "duplicate": ("[DUP]", "33"),
-    "rejected": ("[400]", "31"),
+    "rejected": ("[REJ]", "31"),
     "error": ("[ERR]", "35"),
 }
 
@@ -197,7 +197,7 @@ def format_gate(
         )
     if predicted_counts is not None:
         lines.append(
-            "  예상 결과: 신규 %d, 중복 %d, 400 거절 %d (CSV 기준 예측. 서버에 이미 있는 건은 신규 대신 중복으로 나온다)"
+            "  예상 결과: 신규 %d, 중복 %d, 거절 %d (CSV 기준 예측. 서버에 이미 있는 건은 신규 대신 중복으로 나온다)"
             % (
                 predicted_counts.get("new", 0),
                 predicted_counts.get("duplicate", 0),
@@ -215,7 +215,7 @@ def format_gate(
 
 
 def format_summary(sent: int, new: int, duplicate: int, rejected: int, error: int, log_path: Optional[str]) -> List[str]:
-    line = "전송 %d건: 신규 %d, 중복 %d, 400 거절 %d" % (sent, new, duplicate, rejected)
+    line = "전송 %d건: 신규 %d, 중복 %d, 거절 %d" % (sent, new, duplicate, rejected)
     if error:
         line += ", 오류 %d" % error
     lines = [line]

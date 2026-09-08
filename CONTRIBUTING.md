@@ -34,6 +34,7 @@
 | 이름 규칙 | `docs/contributing/naming.md` |
 | 오류 code, 문구, 예외와 핸들러의 자리 | `docs/contributing/error-handling.md` |
 | 주석과 javadoc | `docs/contributing/comments.md` |
+| 용어(개념어와 이름의 대응, 충돌하는 말, 남은 빈칸) | `docs/glossary.md` |
 | 각 디렉터리의 실행법, 구조, 그 안에서 내린 판단 | 그 디렉터리의 `README.md` |
 
 한 내용을 두 곳에 쓰지 않는다. 정본이 아닌 곳에서 언급해야 하면 정본을 가리킨다. 표에 없는 종류의 문서는 만들기 전에 어디에 둘지 먼저 합의한다.
