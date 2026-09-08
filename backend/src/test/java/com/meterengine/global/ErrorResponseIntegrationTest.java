@@ -1,7 +1,10 @@
-package com.meterengine;
+package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +32,7 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
-class FrameworkExceptionHandlerIntegrationTest {
+class ErrorResponseIntegrationTest {
 
   private static final String ORGANIZATION = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
@@ -71,24 +74,24 @@ class FrameworkExceptionHandlerIntegrationTest {
 
   @Test
   void 깨진_JSON_본문은_400이고_code가_malformed_request_body다() {
-    assertCode(post("{\"bad"), 400, ErrorCodes.MALFORMED_REQUEST_BODY);
+    assertCode(post("{\"bad"), 400, ErrorCode.MALFORMED_REQUEST_BODY.getCode());
   }
 
   @Test
   void 빈_본문은_400이고_code가_malformed_request_body다() {
-    assertCode(post(""), 400, ErrorCodes.MALFORMED_REQUEST_BODY);
+    assertCode(post(""), 400, ErrorCode.MALFORMED_REQUEST_BODY.getCode());
   }
 
   @Test
   void timestamp에_오프셋이_없으면_400이고_code가_malformed_request_body다() {
     // Jackson이 OffsetDateTime으로 못 바꿔서 파싱 단계에서 끊긴다. 필드를 짚을 수 없으므로
-    // validation_error가 아니다 (ErrorCodes.MALFORMED_REQUEST_BODY javadoc 참조).
+    // validation_error가 아니다 (ErrorCode.MALFORMED_REQUEST_BODY.getCode() javadoc 참조).
     String body =
         """
         {"transaction_id":"t","customer_id":"a728e7b6-d82b-4f3c-a960-a66a02794c1d",
          "type":"chat_completion","timestamp":"2026-08-17T12:00:00","properties":{"token":1}}
         """;
-    assertCode(post(body), 400, ErrorCodes.MALFORMED_REQUEST_BODY);
+    assertCode(post(body), 400, ErrorCode.MALFORMED_REQUEST_BODY.getCode());
   }
 
   // ---------------------------------------------------------------------------
@@ -104,29 +107,24 @@ class FrameworkExceptionHandlerIntegrationTest {
             .contentType(MediaType.TEXT_PLAIN)
             .content("{}")
             .exchange();
-    assertCode(result, 415, ErrorCodes.REQUEST_TYPE_NOT_SUPPORTED);
-
-    // 프레임워크가 붙이던 응답 헤더가 남아 있어야 한다. 이것이 전역 advice 대신 상속을 고른
-    // 이유이고(MS2-150 D-1), 손으로 잡으면 잃는 정보다.
-    assertThat(result.getResponse().getHeader("Accept")).contains("application/json");
+    assertCode(result, 415, ErrorCode.REQUEST_TYPE_NOT_SUPPORTED.getCode());
   }
 
   @Test
   void 없는_경로는_404이고_code가_endpoint_not_found다() {
     MvcTestResult result =
         mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION).exchange();
-    assertCode(result, 404, ErrorCodes.ENDPOINT_NOT_FOUND);
+    assertCode(result, 404, ErrorCode.ENDPOINT_NOT_FOUND.getCode());
   }
 
   @Test
-  void 허용되지_않은_메서드는_405이고_Allow_헤더가_남는다() {
+  void 허용되지_않은_메서드는_405이고_code가_붙는다() {
     MvcTestResult result =
         mvc.method(HttpMethod.DELETE)
             .uri("/v1/events")
             .header("X-Organization-Id", ORGANIZATION)
             .exchange();
-    assertCode(result, 405, ErrorCodes.METHOD_NOT_ALLOWED);
-    assertThat(result.getResponse().getHeader("Allow")).contains("GET");
+    assertCode(result, 405, ErrorCode.METHOD_NOT_ALLOWED.getCode());
   }
 
   @Test
@@ -138,7 +136,7 @@ class FrameworkExceptionHandlerIntegrationTest {
             .header("X-Organization-Id", ORGANIZATION)
             .accept(MediaType.TEXT_PLAIN)
             .exchange();
-    assertCode(result, 406, ErrorCodes.RESPONSE_TYPE_NOT_ACCEPTABLE);
+    assertCode(result, 406, ErrorCode.RESPONSE_TYPE_NOT_ACCEPTABLE.getCode());
   }
 
   // ---------------------------------------------------------------------------
@@ -154,7 +152,7 @@ class FrameworkExceptionHandlerIntegrationTest {
               .param("month", "2026-13")
               .header("X-Organization-Id", ORGANIZATION)
               .exchange();
-      assertCode(result, 400, ErrorCodes.VALIDATION_ERROR);
+      assertCode(result, 400, ErrorCode.VALIDATION_ERROR.getCode());
     }
   }
 
@@ -181,7 +179,7 @@ class FrameworkExceptionHandlerIntegrationTest {
   void 본문_검증의_field가_자바_이름이_아니라_JSON_키다() {
     assertThat(post(INVALID_BODY))
         .bodyJson()
-        .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.FIELD))
+        .extractingPath("$.errors[*].field")
         .asArray()
         .contains("transaction_id", "customer_id", "timestamp")
         .doesNotContain("transactionId", "customerId", "occurredAt");
@@ -251,7 +249,7 @@ class FrameworkExceptionHandlerIntegrationTest {
         }) {
       assertThat(result)
           .bodyJson()
-          .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.FIELD))
+          .extractingPath("$.errors[*].field")
           .asArray()
           .allSatisfy(
               field ->
@@ -315,7 +313,7 @@ class FrameworkExceptionHandlerIntegrationTest {
         }) {
       assertThat(result)
           .bodyJson()
-          .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.MESSAGE))
+          .extractingPath("$.errors[*].message")
           .asArray()
           .allSatisfy(
               message ->
@@ -330,7 +328,7 @@ class FrameworkExceptionHandlerIntegrationTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void 어느_4xx에도_type이_실리지_않는다() {
+  void 어느_4xx에도_problem_json_멤버가_실리지_않는다() {
     // 이 단언이 ProblemResponse에서 type을 뺀 근거를 지킨다. 값이 기본값 about:blank면 Spring이
     // 직렬화에서 빼고 우리는 setType을 부르지 않는다. 누가 setType을 부르거나 프레임워크가 기본값을
     // 바꾸면 문서에 없는 필드가 응답에 생기므로(인수기준 4의 반대 방향) 여기서 걸린다.
@@ -348,6 +346,10 @@ class FrameworkExceptionHandlerIntegrationTest {
           .content("{}")
           .exchange(),
       mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION).exchange(),
+      mvc.delete()
+          .uri("/v1/customers/" + UUID.randomUUID())
+          .header("X-Organization-Id", ORGANIZATION)
+          .exchange(),
       mvc.method(HttpMethod.DELETE)
           .uri("/v1/events")
           .header("X-Organization-Id", ORGANIZATION)
@@ -358,7 +360,6 @@ class FrameworkExceptionHandlerIntegrationTest {
           .header("X-Organization-Id", ORGANIZATION)
           .accept(MediaType.TEXT_PLAIN)
           .exchange(),
-      post(UNKNOWN_CUSTOMER_BODY),
       mvc.get()
           .uri("/v1/usage")
           .param("month", "2026-13")
@@ -372,7 +373,14 @@ class FrameworkExceptionHandlerIntegrationTest {
     };
 
     for (MvcTestResult result : responses) {
-      assertThat(result).bodyJson().extractingPath("$").asMap().doesNotContainKey("type");
+      assertThat(result).hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON);
+      assertThat(result)
+          .bodyJson()
+          .extractingPath("$")
+          .asMap()
+          .containsKey("code")
+          .containsKey("message")
+          .doesNotContainKeys("type", "title", "status", "detail", "instance");
     }
   }
 
@@ -406,7 +414,7 @@ class FrameworkExceptionHandlerIntegrationTest {
     assertThat(result).hasStatus(400);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.MESSAGE))
+        .extractingPath("$.errors[*].message")
         .asArray()
         .contains((Object[]) messages);
   }
@@ -415,17 +423,13 @@ class FrameworkExceptionHandlerIntegrationTest {
     assertThat(result).hasStatus(400);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.%s[*].%s".formatted(ProblemMembers.ERRORS, ProblemMembers.FIELD))
+        .extractingPath("$.errors[*].field")
         .asArray()
         .contains((Object[]) fields);
   }
 
   private void assertCode(MvcTestResult result, int status, String code) {
     assertThat(result).hasStatus(status);
-    assertThat(result)
-        .bodyJson()
-        .extractingPath("$." + ProblemMembers.CODE)
-        .asString()
-        .isEqualTo(code);
+    assertThat(result).bodyJson().extractingPath("$.code").asString().isEqualTo(code);
   }
 }

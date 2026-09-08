@@ -1,6 +1,6 @@
 package com.meterengine.metric.controller;
 
-import com.meterengine.ProblemResponse;
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
@@ -49,8 +49,8 @@ public class BillableMetricController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
@@ -61,8 +61,8 @@ public class BillableMetricController {
         responseCode = "409",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다")
   })
   public BillableMetricResponse createBillableMetric(
@@ -88,8 +88,8 @@ public class BillableMetricController {
         responseCode = "400",
         content =
             @Content(
-                mediaType = "application/problem+json",
-                schema = @Schema(implementation = ProblemResponse.class)),
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public ListBillableMetricsResponse listBillableMetrics(

@@ -82,17 +82,17 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 - 왜 이렇게 설계했는지는 docs/(RFC와 정책)에, 이 변경을 왜 했는지는 커밋 메시지와 PR 본문에, "고치면 깨진다"는 테스트에 넣는다
 - 주석을 붙이고 싶어지면 대개 이름이나 분리가 잘못된 것이다. 주석 대신 그쪽을 고친다
 - 도구 지시문(`@SuppressWarnings`, `// eslint-disable-next-line`), `@Schema`/`@Operation`/`@Parameter`/`@ApiResponse`의 description, 파일을 눈으로 나누는 구분자는 대상이 아니다. description은 주석이 아니라 API 계약이다. 다만 거기에 Jira 키를 넣지 않는다 (`openapi.yaml`로 외부에 나간다)
-- 규칙 이전에 쌓인 주석과 javadoc은 RFC-002에 따라 전수 정리한다. 대상 코드로 조각내고 한 PR이 그 조각의 삭제와 옮겨 적은 문서를 함께 담는다. 정리가 아직 닿지 않은 파일을 기능 작업 중에 편집하게 되면 그 파일의 정리를 맡되, 하던 PR에 섞지 않고 그 정리만 하는 PR을 따로 연다
+- 규칙 이전에 쌓인 주석과 javadoc은 전수 정리한다 (결정은 RFC-002). 대상 코드로 조각내고 한 PR이 그 조각의 삭제와 옮겨 적은 문서를 함께 담는다. 정리가 아직 닿지 않은 파일을 기능 작업 중에 편집하게 되면 그 파일의 정리를 맡되, 하던 PR에 섞지 않고 그 정리만 하는 PR을 따로 연다
 - **`V__` 마이그레이션은 주석만 고쳐도 체크섬이 바뀌어 이미 적용된 DB의 기동이 실패한다.** 파일 수정과 함께 배포 DB와 로컬 볼륨의 체크섬을 맞춘다. CI는 매번 빈 DB라 이 실패를 잡지 못한다
 - **주변 코드에 주석이 많아도 그것을 근거로 삼지 않는다.** 기존 파일의 주석 밀도는 규칙 이전 상태이지 따라야 할 본보기가 아니다
 
-전체 규칙은 CONTRIBUTING.md "주석과 javadoc"에 있다.
+전체 규칙과 근거는 `docs/contributing/comments.md`에 있다.
 
 ## 문서 흐름
 
 결정과 규칙은 레포(docs/), 회의록과 일정과 초안은 Miro다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
 
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다.
+레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`와 `docs/contributing/`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. RFC와 규칙과 정책을 가르는 기준은 `docs/contributing/governance.md`다.
 
 PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
 

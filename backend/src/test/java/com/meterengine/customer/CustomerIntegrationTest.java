@@ -2,8 +2,8 @@ package com.meterengine.customer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -96,7 +96,7 @@ class CustomerIntegrationTest {
           .bodyJson()
           .extractingPath("$.code")
           .asString()
-          .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+          .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     }
     assertThat(customerCount(orgId)).isZero();
   }
@@ -140,7 +140,7 @@ class CustomerIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_ORGANIZATION);
+        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION.getCode());
   }
 
   @Test
@@ -270,7 +270,7 @@ class CustomerIntegrationTest {
           .bodyJson()
           .extractingPath("$.code")
           .asString()
-          .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+          .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     }
     assertThat(nameOf(customerId)).isEqualTo("옛 이름");
   }
@@ -292,7 +292,7 @@ class CustomerIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.CUSTOMER_NOT_FOUND);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
 
     assertThat(nameOf(otherCustomerId)).isEqualTo("남의 고객");
   }
@@ -322,7 +322,7 @@ class CustomerIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   // --- 삭제 ---
@@ -346,11 +346,11 @@ class CustomerIntegrationTest {
 
     assertThat(delete(orgId, customerId))
         .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.CUSTOMER_HAS_EVENTS);
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS.getCode());
 
     assertThat(customerCount(orgId)).isEqualTo(1);
     assertThat(list(orgId)).bodyJson().extractingPath("$.customers").asArray().hasSize(1);
@@ -368,7 +368,7 @@ class CustomerIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.CUSTOMER_NOT_FOUND);
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
   }
 
   @Test
