@@ -273,18 +273,18 @@ class OpenApiDocumentTest {
     // [2026-08-17, MS2-150 7단계] 예전에는 "code가 붙는 쪽(/v1/events)과 안 붙는 쪽이 갈린다"고 적혀
     // 있었다. 4단계가 프레임워크 4xx 전부에 code를 붙여 그 구분이 없어졌고, 7단계가 스키마를 하나로
     // 합쳤다. 다시 갈리면 그것은 회귀이므로 넷을 같은 이름으로 못박아 둔다.
-    assertProblemSchema("/v1/events", "get", "ErrorResponse");
-    assertProblemSchema("/v1/events", "post", "ErrorResponse");
-    assertProblemSchema("/v1/usage", "get", "ErrorResponse");
-    assertProblemSchema("/v1/invoices/draft", "get", "ErrorResponse");
-    assertProblemSchema("/v1/customers", "get", "ErrorResponse");
-    assertProblemSchema("/v1/customers", "post", "ErrorResponse");
-    assertProblemSchema("/v1/customers/{id}", "put", "ErrorResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics", "post", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics", "get", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
-    assertProblemSchema("/v1/price-policies", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/events", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/events", "post", "ErrorResponse");
+    assertErrorResponseSchema("/v1/usage", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/invoices/draft", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers", "post", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers/{id}", "put", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers/{id}", "delete", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics", "post", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
+    assertErrorResponseSchema("/v1/price-policies", "get", "ErrorResponse");
   }
 
   /**
@@ -295,12 +295,14 @@ class OpenApiDocumentTest {
    */
   @Test
   void 다른_오류_상태도_200_스키마를_물려받지_않는다() {
-    assertProblemSchema("/v1/customers/{id}", "put", "404", "ErrorResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "404", "ErrorResponse");
-    assertProblemSchema("/v1/customers/{id}", "delete", "409", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics", "post", "409", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "404", "ErrorResponse");
-    assertProblemSchema("/v1/billable-metrics/{code}/price-policy", "post", "409", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers/{id}", "put", "404", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers/{id}", "delete", "404", "ErrorResponse");
+    assertErrorResponseSchema("/v1/customers/{id}", "delete", "409", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics", "post", "409", "ErrorResponse");
+    assertErrorResponseSchema(
+        "/v1/billable-metrics/{code}/price-policy", "post", "404", "ErrorResponse");
+    assertErrorResponseSchema(
+        "/v1/billable-metrics/{code}/price-policy", "post", "409", "ErrorResponse");
   }
 
   @Test
@@ -390,12 +392,12 @@ class OpenApiDocumentTest {
   }
 
   /** 400 응답이 problem+json으로, 기대한 오류 스키마를 가리키는지 본다. */
-  private void assertProblemSchema(String path, String method, String schema) {
-    assertProblemSchema(path, method, "400", schema);
+  private void assertErrorResponseSchema(String path, String method, String schema) {
+    assertErrorResponseSchema(path, method, "400", schema);
   }
 
   /** 400 말고 다른 오류 상태를 볼 때 쓴다 (MS2-155의 404, 409). */
-  private void assertProblemSchema(String path, String method, String status, String schema) {
+  private void assertErrorResponseSchema(String path, String method, String status, String schema) {
     assertThat(json())
         .bodyJson()
         .extractingPath(
