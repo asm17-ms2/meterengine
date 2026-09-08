@@ -63,7 +63,7 @@ class PricePolicyServiceTest {
     assertThatThrownBy(() -> create(List.of()))
         .isInstanceOf(NotFoundException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.METRIC_NOT_FOUND);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
     verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 

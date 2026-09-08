@@ -68,7 +68,7 @@ public class PricePolicyService {
       UUID organizationId, String billableMetricCode, CreatePricePolicyRequest request) {
     if (!billableMetricRepository.existsById(
         new BillableMetricId(organizationId, billableMetricCode))) {
-      throw new NotFoundException(ErrorCode.METRIC_NOT_FOUND);
+      throw new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
     }
 
     validate(request.dimensionProperties());

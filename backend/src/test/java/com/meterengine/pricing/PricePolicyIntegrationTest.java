@@ -106,7 +106,7 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.METRIC_NOT_FOUND.getCode());
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND.getCode());
   }
 
   @Test

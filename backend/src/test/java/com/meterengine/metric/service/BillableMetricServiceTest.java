@@ -93,7 +93,7 @@ class BillableMetricServiceTest {
     assertThatThrownBy(() -> create("SUM", "token"))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.METRIC_ALREADY_EXISTS);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     verify(billableMetricRepository, never()).saveAndFlush(any());
   }
 
@@ -105,7 +105,7 @@ class BillableMetricServiceTest {
     assertThatThrownBy(() -> create("SUM", "token"))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.METRIC_ALREADY_EXISTS);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
   }
 
   @Test

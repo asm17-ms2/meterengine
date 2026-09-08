@@ -46,7 +46,7 @@ function toServerFieldErrors(
 }
 
 function toFailureState(error: ApiError): BillableMetricFormState {
-  if (error.code === "metric_already_exists") {
+  if (error.code === "billable_metric_already_exists") {
     return {
       status: "invalid",
       fieldErrors: { code: "이미 사용 중인 코드입니다. 다른 코드를 쓰세요." },
@@ -114,7 +114,7 @@ const UPDATE_FIELDS: readonly BillableMetricField[] = [
 ];
 
 function toUpdateFailureState(error: ApiError): BillableMetricFormState {
-  if (error.code === "metric_not_found") {
+  if (error.code === "billable_metric_not_found") {
     return {
       status: "failed",
       message: "이미 삭제된 미터입니다. 목록을 새로 고쳐주세요.",
@@ -180,7 +180,7 @@ export async function deleteBillableMetricAction(
     if (result.error.code === "metric_has_price_policy") {
       return { status: "rejected", reason: "policy", name: billableMetricName };
     }
-    if (result.error.code === "metric_not_found") {
+    if (result.error.code === "billable_metric_not_found") {
       revalidatePath("/billable-metrics");
       return { status: "gone", name: billableMetricName };
     }

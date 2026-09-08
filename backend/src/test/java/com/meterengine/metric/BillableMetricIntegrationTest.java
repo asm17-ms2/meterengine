@@ -62,7 +62,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.METRIC_ALREADY_EXISTS.getCode());
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
 
     assertThat(storedName(orgId, "token-usage")).isEqualTo("토큰 사용량");
   }
