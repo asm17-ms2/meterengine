@@ -1,6 +1,6 @@
 <!--
 제목: <type>: <요약> (MS2-xxx). 티켓이 없으면 키를 생략합니다.
-올리기 전에 CONTRIBUTING.md의 "PR 크기와 쪼개기"와 "README 점검"을 확인합니다.
+올리기 전에 docs/contributing/pull-request.md의 "PR 크기와 쪼개기"와 CONTRIBUTING.md의 "README 점검"을 확인합니다.
 사소한 변경(오타, 링크, 버전 올리기)이면 아래를 지우고 한 줄 요약만 써도 됩니다.
 합의가 안 된 제안이면 라벨 proposal을 붙이고 본문 첫 줄에 합의가 필요한 점을 적습니다.
 -->
