@@ -14,6 +14,7 @@
   - `V5__create_invoice_tables.sql` - 확정 인보이스와 인보이스 라인 두 테이블. 고객 x 달로 한 장을 강제하고, 라인은 인보이스 안에서 미터와 단가 조합으로 유일하다. 확정본을 되돌리는 수단은 두지 않았고, 확정된 행을 지우거나 고치는 것을 DB가 막지는 않는다
   - `V6__rename_metric_code_to_billable_metric_code.sql` - price_policy, price_rate, invoice_line의 `metric_code`를 `billable_metric_code`로 개명. 다른 테이블을 가리키는 컬럼은 참조 테이블 이름을 붙인다는 이름 규칙(RFC-001)을 따른 것이다
   - `V7__rename_usage_event_to_event.sql` - `usage_event` 테이블을 `event`로, 그 테이블의 `event_type` 컬럼을 `type`으로 개명. PK, FK, NOT NULL 제약, 트리거, 함수 이름도 `usage_event_` 접두어를 `event_`로 맞췄다. 테이블 이름은 엔티티명과 같게 하고 같은 정보를 이름에 두 번 넣지 않는다는 이름 규칙(RFC-001)을 따른 것이고, 코드 쪽 이름이 이미 `Event`이고 와이어 키가 `type`이라 테이블을 그쪽에 맞췄다. `billable_metric.event_type`은 이 컬럼을 가리키는 참조 컬럼이라 그대로다
+  - `V8__name_organization_fk_and_pk_constraints.sql` - 이름 없이 만들어 PostgreSQL 기본 이름이 붙어 있던 `organization_id` FK와 PK를 `<테이블>_organization_fk`, `<테이블>_pk`로 개명. 코드가 제약 위반을 제약 이름으로 가려내므로 그 이름은 마이그레이션이 정하고 `SchemaConstraintTest`가 지킨다. 기본 이름은 PostgreSQL이 정한 것이라 마이그레이션에 적힌 적이 없고, 테이블을 개명해도 따라오지 않는다 (V7이 손으로 RENAME한 이유)
   - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 가격 정책은 API로도 들어오지만 데모가 쓰는 도입사와 고객과 미터는 이 파일이 정한다. `llm_request` 이벤트 하나를 입력, 출력, 캐시 읽기, 캐시 생성 토큰 미터가 함께 잰다. 캐시 미터를 빼면 실측에서 토큰의 대부분이 캐시라 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (CONTRIBUTING.md "문서의 정본")
