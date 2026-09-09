@@ -145,8 +145,8 @@ class DraftInvoiceIntegrationTest {
         .hasStatus(201);
     jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, 'tx-2', ?, 'api_call', '{"count": 3}', '2026-08-10T13:00:00+09:00')
         """,
         orgId,
@@ -281,8 +281,8 @@ class DraftInvoiceIntegrationTest {
       OffsetDateTime occurredAt) {
     jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
         """,
         organizationId,

@@ -264,7 +264,7 @@ class AllowedHostTest(unittest.TestCase):
 class RequestOriginTest(unittest.TestCase):
     """이 서버는 인증이 없다. 브라우저가 보낸 요청은 받지 않는다.
 
-    받으면 사용자가 열어 둔 아무 페이지나 지어낸 토큰 수를 usage_event에 넣을 수
+    받으면 사용자가 열어 둔 아무 페이지나 지어낸 토큰 수를 event 테이블에 넣을 수
     있다. append-only라 지울 수도 없다.
     """
 

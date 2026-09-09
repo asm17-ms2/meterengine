@@ -66,7 +66,7 @@ class EventIngestIntegrationTest {
 
     OffsetDateTime occurredAt =
         jdbc.queryForObject(
-            "SELECT occurred_at FROM usage_event WHERE organization_id = ? AND transaction_id = 'tx-1'",
+            "SELECT occurred_at FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             OffsetDateTime.class,
             orgId);
     assertThat(occurredAt).isEqualTo(OffsetDateTime.parse(OCCURRED_AT));
@@ -199,7 +199,7 @@ class EventIngestIntegrationTest {
 
     OffsetDateTime receivedAt =
         jdbc.queryForObject(
-            "SELECT received_at FROM usage_event WHERE organization_id = ? AND transaction_id = 'tx-1'",
+            "SELECT received_at FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             OffsetDateTime.class,
             orgId);
     assertThat(receivedAt).isAfter(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
@@ -247,12 +247,12 @@ class EventIngestIntegrationTest {
         .asBoolean()
         .isTrue();
 
-    String eventType =
+    String type =
         jdbc.queryForObject(
-            "SELECT event_type FROM usage_event WHERE organization_id = ? AND transaction_id = 'tx-1'",
+            "SELECT type FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
             orgId);
-    assertThat(eventType).isEqualTo("chat_completion");
+    assertThat(type).isEqualTo("chat_completion");
     assertThat(storedCount(orgId, "tx-1")).isEqualTo(1);
   }
 
@@ -351,7 +351,7 @@ class EventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
 
-    // Double로 바인딩하면 0.12345678901234568로 잘린다. usage_event는 append-only라 되돌릴 수 없고
+    // Double로 바인딩하면 0.12345678901234568로 잘린다. event 테이블은 append-only라 되돌릴 수 없고
     // 이 값이 청구 근거가 된다.
     String preciseDecimal =
         """
@@ -364,14 +364,14 @@ class EventIngestIntegrationTest {
 
     String stored =
         jdbc.queryForObject(
-            "SELECT properties->>'cost' FROM usage_event WHERE organization_id = ? AND transaction_id = 'tx-1'",
+            "SELECT properties->>'cost' FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
             orgId);
     assertThat(stored).isEqualTo("0.1234567890123456789");
 
     String storedInteger =
         jdbc.queryForObject(
-            "SELECT properties->>'token' FROM usage_event WHERE organization_id = ? AND transaction_id = 'tx-1'",
+            "SELECT properties->>'token' FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
             orgId);
     assertThat(storedInteger).isEqualTo("12345678901234567890123");
@@ -477,7 +477,7 @@ class EventIngestIntegrationTest {
   private int storedCount(UUID organizationId, String transactionId) {
     Integer count =
         jdbc.queryForObject(
-            "SELECT count(*) FROM usage_event WHERE organization_id = ? AND transaction_id = ?",
+            "SELECT count(*) FROM event WHERE organization_id = ? AND transaction_id = ?",
             Integer.class,
             organizationId,
             transactionId);
@@ -487,9 +487,7 @@ class EventIngestIntegrationTest {
   private int totalCount(UUID organizationId) {
     Integer count =
         jdbc.queryForObject(
-            "SELECT count(*) FROM usage_event WHERE organization_id = ?",
-            Integer.class,
-            organizationId);
+            "SELECT count(*) FROM event WHERE organization_id = ?", Integer.class, organizationId);
     return count == null ? 0 : count;
   }
 }

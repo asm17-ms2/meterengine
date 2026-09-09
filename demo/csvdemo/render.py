@@ -206,7 +206,7 @@ def format_gate(
         )
     lines.append("")
     lines.append(
-        "  주의: usage_event는 append-only라 DELETE가 불가능합니다. 잘못 보낸 데이터는"
+        "  주의: event 테이블은 append-only라 DELETE가 불가능합니다. 잘못 보낸 데이터는"
     )
     lines.append(
         "  docker compose down -v로 DB를 초기화해야만 지울 수 있습니다."
