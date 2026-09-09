@@ -8,13 +8,13 @@
 - PostgreSQL 단일 저장소, DB 접근은 Spring Data JPA. 집계는 사전 집계 없이 SQL로 계산한다
 - 스키마 마이그레이션: Flyway. 마이그레이션은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다
   - `V1__create_initial_tables.sql` - organization, billable_metric, customer, usage_event 테이블
-  - `V2__split_price_policy_from_billable_metric.sql` - 미터의 unit_price를 price_policy(가격 정책)와 price_rate(단가)로 분리 (MS2-158). 다차원 가격 대비 형태지만 이번 슬라이스는 전부 무차원('{}')이다
-  - `V3__add_customer_created_at.sql` - customer에 등록 시각 `created_at` 추가 (MS2-171). 새 행은 DB가 `clock_timestamp()`로 채운다. **이미 있던 행은 마이그레이션 시각 하나를 나눠 받았고 그 값은 실제 등록 시각이 아니다** (등록 시각을 기록하기 전에 만들어진 행이라 그 사실이 남아 있지 않다. 값이 전부 같다는 것이 백필 표식이다). API로는 이 값을 보낼 통로가 없고, raw SQL이 값을 실어 보내면 그대로 저장된다 - `event.received_at`과 달리 덮어쓰는 트리거를 두지 않았다 (사유는 파일 주석에 있다)
-  - `V4__collate_names_for_korean.sql` - 고객, 도입사, 미터의 이름 컬럼에 ICU 한국어(ko-KR) collation을 지정 (MS2-143). 정렬을 DB가 하는데 DB 기본 collation이 en_US.utf8이라 고객 목록이 한국어 사전순이 아니었다. 컬럼 레벨이라 볼륨을 지우지 않아도 적용된다
+  - `V2__split_price_policy_from_billable_metric.sql` - 미터의 unit_price를 price_policy(가격 정책)와 price_rate(단가)로 분리한다. 다차원 가격 대비 형태지만 이번 슬라이스는 전부 무차원('{}')이다
+  - `V3__add_customer_created_at.sql` - customer에 등록 시각 `created_at` 추가. 새 행은 DB가 `clock_timestamp()`로 채운다. **이미 있던 행은 마이그레이션 시각 하나를 나눠 받았고 그 값은 실제 등록 시각이 아니다** (등록 시각을 기록하기 전에 만들어진 행이라 그 사실이 남아 있지 않다. 값이 전부 같다는 것이 백필 표식이다). API로는 이 값을 보낼 통로가 없고, raw SQL이 값을 실어 보내면 그대로 저장된다 - `event.received_at`과 달리 덮어쓰는 트리거를 두지 않았다 (사유는 파일 주석에 있다)
+  - `V4__collate_names_for_korean.sql` - 고객, 도입사, 미터의 이름 컬럼에 ICU 한국어(ko-KR) collation을 지정. 정렬을 DB가 하는데 DB 기본 collation이 en_US.utf8이라 고객 목록이 한국어 사전순이 아니었다. 컬럼 레벨이라 볼륨을 지우지 않아도 적용된다
   - `V5__create_invoice_tables.sql` - 확정 인보이스와 인보이스 라인 두 테이블. 고객 x 달로 한 장을 강제하고, 라인은 인보이스 안에서 미터와 단가 조합으로 유일하다. 확정본을 되돌리는 수단은 두지 않았고, 확정된 행을 지우거나 고치는 것을 DB가 막지는 않는다
   - `V6__rename_metric_code_to_billable_metric_code.sql` - price_policy, price_rate, invoice_line의 `metric_code`를 `billable_metric_code`로 개명. 다른 테이블을 가리키는 컬럼은 참조 테이블 이름을 붙인다는 이름 규칙(RFC-001)을 따른 것이다
   - `V7__rename_usage_event_to_event.sql` - `usage_event` 테이블을 `event`로, 그 테이블의 `event_type` 컬럼을 `type`으로 개명. PK, FK, NOT NULL 제약, 트리거, 함수 이름도 `usage_event_` 접두어를 `event_`로 맞췄다. 테이블 이름은 엔티티명과 같게 하고 같은 정보를 이름에 두 번 넣지 않는다는 이름 규칙(RFC-001)을 따른 것이고, 코드 쪽 이름이 이미 `Event`이고 와이어 키가 `type`이라 테이블을 그쪽에 맞췄다. `billable_metric.event_type`은 이 컬럼을 가리키는 참조 컬럼이라 그대로다
-  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 가격 정책은 API로도 들어오지만 데모가 쓰는 도입사와 고객과 미터는 이 파일이 정한다. `llm_request` 이벤트 하나를 입력/출력/캐시 읽기/캐시 생성 토큰 미터가 함께 잰다. 캐시 미터는 MS2-169에서 추가했는데, Claude Code 실측에서 토큰의 대부분이 캐시라 그것을 빼면 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
+  - `R__seed.sql` - 시드 데이터. 반복 마이그레이션이라 파일 내용이 곧 상태다 (체크섬이 바뀌면 다시 적용된다). 고객, 미터, 가격 정책은 API로도 들어오지만 데모가 쓰는 도입사와 고객과 미터는 이 파일이 정한다. `llm_request` 이벤트 하나를 입력, 출력, 캐시 읽기, 캐시 생성 토큰 미터가 함께 잰다. 캐시 미터를 빼면 실측에서 토큰의 대부분이 캐시라 청구 예정액이 몇십 원에 그쳐 화면에서 확인할 것이 없었다 (단가 근거는 파일 주석에 있다)
 - 엔티티가 스키마를 만들지 않는다. `spring.jpa.hibernate.ddl-auto=validate`라 기동 때 엔티티와 실제 테이블이 어긋났는지 확인만 한다
 - API 명세: `openapi.yaml`(구현에서 자동 생성, 아래 "API 문서" 참조). 손으로 쓰는 명세는 없고, 이 파일이 계약의 정본이다 (CONTRIBUTING.md "문서의 정본")
 - 오류 응답: `code`, `message`, `errors[]`를 든 자체 스키마 하나로 통일한다. 도입사가 읽는 문구는 한국어 고정이다 (아래 "오류 응답" 참조)
@@ -70,7 +70,7 @@ compose가 `:?`로 주입을 강제하므로 쓰일 일이 없다.
 
 ## 컨테이너 이미지
 
-배포용 실행 이미지는 `Dockerfile`이 만든다 (MS2-161). 멀티 스테이지라 실행 이미지에는
+배포용 실행 이미지는 `Dockerfile`이 만든다. 멀티 스테이지라 실행 이미지에는
 JRE와 jar만 들어간다. 테스트는 CI가 돌리므로 이미지 빌드에서는 실행하지 않는다
 (Testcontainers가 Docker 데몬을 요구하는데 빌드 안에는 데몬이 없다).
 
@@ -115,7 +115,7 @@ docker build -t meterengine-backend .
 
 전부 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 아직 없어서 쓰는 임시 방식이다.
 
-고객 삭제는 행을 실제로 지운다 (MS2-155). 지워도 되는 고객이 곧 이벤트가 하나도 없는 고객이라 남길 것이 없어서다. 이벤트가 있는 고객을 지우려 하면 409이고, 그 규칙은 앱이 아니라 `event` 테이블의 복합 FK가 강제한다.
+고객 삭제는 행을 실제로 지운다. 지워도 되는 고객이 곧 이벤트가 하나도 없는 고객이라 남길 것이 없어서다. 이벤트가 있는 고객을 지우려 하면 409이고, 그 규칙은 앱이 아니라 `event` 테이블의 복합 FK가 강제한다.
 
 **컨트롤러나 DTO를 건드렸으면 `openapi.yaml`을 같은 커밋에 넣는다.** `./gradlew build`가 다시 만들어 주니, 빌드 후 `git status`에 이 파일이 떴으면 계약이 바뀐 것이다. 프론트엔드는 백엔드를 띄우지 않고 이 파일로 계약을 읽는다.
 
@@ -125,7 +125,7 @@ docker build -t meterengine-backend .
 
 **생성 자체는 CI에서도 돈다.** backend job이 `./gradlew build`를 돌리기 때문이다. 그래서 애노테이션이 잘못돼 문서 생성이 깨지면 CI가 잡는다. 잡지 않는 것은 "커밋된 파일이 낡았는지"뿐이다.
 
-그래서 **갱신을 빠뜨리면 아무것도 실패하지 않는다.** 다음 둘 중 하나가 나오면 CI 검사를 다시 논의한다 (MS2-140).
+그래서 **갱신을 빠뜨리면 아무것도 실패하지 않는다.** 다음 중 하나가 나오면 CI 검사를 다시 논의한다.
 
 - 프론트엔드가 이 파일과 실제 응답이 다르다고 보고한다
 - PR 리뷰에서 생성물 누락을 지적한 일이 두 번 나온다
@@ -201,12 +201,12 @@ docker build -t meterengine-backend .
 - 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다
 - 오류 계약은 `global.error`에 둔다. `ErrorCode`, `ErrorResponse`, `BusinessException`과 종류 클래스(`NotFoundException`, `ConflictException`, `InvalidRequestException`), `GlobalExceptionHandler`다. 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
-경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 여덟이다.
+경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 아래와 같다.
 
 - `event` -> `customer` (고객 판정), `event` -> `metric` (청구 월 경계 계산 공유)
 - `invoice` -> `customer` (고객 조회), `invoice` -> `metric` (집계 호출), `invoice` -> `pricing` (단가 조회)
 - `metric` -> `customer` (고객 조회)
-- `customer` -> `event` (고객 삭제 전 이벤트 유무 확인, MS2-155)
-- `pricing` -> `metric` (정책 등록 전 미터 존재 확인, MS2-157)
+- `customer` -> `event` (고객 삭제 전 이벤트 유무 확인)
+- `pricing` -> `metric` (정책 등록 전 미터 존재 확인)
 
-`customer`가 아래층이고 event, metric, invoice가 그것을 쓴다. 역방향은 `customer` -> `event` 하나뿐인데, 이 때문에 event와 customer는 서로를 참조한다. 수용한 이유와 방향을 되돌리는 방법은 `CustomerService`의 클래스 주석에 있다.
+`customer`가 아래층이고 event, metric, invoice가 그것을 쓴다. 역방향은 `customer` -> `event` 하나뿐이라 event와 customer는 서로를 참조한다. 고객 삭제가 이벤트 유무를 물어야 해서 생긴 참조다. 그 조회를 customer 쪽에 SQL로 두면 참조는 없어지지만 `event` 테이블을 모르는 패키지가 그 테이블을 읽게 되어, 스키마가 바뀔 때 컴파일러도 event 쪽 테스트도 잡지 못한다. 이 참조를 그대로 둘지, 필요한 조회를 customer 패키지의 인터페이스로 선언하고 event가 구현하게 해서 방향을 되돌릴지는 아직 정하지 않았다.
