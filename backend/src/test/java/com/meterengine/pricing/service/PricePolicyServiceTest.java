@@ -7,6 +7,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.global.error.BusinessException;
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
@@ -16,9 +22,6 @@ import com.meterengine.pricing.dto.ListPricePoliciesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
-import com.meterengine.pricing.exception.InvalidPricePolicyException;
-import com.meterengine.pricing.exception.MetricNotFoundException;
-import com.meterengine.pricing.exception.PricePolicyAlreadyExistsException;
 import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
@@ -53,11 +56,14 @@ class PricePolicyServiceTest {
   }
 
   @Test
-  void 미터가_없으면_MetricNotFound다() {
+  void 미터가_없으면_NotFound다() {
     when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(false);
 
-    assertThatThrownBy(() -> create(List.of())).isInstanceOf(MetricNotFoundException.class);
+    assertThatThrownBy(() -> create(List.of()))
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
     verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 
@@ -68,7 +74,9 @@ class PricePolicyServiceTest {
         .thenReturn(true);
 
     assertThatThrownBy(() -> create(List.of()))
-        .isInstanceOf(PricePolicyAlreadyExistsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
     verify(pricePolicyRepository, never()).saveAndFlush(any());
   }
 
@@ -81,7 +89,9 @@ class PricePolicyServiceTest {
         .thenThrow(new DataIntegrityViolationException("pk"));
 
     assertThatThrownBy(() -> create(List.of()))
-        .isInstanceOf(PricePolicyAlreadyExistsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
   }
 
   @Test
@@ -89,12 +99,34 @@ class PricePolicyServiceTest {
     billableMetricExists();
 
     assertThatThrownBy(() -> create(List.of("model", "model")))
-        .isInstanceOf(InvalidPricePolicyException.class)
-        .hasMessageContaining("duplicate");
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_PRICE_POLICY);
     assertThatThrownBy(() -> create(List.of(" ")))
-        .isInstanceOf(InvalidPricePolicyException.class)
-        .hasMessageContaining("blank");
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_PRICE_POLICY);
     verify(pricePolicyRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void 선언의_중복이나_빈_키는_dimension_properties를_errors에_담는다() {
+    billableMetricExists();
+
+    assertThatThrownBy(() -> create(List.of("model", "model")))
+        .isInstanceOfSatisfying(
+            InvalidRequestException.class,
+            exception ->
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("dimension_properties"));
+    assertThatThrownBy(() -> create(List.of(" ")))
+        .isInstanceOfSatisfying(
+            InvalidRequestException.class,
+            exception ->
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("dimension_properties"));
   }
 
   @Test

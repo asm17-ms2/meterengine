@@ -2,8 +2,8 @@ package com.meterengine.pricing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,7 +91,7 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     assertThat(pricePolicyCount(orgId, "token-usage")).isZero();
   }
 
@@ -106,7 +106,7 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.METRIC_NOT_FOUND);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND.getCode());
   }
 
   @Test
@@ -130,11 +130,11 @@ class PricePolicyIntegrationTest {
 
     assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"region\"]}"))
         .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.PRICE_POLICY_ALREADY_EXISTS);
+        .isEqualTo(ErrorCode.PRICE_POLICY_ALREADY_EXISTS.getCode());
 
     assertThat(storedProperties(orgId, "token-usage")).isEqualTo("model");
   }
@@ -250,7 +250,7 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   @Test
@@ -336,7 +336,7 @@ class PricePolicyIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.INVALID_PRICE_POLICY);
+        .isEqualTo(ErrorCode.INVALID_PRICE_POLICY.getCode());
     assertThat(pricePolicyCount(organizationId, "token-usage")).isZero();
   }
 

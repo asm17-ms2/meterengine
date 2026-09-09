@@ -12,8 +12,8 @@ import org.springframework.stereotype.Repository;
 /**
  * 고객별 사용량 합산 (MS2-129). 집계 서비스가 미터 하나의 고객별 합을 얻는 통로다.
  *
- * <p>JPA를 쓰지 않는다. usage_event는 append-only 트리거가 걸려 있어 엔티티 매핑 없이 관리되는 테이블이고, properties(jsonb)에서
- * 파라미터로 고른 키를 합산하는 이 쿼리는 JPQL로 표현할 수 없다.
+ * <p>JPA를 쓰지 않는다. event 테이블은 append-only 트리거가 걸려 있어 엔티티 매핑 없이 관리되는 테이블이고, properties(jsonb)에서 파라미터로
+ * 고른 키를 합산하는 이 쿼리는 JPQL로 표현할 수 없다.
  */
 @Repository
 public class BillableMetricUsageRepository {
@@ -52,9 +52,9 @@ public class BillableMetricUsageRepository {
         jdbc.query(
             """
             SELECT customer_id, SUM((properties ->> ?::text)::numeric) AS quantity
-            FROM usage_event
+            FROM event
             WHERE organization_id = ?
-              AND event_type = ?
+              AND type = ?
               AND occurred_at >= ?
               AND occurred_at < ?
               AND jsonb_typeof(properties -> ?::text) = 'number'

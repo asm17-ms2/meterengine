@@ -76,7 +76,7 @@ def run_config(args) -> int:
         print(json.dumps(json.load(f), ensure_ascii=False, indent=2))
     if _is_production(config.base_url):
         print()
-        print("주의: 전송 대상이 배포 서버입니다. usage_event는 지울 수 없습니다.")
+        print("주의: 전송 대상이 배포 서버입니다. event 테이블은 지울 수 없습니다.")
     if changed:
         print()
         print("이미 도는 브리지에는 반영되지 않습니다. 껐다 켜세요 (stop 후 start).")

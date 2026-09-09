@@ -46,7 +46,7 @@ MAX_CUSTOMER_NAME = 255
 class BridgeConfig:
     """~/.meterengine/bridge.json의 내용.
 
-    base_url 기본값이 로컬인 것은 일부러다. usage_event는 append-only라 배포
+    base_url 기본값이 로컬인 것은 일부러다. event 테이블은 append-only라 배포
     서버로 잘못 보낸 이벤트를 지울 수 없다. 배포 주소는 손으로 적어 넣게 한다.
     """
 
@@ -240,7 +240,7 @@ class BridgeState:
         self._prune(now)
         # 고객 캐시는 서버에 딸린 값이다. customer_id를 발급한 것이 그 서버라,
         # 전송 대상을 바꾸면 그 id는 저쪽에 없어 이벤트가 전부 거절된다
-        # (unknown_customer_reference). 그래서 어느 서버 것인지 함께 적어 두고
+        # (customer_not_found). 그래서 어느 서버 것인지 함께 적어 두고
         # 다르면 버린다. 세션 매핑은 폴더에 대한 것이라 서버와 무관하므로 남긴다.
         if self.scope and str(data.get("scope") or "") != self.scope:
             return
@@ -332,7 +332,7 @@ class BridgeState:
 
         서버에서 그 고객을 지우면(DELETE /v1/customers/{id}) 캐시한 id는 죽은
         값인데, 캐시는 디스크에 있어 재시작해도 살아남는다. 버리지 않으면 그
-        프로젝트의 이벤트가 영영 400 unknown_customer_reference로 거절된다.
+        프로젝트의 이벤트가 영영 404 customer_not_found로 거절된다.
         """
         with self._lock:
             if name not in self.customers:

@@ -69,7 +69,7 @@
 
 | 항목 | 값 | 코드 위치 | 근거 |
 |---|---|---|---|
-| 이벤트가 있는 고객 | 지우지 않는다 | `V1__create_initial_tables.sql`의 `usage_event_customer_same_org` 복합 FK, `CustomerIntegrationTest.이벤트가_있는_고객을_지우면_409이고_고객은_그대로다` | PR #39 |
+| 이벤트가 있는 고객 | 지우지 않는다 | `V1__create_initial_tables.sql`이 만들고 `V7__rename_usage_event_to_event.sql`이 개명한 `event_customer_same_org` 복합 FK, `CustomerIntegrationTest.이벤트가_있는_고객을_지우면_409이고_고객은_그대로다` | PR #39 |
 | 삭제 방식 | 물리 DELETE | `CustomerIntegrationTest.이벤트가_없는_고객은_삭제되고_목록에서_빠진다` | PR #39 |
 | 확인과 DELETE 사이의 경합 | 앱이 잠그지 않고 DB에 맡긴다 | `CustomerDeleteConcurrencyTest.이벤트가_커밋되기_전에_들어온_삭제는_대기하다_FK_위반으로_끝난다` | PR #39 |
 | 확인을 통과한 뒤 DB가 거절할 때 | 확인 단계와 같은 예외로 바꾼다 | `CustomerServiceTest.확인_뒤에_DB가_거절하면_같은_409_예외로_바뀐다` | PR #39 |

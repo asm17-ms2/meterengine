@@ -10,42 +10,36 @@ import { config } from "@/lib/config";
  * 클라이언트 번들에 들어가지 않는다.
  */
 
-/**
- * problem detail의 errors 한 칸. 백엔드 ProblemFieldError와 1:1이다.
- *
- * 백엔드 계약에서 도입사가 읽는 한국어는 여기 message 한 자리뿐이다. 나머지
- * (title, detail)는 영어이고 로그와 개발자용이다 (backend/README.md "오류 응답").
- */
+/** 오류 응답의 errors 한 칸. 백엔드 FieldError와 1:1이다. */
 export type FieldError = {
   /** 도입사가 보낸 와이어 이름이다. JSON 키, 쿼리 파라미터, 헤더명이고 자바 필드명이 아니다. */
   field: string;
-  /** 한국어. 화면에 그대로 띄울 수 있는 유일한 서버 문구다. */
+  /** 한국어. 이 자리가 왜 거절됐는지를 화면에 그대로 띄울 수 있다. */
   message: string;
 };
 
-/** 백엔드가 내려주는 RFC 9457 problem+json을 화면이 쓸 형태로 줄인 것. */
+/** 백엔드가 내려주는 오류 응답을 화면이 쓸 형태로 줄인 것. */
 export type ApiError = {
   /** HTTP 상태. 네트워크 실패나 타임아웃이면 0. */
   status: number;
   /**
-   * 백엔드가 problem detail에 얹는 커스텀 확장 멤버.
-   *
-   * 백엔드가 내는 값 (2026-08-24, MS2-157 기준). 정본은 백엔드 ErrorCodes다:
-   *   validation_error / unknown_customer_reference / invalid_event /
-   *   malformed_request_body / request_type_not_supported /
-   *   response_type_not_acceptable / method_not_allowed / endpoint_not_found /
-   *   customer_not_found / customer_has_events / unknown_organization /
-   *   metric_not_found / price_policy_already_exists / invalid_price_policy
+   * 오류 종류를 가르는 값. 정본은 openapi.yaml ErrorResponse의 enum이다:
+   *   validation_error / malformed_request_body / unknown_organization /
+   *   invalid_event / invalid_billable_metric / invalid_price_policy /
+   *   customer_not_found / billable_metric_not_found / endpoint_not_found /
+   *   method_not_allowed / response_type_not_acceptable / customer_has_events /
+   *   billable_metric_already_exists / price_policy_already_exists /
+   *   request_type_not_supported / internal_server_error
    *
    * 여기서 만든 값: network_error / http_error / malformed_response / dev_forced.
    *
    * 닫힌 집합처럼 보이지만 열린 것으로 다룬다. 백엔드가 code를 추가해도 이 주석은
-   * 따라오지 않고, 5xx와 본문이 problem+json이 아닌 응답에는 code가 없어
-   * http_error로 채워진다. 모르는 값은 기본 문구로 떨어뜨린다 (MS2-150 B-2).
+   * 따라오지 않고, 본문이 오류 응답 형식이 아니면 code가 없어 http_error로
+   * 채워진다. 모르는 값은 기본 문구로 떨어뜨린다 (MS2-150 B-2).
    */
   code: string;
-  title: string;
-  detail: string;
+  /** code마다 하나인 한국어 문구. 예고 없이 바뀔 수 있어 분기에 쓰지 않는다. */
+  message: string;
   /**
    * 어느 값이 왜 틀렸는지. code가 validation_error일 때만 실린다.
    *
@@ -65,17 +59,16 @@ export type Result<T> =
  */
 const TIMEOUT_MS = 5_000;
 
-type ProblemDetail = {
+type ErrorBody = {
   code?: unknown;
-  title?: unknown;
-  detail?: unknown;
+  message?: unknown;
   errors?: unknown;
 };
 
 /**
  * errors 배열을 원소 단위로 거른다.
  *
- * 배열 통째로 믿지 않는 이유: openapi.yaml의 ProblemFieldError에 required가 없어
+ * 배열 통째로 믿지 않는 이유: openapi.yaml의 FieldError에 required가 없어
  * field나 message가 빠진 원소가 계약상 가능하다. 한 칸이 이상하다고 나머지를 버릴
  * 이유도 없어서 성한 것만 남긴다. 남는 게 없으면 없는 것으로 친다 - 화면은
  * errors가 비었는지 없는지를 구별하지 않는다.
@@ -93,19 +86,18 @@ function toFieldErrors(raw: unknown): FieldError[] | undefined {
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
-  let problem: ProblemDetail = {};
+  let body: ErrorBody = {};
   try {
-    problem = (await response.json()) as ProblemDetail;
+    body = (await response.json()) as ErrorBody;
   } catch {
-    // problem+json이 아닌 응답(5xx의 기본 에러 페이지 등). 상태 코드만 쓴다.
+    // 오류 응답 형식이 아닌 본문(프록시의 기본 에러 페이지 등). 상태 코드만 쓴다.
   }
   return {
     status: response.status,
-    code: typeof problem.code === "string" ? problem.code : "http_error",
-    title:
-      typeof problem.title === "string" ? problem.title : `HTTP ${response.status}`,
-    detail: typeof problem.detail === "string" ? problem.detail : "",
-    errors: toFieldErrors(problem.errors),
+    code: typeof body.code === "string" ? body.code : "http_error",
+    message:
+      typeof body.message === "string" ? body.message : `HTTP ${response.status}`,
+    errors: toFieldErrors(body.errors),
   };
 }
 
@@ -130,15 +122,14 @@ async function readJson<T>(response: Response): Promise<Result<T>> {
       error: {
         status: response.status,
         code: "malformed_response",
-        title: "응답을 읽지 못했습니다",
-        detail: "서버가 보낸 응답이 JSON 형식이 아닙니다.",
+        message: "응답을 읽지 못했습니다. 서버가 보낸 응답이 JSON 형식이 아닙니다.",
       },
     };
   }
 }
 
 /**
- * 조회와 쓰기가 공유하는 네트워크 계층. 헤더 주입, 타임아웃, problem+json 변환이
+ * 조회와 쓰기가 공유하는 네트워크 계층. 헤더 주입, 타임아웃, 오류 응답 변환이
  * 여기 한 곳에 있다.
  *
  * 응답 본문을 읽지 않고 Response를 그대로 넘긴다. 조회는 항상 JSON이지만 쓰기는
@@ -154,7 +145,7 @@ async function call(
       method: init.method,
       headers: {
         "X-Organization-Id": config.organizationId,
-        Accept: "application/json, application/problem+json",
+        Accept: "application/json",
         // 본문이 있을 때만 붙인다. DELETE에 Content-Type을 달면 본문 없는 요청에
         // 형식을 선언하는 꼴이라 서버가 415로 되받을 여지가 생긴다.
         ...(init.body === undefined
@@ -174,10 +165,9 @@ async function call(
       error: {
         status: 0,
         code: "network_error",
-        title: isTimedOut ? "응답 시간 초과" : "서버에 연결하지 못했습니다",
-        detail: isTimedOut
-          ? `${TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다.`
-          : "백엔드가 실행 중인지 확인해주세요.",
+        message: isTimedOut
+          ? `응답 시간 초과. ${TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다.`
+          : "서버에 연결하지 못했습니다. 백엔드가 실행 중인지 확인해주세요.",
       },
     };
   }

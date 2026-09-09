@@ -3,8 +3,8 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -61,11 +61,11 @@ class BillableMetricCreateConcurrencyTest {
 
       assertThat(late.get(10, TimeUnit.SECONDS))
           .hasStatus(409)
-          .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+          .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
           .bodyJson()
           .extractingPath("$.code")
           .asString()
-          .isEqualTo(ErrorCodes.METRIC_ALREADY_EXISTS);
+          .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
     }
 
     assertThat(storedName(orgId)).isEqualTo("먼저 등록한 미터");

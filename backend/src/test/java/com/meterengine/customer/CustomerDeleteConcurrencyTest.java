@@ -64,7 +64,7 @@ class CustomerDeleteConcurrencyTest {
   private void deleteTestCustomersWithoutEvents() {
     jdbc.update(
         "DELETE FROM customer WHERE name = '동시성 테스트 고객' AND NOT EXISTS ("
-            + "SELECT 1 FROM usage_event e WHERE e.customer_id = customer.id)");
+            + "SELECT 1 FROM event e WHERE e.customer_id = customer.id)");
   }
 
   private void insertEvent(Connection connection, UUID orgId, UUID customerId, String transactionId)
@@ -72,8 +72,8 @@ class CustomerDeleteConcurrencyTest {
     try (PreparedStatement statement =
         connection.prepareStatement(
             """
-            INSERT INTO usage_event
-              (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+            INSERT INTO event
+              (organization_id, transaction_id, customer_id, type, properties, occurred_at)
             VALUES (?, ?, ?, 'chat_completion', '{"token": 1200}', now())
             """)) {
       statement.setObject(1, orgId);
@@ -103,7 +103,7 @@ class CustomerDeleteConcurrencyTest {
 
   private Integer eventCount(UUID orgId, UUID customerId) {
     return jdbc.queryForObject(
-        "SELECT count(*) FROM usage_event WHERE organization_id = ? AND customer_id = ?",
+        "SELECT count(*) FROM event WHERE organization_id = ? AND customer_id = ?",
         Integer.class,
         orgId,
         customerId);

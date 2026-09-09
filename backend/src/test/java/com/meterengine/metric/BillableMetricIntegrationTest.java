@@ -2,8 +2,8 @@ package com.meterengine.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.ErrorCodes;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,11 +58,11 @@ class BillableMetricIntegrationTest {
                  "aggregation": "SUM", "target_property": "chars"}
                 """))
         .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.METRIC_ALREADY_EXISTS);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
 
     assertThat(storedName(orgId, "token-usage")).isEqualTo("토큰 사용량");
   }
@@ -91,7 +91,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.INVALID_BILLABLE_METRIC);
+        .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC.getCode());
     assertThat(billableMetricCount(orgId, "call-count")).isZero();
   }
 
@@ -110,7 +110,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.INVALID_BILLABLE_METRIC);
+        .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC.getCode());
   }
 
   @Test
@@ -122,7 +122,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.VALIDATION_ERROR);
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     assertThat(billableMetricCount(orgId, "token-usage")).isZero();
   }
 
@@ -133,7 +133,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCodes.UNKNOWN_ORGANIZATION);
+        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION.getCode());
   }
 
   @Test

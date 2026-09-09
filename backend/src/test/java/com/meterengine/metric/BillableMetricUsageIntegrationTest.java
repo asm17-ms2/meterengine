@@ -390,8 +390,8 @@ class BillableMetricUsageIntegrationTest {
       OffsetDateTime occurredAt) {
     jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, ?, ?, ?, ?::jsonb, ?)
         """,
         organizationId,

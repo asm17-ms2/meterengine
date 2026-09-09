@@ -46,7 +46,7 @@ JSONL 파일로 항상 저장한다 (옵션이 아니다).
   응답 줄(=>)에 그대로 나온다
 - --interval은 전송 간격 초, --jitter는 간격에 더할 랜덤 슬립 상한이다 (데모에서 실시간
   유입처럼 보이게 하는 용도)
-- 주의: usage_event 테이블은 append-only 트리거로 DELETE가 불가능하다. 잘못 보낸 데이터는
+- 주의: event 테이블은 append-only 트리거로 DELETE가 불가능하다. 잘못 보낸 데이터는
   docker compose down -v로 DB를 초기화해야만 지울 수 있다
 
 #### CSV 스키마
@@ -205,7 +205,7 @@ cd demo && python3 -m unittest && cd ..
 
 - outcome: new(신규 저장) | duplicate(중복, 저장 없음) | rejected(4xx 거절) |
   error(전송 실패/타임아웃/5xx, 저장 여부 불명 -- status와 response는 null일 수 있다)
-- rejected의 response에는 problem+json 원문이 그대로 남는다
+- rejected의 response에는 오류 응답 원문이 그대로 남는다
 - 라인마다 flush하므로 중단돼도 그 앞까지는 유효하다. 읽는 쪽은 읽히지 않는 라인을
   위치와 무관하게 경고와 함께 건너뛰고, 모르는 type은 무시한다 (전방 호환).
   이어쓰는 파일에서는 잘린 라인이 마지막이 아니게 되므로(뒤에 다음 실행 헤더가
@@ -292,7 +292,7 @@ python3 demo/otel_bridge.py start / stop   # 껐다 켰다
 python3 demo/otel_bridge.py status         # 상태와 누적 건수
 ```
 
-`base_url` 기본값이 `http://localhost:8080`인 것은 일부러다. **usage_event는 append-only라
+`base_url` 기본값이 `http://localhost:8080`인 것은 일부러다. **event 테이블은 append-only라
 잘못 보낸 이벤트를 지울 수 없다.** 로컬에서 확인한 뒤 배포 주소를 손으로 적어 넣는다.
 
 ```
@@ -333,7 +333,7 @@ python3 demo/otel_bridge.py config --base-url https://meterengine.com
 
 이 검사가 없으면 사용자가 열어 둔 아무 페이지나 이 포트로 POST할 수 있다.
 `Content-Type: text/plain`이면 CORS 사전 요청 없이 곧바로 나가고, 응답을 읽지 못해도
-브리지는 이미 처리한 뒤다. 지어낸 토큰 수가 `usage_event`에 들어가면 append-only라
+브리지는 이미 처리한 뒤다. 지어낸 토큰 수가 `event` 테이블에 들어가면 append-only라
 지울 수 없고, `/meterengine/session`으로 남의 세션 귀속까지 바꿀 수 있다.
 
 세션 매핑은 하루 동안만 붙들고 있다가 버린다. 프롬프트를 칠 때마다 hook이 오는데,
@@ -448,7 +448,7 @@ demo/
 
   core/             양쪽이 함께 쓰는 것
     model.py        KST 상수, Event, RFC3339 파싱, 와이어 바디 조립
-    api_client.py   백엔드 HTTP 래퍼 (problem+json 파싱 포함)
+    api_client.py   백엔드 HTTP 래퍼 (오류 응답 파싱 포함)
     jsonl_log.py    전송 기록 JSONL 쓰기/읽기, outcome 판정
     files.py        JSON 파일 원자적 쓰기 (상태 파일과 Claude 설정)
 

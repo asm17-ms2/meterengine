@@ -7,13 +7,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.global.error.BusinessException;
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
-import com.meterengine.metric.exception.InvalidBillableMetricException;
-import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.sql.SQLException;
 import java.util.List;
@@ -45,18 +48,42 @@ class BillableMetricServiceTest {
   @Test
   void SUM이_아닌_집계_함수는_Invalid다() {
     assertThatThrownBy(() -> create("COUNT", "token"))
-        .isInstanceOf(InvalidBillableMetricException.class)
-        .hasMessageContaining("SUM");
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
     verify(billableMetricRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void SUM이_아닌_집계_함수는_aggregation을_errors에_담는다() {
+    assertThatThrownBy(() -> create("COUNT", "token"))
+        .isInstanceOfSatisfying(
+            InvalidRequestException.class,
+            exception ->
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("aggregation"));
   }
 
   @Test
   void SUM인데_target_property가_없으면_Invalid다() {
     assertThatThrownBy(() -> create("SUM", null))
-        .isInstanceOf(InvalidBillableMetricException.class)
-        .hasMessageContaining("target_property");
-    assertThatThrownBy(() -> create("SUM", " ")).isInstanceOf(InvalidBillableMetricException.class);
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
+    assertThatThrownBy(() -> create("SUM", " ")).isInstanceOf(InvalidRequestException.class);
     verify(billableMetricRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void SUM인데_target_property가_없으면_target_property를_errors에_담는다() {
+    assertThatThrownBy(() -> create("SUM", null))
+        .isInstanceOfSatisfying(
+            InvalidRequestException.class,
+            exception ->
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("target_property"));
   }
 
   @Test
@@ -64,7 +91,9 @@ class BillableMetricServiceTest {
     when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(true);
 
     assertThatThrownBy(() -> create("SUM", "token"))
-        .isInstanceOf(MetricAlreadyExistsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     verify(billableMetricRepository, never()).saveAndFlush(any());
   }
 
@@ -74,17 +103,21 @@ class BillableMetricServiceTest {
     when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation("billable_metric_pkey"));
 
     assertThatThrownBy(() -> create("SUM", "token"))
-        .isInstanceOf(MetricAlreadyExistsException.class);
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
   }
 
   @Test
-  void 미등록_도입사의_제약_위반은_그대로_나간다() {
+  void 미등록_도입사의_제약_위반은_400_예외로_바뀐다() {
     when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
     when(billableMetricRepository.saveAndFlush(any()))
         .thenThrow(violation("billable_metric_organization_id_fkey"));
 
     assertThatThrownBy(() -> create("SUM", "token"))
-        .isInstanceOf(DataIntegrityViolationException.class);
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
   }
 
   private DataIntegrityViolationException violation(String constraintName) {

@@ -57,8 +57,8 @@ function validateName(name: string): string | null {
 /**
  * 저장 실패를 화면 문구로 옮긴다.
  *
- * code로 고르고 detail은 쓰지 않는다. detail은 영어이고 개발자용이라 그대로
- * 띄우지 말라고 백엔드 계약이 명시한다 (openapi.yaml ProblemResponse).
+ * code로 고르고 서버 message는 쓰지 않는다. message는 예고 없이 바뀔 수 있으니
+ * 분기에 쓰지 말라고 백엔드 계약이 명시한다 (openapi.yaml ErrorResponse).
  * 모르는 code는 기본 문구로 떨어진다 - code 집합은 닫혀 있지 않다.
  */
 function toSaveFailureMessage(error: ApiError): string {
@@ -70,7 +70,7 @@ function toSaveFailureMessage(error: ApiError): string {
     case "unknown_organization":
       return "도입사를 찾을 수 없습니다. 설정을 확인해주세요.";
     case "network_error":
-      return error.title;
+      return error.message;
     default:
       return "저장하지 못했습니다. 잠시 후 다시 시도해주세요.";
   }
@@ -150,7 +150,7 @@ export async function deleteCustomerAction(
       status: "failed",
       message:
         result.error.code === "network_error"
-          ? result.error.title
+          ? result.error.message
           : "삭제하지 못했습니다. 잠시 후 다시 시도해주세요.",
     };
   }

@@ -64,7 +64,7 @@ class ExpectedMonth:
 class PredictedOutcome:
     index: int
     outcome: str
-    # 거절 예측일 때만 채워진다. code는 서버 problem+json의 code에 대응한다
+    # 거절 예측일 때만 채워진다. code는 서버 오류 응답의 code에 대응한다
     code: Optional[str]
     detail: str
 

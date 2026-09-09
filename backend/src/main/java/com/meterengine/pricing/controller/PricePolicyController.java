@@ -85,7 +85,7 @@ public class PricePolicyController {
         description =
             """
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 사유는 detail에 있다.
+            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -93,7 +93,7 @@ public class PricePolicyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
+        description = "code=billable_metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =

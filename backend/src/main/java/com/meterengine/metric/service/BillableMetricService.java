@@ -1,13 +1,16 @@
 package com.meterengine.metric.service;
 
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
-import com.meterengine.metric.exception.InvalidBillableMetricException;
-import com.meterengine.metric.exception.MetricAlreadyExistsException;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,7 +34,7 @@ public class BillableMetricService {
 
     BillableMetricId id = new BillableMetricId(organizationId, request.code());
     if (billableMetricRepository.existsById(id)) {
-      throw new MetricAlreadyExistsException(request.code());
+      throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     }
 
     BillableMetric billableMetric =
@@ -47,9 +50,9 @@ public class BillableMetricService {
     } catch (DataIntegrityViolationException exception) {
       if (exception.getCause() instanceof ConstraintViolationException cause
           && DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
-        throw new MetricAlreadyExistsException(request.code());
+        throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
       }
-      throw exception;
+      throw new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
     }
 
     return BillableMetricResponse.from(billableMetric);
@@ -63,12 +66,13 @@ public class BillableMetricService {
 
   private void validate(CreateBillableMetricRequest request) {
     if (!BillableMetric.SUM.equals(request.aggregation())) {
-      throw new InvalidBillableMetricException(
-          "aggregation %s is not supported; only SUM is available"
-              .formatted(request.aggregation()));
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_BILLABLE_METRIC, List.of(new FieldError("aggregation", "SUM만 지원합니다")));
     }
     if (request.targetProperty() == null || request.targetProperty().isBlank()) {
-      throw new InvalidBillableMetricException("SUM aggregation requires target_property");
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_BILLABLE_METRIC,
+          List.of(new FieldError("target_property", "SUM 집계에는 target_property가 필요합니다")));
     }
   }
 }
