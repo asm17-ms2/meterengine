@@ -66,7 +66,7 @@
 | 서비스 | UpperCamelCase | `<대상>Service`, 동작 하나면 `<대상><동작명사>Service` | `CustomerService`, `EventIngestionService` | 스타일 가이드: [Google Java 5.2.2][gj-5.2.2](클래스명은 명사구라 동작도 명사형). 관례: `<대상>Service`는 [Spring Security][ss-uds] `UserDetailsService` |
 | 컨트롤러 | UpperCamelCase | `<대상>Controller` | `CustomerController` | 관례: [Spring 가이드][guide-rest] `GreetingController`, [PetClinic][petclinic] `OwnerController` |
 | 설정 | UpperCamelCase | `<무엇>Config`, 외부 설정값 `<무엇>Properties` | `OpenApiConfig`, `TossPaymentsProperties` | 관례: `Properties`는 [Spring Boot 레퍼런스][sb-props] 예제 `MyProperties`, `Config`는 [Spring 가이드][guide-security] 예제 `WebSecurityConfig` |
-| 상수 묶음 클래스 | UpperCamelCase 복수 | | `ErrorCodes` | 관례: JDK [`Collectors`][jdk-collectors], `Collections`, `Objects` |
+| 상수 묶음 클래스 | UpperCamelCase 복수 | | `ConstraintNames` | 관례: JDK [`Collectors`][jdk-collectors], `Collections`, `Objects` |
 | 쓰지 않는 접미사 | | 우리 체계와 겹치는 다른 관례의 접미사 `Dto` `Vo` `Cmd` `Json` `Model` `Entity` `Impl`, 하는 일을 말하지 않는 접미사 `Util` `Helper` `Manager`, 요소라는 것만 말하는 접미사 `Entry` `Item` `Row` `Data` `Info`. 한 개념에 이름이 둘 생기는 것을 막고, 이름이 무엇인지를 말하게 한다 | | RFC-001 |
 
 #### DTO
@@ -98,6 +98,7 @@
 | boolean | lowerCamelCase | 필드, 변수, record 컴포넌트, JSON 키, DB 컬럼 전부 접두사 없는 형용사나 과거분사로 같은 이름. 접두사 `is` `has` `can`은 접근자 메서드에만 | 필드 `finalized`, 접근자 `isFinalized()`, JSON과 컬럼 `finalized` | 명세: [JavaBeans][javabeans] 8.3.2(접근자 `isX()`). 스타일 가이드: [Google Java][gj]는 필드 접두사 규칙 없음, JSON 접두사 생략은 [AIP-140][aip-140]. 한 값에 이름 하나를 두어 `@Column`과 `@JsonProperty`로 이름을 맞출 일을 없애는 것은 RFC-001 |
 | 시간 | lowerCamelCase | 순간 `At`, 날짜 `Date` | `finalizedAt`, `billingDate` | 스타일 가이드: [Zalando 규칙 235][zalando-235](`_at`와 `_date` 둘 다 허용), [AIP-142][aip-142]는 `_time`. 관례: [Spring Data 감사 예제][sd-audit]는 `createdDate`. Java 표준 없음, JSON 키와 1:1 대응은 RFC-001 |
 | 상수, enum 상수 | UPPER_SNAKE_CASE | 깊은 불변 `static final`만 | `BILLING_ZONE`, `DRAFT` | 스타일 가이드: [Google Java 5.2.4][gj-5.2.4] |
+| 로거 | lowerCamelCase | `logger`. `static final`이어도 상수가 아니다 | `logger` | 스타일 가이드: [Google Java 5.2.4][gj-5.2.4]의 "Not constants" 예시 `static final Logger logger`. 관례: Spring Framework 자체 코드의 `protected final Log logger` |
 | 타입 변수 | `T` 또는 `XxxT` | | `RequestT` | 스타일 가이드: [Google Java 5.2.8][gj-5.2.8] |
 
 #### 낱말
