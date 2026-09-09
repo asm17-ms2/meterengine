@@ -1,8 +1,9 @@
-package com.meterengine;
+package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.meterengine.TestcontainersConfiguration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
