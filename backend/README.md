@@ -185,7 +185,7 @@ docker build -t meterengine-backend .
 
 `spring.web.locale=ko`와 `spring.web.locale-resolver=fixed`로 못박아서 `Accept-Language`가 무엇이든 한국어가 나간다. 리졸버를 열어 두면 한 응답 안에 두 언어가 섞인다. Hibernate Validator는 en 번들을 갖고 있어 "must not be blank"로 답하는데 우리 문구는 ko 하나뿐이라 한국어가 그대로 나가기 때문이다. 다국어가 필요해지면 번들을 갖추고 그때 연다.
 
-`message`는 `ErrorCode` 상수가 든다. `errors[].message`는 던지는 자리가 넘긴 문구이거나 Hibernate Validator의 ko 번들 문구다. 우리가 만드는 것은 `src/main/resources/messages.properties`의 `problem.field.*`뿐이고, 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 여기 둔다. `@NotBlank` 같은 제약의 문구는 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
+`message`는 `ErrorCode` 상수가 든다. `errors[].message`는 던지는 자리가 넘긴 문구이거나 Hibernate Validator의 ko 번들 문구다. 우리가 만드는 것은 `GlobalExceptionHandler`의 상수뿐이고, 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 거기 둔다. `@NotBlank` 같은 제약의 문구는 ko 번들에 맡긴다. 제약이 늘 때마다 번역을 떠안으면 누락이 조용히 영어로 새기 때문이다.
 
 ## 구조
 

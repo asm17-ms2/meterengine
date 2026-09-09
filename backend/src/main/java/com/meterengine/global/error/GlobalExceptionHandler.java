@@ -6,8 +6,6 @@ import java.lang.reflect.Field;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,11 +30,13 @@ class GlobalExceptionHandler {
 
   private static final String UNRESOLVED_FIELD = "unknown";
 
-  private final MessageSource messageSource;
+  private static final String REQUIRED_MESSAGE = "필수 항목입니다";
 
-  GlobalExceptionHandler(MessageSource messageSource) {
-    this.messageSource = messageSource;
-  }
+  private static final String TYPE_MISMATCH_MESSAGE = "%s 형식이어야 합니다";
+
+  private static final String UNPARSEABLE_MESSAGE = "형식을 해석할 수 없습니다";
+
+  private static final String INVALID_MESSAGE = "올바르지 않습니다";
 
   // 도메인 예외
   @ExceptionHandler(BusinessException.class)
@@ -84,7 +84,7 @@ class GlobalExceptionHandler {
       MissingRequestHeaderException exception) {
     return respond(
         ErrorCode.VALIDATION_ERROR,
-        List.of(new FieldError(exception.getHeaderName(), message("error.field.required"))));
+        List.of(new FieldError(exception.getHeaderName(), REQUIRED_MESSAGE)));
   }
 
   // 400 경로 변수와 쿼리 파라미터 형식 불일치
@@ -184,17 +184,13 @@ class GlobalExceptionHandler {
     return name == null ? UNRESOLVED_FIELD : name;
   }
 
-  private String messageOrDefault(String message) {
-    return message == null ? message("error.field.invalid") : message;
+  private static String messageOrDefault(String message) {
+    return message == null ? INVALID_MESSAGE : message;
   }
 
-  private String typeMismatchMessage(Class<?> requiredType) {
+  private static String typeMismatchMessage(Class<?> requiredType) {
     return requiredType == null
-        ? message("error.field.unparseable")
-        : message("error.field.type-mismatch", requiredType.getSimpleName());
-  }
-
-  private String message(String code, Object... arguments) {
-    return messageSource.getMessage(code, arguments, code, LocaleContextHolder.getLocale());
+        ? UNPARSEABLE_MESSAGE
+        : TYPE_MISMATCH_MESSAGE.formatted(requiredType.getSimpleName());
   }
 }
