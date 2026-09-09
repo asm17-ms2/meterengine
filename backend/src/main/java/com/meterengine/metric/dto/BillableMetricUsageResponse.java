@@ -1,6 +1,7 @@
 package com.meterengine.metric.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -25,8 +26,8 @@ public record BillableMetricUsageResponse(
 
   public record BillableMetricUsageCustomer(
       @JsonProperty("customer_id") UUID customerId,
-      @JsonProperty("customer_name") String customerName,
-      BigDecimal quantity) {
+      @Schema(description = "집계 시점의 고객 이름") @JsonProperty("customer_name") String customerName,
+      @Schema(description = "이벤트 properties의 값을 합산한 수량. 소수 자릿수를 그대로 싣는다") BigDecimal quantity) {
 
     static BillableMetricUsageCustomer from(CustomerUsage customerUsage) {
       return new BillableMetricUsageCustomer(

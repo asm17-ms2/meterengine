@@ -238,7 +238,7 @@ class BillableMetricUsageIntegrationTest {
   void month를_생략하면_이번_달_KST로_집계한다() {
     UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", acme, "chat_completion", "{\"token\":500}", 지금이_월말이어도_이번_달_안인_시각());
+    insertEvent(orgId, "tx-1", acme, "chat_completion", "{\"token\":500}", withinThisMonth());
 
     MvcTestResult result =
         mvc.get().uri("/v1/usage").header("X-Organization-Id", orgId.toString()).exchange();
@@ -309,7 +309,8 @@ class BillableMetricUsageIntegrationTest {
         .quantity();
   }
 
-  private static OffsetDateTime 지금이_월말이어도_이번_달_안인_시각() {
+  /** 이번 달 1일 정오(KST)를 낸다. */
+  private static OffsetDateTime withinThisMonth() {
     return YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
   }
 

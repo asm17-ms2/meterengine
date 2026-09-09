@@ -31,7 +31,7 @@
 
 ## 집계 기준
 
-기간과 월 경계와 `month` 파라미터는 청구 예정액이 집계에서 그대로 받아 쓴다. 그 값의 정본은 `docs/policies/metric.md` "집계 기준"이다.
+기간과 월 경계와 `month` 파라미터는 청구 예정액이 집계에서 그대로 받아 쓴다. 그 값의 정본은 `backend/openapi.yaml`의 `aggregateBillableMetricUsages` description이다.
 
 | 항목 | 값 | 코드 위치 | 근거 |
 |---|---|---|---|

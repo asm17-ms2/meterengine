@@ -615,8 +615,10 @@ components:
           format: uuid
         customer_name:
           type: string
+          description: 집계 시점의 고객 이름
         quantity:
           type: number
+          description: 이벤트 properties의 값을 합산한 수량. 소수 자릿수를 그대로 싣는다
     BillableMetricUsageResponse:
       type: object
       properties:
