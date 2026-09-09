@@ -2,7 +2,7 @@ package com.meterengine.pricing.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
-import com.meterengine.pricing.service.PricePolicyService;
+import com.meterengine.pricing.service.BillableMetricPriceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,10 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class BillableMetricPriceController {
 
-  private final PricePolicyService pricePolicyService;
+  private final BillableMetricPriceService billableMetricPriceService;
 
-  BillableMetricPriceController(PricePolicyService pricePolicyService) {
-    this.pricePolicyService = pricePolicyService;
+  BillableMetricPriceController(BillableMetricPriceService billableMetricPriceService) {
+    this.billableMetricPriceService = billableMetricPriceService;
   }
 
   @GetMapping("/v1/billable-metric-prices")
@@ -49,6 +49,6 @@ public class BillableMetricPriceController {
       @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {
-    return pricePolicyService.list(organizationId);
+    return billableMetricPriceService.list(organizationId);
   }
 }
