@@ -282,7 +282,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         사용자가 아무 사이트나 열어 두면 그 페이지의 스크립트가 이 포트로
         POST할 수 있다. Content-Type을 text/plain으로 두면 CORS 사전 요청 없이
         곧바로 나가고, 응답을 읽지 못해도 우리는 이미 처리한 뒤다. 그러면 남의
-        페이지가 지어낸 토큰 수를 우리 usage_event에 넣을 수 있고(append-only라
+        페이지가 지어낸 토큰 수를 우리 event 테이블에 넣을 수 있고(append-only라
         지울 수 없다) /meterengine/session으로 남의 세션 귀속까지 바꿀 수 있다.
 
         브라우저가 붙이고 도구는 붙이지 않는 표시로 가른다. Origin은 페이지에서

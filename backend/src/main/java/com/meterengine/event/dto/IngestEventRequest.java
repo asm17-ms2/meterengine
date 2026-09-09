@@ -11,8 +11,7 @@ import java.util.UUID;
 /**
  * 이벤트 수집 요청 본문 (MS2-130).
  *
- * <p>다섯 필드가 전부 필수이고, V1 마이그레이션의 usage_event NOT NULL 컬럼 목록과 일치한다. 하나라도 없으면 400이고 저장은 0건이다 (스토리
- * MS2-121 팀 정책).
+ * <p>필드는 전부 필수다. 하나라도 없으면 400이고 저장은 0건이다 (스토리 MS2-121 팀 정책).
  *
  * <p>properties의 내용은 검증하지 않는다. 어느 키가 사용량 값인지는 billable_metric.target_property가 정하는데 이번 슬라이스는 미터를
  * 조회하지 않아 판정할 근거가 없다. model도 token도 필수가 아니다. 값의 유효성은 집계 시점(MS2-129)의 문제다.
@@ -36,5 +35,5 @@ public record IngestEventRequest(
     @JsonProperty("type") @NotBlank String type,
     @NotNull Map<String, Object> properties,
 
-    /** 이벤트 발생 시각. usage_event.occurred_at에 저장된다. */
+    /** 이벤트 발생 시각. event.occurred_at에 저장된다. */
     @JsonProperty("timestamp") @NotNull OffsetDateTime occurredAt) {}

@@ -49,11 +49,11 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 
 - 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다
 - 명세서나 정책 문서를 작성할 때 현재 슬라이스 범위와 미정 범위를 구분해 쓴다
-- 슬라이스를 얇게 만드는 것과 PR을 작게 내는 것은 다른 축이다. 슬라이스가 300줄을 넘으면 동작 단위로 조각내 스택 PR로 쌓는다. 쪼개는 축과 머지 순서는 CONTRIBUTING.md "PR 크기와 쪼개기", "스택 PR"에 있다
+- 슬라이스를 얇게 만드는 것과 PR을 작게 내는 것은 다른 축이다. 슬라이스가 300줄을 넘으면 동작 단위로 조각내 스택 PR로 쌓는다. 쪼개는 축과 머지 순서는 `docs/contributing/pull-request.md`에 있다
 
 ## 스택 PR
 
-**독립 PR이 먼저다.** 따로 머지돼도 되는 작업은 각각 main에서 따서 독립 PR로 낸다. 스택은 조각이 따로 머지되면 반만 동작할 때, 뒤 PR이 앞 PR 없이 성립하지 않을 때, 순서대로 읽어야 이해될 때 쓴다. 판단 기준은 CONTRIBUTING.md "스택 PR"에 있다.
+**독립 PR이 먼저다.** 따로 머지돼도 되는 작업은 각각 main에서 따서 독립 PR로 낸다. 스택은 조각이 따로 머지되면 반만 동작할 때, 뒤 PR이 앞 PR 없이 성립하지 않을 때, 순서대로 읽어야 이해될 때 쓴다. 판단 기준은 `docs/contributing/pull-request.md` "스택 PR"에 있다.
 
 **GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.** 2026-08 기준 public preview라 학습 데이터에 없는 기능이고, 익숙한 수동 rebase로 되돌아가면 스택으로 인식되지 않는 PR이 생기거나 히스토리가 어긋난다.
 
@@ -61,12 +61,14 @@ CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, P
 | --- | --- | --- |
 | 선행 브랜치 위에 새 작업 시작 | `git checkout -b`로 그냥 따기 | `gh stack init` |
 | 이미 있는 스택에 합류 | 브랜치 이름으로 checkout | `gh stack checkout <PR번호>` |
-| PR 올리기 | `gh pr create --base <부모브랜치>` (diff만 맞고 스택으로 인식되지 않는다) | `gh stack submit` |
+| PR 올리기 (스택) | `gh pr create --base <부모브랜치>` (diff만 맞고 스택으로 인식되지 않는다) | `gh stack submit` |
 | 부모가 갱신됐을 때 맞추기 | `git rebase --onto`, `git rebase --update-refs`, `git rebase -i` | `gh stack sync` |
 | 부모가 머지된 뒤 | 손으로 base 바꾸기, 손으로 rebase | 아무것도 하지 않는다. GitHub가 base를 다시 잡는다. 로컬만 `gh stack sync` |
 | 스택 브랜치 push | `git push --force` | `gh stack submit` |
 | 구조 확인 | `git log --graph`로 추정 | `gh stack view` |
 | 이미 올린 PR을 스택으로 묶기 | base만 바꾸기 | `gh stack link` 또는 웹에서 묶기 |
+| 스택의 리뷰어 | 자동 배정에 맡기기 (조각마다 갈린다) | 첫 조각에 자동 배정된 사람으로 조각마다 `gh pr edit <번호> --remove-reviewer <자동 배정된 사람> --add-reviewer <첫 조각의 사람>` |
+| 한 부모에 여러 자식 (가지) | 직선으로 늘어세우기 | 스택이 아니다. 자식마다 `gh pr create --base <부모 브랜치>`, 부모 머지 뒤 Update with rebase. `docs/contributing/pull-request.md` "가지" |
 
 확장이 없으면 `gh extension install github/gh-stack`으로 설치한다. 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 추측하지 말고 `gh stack --help`나 아래 문서를 본다.
 

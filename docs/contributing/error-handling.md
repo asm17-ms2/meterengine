@@ -28,7 +28,7 @@
 - `message`는 한국어 한 줄이고 code마다 하나다. 던지는 자리는 code만 고른다. 계약은 `code`이고 문구는 편의라 바꿔도 된다.
 - 도입사가 보낸 값을 문구에 되비추지 않는다. `message`는 code마다 하나라 구조가 막지만, `errors[].message`는 던지는 자리가 쓰는 문장이라 쓰는 사람이 지킨다. 기대 타입이나 규칙은 우리 것이라 적어도 된다.
 - `errors[].message`만 필드별 구체 사유다. 프레임워크 검증은 Bean Validation의 ko 번들 문구, 도메인 검증은 던지는 자리가 넘긴 문구다.
-- `messages.properties`에는 `errors[].message`용 `problem.field.*` 키만 둔다. Bean Validation 제약의 문구는 덮어쓰지 않는다.
+- 우리가 만드는 `errors[].message` 문구는 `GlobalExceptionHandler`의 상수다. 헤더 누락과 타입 불일치처럼 Bean Validation이 문구를 만들지 않는 자리만 거기 둔다. Bean Validation 제약의 문구는 덮어쓰지 않는다.
 
 ### 근거
 
@@ -39,7 +39,7 @@
 ### 검토한 대안
 
 - 던지는 자리마다 문장 (`"SUM aggregation requires target_property"`): 필드 이름이 문장 속에 묻혀 클라이언트가 파싱해야 하고, 도입사가 보낸 값이 문장에 새기 쉽다.
-- 문구를 `messages.properties` 키로: 다국어가 필요해지면 그때 한다. 지금은 `spring.web.locale`이 ko 고정이라 enum 한 줄이 더 짧다.
+- 문구를 `messages.properties` 키로: 다국어가 필요해지면 그때 한다. 지금은 `spring.web.locale`이 ko 고정이라 enum과 핸들러의 상수 한 줄이 더 짧다. 핸들러 문구만 키로 두던 것도 같은 이유로 상수로 옮겼다.
 
 ## 예외와 핸들러의 자리
 
@@ -54,6 +54,7 @@
 - 프레임워크 예외는 정확한 타입으로 하나씩 나열하고, 부모 타입(`TypeMismatchException` 등)을 적지 않는다. 나열하지 않은 것은 `Exception` 핸들러가 500으로 받는다.
 - `DataIntegrityViolationException`은 핸들러에서 잡지 않는다. 뜻을 아는 서비스가 저장 전 조회로 거르거나 잡아서 종류 클래스로 바꿔 던진다.
 - 테스트의 예외 단언은 종류 클래스를 잡은 뒤 code를 한 번 더 비교한다.
+- 오류 응답의 모양은 통합 테스트가 실제 응답 본문을 받아 검증한다. 생성된 OpenAPI 문서는 애너테이션에서 나오므로 실제 응답과 다를 수 있고, 문서 검사만으로는 그 어긋남을 잡지 못한다.
 
 ```
 com.meterengine.global.error

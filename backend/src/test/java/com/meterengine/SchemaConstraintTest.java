@@ -46,7 +46,7 @@ class SchemaConstraintTest {
     assertThatThrownBy(
             () ->
                 jdbc.update(
-                    "UPDATE usage_event SET occurred_at = occurred_at + interval '1 hour' WHERE transaction_id = 'tx-1'"))
+                    "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
@@ -56,14 +56,14 @@ class SchemaConstraintTest {
     UUID orgId = insertOrganization();
     insertUsageEvent(orgId, insertCustomer(orgId, "acme"), "tx-1");
 
-    assertThatThrownBy(() -> jdbc.update("DELETE FROM usage_event WHERE transaction_id = 'tx-1'"))
+    assertThatThrownBy(() -> jdbc.update("DELETE FROM event WHERE transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
 
   @Test
   void 이벤트_테이블은_TRUNCATE할_수_없다() {
-    assertThatThrownBy(() -> jdbc.execute("TRUNCATE usage_event"))
+    assertThatThrownBy(() -> jdbc.execute("TRUNCATE event"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
@@ -75,8 +75,8 @@ class SchemaConstraintTest {
 
     jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, occurred_at, received_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, occurred_at, received_at)
         VALUES (?, 'tx-1', ?, 'chat_completion', now(), ?)
         """,
         orgId,
@@ -85,8 +85,7 @@ class SchemaConstraintTest {
 
     OffsetDateTime receivedAt =
         jdbc.queryForObject(
-            "SELECT received_at FROM usage_event WHERE transaction_id = 'tx-1'",
-            OffsetDateTime.class);
+            "SELECT received_at FROM event WHERE transaction_id = 'tx-1'", OffsetDateTime.class);
     assertThat(receivedAt).isAfter(clientSuppliedTime);
   }
 
@@ -95,9 +94,8 @@ class SchemaConstraintTest {
   /**
    * 이벤트가 있는 고객은 지울 수 없다.
    *
-   * <p><b>이 성질이 고객 삭제 API의 바닥이다.</b> 막는 것은 새로 만든 장치가 아니라 V1의 복합 FK {@code
-   * usage_event_customer_same_org}다. 그 FK는 {@code ON DELETE} 절이 없어 기본값 {@code NO ACTION}이고, 참조하는
-   * 이벤트가 한 건이라도 있으면 DELETE를 거부한다.
+   * <p><b>이 성질이 고객 삭제 API의 바닥이다.</b> 막는 것은 새로 만든 장치가 아니라 복합 FK {@code event_customer_same_org}다. 그
+   * FK는 {@code ON DELETE} 절이 없어 기본값 {@code NO ACTION}이고, 참조하는 이벤트가 한 건이라도 있으면 DELETE를 거부한다.
    *
    * <p>앱({@code CustomerService})도 지우기 전에 같은 것을 확인하고 409로 거절한다. 층이 둘인 이유는 V1의 append-only 트리거와 같다.
    * 앱의 확인은 사용자에게 쓸 만한 오류를 주는 몫이고, FK는 앱을 거치지 않는 경로(수동 SQL, 배치, 후속 관리 도구)까지 막는 몫이다. 이벤트가 남은 채 고객이
@@ -248,8 +246,8 @@ class SchemaConstraintTest {
   @Test
   void 식별자_컬럼에는_한국어_collation을_붙이지_않는다() {
     assertThat(collationOf("billable_metric", "code")).isNull();
-    assertThat(collationOf("usage_event", "transaction_id")).isNull();
-    assertThat(collationOf("usage_event", "event_type")).isNull();
+    assertThat(collationOf("event", "transaction_id")).isNull();
+    assertThat(collationOf("event", "type")).isNull();
   }
 
   // --- 인보이스 확정본 ---
@@ -561,8 +559,8 @@ class SchemaConstraintTest {
   private void insertUsageEvent(UUID orgId, UUID customerId, String transactionId) {
     jdbc.update(
         """
-        INSERT INTO usage_event
-          (organization_id, transaction_id, customer_id, event_type, properties, occurred_at)
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, ?, ?, 'chat_completion', '{"token": 1200}', now())
         """,
         orgId,
