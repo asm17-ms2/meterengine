@@ -144,7 +144,7 @@ class OpenApiDocumentTest {
             "/v1/customers/{id}",
             "/v1/billable-metrics",
             "/v1/billable-metrics/{code}/price-policy",
-            "/v1/price-policies");
+            "/v1/billable-metric-prices");
 
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
     assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
@@ -183,7 +183,7 @@ class OpenApiDocumentTest {
         .isNotNull();
     assertThat(json())
         .bodyJson()
-        .extractingPath("$.paths['/v1/price-policies'].get.summary")
+        .extractingPath("$.paths['/v1/billable-metric-prices'].get.summary")
         .isNotNull();
   }
 
@@ -214,20 +214,20 @@ class OpenApiDocumentTest {
     assertSchemaHasField("CreatePricePolicyRequest", "dimension_properties");
     assertSchemaHasField("PricePolicyResponse", "billable_metric_code");
     assertSchemaHasField("CustomerResponse", "created_at");
-    assertSchemaHasField("ListPricePoliciesResponse", "price_policies");
-    assertSchemaHasField("BillableMetricPricePolicyResponse", "billable_metric_code");
-    assertSchemaHasField("BillableMetricPricePolicyResponse", "dimension_properties");
-    assertSchemaHasField("BillableMetricPricePolicyResponse", "unit_price");
+    assertSchemaHasField("ListBillableMetricPricesResponse", "billable_metric_prices");
+    assertSchemaHasField("BillableMetricPriceResponse", "billable_metric_code");
+    assertSchemaHasField("BillableMetricPriceResponse", "dimension_properties");
+    assertSchemaHasField("BillableMetricPriceResponse", "unit_price");
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.components.schemas.BillableMetricPricePolicyResponse.properties.dimension_properties.type")
+            "$.components.schemas.BillableMetricPriceResponse.properties.dimension_properties.type")
         .asArray()
         .contains("null");
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.components.schemas.BillableMetricPricePolicyResponse.properties.unit_price.type")
+            "$.components.schemas.BillableMetricPriceResponse.properties.unit_price.type")
         .asArray()
         .contains("null");
 
@@ -246,7 +246,7 @@ class OpenApiDocumentTest {
             "dimensionProperties",
             "dimensionValues",
             "unitPrice",
-            "pricePolicies",
+            "billableMetricPrices",
             "createdAt");
   }
 
@@ -284,7 +284,7 @@ class OpenApiDocumentTest {
     assertErrorResponseSchema("/v1/billable-metrics", "post", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics", "get", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
-    assertErrorResponseSchema("/v1/price-policies", "get", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metric-prices", "get", "ErrorResponse");
   }
 
   /**

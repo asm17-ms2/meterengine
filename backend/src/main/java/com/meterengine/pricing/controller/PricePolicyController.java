@@ -2,7 +2,7 @@ package com.meterengine.pricing.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.pricing.dto.CreatePricePolicyRequest;
-import com.meterengine.pricing.dto.ListPricePoliciesResponse;
+import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.service.PricePolicyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,22 +31,23 @@ public class PricePolicyController {
     this.pricePolicyService = pricePolicyService;
   }
 
-  @GetMapping("/v1/price-policies")
+  @GetMapping("/v1/billable-metric-prices")
   @Operation(
-      summary = "가격 정책 목록 조회",
+      summary = "미터별 가격 목록 조회",
       description =
           """
-          이 도입사의 미터를 code 오름차순으로 전부 돌려주고, 미터마다 등록된 가격 정책을 함께 싣는다.
-          정책이 아직 없는 미터는 dimension_properties가 null이다. 빈 배열은 정책이 있는 무차원 미터라는 뜻이라 서로 다르다.
-          화면이 정책을 붙일 미터를 고르려면 정책 없는 미터도 보여야 해서 함께 싣는다.
-          미터가 없거나 등록되지 않은 도입사면 price_policies가 빈 배열이다.
-          미터의 이름과 집계 기준은 싣지 않는다. 미터 자체의 조회는 미터 API의 몫이다.
-          단가는 무차원 조합('{}')에 붙은 기본 단가 하나만 싣는다. 조합별 단가는 다차원 계산이 붙을 때 함께 연다.
+          이 도입사의 미터를 code 오름차순으로 전부 돌려주고, 미터마다 가격 정책의 축 선언과 기본 단가를 싣는다.
+          정책이 없는 미터도 한 요소로 실리며 dimension_properties가 null이다. 빈 배열은 정책이 있는 무차원 미터라는 뜻이라 서로 다르다.
+          unit_price는 무차원 조합('{}')에 붙은 기본 단가이고, 그 단가가 없으면 null이다. 조합별 단가는 싣지 않는다.
+          미터의 이름과 집계 기준은 싣지 않는다. 미터 자체는 미터 목록 조회로 본다.
           수량을 싣지 않으므로 이 응답만으로는 금액을 계산할 수 없다.
+          미터가 없거나 등록되지 않은 도입사면 billable_metric_prices가 빈 배열이다.
           페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터별 가격 정책. 미터가 없으면 price_policies가 빈 배열이다"),
+    @ApiResponse(
+        responseCode = "200",
+        description = "미터별 가격 목록. 미터가 없으면 billable_metric_prices가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -55,7 +56,7 @@ public class PricePolicyController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
-  public ListPricePoliciesResponse listPricePolicies(
+  public ListBillableMetricPricesResponse listBillableMetricPrices(
       @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
           @RequestHeader("X-Organization-Id")
           UUID organizationId) {
@@ -70,7 +71,7 @@ public class PricePolicyController {
           """
           미터에 가격 정책(가격을 가르는 속성 키의 선언)을 등록한다.
           무차원 미터면 dimension_properties를 빈 배열로 보낸다.
-          단가는 이 API가 받지 않고 별도의 단가 API가 등록한다.
+          단가는 이 API가 받지 않는다. 단가 등록 API는 아직 없다.
           단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
           미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
           """)

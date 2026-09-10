@@ -8,9 +8,9 @@ import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.dto.BillableMetricPricePolicyResponse;
+import com.meterengine.pricing.dto.BillableMetricPriceResponse;
 import com.meterengine.pricing.dto.CreatePricePolicyRequest;
-import com.meterengine.pricing.dto.ListPricePoliciesResponse;
+import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.entity.PricePolicy;
 import com.meterengine.pricing.entity.PricePolicyId;
@@ -45,14 +45,14 @@ public class PricePolicyService {
   }
 
   @Transactional(readOnly = true)
-  public ListPricePoliciesResponse list(UUID organizationId) {
+  public ListBillableMetricPricesResponse list(UUID organizationId) {
     Map<String, PricePolicy> pricePolicyByBillableMetricCode =
         pricePolicyRepository.findByOrganizationId(organizationId).stream()
             .collect(Collectors.toMap(PricePolicy::getBillableMetricCode, Function.identity()));
     Map<String, BigDecimal> unitPriceByBillableMetricCode =
         priceRateRepository.findBaseUnitPrices(organizationId);
 
-    return new ListPricePoliciesResponse(
+    return new ListBillableMetricPricesResponse(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
             .map(
                 billableMetric ->
@@ -88,11 +88,11 @@ public class PricePolicyService {
     return PricePolicyResponse.from(pricePolicy);
   }
 
-  private static BillableMetricPricePolicyResponse toResponse(
+  private static BillableMetricPriceResponse toResponse(
       BillableMetric billableMetric,
       Map<String, PricePolicy> pricePolicyByBillableMetricCode,
       Map<String, BigDecimal> unitPriceByBillableMetricCode) {
-    return BillableMetricPricePolicyResponse.of(
+    return BillableMetricPriceResponse.of(
         billableMetric.getCode(),
         pricePolicyByBillableMetricCode.get(billableMetric.getCode()),
         unitPriceByBillableMetricCode.get(billableMetric.getCode()));
