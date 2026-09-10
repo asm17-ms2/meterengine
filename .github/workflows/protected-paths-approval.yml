@@ -1,0 +1,45 @@
+name: Protected paths approval
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  protected-paths-approval:
+    name: protected-paths-approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a protected path changed and fewer than 2 approvals stand
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          PROTECTED: '^(backend/src/main/resources/(db/migration/|application\.properties$)|backend/(build\.gradle\.kts|settings\.gradle\.kts)$|backend/gradle/|deploy/|docker-compose\.yml$|docs/(rfcs|policies|contributing)/|docs/README\.md$|CONTRIBUTING\.md$|CLAUDE\.md$|\.github/)'
+        run: |
+          changed=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          protected=$(printf '%s\n' "$changed" | grep -E "$PROTECTED" || true)
+          if [ -z "$protected" ]; then
+            echo "보호 경로 변경 없음"
+            exit 0
+          fi
+          echo "보호 경로 변경:"
+          echo "$protected"
+          approvals=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" --jq '
+            [ .[]
+              | select(.user.login != env.AUTHOR and .user.type == "User")
+              | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")
+            ]
+            | group_by(.user.login) | map(last)
+            | map(select(.state == "APPROVED")) | length')
+          echo "유효한 approve: $approvals"
+          if [ "$approvals" -lt 2 ]; then
+            echo "보호 경로를 건드린 PR은 approve 2개가 필요합니다"
+            exit 1
+          fi

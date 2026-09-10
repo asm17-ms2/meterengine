@@ -122,9 +122,31 @@
 - 배정된 사람이 그 PR의 리뷰어다. 코드를 읽고 approve나 changes requested로 답한다. 머지 조건은 이 사람의 approve다
 - 배정되지 않은 사람은 그 PR에 의무가 없다. 읽고 코멘트를 달아도 되지만 approve는 하지 않는다
 - 배정된 사람이 볼 수 없으면 리뷰어를 다른 사람으로 바꾼다. 묵히지 않는다
-- 작성자는 두 번째 리뷰어를 지정할 수 있다. 되돌리기 비싼 경로(`backend/src/main/resources/db/migration/`, `docs/rfcs/`, `docs/policies/`, `.github/`)를 건드리거나 판단이 갈릴 것 같을 때다. 지정된 사람은 모두 approve한다
+- 아래 "보호 경로"를 건드린 PR은 approve가 둘 필요하다. 작성자가 두 번째 리뷰어를 지정한다. `.github/workflows/protected-paths-approval.yml`의 `protected-paths-approval` job이 세고, 필수 체크라 모자라면 머지되지 않는다
+- 그 밖의 경로에서도 판단이 갈릴 것 같으면 작성자가 두 번째 리뷰어를 지정할 수 있다. 지정된 사람은 모두 approve한다
 - 스택은 리뷰어가 한 명이다. 작성자가 고르지 않고 첫 조각에 자동 배정된 사람으로 나머지 조각을 맞춘다. `gh stack submit` 뒤 조각마다 `gh pr edit <번호> --remove-reviewer <자동 배정된 사람> --add-reviewer <첫 조각의 사람>`을 돌린다. 리뷰어는 스택을 한 번에 읽고 조각마다 approve한다
 - 정족수가 전원인 PR(RFC, 절이 생기거나 없어지는 규칙 개정)은 `governance.md` "제안"과 "규칙 개정"을 따른다. 배정과 무관하게 전원이 본다
+
+### 보호 경로
+
+| 경로 | 무엇 | 왜 되돌리기 비싼가 |
+| --- | --- | --- |
+| `backend/src/main/resources/db/migration/` | Flyway 마이그레이션 | 적용된 DB에 체크섬이 박힌다. 고치면 기동이 실패한다 |
+| `backend/src/main/resources/application.properties` | DB 연결, 프로파일, 외부 설정 | 잘못되면 서버가 안 뜨거나 엉뚱한 DB를 본다 |
+| `backend/build.gradle.kts`, `backend/settings.gradle.kts`, `backend/gradle/` | 의존성, 버전 카탈로그, Gradle 버전 | Spring Boot 4와 Java 25 조합이라 하나를 올리면 다른 것이 어긋난다. 팀원 전원의 로컬 환경이 같이 바뀐다 |
+| `deploy/` | 운영 배포 설정과 스크립트 | 잘못 나가면 서비스가 내려간다 |
+| `docker-compose.yml` | 로컬 환경 정의 | 깨지면 전원이 같이 멈춘다 |
+| `docs/rfcs/` | 방향 결정 기록 | 정족수가 전원이다 |
+| `docs/policies/` | 정책 값 | 코드 동작을 정한다. 틀린 채로 쌓이면 코드가 따라간다 |
+| `docs/contributing/`, `CONTRIBUTING.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 몇 주 쌓이면 되돌릴 것이 코드가 된다 |
+| `.github/` | CI, CODEOWNERS, PR 템플릿 | 머지 조건 자체를 바꾼다 |
+
+정규식은 워크플로 파일의 `PROTECTED`에 있다. 표를 바꾸면 그것도 같이 바꾼다.
+
+넣지 않은 것과 이유다.
+
+- `backend/openapi.yaml`: 생성물이라 컨트롤러나 DTO를 건드리면 같이 바뀐다. 외부에 공개한 계약이 생기면 다시 본다
+- `docs/glossary.md`: 용어집. 고치는 비용도 되돌리는 비용도 싸다
 
 ### 근거
 
@@ -132,10 +154,11 @@
 - 두 명이 다 approve하면 누가 읽었는지가 흐려진다. 코멘트 없이 approve만 한 리뷰가 대부분이었고, 스택 조각 여러 개가 1분 안에 연달아 approve된 날이 있었다
 - 머지가 둘 중 느린 쪽에 맞춰진다. 한 명이 배정되면 누가 잡고 있는지가 드러나고, 못 보면 넘길 수 있다
 - 스택에 자동 배정을 그대로 두면 조각마다 리뷰어가 번갈아 붙어 앞 조각의 맥락 없이 뒤 조각을 보게 된다. GitHub에 "스택은 같은 리뷰어" 설정이 없어 손으로 맞춘다
-- 되돌리기 비싼 경로만 전원 승인으로 강제하는 것은 GitHub가 경로별 승인 수를 지원하지 않아 하지 않는다. CODEOWNERS의 "Require review from Code Owners"도 owner 중 한 명이 승인하면 통과라 전원을 강제하지 못한다. 그래서 두 번째 리뷰어는 작성자 판단에 둔다
+- GitHub 룰셋은 경로별 승인 수를 지원하지 않고, CODEOWNERS의 "Require review from Code Owners"도 owner 중 한 명이 승인하면 통과다. 그래서 보호 경로의 approve 둘은 워크플로가 센다. `rfc-checklist`와 같은 방식이다
+- 워크플로는 approve 수만 센다. 새 push 뒤에도 이전 approve가 남는 것은 룰셋의 dismiss stale reviews가 꺼져 있어서이고, 문제가 생기면 그때 켠다
 
 ### 검토한 대안
 
 - CODEOWNERS를 개인 셋으로 두고 1명 승인(이전 방식): 셋 다 알림을 받아 먼저 approve한 사람이 리뷰어가 된다. 빠른 사람에게 리뷰가 몰리고 꼼꼼한 리뷰가 뒤로 밀린다
 - 룰셋의 필수 승인을 2명으로 올리기: 지금의 암묵적 관행을 명시하는 것이지만 리뷰 시간이 작성 시간보다 커지는 문제가 그대로다
-- 되돌리기 비싼 경로만 승인 2명을 요구하는 GitHub Action: 검사 도구 신설이라 정족수와 근거가 따로 필요해 후속 PR로 제안한다
+- 룰셋의 필수 승인을 경로와 무관하게 2명으로 올리기: 보호 경로가 아닌 PR까지 두 명이 봐야 해서 리뷰 부담이 지금과 같다

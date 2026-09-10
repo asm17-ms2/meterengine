@@ -12,9 +12,9 @@
 - 머지 방식: squash merge. PR 하나가 main 커밋 하나로 남아 이슈 단위 추적이 쉽고, 브랜치 안 커밋 정리에 힘 쓰지 않아도 된다. main 룰셋의 Allowed merge methods를 squash만 허용으로 설정해 강제한다. squash로 원본 커밋과의 연결이 끊기는 문제는 아래 "머지 후 브랜치 삭제"와 "선행 브랜치 위 작업" 규칙이 안전장치다
 - 고정 브랜치 도입 시 전환 계획: 이후 테스트서버 운영 등으로 develop/staging 같은 고정 브랜치가 생기면, develop 룰셋은 squash만, main 룰셋은 merge commit만 허용으로 전환한다. 오래 사는 브랜치를 main과 반복 머지할 때 squash를 쓰면 히스토리가 꼬이기 때문이다. 시점은 릴리스/태그 규칙 논의와 함께 정한다
 - 머지 후 브랜치 삭제: 머지된 브랜치는 삭제하고, 이어지는 작업은 main에서 새 브랜치를 딴다. 다만 아직 머지되지 않은 선행 작업에 의존하면 main이 아니라 그 브랜치 위에 쌓는다(`docs/contributing/pull-request.md` "스택 PR"). GitHub 저장소 설정(Automatically delete head branches)으로 자동화한다. 로컬 브랜치는 각자 `git fetch --prune`으로 정리한다
-- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다. 누가 리뷰하는지는 `docs/contributing/pull-request.md` "리뷰어 배정"이 정한다
+- PR 리뷰: 작성자 본인 외 1명 이상 승인 후 머지한다. 셀프머지는 하지 않는다. main 룰셋의 Required approvals(1명)로 강제한다. 누가 리뷰하는지는 `docs/contributing/pull-request.md` "리뷰어 배정"이 정한다. 그 절의 "보호 경로"를 건드린 PR은 approve 둘이 필요하다
 - 제안: 무엇을 RFC PR로, 규칙 PR로, `proposal` PR로 올리고 정족수가 얼마인지는 `docs/contributing/governance.md` "제안"과 "규칙 개정"이 정본이다. Draft로 열지 않는다. 제안 PR만 모아 보려면 `label:proposal`, RFC PR은 `label:rfc`로 거른다
-- main 상태: main은 항상 빌드/테스트가 통과하는 상태를 유지한다. 깨진 코드나 반쯤 만든 기능은 브랜치에만 둔다. CI 실패 시 머지를 금지한다. 필수 체크 항목은 CI 워크플로(`.github/workflows/ci.yml`)의 `backend`, `frontend` job과 RFC 체크리스트 워크플로(`.github/workflows/rfc-checklist.yml`)의 `rfc-checklist` job이다. main 룰셋의 Required status checks에 그 job을 등록해 강제한다. `rfc-checklist`는 `rfc` 라벨이 붙은 PR에서만 돌고 PR 본문에 체크 안 된 항목이 있으면 실패한다. 라벨이 없는 PR에서는 건너뛰므로 필수 체크에 걸려도 막히지 않는다
+- main 상태: main은 항상 빌드/테스트가 통과하는 상태를 유지한다. 깨진 코드나 반쯤 만든 기능은 브랜치에만 둔다. CI 실패 시 머지를 금지한다. 필수 체크 항목은 CI 워크플로(`.github/workflows/ci.yml`)의 `backend`, `frontend` job, RFC 체크리스트 워크플로(`.github/workflows/rfc-checklist.yml`)의 `rfc-checklist` job, 보호 경로 승인 워크플로(`.github/workflows/protected-paths-approval.yml`)의 `protected-paths-approval` job이다. main 룰셋의 Required status checks에 그 job을 등록해 강제한다. `rfc-checklist`는 `rfc` 라벨이 붙은 PR에서만 돌고 PR 본문에 체크 안 된 항목이 있으면 실패한다. 라벨이 없는 PR에서는 건너뛰므로 필수 체크에 걸려도 막히지 않는다. `protected-paths-approval`은 되돌리기 비싼 경로를 건드린 PR에서 approve가 둘 미만이면 실패한다. 경로 목록은 `docs/contributing/pull-request.md` "리뷰어 배정"의 "보호 경로"에 있다
 - 선행 브랜치 위 작업: 브랜치 A가 리뷰 대기 중이고 B가 A 없이는 성립하지 않으면 A 위에 쌓는다. 따로 머지돼도 되면 독립 PR로 낸다. 절차는 `docs/contributing/pull-request.md` "스택 PR"에 있고, GitHub 네이티브 기능만 쓴다. 한 부모에 여러 자식이 기대면 같은 파일 "가지"를 따른다
 - 릴리스/태그 규칙: 버전 태그는 두지 않는다. 배포 단위는 커밋이고, 배포된 것을 가리키는 이름은 그 커밋의 git SHA다(ECR 이미지 태그가 SHA다). 롤백도 이전 SHA로 다시 배포하는 것이라 semver 태그 없이 성립한다. 외부에 버전 번호를 알려야 하는 일이 생기면 그때 다시 논의한다
 
@@ -108,6 +108,7 @@ README는 슬라이스가 끝날 때마다 조금씩 밀린다. "아직 없다"�
 | 오류 code를 추가/변경했거나 오류 응답 형식을 건드렸다 | `backend/README.md` "오류 응답"의 code 목록. 값의 정본은 `ErrorCodes`이고, 프론트엔드는 모르는 code에 기본 문구를 쓴다 |
 | 실행 명령이나 사전 준비(런타임 버전, 컨테이너)가 바뀌었다 | 루트 README "시작하기"와 해당 하위 README의 "실행" |
 | 배포 구성이나 절차를 바꿨다 (compose, Caddy, 배포 스크립트, CD 워크플로) | `deploy/README.md`. 서버에서 도는 것이 바뀌면 "구성"도 같이 본다 |
+| CI 워크플로를 추가했거나 트리거를 바꿨다 | 루트 README의 워크플로 표. 필수 체크면 "확정된 규칙"의 main 상태 항목 |
 | 정책 값(`docs/policies/`에 적힌 값)이나 그 코드 위치를 바꿨다 | 그 도메인의 `docs/policies/` 파일. 코드와 같은 PR에서 고친다 |
 | RFC를 채택, 기각, 대체했다 | `docs/rfcs/README.md` 표의 상태와 날짜 |
 | 가리키던 Jira 이슈가 닫혔다 (완료든 취소든) | 그 이슈 키가 적힌 README 줄. 결정이 났으면 결정 내용을 쓰고, 안 났으면 이슈 키를 떼고 미정이라고만 남긴다 |
