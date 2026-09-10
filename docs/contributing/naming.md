@@ -139,9 +139,12 @@
 
 | 식별자 | 케이스 | 형식 | 예 | 근거 |
 | --- | --- | --- | --- | --- |
-| 컴포넌트 | PascalCase | 여럿이면 복수, 하나면 단수, 셀 수 없는 명사(`Billing` `Usage`)는 그대로. 접미사 `Screen` `Section` `Table` `FormDialog` `DeleteDialog` `Drawer`, 공용은 역할명 | `CustomersTable`, `CustomerFormDialog`, `UsageTable`, `Pagination` | 도구 동작: React가 소문자 이름을 DOM 태그로 봄([React 문서][react-component]). 관례: 복수형은 [next-learn][next-learn]. 접미사 목록은 RFC-001 |
+| 컴포넌트 | PascalCase | 여럿이면 복수, 하나면 단수, 셀 수 없는 명사(`Billing` `Usage`)는 그대로. 접미사 `Screen` `Section` `Frame` `Loading` `Meta` `Table` `FormDialog` `DeleteDialog` `Drawer`, 공용은 역할명. 뜻은 아래 "화면 접미사" | `CustomersTable`, `CustomerFormDialog`, `UsageTable`, `BillingMeta`, `Pagination` | 도구 동작: React가 소문자 이름을 DOM 태그로 봄([React 문서][react-component]). 관례: 복수형은 [next-learn][next-learn]. 접미사 목록은 RFC-001, `Frame` `Loading` `Meta`는 [PR #176][pr-176] |
 | 훅 | `use` + PascalCase | 훅을 호출하지 않으면 `use` 금지 | `useCollapse` | 도구 동작: `use` 접두사로 훅 규칙을 검사함([React 문서][react-hooks], eslint-plugin-react-hooks) |
 | 이벤트 핸들러 | lowerCamelCase | 함수는 `handle<Event>`, prop은 `on<Event>` | `handleSubmit`, `onDelete` | 관례: [React 문서][react-events]가 `handle`/`on`을 관례로 소개 |
+| DOM id | kebab-case | `<대상>-<요소>`. 대상은 컴포넌트 폴더 이름의 단수이고 약칭하지 않는다 | `customer-name`, `billable-metric-code` | 스타일 가이드: [Google HTML/CSS][ghtml](낱말은 하이픈으로 가르고 뜻이 있는 이름). 대상 접두사는 이 파일 |
+
+- **화면 접미사.** `Section`이 데이터를 기다렸다가 결과에 따라 그리는 바깥 경계, `Screen`이 데이터가 도착한 뒤 `Section`이 그리는 화면, `Loading`이 `Section`이 기다리는 동안 그 자리에 보이는 것, `Frame`이 `Section`의 오류 상태와 `Loading`이 함께 쓰는 틀, `Meta`가 화면 제목 옆에 붙는 요약이다.
 
 #### 타입
 
@@ -154,16 +157,17 @@
 
 | 식별자 | 케이스 | 형식 | 예 | 근거 |
 | --- | --- | --- | --- | --- |
-| 함수, 변수, 프로퍼티 | lowerCamelCase | 함수는 동사구, API 함수는 백엔드 동사 어휘 | `listCustomers`, `readMonth` | 스타일 가이드: [Google TS][gts], [Airbnb 23.2][airbnb] |
-| boolean | lowerCamelCase | `is` `has` `can` 접두사 | `isOpen` | 관례: [typescript-eslint 문서 예시][ts-eslint-naming]. 스타일 가이드: [Palmer Group][palmer]. 표준 없음 |
-| 모듈 수준 상수 | UPPER_SNAKE_CASE | export, const, `as const`일 때만. 초기값은 `<STATE>_IDLE`. 함수 안의 const는 lowerCamelCase. 프레임워크가 이름을 정한 export(`metadata`, `config` 등 Next.js 예약)는 그 이름 그대로 | `FORM_IDLE`, `PAGE_SIZE` | 스타일 가이드: [Google TS][gts], [Airbnb 23.10][airbnb]. 도구 동작: 예약 export는 [Next.js][next-metadata]가 이름으로 찾음 |
+| 함수, 변수, 프로퍼티 | lowerCamelCase | 함수는 동사구, API 함수는 백엔드 동사 어휘. API 모듈이 전부 거치는 `lib/api/client.ts`의 원시 함수는 `server` 뒤에 동사 | `listCustomers`, `readMonth`, `serverFetch` | 스타일 가이드: [Google TS][gts], [Airbnb 23.2][airbnb]. 원시 함수 예외는 이 파일 |
+| 컬렉션 | lowerCamelCase | 복수형, 접미사 없음. Map은 `<값>By<키>`. 키가 닫힌 유니온인 `Record` 상수는 조회표라 복수형 그대로 | `visibleRows`, `customerGroupByCustomerId`, `REQUIRED_MESSAGES` | 백엔드 컬렉션 행과 같음. `Record` 상수 예외는 이 파일 |
+| boolean | lowerCamelCase | 변수와 상태는 `is` `has` `can` 접두사. 모듈 수준 `export const`여도 boolean이면 상수 행이 아니라 이 행. prop과 객체 필드는 DOM 속성처럼 접두사 없는 형용사 | `isOpen`, `isDevStateEnabled`, prop `disabled` | 관례: [typescript-eslint 문서 예시][ts-eslint-naming](변수에만 접두사), [React DOM 공용 prop][react-dom-common] `hidden` `disabled`. 스타일 가이드: [Palmer Group][palmer]. 상수 행보다 먼저인 것과 prop 예외는 이 파일. 표준 없음 |
+| 모듈 수준 상수 | UPPER_SNAKE_CASE | 모듈 수준의 `const`는 export 여부와 무관. 함수 안의 `const`는 lowerCamelCase. 초기값은 `<STATE>_IDLE`. boolean은 boolean 행. 프레임워크가 이름을 정한 export(`metadata` 등 Next.js 예약)는 그 이름 그대로. 환경 변수를 읽어 만드는 설정 객체는 값이 배포 환경에서 오므로 상수가 아니라 lowerCamelCase | `FORM_IDLE`, `PAGE_SIZE`, `COLUMNS`, 설정 객체 `config` | 스타일 가이드: [Google TS][gts](모듈 수준만 CONSTANT_CASE 허용, 함수 안은 lowerCamelCase 강제, export 구분 없음). [Airbnb 23.10][airbnb](export할 때만 대문자)과 다르게 감. 도구 동작: 예약 export는 [Next.js][next-metadata]가 이름으로 찾음. 설정 객체 예외는 이 파일 |
 | 약어 | 낱말처럼 camel | 백엔드의 약어 규칙과 같음 | `customerId`, `apiClient` | 스타일 가이드: [Google TS][gts]. [Airbnb 23.9][airbnb](전부 대문자)와 다르게 감 |
 
 #### 파일과 폴더
 
 | 식별자 | 케이스 | 형식 | 예 | 근거 |
 | --- | --- | --- | --- | --- |
-| 컴포넌트 파일 | PascalCase | 파일명 = 컴포넌트명, 파일 하나에 하나 | `CustomerFormDialog.tsx` | 스타일 가이드: [Airbnb React][airbnb-react] |
+| 컴포넌트 파일 | PascalCase | 파일명 = export하는 컴포넌트명. export하는 컴포넌트는 파일 하나에 하나, 그 파일만 쓰는 비공개 보조 컴포넌트는 같은 파일에 둘 수 있다 | `CustomerFormDialog.tsx`, `Pagination.tsx` 안의 비공개 `StepLink` | 이 파일. import 경로가 컴포넌트명을 말하게 한다. 파일명 = 컴포넌트명은 [Airbnb React][airbnb-react]와 [Palmer Group][palmer]. [Airbnb React][airbnb-react]는 stateless 컴포넌트 여럿을 한 파일에 허용해 이보다 느슨하다 |
 | 그 외 파일과 폴더 | kebab-case | 라우트, 컴포넌트 폴더, API 모듈은 같은 이름. 라우트 아래는 `state.ts` `actions.ts`. 공용 폴더는 역할명 단수 | `lib/api/customers.ts`, `dev-state.ts` | 도구 동작: [Next.js 예약 파일][next-files]. 관례: [next-learn][next-learn] |
 
 ### 근거
@@ -175,6 +179,11 @@
 - 컴포넌트는 여럿이면 복수 (대안: 접미사별 고정). [next-learn][next-learn]은 복수, [react-admin][react-admin]은 단수. 이름이 "무엇이 여럿인가"를 말하게 한다
 - 초기값 상수는 `FORM_IDLE` (대안: `initialFormState`, React 문서 관례). 둘 다 표준 안이고, `IDLE`은 초기값이자 되돌아가는 값이라 더 정확하다
 - 컴포넌트 파일 PascalCase. Next.js 생태계 다수([next-learn][next-learn], [shadcn/ui][shadcn])와 [Google TS][gts]는 kebab이다. [Airbnb React][airbnb-react]를 따르며, 파일명만으로 컴포넌트가 구분되는 이점을 택한다
+- 비공개 보조 컴포넌트도 파일로 나누기 (대안). `Notice` `TextField` `StepLink`처럼 한 파일만 쓰는 것을 나누면 import 경로에 이점이 없고 파일만 는다. [Airbnb React][airbnb-react](stateless 여럿 허용)보다 엄격하고 그보다는 느슨한 자리다
+- boolean prop에도 `is` 접두사 (대안, [React 조건부 렌더링][react-conditional] 예제 `isPacked`). DOM으로 그대로 넘기는 `disabled` `autoFocus`와 두 모양이 생긴다. prop을 백엔드 JSON 키처럼 컴포넌트의 계약으로 보고 접두사 없는 형용사로 통일한다
+- 상수 대문자를 export할 때만 (대안, [Airbnb 23.10][airbnb]). 같은 파일의 `COLUMNS`가 export 여부로 케이스가 바뀐다. [Google TS][gts]대로 모듈 수준이면 대문자다
+- 설정 객체 `config`를 `CONFIG`로 (대안). 환경 변수에서 읽는 값 묶음이라 백엔드의 `Properties` 빈에 대응하고, 코드에 값이 적힌 상수와 구분되게 둔다
+- `Record` 상수에 `By` (대안, `messageByField`). 키가 닫힌 유니온이면 타입이 키를 말하므로 이름에 되풀이하지 않는다. 키가 실행 중 정해지는 Map만 `By`다
 
 ## API와 DB
 
@@ -250,9 +259,9 @@
 
 - 명세: [JLS §6.1 Naming Conventions][jls-6.1], [JLS §8.10.3 record 멤버][jls-8.10.3], [JavaBeans 명세][javabeans](8.3 프로퍼티), [Jakarta Persistence 3.2][jpa-spec], [Jakarta Persistence JoinColumn][jpa-joincolumn], [OpenAPI 3.1 Operation Object][oas-op], [Jakarta REST NotFoundException][jakarta-rs], [RFC 6749 5.2][rfc6749-5.2]
 - 도구 동작: [Spring Boot 코드 구조][sb-structure], [springdoc][springdoc], [Spring Data JPA 쿼리 메서드][sd-query], [Spring Boot Hibernate 네이밍 전략][sb-naming], [OpenAPI Generator 인라인 스키마][oag-inline], [React 컴포넌트][react-component], [React 훅][react-hooks], [Next.js 파일 규칙][next-files], [Next.js metadata][next-metadata], [Checkstyle AbbreviationAsWordInName][checkstyle-abbr], [Spring MVC 오류 응답][sf-error-responses]
-- 스타일 가이드: [Google Java Style Guide][gj], [Google TypeScript Style Guide][gts], [Google AIP][aip](122, 126, 131, 132, 133, 134, 140, 142, 156, 160), [Zalando RESTful API Guidelines][zalando](118, 120, 129, 130, 134, 141, 235, 240), [Airbnb JavaScript][airbnb], [Airbnb React][airbnb-react], [Palmer Group TypeScript][palmer], [SQL Style Guide][sqlstyle], [네이버 핵데이 Java 컨벤션][naver], [Google AIP-193][aip-193], [Google API 오류][google-errors]
-- 관례: JDK javadoc [Collectors][jdk-collectors], [LocalDate][jdk-localdate], [List][jdk-list], [Files][jdk-files]. [Jakarta Persistence EntityManager][jpa-em], [Spring Data 리포지토리 정의][sd-repos], [Spring Data CrudRepository][sd-crud], [Spring Data 감사][sd-audit], [Spring 가이드 Accessing Data with JPA][guide-jpa], [Spring 가이드 Building a RESTful Web Service][guide-rest], [Spring 가이드 Securing a Web Application][guide-security], [Spring Boot 설정 프로퍼티 예제][sb-props], [Spring Framework DI][sf-di], [UserDetailsService][ss-uds], [UserDetailsManager][ss-udm], [Spring PetClinic][petclinic], [Stripe API][stripe], [Rails Active Record][rails-ar], [stripe-java Invoice][stripe-java-invoice], [Google Calendar API Events][gcal-events], [Kill Bill API][killbill], [React 이벤트 핸들러][react-events], [next-learn][next-learn], [shadcn/ui][shadcn], [react-admin][react-admin], [prolog][prolog], [2023-zipgo][zipgo], [typescript-eslint naming-convention 문서][ts-eslint-naming] 오류 처리 절은 [spring-guide][spring-guide], [Camunda][camunda], [Kill Bill 저장소][killbill-repo], [Fineract][fineract], [Stripe 오류 코드][stripe-errors], [Chargebee][chargebee], [Lago][lago], [토스페이먼츠 오류 코드][toss-errors], [Slack Web API][slack-errors], [AWS DynamoDB 오류][aws-ddb-errors].
-- 팀: 노션 제안서 [주입 필드][prop-inject], [클래스명][prop-class], [도메인 예외][prop-exception]. [PR #111][pr-111](`List` 접미사 논의). 커밋은 아래 표
+- 스타일 가이드: [Google Java Style Guide][gj], [Google TypeScript Style Guide][gts], [Google AIP][aip](122, 126, 131, 132, 133, 134, 140, 142, 156, 160), [Zalando RESTful API Guidelines][zalando](118, 120, 129, 130, 134, 141, 235, 240), [Airbnb JavaScript][airbnb], [Airbnb React][airbnb-react], [Palmer Group TypeScript][palmer], [Google HTML/CSS Style Guide][ghtml], [SQL Style Guide][sqlstyle], [네이버 핵데이 Java 컨벤션][naver], [Google AIP-193][aip-193], [Google API 오류][google-errors]
+- 관례: JDK javadoc [Collectors][jdk-collectors], [LocalDate][jdk-localdate], [List][jdk-list], [Files][jdk-files]. [Jakarta Persistence EntityManager][jpa-em], [Spring Data 리포지토리 정의][sd-repos], [Spring Data CrudRepository][sd-crud], [Spring Data 감사][sd-audit], [Spring 가이드 Accessing Data with JPA][guide-jpa], [Spring 가이드 Building a RESTful Web Service][guide-rest], [Spring 가이드 Securing a Web Application][guide-security], [Spring Boot 설정 프로퍼티 예제][sb-props], [Spring Framework DI][sf-di], [UserDetailsService][ss-uds], [UserDetailsManager][ss-udm], [Spring PetClinic][petclinic], [Stripe API][stripe], [Rails Active Record][rails-ar], [stripe-java Invoice][stripe-java-invoice], [Google Calendar API Events][gcal-events], [Kill Bill API][killbill], [React 이벤트 핸들러][react-events], [React DOM 공용 prop][react-dom-common], [React 조건부 렌더링][react-conditional], [next-learn][next-learn], [shadcn/ui][shadcn], [react-admin][react-admin], [prolog][prolog], [2023-zipgo][zipgo], [typescript-eslint naming-convention 문서][ts-eslint-naming] 오류 처리 절은 [spring-guide][spring-guide], [Camunda][camunda], [Kill Bill 저장소][killbill-repo], [Fineract][fineract], [Stripe 오류 코드][stripe-errors], [Chargebee][chargebee], [Lago][lago], [토스페이먼츠 오류 코드][toss-errors], [Slack Web API][slack-errors], [AWS DynamoDB 오류][aws-ddb-errors].
+- 팀: 노션 제안서 [주입 필드][prop-inject], [클래스명][prop-class], [도메인 예외][prop-exception]. [PR #111][pr-111](`List` 접미사 논의), [PR #176][pr-176](화면 접미사와 파일당 컴포넌트). 커밋은 아래 표
 
 ### 커밋 인용
 
@@ -334,11 +343,14 @@
 [react-component]: https://react.dev/learn/your-first-component
 [react-hooks]: https://react.dev/learn/reusing-logic-with-custom-hooks
 [react-events]: https://react.dev/learn/responding-to-events
+[react-dom-common]: https://react.dev/reference/react-dom/components/common
+[react-conditional]: https://react.dev/learn/conditional-rendering
 [next-files]: https://nextjs.org/docs/app/api-reference/file-conventions
 [next-metadata]: https://nextjs.org/docs/app/api-reference/functions/generate-metadata
 [next-learn]: https://github.com/vercel/next-learn
 [airbnb]: https://github.com/airbnb/javascript#naming-conventions
 [airbnb-react]: https://github.com/airbnb/javascript/tree/master/react#naming
+[ghtml]: https://google.github.io/styleguide/htmlcssguide.html#ID_and_Class_Name_Delimiters
 [palmer]: https://github.com/palmerhq/typescript
 [ts-eslint-naming]: https://typescript-eslint.io/rules/naming-convention/
 [sqlstyle]: https://www.sqlstyle.guide/#naming-conventions
@@ -359,6 +371,7 @@
 [c-1eb7906]: https://github.com/asm17-ms2/meterengine/commit/1eb7906
 [c-b1f70fe]: https://github.com/asm17-ms2/meterengine/commit/b1f70fe
 [pr-111]: https://github.com/asm17-ms2/meterengine/pull/111
+[pr-176]: https://github.com/asm17-ms2/meterengine/pull/176
 [l-inject]: https://github.com/asm17-ms2/meterengine/blob/2f48aea/backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java#L27
 [l-has-code]: https://github.com/asm17-ms2/meterengine/blob/4945e92/backend/src/main/java/com/meterengine/ErrorCodes.java#L117
 [l-response]: https://github.com/asm17-ms2/meterengine/blob/4945e92/backend/src/main/java/com/meterengine/customer/dto/CustomerResponse.java#L15
