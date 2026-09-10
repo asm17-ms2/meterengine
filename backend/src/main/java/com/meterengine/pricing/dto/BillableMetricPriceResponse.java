@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record BillableMetricPricePolicyResponse(
+public record BillableMetricPriceResponse(
     @JsonProperty("billable_metric_code") String billableMetricCode,
     @Schema(
             nullable = true,
@@ -20,11 +20,11 @@ public record BillableMetricPricePolicyResponse(
         @JsonProperty("unit_price")
         BigDecimal unitPrice) {
 
-  public static BillableMetricPricePolicyResponse of(
+  public static BillableMetricPriceResponse of(
       String billableMetricCode, PricePolicy pricePolicy, BigDecimal unitPrice) {
     return pricePolicy == null
-        ? new BillableMetricPricePolicyResponse(billableMetricCode, null, null)
-        : new BillableMetricPricePolicyResponse(
+        ? new BillableMetricPriceResponse(billableMetricCode, null, null)
+        : new BillableMetricPriceResponse(
             billableMetricCode, pricePolicy.getDimensionProperties(), unitPrice);
   }
 }

@@ -1,6 +1,6 @@
 # pricing 정책
 
-가격 정책 등록과 기본 단가 조회가 쓰는 값이다. 단가 등록과 다차원 계산은 아직 이 파일이 정하는 값이 없다.
+가격 정책 등록과 미터별 가격 조회가 쓰는 값이다. 단가 등록과 다차원 계산은 아직 이 파일이 정하는 값이 없다.
 
 ## 정책 등록
 
@@ -46,6 +46,18 @@
 왜 `{}`인가: 무차원 미터에도 단가가 붙을 조합이 하나 필요하다. 이 조합은 `PriceRate.BASE_COMBINATION`이다. 어느 조합에도 맞지 않는 이벤트를 이 단가로 계산한다는 합의가 있었으나 다차원 계산이 아직 없어 코드가 적용하지 않는다.
 
 왜 String인가: 이 컬럼이 PK의 일부라 식별자의 동등성이 jsonb가 정규화한 텍스트로 정의돼야 영속성 컨텍스트가 같은 행을 같은 엔티티로 본다. Map이면 키 순서가 다른 같은 조합이 다른 식별자가 된다. 조합을 구조로 다뤄야 하면 그때 파싱 계층을 얹는다.
+
+## 미터별 가격 조회
+
+| 항목 | 값 | 코드 위치 | 근거 |
+|---|---|---|---|
+| 요소 단위 | 미터. 정책이 없는 미터도 실리고 dimension_properties가 null이다 | `BillableMetricPriceResponse.of`, `PricePolicyIntegrationTest.정책이_없는_미터는_dimension_properties가_JSON_null로_실린다` | PR #76 |
+| 싣는 것 | 미터 code, 정책의 축 선언, 기본 단가. 미터 이름과 집계 기준은 싣지 않는다 | `BillableMetricPriceResponse` | PR #76 |
+| 순서와 페이지 | 미터 code 오름차순, 페이지 나누지 않음 | `BillableMetricRepository.findByOrganizationIdOrderByCodeAsc`, `PricePolicyIntegrationTest.목록은_미터_code_오름차순이다` | PR #76 |
+
+왜 정책 없는 미터도 싣는가: 화면이 정책을 붙일 미터를 고르려면 정책 없는 미터도 보여야 한다. 정책 있는 것만 내면 프론트엔드가 미터 목록과 차집합을 내게 되어 화면에 판단 로직이 생긴다.
+
+왜 미터 이름을 싣지 않는가: 미터 목록을 내는 경로가 미터 조회와 사용량 조회에 이어 셋이 된다.
 
 ## 저장 구조
 
