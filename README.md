@@ -10,21 +10,11 @@
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
 | `demo/` | 수집-조회 데모/검증 CLI와 Claude Code 사용량 브리지. Python 3.9+, 표준 라이브러리만 쓴다 |
 | `deploy/` | 운영 배포 구성. compose, Caddy, 배포 스크립트 |
-| `work/` | 개인 작업 공간. .gitignore로 제외되며 각자 만들어 쓴다 (CLAUDE.md 참조) |
-
-## 개발 방식
-
-빅뱅 설계(명세와 정책을 전부 확정한 뒤 개발 시작)를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다. 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다 (예: 이벤트 수집 -> 집계 -> rating -> draft 인보이스).
-
-## 문서 위치 규칙
-
-결정과 규칙은 레포(docs/)에, 회의록과 일정과 초안은 Miro에 둔다. 규칙의 정본은 [`CONTRIBUTING.md`](CONTRIBUTING.md) "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 본다.
-
-레포 안 정본은 이렇다. API 계약은 `backend/openapi.yaml`, 결정과 정책은 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)와 `docs/contributing/`, 각 디렉터리의 실행법과 구조는 그 디렉터리의 README다.
 
 ## 시작하기
 
-사전 준비: JDK 25, Node.js 24+, Docker Desktop (Compose 포함). `demo/console.py`를 쓸 때만 [uv](https://docs.astral.sh/uv/)가 추가로 필요하다.
+- 사전 준비: JDK 25, Node.js 24+, Docker Desktop (Compose 포함).
+  - `demo/console.py`를 쓸 때만 [uv](https://docs.astral.sh/uv/)가 추가로 필요하다.
 
 ```
 # backend + PostgreSQL (DB는 자동 기동)
@@ -44,30 +34,13 @@ uv run demo/console.py            # 같은 일을 화면으로
 docker compose up -d
 ```
 
-MS2-31 완료 조건이던 "클론 후 한 명령으로 로컬 실행"은 backend + DB 기준 `./gradlew bootRun` 한 명령으로 충족한다 (DB가 자동 기동된다). frontend는 별도 명령으로 실행한다.
-
-자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조. API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
-
-`.github/workflows/`에서 도는 것은 다음과 같다.
-
-| 워크플로 | 언제 | 무엇을 |
-| --- | --- | --- |
-| `ci.yml` | PR과 main push | backend 빌드/테스트, frontend lint/빌드. main 룰셋의 필수 체크다 |
-| `rfc-checklist.yml` | `rfc` 라벨이 붙은 PR | PR 본문의 체크리스트에 체크 안 된 항목이 있으면 실패한다. main 룰셋의 필수 체크다 |
-| `protected-paths-approval.yml` | PR 열림, push, 리뷰 제출 | 보호 경로를 건드린 PR에 approve가 둘 미만이면 실패한다. main 룰셋의 필수 체크다. 경로 목록은 `docs/contributing/pull-request.md` "보호 경로" |
-| `cd.yml` | main 머지 | 이미지를 굽고 ECR에 올린 뒤 배포한다 |
-| `claude-code-review.yml` | PR과 push | Claude 리뷰. 인라인 코멘트로 달리고 머지를 막지 않는다 |
-| `claude.yml` | `@claude` 호출 | 이슈나 PR 코멘트에 응답한다 |
-| `aws-access-check.yml` | 수동 | OIDC 신뢰 관계와 ECR 접근이 살아 있는지 본다 |
+- 자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조.
+  - API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
 
 ## 배포
 
-https://meterengine.com 에 배포한다. AWS EC2 한 대에서 Caddy(HTTPS와 경로 분배), 백엔드,
-프론트엔드 컨테이너가 돌고, DB는 RDS PostgreSQL이다. 이미지는 ECR에 있고 태그는 배포한
-커밋의 git SHA다.
+- 운영 구성과 배포 절차는 `deploy/README.md`에 있다.
 
-구성, 배포 절차, 서버 접속(SSH가 아니라 SSM이다)은 `deploy/README.md`에 있다.
+## 기여
 
-## 진행 상태
-
-이슈 진행은 Jira MS2 프로젝트에서 관리한다: https://asm17-ms2.atlassian.net
+- 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에서 시작한다.
