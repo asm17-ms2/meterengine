@@ -1,2 +1,15 @@
-# 모든 PR의 리뷰어를 reviewers 팀에서 자동 배정한다
+# 모든 PR의 리뷰어를 reviewers 팀에서 한 명 자동 배정한다
 * @asm17-ms2/reviewers
+
+# 보호 경로는 protected-reviewers 팀(auto assignment 끔) 전원에게 리뷰를 요청한다
+# 경로를 바꾸면 protected-paths-approval.yml의 PROTECTED도 같이 바꾼다
+/backend/src/main/resources/db/migration/ @asm17-ms2/protected-reviewers
+/backend/src/main/resources/application.properties @asm17-ms2/protected-reviewers
+/backend/*.gradle.kts @asm17-ms2/protected-reviewers
+/backend/gradle/ @asm17-ms2/protected-reviewers
+/deploy/ @asm17-ms2/protected-reviewers
+/docker-compose.yml @asm17-ms2/protected-reviewers
+/docs/ @asm17-ms2/protected-reviewers
+/CONTRIBUTING.md @asm17-ms2/protected-reviewers
+/CLAUDE.md @asm17-ms2/protected-reviewers
+/.github/ @asm17-ms2/protected-reviewers

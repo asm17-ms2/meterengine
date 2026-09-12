@@ -21,6 +21,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
+          # 경로를 바꾸면 .github/CODEOWNERS의 보호 경로 행도 같이 바꾼다
           PROTECTED: '^(backend/src/main/resources/(db/migration/|application\.properties$)|backend/(build\.gradle\.kts|settings\.gradle\.kts)$|backend/gradle/|deploy/|docker-compose\.yml$|docs/(rfcs|policies|contributing)/|docs/README\.md$|CONTRIBUTING\.md$|CLAUDE\.md$|\.github/)'
         run: |
           changed=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
