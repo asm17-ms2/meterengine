@@ -100,7 +100,7 @@ class BillableMetricServiceTest {
   @Test
   void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
     when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
-    when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation("billable_metric_pkey"));
+    when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation("billable_metric_pk"));
 
     assertThatThrownBy(() -> create("SUM", "token"))
         .isInstanceOf(ConflictException.class)
@@ -112,7 +112,7 @@ class BillableMetricServiceTest {
   void 미등록_도입사의_제약_위반은_400_예외로_바뀐다() {
     when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
     when(billableMetricRepository.saveAndFlush(any()))
-        .thenThrow(violation("billable_metric_organization_id_fkey"));
+        .thenThrow(violation("billable_metric_organization_fk"));
 
     assertThatThrownBy(() -> create("SUM", "token"))
         .isInstanceOf(InvalidRequestException.class)
