@@ -30,13 +30,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * 집계 서비스의 분기 검증 (MS2-129).
- *
- * <p>월 귀속이 실제로 맞는지는 Postgres의 TIMESTAMPTZ 비교에 달려 있어 {@link
- * com.meterengine.metric.BillableMetricUsageIntegrationTest}가 맡는다. 여기서는 서비스가 레포지토리에 어떤 기간을 넘기는지,
- * 결과를 어떻게 조립하는지만 본다.
- */
 @ExtendWith(MockitoExtension.class)
 class BillableMetricUsageServiceTest {
 
@@ -78,8 +71,6 @@ class BillableMetricUsageServiceTest {
             eq("token"),
             startCaptor.capture(),
             endCaptor.capture());
-    // 끝이 8/31 23:59:59가 아니라 9/1 00:00:00인 것이 핵심이다. 마지막 1초를 제외하면
-    // 23:59:59.5 같은 이벤트가 어느 달에도 속하지 않는다.
     assertThat(startCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00+09:00"));
     assertThat(endCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-09-01T00:00:00+09:00"));
   }
@@ -161,8 +152,6 @@ class BillableMetricUsageServiceTest {
 
   @Test
   void SUM인데_합할_대상_키가_없는_미터도_멈춘다() {
-    // 스키마상 target_property는 nullable이라 SUM 미터에 값이 비어 있을 수 있다. 그대로 두면
-    // jsonb_typeof 필터에 아무 행도 걸리지 않아 모든 고객이 0으로 나간다 (조용히 틀린 값).
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
         .thenReturn(
             List.of(

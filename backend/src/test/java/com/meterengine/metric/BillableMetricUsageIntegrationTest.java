@@ -23,15 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 집계와 사용량 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-129, MS2-138).
- *
- * <p><b>실제 Postgres여야 한다.</b> 월 귀속이 TIMESTAMPTZ 비교의 의미에 달려 있어서, 인메모리 DB로 바꾸면 통과 여부가 그 DB의 시간대 처리
- * 방언을 따라간다 (MS2-129 인수 기준이 H2를 금지하는 이유).
- *
- * <p>{@code @AutoConfigureMockMvc}를 쓰지 않고 WebApplicationContext에서 직접 만드는 이유는 {@link
- * EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
- */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
@@ -53,7 +44,7 @@ class BillableMetricUsageIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 월 경계 (하위작업 인수 기준)
+  // 월 경계
   // ---------------------------------------------------------------------------
 
   @Test
@@ -89,9 +80,7 @@ class BillableMetricUsageIntegrationTest {
   void 같은_순간을_UTC로_보낸_이벤트도_같은_달에_귀속된다() {
     UUID orgId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(orgId, "아크메");
-    // 2026-08-31T14:59:59Z == 2026-08-31T23:59:59+09:00. 표기가 달라도 같은 순간이다.
     insertEvent(orgId, "tx-1", customerId, 500, "2026-08-31T14:59:59Z");
-    // 2026-08-31T15:00:00Z == 2026-09-01T00:00:00+09:00
     insertEvent(orgId, "tx-2", customerId, 700, "2026-08-31T15:00:00Z");
 
     assertThat(quantityOf(orgId, AUGUST, customerId)).isEqualByComparingTo("500");
@@ -160,8 +149,6 @@ class BillableMetricUsageIntegrationTest {
     UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
-    // 수집 API는 properties의 내용을 검증하지 않아 이런 이벤트가 실제로 저장돼 있을 수 있다.
-    // 걸러내지 않으면 numeric 캐스팅이 터져 조회 전체가 500이 된다.
     insertEvent(
         orgId, "tx-2", acme, "chat_completion", "{\"token\":\"많이\"}", "2026-08-10T12:00:00+09:00");
     insertEvent(
@@ -236,7 +223,6 @@ class BillableMetricUsageIntegrationTest {
         .bodyJson()
         .extractingPath("$.billable_metric_usages[0].customers[0].customer_name")
         .isEqualTo("아크메");
-    // 단가는 금액을 내는 MS2-124의 몫이라 사용량 응답에 넣지 않는다.
     assertThat(result)
         .bodyJson()
         .extractingPath("$.billable_metric_usages[0]")
@@ -252,10 +238,7 @@ class BillableMetricUsageIntegrationTest {
   void month를_생략하면_이번_달_KST로_집계한다() {
     UUID orgId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(orgId, "아크메");
-    // 이번 달 1일 정오(KST). 지금이 월말 자정 직전이어도 같은 달 안이다.
-    OffsetDateTime thisMonth =
-        YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
-    insertEvent(orgId, "tx-1", acme, "chat_completion", "{\"token\":500}", thisMonth);
+    insertEvent(orgId, "tx-1", acme, "chat_completion", "{\"token\":500}", withinThisMonth());
 
     MvcTestResult result =
         mvc.get().uri("/v1/usage").header("X-Organization-Id", orgId.toString()).exchange();
@@ -287,8 +270,6 @@ class BillableMetricUsageIntegrationTest {
 
   @Test
   void 등록되지_않은_도입사로_조회하면_빈_결과다() {
-    // 인증이 붙기 전이라 아무 UUID나 자칭할 수 있다. 그 경우 미터도 고객도 없어 빈 결과가 된다
-    // (MS2-126이 붙으면 이 요청 자체가 401로 막힌다).
     assertThat(usageOf(UUID.randomUUID(), AUGUST).billableMetricUsages()).isEmpty();
   }
 
@@ -328,7 +309,12 @@ class BillableMetricUsageIntegrationTest {
         .quantity();
   }
 
-  /** 시드와 같은 모양의 미터(chat_completion의 token을 SUM)를 가진 도입사를 만든다. */
+  /** 이번 달 1일 정오(KST)를 낸다. */
+  private static OffsetDateTime withinThisMonth() {
+    return YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
+  }
+
+  /** chat_completion의 token을 SUM하는 미터를 가진 도입사를 만든다. */
   private UUID organizationWithTokenBillableMetric() {
     UUID organizationId = insertOrganization();
     jdbc.update(

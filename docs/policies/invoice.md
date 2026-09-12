@@ -31,10 +31,10 @@
 
 ## 집계 기준
 
+기간과 월 경계와 `month` 파라미터는 청구 예정액이 집계에서 그대로 받아 쓴다. 그 값의 정본은 `backend/openapi.yaml`의 `aggregateBillableMetricUsages` description이다.
+
 | 항목 | 값 | 코드 위치 | 근거 |
 |---|---|---|---|
-| 기간 | KST 기준의 달 | `BillableMetricUsageService.BILLING_ZONE` | 초기 관례 |
-| month 파라미터 | `yyyy-MM`. 생략하면 이번 달 | `DraftInvoiceController.previewDraftInvoice`, `BillableMetricUsageService.currentMonth` | 초기 관례 |
 | 계산 시각 | 응답을 만든 시각(KST). 저장하지 않는다 | `DraftInvoiceService.preview`의 `calculatedAt` | 초기 관례 |
 
 왜 저장하지 않는가: 청구 예정액은 확정본이 아니라 조회 시점에 계산해 내보내는 값이다. 화면이 표시하는 계산 시각의 정본이 이 필드다.
