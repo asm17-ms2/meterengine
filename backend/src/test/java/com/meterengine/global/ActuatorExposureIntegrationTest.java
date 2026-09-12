@@ -1,7 +1,8 @@
-package com.meterengine;
+package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
