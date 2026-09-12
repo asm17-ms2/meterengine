@@ -43,6 +43,7 @@ class BillableMetricCreateConcurrencyTest {
   @AfterEach
   void cleanUp() {
     jdbc.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 미터'");
+    jdbc.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
   }
 
   @Test
@@ -99,7 +100,7 @@ class BillableMetricCreateConcurrencyTest {
 
   private UUID insertOrganization() {
     return jdbc.queryForObject(
-        "INSERT INTO organization (name) VALUES ('동시성 테스트 도입사') RETURNING id", UUID.class);
+        "INSERT INTO organization (name) VALUES ('미터 동시성 테스트 도입사') RETURNING id", UUID.class);
   }
 
   private String storedName(UUID orgId) {

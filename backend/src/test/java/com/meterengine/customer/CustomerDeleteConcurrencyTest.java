@@ -20,9 +20,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@DirtiesContext
 class CustomerDeleteConcurrencyTest {
 
   @Autowired private DataSource dataSource;
