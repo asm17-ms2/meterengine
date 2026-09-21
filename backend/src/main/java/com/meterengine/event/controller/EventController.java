@@ -135,7 +135,7 @@ public class EventController {
       @Parameter(description = "이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.")
           @RequestParam(required = false)
           String type) {
-    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return eventService.list(organizationId, customerId, target, type, page, size);
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    return eventService.list(organizationId, customerId, targetMonth, type, page, size);
   }
 }

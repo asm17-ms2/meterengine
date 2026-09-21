@@ -33,7 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class BillableMetricUsageServiceTest {
 
-  private static final UUID ORG_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
   @Mock private BillableMetricUsageRepository billableMetricUsageRepository;
@@ -43,11 +43,11 @@ class BillableMetricUsageServiceTest {
   @Captor private ArgumentCaptor<OffsetDateTime> startCaptor;
   @Captor private ArgumentCaptor<OffsetDateTime> endCaptor;
 
-  private BillableMetricUsageService service;
+  private BillableMetricUsageService billableMetricUsageService;
 
   @BeforeEach
   void setUp() {
-    service =
+    billableMetricUsageService =
         new BillableMetricUsageService(
             billableMetricUsageRepository, billableMetricRepository, customerRepository);
   }
@@ -55,18 +55,18 @@ class BillableMetricUsageServiceTest {
   @Test
   void 기간은_KST_월의_반열린_구간으로_넘긴다() {
     UUID customerId = UUID.randomUUID();
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("token-usage", "token")));
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
-        .thenReturn(List.of(new Customer(customerId, ORG_ID, "아크메")));
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
     when(billableMetricUsageRepository.sumQuantityByCustomerId(any(), any(), any(), any(), any()))
         .thenReturn(Map.of());
 
-    service.aggregate(ORG_ID, AUGUST);
+    billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
 
     verify(billableMetricUsageRepository)
         .sumQuantityByCustomerId(
-            eq(ORG_ID),
+            eq(ORGANIZATION_ID),
             eq("chat_completion"),
             eq("token"),
             startCaptor.capture(),
@@ -79,17 +79,18 @@ class BillableMetricUsageServiceTest {
   void 이벤트가_없는_고객도_0으로_결과에_들어간다() {
     UUID withEvents = UUID.randomUUID();
     UUID withoutEvents = UUID.randomUUID();
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("token-usage", "token")));
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(
             List.of(
-                new Customer(withEvents, ORG_ID, "아크메"),
-                new Customer(withoutEvents, ORG_ID, "베타")));
+                new Customer(withEvents, ORGANIZATION_ID, "아크메"),
+                new Customer(withoutEvents, ORGANIZATION_ID, "베타")));
     when(billableMetricUsageRepository.sumQuantityByCustomerId(any(), any(), any(), any(), any()))
         .thenReturn(Map.of(withEvents, new BigDecimal("1200")));
 
-    List<CustomerUsage> customerUsages = service.aggregate(ORG_ID, AUGUST).getFirst().customers();
+    List<CustomerUsage> customerUsages =
+        billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST).getFirst().customers();
 
     assertThat(customerUsages)
         .containsExactly(
@@ -102,10 +103,10 @@ class BillableMetricUsageServiceTest {
     UUID customerId = UUID.randomUUID();
     BillableMetric tokens = billableMetric("token-usage", "token");
     BillableMetric requests = billableMetric("request-usage", "request");
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(tokens, requests));
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
-        .thenReturn(List.of(new Customer(customerId, ORG_ID, "아크메")));
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
     when(billableMetricUsageRepository.sumQuantityByCustomerId(
             any(), any(), eq("token"), any(), any()))
         .thenReturn(Map.of(customerId, new BigDecimal("1200")));
@@ -113,35 +114,39 @@ class BillableMetricUsageServiceTest {
             any(), any(), eq("request"), any(), any()))
         .thenReturn(Map.of(customerId, new BigDecimal("7")));
 
-    List<BillableMetricUsage> result = service.aggregate(ORG_ID, AUGUST);
+    List<BillableMetricUsage> billableMetricUsages =
+        billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
 
-    assertThat(result)
+    assertThat(billableMetricUsages)
         .extracting(usage -> usage.billableMetric().getCode())
         .containsExactly(tokens.getCode(), requests.getCode());
-    assertThat(result.get(0).customers().getFirst().quantity()).isEqualByComparingTo("1200");
-    assertThat(result.get(1).customers().getFirst().quantity()).isEqualByComparingTo("7");
+    assertThat(billableMetricUsages.get(0).customers().getFirst().quantity())
+        .isEqualByComparingTo("1200");
+    assertThat(billableMetricUsages.get(1).customers().getFirst().quantity())
+        .isEqualByComparingTo("7");
   }
 
   @Test
   void 미터가_없으면_고객을_조회하지도_않고_빈_결과다() {
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID)).thenReturn(List.of());
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
+        .thenReturn(List.of());
 
-    assertThat(service.aggregate(ORG_ID, AUGUST)).isEmpty();
+    assertThat(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST)).isEmpty();
 
     verifyNoInteractions(customerRepository, billableMetricUsageRepository);
   }
 
   @Test
   void 아직_구현하지_않은_집계_방식이면_조용히_0을_내지_않고_멈춘다() {
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(
             List.of(
                 new BillableMetric(
-                    ORG_ID, "api-calls", "API 호출 수", "chat_completion", "COUNT", null)));
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
-        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORG_ID, "아크메")));
+                    ORGANIZATION_ID, "api-calls", "API 호출 수", "chat_completion", "COUNT", null)));
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
 
-    assertThatThrownBy(() -> service.aggregate(ORG_ID, AUGUST))
+    assertThatThrownBy(() -> billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("api-calls")
         .hasMessageContaining("COUNT");
@@ -152,14 +157,15 @@ class BillableMetricUsageServiceTest {
 
   @Test
   void SUM인데_합할_대상_키가_없는_미터도_멈춘다() {
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(
             List.of(
-                new BillableMetric(ORG_ID, "broken", "잘못 등록된 미터", "chat_completion", "SUM", null)));
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
-        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORG_ID, "아크메")));
+                new BillableMetric(
+                    ORGANIZATION_ID, "broken", "잘못 등록된 미터", "chat_completion", "sum", null)));
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
 
-    assertThatThrownBy(() -> service.aggregate(ORG_ID, AUGUST))
+    assertThatThrownBy(() -> billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("target_property");
 
@@ -168,6 +174,7 @@ class BillableMetricUsageServiceTest {
   }
 
   private BillableMetric billableMetric(String code, String targetProperty) {
-    return new BillableMetric(ORG_ID, code, code + " 미터", "chat_completion", "SUM", targetProperty);
+    return new BillableMetric(
+        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty);
   }
 }

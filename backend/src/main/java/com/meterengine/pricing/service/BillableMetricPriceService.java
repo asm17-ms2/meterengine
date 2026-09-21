@@ -36,27 +36,27 @@ public class BillableMetricPriceService {
     Map<String, PricePolicy> pricePolicyByBillableMetricCode =
         pricePolicyRepository.findByOrganizationId(organizationId).stream()
             .collect(Collectors.toMap(PricePolicy::getBillableMetricCode, Function.identity()));
-    Map<String, BigDecimal> unitPriceByBillableMetricCode =
-        priceRateRepository.findBaseUnitPrices(organizationId);
+    Map<String, BigDecimal> baseUnitPriceByBillableMetricCode =
+        priceRateRepository.findBaseUnitPriceByBillableMetricCode(organizationId);
 
     return new ListBillableMetricPricesResponse(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
             .map(
                 billableMetric ->
-                    toResponse(
+                    toBillableMetricPriceResponse(
                         billableMetric,
                         pricePolicyByBillableMetricCode,
-                        unitPriceByBillableMetricCode))
+                        baseUnitPriceByBillableMetricCode))
             .toList());
   }
 
-  private static BillableMetricPriceResponse toResponse(
+  private static BillableMetricPriceResponse toBillableMetricPriceResponse(
       BillableMetric billableMetric,
       Map<String, PricePolicy> pricePolicyByBillableMetricCode,
-      Map<String, BigDecimal> unitPriceByBillableMetricCode) {
+      Map<String, BigDecimal> baseUnitPriceByBillableMetricCode) {
     return BillableMetricPriceResponse.of(
         billableMetric.getCode(),
         pricePolicyByBillableMetricCode.get(billableMetric.getCode()),
-        unitPriceByBillableMetricCode.get(billableMetric.getCode()));
+        baseUnitPriceByBillableMetricCode.get(billableMetric.getCode()));
   }
 }

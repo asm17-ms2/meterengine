@@ -11,11 +11,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PriceRateRepository extends JpaRepository<PriceRate, PriceRateId> {
 
-  List<PriceRate> findByOrganizationIdAndDimensionValues(UUID organizationId, String combination);
+  List<PriceRate> findByOrganizationIdAndDimensionValues(
+      UUID organizationId, String dimensionValues);
 
   // 도입사의 미터별 기본 단가를 낸다.
-  default Map<String, BigDecimal> findBaseUnitPrices(UUID organizationId) {
-    return findByOrganizationIdAndDimensionValues(organizationId, PriceRate.BASE_COMBINATION)
+  default Map<String, BigDecimal> findBaseUnitPriceByBillableMetricCode(UUID organizationId) {
+    return findByOrganizationIdAndDimensionValues(organizationId, PriceRate.BASE_DIMENSION_VALUES)
         .stream()
         .collect(Collectors.toMap(PriceRate::getBillableMetricCode, PriceRate::getUnitPrice));
   }

@@ -28,7 +28,7 @@ class DraftInvoiceIntegrationTest {
   private static final String AUGUST = "2026-08";
 
   @Autowired private WebApplicationContext webApplicationContext;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
@@ -39,12 +39,12 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 응답에_월과_고객별_금액이_함께_나온다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-2", acme, 2791, "2026-08-11T12:00:00+09:00");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acme, 2791, "2026-08-11T12:00:00+09:00");
 
-    MvcTestResult result = get(orgId, AUGUST);
+    MvcTestResult result = get(organizationId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo(AUGUST);
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(1645);
@@ -83,12 +83,12 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 이벤트가_없는_고객도_금액_0으로_응답에_들어간다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
-    insertCustomer(orgId, "제타상사");
-    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertCustomer(organizationId, "제타상사");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    MvcTestResult result = get(orgId, AUGUST);
+    MvcTestResult result = get(organizationId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.customers.length()").isEqualTo(2);
     assertThat(result).bodyJson().extractingPath("$.customers[1].customer_name").isEqualTo("제타상사");
@@ -104,15 +104,15 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 다른_도입사의_동일한_데이터는_섞이지_않는다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    UUID twinOrgId = organizationWithTokenBillableMetric();
-    UUID twinCustomer = insertCustomer(twinOrgId, "아크메");
-    insertEvent(twinOrgId, "tx-1", twinCustomer, 500, "2026-08-10T12:00:00+09:00");
+    UUID twinOrganizationId = organizationWithTokenBillableMetric();
+    UUID twinCustomer = insertCustomer(twinOrganizationId, "아크메");
+    insertEvent(twinOrganizationId, "tx-1", twinCustomer, 500, "2026-08-10T12:00:00+09:00");
 
-    MvcTestResult result = get(orgId, AUGUST);
+    MvcTestResult result = get(organizationId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.customers.length()").isEqualTo(1);
     assertThat(result)
@@ -124,35 +124,35 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void 단가가_아직_없는_미터는_라인에서_빠진다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
 
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, 'api-calls', 'API 호출량', 'api_call', 'SUM', 'count')
+        VALUES (?, 'api-calls', 'API 호출량', 'api_call', 'sum', 'count')
         """,
-        orgId);
+        organizationId);
     assertThat(
             mvc.post()
                 .uri("/v1/billable-metrics/api-calls/price-policy")
-                .header("X-Organization-Id", orgId.toString())
+                .header("X-Organization-Id", organizationId.toString())
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .content("{\"dimension_properties\": []}")
                 .exchange())
         .hasStatus(201);
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, 'tx-2', ?, 'api_call', '{"count": 3}', '2026-08-10T13:00:00+09:00')
         """,
-        orgId,
+        organizationId,
         acme);
 
-    MvcTestResult result = get(orgId, AUGUST);
+    MvcTestResult result = get(organizationId, AUGUST);
 
     assertThat(result).hasStatusOk();
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(1);
@@ -165,17 +165,17 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month를_지정하면_그_달로_집계한다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-2", acme, 700, "2026-09-10T12:00:00+09:00");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acme, 700, "2026-09-10T12:00:00+09:00");
 
-    assertThat(get(orgId, "2026-08"))
+    assertThat(get(organizationId, "2026-08"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.total_amount")
         .isEqualTo(250);
-    assertThat(get(orgId, "2026-09"))
+    assertThat(get(organizationId, "2026-09"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.total_amount")
@@ -184,16 +184,16 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month를_생략하면_이번_달_KST로_집계한다() {
-    UUID orgId = organizationWithTokenBillableMetric();
-    UUID acme = insertCustomer(orgId, "아크메");
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
     OffsetDateTime thisMonth =
         YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
-    insertEvent(orgId, "tx-1", acme, 500, thisMonth);
+    insertEvent(organizationId, "tx-1", acme, 500, thisMonth);
 
     MvcTestResult result =
         mvc.get()
             .uri("/v1/invoices/draft")
-            .header("X-Organization-Id", orgId.toString())
+            .header("X-Organization-Id", organizationId.toString())
             .exchange();
 
     assertThat(result)
@@ -206,11 +206,11 @@ class DraftInvoiceIntegrationTest {
 
   @Test
   void month_형식이_틀리면_400이다() {
-    UUID orgId = organizationWithTokenBillableMetric();
+    UUID organizationId = organizationWithTokenBillableMetric();
 
-    assertThat(get(orgId, "2026-13")).hasStatus(400);
-    assertThat(get(orgId, "2026")).hasStatus(400);
-    assertThat(get(orgId, "august")).hasStatus(400);
+    assertThat(get(organizationId, "2026-13")).hasStatus(400);
+    assertThat(get(organizationId, "2026")).hasStatus(400);
+    assertThat(get(organizationId, "august")).hasStatus(400);
   }
 
   @Test
@@ -236,17 +236,17 @@ class DraftInvoiceIntegrationTest {
   // 토큰 사용량 미터와 그 기본 단가를 가진 도입사를 만든다.
   private UUID organizationWithTokenBillableMetric() {
     UUID organizationId = insertOrganization();
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
         organizationId);
-    jdbc.update(
+    jdbcTemplate.update(
         "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
         organizationId);
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, 'token-usage', '{}', 0.5)
@@ -256,12 +256,12 @@ class DraftInvoiceIntegrationTest {
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('도입사') RETURNING id", UUID.class);
   }
 
   private UUID insertCustomer(UUID organizationId, String name) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, ?) RETURNING id",
         UUID.class,
         organizationId,
@@ -279,7 +279,7 @@ class DraftInvoiceIntegrationTest {
       UUID customerId,
       int token,
       OffsetDateTime occurredAt) {
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)

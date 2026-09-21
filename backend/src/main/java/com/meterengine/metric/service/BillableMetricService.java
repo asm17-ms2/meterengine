@@ -67,12 +67,12 @@ public class BillableMetricService {
   private void validate(CreateBillableMetricRequest request) {
     if (!BillableMetric.SUM.equals(request.aggregation())) {
       throw new InvalidRequestException(
-          ErrorCode.INVALID_BILLABLE_METRIC, List.of(new FieldError("aggregation", "SUM만 지원합니다")));
+          ErrorCode.INVALID_BILLABLE_METRIC, List.of(new FieldError("aggregation", "sum만 지원합니다")));
     }
     if (request.targetProperty() == null || request.targetProperty().isBlank()) {
       throw new InvalidRequestException(
           ErrorCode.INVALID_BILLABLE_METRIC,
-          List.of(new FieldError("target_property", "SUM 집계에는 target_property가 필요합니다")));
+          List.of(new FieldError("target_property", "sum 집계에는 target_property가 필요합니다")));
     }
   }
 }

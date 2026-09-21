@@ -12,10 +12,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class BillableMetricUsageRepository {
 
-  private final JdbcTemplate jdbc;
+  private final JdbcTemplate jdbcTemplate;
 
-  BillableMetricUsageRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  BillableMetricUsageRepository(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public Map<UUID, BigDecimal> sumQuantityByCustomerId(
@@ -25,7 +25,7 @@ public class BillableMetricUsageRepository {
       OffsetDateTime start,
       OffsetDateTime end) {
     List<Map.Entry<UUID, BigDecimal>> rows =
-        jdbc.query(
+        jdbcTemplate.query(
             """
             SELECT customer_id, SUM((properties ->> ?::text)::numeric) AS quantity
             FROM event

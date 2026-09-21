@@ -203,7 +203,7 @@ class BillableMetricPriceIntegrationTest {
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
         organizationId,
         code);
