@@ -1,5 +1,4 @@
-# Grafana 데이터 소스 (MS2-168). UI에서 만들지 않고 파일로 넣는 이유는 compose의 grafana
-# 서비스 주석 참조 (재배포에도 살아남는 정본).
+# Grafana 데이터 소스. UI에서 만들지 않는다. 이 파일이 정본이다.
 apiVersion: 1
 
 datasources:

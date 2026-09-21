@@ -736,8 +736,10 @@ components:
           - customer_has_events
           - billable_metric_already_exists
           - price_policy_already_exists
+          - upload_size_exceeded
           - request_type_not_supported
           - internal_server_error
+          - request_timed_out
         errors:
           type: array
           description: 틀린 필드 목록. 400 응답에만 실린다.

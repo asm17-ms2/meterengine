@@ -29,7 +29,9 @@
   - 종류 클래스는 HTTP 상태 하나에 하나다. 새 상태(401, 403, 429)가 생기면 그때 더한다.
   - 대상별 전용 예외(`CustomerNotFoundException`)는 서비스가 타입으로 잡아야 할 때만 둔다. 도메인 패키지에 `exception` 패키지를 두지 않는다.
 - `@RestControllerAdvice`는 `GlobalExceptionHandler` 하나다. `assignableTypes`와 `@Order`를 쓰지 않는다.
-  - 프레임워크 예외는 정확한 타입으로 하나씩 나열한다. 나열하지 않은 것은 `Exception` 핸들러가 500으로 받는다.
+  - 프레임워크 예외는 정확한 타입으로 나열한다. `ResponseEntityExceptionHandler`가 잡는 예외를 빠뜨리지 않는다.
+    - 나열하지 않은 것은 `Exception` 핸들러가 500으로 받는다.
+    - 500으로 두기로 한 예외는 `GlobalExceptionHandlerCoverageTest`의 목록에 적는다.
   - `DataIntegrityViolationException`은 핸들러에서 잡지 않는다. 서비스가 저장 전 조회로 거르거나 잡아서 종류 클래스로 바꿔 던진다.
 - 테스트는 종류 클래스를 잡은 뒤 code를 비교한다.
 - 오류 응답의 모양은 통합 테스트가 실제 응답 본문으로 검증한다. 생성된 OpenAPI 문서는 실제 응답과 다를 수 있다.
