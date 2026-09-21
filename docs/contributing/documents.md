@@ -73,7 +73,7 @@
 | 오류 code를 추가/변경했거나 오류 응답 형식을 건드렸다 | `backend/README.md`의 오류 응답 절 |
 | 실행 명령이나 사전 준비(런타임 버전, 컨테이너)가 바뀌었다 | 루트 README "시작하기"와 해당 하위 README의 "실행" |
 | 배포 구성이나 절차를 바꿨다 (compose, Caddy, 배포 스크립트, CD 워크플로) | `deploy/README.md` |
-| CI 워크플로를 추가했거나 트리거를 바꿨다 | `.github/README.md`의 워크플로 표. 필수 체크면 `pull-request.md` "머지 조건" |
+| CI 워크플로를 추가했거나 트리거를 바꿨다 | `.github/workflows/README.md`의 워크플로 표. 필수 체크면 `pull-request.md` "머지 조건" |
 | 정책 값이나 그 코드 위치를 바꿨다 | 그 도메인의 `docs/policies/` 파일. 코드와 같은 PR에서 고친다 |
 | RFC를 채택, 기각, 대체했다 | `docs/rfcs/README.md` 표의 상태와 날짜 |
 | 가리키던 Jira 이슈가 닫혔다 | 그 이슈 키가 적힌 README 줄. 결정이 났으면 결정 내용을 쓰고, 안 났으면 미정이라고만 남긴다 |
