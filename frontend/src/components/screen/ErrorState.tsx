@@ -3,28 +3,12 @@ import Link from "next/link";
 import { RetryButton } from "@/components/screen/RetryButton";
 import type { ApiError } from "@/lib/api/client";
 
-/**
- * 본문 문구를 code로 고른다.
- *
- * 백엔드 message는 code마다 하나인 한국어 문구지만 예고 없이 바뀔 수 있어
- * 분기에 쓰지 않는다 (openapi.yaml ErrorResponse). 서버가 준 영어 title과 detail을
- * 이어 붙이던 예전 코드는 화면에 "Bad Request - the request could not be accepted
- * as sent"를 띄웠다 (MS2-152).
- *
- * 조회 화면에서 닿을 수 있는 code만 둔다. 쓰기에서만 나는 것(customer_has_events
- * 등)은 customers/actions.ts가 따로 다룬다. code 집합은 닫혀 있지 않아서 모르는
- * 값은 default로 떨어지는데, 5xx의 internal_server_error가 그리로 온다.
- */
 function toBodyMessage(error: ApiError): string {
   switch (error.code) {
-    // 우리가 만든 code는 message가 한국어다 (client.ts의 "여기서 만든 값").
-    // 백엔드가 준 문구가 아니라 이 자리에서 지은 문구라서 그대로 쓴다.
     case "network_error":
     case "malformed_response":
     case "dev_forced":
       return error.message;
-    // 서버가 어느 값이 왜 틀렸는지 짚어준 유일한 자리다. 여러 칸이 틀렸으면 전부
-    // 보여준다 - 하나만 고쳐 다시 눌렀다가 또 막히는 것보다 낫다.
     case "validation_error":
       return error.errors?.length
         ? error.errors.map((fieldError) => fieldError.message).join(" / ")
@@ -38,12 +22,6 @@ function toBodyMessage(error: ApiError): string {
   }
 }
 
-/**
- * 데이터를 못 불러왔을 때. 필터 행 아래 제자리에 들어간다.
- *
- * error.tsx가 아니라 이 컴포넌트를 쓰는 이유: error.tsx는 라우트 세그먼트를 통째로
- * 갈아치워서 화면 제목과 필터 행까지 사라진다. 디자인은 그 둘이 남아 있어야 한다.
- */
 export function ErrorState({
   title,
   error,
@@ -51,12 +29,6 @@ export function ErrorState({
 }: {
   title: string;
   error: ApiError;
-  /**
-   * '기간 좁히기'가 갈 곳. 보통 직전 달이다.
-   *
-   * 없으면 그 버튼이 빠진다. 기간으로 조회하지 않는 화면(고객 목록)에서는
-   * 누를 데가 없어서다 - 이 도입사의 고객 전부가 응답이라 좁힐 조건이 없다.
-   */
   narrowerHref?: string;
 }) {
   const bodyMessage = toBodyMessage(error);

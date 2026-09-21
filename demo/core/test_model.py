@@ -1,5 +1,3 @@
-"""model 모듈의 시간 파싱, 월 귀속, 와이어 바디 조립 검증."""
-
 import unittest
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -36,7 +34,6 @@ class ParseRfc3339Test(unittest.TestCase):
         self.assertEqual(dt.utcoffset(), timedelta(hours=-5))
 
     def test_초_생략을_허용한다(self):
-        # 서버의 Jackson OffsetDateTime(ISO_OFFSET_DATE_TIME)이 수용하므로 툴도 수용한다
         dt = parse_rfc3339("2026-08-14T09:30+09:00")
         self.assertEqual(dt, datetime(2026, 8, 14, 9, 30, 0, tzinfo=KST))
 

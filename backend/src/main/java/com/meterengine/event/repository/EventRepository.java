@@ -8,31 +8,15 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/**
- * 사용량 이벤트 저장 (MS2-130), 로그 조회 (MS2-131).
- *
- * <p>JPA를 쓰지 않는다. event 테이블은 append-only 트리거가 걸려 있어 영속성 컨텍스트의 dirty checking이 UPDATE를 내보내는 순간 예외가
- * 난다. ON CONFLICT DO NOTHING은 save()로 표현할 수 없고, PK가 복합이라 @IdClass도 필요하다. 얻을 것보다 우회할 것이 많다.
- */
 @Repository
 public class EventRepository {
 
-  private final JdbcTemplate jdbc;
+  private final JdbcTemplate jdbcTemplate;
 
-  EventRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  EventRepository(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
-  /**
-   * 이벤트를 저장한다. 이미 같은 (도입사, transaction_id)가 있으면 아무것도 하지 않는다.
-   *
-   * <p>PK가 (organization_id, transaction_id)라 ON CONFLICT DO NOTHING 한 문장이 멱등을 만든다. 단일 문장이라 동시에 같은
-   * 키가 와도 DB가 직렬화한다. 조회 후 삽입으로 나누면 그 사이가 경합 구간이 된다.
-   *
-   * <p>occurredAt은 요청의 timestamp 필드다. 경계에서 이름이 바뀐다.
-   *
-   * @return 저장했으면 1, 이미 있어서 건너뛰었으면 0
-   */
   public int insertIfAbsent(
       UUID organizationId,
       String transactionId,
@@ -40,7 +24,7 @@ public class EventRepository {
       String type,
       String propertiesJson,
       OffsetDateTime occurredAt) {
-    return jdbc.update(
+    return jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)
@@ -55,24 +39,6 @@ public class EventRepository {
         occurredAt);
   }
 
-  /**
-   * 기간 안의 이벤트를 최신순 한 페이지만큼 읽는다 (MS2-131).
-   *
-   * <p><b>정렬이 두 키다.</b> {@code occurred_at}은 클라이언트가 준 값이라 같은 값이 흔하고, DB는 동점 사이의 순서를 약속하지 않는다. 그대로
-   * 두면 호출마다 순서가 달라져 1페이지에서 본 행이 2페이지에 또 나오고 다른 행은 사라진다. 에러도 안 나고 눈으로도 안 잡힌다. {@code
-   * transaction_id}는 PK 구성요소라 도입사 안에서 유일함이 DB로 보장돼, tiebreaker에 필요한 결정성을 준다.
-   *
-   * <p><b>기간은 반열린 구간 [start, end)다.</b> {@link
-   * com.meterengine.metric.repository.BillableMetricUsageRepository#sumQuantityByCustomerId}와 같은
-   * 방식으로, 호출자가 KST 월 경계를 계산해 넘긴다. 두 API가 같은 달을 다르게 자르면 화면 숫자가 어긋난다.
-   *
-   * <p><b>customer는 LEFT JOIN이다.</b> 복합 FK가 있어 짝이 없을 수 없지만, 조인 실패가 행을 통째로 삼키는 쪽보다 이름만 비는 쪽이 낫다.
-   *
-   * <p>{@code properties}는 {@code ::text}로 꺼내 파싱하지 않고 그대로 응답에 싣는다.
-   *
-   * @param customerId null이면 고객을 좁히지 않는다
-   * @param type null이거나 공백뿐이면 종류를 좁히지 않는다
-   */
   public List<Event> findPage(
       UUID organizationId,
       UUID customerId,
@@ -81,12 +47,12 @@ public class EventRepository {
       OffsetDateTime end,
       int page,
       int size) {
-    List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, type, start, end, params);
-    params.add(size);
-    params.add((long) page * size);
+    List<Object> parameters = new ArrayList<>();
+    String where = buildWhere(organizationId, customerId, type, start, end, parameters);
+    parameters.add(size);
+    parameters.add((long) page * size);
 
-    return jdbc.query(
+    return jdbcTemplate.query(
         """
         SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
                e.properties::text AS properties, e.occurred_at, e.received_at
@@ -108,43 +74,23 @@ public class EventRepository {
                 rs.getString("properties"),
                 rs.getObject("occurred_at", OffsetDateTime.class),
                 rs.getObject("received_at", OffsetDateTime.class)),
-        params.toArray());
+        parameters.toArray());
   }
 
-  /**
-   * 같은 조건에 걸리는 전체 건수 (MS2-131).
-   *
-   * <p>화면이 마지막 페이지 번호를 그리려면 페이지 하나가 아니라 총량이 필요하다. 조인은 안 건다. 이름으로 거르지 않으므로 셀 때는 필요 없다.
-   */
   public long count(
       UUID organizationId, UUID customerId, String type, OffsetDateTime start, OffsetDateTime end) {
-    List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, type, start, end, params);
+    List<Object> parameters = new ArrayList<>();
+    String where = buildWhere(organizationId, customerId, type, start, end, parameters);
 
     Long total =
-        jdbc.queryForObject("SELECT count(*) FROM event e " + where, Long.class, params.toArray());
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM event e " + where, Long.class, parameters.toArray());
     return total == null ? 0 : total;
   }
 
-  /**
-   * 이 (도입사, 고객)에 이벤트가 한 건이라도 있는지 (MS2-155).
-   *
-   * <p>고객 삭제가 이 판정에 걸려 있다. 이벤트가 있는 고객은 지울 수 없고 409가 나간다. 그 규칙 자체는 V1의 복합 FK가 강제하고, 이 조회는 사용자에게 쓸 만한
-   * 오류를 주기 위해 앱이 먼저 물어보는 것이다.
-   *
-   * <p><b>{@link #count}로 갈음하지 않는다.</b> 필터를 전부 null로 넘기면 같은 범위가 나오지만, 그쪽은 조건에 걸리는 행을 끝까지 센다. 여기서
-   * 필요한 답은 "있다/없다"뿐이라 {@code EXISTS}가 첫 행에서 멈춘다. 이벤트가 수백만 건인 고객에서 차이가 난다.
-   *
-   * <p><b>이 메서드가 customer 쪽이 아니라 여기 있는 이유.</b> event 테이블을 아는 것은 이 패키지다. 고객 쪽에 SQL을 두면 테이블이 바뀔 때 그
-   * 사실이 이 도메인 밖에서 조용히 깨진다. 대신 customer -> event 참조가 생겨 두 패키지가 서로를 참조하게 되는데, 그것이 문제가 되는 시점(모듈 경계를
-   * 강제할 때)에는 customer가 필요한 조회를 인터페이스로 선언하고 이 패키지가 구현하는 식으로 방향을 되돌릴 수 있다. 호출부는 그대로 둔 채로 된다.
-   *
-   * <p>organization_id를 조건에 함께 넣는다. PK가 (도입사, transaction_id)라 customer_id만으로 조회하면 인덱스를 타지 못할 뿐
-   * 아니라, 도입사를 빼먹은 조회가 여기서만 예외가 되는 것도 곤란하다.
-   */
   public boolean existsForCustomer(UUID organizationId, UUID customerId) {
     return Boolean.TRUE.equals(
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             """
             SELECT EXISTS(
               SELECT 1 FROM event
@@ -156,41 +102,27 @@ public class EventRepository {
             customerId));
   }
 
-  /**
-   * 두 쿼리가 같은 조건을 보도록 WHERE 절을 한 곳에서 만든다.
-   *
-   * <p>목록과 건수가 조건이 어긋나면 페이지 번호는 있는데 그 페이지가 비는 식으로 조용히 깨진다.
-   *
-   * <p>선택 필터를 {@code (? IS NULL OR col = ?)}로 쓰지 않고 절을 빼는 이유는, 그 형태가 파라미터 타입을 모호하게 만들어 UUID와 text에
-   * 명시적 캐스팅을 요구하기 때문이다. 값은 전부 바인딩 파라미터라 문자열을 이어 붙여도 주입 경로가 생기지 않는다.
-   *
-   * <p><b>조건은 event 별칭 {@code e}만 쓴다.</b> {@link #count}는 조인 없이 이 절을 붙이므로, 여기에 고객 이름 검색 같은 {@code
-   * c.} 조건을 더하면 count 쪽이 missing FROM-clause로 터진다. 조인이 필요한 조건은 두 쿼리에 함께 넣어야 한다.
-   */
   private String buildWhere(
       UUID organizationId,
       UUID customerId,
       String type,
       OffsetDateTime start,
       OffsetDateTime end,
-      List<Object> params) {
+      List<Object> parameters) {
     StringBuilder where =
         new StringBuilder(
             "WHERE e.organization_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?");
-    params.add(organizationId);
-    params.add(start);
-    params.add(end);
+    parameters.add(organizationId);
+    parameters.add(start);
+    parameters.add(end);
 
     if (customerId != null) {
       where.append(" AND e.customer_id = ?");
-      params.add(customerId);
+      parameters.add(customerId);
     }
-    // 빈 문자열을 필터로 받지 않는다. customer_id와 month는 스프링이 빈 값을 null로 바꾸는데
-    // type만 String이라 ""가 그대로 내려와, FE가 필터를 비우며 빈 값을 보내면
-    // type = '' 조건이 걸려 데이터가 있는데도 화면이 빈다.
     if (type != null && !type.isBlank()) {
       where.append(" AND e.type = ?");
-      params.add(type);
+      parameters.add(type);
     }
     return where.append('\n').toString();
   }

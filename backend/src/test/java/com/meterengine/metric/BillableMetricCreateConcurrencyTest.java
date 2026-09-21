@@ -31,7 +31,7 @@ class BillableMetricCreateConcurrencyTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private DataSource dataSource;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
@@ -42,19 +42,20 @@ class BillableMetricCreateConcurrencyTest {
 
   @AfterEach
   void cleanUp() {
-    jdbc.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 미터'");
-    jdbc.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
+    jdbcTemplate.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 미터'");
+    jdbcTemplate.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
   }
 
   @Test
   void 중복_확인을_통과한_등록이_겹치면_늦은_쪽은_409로_끝난다() throws Exception {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
     try (Connection first = dataSource.getConnection()) {
       first.setAutoCommit(false);
-      insertBillableMetric(first, orgId);
+      insertBillableMetric(first, organizationId);
 
-      CompletableFuture<MvcTestResult> late = CompletableFuture.supplyAsync(() -> post(orgId));
+      CompletableFuture<MvcTestResult> late =
+          CompletableFuture.supplyAsync(() -> post(organizationId));
 
       assertThatThrownBy(() -> late.get(2, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
@@ -69,7 +70,7 @@ class BillableMetricCreateConcurrencyTest {
           .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
     }
 
-    assertThat(storedName(orgId)).isEqualTo("먼저 등록한 미터");
+    assertThat(storedName(organizationId)).isEqualTo("먼저 등록한 미터");
   }
 
   private MvcTestResult post(UUID organizationId) {
@@ -80,33 +81,34 @@ class BillableMetricCreateConcurrencyTest {
         .content(
             """
             {"code": "token-usage", "name": "늦게 등록한 미터", "event_type": "chat_completion",
-             "aggregation": "SUM", "target_property": "token"}
+             "aggregation": "sum", "target_property": "token"}
             """)
         .exchange();
   }
 
-  private void insertBillableMetric(Connection connection, UUID orgId) throws SQLException {
+  private void insertBillableMetric(Connection connection, UUID organizationId)
+      throws SQLException {
     try (PreparedStatement statement =
         connection.prepareStatement(
             """
             INSERT INTO billable_metric
               (organization_id, code, name, event_type, aggregation, target_property)
-            VALUES (?, 'token-usage', '먼저 등록한 미터', 'chat_completion', 'SUM', 'token')
+            VALUES (?, 'token-usage', '먼저 등록한 미터', 'chat_completion', 'sum', 'token')
             """)) {
-      statement.setObject(1, orgId);
+      statement.setObject(1, organizationId);
       statement.executeUpdate();
     }
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('미터 동시성 테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private String storedName(UUID orgId) {
-    return jdbc.queryForObject(
+  private String storedName(UUID organizationId) {
+    return jdbcTemplate.queryForObject(
         "SELECT name FROM billable_metric WHERE organization_id = ? AND code = 'token-usage'",
         String.class,
-        orgId);
+        organizationId);
   }
 }

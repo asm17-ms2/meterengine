@@ -11,17 +11,6 @@ import {
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
-/**
- * 고객 화면의 상호작용 전부 (MS2-154).
- *
- * 다른 세 화면과 달리 제목 줄과 필터 행까지 클라이언트가 그린다. 검색어가 화면
- * 안의 상태인데 제목 옆 "총 N명"이 그 결과를 세야 해서, 셋이 한 상태를 봐야
- * 하기 때문이다.
- *
- * 검색을 쿼리스트링(?q=)에 두지 않은 이유: 백엔드에 검색 파라미터가 없다.
- * 목록 응답이 이 도입사의 고객 전부라 거를 대상이 이미 화면에 다 와 있고,
- * 글자를 칠 때마다 서버를 왕복할 일이 아니다.
- */
 export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<{ customer: CustomerRowView | null } | null>(
@@ -68,8 +57,6 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
       </FilterBar>
 
       {rows.length === 0 ? (
-        // 공통 EmptyState를 쓰지 않는다. 그쪽 버튼은 '필터 초기화' 링크인데,
-        // 이 화면에는 초기화할 필터가 없고 다음 행동이 등록이라서다.
         <div className="empty-state">
           <div className="empty-state__title">등록된 고객이 없습니다</div>
           <p className="empty-state__body">
@@ -86,9 +73,6 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
           </button>
         </div>
       ) : visibleRows.length === 0 ? (
-        // 검색이 다 걸러낸 경우. 위의 빈 상태와 할 말이 다르다. 고객은 있고
-        // 지금 친 글자에 맞는 것이 없을 뿐이라, 등록이 아니라 검색어를 지우는
-        // 것이 다음 행동이다. EmptyState는 초기화가 링크라 여기 쓸 수 없다.
         <div className="empty-state">
           <div className="empty-state__title">검색 결과가 없습니다</div>
           <p className="empty-state__body">
@@ -112,11 +96,6 @@ export function CustomersScreen({ rows }: { rows: CustomerRowView[] }) {
             onDelete={(row) => setDeleting(row)}
           />
           <div className="screen-footer">
-            {/*
-              응답이 정렬 기준을 에코하지 않아서 화면에 고정한다. 백엔드는 고객명
-              오름차순으로 주고, 동명이 있으면 id가 두 번째 키다.
-              페이지 나누기는 없다 - 이 도입사의 전부가 응답의 정의다.
-            */}
             <span className="screen-note">정렬: 고객명 오름차순</span>
           </div>
         </>

@@ -23,7 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 class PricePolicyIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
@@ -36,10 +36,10 @@ class PricePolicyIntegrationTest {
 
   @Test
   void 무차원_정책을_등록하면_201이고_빈_선언이_저장된다() {
-    UUID orgId = insertOrganization();
-    insertBillableMetric(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
 
-    MvcTestResult result = post(orgId, "token-usage", "{\"dimension_properties\": []}");
+    MvcTestResult result = post(organizationId, "token-usage", "{\"dimension_properties\": []}");
 
     assertThat(result)
         .hasStatus(201)
@@ -48,60 +48,60 @@ class PricePolicyIntegrationTest {
         .isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.dimension_properties").asArray().isEmpty();
 
-    assertThat(pricePolicyCount(orgId, "token-usage")).isEqualTo(1);
-    assertThat(storedProperties(orgId, "token-usage")).isEqualTo("");
+    assertThat(pricePolicyCount(organizationId, "token-usage")).isEqualTo(1);
+    assertThat(storedProperties(organizationId, "token-usage")).isEqualTo("");
   }
 
   @Test
   void 다차원_선언을_등록하면_선언이_순서대로_저장된다() {
-    UUID orgId = insertOrganization();
-    insertBillableMetric(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
 
     MvcTestResult result =
-        post(orgId, "token-usage", "{\"dimension_properties\": [\"model\", \"region\"]}");
+        post(organizationId, "token-usage", "{\"dimension_properties\": [\"model\", \"region\"]}");
 
     assertThat(result)
         .hasStatus(201)
         .bodyJson()
         .extractingPath("$.dimension_properties")
         .isEqualTo(java.util.List.of("model", "region"));
-    assertThat(storedProperties(orgId, "token-usage")).isEqualTo("model,region");
+    assertThat(storedProperties(organizationId, "token-usage")).isEqualTo("model,region");
   }
 
   // --- 도메인 검증 (400 invalid_price_policy) ---
 
   @Test
   void 선언에_중복_키나_빈_키가_있으면_400이고_저장은_0건이다() {
-    UUID orgId = insertOrganization();
-    insertBillableMetric(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
 
-    assertInvalid(orgId, "{\"dimension_properties\": [\"model\", \"model\"]}");
-    assertInvalid(orgId, "{\"dimension_properties\": [\" \"]}");
+    assertInvalid(organizationId, "{\"dimension_properties\": [\"model\", \"model\"]}");
+    assertInvalid(organizationId, "{\"dimension_properties\": [\" \"]}");
   }
 
   // --- 형식 검증 (400 validation_error) ---
 
   @Test
   void 선언이_없으면_400이고_저장은_0건이다() {
-    UUID orgId = insertOrganization();
-    insertBillableMetric(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
 
-    assertThat(post(orgId, "token-usage", "{}"))
+    assertThat(post(organizationId, "token-usage", "{}"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
-    assertThat(pricePolicyCount(orgId, "token-usage")).isZero();
+    assertThat(pricePolicyCount(organizationId, "token-usage")).isZero();
   }
 
   // --- 미터와 테넌트 (404) ---
 
   @Test
   void 없는_미터에_등록하면_404다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    assertThat(post(orgId, "no-such-metric", dimensionlessBody()))
+    assertThat(post(organizationId, "no-such-metric", dimensionlessBody()))
         .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
@@ -111,24 +111,24 @@ class PricePolicyIntegrationTest {
 
   @Test
   void 다른_도입사의_미터에는_등록할_수_없다() {
-    UUID otherOrgId = insertOrganization();
-    insertBillableMetric(otherOrgId, "token-usage");
-    UUID orgId = insertOrganization();
+    UUID otherOrganizationId = insertOrganization();
+    insertBillableMetric(otherOrganizationId, "token-usage");
+    UUID organizationId = insertOrganization();
 
-    assertThat(post(orgId, "token-usage", dimensionlessBody())).hasStatus(404);
-    assertThat(pricePolicyCount(otherOrgId, "token-usage")).isZero();
+    assertThat(post(organizationId, "token-usage", dimensionlessBody())).hasStatus(404);
+    assertThat(pricePolicyCount(otherOrganizationId, "token-usage")).isZero();
   }
 
   // --- 중복 (409) ---
 
   @Test
   void 정책이_이미_있는_미터에_다시_등록하면_409이고_기존_정책은_그대로다() {
-    UUID orgId = insertOrganization();
-    insertBillableMetric(orgId, "token-usage");
-    assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"model\"]}"))
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+    assertThat(post(organizationId, "token-usage", "{\"dimension_properties\": [\"model\"]}"))
         .hasStatus(201);
 
-    assertThat(post(orgId, "token-usage", "{\"dimension_properties\": [\"region\"]}"))
+    assertThat(post(organizationId, "token-usage", "{\"dimension_properties\": [\"region\"]}"))
         .hasStatus(409)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
@@ -136,7 +136,7 @@ class PricePolicyIntegrationTest {
         .asString()
         .isEqualTo(ErrorCode.PRICE_POLICY_ALREADY_EXISTS.getCode());
 
-    assertThat(storedProperties(orgId, "token-usage")).isEqualTo("model");
+    assertThat(storedProperties(organizationId, "token-usage")).isEqualTo("model");
   }
 
   // --- 공통 ---
@@ -178,37 +178,37 @@ class PricePolicyIntegrationTest {
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private void insertBillableMetric(UUID orgId, String code) {
-    jdbc.update(
+  private void insertBillableMetric(UUID organizationId, String code) {
+    jdbcTemplate.update(
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
-        orgId,
+        organizationId,
         code);
   }
 
-  private Integer pricePolicyCount(UUID orgId, String billableMetricCode) {
-    return jdbc.queryForObject(
+  private Integer pricePolicyCount(UUID organizationId, String billableMetricCode) {
+    return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM price_policy WHERE organization_id = ? AND billable_metric_code = ?",
         Integer.class,
-        orgId,
+        organizationId,
         billableMetricCode);
   }
 
-  private String storedProperties(UUID orgId, String billableMetricCode) {
-    return jdbc.queryForObject(
+  private String storedProperties(UUID organizationId, String billableMetricCode) {
+    return jdbcTemplate.queryForObject(
         """
         SELECT array_to_string(dimension_properties, ',') FROM price_policy
         WHERE organization_id = ? AND billable_metric_code = ?
         """,
         String.class,
-        orgId,
+        organizationId,
         billableMetricCode);
   }
 }

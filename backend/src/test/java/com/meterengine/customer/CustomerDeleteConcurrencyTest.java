@@ -28,7 +28,7 @@ import org.springframework.test.annotation.DirtiesContext;
 class CustomerDeleteConcurrencyTest {
 
   @Autowired private DataSource dataSource;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @AfterEach
   void cleanUp() {
@@ -37,16 +37,16 @@ class CustomerDeleteConcurrencyTest {
 
   @Test
   void 이벤트가_커밋되기_전에_들어온_삭제는_대기하다_FK_위반으로_끝난다() throws Exception {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId);
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
 
     try (Connection ingesting = dataSource.getConnection()) {
       ingesting.setAutoCommit(false);
-      insertEvent(ingesting, orgId, customerId, "tx-1");
+      insertEvent(ingesting, organizationId, customerId, "tx-1");
 
       CompletableFuture<Void> deleting =
           CompletableFuture.runAsync(
-              () -> jdbc.update("DELETE FROM customer WHERE id = ?", customerId));
+              () -> jdbcTemplate.update("DELETE FROM customer WHERE id = ?", customerId));
 
       assertThatThrownBy(() -> deleting.get(2, TimeUnit.SECONDS))
           .isInstanceOf(TimeoutException.class);
@@ -60,16 +60,17 @@ class CustomerDeleteConcurrencyTest {
     }
 
     assertThat(customerExists(customerId)).isTrue();
-    assertThat(eventCount(orgId, customerId)).isEqualTo(1);
+    assertThat(eventCount(organizationId, customerId)).isEqualTo(1);
   }
 
   private void deleteTestCustomersWithoutEvents() {
-    jdbc.update(
+    jdbcTemplate.update(
         "DELETE FROM customer WHERE name = '동시성 테스트 고객' AND NOT EXISTS ("
             + "SELECT 1 FROM event e WHERE e.customer_id = customer.id)");
   }
 
-  private void insertEvent(Connection connection, UUID orgId, UUID customerId, String transactionId)
+  private void insertEvent(
+      Connection connection, UUID organizationId, UUID customerId, String transactionId)
       throws SQLException {
     try (PreparedStatement statement =
         connection.prepareStatement(
@@ -78,7 +79,7 @@ class CustomerDeleteConcurrencyTest {
               (organization_id, transaction_id, customer_id, type, properties, occurred_at)
             VALUES (?, ?, ?, 'chat_completion', '{"token": 1200}', now())
             """)) {
-      statement.setObject(1, orgId);
+      statement.setObject(1, organizationId);
       statement.setString(2, transactionId);
       statement.setObject(3, customerId);
       statement.executeUpdate();
@@ -86,28 +87,28 @@ class CustomerDeleteConcurrencyTest {
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('동시성 테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private UUID insertCustomer(UUID orgId) {
-    return jdbc.queryForObject(
+  private UUID insertCustomer(UUID organizationId) {
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, '동시성 테스트 고객') RETURNING id",
         UUID.class,
-        orgId);
+        organizationId);
   }
 
   private boolean customerExists(UUID customerId) {
     return Boolean.TRUE.equals(
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT EXISTS(SELECT 1 FROM customer WHERE id = ?)", Boolean.class, customerId));
   }
 
-  private Integer eventCount(UUID orgId, UUID customerId) {
-    return jdbc.queryForObject(
+  private Integer eventCount(UUID organizationId, UUID customerId) {
+    return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM event WHERE organization_id = ? AND customer_id = ?",
         Integer.class,
-        orgId,
+        organizationId,
         customerId);
   }
 }

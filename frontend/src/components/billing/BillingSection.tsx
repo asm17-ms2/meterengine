@@ -13,10 +13,6 @@ import {
 import { formatDecimal, formatKrw } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
-/**
- * 프라미스를 await하는 서버 컴포넌트. 페이지가 이걸 <Suspense>로 감싸서
- * 표 영역만 스켈레톤으로 바뀌고 화면 제목과 필터 행은 남는다.
- */
 export async function BillingSection({
   draftInvoice,
   month,
@@ -36,10 +32,6 @@ export async function BillingSection({
     );
   }
 
-  // 표가 비는 경로가 둘이고 운영자가 할 일이 다르다 (UsageSection과 같은 구분).
-  // 백엔드는 모든 고객에게 모든 미터의 라인을 만들어 주므로, 고객이 있는데 라인
-  // 합이 0이라는 것은 등록된 미터가 없다는 뜻이다. 수집된 이벤트 유무는 둘 다와
-  // 무관하다. 이벤트가 0건인 고객도 수량 0 라인으로 남기 때문이다.
   if (result.data.customers.length === 0) {
     return (
       <EmptyState
@@ -76,10 +68,6 @@ export async function BillingSection({
   );
 }
 
-/**
- * 와이어 응답을 표가 그릴 문자열로 바꾼다. 수량과 단가는 소수가 올 수 있어
- * formatDecimal을 쓰고, 금액은 서버가 절사까지 끝낸 정수라 원화 표기만 한다.
- */
 function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupView[] {
   return customers.map((customer) => ({
     customerId: customer.customer_id,

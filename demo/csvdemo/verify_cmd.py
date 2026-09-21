@@ -1,10 +1,3 @@
-"""verify 서브커맨드: 소스 기반 기대값과 서버 응답을 나란히 비교한다.
-
-미터 정의(event_type, target_property, 단가)는 서버 응답에서 유도한다.
-독립 계산의 핵심은 이벤트에 대한 중복 제거/월 귀속/합산/절사이고,
-유도한 메타데이터는 화면에 그대로 출력해 사람이 시드와 대조할 수 있게 한다.
-"""
-
 from __future__ import annotations
 
 import sys
@@ -14,7 +7,7 @@ from typing import Dict, List, Optional
 
 from core.api_client import ApiClient, ApiResult, parse_problem, roster_from_usage
 from csvdemo.csvio import read_csv_events
-from csvdemo.expected import ExpectedMonth, MetricMeta, build_expected, predict_send, stored_events_from_log
+from csvdemo.expected import BillableMetricMeta, ExpectedMonth, build_expected, predict_send, stored_events_from_log
 from core.jsonl_log import read_log
 from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, StoredEvent, kst_month
 from csvdemo.render import MISMATCH_GUIDANCE, Console, render_table
@@ -78,10 +71,6 @@ def _load_log_source(args, console: Console) -> Optional[VerifySource]:
         return None
     for warning in log.warnings:
         print(console.warn("경고: " + warning))
-    # 중간이 깨진 send 로그로는 판정하지 않는다. 레코드가 빠진 채로 남은 합계가
-    # 우연히 서버와 맞으면 "일치"로 0을 내주는데, 그 0을 보고 다음 단계로 넘어가면
-    # 손상을 통과시킨 것이 된다. 브리지 로그(헤더가 여럿)는 하루치를 이어쓰다
-    # 재시작으로 잘리는 것이 정상 범위라 경고까지만 한다.
     if log.damaged and log.header_count <= 1:
         print(
             "로그 중간의 %d개 라인이 손상돼 기대값을 신뢰할 수 없습니다: %s\n"
@@ -119,7 +108,6 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
     org_id = args.org_id or DEFAULT_ORG_ID
     client = ApiClient(base_url, org_id, timeout_seconds=args.timeout)
 
-    # 등록 고객 명단을 서버에서 받아 customer_not_found까지 예측한다.
     usage = client.get_usage(args.month)
     if usage.status != 200:
         print("/v1/usage 응답이 200이 아니라 고객 명단을 얻지 못했습니다: %s" % parse_problem(usage.status, usage.body).summary(), file=sys.stderr)
@@ -155,25 +143,25 @@ def _verify_month(client: ApiClient, console: Console, stored: List[StoredEvent]
             print("%s %s 응답이 JSON 객체가 아닙니다. --base-url이 백엔드를 가리키는지 확인하세요." % (name, month), file=sys.stderr)
             return None
 
-    metrics = _derive_metrics(usage, invoice)
-    unsupported = [m.code for m in metrics if m.aggregation != "SUM"]
+    billable_metrics = _derive_billable_metrics(usage, invoice)
+    unsupported = [m.code for m in billable_metrics if m.aggregation != "sum"]
     if unsupported:
-        print("SUM 외 집계는 아직 지원하지 않습니다: %s" % ", ".join(unsupported), file=sys.stderr)
+        print("sum 외 집계는 아직 지원하지 않습니다: %s" % ", ".join(unsupported), file=sys.stderr)
         return None
     roster = roster_from_usage(usage.body)
     customer_ids = sorted(roster, key=lambda cid: roster[cid])
-    expected = build_expected(stored, metrics, month, customer_ids)
+    expected = build_expected(stored, billable_metrics, month, customer_ids)
 
     print()
     print("== %s 검증 (서버: %s) ==" % (month, client.base_url))
     print("사용한 미터 정의 (서버 응답에서 유도, 시드와 눈으로 대조 가능):")
-    for metric in metrics:
-        price = str(metric.unit_price) if metric.unit_price is not None else "미상(인보이스에 라인 없음)"
-        print("  %s: event_type=%s, target_property=%s, %s, 단가 %s" % (metric.code, metric.event_type, metric.target_property, metric.aggregation, price))
+    for billable_metric in billable_metrics:
+        price = str(billable_metric.unit_price) if billable_metric.unit_price is not None else "미상(인보이스에 라인 없음)"
+        print("  %s: event_type=%s, target_property=%s, %s, 단가 %s" % (billable_metric.code, billable_metric.event_type, billable_metric.target_property, billable_metric.aggregation, price))
 
     month_match = True
-    for metric in metrics:
-        matched = _print_quantity_table(console, metric, expected, usage, invoice, roster, customer_ids)
+    for billable_metric in billable_metrics:
+        matched = _print_quantity_table(console, billable_metric, expected, usage, invoice, roster, customer_ids)
         month_match = month_match and matched
     matched = _print_amount_table(console, expected, invoice, roster, customer_ids)
     month_match = month_match and matched
@@ -185,40 +173,40 @@ def _verify_month(client: ApiClient, console: Console, stored: List[StoredEvent]
     return month_match
 
 
-def _derive_metrics(usage: ApiResult, invoice: ApiResult) -> List[MetricMeta]:
+def _derive_billable_metrics(usage: ApiResult, invoice: ApiResult) -> List[BillableMetricMeta]:
     unit_prices: Dict[str, Decimal] = {}
     for customer in invoice.body.get("customers") or []:
         for line in customer.get("lines") or []:
             unit_prices.setdefault(line["billable_metric_code"], Decimal(line["unit_price"]))
-    metrics = []
-    for metric in usage.body.get("billable_metric_usages") or []:
-        metrics.append(
-            MetricMeta(
-                code=metric["code"],
-                event_type=metric["event_type"],
-                aggregation=metric["aggregation"],
-                target_property=metric["target_property"],
-                unit_price=unit_prices.get(metric["code"]),
+    billable_metrics = []
+    for billable_metric in usage.body.get("billable_metric_usages") or []:
+        billable_metrics.append(
+            BillableMetricMeta(
+                code=billable_metric["code"],
+                event_type=billable_metric["event_type"],
+                aggregation=billable_metric["aggregation"],
+                target_property=billable_metric["target_property"],
+                unit_price=unit_prices.get(billable_metric["code"]),
             )
         )
-    return metrics
+    return billable_metrics
 
 
-def _print_quantity_table(console, metric, expected: ExpectedMonth, usage, invoice, roster, customer_ids) -> bool:
+def _print_quantity_table(console, billable_metric, expected: ExpectedMonth, usage, invoice, roster, customer_ids) -> bool:
     usage_quantities = {}
-    for usage_metric in usage.body.get("billable_metric_usages") or []:
-        if usage_metric["code"] == metric.code:
-            usage_quantities = {c["customer_id"]: Decimal(c["quantity"]) for c in usage_metric.get("customers") or []}
+    for usage_billable_metric in usage.body.get("billable_metric_usages") or []:
+        if usage_billable_metric["code"] == billable_metric.code:
+            usage_quantities = {c["customer_id"]: Decimal(c["quantity"]) for c in usage_billable_metric.get("customers") or []}
     invoice_quantities = {}
     for customer in invoice.body.get("customers") or []:
         for line in customer.get("lines") or []:
-            if line["billable_metric_code"] == metric.code:
+            if line["billable_metric_code"] == billable_metric.code:
                 invoice_quantities[customer["customer_id"]] = Decimal(line["quantity"])
 
     rows = []
     all_match = True
     for customer_id in customer_ids:
-        expected_quantity = _expected_quantity(expected, customer_id, metric.code)
+        expected_quantity = _expected_quantity(expected, customer_id, billable_metric.code)
         usage_quantity = usage_quantities.get(customer_id, Decimal("0"))
         invoice_quantity = invoice_quantities.get(customer_id, Decimal("0"))
         matched = expected_quantity == usage_quantity == invoice_quantity
@@ -231,7 +219,7 @@ def _print_quantity_table(console, metric, expected: ExpectedMonth, usage, invoi
             console.ok("일치") if matched else console.fail("불일치"),
         ])
     print()
-    print("[%s] 고객별 사용량" % metric.code)
+    print("[%s] 고객별 사용량" % billable_metric.code)
     for line in render_table(
         ["고객", "기대값", "/v1/usage", "/v1/invoices/draft", "판정"],
         rows,
@@ -241,9 +229,9 @@ def _print_quantity_table(console, metric, expected: ExpectedMonth, usage, invoi
     return all_match
 
 
-def _expected_quantity(expected: ExpectedMonth, customer_id: str, metric_code: str) -> Decimal:
+def _expected_quantity(expected: ExpectedMonth, customer_id: str, billable_metric_code: str) -> Decimal:
     for line in expected.customers[customer_id].lines:
-        if line.metric_code == metric_code:
+        if line.billable_metric_code == billable_metric_code:
             return line.quantity
     return Decimal("0")
 

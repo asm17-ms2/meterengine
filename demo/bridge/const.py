@@ -1,10 +1,3 @@
-"""브리지가 쓰는 경로와 주소 (MS2-169).
-
-CLI(otel_bridge.py), 서버(server.py), 운영 명령(admin.py), TUI(console.py)가
-같은 값을 봐야 해서 한곳에 모은다. 특히 hook URL과 OTLP 엔드포인트는 setup이
-Claude 설정에 적어 넣는 값이라, 여기서 어긋나면 이벤트가 조용히 사라진다.
-"""
-
 from __future__ import annotations
 
 import os
@@ -29,10 +22,6 @@ PLIST_PATH = os.path.join(
 
 CLAUDE_SETTINGS_PATH = os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
 
-# 브리지가 여는 경로.
-#   LOGS_PATH    Claude Code의 OTLP exporter가 사용량을 보내는 곳
-#   SESSION_PATH UserPromptSubmit hook이 세션과 폴더를 알리는 곳
-#   HEALTH_PATH  status와 TUI가 상태를 읽는 곳
 LOGS_PATH = "/v1/logs"
 SESSION_PATH = "/meterengine/session"
 HEALTH_PATH = "/meterengine/health"

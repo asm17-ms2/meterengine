@@ -1,8 +1,3 @@
-"""백엔드 HTTP API의 얇은 래퍼. 외부 API 호출은 이 모듈만 거친다.
-
-응답 JSON의 소수는 Decimal로 읽는다 (quantity, unit_price 정밀도 보존).
-"""
-
 from __future__ import annotations
 
 import http.client
@@ -19,7 +14,7 @@ from core.model import loads_decimal
 
 
 class TransportError(Exception):
-    """서버까지 도달하지 못한 실패. 연결 거부와 타임아웃을 메시지로 구분한다."""
+    pass
 
 
 @dataclass
@@ -49,11 +44,6 @@ class Problem:
 
 
 def parse_problem(status: int, body: Optional[dict]) -> Problem:
-    """오류 응답 본문을 파싱한다.
-
-    code와 message는 4xx와 5xx에 모두 실리지만, 프록시나 게이트웨이가 끼어들면 이 형식이
-    아닌 본문도 온다. errors는 400에만 실린다.
-    """
     body = body or {}
     return Problem(
         status=status,
@@ -84,21 +74,14 @@ class ApiClient:
         return self._request("GET", "/v1/invoices/draft", query=_month_query(month))
 
     def get_events_page(self, month: Optional[str]) -> ApiResult:
-        """total(월 필터 적용 건수)만 필요하므로 가장 작은 페이지를 받는다."""
         query = _month_query(month)
         query.update({"page": "0", "size": "1"})
         return self._request("GET", "/v1/events", query=query)
 
     def get_customers(self) -> ApiResult:
-        """이 도입사의 고객 전부. 페이지를 나누지 않는 응답이다."""
         return self._request("GET", "/v1/customers")
 
     def create_customer(self, name: str) -> ApiResult:
-        """고객을 등록하고 서버가 발급한 id를 받는다 (201).
-
-        이름 중복을 막지 않는 API라, 부르기 전에 목록에서 같은 이름을 찾아야 한다
-        (bridge/state.py의 CustomerResolver 참조).
-        """
         body = json.dumps({"name": name}, ensure_ascii=False).encode("utf-8")
         return self._request("POST", "/v1/customers", body=body, content_type="application/json")
 
@@ -116,14 +99,12 @@ class ApiClient:
             with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                 return self._to_result(response.status, response.read(), started)
         except urllib.error.HTTPError as error:
-            # 4xx/5xx도 서버가 준 응답이다. 바디를 읽어 그대로 돌려준다.
             return self._to_result(error.code, error.read(), started)
         except urllib.error.URLError as error:
             raise TransportError(self._transport_message(error.reason)) from error
         except socket.timeout as error:
             raise TransportError(self._timeout_message()) from error
         except (http.client.HTTPException, OSError) as error:
-            # 응답 수신 중 연결이 끊기면(RemoteDisconnected 등) URLError로 감싸지지 않는다
             raise TransportError(
                 "%s 응답을 받는 중 연결이 끊겼습니다: %s" % (self.base_url, error)
             ) from error
@@ -162,12 +143,8 @@ def _month_query(month: Optional[str]) -> dict:
 
 
 def roster_from_usage(usage_body: Optional[dict]) -> dict:
-    """/v1/usage 응답에서 등록 고객 명단(customer_id -> customer_name)을 뽑는다.
-
-    응답은 등록 고객 전원을 0 채움으로 포함하므로 이것이 전체 명단이다.
-    """
     roster = {}
-    for metric in (usage_body or {}).get("billable_metric_usages") or []:
-        for customer in metric.get("customers") or []:
+    for billable_metric in (usage_body or {}).get("billable_metric_usages") or []:
+        for customer in billable_metric.get("customers") or []:
             roster[customer["customer_id"]] = customer["customer_name"]
     return roster

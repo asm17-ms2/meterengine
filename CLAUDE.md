@@ -56,9 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 주석을 쓰지 않는다. javadoc도 주석이다. 예외는 선언 위의 한 줄 설명뿐이고 그것도 의무가 아니다. 형식은 `docs/contributing/comments.md`.
 - 주석을 붙이고 싶어지면 이름이나 분리를 고친다.
-- 규칙 이전의 주석은 레포 전체를 한 PR로 지운다. 옮기지 않고, 긴 주석을 한 줄로 줄이지 않는다.
 - **`V__` 마이그레이션은 주석만 고쳐도 체크섬이 바뀌어 적용된 DB의 기동이 실패한다.** 배포 서버의 DB와 로컬 볼륨의 체크섬을 같이 맞춘다. `R__`는 다시 실행된다. CI는 빈 DB라 둘 다 잡지 못한다.
-- **주변 코드의 주석 밀도는 본보기가 아니다.**.
 
 ## OpenAPI 생성물
 

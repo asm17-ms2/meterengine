@@ -14,7 +14,7 @@ import org.hibernate.type.SqlTypes;
 public class PriceRate {
 
   // 기본 단가가 붙는 조합이다.
-  public static final String BASE_COMBINATION = "{}";
+  public static final String BASE_DIMENSION_VALUES = "{}";
 
   @Id
   @Column(name = "organization_id")
@@ -32,7 +32,6 @@ public class PriceRate {
   @Column(name = "unit_price", nullable = false)
   private BigDecimal unitPrice;
 
-  /** Hibernate 전용. */
   protected PriceRate() {}
 
   public UUID getOrganizationId() {
