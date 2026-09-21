@@ -1,13 +1,13 @@
 # 문서 공통 규칙
 
-- 레포 안의 모든 문서에 적용한다. README, 규칙 파일, 정책 파일, CLAUDE.md, 용어집.
+- 레포 안의 모든 문서에 적용한다. README, 규칙 파일, 정책 파일, AGENTS.md, CLAUDE.md, 용어집.
   - RFC 본문은 머지된 뒤 고치지 않으므로 대상이 아니다. 새 RFC는 `docs/rfcs/template.md`를 따른다.
 - 문서 규칙은 사람의 부담을 줄이려는 것이다. 문서가 빠져도 코드는 그대로 돌고, 빠진 것은 다음 PR로 더한다.
 
 ## 정본은 하나
 
 - 한 내용을 두 곳에 쓰지 않는다. 정본이 아닌 곳에서는 정본을 가리킨다. 정본은 `governance.md` "정본".
-- README와 CLAUDE.md는 규칙을 베끼지 않고 규칙 파일을 가리킨다.
+- README와 AGENTS.md는 규칙을 베끼지 않고 규칙 파일을 가리킨다. CLAUDE.md는 AGENTS.md를 가져온다.
 - RFC와 규칙 파일이 겹치는 것은 중복이 아니다. RFC는 머지되는 순간 얼어붙는 제안서다.
 
 ## 읽기 쉽게
@@ -69,7 +69,7 @@
 | --- | --- |
 | 프론트 화면을 추가하거나 자리표시자를 실제 화면으로 바꿨다 | `frontend/README.md`의 "화면" 표 |
 | 마이그레이션이나 시드를 추가/변경했다 | `backend/README.md`의 마이그레이션 항목 |
-| 컨트롤러나 DTO를 건드렸다 | `backend/README.md`의 API 문서 절. 생성물 `backend/openapi.yaml`은 CLAUDE.md의 규칙을 따른다 |
+| 컨트롤러나 DTO를 건드렸다 | `backend/README.md`의 API 문서 절. 생성물 `backend/openapi.yaml`은 AGENTS.md의 규칙을 따른다 |
 | 오류 code를 추가/변경했거나 오류 응답 형식을 건드렸다 | `backend/README.md`의 오류 응답 절 |
 | 실행 명령이나 사전 준비(런타임 버전, 컨테이너)가 바뀌었다 | 루트 README "시작하기"와 해당 하위 README의 "실행" |
 | 배포 구성이나 절차를 바꿨다 (compose, Caddy, 배포 스크립트, CD 워크플로) | `deploy/README.md` |

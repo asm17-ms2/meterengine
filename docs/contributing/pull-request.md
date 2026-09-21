@@ -122,7 +122,7 @@
 | `docker-compose.yml` | 로컬 환경 정의 | 깨지면 전원이 같이 멈춘다 |
 | `docs/rfcs/` | 방향 결정 기록 | 정족수가 전원이다 |
 | `docs/policies/` | 정책 값 | 코드 동작을 정한다 |
-| `docs/contributing/`, `CONTRIBUTING.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 쌓이면 되돌릴 것이 코드가 된다 |
+| `docs/contributing/`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 쌓이면 되돌릴 것이 코드가 된다 |
 | `.github/` | CI, CODEOWNERS, PR 템플릿 | 머지 조건 자체를 바꾼다 |
 
 - 강제용 패턴은 main 룰셋의 required reviewer 규칙에, 리뷰 요청용 경로는 `.github/CODEOWNERS`에 있다. 표를 바꾸면 둘 다 바꾼다.
