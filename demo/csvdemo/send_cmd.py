@@ -1,9 +1,3 @@
-"""send 서브커맨드: 이벤트를 순차 전송하며 요청:응답을 1:1 대조 출력한다.
-
-DB가 append-only라 오전송은 초기화 말고는 되돌릴 수 없다.
-그래서 전송 전 확인 게이트가 있고, 모든 요청:응답 쌍은 항상 JSONL로 남긴다.
-"""
-
 from __future__ import annotations
 
 import os
@@ -20,8 +14,6 @@ from core.jsonl_log import JsonlLogWriter, classify_outcome
 from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
-# demo/logs를 가리킨다. 이 파일이 demo/csvdemo/ 아래라 dirname을 두 번 벗긴다.
-# 브리지(bridge/const.py)도 같은 곳을 보고, README의 verify 안내도 이 경로다.
 LOGS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"
 )
@@ -55,7 +47,6 @@ def send_events(events: List[Event], client: ApiClient, console: Console, args) 
     for predicted in prediction.outcomes:
         predicted_counts[predicted.outcome] = predicted_counts.get(predicted.outcome, 0) + 1
         predicted_outcomes[predicted.index] = predicted.outcome
-    # 행 설명은 CSV 작성자가 note 컬럼에 적은 것만 보여준다. 비어 있으면 아무것도 안 붙는다
     notes: Dict[int, str] = {index: event.note for index, event in enumerate(events) if event.note}
     for line in format_gate(
         client.base_url, client.org_id, len(events), month_counts, server_totals, predicted_counts
@@ -135,7 +126,6 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
 
 
 def _predict(client: ApiClient, events: List[Event]) -> Prediction:
-    """전송 전에 각 행을 로컬 판정한다. 고객 명단을 못 얻으면 그 판정만 건너뛴다."""
     known_customer_ids = None
     try:
         usage = client.get_usage(None)
@@ -167,7 +157,6 @@ def _server_totals(client: ApiClient, month_counts: Dict[str, int]) -> Dict[str,
         try:
             result = client.get_events_page(month)
         except TransportError as error:
-            # 게이트 표시는 참고 정보라 여기서는 멈추지 않는다. 전송 시점에 다시 드러난다.
             print("서버 확인 실패: " + str(error), file=sys.stderr)
             totals[month] = None
             continue
@@ -190,8 +179,6 @@ def _preview(events: List[Event], console: Console, predicted_outcomes: Dict[int
 
     for index in range(min(PREVIEW_LIMIT, len(events))):
         print_row(index)
-    # 문제로 예측된 행은 미리보기 범위 밖이어도 반드시 보여준다.
-    # 전송 전에 사람이 걸러낼 기회가 게이트의 존재 이유이기 때문이다.
     hidden_problems = [
         index
         for index in range(PREVIEW_LIMIT, len(events))

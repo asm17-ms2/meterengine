@@ -4,10 +4,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import type { MonthOption } from "@/lib/month";
 
-/**
- * 조회 월 select. 선택하면 ?month=를 바꿔 서버가 화면을 다시 그린다.
- * 월이 바뀌면 페이지 번호는 의미가 없어지므로 같이 지운다.
- */
 export function MonthSelect({
   value,
   options,

@@ -1,5 +1,3 @@
-"""bridge/state.py 테스트. 네트워크 대신 가짜 클라이언트를 쓴다."""
-
 import json
 import os
 import subprocess
@@ -31,8 +29,6 @@ class FakeResult:
 
 
 class FakeClient:
-    """ApiClient 대역. 고객 목록과 등록만 흉내 낸다."""
-
     def __init__(self, customers=None):
         self.customers = list(customers or [])
         self.created = []
@@ -57,7 +53,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.allow, [])
 
     def test_기본_전송_대상은_로컬이다(self):
-        """event 테이블은 지울 수 없다. 배포 주소는 손으로 적게 한다."""
         self.assertNotIn("meterengine.com", BridgeConfig().base_url)
 
     def test_저장한_것을_그대로_읽는다(self):
@@ -138,7 +133,6 @@ class RepoNameTest(unittest.TestCase):
         self.assertIsNone(repo_name("/이런/폴더는/없다"))
 
     def test_워크트리도_본_레포_이름으로_모인다(self):
-        """워크트리마다 다른 고객이 생기면 안 된다. MS2-169, MS2-157이 한 이름으로 모여야 한다."""
         with tempfile.TemporaryDirectory() as directory:
             main = os.path.join(directory, "메인레포")
             os.makedirs(main)
@@ -154,7 +148,6 @@ class RepoNameTest(unittest.TestCase):
                 self.skipTest("워크트리를 만들 수 없습니다: " + result.stderr.strip())
             self.assertEqual(repo_name(main), "메인레포")
             self.assertEqual(repo_name(worktree), "메인레포")
-            # 하위 폴더에서도 같은 이름이어야 한다
             nested = os.path.join(worktree, "demo")
             os.makedirs(nested, exist_ok=True)
             self.assertEqual(repo_name(nested), "메인레포")
@@ -176,7 +169,6 @@ class BridgeStateTest(unittest.TestCase):
             self.assertIsNone(self.state(directory).project_of(None))
 
     def test_deny한_세션은_매핑_없음과_구별된다(self):
-        """구별하지 않으면 워커가 폴백으로 보내 deny가 무력해진다."""
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "state.json")
             state = BridgeState(path)
@@ -215,23 +207,16 @@ class BridgeStateTest(unittest.TestCase):
 
 
 class SessionExpiryTest(unittest.TestCase):
-    """세션 매핑은 무한히 쌓이면 안 된다.
-
-    프롬프트를 칠 때마다(UserPromptSubmit hook) 이 파일 전체를 다시 쓰고 fsync
-    하므로, 커질수록 hook이 느려진다. hook 타임아웃은 5초다.
-    """
-
     def test_하루가_지난_세션은_사라진다(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "state.json")
             state = BridgeState(path)
             state.remember_session("오래된", "meterengine")
             state.deny_session("오래된-deny")
-            # 마지막 hook 시각을 이틀 전으로 돌린다
             old = time.time() - 2 * 24 * 60 * 60
             state.seen["오래된"] = old
             state.seen["오래된-deny"] = old
-            state.remember_session("새것", "meterengine")  # 저장이 일어나며 정리된다
+            state.remember_session("새것", "meterengine")
 
             reloaded = BridgeState(path)
             self.assertIsNone(reloaded.project_of("오래된"))
@@ -239,7 +224,6 @@ class SessionExpiryTest(unittest.TestCase):
             self.assertEqual(reloaded.project_of("새것"), "meterengine")
 
     def test_같은_매핑을_다시_받으면_파일을_건드리지_않는다(self):
-        """프롬프트마다 오는 hook이다. 매번 쓰면 그만큼 느려진다."""
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "state.json")
             state = BridgeState(path)
@@ -258,8 +242,6 @@ class SessionExpiryTest(unittest.TestCase):
 
 
 class ForgetCustomerTest(unittest.TestCase):
-    """서버에서 고객이 지워지면 캐시한 id는 죽은 값이다."""
-
     def test_버리면_다음에_다시_찾는다(self):
         client = FakeClient()
         with tempfile.TemporaryDirectory() as directory:
@@ -269,7 +251,6 @@ class ForgetCustomerTest(unittest.TestCase):
             state.forget_customer("meterengine(박성종)")
             self.assertIsNone(state.cached_customer("meterengine(박성종)"))
             resolver.resolve("meterengine(박성종)")
-        # 캐시가 남아 있었다면 조회가 한 번뿐이었을 것이다
         self.assertEqual(client.list_calls, 2)
 
     def test_버린_것은_재시작_뒤에도_없다(self):
@@ -286,7 +267,6 @@ class CustomerResolverTest(unittest.TestCase):
         return CustomerResolver(client, BridgeState(os.path.join(directory, "state.json")))
 
     def test_이미_있으면_등록하지_않는다(self):
-        """등록 API가 이름 중복을 막지 않으므로, 조회를 빠뜨리면 고객이 계속 늘어난다."""
         client = FakeClient([{"id": DEMO_CUSTOMER, "name": "meterengine(박성종)"}])
         with tempfile.TemporaryDirectory() as directory:
             customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
@@ -388,7 +368,6 @@ class ProjectStateTest(unittest.TestCase):
             self.assertEqual(config.project_state(name), state)
 
     def test_실명이_없으면_전부_실명이_된다(self):
-        """고른 것과 정반대가 되는 자리라 화면이 이 상태를 알려야 한다."""
         config = BridgeConfig()
         config.set_project_states({"meterengine": MERGED, "notes": MERGED})
         self.assertTrue(config.names_everything())
@@ -408,8 +387,6 @@ class ProjectStateTest(unittest.TestCase):
 
 
 class CustomerCacheScopeTest(unittest.TestCase):
-    """고객 캐시는 발급한 서버의 것이다. 전송 대상을 바꾸면 써서는 안 된다."""
-
     LOCAL = "http://localhost:8080|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
     PROD = "https://meterengine.com|d7cee55d-8c82-4afc-b996-6749d8b26a4e"
 
@@ -422,7 +399,6 @@ class CustomerCacheScopeTest(unittest.TestCase):
             )
 
     def test_서버가_바뀌면_캐시를_버린다(self):
-        """안 버리면 로컬 UUID를 배포로 보내 이벤트가 전부 거절된다."""
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "state.json")
             BridgeState(path, self.LOCAL).remember_customer("meterengine(박성종)", DEMO_CUSTOMER)
@@ -430,7 +406,6 @@ class CustomerCacheScopeTest(unittest.TestCase):
             self.assertIsNone(switched.cached_customer("meterengine(박성종)"))
 
     def test_서버가_바뀌어도_세션_매핑은_남는다(self):
-        """폴더가 어느 프로젝트인지는 서버와 무관하다."""
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "state.json")
             first = BridgeState(path, self.LOCAL)
@@ -445,7 +420,6 @@ class CustomerCacheScopeTest(unittest.TestCase):
             path = os.path.join(directory, "state.json")
             BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
             BridgeState(path, self.PROD).remember_customer("고객", OTHER_CUSTOMER)
-            # 배포 쪽 값으로 덮였으므로 로컬로 돌아오면 캐시가 없다
             self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
 
     def test_scope는_전송_대상과_도입사로_만든다(self):
@@ -454,12 +428,6 @@ class CustomerCacheScopeTest(unittest.TestCase):
 
 
 class ConfigValidateTest(unittest.TestCase):
-    """save가 validate를 먼저 부른다.
-
-    잘못된 값이 파일에 남으면 그 뒤로는 load가 죽어서, config 명령으로도 되돌릴 수
-    없고 손으로 JSON을 고쳐야 한다.
-    """
-
     def test_UUID가_아닌_org_id는_저장하지_않는다(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "bridge.json")
@@ -468,7 +436,6 @@ class ConfigValidateTest(unittest.TestCase):
             self.assertFalse(os.path.exists(path))
 
     def test_스킴_없는_base_url은_저장하지_않는다(self):
-        # 오타를 내면 전송이 전부 조용히 실패한다. 저장 시점에 막는다.
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "bridge.json")
             with self.assertRaises(ValueError):
@@ -483,8 +450,6 @@ class ConfigValidateTest(unittest.TestCase):
 
 
 class SnapshotTest(unittest.TestCase):
-    """health가 잠금 밖에서 순회하면 hook이 매핑을 넣는 순간 터진다."""
-
     def test_스냅샷은_복사본이라_원본과_얽히지_않는다(self):
         with tempfile.TemporaryDirectory() as directory:
             state = BridgeState(os.path.join(directory, "state.json"), "scope")

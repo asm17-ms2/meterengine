@@ -1,9 +1,3 @@
-"""Claude 설정 병합 (MS2-169).
-
-남의 설정 파일을 고치는 자리라, 되돌릴 수 있는지와 반쯤 쓰이지 않는지를 잡는다.
-launchd는 여기서 다루지 않는다 (실제로 등록해 봐야 알 수 있다).
-"""
-
 import json
 import os
 import sys
@@ -42,12 +36,10 @@ class ApplyClaudeSettingsTest(unittest.TestCase):
         self.assertEqual(settings["env"]["CLAUDE_CODE_ENABLE_TELEMETRY"], "1")
 
     def test_백업은_처음_것을_지킨다(self):
-        """두 번째 실행이 덮어쓰면 되돌릴 원본이 사라진다."""
         self.write({"model": "opus"})
         backup = self.apply()
         self.assertEqual(self.read(backup), {"model": "opus"})
 
-        # 사이에 무언가 바뀌어 다시 반영하는 상황
         settings = self.read()
         del settings["env"]["OTEL_LOGS_EXPORTER"]
         self.write(settings)
@@ -61,8 +53,6 @@ class ApplyClaudeSettingsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.path))
 
     def test_키_순서를_뒤집지_않는다(self):
-        # 사람이 관리하는 파일이다. 정렬해 버리면 손대지 않은 항목까지 전부 움직여
-        # 무엇이 바뀌었는지 보이지 않는다.
         self.write({"zzz": 1, "aaa": 2})
         self.apply()
         with open(self.path, encoding="utf-8") as f:

@@ -6,14 +6,9 @@ import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 
-/**
- * 화면이 그리는 뷰모델. 숫자 포맷은 서버에서 끝내고 문자열로 받는다.
- * 클라이언트에서 toLocaleString을 부르면 서버와 결과가 달라져 하이드레이션이 어긋난다.
- */
 export type BillingGroupView = {
   customerId: string;
   customerName: string;
-  /** 고객 소계. 서버가 준 amount를 원화 표기만 한 것이다. */
   amount: string;
   lines: BillingLineView[];
 };
@@ -40,7 +35,6 @@ export function BillingTable({
   totalAmount,
 }: {
   groups: BillingGroupView[];
-  /** 전체 합계. 서버가 준 total_amount 그대로다. */
   totalAmount: string;
 }) {
   const { isCollapsed, toggle } = useCollapse();

@@ -3,7 +3,6 @@ package com.meterengine.event;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
@@ -27,15 +26,6 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 이벤트 조회 API를 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-131).
- *
- * <p>{@code @AutoConfigureMockMvc}를 쓰지 않고 WebApplicationContext에서 직접 만드는 이유는 {@link
- * EventIngestIntegrationTest} 참조. 컨텍스트를 공유해 Postgres 컨테이너가 한 번만 뜬다.
- *
- * <p><b>실제 Postgres여야 한다.</b> 월 귀속이 TIMESTAMPTZ 비교의 의미에 달려 있고, 동점 정렬은 DB가 실제로 어떤 순서를 내놓느냐의 문제다. 둘 다
- * 인메모리 DB로 바꾸면 통과 여부가 그 DB의 방언을 따라간다.
- */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
@@ -76,7 +66,6 @@ class EventListIntegrationTest {
         .asArray()
         .containsExactly("tx-mine");
 
-    // 남의 고객 ID를 알고 있어도 못 본다. 고객 판정이 organization_id와 함께 걸려 404가 된다.
     assertThat(get(mine, "?customer_id=" + theirCustomer))
         .hasStatus(404)
         .bodyJson()
@@ -86,7 +75,7 @@ class EventListIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 정렬 (인수 조건: 같은 요청을 여러 번 보내도 순서가 같다)
+  // 정렬
   // ---------------------------------------------------------------------------
 
   @Test
@@ -98,7 +87,6 @@ class EventListIntegrationTest {
     insertEvent(orgId, "tx-b", customerId, "chat_completion", 2, sameMoment);
     insertEvent(orgId, "tx-c", customerId, "chat_completion", 3, sameMoment);
 
-    // 한 번 맞는 것으로는 부족하다. 동점 순서를 DB가 약속하지 않으므로 여러 번 불러 같은지 본다.
     for (int attempt = 0; attempt < 5; attempt++) {
       assertThat(get(orgId, "?month=" + AUGUST))
           .hasStatusOk()
@@ -118,8 +106,6 @@ class EventListIntegrationTest {
       insertEvent(orgId, "tx-%d".formatted(i), customerId, "chat_completion", i, sameMoment);
     }
 
-    // tiebreaker가 존재하는 이유가 바로 이 조합이다. 동점만 보거나 페이지만 보면
-    // ORDER BY에서 transaction_id를 지워도 테스트가 통과한다.
     List<String> collected = new ArrayList<>();
     for (int page = 0; page < 3; page++) {
       collected.addAll(
@@ -178,7 +164,6 @@ class EventListIntegrationTest {
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
-    // 데이터가 없는 것이지 요청이 틀린 것이 아니다. total은 필터 기준 그대로 남는다.
     MvcTestResult result = get(orgId, "?month=%s&page=999".formatted(AUGUST));
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.events").asArray().isEmpty();
     assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(1);
@@ -220,7 +205,6 @@ class EventListIntegrationTest {
         .containsExactly("tx-acme-embed");
     assertThat(transactionIds(get(orgId, "?month=2026-07"))).containsExactly("tx-acme-july");
 
-    // 셋을 함께 주면 교집합이다.
     assertThat(
             transactionIds(
                 get(
@@ -253,8 +237,6 @@ class EventListIntegrationTest {
   void 미터에_없는_type도_저장돼_있으면_그대로_조회된다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
-    // event.type은 미터와 FK 없는 논리 매칭이라 미등록 값도 저장된다 (V1 주석).
-    // 로그는 원문 보존이므로 집계에 안 잡히는 값도 화면에는 보여야 한다.
     insertEvent(orgId, "tx-unknown", customerId, "정체불명", 1, "2026-08-10T12:00:00+09:00");
 
     assertThat(transactionIds(get(orgId, "?month=%s&type=%s".formatted(AUGUST, "정체불명"))))
@@ -262,7 +244,7 @@ class EventListIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 월 경계 (인수 조건: 사용량 집계와 같은 판정)
+  // 월 경계
   // ---------------------------------------------------------------------------
 
   @Test
@@ -280,7 +262,6 @@ class EventListIntegrationTest {
   void 같은_순간을_UTC로_보낸_이벤트도_같은_달에_귀속된다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
-    // 2026-08-31T14:59:59Z == 2026-08-31T23:59:59+09:00. 표기가 달라도 같은 순간이다.
     insertEvent(orgId, "tx-utc", customerId, "chat_completion", 1, "2026-08-31T14:59:59Z");
 
     assertThat(transactionIds(get(orgId, "?month=" + AUGUST))).containsExactly("tx-utc");
@@ -291,7 +272,6 @@ class EventListIntegrationTest {
     UUID orgId = insertOrganization("도입사");
     String thisMonth = BillableMetricUsageService.currentMonth().toString();
 
-    // 생략했을 때 서버가 어느 달을 골랐는지 응답만 보고 알 수 있어야 한다.
     assertThat(get(orgId, ""))
         .hasStatusOk()
         .bodyJson()
@@ -300,7 +280,7 @@ class EventListIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 사용량 집계와의 대조 (인수 조건: 두 화면 숫자가 같아야 한다)
+  // 사용량 집계와의 대조
   // ---------------------------------------------------------------------------
 
   @Test
@@ -310,8 +290,6 @@ class EventListIntegrationTest {
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 300, "2026-08-05T10:00:00+09:00");
     insertEvent(orgId, "tx-2", customerId, "chat_completion", 200, "2026-08-20T10:00:00+09:00");
-    // 집계는 jsonb_typeof가 number가 아닌 값을 뺀다. 로그는 원문을 다 보여주므로 합을 낼 때
-    // 같은 기준으로 세야 두 화면이 맞는다.
     insertEventWithProperties(
         orgId,
         "tx-text",
@@ -320,15 +298,13 @@ class EventListIntegrationTest {
         "{\"token\": \"많이\"}",
         "2026-08-21T10:00:00+09:00");
 
-    // 이 불변식을 지키는 것은 두 파일에 따로 있는 기간 계산이 같다는 것뿐이다. 갈리면
-    // 청구 근거 화면과 청구 금액이 어긋나는데, 이 테스트가 없으면 감지할 장치가 없다.
     assertThat(
             numericTokenSum(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, customerId))))
         .isEqualByComparingTo(aggregatedQuantity(orgId, customerId));
   }
 
   // ---------------------------------------------------------------------------
-  // 빈 목록과 없는 고객 (인수 조건: 이 둘이 갈리는 것이 핵심)
+  // 빈 목록과 없는 고객
   // ---------------------------------------------------------------------------
 
   @Test
@@ -356,14 +332,13 @@ class EventListIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 잘못된 파라미터 (인수 조건: 400이고 code=validation_error, 500이 아니다)
+  // 잘못된 파라미터
   // ---------------------------------------------------------------------------
 
   @Test
   void size가_범위_밖이면_500이_아니라_400이다() {
     UUID orgId = insertOrganization("도입사");
 
-    // 조용히 100으로 깎으면 FE가 왜 요청한 만큼 안 오는지 모른다. 못 주면 못 준다고 말한다.
     assertThat(get(orgId, "?size=101"))
         .hasStatus(400)
         .bodyJson()
@@ -382,7 +357,6 @@ class EventListIntegrationTest {
   void 허용_경계인_size_1과_100은_통과한다() {
     UUID orgId = insertOrganization("도입사");
 
-    // 거절만 검증하면 @Min(2) 같은 오타를 못 잡는다. 통과해야 하는 쪽도 본다.
     assertThat(get(orgId, "?size=1")).hasStatusOk();
     assertThat(get(orgId, "?size=100")).hasStatusOk();
     assertThat(get(orgId, "?page=0")).hasStatusOk();
@@ -390,7 +364,6 @@ class EventListIntegrationTest {
 
   @Test
   void 헤더가_없으면_400이고_code가_붙는다() {
-    // 가장 흔한 400이라 오히려 빠뜨리기 쉽다. FE가 code로 문구를 고르므로 여기만 비면 안 된다.
     assertThat(mvc.get().uri("/v1/events").exchange())
         .hasStatus(400)
         .bodyJson()
@@ -405,8 +378,6 @@ class EventListIntegrationTest {
     UUID customerId = insertCustomer(orgId, "아크메");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
-    // FE가 필터를 비우며 빈 값을 그대로 붙이는 구현이 흔하다. 그때 type = '' 로 걸리면
-    // 데이터가 있는데도 화면이 빈다. customer_id와 month는 스프링이 알아서 null로 바꾼다.
     assertThat(transactionIds(get(orgId, "?month=%s&type=".formatted(AUGUST))))
         .containsExactly("tx-1");
   }
@@ -415,7 +386,6 @@ class EventListIntegrationTest {
   void 음수_page는_500이_아니라_400이다() {
     UUID orgId = insertOrganization("도입사");
 
-    // 방어가 없으면 OFFSET이 음수가 되어 DB 에러로 500이 나간다.
     assertThat(get(orgId, "?page=-1"))
         .hasStatus(400)
         .bodyJson()
@@ -428,7 +398,6 @@ class EventListIntegrationTest {
   void UUID가_아닌_customerId와_형식이_틀린_month도_code가_붙는다() {
     UUID orgId = insertOrganization("도입사");
 
-    // 프레임워크도 이 둘을 400으로 내주지만 code가 없다. FE가 code로 문구를 고르므로 일부만 빠지면 안 된다.
     assertThat(get(orgId, "?customer_id=abc"))
         .hasStatus(400)
         .bodyJson()
@@ -453,7 +422,6 @@ class EventListIntegrationTest {
     UUID customerId = insertCustomer(orgId, "아크메 주식회사");
     insertEvent(orgId, "tx-1", customerId, "chat_completion", 100, "2026-08-10T12:00:00+09:00");
 
-    // 이벤트 행에는 customer_id뿐이라 조인하지 않으면 화면이 UUID만 보여주게 된다.
     assertThat(get(orgId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
@@ -466,7 +434,6 @@ class EventListIntegrationTest {
   void properties는_소수_스무자리도_자릿수가_그대로_돌아온다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
-    // 저장은 통합 테스트가 이미 지키지만 조회 왕복은 아무도 안 지킨다. 파싱을 끼우면 여기서 잘린다.
     insertEventWithProperties(
         orgId,
         "tx-1",
@@ -475,8 +442,6 @@ class EventListIntegrationTest {
         "{\"cost\": 0.1234567890123456789}",
         "2026-08-10T12:00:00+09:00");
 
-    // 파싱된 값이 아니라 응답 원문을 본다. JSONPath로 꺼내면 그 경로에서 한 번 더 파싱돼,
-    // 정작 검증하려는 "네트워크로 나가는 글자"가 무엇인지 흐려진다.
     MvcTestResult result = get(orgId, "?month=" + AUGUST);
     assertThat(result).hasStatusOk();
     assertThat(bodyText(result)).contains("0.1234567890123456789");
@@ -486,7 +451,6 @@ class EventListIntegrationTest {
   void properties는_키를_가리지_않고_원문_그대로_나간다() {
     UUID orgId = insertOrganization("도입사");
     UUID customerId = insertCustomer(orgId, "아크메");
-    // 화면이 model=... token=... 처럼 전부 펼쳐 보여주므로 서버가 키를 골라서는 안 된다.
     insertEventWithProperties(
         orgId,
         "tx-1",
@@ -514,12 +478,6 @@ class EventListIntegrationTest {
         .exchange();
   }
 
-  /**
-   * 응답에서 transaction_id만 순서대로 뽑는다. 정렬과 필터 검증이 대부분 이 목록 비교로 끝난다.
-   *
-   * <p>{@link ListEventsResponse}로 역직렬화하지 않는다. properties가 {@code @JsonRawValue}라 그 DTO는 쓰기 전용이고,
-   * 읽으려 들면 객체를 String에 넣지 못해 터진다. 트리로 읽으면 그 필드를 건드리지 않는다.
-   */
   private List<String> transactionIds(MvcTestResult result) {
     List<String> ids = new ArrayList<>();
     jsonMapper
@@ -529,7 +487,6 @@ class EventListIntegrationTest {
     return ids;
   }
 
-  /** 이벤트 로그 응답에서 숫자형 token만 더한다. 집계가 숫자 아닌 값을 빼므로 같은 기준으로 센다. */
   private BigDecimal numericTokenSum(MvcTestResult result) {
     BigDecimal sum = BigDecimal.ZERO;
     for (JsonNode event : jsonMapper.readTree(bodyText(result)).get("events")) {
@@ -561,7 +518,6 @@ class EventListIntegrationTest {
     throw new IllegalStateException("집계 응답에 고객이 없다: " + customerId);
   }
 
-  /** 시드와 같은 모양의 미터(chat_completion의 token을 SUM). 집계가 이 미터로 합을 낸다. */
   private void insertTokenMetric(UUID organizationId) {
     jdbc.update(
         """

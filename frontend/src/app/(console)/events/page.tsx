@@ -24,8 +24,6 @@ export default async function EventsPage({
   const page = readPage(params.page);
   const devState = readDevState(params.state);
 
-  // await하지 않고 넘긴다. 헤더 메타와 표가 같은 응답을 보되 각자의 Suspense
-  // 경계에서 기다린다.
   const events =
     devState === "loading" ? null : listEvents({ month, page }, devState);
 
@@ -59,11 +57,6 @@ export default async function EventsPage({
   );
 }
 
-/**
- * 이 화면의 주소를 만든다. page는 0부터 세고, 0이면 생략해서 첫 페이지 주소를
- * 깨끗하게 둔다. state는 개발 모드에서만 붙는다 (프로덕션에서는 isDevStateEnabled가
- * 상수 false라 이 분기가 통째로 제거된다).
- */
 function buildEventsHref(month: string, page: number, devState: DevState): string {
   const params = new URLSearchParams({ month });
   if (page > 0) params.set("page", String(page));

@@ -1,11 +1,3 @@
-"""소스 이벤트로부터 기대 사용량과 기대 예정액을 독립 계산한다.
-
-서버 계산 규칙의 정본:
-- 합산 필터: BillableMetricUsageRepository.sumQuantityByCustomerId (jsonb_typeof = 'number', KST 반열린 월 구간)
-- 라인 금액: DraftInvoiceService (quantity x unit_price를 RoundingMode.DOWN 절사)
-이 모듈은 그 규칙을 Decimal 연산으로 복제한다. float를 쓰지 않는다.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,15 +15,11 @@ from core.model import (
     parse_rfc3339,
 )
 
-# 서버는 PostgreSQL numeric으로 정확 계산하므로 기본 컨텍스트(유효숫자 28)의
-# 반올림이 끼지 않게 합산과 금액 계산 모두 넉넉한 정밀도로 돌린다.
 CALC_PRECISION = 50
 
 
 @dataclass
 class MetricMeta:
-    """서버 응답에서 유도한 미터 정의. unit_price는 인보이스 라인이 없으면 미상."""
-
     code: str
     event_type: str
     aggregation: str
@@ -64,7 +52,6 @@ class ExpectedMonth:
 class PredictedOutcome:
     index: int
     outcome: str
-    # 거절 예측일 때만 채워진다. code는 서버 오류 응답의 code에 대응한다
     code: Optional[str]
     detail: str
 
@@ -76,11 +63,6 @@ class Prediction:
 
 
 def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
-    """로그에서 서버 상태에 기여한 이벤트만 뽑는다.
-
-    서버 판정이 기록돼 있으므로 outcome=new만 저장분이다. duplicate는 이미
-    저장된 것의 재전송이고, rejected는 저장이 없고, error는 저장 여부 불명이다.
-    """
     stored = []
     for record in records:
         if record.outcome != "new":
@@ -90,8 +72,6 @@ def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
             stored.append(
                 StoredEvent(
                     transaction_id=request["transaction_id"],
-                    # 서버는 UUID를 대소문자 무관으로 파싱하고 응답은 소문자로 내려주므로
-                    # 기대값 계산도 소문자로 정규화해야 서버 응답과 키가 맞는다
                     customer_id=str(request["customer_id"]).lower(),
                     event_type=request["type"],
                     occurred_at=parse_rfc3339(request["timestamp"]),
@@ -106,13 +86,6 @@ def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
 
 
 def predict_send(events: List[Event], known_customer_ids: Optional[Set[str]]) -> Prediction:
-    """전송 전에 서버 판정을 시뮬레이션한다 (send 미리보기와 verify --csv 공용).
-
-    거절된 전송은 저장이 없으므로 중복 판정(first-write-wins)은
-    검증을 통과한 이벤트끼리만 돌린다. known_customer_ids가 None이면
-    (고객 명단을 얻지 못한 경우) 미등록 고객 판정은 건너뛴다.
-    invalid_event 같은 희귀 케이스는 예측하지 못한다.
-    """
     stored = []
     outcomes = []
     seen_transaction_ids = set()
@@ -163,8 +136,6 @@ def _validation_problem(event: Event) -> Optional[str]:
 
 
 def _is_number(value) -> bool:
-    # 서버의 jsonb_typeof = 'number'에 대응한다.
-    # Python에서 bool은 int의 하위 타입이라 먼저 배제해야 한다.
     if isinstance(value, bool):
         return False
     return isinstance(value, (int, Decimal))
@@ -173,7 +144,6 @@ def _is_number(value) -> bool:
 def sum_quantities(
     stored: List[StoredEvent], month: str, event_type: str, target_property: str
 ) -> Dict[str, Decimal]:
-    """미터 하나에 대한 고객별 사용량 합. 대상 월 밖, 다른 event_type, 비숫자 값은 제외."""
     sums: Dict[str, Decimal] = {}
     with localcontext() as context:
         context.prec = CALC_PRECISION
@@ -192,10 +162,6 @@ def sum_quantities(
 
 
 def line_amount(quantity: Decimal, unit_price: Decimal) -> int:
-    """서버와 동일한 라인 금액: 곱한 뒤 라인마다 절사해 정수로.
-
-    기본 컨텍스트(유효숫자 28)의 곱셈 반올림이 끼어들지 않게 정밀도를 넉넉히 잡는다.
-    """
     with localcontext() as context:
         context.prec = CALC_PRECISION
         return int((quantity * unit_price).to_integral_value(rounding=ROUND_DOWN))
@@ -207,7 +173,6 @@ def build_expected(
     month: str,
     customer_ids: List[str],
 ) -> ExpectedMonth:
-    """고객별 라인/소계와 총계를 계산한다. 단가 미상인 미터가 있으면 금액은 미상으로 둔다."""
     sums_by_metric = {
         metric.code: sum_quantities(stored, month, metric.event_type, metric.target_property)
         for metric in metrics

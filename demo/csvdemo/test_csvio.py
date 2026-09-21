@@ -1,5 +1,3 @@
-"""CSV 소스 읽기 검증. 스키마는 MS2-142 확정 전의 잠정 인터페이스다."""
-
 import os
 import tempfile
 import unittest
@@ -38,7 +36,6 @@ class ReadCsvEventsTest(unittest.TestCase):
         self.assertEqual(events[0].properties_text, '{"token": 1}')
 
     def test_잘못된_값도_거르지_않고_그대로_담는다(self):
-        # 400 거절 시연이 목적이므로 내용 검증은 서버 경계의 몫이다.
         self._write(
             "transaction_id,customer_id,event_type,timestamp,properties\n"
             'evt-1,not-a-uuid,,bad-timestamp,"{""token"": 1}"\n'

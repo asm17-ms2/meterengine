@@ -1,8 +1,3 @@
-"""콘솔 출력 형식. 요청:응답 1:1 대조 2행, 비교표, 확인 게이트 문구.
-
-한글은 터미널에서 2칸을 차지하므로 표 정렬은 east_asian_width 기준으로 계산한다.
-"""
-
 from __future__ import annotations
 
 import os
@@ -86,7 +81,6 @@ def truncate_display(text: str, max_width: int) -> str:
 
 
 def terminal_width() -> Optional[int]:
-    # 파이프 출력이면 자르지 않는다. 전문은 어차피 JSONL에 있다.
     if not sys.stdout.isatty():
         return None
     return shutil.get_terminal_size((100, 24)).columns
@@ -128,7 +122,6 @@ def format_send_pair(
         prefix
         + console.tag(outcome)
         + " "
-        # 문제 설명은 transaction_id보다 먼저 보여 사람이 즉시 원인을 읽게 한다
         + ((note + "  ") if note else "")
         + truncate_display(event.transaction_id, 28)
         + "  "

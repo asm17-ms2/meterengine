@@ -32,7 +32,6 @@ public class PriceRate {
   @Column(name = "unit_price", nullable = false)
   private BigDecimal unitPrice;
 
-  /** Hibernate 전용. */
   protected PriceRate() {}
 
   public UUID getOrganizationId() {

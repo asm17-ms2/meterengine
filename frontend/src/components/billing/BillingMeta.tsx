@@ -5,7 +5,6 @@ import {
 import type { Result } from "@/lib/api/client";
 import { formatKstStamp } from "@/lib/format";
 
-/** 화면 제목 오른쪽 메타. 같은 프라미스를 보되 Suspense 경계가 따로다. */
 export async function BillingMeta({
   draftInvoice,
 }: {
