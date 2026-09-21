@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Import;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
-class MeterEngineApplicationTests {
+class MeterEngineApplicationTest {
 
   @Test
-  void contextLoads() {}
+  void 컨텍스트가_뜬다() {}
 }

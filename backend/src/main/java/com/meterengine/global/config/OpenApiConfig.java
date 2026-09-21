@@ -1,4 +1,4 @@
-package com.meterengine;
+package com.meterengine.global.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -13,10 +13,6 @@ import org.springframework.context.annotation.Configuration;
  * <p>springdoc은 경로와 스키마를 컨트롤러에서 자동으로 만들지만 {@code info}는 만들지 못한다. 채우지 않으면 title이 {@code "OpenAPI
  * definition"}, version이 {@code "v0"}인 채로 프론트엔드에 나간다. 설정 프로퍼티로는 채울 수 없어서(springdoc 3.0.3이 제공하는
  * 프로퍼티에 {@code info.*}가 없다) 빈으로 준다.
- *
- * <p><b>패키지를 새로 파지 않았다.</b> MS2-149 재구조화에서 도메인 패키지는 customer, event, invoice, metric 넷으로 정했는데, 이
- * 클래스는 어느 도메인 소속도 아니라 루트에 남긴다 (MS2-141은 취소됨). 설정 클래스가 더 생기면 그때 모을 자리를 정한다. 어디에 두든
- * {@code @SpringBootApplication}의 스캔 범위 안이라 동작은 같다.
  */
 @Configuration(proxyBeanMethods = false)
 class OpenApiConfig {
