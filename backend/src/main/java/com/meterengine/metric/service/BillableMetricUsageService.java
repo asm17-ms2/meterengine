@@ -54,11 +54,11 @@ public class BillableMetricUsageService {
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
 
     return billableMetrics.stream()
-        .map(billableMetric -> aggregateBillableMetric(billableMetric, customers, start, end))
+        .map(billableMetric -> aggregate(billableMetric, customers, start, end))
         .toList();
   }
 
-  private BillableMetricUsage aggregateBillableMetric(
+  private BillableMetricUsage aggregate(
       BillableMetric billableMetric,
       List<Customer> customers,
       OffsetDateTime start,
@@ -89,13 +89,13 @@ public class BillableMetricUsageService {
   private void requireSupported(BillableMetric billableMetric) {
     if (!billableMetric.isSum()) {
       throw new IllegalStateException(
-          "metric %s uses aggregation %s, which is not implemented yet (only SUM)"
+          "metric %s uses aggregation %s, which is not implemented yet (only sum)"
               .formatted(billableMetric.getCode(), billableMetric.getAggregation()));
     }
     if (billableMetric.getTargetProperty() == null
         || billableMetric.getTargetProperty().isBlank()) {
       throw new IllegalStateException(
-          "metric %s aggregates with SUM but has no target_property to sum"
+          "metric %s aggregates with sum but has no target_property to sum"
               .formatted(billableMetric.getCode()));
     }
   }

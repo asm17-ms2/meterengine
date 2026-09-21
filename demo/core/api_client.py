@@ -144,7 +144,7 @@ def _month_query(month: Optional[str]) -> dict:
 
 def roster_from_usage(usage_body: Optional[dict]) -> dict:
     roster = {}
-    for metric in (usage_body or {}).get("billable_metric_usages") or []:
-        for customer in metric.get("customers") or []:
+    for billable_metric in (usage_body or {}).get("billable_metric_usages") or []:
+        for customer in billable_metric.get("customers") or []:
             roster[customer["customer_id"]] = customer["customer_name"]
     return roster

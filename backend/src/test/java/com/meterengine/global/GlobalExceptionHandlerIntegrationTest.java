@@ -27,7 +27,7 @@ import org.springframework.web.context.WebApplicationContext;
 @Transactional
 class GlobalExceptionHandlerIntegrationTest {
 
-  private static final String ORGANIZATION = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
+  private static final String ORGANIZATION_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
 
   private static final String INVALID_BODY =
       """
@@ -75,7 +75,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult result =
         mvc.post()
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .contentType(MediaType.TEXT_PLAIN)
             .content("{}")
             .exchange();
@@ -85,7 +85,7 @@ class GlobalExceptionHandlerIntegrationTest {
   @Test
   void 없는_경로는_404이고_code가_endpoint_not_found다() {
     MvcTestResult result =
-        mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION).exchange();
+        mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION_ID).exchange();
     assertCode(result, 404, ErrorCode.ENDPOINT_NOT_FOUND.getCode());
   }
 
@@ -94,7 +94,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult result =
         mvc.method(HttpMethod.DELETE)
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .exchange();
     assertCode(result, 405, ErrorCode.METHOD_NOT_ALLOWED.getCode());
   }
@@ -105,7 +105,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("month", "2026-08")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .accept(MediaType.TEXT_PLAIN)
             .exchange();
     assertCode(result, 406, ErrorCode.RESPONSE_TYPE_NOT_ACCEPTABLE.getCode());
@@ -118,7 +118,7 @@ class GlobalExceptionHandlerIntegrationTest {
           mvc.get()
               .uri(path)
               .param("month", "2026-13")
-              .header("X-Organization-Id", ORGANIZATION)
+              .header("X-Organization-Id", ORGANIZATION_ID)
               .exchange();
       assertCode(result, 400, ErrorCode.VALIDATION_ERROR.getCode());
     }
@@ -153,7 +153,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("customer_id", "not-a-uuid")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .exchange();
 
     assertFields(result, "customer_id");
@@ -165,7 +165,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("size", "101")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .exchange();
 
     assertFields(result, "size");
@@ -195,7 +195,7 @@ class GlobalExceptionHandlerIntegrationTest {
               .uri("/v1/events")
               .param("customer_id", "not-a-uuid")
               .param("size", "101")
-              .header("X-Organization-Id", ORGANIZATION)
+              .header("X-Organization-Id", ORGANIZATION_ID)
               .exchange(),
           mvc.get().uri("/v1/events").exchange(),
           mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange()
@@ -230,7 +230,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult english =
         mvc.post()
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION)
+            .header("X-Organization-Id", ORGANIZATION_ID)
             .header("Accept-Language", "en")
             .contentType(MediaType.APPLICATION_JSON)
             .content(INVALID_BODY)
@@ -247,7 +247,7 @@ class GlobalExceptionHandlerIntegrationTest {
           mvc.get()
               .uri("/v1/events")
               .param("size", "101")
-              .header("X-Organization-Id", ORGANIZATION)
+              .header("X-Organization-Id", ORGANIZATION_ID)
               .exchange(),
           mvc.get().uri("/v1/events").exchange(),
           mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange()
@@ -274,34 +274,34 @@ class GlobalExceptionHandlerIntegrationTest {
       mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange(),
       mvc.post()
           .uri("/v1/events")
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .contentType(MediaType.TEXT_PLAIN)
           .content("{}")
           .exchange(),
-      mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION).exchange(),
+      mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION_ID).exchange(),
       mvc.delete()
           .uri("/v1/customers/" + UUID.randomUUID())
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .exchange(),
       mvc.method(HttpMethod.DELETE)
           .uri("/v1/events")
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .exchange(),
       mvc.get()
           .uri("/v1/events")
           .param("month", "2026-08")
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .accept(MediaType.TEXT_PLAIN)
           .exchange(),
       mvc.get()
           .uri("/v1/usage")
           .param("month", "2026-13")
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .exchange(),
       mvc.get()
           .uri("/v1/invoices/draft")
           .param("month", "2026-13")
-          .header("X-Organization-Id", ORGANIZATION)
+          .header("X-Organization-Id", ORGANIZATION_ID)
           .exchange()
     };
 
@@ -323,7 +323,7 @@ class GlobalExceptionHandlerIntegrationTest {
             mvc.get()
                 .uri("/v1/usage")
                 .param("month", "2026-08")
-                .header("X-Organization-Id", ORGANIZATION)
+                .header("X-Organization-Id", ORGANIZATION_ID)
                 .exchange())
         .hasStatus(200);
   }
@@ -366,7 +366,7 @@ class GlobalExceptionHandlerIntegrationTest {
   private MvcTestResult post(String body) {
     return mvc.post()
         .uri("/v1/events")
-        .header("X-Organization-Id", ORGANIZATION)
+        .header("X-Organization-Id", ORGANIZATION_ID)
         .contentType(MediaType.APPLICATION_JSON)
         .content(body)
         .exchange();

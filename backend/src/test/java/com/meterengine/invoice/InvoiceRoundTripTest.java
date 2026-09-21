@@ -23,7 +23,7 @@ class InvoiceRoundTripTest {
 
   @Autowired private InvoiceRepository invoiceRepository;
   @Autowired private EntityManager entityManager;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   void 저장한_인보이스는_기간과_금액과_확정_시각이_그대로_되읽힌다() {
@@ -51,12 +51,12 @@ class InvoiceRoundTripTest {
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
   private UUID insertCustomer(UUID organizationId) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, 'acme') RETURNING id",
         UUID.class,
         organizationId);

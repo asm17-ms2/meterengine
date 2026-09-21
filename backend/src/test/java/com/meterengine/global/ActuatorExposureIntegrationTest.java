@@ -19,16 +19,16 @@ class ActuatorExposureIntegrationTest {
 
   @LocalServerPort private int port;
 
-  private RestTestClient client;
+  private RestTestClient restTestClient;
 
   @BeforeEach
   void setUp() {
-    client = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+    restTestClient = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
   }
 
   @Test
   void prometheus_엔드포인트가_지표를_낸다() {
-    client
+    restTestClient
         .get()
         .uri("/actuator/prometheus")
         .exchange()
@@ -40,6 +40,6 @@ class ActuatorExposureIntegrationTest {
 
   @Test
   void 노출하지_않기로_한_엔드포인트는_닿지_않는다() {
-    client.get().uri("/actuator/env").exchange().expectStatus().isNotFound();
+    restTestClient.get().uri("/actuator/env").exchange().expectStatus().isNotFound();
   }
 }

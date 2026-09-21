@@ -23,7 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 class BillableMetricIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
@@ -34,28 +34,28 @@ class BillableMetricIntegrationTest {
 
   @Test
   void 미터를_등록하면_201이고_보낸_값이_그대로_저장된다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    MvcTestResult result = post(orgId, sumBody("token-usage"));
+    MvcTestResult result = post(organizationId, sumBody("token-usage"));
 
     assertThat(result).hasStatus(201).bodyJson().extractingPath("$.code").isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.event_type").isEqualTo("chat_completion");
     assertThat(result).bodyJson().extractingPath("$.target_property").isEqualTo("token");
-    assertThat(billableMetricCount(orgId, "token-usage")).isEqualTo(1);
-    assertThat(storedAggregation(orgId, "token-usage")).isEqualTo("SUM");
+    assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
+    assertThat(storedAggregation(organizationId, "token-usage")).isEqualTo("sum");
   }
 
   @Test
   void 같은_코드로_다시_등록하면_409이고_기존_미터는_그대로다() {
-    UUID orgId = insertOrganization();
-    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
 
     assertThat(
             post(
-                orgId,
+                organizationId,
                 """
                 {"code": "token-usage", "name": "다른 이름", "event_type": "other",
-                 "aggregation": "SUM", "target_property": "chars"}
+                 "aggregation": "sum", "target_property": "chars"}
                 """))
         .hasStatus(409)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -64,25 +64,25 @@ class BillableMetricIntegrationTest {
         .asString()
         .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
 
-    assertThat(storedName(orgId, "token-usage")).isEqualTo("토큰 사용량");
+    assertThat(storedName(organizationId, "token-usage")).isEqualTo("토큰 사용량");
   }
 
   @Test
   void 다른_도입사에는_같은_코드를_등록할_수_있다() {
-    UUID orgId = insertOrganization();
-    UUID otherOrgId = insertOrganization();
-    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
+    UUID organizationId = insertOrganization();
+    UUID otherOrganizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
 
-    assertThat(post(otherOrgId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(post(otherOrganizationId, sumBody("token-usage"))).hasStatus(201);
   }
 
   @Test
   void SUM이_아닌_집계_함수는_400이고_저장은_0건이다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
     assertThat(
             post(
-                orgId,
+                organizationId,
                 """
                 {"code": "call-count", "name": "호출 수", "event_type": "chat_completion",
                  "aggregation": "COUNT", "target_property": "calls"}
@@ -92,19 +92,19 @@ class BillableMetricIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC.getCode());
-    assertThat(billableMetricCount(orgId, "call-count")).isZero();
+    assertThat(billableMetricCount(organizationId, "call-count")).isZero();
   }
 
   @Test
   void SUM인데_target_property가_없으면_400이다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
     assertThat(
             post(
-                orgId,
+                organizationId,
                 """
                 {"code": "token-usage", "name": "토큰 사용량", "event_type": "chat_completion",
-                 "aggregation": "SUM"}
+                 "aggregation": "sum"}
                 """))
         .hasStatus(400)
         .bodyJson()
@@ -115,15 +115,15 @@ class BillableMetricIntegrationTest {
 
   @Test
   void 필수_필드가_비면_400_validation_error다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    assertThat(post(orgId, "{\"code\": \"token-usage\"}"))
+    assertThat(post(organizationId, "{\"code\": \"token-usage\"}"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
-    assertThat(billableMetricCount(orgId, "token-usage")).isZero();
+    assertThat(billableMetricCount(organizationId, "token-usage")).isZero();
   }
 
   @Test
@@ -150,11 +150,11 @@ class BillableMetricIntegrationTest {
 
   @Test
   void 등록한_미터가_code_오름차순_목록으로_나온다() {
-    UUID orgId = insertOrganization();
-    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
-    assertThat(post(orgId, sumBody("api-calls"))).hasStatus(201);
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(post(organizationId, sumBody("api-calls"))).hasStatus(201);
 
-    MvcTestResult result = getList(orgId);
+    MvcTestResult result = getList(organizationId);
 
     assertThat(result).hasStatus(200);
     assertThat(result)
@@ -166,9 +166,9 @@ class BillableMetricIntegrationTest {
 
   @Test
   void 미터가_없으면_목록이_빈_배열이다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    assertThat(getList(orgId))
+    assertThat(getList(organizationId))
         .hasStatus(200)
         .bodyJson()
         .extractingPath("$.billable_metrics")
@@ -178,12 +178,12 @@ class BillableMetricIntegrationTest {
 
   @Test
   void 목록은_자기_도입사의_미터만_담는다() {
-    UUID orgId = insertOrganization();
-    UUID otherOrgId = insertOrganization();
-    assertThat(post(orgId, sumBody("token-usage"))).hasStatus(201);
-    assertThat(post(otherOrgId, sumBody("api-calls"))).hasStatus(201);
+    UUID organizationId = insertOrganization();
+    UUID otherOrganizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+    assertThat(post(otherOrganizationId, sumBody("api-calls"))).hasStatus(201);
 
-    assertThat(getList(orgId))
+    assertThat(getList(organizationId))
         .hasStatus(200)
         .bodyJson()
         .extractingPath("$.billable_metrics[*].code")
@@ -210,37 +210,37 @@ class BillableMetricIntegrationTest {
   private String sumBody(String code) {
     return """
         {"code": "%s", "name": "토큰 사용량", "event_type": "chat_completion",
-         "aggregation": "SUM", "target_property": "token"}
+         "aggregation": "sum", "target_property": "token"}
         """
         .formatted(code);
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private Integer billableMetricCount(UUID orgId, String code) {
-    return jdbc.queryForObject(
+  private Integer billableMetricCount(UUID organizationId, String code) {
+    return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM billable_metric WHERE organization_id = ? AND code = ?",
         Integer.class,
-        orgId,
+        organizationId,
         code);
   }
 
-  private String storedAggregation(UUID orgId, String code) {
-    return jdbc.queryForObject(
+  private String storedAggregation(UUID organizationId, String code) {
+    return jdbcTemplate.queryForObject(
         "SELECT aggregation FROM billable_metric WHERE organization_id = ? AND code = ?",
         String.class,
-        orgId,
+        organizationId,
         code);
   }
 
-  private String storedName(UUID orgId, String code) {
-    return jdbc.queryForObject(
+  private String storedName(UUID organizationId, String code) {
+    return jdbcTemplate.queryForObject(
         "SELECT name FROM billable_metric WHERE organization_id = ? AND code = ?",
         String.class,
-        orgId,
+        organizationId,
         code);
   }
 }

@@ -14,7 +14,7 @@ import org.hibernate.type.SqlTypes;
 public class PriceRate {
 
   // 기본 단가가 붙는 조합이다.
-  public static final String BASE_COMBINATION = "{}";
+  public static final String BASE_DIMENSION_VALUES = "{}";
 
   @Id
   @Column(name = "organization_id")

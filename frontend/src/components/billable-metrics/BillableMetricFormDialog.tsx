@@ -7,6 +7,7 @@ import {
   updateBillableMetricAction,
 } from "@/app/(console)/billable-metrics/actions";
 import {
+  BILLABLE_METRIC_AGGREGATION,
   BILLABLE_METRIC_FORM_IDLE,
   type BillableMetricField,
   type BillableMetricRowView,
@@ -51,11 +52,11 @@ export function BillableMetricFormDialog({
 
   return (
     <Dialog
-      labelledBy="metric-form-title"
+      labelledBy="billable-metric-form-title"
       onClose={isPending ? undefined : onClose}
       action={formAction}
     >
-      <div className="dialog-title" id="metric-form-title">
+      <div className="dialog-title" id="billable-metric-form-title">
         {isEdit ? "미터 수정" : "미터 등록"}
       </div>
 
@@ -63,7 +64,7 @@ export function BillableMetricFormDialog({
         <input type="hidden" name="code" value={billableMetric.code} />
       ) : (
         <TextField
-          id="metric-code"
+          id="billable-metric-code"
           name="code"
           label="코드"
           placeholder="input-tokens"
@@ -74,7 +75,7 @@ export function BillableMetricFormDialog({
         />
       )}
       <TextField
-        id="metric-name"
+        id="billable-metric-name"
         name="name"
         label="이름"
         placeholder="입력 토큰"
@@ -82,7 +83,7 @@ export function BillableMetricFormDialog({
         {...buildFieldProps("name")}
       />
       <TextField
-        id="metric-event-type"
+        id="billable-metric-event-type"
         name="event_type"
         label="이벤트 타입"
         placeholder="llm_request"
@@ -112,18 +113,18 @@ export function BillableMetricFormDialog({
               color: "var(--color-bg)",
             }}
           >
-            SUM
+            {BILLABLE_METRIC_AGGREGATION}
           </span>
-          <span className="screen-note">지금은 SUM만 지원합니다.</span>
+          <span className="screen-note">지금은 sum만 지원합니다.</span>
         </div>
       </div>
 
       <TextField
-        id="metric-target-property"
+        id="billable-metric-target-property"
         name="target_property"
         label="집계 대상 속성"
         placeholder="input_tokens"
-        hint="이벤트 properties에서 합산할 키입니다. SUM 집계는 필수입니다."
+        hint="이벤트 properties에서 합산할 키입니다. sum 집계는 필수입니다."
         mono
         {...buildFieldProps("target_property")}
       />

@@ -19,7 +19,7 @@ CALC_PRECISION = 50
 
 
 @dataclass
-class MetricMeta:
+class BillableMetricMeta:
     code: str
     event_type: str
     aggregation: str
@@ -29,7 +29,7 @@ class MetricMeta:
 
 @dataclass
 class ExpectedLine:
-    metric_code: str
+    billable_metric_code: str
     quantity: Decimal
     amount: Optional[int]
 
@@ -169,29 +169,29 @@ def line_amount(quantity: Decimal, unit_price: Decimal) -> int:
 
 def build_expected(
     stored: List[StoredEvent],
-    metrics: List[MetricMeta],
+    billable_metrics: List[BillableMetricMeta],
     month: str,
     customer_ids: List[str],
 ) -> ExpectedMonth:
     sums_by_metric = {
-        metric.code: sum_quantities(stored, month, metric.event_type, metric.target_property)
-        for metric in metrics
+        billable_metric.code: sum_quantities(stored, month, billable_metric.event_type, billable_metric.target_property)
+        for billable_metric in billable_metrics
     }
     customers: Dict[str, ExpectedCustomer] = {}
     total_amount: Optional[int] = 0
     for customer_id in customer_ids:
         lines = []
         customer_amount: Optional[int] = 0
-        for metric in metrics:
-            quantity = sums_by_metric[metric.code].get(customer_id, Decimal("0"))
-            if metric.unit_price is None:
+        for billable_metric in billable_metrics:
+            quantity = sums_by_metric[billable_metric.code].get(customer_id, Decimal("0"))
+            if billable_metric.unit_price is None:
                 amount = None
                 customer_amount = None
             else:
-                amount = line_amount(quantity, metric.unit_price)
+                amount = line_amount(quantity, billable_metric.unit_price)
                 if customer_amount is not None:
                     customer_amount += amount
-            lines.append(ExpectedLine(metric_code=metric.code, quantity=quantity, amount=amount))
+            lines.append(ExpectedLine(billable_metric_code=billable_metric.code, quantity=quantity, amount=amount))
         customers[customer_id] = ExpectedCustomer(
             customer_id=customer_id, lines=lines, amount=customer_amount
         )

@@ -28,18 +28,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DraftInvoiceServiceTest {
 
-  private static final UUID ORG_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
 
   @Mock private BillableMetricUsageService billableMetricUsageService;
   @Mock private CustomerRepository customerRepository;
   @Mock private PriceRateRepository priceRateRepository;
 
-  private DraftInvoiceService service;
+  private DraftInvoiceService draftInvoiceService;
 
   @BeforeEach
   void setUp() {
-    service =
+    draftInvoiceService =
         new DraftInvoiceService(
             billableMetricUsageService, customerRepository, priceRateRepository);
   }
@@ -47,14 +47,14 @@ class DraftInvoiceServiceTest {
   @Test
   void 금액은_사용량_곱하기_단가다() {
     Customer acme = customer("아크메");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3290")));
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.month()).isEqualTo("2026-08");
     assertThat(response.calculatedAt()).isNotNull();
@@ -75,14 +75,14 @@ class DraftInvoiceServiceTest {
   @Test
   void 원_미만은_버린다() {
     Customer acme = customer("아크메");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3291")));
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.customers().getFirst().amount()).isEqualTo(1645);
   }
@@ -90,20 +90,20 @@ class DraftInvoiceServiceTest {
   @Test
   void 절사는_라인별로_하고_합산한다() {
     Customer acme = customer("아크메");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3291"),
                 usage(billableMetric("api-request-count", "count"), acme, "5")));
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(
             Map.of(
                 "token-usage", new BigDecimal("0.5"),
                 "api-request-count", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     DraftInvoiceCustomer draftInvoiceCustomer = response.customers().getFirst();
     assertThat(draftInvoiceCustomer.lines())
@@ -117,9 +117,9 @@ class DraftInvoiceServiceTest {
   void 이벤트가_없는_고객은_사용량_0_금액_0이다() {
     Customer acme = customer("아크메");
     Customer beta = customer("베타");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme, beta));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(
             List.of(
                 new BillableMetricUsage(
@@ -127,10 +127,11 @@ class DraftInvoiceServiceTest {
                     List.of(
                         new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500")),
                         new CustomerUsage(beta.getId(), "베타", BigDecimal.ZERO)))));
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    List<DraftInvoiceCustomer> draftInvoiceCustomers = service.preview(ORG_ID, AUGUST).customers();
+    List<DraftInvoiceCustomer> draftInvoiceCustomers =
+        draftInvoiceService.preview(ORGANIZATION_ID, AUGUST).customers();
 
     DraftInvoiceCustomer betaDraftInvoiceCustomer = draftInvoiceCustomers.get(1);
     assertThat(betaDraftInvoiceCustomer.amount()).isZero();
@@ -144,12 +145,13 @@ class DraftInvoiceServiceTest {
   void 미터가_없는_도입사도_고객이_전부_나온다() {
     Customer acme = customer("아크메");
     Customer beta = customer("베타");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme, beta));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST)).thenReturn(List.of());
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID)).thenReturn(Map.of());
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST)).thenReturn(List.of());
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
+        .thenReturn(Map.of());
 
-    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.totalAmount()).isZero();
     assertThat(response.customers())
@@ -166,17 +168,17 @@ class DraftInvoiceServiceTest {
   @Test
   void 단가가_없는_미터는_라인에서_빠진다() {
     Customer acme = customer("아크메");
-    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORG_ID))
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORG_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3290"),
                 usage(billableMetric("api-calls", "count"), acme, "3")));
-    when(priceRateRepository.findBaseUnitPrices(ORG_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = service.preview(ORG_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.customers().getFirst().lines())
         .singleElement()
@@ -187,11 +189,12 @@ class DraftInvoiceServiceTest {
   }
 
   private static Customer customer(String name) {
-    return new Customer(UUID.randomUUID(), ORG_ID, name);
+    return new Customer(UUID.randomUUID(), ORGANIZATION_ID, name);
   }
 
   private static BillableMetric billableMetric(String code, String targetProperty) {
-    return new BillableMetric(ORG_ID, code, code + " 미터", "chat_completion", "SUM", targetProperty);
+    return new BillableMetric(
+        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty);
   }
 
   private static BillableMetricUsage usage(
