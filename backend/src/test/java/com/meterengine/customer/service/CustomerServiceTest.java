@@ -26,7 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
 
-  private static final UUID ORG_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
 
   @Mock private CustomerRepository customerRepository;
@@ -44,7 +44,7 @@ class CustomerServiceTest {
     when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any()))
         .thenThrow(new DataIntegrityViolationException("customer_organization_fk"));
 
-    assertThatThrownBy(() -> customerService.create(ORG_ID, "아크메"))
+    assertThatThrownBy(() -> customerService.create(ORGANIZATION_ID, "아크메"))
         .isInstanceOf(InvalidRequestException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
@@ -52,11 +52,11 @@ class CustomerServiceTest {
 
   @Test
   void 이벤트가_있으면_지우지_않고_409_예외다() {
-    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
-    when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(true);
+    when(eventRepository.existsForCustomer(ORGANIZATION_ID, CUSTOMER_ID)).thenReturn(true);
 
-    assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
@@ -66,14 +66,14 @@ class CustomerServiceTest {
 
   @Test
   void 확인_뒤에_DB가_거절하면_같은_409_예외로_바뀐다() {
-    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
-    when(eventRepository.existsForCustomer(ORG_ID, CUSTOMER_ID)).thenReturn(false);
-    doThrow(new DataIntegrityViolationException("event_customer_same_org"))
+    when(eventRepository.existsForCustomer(ORGANIZATION_ID, CUSTOMER_ID)).thenReturn(false);
+    doThrow(new DataIntegrityViolationException("event_customer_same_organization_fk"))
         .when(customerRepository)
         .flush();
 
-    assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
@@ -81,18 +81,18 @@ class CustomerServiceTest {
 
   @Test
   void 없는_고객을_지우면_404_예외다() {
-    when(customerRepository.findByOrganizationIdAndId(ORG_ID, CUSTOMER_ID))
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> customerService.delete(ORG_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
         .isInstanceOf(NotFoundException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND);
 
-    verify(eventRepository, never()).existsForCustomer(ORG_ID, CUSTOMER_ID);
+    verify(eventRepository, never()).existsForCustomer(ORGANIZATION_ID, CUSTOMER_ID);
   }
 
   private Customer customer() {
-    return new Customer(CUSTOMER_ID, ORG_ID, "아크메");
+    return new Customer(CUSTOMER_ID, ORGANIZATION_ID, "아크메");
   }
 }

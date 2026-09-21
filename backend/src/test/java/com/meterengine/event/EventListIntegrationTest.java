@@ -34,7 +34,7 @@ class EventListIntegrationTest {
   private static final String AUGUST = "2026-08";
 
   @Autowired private WebApplicationContext webApplicationContext;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private JsonMapper jsonMapper;
 
   private MockMvcTester mvc;
@@ -50,23 +50,34 @@ class EventListIntegrationTest {
 
   @Test
   void 다른_도입사의_이벤트는_어떤_파라미터로도_나오지_않는다() {
-    UUID mine = insertOrganization("내 도입사");
-    UUID myCustomer = insertCustomer(mine, "아크메");
-    insertEvent(mine, "tx-mine", myCustomer, "chat_completion", 100, "2026-08-10T12:00:00+09:00");
-
-    UUID theirs = insertOrganization("남의 도입사");
-    UUID theirCustomer = insertCustomer(theirs, "베타");
+    UUID organizationId = insertOrganization("내 도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     insertEvent(
-        theirs, "tx-theirs", theirCustomer, "chat_completion", 999, "2026-08-10T12:00:00+09:00");
+        organizationId,
+        "tx-organizationId",
+        customerId,
+        "chat_completion",
+        100,
+        "2026-08-10T12:00:00+09:00");
 
-    assertThat(get(mine, "?month=" + AUGUST))
+    UUID otherOrganizationId = insertOrganization("남의 도입사");
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, "베타");
+    insertEvent(
+        otherOrganizationId,
+        "tx-otherOrganizationId",
+        otherCustomerId,
+        "chat_completion",
+        999,
+        "2026-08-10T12:00:00+09:00");
+
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.events[*].transaction_id")
         .asArray()
-        .containsExactly("tx-mine");
+        .containsExactly("tx-organizationId");
 
-    assertThat(get(mine, "?customer_id=" + theirCustomer))
+    assertThat(get(organizationId, "?customer_id=" + otherCustomerId))
         .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
@@ -80,15 +91,15 @@ class EventListIntegrationTest {
 
   @Test
   void occurred_at이_같아도_transaction_id로_순서가_고정된다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     String sameMoment = "2026-08-10T12:00:00+09:00";
-    insertEvent(orgId, "tx-a", customerId, "chat_completion", 1, sameMoment);
-    insertEvent(orgId, "tx-b", customerId, "chat_completion", 2, sameMoment);
-    insertEvent(orgId, "tx-c", customerId, "chat_completion", 3, sameMoment);
+    insertEvent(organizationId, "tx-a", customerId, "chat_completion", 1, sameMoment);
+    insertEvent(organizationId, "tx-b", customerId, "chat_completion", 2, sameMoment);
+    insertEvent(organizationId, "tx-c", customerId, "chat_completion", 3, sameMoment);
 
     for (int attempt = 0; attempt < 5; attempt++) {
-      assertThat(get(orgId, "?month=" + AUGUST))
+      assertThat(get(organizationId, "?month=" + AUGUST))
           .hasStatusOk()
           .bodyJson()
           .extractingPath("$.events[*].transaction_id")
@@ -99,30 +110,33 @@ class EventListIntegrationTest {
 
   @Test
   void 동점이_페이지_경계에_걸쳐도_중복도_누락도_없다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     String sameMoment = "2026-08-10T12:00:00+09:00";
     for (int i = 1; i <= 5; i++) {
-      insertEvent(orgId, "tx-%d".formatted(i), customerId, "chat_completion", i, sameMoment);
+      insertEvent(
+          organizationId, "tx-%d".formatted(i), customerId, "chat_completion", i, sameMoment);
     }
 
-    List<String> collected = new ArrayList<>();
+    List<String> collectedTransactionIds = new ArrayList<>();
     for (int page = 0; page < 3; page++) {
-      collected.addAll(
-          transactionIds(get(orgId, "?month=%s&page=%d&size=2".formatted(AUGUST, page))));
+      collectedTransactionIds.addAll(
+          transactionIds(get(organizationId, "?month=%s&page=%d&size=2".formatted(AUGUST, page))));
     }
 
-    assertThat(collected).containsExactly("tx-5", "tx-4", "tx-3", "tx-2", "tx-1");
+    assertThat(collectedTransactionIds).containsExactly("tx-5", "tx-4", "tx-3", "tx-2", "tx-1");
   }
 
   @Test
   void 최신_occurred_at이_먼저_나온다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-old", customerId, "chat_completion", 1, "2026-08-01T09:00:00+09:00");
-    insertEvent(orgId, "tx-new", customerId, "chat_completion", 2, "2026-08-20T09:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(
+        organizationId, "tx-old", customerId, "chat_completion", 1, "2026-08-01T09:00:00+09:00");
+    insertEvent(
+        organizationId, "tx-new", customerId, "chat_completion", 2, "2026-08-20T09:00:00+09:00");
 
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.events[*].transaction_id")
@@ -136,11 +150,11 @@ class EventListIntegrationTest {
 
   @Test
   void 전체를_size로_나눠_끝까지_받아_합치면_중복도_누락도_없다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     for (int i = 1; i <= 5; i++) {
       insertEvent(
-          orgId,
+          organizationId,
           "tx-%d".formatted(i),
           customerId,
           "chat_completion",
@@ -148,37 +162,39 @@ class EventListIntegrationTest {
           "2026-08-%02dT12:00:00+09:00".formatted(i));
     }
 
-    List<String> collected = new ArrayList<>();
+    List<String> collectedTransactionIds = new ArrayList<>();
     for (int page = 0; page < 3; page++) {
-      MvcTestResult result = get(orgId, "?month=%s&page=%d&size=2".formatted(AUGUST, page));
+      MvcTestResult result =
+          get(organizationId, "?month=%s&page=%d&size=2".formatted(AUGUST, page));
       assertThat(result).hasStatusOk().bodyJson().extractingPath("$.total").isEqualTo(5);
-      collected.addAll(transactionIds(result));
+      collectedTransactionIds.addAll(transactionIds(result));
     }
 
-    assertThat(collected).containsExactly("tx-5", "tx-4", "tx-3", "tx-2", "tx-1");
+    assertThat(collectedTransactionIds).containsExactly("tx-5", "tx-4", "tx-3", "tx-2", "tx-1");
   }
 
   @Test
   void 범위를_넘는_page는_오류가_아니라_빈_목록이다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(
+        organizationId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
-    MvcTestResult result = get(orgId, "?month=%s&page=999".formatted(AUGUST));
+    MvcTestResult result = get(organizationId, "?month=%s&page=999".formatted(AUGUST));
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.events").asArray().isEmpty();
     assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(1);
   }
 
   @Test
   void page와_size를_생략하면_0번_페이지_20줄이다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.page")
         .isEqualTo(0);
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.size")
@@ -191,42 +207,47 @@ class EventListIntegrationTest {
 
   @Test
   void 세_필터가_각각_걸리고_함께_주면_AND다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID acme = insertCustomer(orgId, "아크메");
-    UUID beta = insertCustomer(orgId, "베타");
-    insertEvent(orgId, "tx-acme-chat", acme, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-acme-embed", acme, "embedding", 2, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-beta-chat", beta, "chat_completion", 3, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-acme-july", acme, "chat_completion", 4, "2026-07-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(
+        organizationId, "tx-acme-chat", acme, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-acme-embed", acme, "embedding", 2, "2026-08-10T12:00:00+09:00");
+    insertEvent(
+        organizationId, "tx-beta-chat", beta, "chat_completion", 3, "2026-08-10T12:00:00+09:00");
+    insertEvent(
+        organizationId, "tx-acme-july", acme, "chat_completion", 4, "2026-07-10T12:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, acme))))
+    assertThat(
+            transactionIds(get(organizationId, "?month=%s&customer_id=%s".formatted(AUGUST, acme))))
         .containsExactlyInAnyOrder("tx-acme-chat", "tx-acme-embed");
-    assertThat(transactionIds(get(orgId, "?month=%s&type=embedding".formatted(AUGUST))))
+    assertThat(transactionIds(get(organizationId, "?month=%s&type=embedding".formatted(AUGUST))))
         .containsExactly("tx-acme-embed");
-    assertThat(transactionIds(get(orgId, "?month=2026-07"))).containsExactly("tx-acme-july");
+    assertThat(transactionIds(get(organizationId, "?month=2026-07")))
+        .containsExactly("tx-acme-july");
 
     assertThat(
             transactionIds(
                 get(
-                    orgId,
+                    organizationId,
                     "?month=%s&customer_id=%s&type=chat_completion".formatted(AUGUST, acme))))
         .containsExactly("tx-acme-chat");
   }
 
   @Test
   void total은_필터를_적용한_뒤의_건수다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID acme = insertCustomer(orgId, "아크메");
-    UUID beta = insertCustomer(orgId, "베타");
-    insertEvent(orgId, "tx-1", acme, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
-    insertEvent(orgId, "tx-2", beta, "chat_completion", 2, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, "chat_completion", 2, "2026-08-10T12:00:00+09:00");
 
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.total")
         .isEqualTo(2);
-    assertThat(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, acme)))
+    assertThat(get(organizationId, "?month=%s&customer_id=%s".formatted(AUGUST, acme)))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.total")
@@ -235,11 +256,11 @@ class EventListIntegrationTest {
 
   @Test
   void 미터에_없는_type도_저장돼_있으면_그대로_조회된다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-unknown", customerId, "정체불명", 1, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-unknown", customerId, "정체불명", 1, "2026-08-10T12:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=%s&type=%s".formatted(AUGUST, "정체불명"))))
+    assertThat(transactionIds(get(organizationId, "?month=%s&type=%s".formatted(AUGUST, "정체불명"))))
         .containsExactly("tx-unknown");
   }
 
@@ -249,30 +270,32 @@ class EventListIntegrationTest {
 
   @Test
   void 팔월_마지막_순간은_팔월이고_구월_첫_순간은_구월이다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-aug", customerId, "chat_completion", 1, "2026-08-31T23:59:59+09:00");
-    insertEvent(orgId, "tx-sep", customerId, "chat_completion", 2, "2026-09-01T00:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(
+        organizationId, "tx-aug", customerId, "chat_completion", 1, "2026-08-31T23:59:59+09:00");
+    insertEvent(
+        organizationId, "tx-sep", customerId, "chat_completion", 2, "2026-09-01T00:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=" + AUGUST))).containsExactly("tx-aug");
-    assertThat(transactionIds(get(orgId, "?month=2026-09"))).containsExactly("tx-sep");
+    assertThat(transactionIds(get(organizationId, "?month=" + AUGUST))).containsExactly("tx-aug");
+    assertThat(transactionIds(get(organizationId, "?month=2026-09"))).containsExactly("tx-sep");
   }
 
   @Test
   void 같은_순간을_UTC로_보낸_이벤트도_같은_달에_귀속된다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-utc", customerId, "chat_completion", 1, "2026-08-31T14:59:59Z");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-utc", customerId, "chat_completion", 1, "2026-08-31T14:59:59Z");
 
-    assertThat(transactionIds(get(orgId, "?month=" + AUGUST))).containsExactly("tx-utc");
+    assertThat(transactionIds(get(organizationId, "?month=" + AUGUST))).containsExactly("tx-utc");
   }
 
   @Test
   void month를_생략하면_이번_달이고_응답이_어느_달인지_알려준다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
     String thisMonth = BillableMetricUsageService.currentMonth().toString();
 
-    assertThat(get(orgId, ""))
+    assertThat(get(organizationId, ""))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.month")
@@ -285,13 +308,15 @@ class EventListIntegrationTest {
 
   @Test
   void 로그의_숫자형_token_합이_사용량_집계_값과_같다() {
-    UUID orgId = insertOrganization("도입사");
-    insertTokenMetric(orgId);
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", customerId, "chat_completion", 300, "2026-08-05T10:00:00+09:00");
-    insertEvent(orgId, "tx-2", customerId, "chat_completion", 200, "2026-08-20T10:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    insertTokenBillableMetric(organizationId);
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(
+        organizationId, "tx-1", customerId, "chat_completion", 300, "2026-08-05T10:00:00+09:00");
+    insertEvent(
+        organizationId, "tx-2", customerId, "chat_completion", 200, "2026-08-20T10:00:00+09:00");
     insertEventWithProperties(
-        orgId,
+        organizationId,
         "tx-text",
         customerId,
         "chat_completion",
@@ -299,8 +324,9 @@ class EventListIntegrationTest {
         "2026-08-21T10:00:00+09:00");
 
     assertThat(
-            numericTokenSum(get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, customerId))))
-        .isEqualByComparingTo(aggregatedQuantity(orgId, customerId));
+            numericTokenSum(
+                get(organizationId, "?month=%s&customer_id=%s".formatted(AUGUST, customerId))))
+        .isEqualByComparingTo(aggregatedQuantity(organizationId, customerId));
   }
 
   // ---------------------------------------------------------------------------
@@ -309,10 +335,10 @@ class EventListIntegrationTest {
 
   @Test
   void 이벤트가_0건인_등록_고객은_200_빈_목록이다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID quiet = insertCustomer(orgId, "조용한 고객");
+    UUID organizationId = insertOrganization("도입사");
+    UUID quiet = insertCustomer(organizationId, "조용한 고객");
 
-    MvcTestResult result = get(orgId, "?month=%s&customer_id=%s".formatted(AUGUST, quiet));
+    MvcTestResult result = get(organizationId, "?month=%s&customer_id=%s".formatted(AUGUST, quiet));
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.total").isEqualTo(0);
     assertThat(result).bodyJson().extractingPath("$.events").asArray().isEmpty();
@@ -320,9 +346,9 @@ class EventListIntegrationTest {
 
   @Test
   void 미등록_고객으로_필터하면_404이고_code가_customer_not_found다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?customer_id=" + UUID.randomUUID()))
+    assertThat(get(organizationId, "?customer_id=" + UUID.randomUUID()))
         .hasStatus(404)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
@@ -337,15 +363,15 @@ class EventListIntegrationTest {
 
   @Test
   void size가_범위_밖이면_500이_아니라_400이다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?size=101"))
+    assertThat(get(organizationId, "?size=101"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
-    assertThat(get(orgId, "?size=0"))
+    assertThat(get(organizationId, "?size=0"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
@@ -355,11 +381,11 @@ class EventListIntegrationTest {
 
   @Test
   void 허용_경계인_size_1과_100은_통과한다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?size=1")).hasStatusOk();
-    assertThat(get(orgId, "?size=100")).hasStatusOk();
-    assertThat(get(orgId, "?page=0")).hasStatusOk();
+    assertThat(get(organizationId, "?size=1")).hasStatusOk();
+    assertThat(get(organizationId, "?size=100")).hasStatusOk();
+    assertThat(get(organizationId, "?page=0")).hasStatusOk();
   }
 
   @Test
@@ -374,19 +400,20 @@ class EventListIntegrationTest {
 
   @Test
   void type을_빈_값으로_보내면_필터가_걸리지_않는다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
-    insertEvent(orgId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    insertEvent(
+        organizationId, "tx-1", customerId, "chat_completion", 1, "2026-08-10T12:00:00+09:00");
 
-    assertThat(transactionIds(get(orgId, "?month=%s&type=".formatted(AUGUST))))
+    assertThat(transactionIds(get(organizationId, "?month=%s&type=".formatted(AUGUST))))
         .containsExactly("tx-1");
   }
 
   @Test
   void 음수_page는_500이_아니라_400이다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?page=-1"))
+    assertThat(get(organizationId, "?page=-1"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
@@ -396,15 +423,15 @@ class EventListIntegrationTest {
 
   @Test
   void UUID가_아닌_customerId와_형식이_틀린_month도_code가_붙는다() {
-    UUID orgId = insertOrganization("도입사");
+    UUID organizationId = insertOrganization("도입사");
 
-    assertThat(get(orgId, "?customer_id=abc"))
+    assertThat(get(organizationId, "?customer_id=abc"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
-    assertThat(get(orgId, "?month=2026-13"))
+    assertThat(get(organizationId, "?month=2026-13"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.code")
@@ -418,11 +445,12 @@ class EventListIntegrationTest {
 
   @Test
   void 응답에_고객_이름이_함께_실린다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메 주식회사");
-    insertEvent(orgId, "tx-1", customerId, "chat_completion", 100, "2026-08-10T12:00:00+09:00");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메 주식회사");
+    insertEvent(
+        organizationId, "tx-1", customerId, "chat_completion", 100, "2026-08-10T12:00:00+09:00");
 
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.events[0].customer_name")
@@ -432,34 +460,34 @@ class EventListIntegrationTest {
 
   @Test
   void properties는_소수_스무자리도_자릿수가_그대로_돌아온다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     insertEventWithProperties(
-        orgId,
+        organizationId,
         "tx-1",
         customerId,
         "chat_completion",
         "{\"cost\": 0.1234567890123456789}",
         "2026-08-10T12:00:00+09:00");
 
-    MvcTestResult result = get(orgId, "?month=" + AUGUST);
+    MvcTestResult result = get(organizationId, "?month=" + AUGUST);
     assertThat(result).hasStatusOk();
     assertThat(bodyText(result)).contains("0.1234567890123456789");
   }
 
   @Test
   void properties는_키를_가리지_않고_원문_그대로_나간다() {
-    UUID orgId = insertOrganization("도입사");
-    UUID customerId = insertCustomer(orgId, "아크메");
+    UUID organizationId = insertOrganization("도입사");
+    UUID customerId = insertCustomer(organizationId, "아크메");
     insertEventWithProperties(
-        orgId,
+        organizationId,
         "tx-1",
         customerId,
         "chat_completion",
         "{\"model\": \"gpt-4o\", \"token\": 2040, \"cached\": true}",
         "2026-08-10T12:00:00+09:00");
 
-    assertThat(get(orgId, "?month=" + AUGUST))
+    assertThat(get(organizationId, "?month=" + AUGUST))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.events[0].properties")
@@ -518,12 +546,12 @@ class EventListIntegrationTest {
     throw new IllegalStateException("집계 응답에 고객이 없다: " + customerId);
   }
 
-  private void insertTokenMetric(UUID organizationId) {
-    jdbc.update(
+  private void insertTokenBillableMetric(UUID organizationId) {
+    jdbcTemplate.update(
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
         organizationId);
   }
@@ -537,12 +565,12 @@ class EventListIntegrationTest {
   }
 
   private UUID insertOrganization(String name) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES (?) RETURNING id", UUID.class, name);
   }
 
   private UUID insertCustomer(UUID organizationId, String name) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, ?) RETURNING id",
         UUID.class,
         organizationId,
@@ -572,7 +600,7 @@ class EventListIntegrationTest {
       String eventType,
       String propertiesJson,
       String occurredAt) {
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)

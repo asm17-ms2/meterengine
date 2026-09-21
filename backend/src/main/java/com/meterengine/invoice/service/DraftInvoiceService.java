@@ -43,21 +43,24 @@ public class DraftInvoiceService {
     List<Customer> organizationCustomers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
 
-    Map<String, BigDecimal> baseUnitPrices = priceRateRepository.findBaseUnitPrices(organizationId);
+    Map<String, BigDecimal> baseUnitPriceByBillableMetricCode =
+        priceRateRepository.findBaseUnitPriceByBillableMetricCode(organizationId);
 
     List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers =
         billableMetricUsageService.aggregate(organizationId, month).stream()
             .filter(
                 billableMetricUsage ->
-                    baseUnitPrices.containsKey(billableMetricUsage.billableMetric().getCode()))
+                    baseUnitPriceByBillableMetricCode.containsKey(
+                        billableMetricUsage.billableMetric().getCode()))
             .map(
                 billableMetricUsage ->
-                    BillableMetricQuantitiesByCustomer.from(billableMetricUsage, baseUnitPrices))
+                    BillableMetricQuantitiesByCustomer.of(
+                        billableMetricUsage, baseUnitPriceByBillableMetricCode))
             .toList();
 
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
         organizationCustomers.stream()
-            .map(customer -> draftInvoiceCustomer(customer, billableMetricQuantitiesByCustomers))
+            .map(customer -> toDraftInvoiceCustomer(customer, billableMetricQuantitiesByCustomers))
             .toList();
 
     long totalAmount =
@@ -69,7 +72,7 @@ public class DraftInvoiceService {
         month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
   }
 
-  private static DraftInvoiceCustomer draftInvoiceCustomer(
+  private static DraftInvoiceCustomer toDraftInvoiceCustomer(
       Customer customer,
       List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers) {
     List<DraftInvoiceLine> draftInvoiceLines =
@@ -90,14 +93,15 @@ public class DraftInvoiceService {
       BigDecimal unitPrice,
       Map<UUID, BigDecimal> quantityByCustomerId) {
 
-    static BillableMetricQuantitiesByCustomer from(
-        BillableMetricUsage billableMetricUsage, Map<String, BigDecimal> baseUnitPrices) {
+    static BillableMetricQuantitiesByCustomer of(
+        BillableMetricUsage billableMetricUsage,
+        Map<String, BigDecimal> baseUnitPriceByBillableMetricCode) {
       String billableMetricCode = billableMetricUsage.billableMetric().getCode();
 
       return new BillableMetricQuantitiesByCustomer(
           billableMetricCode,
           billableMetricUsage.billableMetric().getTargetProperty(),
-          baseUnitPrices.get(billableMetricCode),
+          baseUnitPriceByBillableMetricCode.get(billableMetricCode),
           billableMetricUsage.customers().stream()
               .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
     }
