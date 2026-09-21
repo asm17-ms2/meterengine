@@ -12,16 +12,27 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.MatrixVariable;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 
 @Import({
   TestcontainersConfiguration.class,
-  GlobalExceptionHandlerIntegrationTest.ThrowingController.class
+  GlobalExceptionHandlerIntegrationTest.ThrowingController.class,
+  GlobalExceptionHandlerIntegrationTest.BindingController.class
 })
 @SpringBootTest
 @Transactional
@@ -372,6 +383,85 @@ class GlobalExceptionHandlerIntegrationTest {
         .exchange();
   }
 
+  @Test
+  void 누락된_필수_쿼리_파라미터의_field가_파라미터_이름이다() {
+    assertFields(mvc.get().uri(BindingController.PARAMETER_PATH).exchange(), "required_parameter");
+  }
+
+  @Test
+  void 누락된_멀티파트_파트의_field가_파트_이름이다() {
+    MvcTestResult result =
+        mvc.post()
+            .uri(BindingController.PART_PATH)
+            .multipart()
+            .file(new MockMultipartFile("other", new byte[] {1}))
+            .exchange();
+
+    assertFields(result, "file");
+  }
+
+  @Test
+  void 누락된_필수_쿠키의_field가_쿠키_이름이다() {
+    assertFields(mvc.get().uri(BindingController.COOKIE_PATH).exchange(), "session");
+  }
+
+  @Test
+  void 누락된_매트릭스_변수의_field가_변수_이름이다() {
+    assertFields(mvc.get().uri(BindingController.MATRIX_PATH, "42").exchange(), "kind");
+  }
+
+  @Test
+  void 만족되지_않은_params_조건의_field가_파라미터_이름이다() {
+    assertFields(mvc.get().uri(BindingController.CONDITION_PATH).exchange(), "type");
+  }
+
+  @Test
+  void 바인딩_누락은_모두_400이고_code가_validation_error다() {
+    for (MvcTestResult result :
+        new MvcTestResult[] {
+          mvc.get().uri(BindingController.PARAMETER_PATH).exchange(),
+          mvc.get().uri(BindingController.COOKIE_PATH).exchange(),
+          mvc.get().uri(BindingController.MATRIX_PATH, "42").exchange(),
+          mvc.get().uri(BindingController.CONDITION_PATH).exchange(),
+        }) {
+      assertCode(result, 400, ErrorCode.VALIDATION_ERROR.getCode());
+    }
+  }
+
+  @Test
+  void 업로드_상한_초과는_413이고_code가_upload_size_exceeded다() {
+    assertCode(
+        mvc.get().uri(ThrowingController.UPLOAD_PATH).exchange(),
+        413,
+        ErrorCode.UPLOAD_SIZE_EXCEEDED.getCode());
+  }
+
+  @Test
+  void 비동기_시간_초과는_503이고_code가_request_timed_out다() {
+    assertCode(
+        mvc.get().uri(ThrowingController.TIMEOUT_PATH).exchange(),
+        503,
+        ErrorCode.REQUEST_TIMED_OUT.getCode());
+  }
+
+  @Test
+  void 새_상태의_오류도_code와_message만_싣고_errors가_없다() {
+    for (MvcTestResult result :
+        new MvcTestResult[] {
+          mvc.get().uri(ThrowingController.UPLOAD_PATH).exchange(),
+          mvc.get().uri(ThrowingController.TIMEOUT_PATH).exchange(),
+        }) {
+      assertThat(result).hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON);
+      assertThat(result)
+          .bodyJson()
+          .extractingPath("$")
+          .asMap()
+          .containsKey("code")
+          .containsKey("message")
+          .doesNotContainKeys("errors", "type", "title", "status", "detail", "instance");
+    }
+  }
+
   private void assertMessages(MvcTestResult result, String... messages) {
     assertThat(result).hasStatus(400);
     assertThat(result)
@@ -399,11 +489,50 @@ class GlobalExceptionHandlerIntegrationTest {
   static class ThrowingController {
 
     static final String PATH = "/test/throw";
+    static final String UPLOAD_PATH = "/test/throw/upload";
+    static final String TIMEOUT_PATH = "/test/throw/timeout";
     static final String CAUSE = "thrown on purpose by the test";
+
+    private static final long MAX_UPLOAD_SIZE = 1024;
 
     @GetMapping(PATH)
     void throwUnknown() {
       throw new IllegalStateException(CAUSE);
     }
+
+    @GetMapping(UPLOAD_PATH)
+    void throwUploadSizeExceeded() {
+      throw new MaxUploadSizeExceededException(MAX_UPLOAD_SIZE);
+    }
+
+    @GetMapping(TIMEOUT_PATH)
+    void throwAsyncRequestTimeout() {
+      throw new AsyncRequestTimeoutException();
+    }
+  }
+
+  @RestController
+  static class BindingController {
+
+    static final String PARAMETER_PATH = "/test/binding/parameter";
+    static final String PART_PATH = "/test/binding/part";
+    static final String COOKIE_PATH = "/test/binding/cookie";
+    static final String MATRIX_PATH = "/test/binding/matrix/{id}";
+    static final String CONDITION_PATH = "/test/binding/condition";
+
+    @GetMapping(PARAMETER_PATH)
+    void requireParameter(@RequestParam("required_parameter") String requiredParameter) {}
+
+    @PostMapping(PART_PATH)
+    void requirePart(@RequestPart MultipartFile file) {}
+
+    @GetMapping(COOKIE_PATH)
+    void requireCookie(@CookieValue String session) {}
+
+    @GetMapping(MATRIX_PATH)
+    void requireMatrixVariable(@PathVariable String id, @MatrixVariable String kind) {}
+
+    @GetMapping(path = CONDITION_PATH, params = "type=create")
+    void requireCondition() {}
   }
 }

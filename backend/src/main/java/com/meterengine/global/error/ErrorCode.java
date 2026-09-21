@@ -29,11 +29,17 @@ public enum ErrorCode {
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   PRICE_POLICY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 미터에는 가격 정책이 이미 있습니다"),
 
+  // 413 Content Too Large
+  UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),
+
   // 415 Unsupported Media Type
   REQUEST_TYPE_NOT_SUPPORTED(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 Content-Type입니다"),
 
   // 500 Internal Server Error
-  INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다");
+  INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다"),
+
+  // 503 Service Unavailable
+  REQUEST_TIMED_OUT(HttpStatus.SERVICE_UNAVAILABLE, "요청 처리 시간이 초과되었습니다");
 
   private final HttpStatus status;
   private final String code;
