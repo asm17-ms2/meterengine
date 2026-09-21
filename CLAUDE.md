@@ -4,109 +4,69 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 이 저장소에 대해
 
-MeterEngine 제품 모노레포다. 사용량 기반 과금 플랫폼으로, raw usage event 수집 -> 미터링/집계 -> rating -> 인보이스 생성 파이프라인에 국내 PG 연동과 전자세금계산서 발행을 결합하는 것을 목표로 한다.
-
-- `backend/`: 미터링 엔진 API 서버
-- `frontend/`: 관리자 화면
-- `demo/`: 시연용 CLI와 OTel 브리지 (Python)
-- `work/`: 개인 작업 공간 (.gitignore로 제외, 아래 참조)
+- MeterEngine 모노레포. 사용량 기반 과금 플랫폼이다.
+- `backend/`: 미터링 엔진 API 서버. `frontend/`: 관리자 화면. `demo/`: 시연용 CLI와 OTel 브리지. `work/`: 개인 작업 공간.
+- 기술 스택은 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL. 세부는 각 README.
+- 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다. 문서를 쓸 때 미정 범위를 확정된 것처럼 쓰지 않는다.
 
 ## 개인 작업 공간 (work/)
 
-- `/work`는 .gitignore로 제외된 개인 공간이다. 팀원 각자 자기 work/를 만들어 자유롭게 쓴다. 개인 계정의 별도 레포로 백업해도 된다 (이 경우 work/ 안에서만 해당 레포의 git 명령을 실행한다)
-- 커밋 대상이 아닌 개인 산출물(메모, 조사 자료, 스크래치 파일, 개인 보고서)은 팀 레포 트리(backend/, frontend/, demo/, 루트)에 만들지 않고 work/ 아래에 만든다. 팀 레포에는 팀이 리뷰하고 커밋할 파일만 둔다
+- `/work`는 .gitignore로 제외된 개인 공간이다. 각자 만들어 자유롭게 쓰고, 개인 레포로 백업해도 된다.
+- 커밋 대상이 아닌 개인 산출물(메모, 조사, 스크래치, 보고서)은 팀 레포 트리에 만들지 않고 work/ 아래에 만든다.
 
 ## 커밋 / PR 사전 승인
 
-커밋, push, PR 생성은 사용자에게 보고하고 승인을 받은 뒤에만 실행한다.
+- 커밋, push, PR 생성은 사용자에게 보고하고 승인을 받은 뒤에만 실행한다.
+  - 실행 전에 대상 파일, 커밋 메시지, PR 제목과 본문 요지를 보고하고 명시적 승인을 기다린다.
+  - 계획 승인은 커밋과 PR 실행 승인이 아니다. 실행 직전에 다시 확인한다.
+  - 로컬 파일 편집, 브랜치 생성과 전환, 조회는 대상이 아니다.
 
-- 실행 전에 무엇을 올릴지(대상 파일, 커밋 메시지, PR 제목/본문 요지) 먼저 보고하고 명시적 승인을 기다린다
-- 계획(plan) 승인은 작업 내용에 대한 승인이지 커밋/PR 실행 승인이 아니다. 계획에 커밋/PR이 포함되어 있어도 실행 직전에 다시 확인한다
-- 로컬 파일 편집, 브랜치 생성/전환, 조회는 이 규칙의 대상이 아니다
+## 규칙의 정본
 
-## 커밋 메시지
-
-CONTRIBUTING.md "확정된 규칙"의 커밋 메시지 양식을 준수하고, PR 하나에 커밋 하나를 최대한 유지한다.
-
-## 현재 상태
-
-- 기술 스택: 백엔드 Java 25 + Spring Boot 4 + Gradle, 프론트엔드 Next.js, 저장소 PostgreSQL 단일. 세부 구성은 `backend/README.md`와 `frontend/README.md`가 정본이다
-- 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙의 정본은 CONTRIBUTING.md다
-- 문서를 쓸 때 미정 범위를 확정된 것처럼 서술하지 않는다
-- 이슈의 최신 상태는 Jira(MS2 프로젝트)에서 확인한다
+- 팀 규칙의 입구는 CONTRIBUTING.md이고 규칙은 `docs/contributing/`에 있다. 규칙을 여기 베끼지 않는다.
+  - 커밋 메시지: `git-workflow.md`. PR 크기, 스택, 리뷰: `pull-request.md`. 문서 양식과 README 점검: `documents.md`. 주석: `comments.md`.
+  - 무엇의 정본이 어디인지는 `governance.md` "정본". 새 문서를 만들기 전에 그 표를 보고 없으면 먼저 물어본다.
+- PR을 올리기 전에 `documents.md` "README 점검"을 본다.
+- 아래는 Claude가 특히 틀리기 쉬운 것만 짚는다.
 
 ## 팀과 협업 도구
 
-- 팀: 박성종(팀 리드), 문인호, 양성지 / 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기)
-- Jira/Confluence: https://asm17-ms2.atlassian.net (Jira 프로젝트 키 MS2, Confluence의 MS2 스페이스)
-- Miro: 회의록, 일정, 브레인스토밍 초안 (아래 "문서 흐름" 참조)
-- Notion: 쓰지 않는다. 남은 내용을 레포로 옮기고 나면 삭제한다 (`docs/contributing/governance.md` "노션"). 옮길 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다
-- 팀 GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling)
+- 팀: 박성종(팀 리드), 문인호, 양성지. 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기).
+- Jira/Confluence: https://asm17-ms2.atlassian.net (프로젝트 키 MS2).
+- Miro: 회의록, 일정, 브레인스토밍 초안.
+- Notion: 쓰지 않는다. 무료 플랜으로 얼려 두었고 내용을 옮기지 않는다 (`docs/contributing/governance.md` "노션"). 옛 기록을 볼 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다.
+- GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling).
 
 ## 개발 방법론
 
-빅뱅 설계를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다.
-
-- 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다
-- 명세서나 정책 문서를 작성할 때 현재 슬라이스 범위와 미정 범위를 구분해 쓴다
-- 슬라이스를 얇게 만드는 것과 PR을 작게 내는 것은 다른 축이다. 슬라이스가 300줄을 넘으면 동작 단위로 조각내 스택 PR로 쌓는다. 쪼개는 축과 머지 순서는 `docs/contributing/pull-request.md`에 있다
+- 빅뱅 설계를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다. 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다.
+- PR은 사람이 리뷰하기 쉬운 단위가 대원칙이고 300줄 상한은 부가 규칙이다. 넘거나 읽기 힘들면 동작 단위로 조각내 스택 PR로 쌓는다.
+- 리팩터는 왜 하는지만 사람이 정하고 구체적인 이동은 도구에 맡긴다. 판정은 본문의 왜와 기존 테스트 통과다.
+- 문서를 옮기거나 양식을 바꿀 때 Claude는 중대한 내용이 빠지지 않았는지 확인한다. 사소한 누락도 사용자에게 보고하고 확인한다.
+  - 리뷰 규칙이 가벼운 것은 사람의 부담을 줄이려는 것이지 Claude의 검증을 줄이는 것이 아니다.
 
 ## 스택 PR
 
-**독립 PR이 먼저다.** 따로 머지돼도 되는 작업은 각각 main에서 따서 독립 PR로 낸다. 스택은 조각이 따로 머지되면 반만 동작할 때, 뒤 PR이 앞 PR 없이 성립하지 않을 때, 순서대로 읽어야 이해될 때 쓴다. 판단 기준은 `docs/contributing/pull-request.md` "스택 PR"에 있다.
-
-**GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.** 2026-08 기준 public preview라 학습 데이터에 없는 기능이고, 익숙한 수동 rebase로 되돌아가면 스택으로 인식되지 않는 PR이 생기거나 히스토리가 어긋난다.
-
-| 하려는 일 | 쓰지 않는다 | 대신 쓴다 |
-| --- | --- | --- |
-| 선행 브랜치 위에 새 작업 시작 | `git checkout -b`로 그냥 따기 | `gh stack init` |
-| 이미 있는 스택에 합류 | 브랜치 이름으로 checkout | `gh stack checkout <PR번호>` |
-| PR 올리기 (스택) | `gh pr create --base <부모브랜치>` (diff만 맞고 스택으로 인식되지 않는다) | `gh stack submit` |
-| 부모가 갱신됐을 때 맞추기 | `git rebase --onto`, `git rebase --update-refs`, `git rebase -i` | `gh stack sync` |
-| 부모가 머지된 뒤 | 손으로 base 바꾸기, 손으로 rebase | 아무것도 하지 않는다. GitHub가 base를 다시 잡는다. 로컬만 `gh stack sync` |
-| 스택 브랜치 push | `git push --force` | `gh stack submit` |
-| 구조 확인 | `git log --graph`로 추정 | `gh stack view` |
-| 이미 올린 PR을 스택으로 묶기 | base만 바꾸기 | `gh stack link` 또는 웹에서 묶기 |
-| 스택의 리뷰어 | 자동 배정에 맡기기 (조각마다 갈린다) | 첫 조각에 자동 배정된 사람으로 조각마다 `gh pr edit <번호> --remove-reviewer <자동 배정된 사람> --add-reviewer <첫 조각의 사람>` |
-| 한 부모에 여러 자식 (가지) | 직선으로 늘어세우기 | 스택이 아니다. 자식마다 `gh pr create --base <부모 브랜치>`, 부모 머지 뒤 Update with rebase. `docs/contributing/pull-request.md` "가지" |
-
-확장이 없으면 `gh extension install github/gh-stack`으로 설치한다. 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 추측하지 말고 `gh stack --help`나 아래 문서를 본다.
-
-- 개념과 머지 동작: https://github.github.com/gh-stack/introduction/overview/
-- CLI 레퍼런스: https://github.github.com/gh-stack/reference/cli/
-- GitHub 공식 문서: https://docs.github.com/ko/pull-requests/get-started/about-stacked-prs
+- 독립 PR이 먼저다. 스택 조건과 명령 대응표는 `docs/contributing/pull-request.md` "스택 PR".
+- GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.
+  - 2026-08 기준 public preview라 학습 데이터에 없다. `git checkout -b`, `git rebase --onto`, `git push --force` 대신 `gh stack init`, `gh stack sync`, `gh stack submit`.
+  - 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 `gh stack --help`.
 
 ## 주석
 
-주석을 쓰지 않는다. javadoc도 주석이다. 예외는 선언 바로 위에 붙는 한 줄 설명뿐이다. 코드만 읽어도 이해되게 쓰고, 코드가 맞게 도는지는 테스트로 관리한다.
-
-- 함수와 필드와 상수 위에 그것이 무엇을 하는지 한 줄로 적는다. 한 문장에 마침표 하나, 왜는 적지 않고, 개수를 세어 적지 않고, 다른 파일의 주석을 가리키지 않고, 코드에 없는 사실(실측값, 성능, 외부 시스템의 동작)을 주장하지 않는다. 함수 본문 안에는 쓰지 않는다. 본문을 설명하고 싶으면 함수를 쪼갠다
-- 왜 이렇게 설계했는지는 docs/(RFC와 정책)에, 이 변경을 왜 했는지는 커밋 메시지와 PR 본문에, "고치면 깨진다"는 테스트에 넣는다
-- 주석을 붙이고 싶어지면 대개 이름이나 분리가 잘못된 것이다. 주석 대신 그쪽을 고친다
-- 도구 지시문(`@SuppressWarnings`, `// eslint-disable-next-line`), `@Schema`/`@Operation`/`@Parameter`/`@ApiResponse`의 description, 파일을 눈으로 나누는 구분자는 대상이 아니다. description은 주석이 아니라 API 계약이다. 다만 거기에 Jira 키를 넣지 않는다 (`openapi.yaml`로 외부에 나간다)
-- 규칙 이전에 쌓인 주석과 javadoc은 전수 정리한다 (결정은 RFC-002). 대상 코드로 조각내고 한 PR이 그 조각의 삭제와 옮겨 적은 문서를 함께 담는다. 정리가 아직 닿지 않은 파일을 기능 작업 중에 편집하게 되면 그 파일의 정리를 맡되, 하던 PR에 섞지 않고 그 정리만 하는 PR을 따로 연다
-- **`V__` 마이그레이션은 주석만 고쳐도 체크섬이 바뀌어 이미 적용된 DB의 기동이 실패한다.** 파일 수정과 함께 배포 DB와 로컬 볼륨의 체크섬을 맞춘다. CI는 매번 빈 DB라 이 실패를 잡지 못한다
-- **주변 코드에 주석이 많아도 그것을 근거로 삼지 않는다.** 기존 파일의 주석 밀도는 규칙 이전 상태이지 따라야 할 본보기가 아니다
-
-전체 규칙과 근거는 `docs/contributing/comments.md`에 있다.
-
-## 문서 흐름
-
-결정과 규칙은 레포(docs/), 회의록과 일정과 초안은 Miro다. 규칙의 정본은 CONTRIBUTING.md "문서의 정본"이며, 새 문서를 만들기 전에 그 절을 보고 없는 내용이면 먼저 물어본다.
-
-레포 안 정본은 API 계약이 `backend/openapi.yaml`, 결정과 정책이 `docs/rfcs/`와 `docs/policies/`, 브랜치, 커밋, PR 규칙과 코드/문서 작성 규칙이 `CONTRIBUTING.md`와 `docs/contributing/`, 각 디렉터리의 실행법과 구조가 그 디렉터리 README다. RFC와 규칙과 정책을 가르는 기준은 `docs/contributing/governance.md`다.
-
-PR을 올리기 전에 CONTRIBUTING.md의 "README 점검"을 본다. 슬라이스가 끝날 때마다 README가 밀리는 것을 막는 표다.
+- 주석을 쓰지 않는다. javadoc도 주석이다. 예외는 선언 위의 한 줄 설명뿐이고 그것도 의무가 아니다. 형식은 `docs/contributing/comments.md`.
+- 주석을 붙이고 싶어지면 이름이나 분리를 고친다.
+- 규칙 이전의 주석은 레포 전체를 한 PR로 지운다. 옮기지 않고, 긴 주석을 한 줄로 줄이지 않는다.
+- **`V__` 마이그레이션은 주석만 고쳐도 체크섬이 바뀌어 적용된 DB의 기동이 실패한다.** 배포 서버의 DB와 로컬 볼륨의 체크섬을 같이 맞춘다. `R__`는 다시 실행된다. CI는 빈 DB라 둘 다 잡지 못한다.
+- **주변 코드의 주석 밀도는 본보기가 아니다.**.
 
 ## OpenAPI 생성물
 
-**백엔드 컨트롤러나 DTO를 건드린 PR은 `backend/openapi.yaml`을 같이 커밋한다.** `./gradlew build`가 다시 만들어 주므로, 빌드한 뒤 `git status`에 이 파일이 떴으면 커밋에 넣는다.
-
-CI는 이 파일을 검사하지 않는다. 갱신을 빠뜨려도 아무것도 실패하지 않고, 프론트엔드가 낡은 계약을 읽게 된다. 검사를 넣지 않은 이유와 재검토 조건은 `backend/README.md`에 있다.
+- **컨트롤러나 DTO를 건드린 PR은 `backend/openapi.yaml`을 같이 커밋한다.** `./gradlew build`가 다시 만든다. `git status`에 떴으면 넣는다.
+  - CI는 검사하지 않는다. 빠뜨리면 프론트엔드가 낡은 계약을 읽는다.
 
 ## 출력 형식
 
-- 가운뎃점, 엠 대시, 이모지, 스마트 따옴표를 쓰지 않는다 (공식 고유명사 제외)
-- 한영 병기는 고유 제품명 첫 등장 시에만 최소한으로
-- AI가 쓴 티가 나는 문구를 지양한다
-- 옆에 목록이 있으면 개수를 문장이나 제목에 적지 않는다 ("예외 핸들러 넷" -> "예외 핸들러"). 항목이 늘면 조용히 틀린다. 문서가 정하거나 약속하는 값만 예외이며, 기준은 CONTRIBUTING.md "시간이 지나면 틀리는 값"에 있다
+- 문서 양식과 금지 문자는 `docs/contributing/documents.md`. 응답에도 같다.
+- 한영 병기는 고유 제품명 첫 등장 시에만.
+- AI가 쓴 티가 나는 문구를 쓰지 않는다.
