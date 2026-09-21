@@ -44,7 +44,8 @@ class BillableMetricPriceServiceTest {
     when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
         .thenReturn(
             List.of(pricePolicy("token-usage", List.of()), pricePolicy("input-tokens", List.of())));
-    when(priceRateRepository.findBaseUnitPrices(ORGANIZATION_ID)).thenReturn(Map.of());
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
+        .thenReturn(Map.of());
 
     assertThat(billableMetricPriceService.list(ORGANIZATION_ID).billableMetricPrices())
         .extracting(BillableMetricPriceResponse::billableMetricCode)
@@ -57,13 +58,13 @@ class BillableMetricPriceServiceTest {
         .thenReturn(List.of(billableMetric("input-tokens")));
     when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
         .thenReturn(List.of(pricePolicy("input-tokens", List.of("model"))));
-    when(priceRateRepository.findBaseUnitPrices(ORGANIZATION_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
 
-    BillableMetricPriceResponse only = onlyBillableMetricPrice();
+    BillableMetricPriceResponse onlyBillableMetricPrice = onlyBillableMetricPrice();
 
-    assertThat(only.dimensionProperties()).containsExactly("model");
-    assertThat(only.unitPrice()).isEqualByComparingTo("0.007");
+    assertThat(onlyBillableMetricPrice.dimensionProperties()).containsExactly("model");
+    assertThat(onlyBillableMetricPrice.unitPrice()).isEqualByComparingTo("0.007");
   }
 
   @Test
@@ -71,13 +72,13 @@ class BillableMetricPriceServiceTest {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("input-tokens")));
     when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID)).thenReturn(List.of());
-    when(priceRateRepository.findBaseUnitPrices(ORGANIZATION_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
 
-    BillableMetricPriceResponse only = onlyBillableMetricPrice();
+    BillableMetricPriceResponse onlyBillableMetricPrice = onlyBillableMetricPrice();
 
-    assertThat(only.dimensionProperties()).isNull();
-    assertThat(only.unitPrice()).isNull();
+    assertThat(onlyBillableMetricPrice.dimensionProperties()).isNull();
+    assertThat(onlyBillableMetricPrice.unitPrice()).isNull();
   }
 
   @Test
@@ -86,7 +87,7 @@ class BillableMetricPriceServiceTest {
         .thenReturn(List.of(billableMetric("input-tokens")));
     when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
         .thenReturn(List.of(pricePolicy("input-tokens", List.of())));
-    when(priceRateRepository.findBaseUnitPrices(ORGANIZATION_ID))
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("99")));
 
     assertThat(onlyBillableMetricPrice().unitPrice()).isNull();
@@ -97,7 +98,7 @@ class BillableMetricPriceServiceTest {
   }
 
   private static BillableMetric billableMetric(String code) {
-    return new BillableMetric(ORGANIZATION_ID, code, "토큰 사용량", "chat_completion", "SUM", "token");
+    return new BillableMetric(ORGANIZATION_ID, code, "토큰 사용량", "chat_completion", "sum", "token");
   }
 
   private static PricePolicy pricePolicy(String code, List<String> dimensionProperties) {

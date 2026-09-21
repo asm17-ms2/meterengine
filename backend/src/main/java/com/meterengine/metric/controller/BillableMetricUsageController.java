@@ -60,8 +60,8 @@ public class BillableMetricUsageController {
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month) {
-    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
     return ListBillableMetricUsagesResponse.of(
-        target, billableMetricUsageService.aggregate(organizationId, target));
+        targetMonth, billableMetricUsageService.aggregate(organizationId, targetMonth));
   }
 }

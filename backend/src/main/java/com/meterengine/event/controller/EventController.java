@@ -127,7 +127,7 @@ public class EventController {
       @Parameter(description = "이벤트 type을 좁힌다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회된다.")
           @RequestParam(required = false)
           String type) {
-    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return eventService.list(organizationId, customerId, target, type, page, size);
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    return eventService.list(organizationId, customerId, targetMonth, type, page, size);
   }
 }

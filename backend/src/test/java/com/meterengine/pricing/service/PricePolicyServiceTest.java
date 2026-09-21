@@ -33,22 +33,23 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class PricePolicyServiceTest {
 
-  private static final UUID ORG_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final String BILLABLE_METRIC_CODE = "token-usage";
 
   @Mock private PricePolicyRepository pricePolicyRepository;
   @Mock private BillableMetricRepository billableMetricRepository;
 
-  private PricePolicyService service;
+  private PricePolicyService pricePolicyService;
 
   @BeforeEach
   void setUp() {
-    service = new PricePolicyService(pricePolicyRepository, billableMetricRepository);
+    pricePolicyService = new PricePolicyService(pricePolicyRepository, billableMetricRepository);
   }
 
   @Test
   void 미터가_없으면_NotFound다() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, BILLABLE_METRIC_CODE)))
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(false);
 
     assertThatThrownBy(() -> create(List.of()))
@@ -61,7 +62,7 @@ class PricePolicyServiceTest {
   @Test
   void 정책이_이미_있으면_AlreadyExists다() {
     billableMetricExists();
-    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(true);
 
     assertThatThrownBy(() -> create(List.of()))
@@ -74,7 +75,7 @@ class PricePolicyServiceTest {
   @Test
   void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
     billableMetricExists();
-    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(false);
     when(pricePolicyRepository.saveAndFlush(any()))
         .thenThrow(new DataIntegrityViolationException("pk"));
@@ -123,14 +124,14 @@ class PricePolicyServiceTest {
   @Test
   void 정상_등록이면_정책이_저장되고_저장된_모양이_응답이_된다() {
     billableMetricExists();
-    when(pricePolicyRepository.existsById(new PricePolicyId(ORG_ID, BILLABLE_METRIC_CODE)))
+    when(pricePolicyRepository.existsById(new PricePolicyId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(false);
 
     PricePolicyResponse response = create(List.of("model"));
 
     ArgumentCaptor<PricePolicy> saved = ArgumentCaptor.forClass(PricePolicy.class);
     verify(pricePolicyRepository).saveAndFlush(saved.capture());
-    assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORG_ID);
+    assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORGANIZATION_ID);
     assertThat(saved.getValue().getBillableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(saved.getValue().getDimensionProperties()).containsExactly("model");
     assertThat(response.billableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
@@ -138,11 +139,13 @@ class PricePolicyServiceTest {
   }
 
   private void billableMetricExists() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, BILLABLE_METRIC_CODE)))
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
         .thenReturn(true);
   }
 
   private PricePolicyResponse create(List<String> properties) {
-    return service.create(ORG_ID, BILLABLE_METRIC_CODE, new CreatePricePolicyRequest(properties));
+    return pricePolicyService.create(
+        ORGANIZATION_ID, BILLABLE_METRIC_CODE, new CreatePricePolicyRequest(properties));
   }
 }

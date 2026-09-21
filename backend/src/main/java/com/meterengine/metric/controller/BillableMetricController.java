@@ -39,7 +39,7 @@ public class BillableMetricController {
       description =
           """
           미터를 등록한다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상이다.
-          aggregation은 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
+          aggregation은 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
           target_property가 필수다.
           code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
           """)
@@ -54,7 +54,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_billable_metric: aggregation이 SUM이 아니거나, SUM인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """),
     @ApiResponse(

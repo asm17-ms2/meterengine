@@ -26,7 +26,7 @@ class EventIngestIntegrationTest {
   private static final String OCCURRED_AT = "2026-08-10T12:00:00+09:00";
 
   @Autowired private WebApplicationContext webApplicationContext;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
@@ -37,34 +37,34 @@ class EventIngestIntegrationTest {
 
   @Test
   void 유효한_이벤트는_저장되고_200을_받는다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    MvcTestResult result = post(orgId, body("tx-1", customerId.toString()));
+    MvcTestResult result = post(organizationId, body("tx-1", customerId.toString()));
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.duplicate").asBoolean().isFalse();
-    assertThat(storedCount(orgId, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
   void 요청의_timestamp가_occurred_at으로_저장된다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    post(orgId, body("tx-1", customerId.toString()));
+    post(organizationId, body("tx-1", customerId.toString()));
 
     OffsetDateTime occurredAt =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT occurred_at FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             OffsetDateTime.class,
-            orgId);
+            organizationId);
     assertThat(occurredAt).isEqualTo(OffsetDateTime.parse(OCCURRED_AT));
   }
 
   @Test
   void 필수_필드가_하나라도_없으면_400이고_저장은_0건이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String[] incompleteBodies = {
       """
@@ -90,36 +90,36 @@ class EventIngestIntegrationTest {
     };
 
     for (String incomplete : incompleteBodies) {
-      assertThat(post(orgId, incomplete)).hasStatus(400);
+      assertThat(post(organizationId, incomplete)).hasStatus(400);
     }
-    assertThat(totalCount(orgId)).isZero();
+    assertThat(totalCount(organizationId)).isZero();
   }
 
   @Test
   void _400으로_거절된_transaction_id는_같은_키로_다시_보내면_저장된다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String withoutEventType =
         """
         {"transaction_id":"tx-1","customer_id":"%s","properties":{},"timestamp":"%s"}
         """
             .formatted(customerId, OCCURRED_AT);
-    assertThat(post(orgId, withoutEventType)).hasStatus(400);
+    assertThat(post(organizationId, withoutEventType)).hasStatus(400);
 
-    assertThat(post(orgId, body("tx-1", customerId.toString())))
+    assertThat(post(organizationId, body("tx-1", customerId.toString())))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.duplicate")
         .asBoolean()
         .isFalse();
-    assertThat(storedCount(orgId, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
   void properties가_비어_있거나_model과_token이_없어도_저장된다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String emptyProperties =
         """
@@ -134,16 +134,16 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
-    assertThat(post(orgId, emptyProperties)).hasStatusOk();
-    assertThat(post(orgId, unrelatedProperties)).hasStatusOk();
-    assertThat(totalCount(orgId)).isEqualTo(2);
+    assertThat(post(organizationId, emptyProperties)).hasStatusOk();
+    assertThat(post(organizationId, unrelatedProperties)).hasStatusOk();
+    assertThat(totalCount(organizationId)).isEqualTo(2);
   }
 
   @Test
   void 등록되지_않은_고객이면_404이고_저장은_0건이다() {
-    UUID orgId = insertOrganization("도입사 A");
+    UUID organizationId = insertOrganization("도입사 A");
 
-    MvcTestResult result = post(orgId, body("tx-1", UUID.randomUUID().toString()));
+    MvcTestResult result = post(organizationId, body("tx-1", UUID.randomUUID().toString()));
 
     assertThat(result)
         .hasStatus(404)
@@ -151,16 +151,16 @@ class EventIngestIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
-    assertThat(totalCount(orgId)).isZero();
+    assertThat(totalCount(organizationId)).isZero();
   }
 
   @Test
   void 다른_도입사_소속_고객이면_404이고_저장은_0건이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID otherOrgId = insertOrganization("도입사 B");
-    UUID otherCustomerId = insertCustomer(otherOrgId, "다른 도입사의 고객");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID otherOrganizationId = insertOrganization("도입사 B");
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, "다른 도입사의 고객");
 
-    MvcTestResult result = post(orgId, body("tx-1", otherCustomerId.toString()));
+    MvcTestResult result = post(organizationId, body("tx-1", otherCustomerId.toString()));
 
     assertThat(result)
         .hasStatus(404)
@@ -168,13 +168,13 @@ class EventIngestIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
-    assertThat(totalCount(orgId)).isZero();
+    assertThat(totalCount(organizationId)).isZero();
   }
 
   @Test
   void received_at은_클라이언트가_무엇을_보내든_서버_시각이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String withReceivedAt =
         """
@@ -182,44 +182,44 @@ class EventIngestIntegrationTest {
          "properties":{},"timestamp":"%s","received_at":"2020-01-01T00:00:00Z"}
         """
             .formatted(customerId, OCCURRED_AT);
-    assertThat(post(orgId, withReceivedAt)).hasStatusOk();
+    assertThat(post(organizationId, withReceivedAt)).hasStatusOk();
 
     OffsetDateTime receivedAt =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT received_at FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             OffsetDateTime.class,
-            orgId);
+            organizationId);
     assertThat(receivedAt).isAfter(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
   }
 
   @Test
   void 같은_transaction_id를_두_번_보내면_저장은_1건이고_두_번째도_성공이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    assertThat(post(orgId, body("tx-1", customerId.toString())))
+    assertThat(post(organizationId, body("tx-1", customerId.toString())))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.duplicate")
         .asBoolean()
         .isFalse();
 
-    assertThat(post(orgId, body("tx-1", customerId.toString())))
+    assertThat(post(organizationId, body("tx-1", customerId.toString())))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.duplicate")
         .asBoolean()
         .isTrue();
 
-    assertThat(storedCount(orgId, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
   void 같은_키로_내용이_다른_요청이_와도_최초_저장본만_유지된다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    post(orgId, body("tx-1", customerId.toString()));
+    post(organizationId, body("tx-1", customerId.toString()));
 
     String different =
         """
@@ -227,7 +227,7 @@ class EventIngestIntegrationTest {
          "properties":{"token":999999},"timestamp":"2026-08-11T00:00:00+09:00"}
         """
             .formatted(customerId);
-    assertThat(post(orgId, different))
+    assertThat(post(organizationId, different))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.duplicate")
@@ -235,18 +235,18 @@ class EventIngestIntegrationTest {
         .isTrue();
 
     String type =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT type FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
-            orgId);
+            organizationId);
     assertThat(type).isEqualTo("chat_completion");
-    assertThat(storedCount(orgId, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
   void 도입사_헤더가_없거나_형식이_틀리면_400이고_저장은_0건이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
     String payload = body("tx-1", customerId.toString());
 
     assertThat(
@@ -266,26 +266,26 @@ class EventIngestIntegrationTest {
                 .exchange())
         .hasStatus(400);
 
-    assertThat(totalCount(orgId)).isZero();
+    assertThat(totalCount(organizationId)).isZero();
   }
 
   @Test
   void 도입사가_다르면_같은_transaction_id도_각각_저장된다() {
-    UUID orgA = insertOrganization("도입사 A");
-    UUID orgB = insertOrganization("도입사 B");
-    UUID customerA = insertCustomer(orgA, "acme");
-    UUID customerB = insertCustomer(orgB, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID otherOrganizationId = insertOrganization("도입사 B");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, "acme");
 
-    assertThat(post(orgA, body("tx-1", customerA.toString()))).hasStatusOk();
-    assertThat(post(orgB, body("tx-1", customerB.toString()))).hasStatusOk();
+    assertThat(post(organizationId, body("tx-1", customerId.toString()))).hasStatusOk();
+    assertThat(post(otherOrganizationId, body("tx-1", otherCustomerId.toString()))).hasStatusOk();
 
-    assertThat(storedCount(orgA, "tx-1")).isEqualTo(1);
-    assertThat(storedCount(orgB, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
+    assertThat(storedCount(otherOrganizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
   void 형식_오류와_고객_매핑_실패는_code로_서로_구별된다() {
-    UUID orgId = insertOrganization("도입사 A");
+    UUID organizationId = insertOrganization("도입사 A");
 
     String withoutTransactionId =
         """
@@ -293,7 +293,7 @@ class EventIngestIntegrationTest {
         """
             .formatted(UUID.randomUUID(), OCCURRED_AT);
 
-    assertThat(post(orgId, withoutTransactionId))
+    assertThat(post(organizationId, withoutTransactionId))
         .hasStatus(400)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
@@ -301,7 +301,7 @@ class EventIngestIntegrationTest {
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
 
-    assertThat(post(orgId, body("tx-1", UUID.randomUUID().toString())))
+    assertThat(post(organizationId, body("tx-1", UUID.randomUUID().toString())))
         .hasStatus(404)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
@@ -312,8 +312,8 @@ class EventIngestIntegrationTest {
 
   @Test
   void 형식_검증_실패는_어느_필드가_왜_걸렸는지_알려준다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String withoutEventType =
         """
@@ -321,7 +321,7 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
-    assertThat(post(orgId, withoutEventType))
+    assertThat(post(organizationId, withoutEventType))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
@@ -331,8 +331,8 @@ class EventIngestIntegrationTest {
 
   @Test
   void 소수는_자릿수가_잘리지_않고_저장된다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String preciseDecimal =
         """
@@ -341,27 +341,27 @@ class EventIngestIntegrationTest {
          "timestamp":"%s"}
         """
             .formatted(customerId, OCCURRED_AT);
-    assertThat(post(orgId, preciseDecimal)).hasStatusOk();
+    assertThat(post(organizationId, preciseDecimal)).hasStatusOk();
 
     String stored =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT properties->>'cost' FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
-            orgId);
+            organizationId);
     assertThat(stored).isEqualTo("0.1234567890123456789");
 
     String storedInteger =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT properties->>'token' FROM event WHERE organization_id = ? AND transaction_id = 'tx-1'",
             String.class,
-            orgId);
+            organizationId);
     assertThat(storedInteger).isEqualTo("12345678901234567890123");
   }
 
   @Test
   void DB가_담을_수_없는_값은_500이_아니라_400이다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     String withNulCharacter =
         """
@@ -370,7 +370,7 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
-    MvcTestResult result = post(orgId, withNulCharacter);
+    MvcTestResult result = post(organizationId, withNulCharacter);
 
     assertThat(result)
         .hasStatus(400)
@@ -384,11 +384,11 @@ class EventIngestIntegrationTest {
 
   @Test
   void 도입사를_잘못_보내면_404이고_보낸_값은_본문에_없다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
-    UUID wrongOrgId = UUID.randomUUID();
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    UUID wrongOrganizationId = UUID.randomUUID();
 
-    MvcTestResult result = post(wrongOrgId, body("tx-1", customerId.toString()));
+    MvcTestResult result = post(wrongOrganizationId, body("tx-1", customerId.toString()));
 
     assertThat(result)
         .hasStatus(404)
@@ -396,17 +396,17 @@ class EventIngestIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
-    assertThat(result).bodyText().doesNotContain(wrongOrgId.toString());
+    assertThat(result).bodyText().doesNotContain(wrongOrganizationId.toString());
   }
 
   @Test
   void transaction_id는_255자까지_받고_256자는_거절한다() {
-    UUID orgId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    assertThat(post(orgId, body("x".repeat(255), customerId.toString()))).hasStatusOk();
+    assertThat(post(organizationId, body("x".repeat(255), customerId.toString()))).hasStatusOk();
 
-    assertThat(post(orgId, body("x".repeat(256), customerId.toString())))
+    assertThat(post(organizationId, body("x".repeat(256), customerId.toString())))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")
@@ -432,12 +432,12 @@ class EventIngestIntegrationTest {
   }
 
   private UUID insertOrganization(String name) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES (?) RETURNING id", UUID.class, name);
   }
 
   private UUID insertCustomer(UUID organizationId, String name) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, ?) RETURNING id",
         UUID.class,
         organizationId,
@@ -446,7 +446,7 @@ class EventIngestIntegrationTest {
 
   private int storedCount(UUID organizationId, String transactionId) {
     Integer count =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT count(*) FROM event WHERE organization_id = ? AND transaction_id = ?",
             Integer.class,
             organizationId,
@@ -456,7 +456,7 @@ class EventIngestIntegrationTest {
 
   private int totalCount(UUID organizationId) {
     Integer count =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT count(*) FROM event WHERE organization_id = ?", Integer.class, organizationId);
     return count == null ? 0 : count;
   }

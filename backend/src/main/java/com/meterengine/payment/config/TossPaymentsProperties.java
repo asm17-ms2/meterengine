@@ -1,4 +1,4 @@
-package com.meterengine.payment;
+package com.meterengine.payment.config;
 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;

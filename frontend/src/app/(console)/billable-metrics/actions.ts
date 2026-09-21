@@ -2,15 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import type {
-  BillableMetricDeleteState,
-  BillableMetricField,
-  BillableMetricFormState,
+import {
+  BILLABLE_METRIC_AGGREGATION,
+  type BillableMetricDeleteState,
+  type BillableMetricField,
+  type BillableMetricFormState,
 } from "@/app/(console)/billable-metrics/state";
 import type { ApiError } from "@/lib/api/client";
 import { createBillableMetric, deleteBillableMetric, updateBillableMetric } from "@/lib/api/billable-metrics";
-
-const AGGREGATION = "SUM";
 
 const BILLABLE_METRIC_FIELDS: readonly BillableMetricField[] = [
   "code",
@@ -23,7 +22,7 @@ const REQUIRED_MESSAGES: Record<BillableMetricField, string> = {
   code: "코드를 입력하세요",
   name: "이름을 입력하세요",
   event_type: "이벤트 타입을 입력하세요",
-  target_property: "집계 대상 속성을 입력하세요. SUM 집계는 필수입니다",
+  target_property: "집계 대상 속성을 입력하세요. sum 집계는 필수입니다",
 };
 
 function readField(formData: FormData, field: BillableMetricField): string {
@@ -63,7 +62,7 @@ function toFailureState(error: ApiError): BillableMetricFormState {
     case "invalid_billable_metric":
       return {
         status: "failed",
-        message: "집계 설정이 올바르지 않습니다. 집계 함수는 SUM만 지원하고 집계 대상 속성이 필요합니다.",
+        message: "집계 설정이 올바르지 않습니다. 집계 함수는 sum만 지원하고 집계 대상 속성이 필요합니다.",
       };
     case "unknown_organization":
       return {
@@ -98,7 +97,7 @@ export async function createBillableMetricAction(
     code: values.code,
     name: values.name,
     event_type: values.event_type,
-    aggregation: AGGREGATION,
+    aggregation: BILLABLE_METRIC_AGGREGATION,
     target_property: values.target_property,
   });
   if (!result.ok) return toFailureState(result.error);
@@ -152,7 +151,7 @@ export async function updateBillableMetricAction(
   const result = await updateBillableMetric(code, {
     name: values.name,
     event_type: values.event_type,
-    aggregation: AGGREGATION,
+    aggregation: BILLABLE_METRIC_AGGREGATION,
     target_property: values.target_property,
   });
   if (!result.ok) return toUpdateFailureState(result.error);

@@ -11,10 +11,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class EventRepository {
 
-  private final JdbcTemplate jdbc;
+  private final JdbcTemplate jdbcTemplate;
 
-  EventRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  EventRepository(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public int insertIfAbsent(
@@ -24,7 +24,7 @@ public class EventRepository {
       String type,
       String propertiesJson,
       OffsetDateTime occurredAt) {
-    return jdbc.update(
+    return jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)
@@ -47,12 +47,12 @@ public class EventRepository {
       OffsetDateTime end,
       int page,
       int size) {
-    List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, type, start, end, params);
-    params.add(size);
-    params.add((long) page * size);
+    List<Object> parameters = new ArrayList<>();
+    String where = buildWhere(organizationId, customerId, type, start, end, parameters);
+    parameters.add(size);
+    parameters.add((long) page * size);
 
-    return jdbc.query(
+    return jdbcTemplate.query(
         """
         SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
                e.properties::text AS properties, e.occurred_at, e.received_at
@@ -74,22 +74,23 @@ public class EventRepository {
                 rs.getString("properties"),
                 rs.getObject("occurred_at", OffsetDateTime.class),
                 rs.getObject("received_at", OffsetDateTime.class)),
-        params.toArray());
+        parameters.toArray());
   }
 
   public long count(
       UUID organizationId, UUID customerId, String type, OffsetDateTime start, OffsetDateTime end) {
-    List<Object> params = new ArrayList<>();
-    String where = buildWhere(organizationId, customerId, type, start, end, params);
+    List<Object> parameters = new ArrayList<>();
+    String where = buildWhere(organizationId, customerId, type, start, end, parameters);
 
     Long total =
-        jdbc.queryForObject("SELECT count(*) FROM event e " + where, Long.class, params.toArray());
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM event e " + where, Long.class, parameters.toArray());
     return total == null ? 0 : total;
   }
 
   public boolean existsForCustomer(UUID organizationId, UUID customerId) {
     return Boolean.TRUE.equals(
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             """
             SELECT EXISTS(
               SELECT 1 FROM event
@@ -107,21 +108,21 @@ public class EventRepository {
       String type,
       OffsetDateTime start,
       OffsetDateTime end,
-      List<Object> params) {
+      List<Object> parameters) {
     StringBuilder where =
         new StringBuilder(
             "WHERE e.organization_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?");
-    params.add(organizationId);
-    params.add(start);
-    params.add(end);
+    parameters.add(organizationId);
+    parameters.add(start);
+    parameters.add(end);
 
     if (customerId != null) {
       where.append(" AND e.customer_id = ?");
-      params.add(customerId);
+      parameters.add(customerId);
     }
     if (type != null && !type.isBlank()) {
       where.append(" AND e.type = ?");
-      params.add(type);
+      parameters.add(type);
     }
     return where.append('\n').toString();
   }

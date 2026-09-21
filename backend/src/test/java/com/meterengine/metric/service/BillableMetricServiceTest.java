@@ -33,16 +33,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class BillableMetricServiceTest {
 
-  private static final UUID ORG_ID = UUID.randomUUID();
-  private static final String CODE = "token-usage";
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
+  private static final String BILLABLE_METRIC_CODE = "token-usage";
 
   @Mock private BillableMetricRepository billableMetricRepository;
 
-  private BillableMetricService service;
+  private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
-    service = new BillableMetricService(billableMetricRepository);
+    billableMetricService = new BillableMetricService(billableMetricRepository);
   }
 
   @Test
@@ -67,17 +67,17 @@ class BillableMetricServiceTest {
 
   @Test
   void SUM인데_target_property가_없으면_Invalid다() {
-    assertThatThrownBy(() -> create("SUM", null))
+    assertThatThrownBy(() -> create("sum", null))
         .isInstanceOf(InvalidRequestException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
-    assertThatThrownBy(() -> create("SUM", " ")).isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> create("sum", " ")).isInstanceOf(InvalidRequestException.class);
     verify(billableMetricRepository, never()).saveAndFlush(any());
   }
 
   @Test
   void SUM인데_target_property가_없으면_target_property를_errors에_담는다() {
-    assertThatThrownBy(() -> create("SUM", null))
+    assertThatThrownBy(() -> create("sum", null))
         .isInstanceOfSatisfying(
             InvalidRequestException.class,
             exception ->
@@ -88,9 +88,11 @@ class BillableMetricServiceTest {
 
   @Test
   void 같은_코드의_미터가_이미_있으면_AlreadyExists다() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(true);
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(true);
 
-    assertThatThrownBy(() -> create("SUM", "token"))
+    assertThatThrownBy(() -> create("sum", "token"))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
@@ -99,10 +101,12 @@ class BillableMetricServiceTest {
 
   @Test
   void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
     when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation("billable_metric_pk"));
 
-    assertThatThrownBy(() -> create("SUM", "token"))
+    assertThatThrownBy(() -> create("sum", "token"))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
@@ -110,11 +114,13 @@ class BillableMetricServiceTest {
 
   @Test
   void 미등록_도입사의_제약_위반은_400_예외로_바뀐다() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
     when(billableMetricRepository.saveAndFlush(any()))
         .thenThrow(violation("billable_metric_organization_fk"));
 
-    assertThatThrownBy(() -> create("SUM", "token"))
+    assertThatThrownBy(() -> create("sum", "token"))
         .isInstanceOf(InvalidRequestException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
@@ -128,41 +134,50 @@ class BillableMetricServiceTest {
 
   @Test
   void 정상_등록이면_미터가_저장되고_저장된_모양이_응답이_된다() {
-    when(billableMetricRepository.existsById(new BillableMetricId(ORG_ID, CODE))).thenReturn(false);
+    when(billableMetricRepository.existsById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(false);
 
-    BillableMetricResponse response = create("SUM", "token");
+    BillableMetricResponse response = create("sum", "token");
 
     ArgumentCaptor<BillableMetric> saved = ArgumentCaptor.forClass(BillableMetric.class);
     verify(billableMetricRepository).saveAndFlush(saved.capture());
-    assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORG_ID);
-    assertThat(saved.getValue().getCode()).isEqualTo(CODE);
+    assertThat(saved.getValue().getOrganizationId()).isEqualTo(ORGANIZATION_ID);
+    assertThat(saved.getValue().getCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(saved.getValue().getName()).isEqualTo("토큰 사용량");
     assertThat(saved.getValue().getEventType()).isEqualTo("chat_completion");
-    assertThat(saved.getValue().getAggregation()).isEqualTo("SUM");
+    assertThat(saved.getValue().getAggregation()).isEqualTo("sum");
     assertThat(saved.getValue().getTargetProperty()).isEqualTo("token");
-    assertThat(response.code()).isEqualTo(CODE);
+    assertThat(response.code()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(response.targetProperty()).isEqualTo("token");
   }
 
   @Test
   void 목록_조회는_저장소의_code_순_목록을_응답으로_바꾼다() {
-    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORG_ID))
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(
             List.of(
-                new BillableMetric(ORG_ID, "api-calls", "호출 수", "chat_completion", "SUM", "calls"),
-                new BillableMetric(ORG_ID, CODE, "토큰 사용량", "chat_completion", "SUM", "token")));
+                new BillableMetric(
+                    ORGANIZATION_ID, "api-calls", "호출 수", "chat_completion", "sum", "calls"),
+                new BillableMetric(
+                    ORGANIZATION_ID,
+                    BILLABLE_METRIC_CODE,
+                    "토큰 사용량",
+                    "chat_completion",
+                    "sum",
+                    "token")));
 
-    ListBillableMetricsResponse response = service.list(ORG_ID);
+    ListBillableMetricsResponse response = billableMetricService.list(ORGANIZATION_ID);
 
     assertThat(response.billableMetrics())
         .extracting(BillableMetricResponse::code)
-        .containsExactly("api-calls", CODE);
+        .containsExactly("api-calls", BILLABLE_METRIC_CODE);
   }
 
   private BillableMetricResponse create(String aggregation, String targetProperty) {
-    return service.create(
-        ORG_ID,
+    return billableMetricService.create(
+        ORGANIZATION_ID,
         new CreateBillableMetricRequest(
-            CODE, "토큰 사용량", "chat_completion", aggregation, targetProperty));
+            BILLABLE_METRIC_CODE, "토큰 사용량", "chat_completion", aggregation, targetProperty));
   }
 }

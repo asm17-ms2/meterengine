@@ -12,7 +12,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '토큰 사용량',
-   'chat_completion', 'SUM', 'token')
+   'chat_completion', 'sum', 'token')
 ON CONFLICT (organization_id, code) DO UPDATE SET
   name            = EXCLUDED.name,
   event_type      = EXCLUDED.event_type,
@@ -41,11 +41,11 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '입력 토큰',
-   'llm_request', 'SUM', 'input_tokens'),
+   'llm_request', 'sum', 'input_tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '출력 토큰',
-   'llm_request', 'SUM', 'output_tokens'),
+   'llm_request', 'sum', 'output_tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '외부 전송량',
-   'network_traffic', 'SUM', 'egress_gb')
+   'network_traffic', 'sum', 'egress_gb')
 ON CONFLICT (organization_id, code) DO UPDATE SET
   name            = EXCLUDED.name,
   event_type      = EXCLUDED.event_type,
@@ -69,9 +69,9 @@ ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE 
 INSERT INTO billable_metric
   (organization_id, code, name, event_type, aggregation, target_property) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '캐시 읽기 토큰',
-   'llm_request', 'SUM', 'cache_read_tokens'),
+   'llm_request', 'sum', 'cache_read_tokens'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '캐시 생성 토큰',
-   'llm_request', 'SUM', 'cache_creation_tokens')
+   'llm_request', 'sum', 'cache_creation_tokens')
 ON CONFLICT (organization_id, code) DO UPDATE SET
   name            = EXCLUDED.name,
   event_type      = EXCLUDED.event_type,

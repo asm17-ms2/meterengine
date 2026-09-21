@@ -14,7 +14,7 @@ import org.springframework.data.domain.Persistable;
 @IdClass(BillableMetricId.class)
 public class BillableMetric implements Persistable<BillableMetricId> {
 
-  public static final String SUM = "SUM";
+  public static final String SUM = "sum";
 
   @Id
   @Column(name = "organization_id")

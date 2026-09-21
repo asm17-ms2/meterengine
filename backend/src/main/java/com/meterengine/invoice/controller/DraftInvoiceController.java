@@ -58,7 +58,7 @@ public class DraftInvoiceController {
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month) {
-    YearMonth target = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return draftInvoiceService.preview(organizationId, target);
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    return draftInvoiceService.preview(organizationId, targetMonth);
   }
 }
