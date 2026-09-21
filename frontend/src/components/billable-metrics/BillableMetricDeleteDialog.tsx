@@ -56,11 +56,11 @@ export function BillableMetricDeleteDialog({
 
   return (
     <Dialog
-      labelledBy="metric-delete-title"
+      labelledBy="billable-metric-delete-title"
       onClose={isPending ? undefined : onClose}
       action={formAction}
     >
-      <div className="dialog-title" id="metric-delete-title">
+      <div className="dialog-title" id="billable-metric-delete-title">
         미터를 삭제할까요?
       </div>
 
@@ -117,13 +117,13 @@ function Notice({
 }) {
   return (
     <Dialog
-      labelledBy="metric-delete-notice-title"
+      labelledBy="billable-metric-delete-notice-title"
       onClose={onClose}
       style={{ borderLeft: "4px solid var(--color-accent)" }}
     >
       <div
         className="dialog-title"
-        id="metric-delete-notice-title"
+        id="billable-metric-delete-notice-title"
         style={{ color: "var(--color-accent-700)" }}
       >
         {title}

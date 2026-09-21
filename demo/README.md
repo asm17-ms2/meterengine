@@ -253,7 +253,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다. Claude Opus 5 공시가를 1달러 1,400원으로 환산한 토큰당 원 단가다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
 - 캐시 쓰기는 5분 캐시 기준이다. OTel의 `cache_creation_tokens`가 5분과 1시간을 구분하지 않는다.
-- 모델별 단가는 켜지지 않는다. `properties`에 `model`이 실려 있어도 `PriceRateRepository.findBaseUnitPrices`가 `dimension_values = '{}'` 행만 읽는다.
+- 모델별 단가는 켜지지 않는다. `properties`에 `model`이 실려 있어도 `PriceRateRepository.findBaseUnitPriceByBillableMetricCode`가 `dimension_values = '{}'` 행만 읽는다.
   - 시드에는 기본 단가 한 행만 둔다. 기본 단가 행을 지우면 그 미터가 인보이스에서 통째로 빠진다.
 - 금액은 실제 가격이라 작다. 라인마다 절사하므로 입력 토큰처럼 적은 항목은 0원이 되기도 한다.
 

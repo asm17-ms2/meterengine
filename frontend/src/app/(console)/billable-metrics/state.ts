@@ -1,3 +1,5 @@
+export const BILLABLE_METRIC_AGGREGATION = "sum";
+
 export type BillableMetricRowView = {
   code: string;
   name: string;

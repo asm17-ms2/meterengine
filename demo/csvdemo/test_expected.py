@@ -2,7 +2,7 @@ import unittest
 from decimal import Decimal
 
 from csvdemo.expected import (
-    MetricMeta,
+    BillableMetricMeta,
     build_expected,
     line_amount,
     predict_send,
@@ -16,10 +16,10 @@ ACME = "a728e7b6-d82b-4f3c-a960-a66a02794c1d"
 BETA = "252339bc-d5f8-472d-b5d6-ed8554049450"
 KNOWN = {ACME, BETA}
 
-TOKEN_USAGE = MetricMeta(
+TOKEN_USAGE = BillableMetricMeta(
     code="token-usage",
     event_type="chat_completion",
-    aggregation="SUM",
+    aggregation="sum",
     target_property="token",
     unit_price=Decimal("0.5"),
 )
@@ -191,10 +191,10 @@ class BuildExpectedTest(unittest.TestCase):
         self.assertEqual(result.customers[BETA].amount, 0)
 
     def test_단가를_모르는_미터는_금액이_없다(self):
-        no_price = MetricMeta(
+        no_price = BillableMetricMeta(
             code="api-calls",
             event_type="api_call",
-            aggregation="SUM",
+            aggregation="sum",
             target_property="count",
             unit_price=None,
         )

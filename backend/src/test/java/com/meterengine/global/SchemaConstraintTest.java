@@ -21,26 +21,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SchemaConstraintTest {
 
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   void 같은_도입사에서_같은_transaction_id는_두_번_저장되지_않는다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    insertUsageEvent(orgId, customerId, "tx-1");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertEvent(organizationId, customerId, "tx-1");
 
-    assertThatThrownBy(() -> insertUsageEvent(orgId, customerId, "tx-1"))
+    assertThatThrownBy(() -> insertEvent(organizationId, customerId, "tx-1"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 저장된_이벤트는_UPDATE할_수_없다() {
-    UUID orgId = insertOrganization();
-    insertUsageEvent(orgId, insertCustomer(orgId, "acme"), "tx-1");
+    UUID organizationId = insertOrganization();
+    insertEvent(organizationId, insertCustomer(organizationId, "acme"), "tx-1");
 
     assertThatThrownBy(
             () ->
-                jdbc.update(
+                jdbcTemplate.update(
                     "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
@@ -48,17 +48,17 @@ class SchemaConstraintTest {
 
   @Test
   void 저장된_이벤트는_DELETE할_수_없다() {
-    UUID orgId = insertOrganization();
-    insertUsageEvent(orgId, insertCustomer(orgId, "acme"), "tx-1");
+    UUID organizationId = insertOrganization();
+    insertEvent(organizationId, insertCustomer(organizationId, "acme"), "tx-1");
 
-    assertThatThrownBy(() -> jdbc.update("DELETE FROM event WHERE transaction_id = 'tx-1'"))
+    assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM event WHERE transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
 
   @Test
   void 이벤트_테이블은_TRUNCATE할_수_없다() {
-    assertThatThrownBy(() -> jdbc.execute("TRUNCATE event"))
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE event"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
@@ -66,20 +66,20 @@ class SchemaConstraintTest {
   @Test
   void received_at은_요청이_값을_보내도_서버가_찍은_시각으로_덮어쓴다() {
     OffsetDateTime clientSuppliedTime = OffsetDateTime.parse("2020-01-01T00:00:00Z");
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, occurred_at, received_at)
         VALUES (?, 'tx-1', ?, 'chat_completion', now(), ?)
         """,
-        orgId,
-        insertCustomer(orgId, "acme"),
+        organizationId,
+        insertCustomer(organizationId, "acme"),
         clientSuppliedTime);
 
     OffsetDateTime receivedAt =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT received_at FROM event WHERE transaction_id = 'tx-1'", OffsetDateTime.class);
     assertThat(receivedAt).isAfter(clientSuppliedTime);
   }
@@ -88,9 +88,9 @@ class SchemaConstraintTest {
 
   @Test
   void 이벤트가_있는_고객은_지울_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    insertUsageEvent(orgId, customerId, "tx-1");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertEvent(organizationId, customerId, "tx-1");
 
     assertThatThrownBy(() -> deleteCustomer(customerId))
         .isInstanceOf(DataIntegrityViolationException.class);
@@ -98,8 +98,8 @@ class SchemaConstraintTest {
 
   @Test
   void 이벤트가_없는_고객은_지울_수_있다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     deleteCustomer(customerId);
 
@@ -110,69 +110,73 @@ class SchemaConstraintTest {
 
   @Test
   void 미터가_없으면_가격_정책을_만들_수_없다() {
-    UUID orgId = insertOrganization();
+    UUID organizationId = insertOrganization();
 
-    assertThatThrownBy(() -> insertPricePolicy(orgId, "no-such-metric"))
+    assertThatThrownBy(() -> insertPricePolicy(organizationId, "no-such-metric"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 다른_도입사의_미터에는_가격_정책을_붙일_수_없다() {
-    UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
-    UUID otherOrgId = insertOrganization();
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+    UUID otherOrganizationId = insertOrganization();
 
-    assertThatThrownBy(() -> insertPricePolicy(otherOrgId, "token-usage"))
+    assertThatThrownBy(() -> insertPricePolicy(otherOrganizationId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 같은_미터에_가격_정책은_하나만_만들_수_있다() {
-    UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
-    insertPricePolicy(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+    insertPricePolicy(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertPricePolicy(orgId, "token-usage"))
+    assertThatThrownBy(() -> insertPricePolicy(organizationId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 가격_정책이_없으면_단가를_만들_수_없다() {
-    UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertPriceRate(orgId, "token-usage", "{}", "0.5"))
+    assertThatThrownBy(() -> insertPriceRate(organizationId, "token-usage", "{}", "0.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 단가는_음수일_수_없다() {
-    UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
-    insertPricePolicy(orgId, "token-usage");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+    insertPricePolicy(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertPriceRate(orgId, "token-usage", "{}", "-0.5"))
+    assertThatThrownBy(() -> insertPriceRate(organizationId, "token-usage", "{}", "-0.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 같은_조합의_단가는_키_순서가_달라도_두_번_저장되지_않는다() {
-    UUID orgId = insertOrganization();
-    insertMetric(orgId, "token-usage");
-    insertPricePolicy(orgId, "token-usage");
-    insertPriceRate(orgId, "token-usage", "{\"model\": \"opus5\", \"region\": \"kr\"}", "0.5");
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+    insertPricePolicy(organizationId, "token-usage");
+    insertPriceRate(
+        organizationId, "token-usage", "{\"model\": \"opus5\", \"region\": \"kr\"}", "0.5");
 
     assertThatThrownBy(
             () ->
                 insertPriceRate(
-                    orgId, "token-usage", "{\"region\": \"kr\", \"model\": \"opus5\"}", "2.5"))
+                    organizationId,
+                    "token-usage",
+                    "{\"region\": \"kr\", \"model\": \"opus5\"}",
+                    "2.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void billable_metric에는_더_이상_unit_price_열이_없다() {
     Boolean columnExists =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             """
             SELECT EXISTS(
               SELECT 1 FROM information_schema.columns
@@ -183,14 +187,14 @@ class SchemaConstraintTest {
     assertThat(columnExists).isFalse();
   }
 
-  private void insertMetric(UUID orgId, String code) {
-    jdbc.update(
+  private void insertBillableMetric(UUID organizationId, String code) {
+    jdbcTemplate.update(
         """
         INSERT INTO billable_metric
           (organization_id, code, name, event_type, aggregation, target_property)
-        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'SUM', 'token')
+        VALUES (?, ?, '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
-        orgId,
+        organizationId,
         code);
   }
 
@@ -229,11 +233,11 @@ class SchemaConstraintTest {
             "price_rate_organization_fk",
             "invoice_organization_fk",
             "invoice_line_organization_fk",
-            "event_customer_same_org",
-            "price_policy_metric_same_org",
-            "price_rate_policy_fk",
-            "invoice_customer_same_org",
-            "invoice_line_invoice_same_org");
+            "event_customer_same_organization_fk",
+            "price_policy_billable_metric_same_organization_fk",
+            "price_rate_price_policy_same_organization_fk",
+            "invoice_customer_same_organization_fk",
+            "invoice_line_invoice_same_organization_fk");
   }
 
   @Test
@@ -246,109 +250,114 @@ class SchemaConstraintTest {
 
   @Test
   void 같은_고객의_같은_달은_두_번_확정되지_않는다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    insertInvoice(orgId, customerId, "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertInvoice(organizationId, customerId, "2026-08");
 
-    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-08"))
+    assertThatThrownBy(() -> insertInvoice(organizationId, customerId, "2026-08"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 확정_인보이스는_고객마다_그리고_달마다_따로_저장된다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    insertInvoice(orgId, customerId, "2026-08");
-    insertInvoice(orgId, customerId, "2026-09");
-    insertInvoice(orgId, insertCustomer(orgId, "beta"), "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertInvoice(organizationId, customerId, "2026-08");
+    insertInvoice(organizationId, customerId, "2026-09");
+    insertInvoice(organizationId, insertCustomer(organizationId, "beta"), "2026-08");
 
     assertThat(
-            jdbc.queryForObject(
-                "SELECT count(*) FROM invoice WHERE organization_id = ?", Integer.class, orgId))
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM invoice WHERE organization_id = ?",
+                Integer.class,
+                organizationId))
         .isEqualTo(3);
   }
 
   @Test
   void 청구_기간은_월을_두_자리로_적은_표기만_저장된다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-8"))
+    assertThatThrownBy(() -> insertInvoice(organizationId, customerId, "2026-8"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 존재하지_않는_달은_청구_기간이_될_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
 
-    assertThatThrownBy(() -> insertInvoice(orgId, customerId, "2026-13"))
+    assertThatThrownBy(() -> insertInvoice(organizationId, customerId, "2026-13"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 다른_도입사의_고객에는_인보이스를_붙일_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    UUID otherOrgId = insertOrganization();
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    UUID otherOrganizationId = insertOrganization();
 
-    assertThatThrownBy(() -> insertInvoice(otherOrgId, customerId, "2026-08"))
+    assertThatThrownBy(() -> insertInvoice(otherOrganizationId, customerId, "2026-08"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 확정_시각은_생략하면_DB가_대신_채우지_않는다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
 
     assertThatThrownBy(
             () ->
-                jdbc.update(
+                jdbcTemplate.update(
                     """
                     INSERT INTO invoice
                       (organization_id, customer_id, period, supply_amount, tax_amount)
                     VALUES (?, ?, '2026-08', 12000, 1200)
                     """,
-                    orgId,
+                    organizationId,
                     customerId))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 다른_도입사의_인보이스에는_라인을_붙일_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
-    UUID otherOrgId = insertOrganization();
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    UUID otherOrganizationId = insertOrganization();
 
-    assertThatThrownBy(() -> insertInvoiceLine(otherOrgId, invoiceId, "token-usage"))
+    assertThatThrownBy(() -> insertInvoiceLine(otherOrganizationId, invoiceId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 같은_인보이스에_같은_미터의_라인은_두_번_저장되지_않는다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
-    insertInvoiceLine(orgId, invoiceId, "token-usage");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    insertInvoiceLine(organizationId, invoiceId, "token-usage");
 
-    assertThatThrownBy(() -> insertInvoiceLine(orgId, invoiceId, "token-usage"))
+    assertThatThrownBy(() -> insertInvoiceLine(organizationId, invoiceId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 라인이_있는_인보이스는_지울_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
-    insertInvoiceLine(orgId, invoiceId, "token-usage");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    insertInvoiceLine(organizationId, invoiceId, "token-usage");
 
-    assertThatThrownBy(() -> jdbc.update("DELETE FROM invoice WHERE id = ?", invoiceId))
+    assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM invoice WHERE id = ?", invoiceId))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 확정_인보이스가_있는_고객은_지울_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID customerId = insertCustomer(orgId, "acme");
-    insertInvoice(orgId, customerId, "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertInvoice(organizationId, customerId, "2026-08");
 
     assertThatThrownBy(() -> deleteCustomer(customerId))
         .isInstanceOf(DataIntegrityViolationException.class);
@@ -356,35 +365,37 @@ class SchemaConstraintTest {
 
   @Test
   void 라인의_단가는_음수일_수_없다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
 
-    assertThatThrownBy(() -> insertInvoiceLine(orgId, invoiceId, "token-usage", "-0.5"))
+    assertThatThrownBy(() -> insertInvoiceLine(organizationId, invoiceId, "token-usage", "-0.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
   void 확정_라인은_등록되지_않은_미터_코드와_빈_집계_기준으로도_저장된다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
 
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO invoice_line
           (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, 'deleted-metric', NULL, '{}', 1200, 0.5, 600)
         """,
-        orgId,
+        organizationId,
         invoiceId);
 
-    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+    assertThat(invoiceLineCountOf(invoiceId)).isEqualTo(1);
   }
 
   @Test
   void 확정_라인에서_비울_수_있는_열은_집계_기준뿐이다() {
     assertThat(
-            jdbc.queryForList(
+            jdbcTemplate.queryForList(
                 """
                 SELECT column_name FROM information_schema.columns
                 WHERE table_schema = 'public' AND table_name = 'invoice_line'
@@ -396,26 +407,27 @@ class SchemaConstraintTest {
 
   @Test
   void 라인의_수량과_금액에는_음수를_막는_제약을_걸지_않는다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
 
-    jdbc.update(
+    jdbcTemplate.update(
         """
         INSERT INTO invoice_line
           (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, 'token-usage', 'token', '{}', -1200, 0.5, -600)
         """,
-        orgId,
+        organizationId,
         invoiceId);
 
-    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+    assertThat(invoiceLineCountOf(invoiceId)).isEqualTo(1);
   }
 
   @Test
   void 라인은_인보이스로_찾는_인덱스를_가진다() {
     Boolean indexExists =
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             """
             SELECT EXISTS(
               SELECT 1 FROM pg_index i
@@ -431,23 +443,24 @@ class SchemaConstraintTest {
 
   @Test
   void 확정된_인보이스는_공급가액과_세액을_따로_담는다() {
-    UUID orgId = insertOrganization();
-    UUID invoiceId = insertInvoice(orgId, insertCustomer(orgId, "acme"), "2026-08");
-    insertInvoiceLine(orgId, invoiceId, "token-usage");
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    insertInvoiceLine(organizationId, invoiceId, "token-usage");
 
     assertThat(
-            jdbc.queryForObject(
+            jdbcTemplate.queryForObject(
                 "SELECT supply_amount + tax_amount FROM invoice WHERE id = ?",
                 Long.class,
                 invoiceId))
         .isEqualTo(13200L);
-    assertThat(lineCountOf(invoiceId)).isEqualTo(1);
+    assertThat(invoiceLineCountOf(invoiceId)).isEqualTo(1);
     assertThat(amountColumnsOf("invoice")).containsExactly("supply_amount", "tax_amount");
     assertThat(amountColumnsOf("invoice_line")).containsExactly("amount");
   }
 
   private String collationOf(String table, String column) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         """
         SELECT collation_name FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = ? AND column_name = ?
@@ -457,8 +470,8 @@ class SchemaConstraintTest {
         column);
   }
 
-  private UUID insertInvoice(UUID orgId, UUID customerId, String period) {
-    return jdbc.queryForObject(
+  private UUID insertInvoice(UUID organizationId, UUID customerId, String period) {
+    return jdbcTemplate.queryForObject(
         """
         INSERT INTO invoice
           (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
@@ -466,37 +479,37 @@ class SchemaConstraintTest {
         RETURNING id
         """,
         UUID.class,
-        orgId,
+        organizationId,
         customerId,
         period);
   }
 
-  private void insertInvoiceLine(UUID orgId, UUID invoiceId, String billableMetricCode) {
-    insertInvoiceLine(orgId, invoiceId, billableMetricCode, "0.5");
+  private void insertInvoiceLine(UUID organizationId, UUID invoiceId, String billableMetricCode) {
+    insertInvoiceLine(organizationId, invoiceId, billableMetricCode, "0.5");
   }
 
   private void insertInvoiceLine(
-      UUID orgId, UUID invoiceId, String billableMetricCode, String unitPrice) {
-    jdbc.update(
+      UUID organizationId, UUID invoiceId, String billableMetricCode, String unitPrice) {
+    jdbcTemplate.update(
         """
         INSERT INTO invoice_line
           (organization_id, invoice_id, billable_metric_code, target_property, dimension_values,
            quantity, unit_price, amount)
         VALUES (?, ?, ?, 'token', '{}', 1200, ?::numeric, 600)
         """,
-        orgId,
+        organizationId,
         invoiceId,
         billableMetricCode,
         unitPrice);
   }
 
-  private int lineCountOf(UUID invoiceId) {
-    return jdbc.queryForObject(
+  private int invoiceLineCountOf(UUID invoiceId) {
+    return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM invoice_line WHERE invoice_id = ?", Integer.class, invoiceId);
   }
 
   private List<String> amountColumnsOf(String table) {
-    return jdbc.queryForList(
+    return jdbcTemplate.queryForList(
         """
         SELECT column_name FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = ? AND column_name LIKE '%amount%'
@@ -505,32 +518,32 @@ class SchemaConstraintTest {
         String.class, table);
   }
 
-  private void insertPricePolicy(UUID orgId, String billableMetricCode) {
-    jdbc.update(
+  private void insertPricePolicy(UUID organizationId, String billableMetricCode) {
+    jdbcTemplate.update(
         "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, ?)",
-        orgId,
+        organizationId,
         billableMetricCode);
   }
 
   private void insertPriceRate(
-      UUID orgId, String billableMetricCode, String dimensionValues, String price) {
-    jdbc.update(
+      UUID organizationId, String billableMetricCode, String dimensionValues, String price) {
+    jdbcTemplate.update(
         """
         INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, ?, ?::jsonb, ?::numeric)
         """,
-        orgId,
+        organizationId,
         billableMetricCode,
         dimensionValues,
         price);
   }
 
   private void deleteCustomer(UUID customerId) {
-    jdbc.update("DELETE FROM customer WHERE id = ?", customerId);
+    jdbcTemplate.update("DELETE FROM customer WHERE id = ?", customerId);
   }
 
   private List<String> constraintNames() {
-    return jdbc.queryForList(
+    return jdbcTemplate.queryForList(
         """
         SELECT conname FROM pg_constraint
         WHERE connamespace = 'public'::regnamespace AND contype IN ('p', 'f')
@@ -540,31 +553,31 @@ class SchemaConstraintTest {
 
   private boolean customerExists(UUID customerId) {
     return Boolean.TRUE.equals(
-        jdbc.queryForObject(
+        jdbcTemplate.queryForObject(
             "SELECT EXISTS(SELECT 1 FROM customer WHERE id = ?)", Boolean.class, customerId));
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
-  private UUID insertCustomer(UUID orgId, String name) {
-    return jdbc.queryForObject(
+  private UUID insertCustomer(UUID organizationId, String name) {
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, ?) RETURNING id",
         UUID.class,
-        orgId,
+        organizationId,
         name);
   }
 
-  private void insertUsageEvent(UUID orgId, UUID customerId, String transactionId) {
-    jdbc.update(
+  private void insertEvent(UUID organizationId, UUID customerId, String transactionId) {
+    jdbcTemplate.update(
         """
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, ?, ?, 'chat_completion', '{"token": 1200}', now())
         """,
-        orgId,
+        organizationId,
         transactionId,
         customerId);
   }

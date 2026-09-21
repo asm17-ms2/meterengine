@@ -23,7 +23,7 @@ class InvoiceLineRoundTripTest {
 
   @Autowired private InvoiceLineRepository invoiceLineRepository;
   @Autowired private EntityManager entityManager;
-  @Autowired private JdbcTemplate jdbc;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   void 저장한_라인은_수량과_단가를_적은_자릿수_그대로_되읽는다() {
@@ -58,7 +58,7 @@ class InvoiceLineRoundTripTest {
   }
 
   private UUID insertInvoice(UUID organizationId) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         """
         INSERT INTO invoice
           (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
@@ -96,12 +96,12 @@ class InvoiceLineRoundTripTest {
   }
 
   private UUID insertOrganization() {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('테스트 도입사') RETURNING id", UUID.class);
   }
 
   private UUID insertCustomer(UUID organizationId) {
-    return jdbc.queryForObject(
+    return jdbcTemplate.queryForObject(
         "INSERT INTO customer (organization_id, name) VALUES (?, 'acme') RETURNING id",
         UUID.class,
         organizationId);

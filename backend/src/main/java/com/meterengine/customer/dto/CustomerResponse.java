@@ -6,9 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record CustomerResponse(
-    @JsonProperty("id") UUID id,
-    @JsonProperty("name") String name,
-    @JsonProperty("created_at") OffsetDateTime createdAt) {
+    UUID id, String name, @JsonProperty("created_at") OffsetDateTime createdAt) {
 
   public static CustomerResponse from(Customer customer) {
     return new CustomerResponse(customer.getId(), customer.getName(), customer.getCreatedAt());

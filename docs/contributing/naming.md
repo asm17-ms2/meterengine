@@ -128,7 +128,7 @@
 | URL 경로 | kebab-case | 복수 명사, 동사 없음. 부모 아래 하나뿐인 하위 리소스와 셀 수 없는 명사는 단수 | `/v1/billable-metrics/{code}/price-policy`, `/v1/usage` |
 | 쿼리 파라미터 | snake_case | JSON 키와 같은 이름 | `customer_id` |
 | 경로 변수 | snake_case | 앞 세그먼트 리소스의 식별 JSON 키. 리소스명을 되풀이하지 않고(`{id}`), 둘 이상이면 `<리소스 단수>_<키>`. 자바 변수는 camelCase | `/v1/customers/{id}`, `@PathVariable("transaction_id") String transactionId` |
-| JSON 키 | snake_case | 두 낱말 이상이면 `@JsonProperty`로 지정. boolean은 접두사 없는 형용사 | `customer_id`, `active` |
+| JSON 키 | snake_case | 두 낱말 이상이거나 키가 자바 이름과 다르면 `@JsonProperty`로 지정. boolean은 접두사 없는 형용사 | `customer_id`, `active`, 수집 요청의 `occurredAt`은 `@JsonProperty("timestamp")` |
 | 문자열 열거값, 에러 코드 | lowercase snake_case | 이미 나간 에러 코드와 통일 | `customer_not_found` |
 
 ### DB
@@ -137,6 +137,9 @@
 | --- | --- | --- | --- |
 | DB 테이블 | snake_case 단수 | 엔티티명이 곧 테이블명, `@Table` 불필요 | `invoice_line` |
 | DB 컬럼 | snake_case | 다른 테이블을 가리키면 `<참조 테이블>_<참조 컬럼>`. 순간 `_at`, 날짜 `_date`, boolean은 접두사 없는 형용사 | `customer_id`, `finalized_at` |
+| DB 제약 | snake_case | `<테이블>_<대상>_<종류>`, 종류는 `pk` `fk` `unique` `check` `not_null`이고 끝에 온다. 대상은 아래 "제약 종류별 대상" | `customer_pk`, `customer_organization_fk`, `event_customer_same_organization_fk`, `invoice_period_check` |
+
+- **제약 종류별 대상.** PK는 대상이 없다. FK는 참조하는 테이블이고, 도입사 경계를 함께 강제하는 복합 FK는 `<테이블>_<참조 테이블>_same_organization_fk`다. UNIQUE는 키 컬럼을 순서대로 잇고 참조 컬럼의 `_id` `_code`를 뗀다. CHECK와 NOT NULL은 컬럼 하나이며 PostgreSQL 자동 이름이 이미 이 형식이라 그대로 쓴다. 63바이트를 넘으면 다른 제약이 이미 싣고 있는 컬럼을 앞에서부터 한도 안에 들어올 때까지만 뺀다.
 
 ## 오류 처리
 
