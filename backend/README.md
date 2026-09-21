@@ -82,7 +82,6 @@ docker build -t meterengine-backend .
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - `TOSSPAYMENTS_SECRET_KEY`의 기본값은 실제 키가 아니다. 이 값으로 토스페이먼츠 API를 부르면 거절당한다.
   - 빈 값을 주면 `TossPaymentsProperties`의 `@NotBlank`가 기동을 실패시킨다.
-  - 로컬에서 결제를 시험하려면 같은 상점의 클라이언트 키도 함께 필요하다. 빌링키 발급이 브라우저에서 카드를 등록하는 단계부터 시작한다.
 - 운영에서는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
@@ -92,7 +91,7 @@ docker build -t meterengine-backend .
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
-- 모든 오퍼레이션이 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 붙기 전까지 쓰는 임시 방식이다.
+- 모든 오퍼레이션이 도입사를 `X-Organization-Id` 헤더로 받는다.
 
 ### 오류 응답
 

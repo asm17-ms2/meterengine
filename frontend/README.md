@@ -111,10 +111,12 @@ docker run -p 3000:3000 \
 
 ## 화면
 
-| 경로 | 화면 | 백엔드 |
-| --- | --- | --- |
-| `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) | `GET /v1/events` |
-| `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) | `GET /v1/usage` |
-| `/billing` | 청구 예정액 | `GET /v1/invoices/draft` |
-| `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) | `GET/POST /v1/customers`, `PUT/DELETE /v1/customers/{id}` |
-| `/billable-metrics` | 미터 관리 (이름 검색, 등록/수정 다이얼로그, 삭제) | `GET/POST /v1/billable-metrics`, `PUT/DELETE /v1/billable-metrics/{code}` |
+| 경로 | 화면 |
+| --- | --- |
+| `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) |
+| `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) |
+| `/billing` | 청구 예정액 |
+| `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) |
+| `/billable-metrics` | 미터 관리 (이름 검색, 등록/수정 다이얼로그, 삭제) |
+
+- 화면이 부르는 백엔드 오퍼레이션은 `src/lib/api/`에 있다.

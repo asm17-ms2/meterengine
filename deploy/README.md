@@ -185,7 +185,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
 | `tosspayments-secret-key` | SecureString | 백엔드가 토스페이먼츠 API를 부를 때 쓰는 Basic 인증 키 |
-| `tosspayments-client-key` | String | 브라우저에서 토스페이먼츠 SDK 초기화용. 아직 읽는 곳이 없다 |
+| `tosspayments-client-key` | String | 브라우저에서 토스페이먼츠 SDK 초기화용 |
 
 - 새 파라미터를 등록한다.
 
@@ -211,11 +211,8 @@ aws ssm put-parameter --name /meterengine/prod/<이름> --type SecureString --va
 
 - **두 키는 같은 상점에서 함께 받은 한 쌍이어야 한다.** 짝이 맞지 않으면 API가 `UNAUTHORIZED_KEY`로 거절한다.
 - **연동 키 종류를 주문서형, 결제창형(`test_gck_` / `test_gsk_`)으로 바꾸면 안 된다.** 빌링키 발급이 `NOT_SUPPORTED_METHOD`로 막힌다.
-- **API 버전을 바꾸면 응답 필드가 바뀐다.** 응답을 파싱하는 코드가 붙은 뒤에는 버전을 올릴 때 백엔드 매핑을 같이 고친다.
+- **API 버전을 바꾸면 응답 필드가 바뀐다.**
 - 클라이언트 키는 브라우저에 노출되는 값이라 SecureString이 아니다.
-- 자동결제 승인 API의 `Idempotency-Key` 헤더는 첫 요청부터 15일간 첫 응답을 그대로 돌려준다.
-  - **성공이든 실패든 응답이 캐시되므로, 실패한 결제를 재시도할 때는 새 키를 쓴다**.
-  - 15일이 지나면 키가 만료되어 새 결제로 처리되니 이중 결제 방어를 이 헤더에만 맡기지 않는다.
 
 ## 모니터링
 
@@ -238,7 +235,6 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
 4. MeterEngine 폴더 > MeterEngine SLO 대시보드를 연다.
-   - 패널: 가용성, 백엔드 상태, 5xx 비율, 응답 지연 p95/p99, CPU 사용률, 메모리 사용률, 루트 디스크 사용률.
 
 ### 경보
 

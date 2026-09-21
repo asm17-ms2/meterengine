@@ -53,17 +53,6 @@ cd demo && python3 -m unittest && cd ..
 
 - 깨끗한 DB에서 위 순서를 밟으면 전부 일치가 나온다. DB에 이전 이벤트가 남아 있으면 불일치와 함께 소스 밖 건수가 진단에 찍힌다.
 - `verify`는 신규 저장이 담긴 로그로 한다. 재전송 로그(전부 중복)를 넣으면 "저장될 이벤트가 없습니다"로 끝난다.
-- `demo/sample-events.csv`를 한 번 보낸 뒤 나오는 값 (전부 2026년 8월 귀속).
-
-| 고객 | 사용량 | 청구 예정액 |
-|---|---|---|
-| 이슬비랩스 | input 4,820, output 2,820 | 33 + 98 = 131원 |
-| 도담헬스 | input 5,010 | 35원 |
-| 한들물류 | egress 25.0GB | 3,000원 |
-| 아크메 주식회사, 베타 스튜디오 | 없음 | 0원 |
-
-- 금액은 라인마다 버림(ROUND_DOWN)이라 33.74원이 33원이 된다.
-- 캐시 미터는 이 CSV에 해당 속성이 없어 0원이고 브리지가 보내는 이벤트에서만 잡힌다.
 - 경계 케이스는 `demo/sample-events-edge.csv`(10행, 전부 정상 저장)로 같은 순서를 반복한다.
   - KST 월 경계, UTC 표기 타임스탬프, 소수 토큰 절사, 저장은 되지만 집계에서 빠지는 행.
   - `verify`가 8월과 9월을 이어서 검증하는 것도 이 샘플에서 보인다.
@@ -236,7 +225,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 | OTel 이벤트 | event_type | 집계 |
 |---|---|---|
-| `api_request` | `llm_request` | 된다. 아래 단가 표의 미터에 잡힌다 |
+| `api_request` | `llm_request` | 된다. 아래 "단가"의 미터에 잡힌다 |
 | `tool_result` | `tool_call` | 안 된다. 미터가 없어 저장만 된다 |
 | `api_error` | `llm_error` | 안 된다 |
 | `api_refusal` | `llm_refusal` | 안 된다 |
@@ -261,16 +250,8 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 ### 단가
 
-- Anthropic 공시가를 역산한 값이다. 기준은 Claude Opus 5, 1 MTok = 100만 토큰, 1달러 1,400원.
-
-| 미터 | 공시가 | 계산 | 원/토큰 |
-|---|---|---|---|
-| `input-tokens` | $5 / MTok | 5 x 1400 / 1,000,000 | 0.007 |
-| `cache-creation-tokens` | $6.25 / MTok | 6.25 x 1400 / 1,000,000 | 0.00875 |
-| `cache-read-tokens` | $0.50 / MTok | 0.5 x 1400 / 1,000,000 | 0.0007 |
-| `output-tokens` | $25 / MTok | 25 x 1400 / 1,000,000 | 0.035 |
-
-- `llm_request` 이벤트 하나가 이 미터들에 함께 잡힌다.
+- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다. Claude Opus 5 공시가를 1달러 1,400원으로 환산한 토큰당 원 단가다.
+- `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
 - 캐시 쓰기는 5분 캐시 기준이다. OTel의 `cache_creation_tokens`가 5분과 1시간을 구분하지 않는다.
 - 모델별 단가는 켜지지 않는다. `properties`에 `model`이 실려 있어도 `PriceRateRepository.findBaseUnitPrices`가 `dimension_values = '{}'` 행만 읽는다.
   - 시드에는 기본 단가 한 행만 둔다. 기본 단가 행을 지우면 그 미터가 인보이스에서 통째로 빠진다.
@@ -322,35 +303,16 @@ uv run demo/console.py
 
 ## 파일 구성
 
-```
-demo/
-  meterdemo.py      CSV 데모/검증 진입점 (send, verify)
-  otel_bridge.py    브리지 명령줄 진입점 (serve, config, setup, install, uninstall, start, stop, status)
-  console.py        브리지 화면 진입점 (uv로 실행)
-
-  core/             양쪽이 함께 쓰는 것
-    model.py        KST 상수, Event, RFC3339 파싱, 와이어 바디 조립
-    api_client.py   백엔드 HTTP 래퍼
-    jsonl_log.py    전송 기록 JSONL 쓰기/읽기, outcome 판정
-    files.py        JSON 파일 원자적 쓰기
-
-  csvdemo/          CSV를 흘려보내고 대조하는 쪽
-    csvio.py        CSV 소스 읽기
-    expected.py     기대값 독립 계산
-    render.py       콘솔 출력
-    send_cmd.py / verify_cmd.py
-
-  bridge/           Claude Code 사용량을 보내는 쪽
-    const.py        경로와 주소
-    otel_map.py     OTLP 페이로드를 Event로 변환
-    state.py        설정, 세션 매핑, 고객 해석
-    server.py       OTLP와 hook을 받는 수집 서버
-    admin.py        켜고 끄고 설정하는 일
-
-  sample-events.csv       100행. 신규 80, 중복 20
-  sample-events-edge.csv  경계 케이스 10행
-  logs/                   전송 기록 (gitignore)
-```
+| 경로 | 내용 |
+|---|---|
+| `meterdemo.py` | CSV 데모/검증 진입점 (`send`, `verify`) |
+| `otel_bridge.py` | 브리지 명령줄 진입점 |
+| `console.py` | 브리지 화면 진입점 (uv로 실행) |
+| `core/` | 양쪽이 함께 쓰는 것. 이벤트 모델, 백엔드 HTTP 래퍼, 전송 기록 JSONL |
+| `csvdemo/` | CSV를 흘려보내고 대조하는 쪽 |
+| `bridge/` | Claude Code 사용량을 보내는 쪽 |
+| `sample-events.csv`, `sample-events-edge.csv` | 샘플 이벤트와 경계 케이스 |
+| `logs/` | 전송 기록 (gitignore) |
 
 - 진입점이 최상위에 있어야 `python3 demo/meterdemo.py`로 실행할 때 `demo/`가 import 경로가 된다.
 - 테스트는 각 패키지 안에 있다.
