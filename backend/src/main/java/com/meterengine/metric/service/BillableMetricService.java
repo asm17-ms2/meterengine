@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillableMetricService {
 
-  private static final String DUPLICATE_CODE_CONSTRAINT = "billable_metric_pkey";
+  private static final String DUPLICATE_CODE_CONSTRAINT = "billable_metric_pk";
 
   private final BillableMetricRepository billableMetricRepository;
 
