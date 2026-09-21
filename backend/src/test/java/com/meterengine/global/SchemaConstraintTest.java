@@ -251,6 +251,38 @@ class SchemaConstraintTest {
     assertThat(collationOf("event", "type")).isNull();
   }
 
+  @Test
+  void 코드가_비교하는_제약은_마이그레이션이_정한_이름으로_있다() {
+    assertThat(constraintNames())
+        .contains(
+            "organization_pk",
+            "customer_pk",
+            "billable_metric_pk",
+            "event_pk",
+            "price_policy_pk",
+            "price_rate_pk",
+            "invoice_pk",
+            "invoice_line_pk",
+            "customer_organization_fk",
+            "billable_metric_organization_fk",
+            "event_organization_fk",
+            "price_policy_organization_fk",
+            "price_rate_organization_fk",
+            "invoice_organization_fk",
+            "invoice_line_organization_fk",
+            "event_customer_same_org",
+            "price_policy_metric_same_org",
+            "price_rate_policy_fk",
+            "invoice_customer_same_org",
+            "invoice_line_invoice_same_org");
+  }
+
+  @Test
+  void PostgreSQL_기본_이름의_PK와_FK는_남아_있지_않다() {
+    assertThat(constraintNames())
+        .noneMatch(name -> name.endsWith("_pkey") || name.endsWith("_fkey"));
+  }
+
   // --- 인보이스 확정본 ---
 
   @Test
@@ -536,6 +568,15 @@ class SchemaConstraintTest {
 
   private void deleteCustomer(UUID customerId) {
     jdbc.update("DELETE FROM customer WHERE id = ?", customerId);
+  }
+
+  private List<String> constraintNames() {
+    return jdbc.queryForList(
+        """
+        SELECT conname FROM pg_constraint
+        WHERE connamespace = 'public'::regnamespace AND contype IN ('p', 'f')
+        """,
+        String.class);
   }
 
   private boolean customerExists(UUID customerId) {

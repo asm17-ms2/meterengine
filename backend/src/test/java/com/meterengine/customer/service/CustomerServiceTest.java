@@ -42,7 +42,7 @@ class CustomerServiceTest {
   @Test
   void 등록되지_않은_도입사로_DB가_거절하면_400_예외로_바뀐다() {
     when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any()))
-        .thenThrow(new DataIntegrityViolationException("customer_organization_id_fkey"));
+        .thenThrow(new DataIntegrityViolationException("customer_organization_fk"));
 
     assertThatThrownBy(() -> customerService.create(ORG_ID, "아크메"))
         .isInstanceOf(InvalidRequestException.class)
