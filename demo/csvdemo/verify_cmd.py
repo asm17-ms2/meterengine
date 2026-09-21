@@ -1,10 +1,3 @@
-"""verify 서브커맨드: 소스 기반 기대값과 서버 응답을 나란히 비교한다.
-
-미터 정의(event_type, target_property, 단가)는 서버 응답에서 유도한다.
-독립 계산의 핵심은 이벤트에 대한 중복 제거/월 귀속/합산/절사이고,
-유도한 메타데이터는 화면에 그대로 출력해 사람이 시드와 대조할 수 있게 한다.
-"""
-
 from __future__ import annotations
 
 import sys
@@ -78,10 +71,6 @@ def _load_log_source(args, console: Console) -> Optional[VerifySource]:
         return None
     for warning in log.warnings:
         print(console.warn("경고: " + warning))
-    # 중간이 깨진 send 로그로는 판정하지 않는다. 레코드가 빠진 채로 남은 합계가
-    # 우연히 서버와 맞으면 "일치"로 0을 내주는데, 그 0을 보고 다음 단계로 넘어가면
-    # 손상을 통과시킨 것이 된다. 브리지 로그(헤더가 여럿)는 하루치를 이어쓰다
-    # 재시작으로 잘리는 것이 정상 범위라 경고까지만 한다.
     if log.damaged and log.header_count <= 1:
         print(
             "로그 중간의 %d개 라인이 손상돼 기대값을 신뢰할 수 없습니다: %s\n"
@@ -119,7 +108,6 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
     org_id = args.org_id or DEFAULT_ORG_ID
     client = ApiClient(base_url, org_id, timeout_seconds=args.timeout)
 
-    # 등록 고객 명단을 서버에서 받아 customer_not_found까지 예측한다.
     usage = client.get_usage(args.month)
     if usage.status != 200:
         print("/v1/usage 응답이 200이 아니라 고객 명단을 얻지 못했습니다: %s" % parse_problem(usage.status, usage.body).summary(), file=sys.stderr)

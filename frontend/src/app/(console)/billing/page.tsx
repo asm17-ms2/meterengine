@@ -24,8 +24,6 @@ export default async function BillingPage({
   const month = readMonth(params.month);
   const devState = readDevState(params.state);
 
-  // await하지 않고 넘긴다. 헤더 메타와 표가 같은 응답을 보되 각자의 Suspense
-  // 경계에서 기다린다.
   const draftInvoice =
     devState === "loading" ? null : previewDraftInvoice(month, devState);
 

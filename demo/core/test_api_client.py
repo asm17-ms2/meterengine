@@ -1,9 +1,3 @@
-"""오류 응답 파싱 검증.
-
-code와 message는 4xx와 5xx에 모두 실린다. 그래도 프록시가 끼어들면 이 형식이 아닌 본문이 오므로
-둘 다 없는 경우를 폴백으로 다룬다.
-"""
-
 import unittest
 
 from core.api_client import parse_problem
@@ -21,7 +15,6 @@ class ParseProblemTest(unittest.TestCase):
         )
         self.assertEqual(problem.code, "validation_error")
         self.assertEqual(problem.message, "요청 값이 올바르지 않습니다")
-        # 와이어 이름이다. 자바 필드 이름(eventType)이 아니다.
         self.assertEqual(problem.errors[0]["field"], "type")
 
     def test_code가_없는_본문도_다룬다(self):

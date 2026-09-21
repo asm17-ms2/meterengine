@@ -1,5 +1,3 @@
-"""기대값 계산 규칙 검증. MS2-128 인수조건의 계산 규칙에 1:1 대응한다."""
-
 import unittest
 from decimal import Decimal
 
@@ -79,8 +77,6 @@ class PredictSendTest(unittest.TestCase):
         self.assertEqual(prediction.stored[0].customer_id, ACME)
 
     def test_거절된_전송은_중복_판정에_들어가지_않는다(self):
-        # first-write-wins의 "최초"는 최초 저장분이다. 거절은 저장이 없으므로
-        # 같은 transaction_id의 나중 유효 전송이 신규가 된다.
         rejected_then_valid = [
             _event("evt-1", customer="9f31c2aa-0000-0000-0000-000000000000"),
             _event("evt-1"),
@@ -143,7 +139,6 @@ class SumQuantitiesTest(unittest.TestCase):
         self.assertEqual(sums[ACME], Decimal("500"))
 
     def test_비숫자와_누락과_불리언은_제외한다(self):
-        # 서버는 jsonb_typeof = 'number'만 합산한다. 저장은 되지만 합계에서 빠진다.
         stored = [
             _stored("evt-1", props={"token": Decimal("500")}),
             _stored("evt-2", props={"token": "500"}),
@@ -159,14 +154,12 @@ class SumQuantitiesTest(unittest.TestCase):
         self.assertEqual(sums[ACME], Decimal("1234567890.123456789012345"))
 
     def test_유효숫자_28자리를_넘는_합도_정확하다(self):
-        # 서버는 PostgreSQL numeric SUM으로 정확 계산하므로 기본 컨텍스트(prec=28) 반올림이 끼면 안 된다.
         value = Decimal("12345678901234567890.123456789")
         stored = [_stored("evt-1", props={"token": value}), _stored("evt-2", props={"token": value})]
         sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("24691357802469135780.246913578"))
 
     def test_대문자_uuid도_같은_고객으로_집계한다(self):
-        # 서버는 UUID를 대소문자 무관으로 파싱하고 응답은 소문자로 내려준다.
         stored = [_stored("evt-1", customer=ACME.upper())]
         sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("500"))
@@ -182,8 +175,6 @@ class LineAmountTest(unittest.TestCase):
 
 class BuildExpectedTest(unittest.TestCase):
     def test_라인별_절사가_고객별로_적용된다(self):
-        # 고객 둘이 각각 수량 3 x 단가 0.5 = 1.5원이면 라인 절사로 각 1원, 총 2원이다.
-        # 합산 후 절사(3원)와 구분되는 케이스다.
         stored = [
             _stored("evt-1", customer=ACME, props={"token": 3}),
             _stored("evt-2", customer=BETA, props={"token": 3}),

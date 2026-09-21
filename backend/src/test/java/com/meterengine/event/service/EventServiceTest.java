@@ -27,12 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 수집 서비스의 분기 검증 (MS2-130).
- *
- * <p>동시 요청은 ON CONFLICT DO NOTHING 한 문장이 DB에서 직렬화하므로 실제 경합을 재현하는 대신, 제약 위반 예외가 터졌을 때의 경로를 단위 테스트로
- * 갈음한다 (하위작업 인수 기준).
- */
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
 

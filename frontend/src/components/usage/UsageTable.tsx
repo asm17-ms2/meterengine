@@ -6,10 +6,6 @@ import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 
-/**
- * 화면이 그리는 뷰모델. 숫자 포맷은 서버에서 끝내고 문자열로 받는다.
- * 클라이언트에서 toLocaleString을 부르면 서버와 결과가 달라져 하이드레이션이 어긋난다.
- */
 export type UsageGroupView = {
   customerId: string;
   customerName: string;

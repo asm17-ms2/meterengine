@@ -7,13 +7,6 @@ import { CUSTOMER_DELETE_IDLE } from "@/app/(console)/customers/state";
 import type { CustomerRowView } from "@/components/customers/CustomersTable";
 import { Dialog } from "@/components/screen/Dialog";
 
-/**
- * 고객 삭제. 확인 -> (서버 판정) -> 결과 안내까지 한 창에서 넘어간다.
- *
- * 이벤트가 있는지 화면이 미리 알 수 없어서 이 모양이 된다. 목록 응답에 이벤트
- * 건수가 없고, 있더라도 확인 다이얼로그를 띄운 사이에 이벤트가 들어올 수 있다.
- * 판정은 저장할 때 서버가 하고, 화면은 그 답을 받아 창을 바꾼다.
- */
 export function CustomerDeleteDialog({
   customer,
   onClose,
@@ -30,11 +23,6 @@ export function CustomerDeleteDialog({
     if (state.status === "done") onClose();
   }, [state, onClose]);
 
-  // 서버가 거절했다 (409). 오류가 아니라 규칙이라 에러 블록이 아닌 안내다.
-  //
-  // 디자인은 여기에 이벤트 건수를 적었지만("...이벤트가 328건 있습니다") 그 값을
-  // 채울 곳이 없다. 409 응답은 건수를 주지 않고, ErrorResponse의 message는
-  // code마다 하나인 고정 문구라 건수가 들어 있지 않다.
   if (state.status === "rejected") {
     return (
       <Notice
@@ -46,8 +34,6 @@ export function CustomerDeleteDialog({
     );
   }
 
-  // 이미 없다 (404). 목록을 열어 둔 사이에 다른 곳에서 지워진 경우다.
-  // 사용자가 원한 결과와 같은 상태이므로 "실패"라고 말하지 않는다.
   if (state.status === "gone") {
     return (
       <Notice
@@ -109,12 +95,6 @@ export function CustomerDeleteDialog({
   );
 }
 
-/**
- * 되돌릴 것이 없는 결과 안내. 확인 버튼 하나뿐이다.
- *
- * 왼쪽 4px 띠가 디자인이 정한 "이건 거절이다" 표시다. 에러 블록과 달리 화면이
- * 망가진 것이 아니라 요청이 규칙에 걸렸다는 뜻이다.
- */
 function Notice({
   title,
   body,

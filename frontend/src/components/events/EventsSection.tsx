@@ -12,10 +12,6 @@ import {
 import { formatKstDateTime, formatDecimal } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
-/**
- * 프라미스를 await하는 서버 컴포넌트. 페이지가 <Suspense>로 감싸서 표 영역만
- * 스켈레톤으로 바뀌고 화면 제목과 필터 행은 남는다.
- */
 export async function EventsSection({
   events,
   month,
@@ -42,9 +38,6 @@ export async function EventsSection({
   const pageCount = countPages(listEventsResponse);
 
   if (listEventsResponse.events.length === 0) {
-    // 두 가지 경우가 있고 할 말이 다르다. 정말 이 달에 이벤트가 없는 것과,
-    // 주소창의 page가 마지막 페이지를 넘어간 것이다. 후자에 '이벤트가 없습니다'라고
-    // 하면 방금 본 목록이 사라진 것처럼 읽힌다.
     const isOutOfRange = listEventsResponse.total > 0;
     return (
       <EmptyState
@@ -78,10 +71,6 @@ export async function EventsSection({
           pageCount={pageCount}
           buildHref={(displayPage) => buildHref(displayPage - 1)}
         />
-        {/*
-          응답이 정렬 기준을 에코하지 않아서 화면에 고정한다. 백엔드가 정렬을 바꾸면
-          이 문구도 같이 고쳐야 한다 (MS2-131 PR에 적어 두었다).
-        */}
         <span className="screen-note">정렬: occurred_at 최신순</span>
       </div>
     </>

@@ -1,5 +1,3 @@
-"""otel_map 테스트. 네트워크 없이 변환만 확인한다."""
-
 import unittest
 from decimal import Decimal
 
@@ -74,10 +72,6 @@ class ToEventTest(unittest.TestCase):
         self.assertEqual(event.transaction_id, "tool_result:toolu_01M3")
 
     def test_같은_id를_실은_다른_이벤트가_멱등키를_나눠_갖지_않는다(self):
-        """이름을 안 붙이면 뒤엣것이 서버에서 duplicate로 조용히 사라진다.
-
-        api_refusal이 먼저 닿으면 토큰이 실린 llm_request 쪽이 버려진다.
-        """
         same = {"request_id": {"stringValue": "req_ABC"}}
         request = otel_map.to_event(record("api_request", same), "cid", {})
         refusal = otel_map.to_event(record("api_refusal", same), "cid", {})
@@ -96,7 +90,6 @@ class ToEventTest(unittest.TestCase):
             otel_map.to_event(record("api_request", {}), "cid", {})
 
     def test_transaction_id는_255자를_넘지_않는다(self):
-        # 이름을 붙인 뒤에도 서버 상한(255) 안이어야 한다.
         data = record("api_request", {"request_id": {"stringValue": "r" * 400}})
         event = otel_map.to_event(data, "cid", {})
         self.assertEqual(len(event.transaction_id), 255)
@@ -109,7 +102,6 @@ class ToEventTest(unittest.TestCase):
         event = otel_map.to_event(api_request(), "cid", {})
         moment = parse_rfc3339(event.timestamp_text)
         self.assertEqual(moment.utcoffset().total_seconds(), 9 * 3600)
-        # timeUnixNano가 가리키는 순간과 같아야 한다
         self.assertEqual(moment.timestamp(), 1787278841.429)
 
     def test_timeUnixNano가_없으면_event_timestamp를_쓴다(self):
@@ -148,7 +140,6 @@ class PropertiesTest(unittest.TestCase):
         self.assertNotIn("agent.name", properties)
 
     def test_토큰은_JSON_number다(self):
-        """미터의 집계는 값이 JSON number일 때만 돈다. 문자열이면 조용히 빠진다."""
         properties = self.properties_of(otel_map.to_event(api_request(), "cid", {}))
         self.assertIsInstance(properties["input_tokens"], int)
         self.assertIsInstance(properties["output_tokens"], int)
@@ -156,7 +147,6 @@ class PropertiesTest(unittest.TestCase):
         self.assertEqual(properties["output_tokens"], 75)
 
     def test_문자열로_온_수치도_number로_바꾼다(self):
-        """tool_result의 duration_ms는 stringValue로 온다 (실측)."""
         data = record(
             "tool_result",
             {
@@ -170,11 +160,9 @@ class PropertiesTest(unittest.TestCase):
         self.assertEqual(properties["duration_ms"], 145)
         self.assertIsInstance(properties["duration_ms"], int)
         self.assertEqual(properties["tool_result_size_bytes"], 2)
-        # success는 수치 키가 아니라 문자열 그대로 둔다 (차원 후보다)
         self.assertEqual(properties["success"], "true")
 
     def test_문자열로_온_int64도_받는다(self):
-        """protobuf JSON 매핑은 int64를 문자열로 쓴다. 어느 쪽이든 받아야 한다."""
         data = api_request(input_tokens={"intValue": "40000"})
         properties = self.properties_of(otel_map.to_event(data, "cid", {}))
         self.assertEqual(properties["input_tokens"], 40000)
@@ -190,16 +178,10 @@ class PropertiesTest(unittest.TestCase):
         self.assertNotIn("duration_ms", properties)
 
     def test_NaN과_Infinity는_담지_않는다(self):
-        """JSON에 표기가 없는 값이라, 실으면 본문이 JSON으로 성립하지 않는다.
-
-        서버가 거절할 뿐 아니라 로그에도 request_raw만 남아 verify가 그 줄을
-        재구성하지 못한다. Decimal("NaN")이 성립하기 때문에 걸리는 자리다.
-        """
         for text in ("NaN", "Infinity", "-Infinity"):
             data = api_request(duration_ms={"stringValue": text})
             event = otel_map.to_event(data, "cid", {})
             self.assertNotIn("duration_ms", self.properties_of(event), text)
-            # 본문 전체가 다시 읽히는지까지 본다
             loads_decimal(event.properties_text)
 
     def test_브리지가_덧붙인_값이_들어간다(self):

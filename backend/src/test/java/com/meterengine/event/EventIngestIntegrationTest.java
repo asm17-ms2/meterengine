@@ -18,17 +18,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-/**
- * 이벤트 수집 API의 인수 기준을 HTTP 계층부터 DB까지 관통해 검증한다 (MS2-130).
- *
- * <p>범위는 이 하위작업의 인수 기준으로 한정한다. 스키마 자체의 제약(append-only, received_at 트리거, 멱등키 유니크)은
- * SchemaConstraintTest가 이미 검증하므로 여기서는 API를 통과했을 때의 결과만 본다.
- *
- * <p><b>{@code @AutoConfigureMockMvc}를 쓰지 않고 WebApplicationContext에서 직접 만든다.</b> 그 애너테이션이 붙으면 컨텍스트
- * 캐시 키가 달라져서 MeterEngineApplicationTests, SchemaConstraintTest와 컨텍스트를 공유하지 못한다. 그러면
- * TestcontainersConfiguration의 빈이 다시 만들어져 Postgres 컨테이너가 두 번 뜬다(실측). 애너테이션을 빼면 세 테스트가 같은 컨텍스트와 컨테이너
- * 하나를 쓴다. 이 슬라이스에는 서블릿 필터가 없어 Boot가 MockMvc에 얹어 주는 필터 체인도 필요 없다.
- */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional
@@ -77,7 +66,6 @@ class EventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
 
-    // 다섯 필드를 하나씩 빼 본다. V1 스키마의 NOT NULL 컬럼 목록과 같은 집합이다.
     String[] incompleteBodies = {
       """
       {"customer_id":"%s","type":"chat_completion","properties":{},"timestamp":"%s"}
@@ -188,7 +176,6 @@ class EventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
 
-    // received_at은 DTO에 필드가 없어 매핑되지 않고, DB 트리거가 서버 시각으로 덮어쓴다.
     String withReceivedAt =
         """
         {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
@@ -300,9 +287,6 @@ class EventIngestIntegrationTest {
   void 형식_오류와_고객_매핑_실패는_code로_서로_구별된다() {
     UUID orgId = insertOrganization("도입사 A");
 
-    // 형식 오류는 Boot의 ProblemDetailsExceptionHandler가, 고객 매핑 실패는
-    // EventExceptionHandler가 맡는다. 후자가 ResponseEntityExceptionHandler를
-    // 상속하면 전자의 자동 설정이 물러나므로, 둘이 공존하는지 확인한다.
     String withoutTransactionId =
         """
         {"customer_id":"%s","type":"chat_completion","properties":{},"timestamp":"%s"}
@@ -337,7 +321,6 @@ class EventIngestIntegrationTest {
         """
             .formatted(customerId, OCCURRED_AT);
 
-    // 2026-08-17부터 자바 이름(eventType)이 아니라 도입사가 보낸 JSON 키다 (MS2-150 A-2).
     assertThat(post(orgId, withoutEventType))
         .hasStatus(400)
         .bodyJson()
@@ -351,8 +334,6 @@ class EventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
 
-    // Double로 바인딩하면 0.12345678901234568로 잘린다. event 테이블은 append-only라 되돌릴 수 없고
-    // 이 값이 청구 근거가 된다.
     String preciseDecimal =
         """
         {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
@@ -382,8 +363,6 @@ class EventIngestIntegrationTest {
     UUID orgId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(orgId, "acme");
 
-    // NUL 문자는 유효한 JSON이지만 Postgres jsonb가 거부한다. 500으로 나가면 5xx가 재시도 신호라
-    // 수집 클라이언트가 저장되지도 않을 이벤트를 영원히 재전송한다.
     String withNulCharacter =
         """
         {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
@@ -401,12 +380,6 @@ class EventIngestIntegrationTest {
         .asString()
         .isEqualTo(ErrorCode.INVALID_EVENT.getCode());
     assertThat(result).bodyJson().doesNotHavePath("$.errors");
-
-    // 여기서 저장 건수를 세지 않는다. 제약 위반이 나면 PostgreSQL이 트랜잭션을 abort 상태로 만들어
-    // (SQLSTATE 25P02) 이 테스트의 @Transactional 안에서는 이후 어떤 조회도 실패한다. 실제로 한 번
-    // 겪었다. INSERT 문 자체가 실패했으니 저장은 0건이고, 운영에서는 ingest()가 트랜잭션 밖에서 돌아
-    // 다음 요청에 영향이 없다. 이 제약이 EventService의 DuplicateKeyException catch에
-    // 달아 둔 경고와 같은 사실이다.
   }
 
   @Test
@@ -415,8 +388,6 @@ class EventIngestIntegrationTest {
     UUID customerId = insertCustomer(orgId, "acme");
     UUID wrongOrgId = UUID.randomUUID();
 
-    // customer_id는 멀쩡한데 X-Organization-Id가 틀린 경우다. 고객만 지목하면 도입사는 고객 등록을
-    // 의심하며 엉뚱한 곳을 디버깅한다.
     MvcTestResult result = post(wrongOrgId, body("tx-1", customerId.toString()));
 
     assertThat(result)
@@ -435,7 +406,6 @@ class EventIngestIntegrationTest {
 
     assertThat(post(orgId, body("x".repeat(255), customerId.toString()))).hasStatusOk();
 
-    // 자바 이름은 transactionId다. 와이어 이름으로 통일했다 (MS2-150 A-2).
     assertThat(post(orgId, body("x".repeat(256), customerId.toString())))
         .hasStatus(400)
         .bodyJson()

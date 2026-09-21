@@ -2,7 +2,6 @@
 
 import { useCollapse } from "@/components/table/CollapseProvider";
 
-/** 필터 행 오른쪽에 붙는 두 버튼. */
 export function ExpandControls() {
   const { expandAll, collapseAll } = useCollapse();
   return (

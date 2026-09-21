@@ -1,5 +1,3 @@
-"""JSONL 로그 포맷의 쓰기/읽기 왕복과 손상 내성 검증."""
-
 import os
 import tempfile
 import unittest
@@ -99,10 +97,6 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(len(result.warnings), 1)
 
     def test_중간이_깨진_라인도_건너뛰고_경고한다(self):
-        """브리지는 하루치를 이어쓴다. 잘린 라인 뒤에 다음 실행 헤더가 붙으면
-        그 라인은 더 이상 마지막이 아니다. 파일 전체를 거부하면 그날 기록이
-        통째로 검증 불가가 된다.
-        """
         _write_sample(self.path)
         with open(self.path, "a", encoding="utf-8") as f:
             f.write('{"v": 1, "type": "send", "seq": 4, "requ')
@@ -111,9 +105,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
                     ' "request": {}, "status": 200, "response": {}, "outcome": "new",'
                     ' "error": null, "elapsed_ms": 3}\n')
         result = read_log(self.path)
-        # 깨진 줄만 빠지고 뒤의 정상 레코드는 살아난다
         self.assertEqual([r.seq for r in result.records], [1, 2, 3, 5])
-        # 조용히 넘기지는 않는다. send는 중간이 깨진 것 자체가 신호다
         self.assertEqual(len(result.warnings), 1)
         self.assertIn("손상", result.warnings[0])
 
@@ -125,8 +117,6 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(len(result.records), 3)
 
     def test_깨진_properties도_로그를_깨뜨리지_않는다(self):
-        # csvio는 값을 검증하지 않으므로 와이어 바디가 깨진 JSON일 수 있다 (400 시연 목적).
-        # 그래도 로그 파일은 항상 읽을 수 있어야 한다.
         _write_sample(self.path)
         with JsonlLogWriter(os.path.join(self.tmp.name, "broken.jsonl")) as writer:
             writer.write_send(
@@ -147,7 +137,6 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(result.records[0].response["code"], "validation_error")
 
     def test_개행이_든_properties도_한_라인으로_남는다(self):
-        # 따옴표 친 CSV 셀에는 개행이 합법이고, JSON 토큰 사이 개행은 유효한 JSON이다.
         path = os.path.join(self.tmp.name, "newline.jsonl")
         with JsonlLogWriter(path) as writer:
             writer.write_send(
@@ -168,12 +157,6 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(record.request["properties"]["token"], 7)
 
     def test_중간_라인_손상은_경고로_올린다(self):
-        """예전에는 여기서 ValueError를 던져 파일 전체를 버렸다.
-
-        브리지가 하루치를 이어쓰면서 그 처리가 과해졌다. 쓰다 만 라인 하나가
-        그날 기록 전체를 검증 불가로 만들기 때문이다. 대신 그 줄만 건너뛰고
-        경고를 올린다. 손상 자체는 여전히 사람 눈에 띄어야 한다.
-        """
         _write_sample(self.path)
         with open(self.path, encoding="utf-8") as f:
             lines = f.read().splitlines()
@@ -187,8 +170,6 @@ class JsonlLogRoundTripTest(unittest.TestCase):
 
 
 class ClassifyOutcomeTest(unittest.TestCase):
-    """브리지와 CSV 데모가 같은 판정을 써야 한다. verify가 둘을 같은 뜻으로 읽는다."""
-
     def test_200은_duplicate_여부로_갈린다(self):
         self.assertEqual(classify_outcome(200, {"duplicate": False}), "new")
         self.assertEqual(classify_outcome(200, {"duplicate": True}), "duplicate")
@@ -199,8 +180,6 @@ class ClassifyOutcomeTest(unittest.TestCase):
         self.assertEqual(classify_outcome(499, None), "rejected")
 
     def test_5xx는_error다(self):
-        # rejected로 접으면 verify가 "거절됐으니 저장 안 됨"으로 확정한다. 실제로는
-        # 저장되고 응답만 실패했을 수 있어, 저장 여부를 알 수 없다고 알려야 한다.
         self.assertEqual(classify_outcome(500, None), "error")
         self.assertEqual(classify_outcome(503, {}), "error")
 
@@ -209,15 +188,11 @@ class ClassifyOutcomeTest(unittest.TestCase):
         self.assertEqual(classify_outcome(200, None), "error")
 
     def test_객체가_아닌_본문도_error다(self):
-        # 프록시가 배열이나 문자열을 돌려줄 수 있다. 여기서 터지면 전송 한 건이
-        # 통째로 예외가 된다.
         self.assertEqual(classify_outcome(200, [1, 2]), "error")
         self.assertEqual(classify_outcome(200, "ok"), "error")
 
 
 class AppendTest(unittest.TestCase):
-    """브리지는 하루치를 이어쓴다. 앞 줄이 끝나지 않은 채로 붙이면 둘 다 잃는다."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -226,7 +201,7 @@ class AppendTest(unittest.TestCase):
     def test_개행_없이_끊긴_파일에_이어써도_헤더가_살아난다(self):
         _write_sample(self.path)
         with open(self.path, "a", encoding="utf-8") as f:
-            f.write('{"v": 1, "type": "send", "seq": 4, "requ')  # 쓰다 죽은 자리
+            f.write('{"v": 1, "type": "send", "seq": 4, "requ')
         with JsonlLogWriter(self.path, append=True) as writer:
             writer.write_run_header(
                 started_at_text="2026-08-24T11:00:00+09:00",
@@ -236,8 +211,6 @@ class AppendTest(unittest.TestCase):
                 argv=["otel_bridge.py", "serve"],
             )
         result = read_log(self.path)
-        # 헤더가 앞줄에 엉겨 붙으면 여기서 None이 되고, verify가 전송 대상을 모른 채
-        # 기본값(localhost)으로 검증한다
         self.assertEqual(result.header.base_url, "https://meterengine.com")
         self.assertEqual(result.header_count, 2)
 
@@ -255,8 +228,6 @@ class DamagedTest(unittest.TestCase):
         self.path = os.path.join(self.tmp.name, "send-test.jsonl")
 
     def test_JSON이지만_객체가_아닌_줄도_건너뛴다(self):
-        # 잘린 라인 뒤에 숫자 조각만 남을 수 있다. 확인 없이 .get을 부르면
-        # AttributeError로 죽어, verify가 안내 대신 트레이스백을 낸다.
         _write_sample(self.path)
         with open(self.path, "a", encoding="utf-8") as f:
             f.write("123\n")
@@ -274,7 +245,6 @@ class DamagedTest(unittest.TestCase):
         self.assertEqual(result.header_count, 1)
 
     def test_잘린_마지막_라인은_damaged가_아니다(self):
-        # 이것은 중단의 정상 흔적이다. 경고까지만 하고 판정을 막지 않는다.
         _write_sample(self.path)
         with open(self.path, "a", encoding="utf-8") as f:
             f.write('{"v": 1, "type": "send", "seq": 4, "requ')
