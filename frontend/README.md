@@ -71,7 +71,7 @@ docker run -p 3000:3000 \
   meterengine-frontend
 ```
 
-- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`과 `public`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
+- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
 - 백엔드 주소와 도입사 식별자는 이미지에 굽지 않고 런타임 환경변수로 받는다.
   - 주지 않으면 `src/lib/config.ts`의 기본값으로 떨어지고 오류가 나지 않는다.
 
