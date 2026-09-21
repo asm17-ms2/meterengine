@@ -14,10 +14,10 @@
 |---|---|---|
 | 이름 비교 | 한국어 사전순 | `customer.name`의 collation, `CustomerIntegrationTest.목록은_한국어_사전순이다` |
 
-## 도입사 스코프
+## id 발급
 
-id를 서버가 발급하는 것과 남의 도입사 고객을 미등록과 구별하지 않는 것의 정본은 `backend/openapi.yaml`의 `createCustomer` description과 `customer_not_found` description이다.
+id를 서버가 발급하는 것의 정본은 `backend/openapi.yaml`의 `createCustomer` description이다.
 
 ## 삭제
 
-이벤트가 있는 고객을 지우지 않는 것과 행을 실제로 지우는 것의 정본은 `backend/openapi.yaml`의 `deleteCustomer` description이다.
+이벤트가 있는 고객을 지우지 않는 것과 지운 고객을 되돌릴 수 없는 것의 정본은 `backend/openapi.yaml`의 `deleteCustomer` description이다.

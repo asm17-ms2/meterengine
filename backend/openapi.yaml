@@ -3,27 +3,26 @@ info:
   description: |
     사용량 기반 과금 플랫폼의 API. 사용량 이벤트를 수집하고, 고객별 월 사용량과 청구 예정액을 조회한다.
 
-    도입사는 X-Organization-Id 헤더로 받는다. 이 헤더는 임시물이며 MS2-126이 Bearer API 키 인증을
-    붙이면서 인증 주체에서 꺼내는 형태로 바뀐다.
+    모든 요청에 X-Organization-Id 헤더로 도입사 ID를 보낸다. 인증이 붙기 전까지 쓰는 임시 헤더다.
 
-    오류 응답은 code, message, errors[] 형식이다. 화면 문구는 code로 고른다. message는
+    오류 응답은 code, message, errors로 이뤄진다. 오류별 처리는 code로 분기한다. message는
     code마다 하나인 한국어 문구이고, errors는 틀린 필드를 짚을 수 있는 400에만 실린다.
   title: MeterEngine API
   version: v1
 servers:
-- description: 문서를 서빙한 호스트
+- description: 이 문서를 제공한 호스트
   url: /
 paths:
   /v1/billable-metric-prices:
     get:
       description: |
-        이 도입사의 미터를 code 오름차순으로 전부 싣고, 미터마다 가격 정책의 축 선언과 기본 단가를 붙인다.
-        정책이 없는 미터도 실리며 dimension_properties가 null이다. 빈 배열은 무차원 정책이라는 뜻이다.
-        unit_price는 무차원 조합에 붙은 기본 단가이고, 없으면 null이다. 조합별 단가는 싣지 않는다.
+        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 가격 정책과 기본 단가를 붙인다.
+        가격 정책이 없는 미터는 dimension_properties가 null이다. 빈 배열은 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
+        unit_price는 속성 조건 없이 적용되는 기본 단가이고, 없으면 null이다. 속성 값 조합별 단가는 싣지 않는다.
         페이지를 나누지 않는다.
       operationId: listBillableMetricPrices
       parameters:
-      - description: 도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -49,12 +48,12 @@ paths:
   /v1/billable-metrics:
     get:
       description: |
-        이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
-        미터가 없거나 등록되지 않은 도입사면 billable_metrics가 빈 배열이다.
-        페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
+        등록한 미터를 code 오름차순으로 전부 돌려준다.
+        X-Organization-Id가 등록되지 않은 도입사여도 오류가 아니라 빈 배열이다.
+        페이지를 나누지 않는다.
       operationId: listBillableMetrics
       parameters:
-      - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -79,13 +78,13 @@ paths:
       - billable-metric-controller
     post:
       description: |
-        집계 미터를 등록한다. event_type이 같은 사용량 이벤트가 이 미터의 집계 대상이 된다.
-        집계 함수는 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
+        미터를 등록한다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상이다.
+        aggregation은 SUM만 받는다. SUM은 이벤트 properties에서 target_property 키의 값을 합산하므로
         target_property가 필수다.
-        코드는 도입사 안에서 유일하고, 등록 뒤 바꿀 수 없다.
+        code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
       operationId: createBillableMetric
       parameters:
-      - description: 도입사 ID. Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -104,7 +103,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/BillableMetricResponse"
-          description: 등록된 미터. 반영 결과를 확인하는 창구다
+          description: 등록된 미터
         "400":
           content:
             application/json:
@@ -119,29 +118,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=billable_metric_already_exists: 같은 코드의 미터가 이미 있다. 다른\
-            \ 코드를 써야 한다"
+          description: "code=billable_metric_already_exists: 같은 code의 미터가 이미 있다"
       summary: 집계 미터 등록
       tags:
       - billable-metric-controller
   /v1/billable-metrics/{code}/price-policy:
     post:
       description: |
-        미터에 가격 정책(가격을 가르는 속성 키의 선언)을 등록한다.
-        무차원 미터면 dimension_properties를 빈 배열로 보낸다.
-        단가는 이 API가 받지 않는다. 단가 등록 API는 아직 없다.
-        단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
-        미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
+        미터의 가격 정책을 등록한다. 가격 정책은 단가를 가르는 이벤트 속성 키를 선언한 것이다.
+        속성에 따라 단가가 갈리지 않으면 dimension_properties를 빈 배열로 보낸다.
+        단가는 이 API로 등록하지 않는다. 단가가 없는 미터는 청구 예정액에 라인이 나오지 않는다.
+        미터 하나에 가격 정책은 하나다. 이미 있으면 409다.
       operationId: createPricePolicy
       parameters:
-      - description: 도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
         schema:
           type: string
           format: uuid
-      - description: 정책을 붙일 미터의 code.
+      - description: 가격 정책을 등록할 미터의 code.
         in: path
         name: code
         required: true
@@ -159,7 +156,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PricePolicyResponse"
-          description: 등록된 정책 전체. 반영 결과를 확인하는 창구다
+          description: 등록된 가격 정책
         "400":
           content:
             application/json:
@@ -167,31 +164,29 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_price_policy: dimension_properties에 중복된 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "404":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=billable_metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"
+          description: "code=billable_metric_not_found: 그런 미터가 없다"
         "409":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=price_policy_already_exists: 이 미터에 정책이 이미 있다. 요청을 고쳐서\
-            \ 될 일이 아니다"
+          description: "code=price_policy_already_exists: 이 미터에 가격 정책이 이미 있다"
       summary: 가격 정책 등록
       tags:
       - price-policy-controller
   /v1/customers:
     get:
       description: |
-        이 도입사의 고객을 이름 오름차순으로 전부 돌려준다. 동명이인이 있어도 순서가 흔들리지 않게
-        id가 두 번째 정렬 키다. 사용량 조회, 청구 예정액과 같은 순서다.
-        고객이 없거나 등록되지 않은 도입사면 customers가 빈 배열이다.
-        페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의이며, 사용량과 청구 예정액 응답도
-        같은 고객 집합을 한 번에 담는다.
+        등록한 고객을 이름 오름차순으로 전부 돌려준다. 이름이 같으면 id 순이다.
+        사용량 조회, 청구 예정액 조회의 고객 순서와 같다.
+        X-Organization-Id가 등록되지 않은 도입사여도 오류가 아니라 빈 배열이다.
+        페이지를 나누지 않는다.
       operationId: listCustomers
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
@@ -219,9 +214,8 @@ paths:
       - customer-controller
     post:
       description: |
-        고객을 만들고 서버가 발급한 id와 함께 돌려준다. 이벤트 수집은 이 값을 customer_id로 실어 보낸다.
-        이름 중복을 막지 않는다. 같은 이름의 계열사나 부서를 따로 관리할 수 있고, 구별은 id가 한다.
-        Location 헤더를 주지 않는다. 단건 조회 경로가 없어 가리킬 곳이 없다.
+        고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
+        이름이 같은 고객을 여럿 등록할 수 있다. 구별은 id로 한다.
       operationId: createCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
@@ -243,7 +237,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerResponse"
-          description: 만들어진 고객
+          description: 등록된 고객
         "400":
           content:
             application/json:
@@ -258,11 +252,10 @@ paths:
   /v1/customers/{id}:
     delete:
       description: |
-        고객을 지운다. 행이 실제로 사라져 목록과 사용량, 청구 예정액에서 빠지고
-        그 고객 id를 실은 이벤트는 미등록 고객으로 거절된다. 되돌리는 API는 없다.
-        사용량 이벤트가 한 건이라도 있으면 지우지 않고 409로 거절한다. 이벤트는 청구 근거이고
-        지울 수 없어서, 고객만 지우면 그 사용량이 어느 청구서에도 오르지 않는다.
-        같은 고객을 두 번 지우면 두 번째는 204가 아니라 404다.
+        고객을 지운다. 지운 고객은 목록과 사용량, 청구 예정액에서 빠지고
+        그 id로 보낸 이벤트는 404(customer_not_found)로 거절된다. 지운 고객은 되돌릴 수 없다.
+        사용량 이벤트가 한 건이라도 있는 고객은 지울 수 없고 409다.
+        이미 지운 고객을 다시 지우면 404다.
       operationId: deleteCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
@@ -293,23 +286,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_not_found: 없거나 다른 도입사 소속이다"
+          description: "code=customer_not_found: 그런 고객이 없다"
         "409":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일\
-            이 아니다"
+          description: "code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다"
       summary: 고객 삭제
       tags:
       - customer-controller
     put:
       description: |
-        고객 이름을 바꾸고 갱신된 고객을 돌려준다. 단건 조회가 없으므로 이 응답이 반영 결과를 확인하는 창구다.
-        PATCH가 아닌 이유는 고칠 수 있는 것이 이름 하나이고 그것이 항상 필수라, 부분 갱신이라 부를 것이 없어서다.
-        필드가 늘면서 일부만 보내는 요청이 필요해지면 그때 PATCH를 따로 추가한다.
-        다른 도입사 소속이거나 이미 지워진 고객은 404다. 지운 고객은 행 자체가 없어 없는 고객과 구별되지 않는다.
+        고객 이름을 바꾸고 바뀐 고객을 돌려준다.
       operationId: updateCustomer
       parameters:
       - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
@@ -338,7 +327,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerResponse"
-          description: 갱신된 고객
+          description: 바뀐 고객
         "400":
           content:
             application/json:
@@ -351,34 +340,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다"
+          description: "code=customer_not_found: 그런 고객이 없다"
       summary: 고객 수정
       tags:
       - customer-controller
   /v1/events:
     get:
       description: |
-        지정한 달의 이벤트를 occurred_at 최신순으로 한 페이지씩 돌려준다. 같은 시각이 여럿이면
-        transaction_id 내림차순으로 순서가 고정돼, 같은 요청을 여러 번 보내도 결과가 같다.
+        지정한 달의 이벤트를 occurred_at 최신순으로 한 페이지씩 돌려준다.
+        occurred_at이 같으면 transaction_id 내림차순이다.
         기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
-        2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다 (사용량 조회와 같은 판정).
-        customer_id, month, type을 함께 주면 AND로 걸리고 total도 필터를 적용한 뒤의 건수다.
-        properties는 저장된 값을 그대로 낸다. 서버가 키를 고르거나 값을 해석하지 않는다.
-        저장 타입이 jsonb라 키 순서와 공백은 수집 때와 달라질 수 있고, 숫자 자릿수는 그대로다.
-
-        FE 규약 둘은 서버가 강제할 수 없어 여기 적어 둔다.
-        page는 0부터다(화면의 1페이지 = page=0). 필터를 바꾸면 page를 0으로 되돌린다.
-        안 그러면 3페이지를 보다가 조건을 좁혔을 때 그만큼 페이지가 없어 빈 화면이 뜬다.
+        2026-09-01T00:00:00+09:00 이벤트는 9월에 든다. 사용량 조회와 기준이 같다.
+        customer_id, month, type을 함께 주면 모두 만족하는 이벤트만 나오고, total은 조건을 적용한 뒤의 건수다.
+        properties는 저장된 값 그대로다. 키 순서와 공백은 보낸 것과 다를 수 있고, 숫자 자릿수는 그대로다.
       operationId: listEvents
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
         schema:
           type: string
           format: uuid
-      - description: 0부터 세는 페이지 번호. 화면의 1페이지가 0이다.
+      - description: 0부터 세는 페이지 번호.
         in: query
         name: page
         required: false
@@ -397,7 +381,7 @@ paths:
           default: 20
           maximum: 100
           minimum: 1
-      - description: 고객을 좁힌다. 생략하면 도입사의 모든 고객이 대상이다.
+      - description: 고객을 좁힌다. 생략하면 모든 고객이 대상이다.
         in: query
         name: customer_id
         required: false
@@ -411,7 +395,7 @@ paths:
         required: false
         schema:
           type: string
-      - description: 이벤트 종류를 좁힌다. 미터에 없는 값도 저장돼 있으면 그대로 조회된다.
+      - description: 이벤트 type을 좁힌다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회된다.
         in: query
         name: type
         required: false
@@ -437,22 +421,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_not_found: customer_id가 가리키는 고객이 없거나 다른 도입사\
-            \ 소속이다. 둘을 구별해 답하지 않는다"
+          description: "code=customer_not_found: customer_id가 가리키는 고객이 없다"
       summary: 사용량 이벤트 조회
       tags:
       - event-controller
     post:
       description: |
-        같은 (도입사, transaction_id)의 재전송은 저장하지 않고 최초 저장본을 유지한다(first-write-wins).
-        재전송도 200이며 duplicate가 true로 내려온다.
-        properties의 내용은 검증하지 않는다. 저장 타입이 jsonb라 키 순서와 공백은 보존되지 않지만,
-        숫자는 정수/소수 모두 자릿수가 잘리지 않는다.
-        timestamp는 이벤트 발생 시각이며 occurred_at으로 저장된다.
-        received_at은 서버가 찍으며 요청에 담긴 값은 무시된다.
+        사용량 이벤트 한 건을 저장한다.
+        transaction_id가 같은 이벤트를 다시 보내면 저장하지 않고 처음 저장한 이벤트를 유지한다.
+        이때도 응답은 200이고 duplicate가 true다. 응답을 받지 못했으면 같은 transaction_id로 다시 보내면 된다.
+        properties의 내용은 검증하지 않는다. 키 순서와 공백은 보존되지 않고,
+        숫자는 정수와 소수 모두 자릿수가 잘리지 않는다.
+        timestamp는 이벤트가 발생한 시각이고 조회 응답에서는 occurred_at으로 나온다.
+        received_at은 서버가 받은 시각이며 요청에 실어도 무시된다.
       operationId: ingestEvent
       parameters:
-      - description: 도입사 ID. MS2-126의 Bearer 인증으로 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -471,36 +455,35 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/IngestEventResponse"
-          description: 저장했거나(duplicate=false) 이미 저장돼 있다(true)
+          description: 저장했다(duplicate=false). 이미 저장된 transaction_id면 duplicate=true다
         "400":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: 형식 검증 실패. errors에 필드명과 사유가 들어 있다.
-            code=invalid_event: 저장할 수 없는 값이다. 같은 본문으로 재시도해도 성공하지 않는다.
+            code=validation_error: 필수 필드가 없거나 형식이 틀렸다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_event: 저장할 수 없는 값이 들어 있다. 같은 본문을 다시 보내도 성공하지 않는다.
         "404":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_not_found: customer_id가 가리키는 고객이 없거나 다른 도입사\
-            \ 소속이다. 둘을 구별해 답하지 않는다"
+          description: "code=customer_not_found: customer_id가 가리키는 고객이 없다"
       summary: 사용량 이벤트 수집
       tags:
       - event-controller
   /v1/invoices/draft:
     get:
       description: |
-        도입사의 모든 고객에 대해 미터별 사용량 x 단가로 청구 예정액을 계산해 돌려준다.
-        집계는 조회 시점에 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
-        금액은 원 단위 정수이고, 라인(고객 x 미터)마다 원 미만을 절사한 뒤 합산한다.
-        이벤트가 없는 고객도 단가가 있는 모든 미터 라인이 수량 0, 금액 0으로 들어간다.
-        고객 순서는 이름 오름차순, 라인 순서는 미터 code 오름차순으로 고정이다.
+        모든 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+        조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
+        금액은 원 단위 정수다. 라인(고객 x 미터)마다 원 미만을 버린 뒤 합산한다.
+        이벤트가 없는 고객도 단가가 있는 미터마다 수량 0, 금액 0인 라인이 나온다.
+        고객은 이름 오름차순, 라인은 미터 code 오름차순이다.
       operationId: previewDraftInvoice
       parameters:
-      - description: 도입사 ID. 인증이 아직 없어서 쓰는 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -520,29 +503,29 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/DraftInvoiceResponse"
-          description: 고객별 청구 예정액. 미터가 없는 도입사는 각 고객의 lines가 빈 배열이다
+          description: 고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다
         "400":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이\
-            고 errors에 필드명과 사유가 들어 있다"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
+            \ month가 yyyy-MM이 아니다"
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
   /v1/usage:
     get:
       description: |
-        도입사의 미터마다 그 미터의 event_type과 맞는 이벤트를 고객별로 합산해 돌려준다.
+        미터마다 type이 그 미터의 event_type과 같은 이벤트를 고객별로 합산해 돌려준다.
         기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
-        2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다.
-        도입사의 모든 고객이 응답에 들어가며, 이벤트가 없는 고객은 quantity가 0이다.
+        2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
+        모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이다.
         properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
-        금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
+        금액은 싣지 않는다. 금액은 청구 예정액 조회(GET /v1/invoices/draft)가 준다.
       operationId: aggregateBillableMetricUsages
       parameters:
-      - description: 도입사 ID. 인증이 붙으면 대체될 임시 헤더다.
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
         in: header
         name: X-Organization-Id
         required: true
@@ -562,14 +545,14 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListBillableMetricUsagesResponse"
-          description: 미터별/고객별 사용량. 미터가 없는 도입사는 billable_metric_usages가 빈 배열이다
+          description: "미터별, 고객별 사용량. 등록한 미터가 없으면 billable_metric_usages가 빈 배열이다"
         "400":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이\
-            고 errors에 필드명과 사유가 들어 있다"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
+            \ month가 yyyy-MM이 아니다"
       summary: 고객별 월 사용량 조회
       tags:
       - billable-metric-usage-controller
@@ -584,16 +567,16 @@ components:
           type:
           - array
           - "null"
-          description: "가격을 가르는 이벤트 속성 키의 선언. 정책이 아직 없는 미터는 null이고, 정책이 있는 무차원 미터는\
-            \ 빈 배열이다"
+          description: "단가를 가르는 이벤트 속성 키. 가격 정책이 없는 미터는 null이고, 속성에 따라 단가가 갈리지 않는\
+            \ 미터는 빈 배열이다"
           items:
             type: string
         unit_price:
           type:
           - number
           - "null"
-          description: "무차원 조합('{}')에 붙은 기본 단가. 단가 행이 아직 없으면 null이고, 그 미터는 청구 예정액\
-            \ 계산에서 라인이 빠진다. 0은 무료를 뜻하는 값이라 null과 다르다"
+          description: "속성 조건 없이 적용되는 기본 단가. 없으면 null이고, 그 미터는 청구 예정액에 라인이 나오지 않는다\
+            . 0은 무료라는 뜻이라 null과 다르다"
     BillableMetricResponse:
       type: object
       properties:
