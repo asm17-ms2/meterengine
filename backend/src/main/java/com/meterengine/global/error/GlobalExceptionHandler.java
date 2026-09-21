@@ -3,6 +3,7 @@ package com.meterengine.global.error;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +15,20 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingMatrixVariableException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.UnsatisfiedServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -37,6 +45,8 @@ class GlobalExceptionHandler {
   private static final String UNPARSEABLE_MESSAGE = "형식을 해석할 수 없습니다";
 
   private static final String INVALID_MESSAGE = "올바르지 않습니다";
+
+  private static final String UNSATISFIED_PARAMETER_MESSAGE = "%s 조건에 맞지 않습니다";
 
   // 도메인 예외
   @ExceptionHandler(BusinessException.class)
@@ -82,9 +92,50 @@ class GlobalExceptionHandler {
   @ExceptionHandler(MissingRequestHeaderException.class)
   ResponseEntity<ErrorResponse> handleMissingRequestHeaderException(
       MissingRequestHeaderException exception) {
-    return respond(
-        ErrorCode.VALIDATION_ERROR,
-        List.of(new FieldError(exception.getHeaderName(), REQUIRED_MESSAGE)));
+    return respondMissingValue(exception.getHeaderName());
+  }
+
+  // 400 필수 쿼리 파라미터 누락
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+      MissingServletRequestParameterException exception) {
+    return respondMissingValue(exception.getParameterName());
+  }
+
+  // 400 필수 멀티파트 파트 누락
+  @ExceptionHandler(MissingServletRequestPartException.class)
+  ResponseEntity<ErrorResponse> handleMissingServletRequestPartException(
+      MissingServletRequestPartException exception) {
+    return respondMissingValue(exception.getRequestPartName());
+  }
+
+  // 400 필수 쿠키 누락
+  @ExceptionHandler(MissingRequestCookieException.class)
+  ResponseEntity<ErrorResponse> handleMissingRequestCookieException(
+      MissingRequestCookieException exception) {
+    return respondMissingValue(exception.getCookieName());
+  }
+
+  // 400 필수 매트릭스 변수 누락
+  @ExceptionHandler(MissingMatrixVariableException.class)
+  ResponseEntity<ErrorResponse> handleMissingMatrixVariableException(
+      MissingMatrixVariableException exception) {
+    return respondMissingValue(exception.getVariableName());
+  }
+
+  // 400 만족되지 않은 params 조건
+  @ExceptionHandler(UnsatisfiedServletRequestParameterException.class)
+  ResponseEntity<ErrorResponse> handleUnsatisfiedServletRequestParameterException(
+      UnsatisfiedServletRequestParameterException exception) {
+    List<FieldError> errors =
+        Arrays.stream(exception.getParamConditions())
+            .map(
+                condition ->
+                    new FieldError(
+                        parameterConditionName(condition),
+                        UNSATISFIED_PARAMETER_MESSAGE.formatted(condition)))
+            .toList();
+    return respond(ErrorCode.VALIDATION_ERROR, errors);
   }
 
   // 400 경로 변수와 쿼리 파라미터 형식 불일치
@@ -111,6 +162,13 @@ class GlobalExceptionHandler {
     return respond(ErrorCode.REQUEST_TYPE_NOT_SUPPORTED);
   }
 
+  // 413 업로드 크기 상한 초과
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException(
+      MaxUploadSizeExceededException exception) {
+    return respond(ErrorCode.UPLOAD_SIZE_EXCEEDED);
+  }
+
   // 406 Accept에 맞는 응답 형식 없음
   @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
   ResponseEntity<ErrorResponse> handleHttpMediaTypeNotAcceptableException(
@@ -131,6 +189,13 @@ class GlobalExceptionHandler {
     return respond(ErrorCode.ENDPOINT_NOT_FOUND);
   }
 
+  // 503 비동기 처리 시간 초과
+  @ExceptionHandler(AsyncRequestTimeoutException.class)
+  ResponseEntity<ErrorResponse> handleAsyncRequestTimeoutException(
+      AsyncRequestTimeoutException exception) {
+    return respond(ErrorCode.REQUEST_TIMED_OUT);
+  }
+
   // 500 나열되지 않은 예외
   @ExceptionHandler(Exception.class)
   ResponseEntity<ErrorResponse> handleException(Exception exception) {
@@ -149,6 +214,23 @@ class GlobalExceptionHandler {
     return ResponseEntity.status(errorCode.getStatus())
         .contentType(MediaType.APPLICATION_JSON)
         .body(ErrorResponse.of(errorCode, errors));
+  }
+
+  private static ResponseEntity<ErrorResponse> respondMissingValue(String field) {
+    return respond(ErrorCode.VALIDATION_ERROR, List.of(new FieldError(field, REQUIRED_MESSAGE)));
+  }
+
+  private static String parameterConditionName(String condition) {
+    String name = condition.startsWith("!") ? condition.substring(1) : condition;
+    int separatorIndex = name.length();
+    for (int index = 0; index < name.length(); index++) {
+      char character = name.charAt(index);
+      if (character == '=' || character == '!') {
+        separatorIndex = index;
+        break;
+      }
+    }
+    return name.substring(0, separatorIndex);
   }
 
   private static String requestFieldName(Object target, String javaField) {
