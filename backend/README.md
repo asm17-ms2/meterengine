@@ -94,23 +94,6 @@ docker build -t meterengine-backend .
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 - 모든 오퍼레이션이 도입사를 `X-Organization-Id` 헤더로 받는다. 인증이 붙기 전까지 쓰는 임시 방식이다.
 
-| 오퍼레이션 | 내용 |
-| --- | --- |
-| `GET /v1/customers` | 고객 목록. 이름 오름차순, 페이지 나누지 않음 |
-| `POST /v1/customers` | 고객 등록. 서버가 id와 등록 시각을 만든다 |
-| `PUT /v1/customers/{id}` | 고객 이름 수정 |
-| `DELETE /v1/customers/{id}` | 고객 삭제. 이벤트가 있으면 409 |
-| `POST /v1/events` | 사용량 이벤트 수집. transaction_id 기준 멱등(first-write-wins) |
-| `GET /v1/events` | 이벤트 조회. 월, 고객, type 필터와 페이지 나누기 |
-| `GET /v1/usage` | 고객별 월 사용량 집계 |
-| `GET /v1/invoices/draft` | 고객별 청구 예정액 |
-| `POST /v1/billable-metrics` | 집계 미터 등록. 집계 함수는 SUM만 받고 target_property가 필수다. 코드는 도입사 안에서 유일하다 |
-| `GET /v1/billable-metrics` | 미터 목록. code 오름차순, 페이지 나누지 않음 |
-| `POST /v1/billable-metrics/{code}/price-policy` | 가격 정책 등록. 축 선언만 받고 미터당 하나다 |
-| `GET /v1/billable-metric-prices` | 미터별 가격 목록. 미터마다 정책과 무차원 기본 단가를 싣는다. code 오름차순, 페이지 나누지 않음 |
-
-- 단가 등록 API가 아직 없다. 단가가 없는 미터는 청구 예정액 라인에서 빠진다.
-
 ### 오류 응답
 
 - 오류는 5xx를 포함해 형식 하나로 나간다. 스키마는 `openapi.yaml`의 `ErrorResponse`다.
@@ -146,10 +129,6 @@ docker build -t meterengine-backend .
 - 도메인 어디에도 속하지 않는 것은 루트에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
 - `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다.
-- 아직 없는 것.
-  - 확정 인보이스를 저장하는 서비스와 API. 엔티티와 리포지토리만 있다.
-  - 단가 등록, 수정, 삭제 API.
-  - 빌링키와 결제 이력.
 
 ### 마이그레이션
 
