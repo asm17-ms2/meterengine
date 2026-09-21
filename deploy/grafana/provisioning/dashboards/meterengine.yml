@@ -1,4 +1,4 @@
-# 대시보드 파일 프로바이더 (MS2-168). deploy/grafana/dashboards/의 JSON이 compose 볼륨으로
+# 대시보드 파일 프로바이더. deploy/grafana/dashboards/의 JSON이 compose 볼륨으로
 # /var/lib/grafana/dashboards 에 마운트되고, 여기서 읽어 간다.
 apiVersion: 1
 

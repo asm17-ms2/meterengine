@@ -1,4 +1,4 @@
-# Prometheus 수집 설정 (MS2-168). compose 내부 네트워크의 서비스 이름으로 붙는다.
+# Prometheus 수집 설정. compose 내부 네트워크의 서비스 이름으로 붙는다.
 #
 # 백엔드의 /actuator/prometheus는 Caddy가 프록시하지 않아 인터넷에서 안 보이지만,
 # 여기는 같은 compose 네트워크 안이라 backend:8080으로 직접 닿는다.

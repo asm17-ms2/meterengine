@@ -5,7 +5,7 @@
 #   /opt/meterengine/deploy/deploy.sh <git-sha>
 #
 # 호출 주체는 둘이다:
-#   - CD 워크플로(MS2-167)가 SSM SendCommand로 실행
+#   - CD 워크플로가 SSM SendCommand로 실행
 #   - 사람이 SSM 세션에 붙어 직접 실행 (첫 배포와 롤백)
 #
 # 하는 일: 레포를 그 SHA로 맞추고 -> Parameter Store에서 .env를 새로 만들고 ->
@@ -31,7 +31,6 @@ die() { printf '[deploy] 실패: %s\n' "$*" >&2; exit 1; }
 
 # Parameter Store 값으로 .env를 매번 새로 만든다. 서버에 손으로 만든 .env를 남겨 두지 않는
 # 이유는, 그렇게 하면 파라미터를 고쳐도 서버가 옛 값을 계속 쓰는 상태를 눈치채기 어렵기 때문이다.
-# RDS(MS2-164)가 생기면 여기서 읽는 값이 바뀌는 것만으로 접속 대상이 바뀐다.
 write_env_file() {
 	local image_tag="$1"
 
@@ -115,14 +114,14 @@ main() {
 	log "ECR 로그인 완료"
 
 	# 5. 이미지를 받고 스택을 올린다.
-	#    --remove-orphans는 이전 배포에만 있던 서비스(예: RDS 전환 후의 postgres)를 치운다.
+	#    --remove-orphans는 이전 배포에만 있던 서비스를 치운다.
 	"${compose[@]}" pull --quiet
 	"${compose[@]}" up -d --remove-orphans
 	log "컨테이너 기동 요청 완료"
 
 	# Caddyfile은 bind mount라 파일 내용이 바뀌어도 compose가 컨테이너를 다시 만들지 않는다.
 	# 서비스 정의(이미지, 환경변수, 볼륨 경로)만 보기 때문이다. 그래서 Caddyfile만 고친 배포는
-	# up -d만으로 반영되지 않는다(MS2-166에서 www를 더할 때 실제로 겪었다).
+	# up -d만으로 반영되지 않는다.
 	# reload는 설정이 같으면 아무 일도 하지 않고, 달라졌으면 연결을 끊지 않은 채 적용한다.
 	# 컨테이너가 방금 떴으면 admin API가 아직 안 열렸을 수 있어 잠깐 재시도한다.
 	local reloaded=no i
