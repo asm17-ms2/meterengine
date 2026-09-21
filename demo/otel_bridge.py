@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-"""Claude Code 사용량을 팀 수집 API로 흘려보내는 로컬 브리지 (MS2-169).
-
-Claude Code가 OTLP로 보낸 사용량 이벤트를 받아 POST /v1/events 형태로 바꿔 보낸다.
-각자 기계에서 도는 상주 프로세스이고, 백엔드나 배포 구성은 건드리지 않는다.
-
-    Claude Code --UserPromptSubmit hook--> 브리지: 이 세션은 이 폴더
-                --OTLP/JSON--------------> 브리지: 토큰과 메타
-                                              |
-                                              v
-                                      POST <base_url>/v1/events
-
-이 파일은 명령줄 진입점이다. 화면을 보며 다루려면 console.py를 쓴다.
-자세한 설명은 demo/README.md 참조.
-"""
 
 from __future__ import annotations
 
@@ -37,13 +23,10 @@ def run_serve(args) -> int:
     config = BridgeConfig.load(args.config)
     if args.base_url:
         config.base_url = args.base_url
-    # 고객 캐시가 이 서버 것인지 판정할 수 있게 scope를 넘긴다.
     state = BridgeState(args.state, config.scope())
     try:
         return server.serve(config, state, args.host, args.port)
     except OSError as error:
-        # 대부분 브리지가 이미 떠 있는 경우다. 트레이스백 대신 무엇을 하면 되는지
-        # 적는다. 진단이 필요한 값(포트)이 메시지에 들어 있어야 한다.
         print(
             "%d 포트를 열지 못했습니다: %s\n"
             "브리지가 이미 떠 있는지 보세요 (python3 demo/otel_bridge.py status)."
@@ -54,7 +37,6 @@ def run_serve(args) -> int:
 
 
 def run_config(args) -> int:
-    """설정을 보거나 바꾼다."""
     path = args.config
     config = BridgeConfig.load(path)
     changed = False
@@ -84,7 +66,6 @@ def run_config(args) -> int:
 
 
 def run_setup(args) -> int:
-    """~/.claude/settings.json에 OTel env와 hook을 병합한다."""
     plan = admin.plan_claude_settings(args.settings, args.host, args.port)
     if not plan.needed:
         print("이미 설정돼 있습니다: " + plan.path)
@@ -219,8 +200,6 @@ def main(argv=None) -> int:
         print(str(error), file=sys.stderr)
         return 2
     except OSError as error:
-        # 설정 파일이나 plist를 쓰지 못하는 경우다 (권한, 디스크). 트레이스백 대신
-        # 한 줄로 알린다 (README의 "오류 처리" 약속).
         print("파일을 다루지 못했습니다: %s" % error, file=sys.stderr)
         return 2
     except KeyboardInterrupt:

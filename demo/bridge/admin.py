@@ -1,9 +1,3 @@
-"""브리지를 켜고 끄고 설정하는 일 (MS2-169).
-
-CLI와 TUI가 같은 코드를 쓴다. 그래서 이 모듈은 아무것도 출력하지 않는다.
-무엇을 했는지 값으로 돌려주고, 사람에게 보여 주는 일은 부르는 쪽이 한다.
-"""
-
 from __future__ import annotations
 
 import json
@@ -30,10 +24,6 @@ from bridge.const import (
 )
 from core.files import write_json_atomic
 
-# Claude에 심을 환경 변수.
-#   메트릭을 끄는 이유: 우리가 쓰는 것은 이벤트 로그뿐이고, 메트릭까지 켜면
-#   브리지가 걸러낼 것만 늘어난다.
-#   http/json인 이유: protobuf를 풀지 않고 표준 라이브러리로 읽기 위해서다.
 OTEL_ENV = {
     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
     "OTEL_LOGS_EXPORTER": "otlp",
@@ -42,10 +32,6 @@ OTEL_ENV = {
     "OTEL_LOGS_EXPORT_INTERVAL": "5000",
 }
 
-# hook을 UserPromptSubmit에 다는 이유는 두 가지다. SessionStart는 command와
-# mcp_tool 타입만 지원해서 http hook을 걸 수 없고(공식 문서), 세션당 한 번뿐이라
-# 그때 브리지가 꺼져 있으면 그 세션 전체가 폴백으로 간다. UserPromptSubmit은 매
-# 턴 오므로 브리지를 중간에 재시작해도 다음 턴에 매핑이 저절로 복구된다.
 HOOK_EVENT = "UserPromptSubmit"
 
 
@@ -75,7 +61,7 @@ class SettingsPlan:
 
 
 class AdminError(Exception):
-    """사람이 고쳐야 하는 상태. 메시지를 그대로 보여 주면 된다."""
+    pass
 
 
 # ------------------------------------------------------------ Claude 설정
@@ -84,10 +70,6 @@ class AdminError(Exception):
 def plan_claude_settings(
     path: str = CLAUDE_SETTINGS_PATH, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT
 ) -> SettingsPlan:
-    """설정 파일에 무엇을 더할지 계산한다. 파일을 쓰지는 않는다.
-
-    기존 키를 지우지 않는다. 이미 다른 hook이 있으면 그 옆에 붙인다.
-    """
     settings: dict = {}
     if os.path.exists(path):
         try:
@@ -126,17 +108,6 @@ def plan_claude_settings(
 
 
 def apply_claude_settings(plan: SettingsPlan) -> Optional[str]:
-    """계획을 파일에 쓴다. 백업이 있으면 그 경로를 돌려준다.
-
-    남의 설정 파일이다. 두 가지를 지킨다.
-
-    백업은 한 번만 만든다. 두 번째 실행에서 덮어쓰면 우리가 이미 고친 파일이
-    백업 자리에 들어가, 되돌릴 원본이 사라진다.
-
-    본문은 원자적으로 쓴다(core/files.py). 열자마자 지우고 쓰는 방식이면 그 사이에
-    디스크가 차거나 프로세스가 죽었을 때 빈 settings.json이 남고, Claude Code가
-    사용자 설정 없이 뜬다.
-    """
     parent = os.path.dirname(plan.path)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -145,9 +116,7 @@ def apply_claude_settings(plan: SettingsPlan) -> Optional[str]:
         with open(plan.path, encoding="utf-8") as src, open(backup, "w", encoding="utf-8") as dst:
             dst.write(src.read())
     if not os.path.exists(backup):
-        backup = None  # 처음부터 설정 파일이 없었다
-    # 사람이 관리하는 파일이라 키 순서를 그대로 둔다. 정렬하면 손대지 않은
-    # 항목까지 전부 움직여 무엇이 바뀌었는지 보이지 않는다.
+        backup = None
     write_json_atomic(plan.path, plan.settings, sort_keys=False)
     return backup
 
@@ -166,12 +135,6 @@ def _has_hook_url(entries: list, url: str) -> bool:
 
 
 def worktree_root(script: str = BRIDGE_SCRIPT) -> Optional[str]:
-    """스크립트가 git 워크트리 안에 있으면 그 경로. 아니면 None.
-
-    워크트리는 --show-toplevel과 --git-common-dir의 부모가 다르다는 것으로 가른다.
-    plist에 절대 경로가 박히므로, 워크트리에 등록하면 그것을 지우는 순간 브리지가
-    죽고 launchd는 살리려다 실패를 반복한다.
-    """
     directory = os.path.dirname(script)
     try:
         top = subprocess.run(
@@ -194,15 +157,7 @@ def worktree_root(script: str = BRIDGE_SCRIPT) -> Optional[str]:
 
 
 def launch_python() -> str:
-    """launchd에 박을 인터프리터 경로.
-
-    sys.executable을 그대로 쓰면 안 된다. 콘솔을 uv run으로 띄운 경우 그 값이
-    uv 캐시 안의 임시 venv를 가리키는데, 그 경로는 uv cache clean 한 번에 사라진다.
-    그러면 KeepAlive가 없는 인터프리터로 브리지를 되살리려 무한히 재시도한다.
-
-    브리지는 표준 라이브러리만 쓰므로 그 venv를 만든 원래 python이면 충분하다.
-    """
-    if sys.prefix != sys.base_prefix:  # venv 안에서 돌고 있다
+    if sys.prefix != sys.base_prefix:
         for name in ("python3", "python"):
             candidate = os.path.join(sys.base_prefix, "bin", name)
             if os.path.exists(candidate):
@@ -238,7 +193,6 @@ def plist_text(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, python: str =
 
 
 def install(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, force: bool = False) -> str:
-    """로그인할 때 자동으로 뜨도록 등록한다. 등록 파일 경로를 돌려준다."""
     worktree = worktree_root()
     if worktree and not force:
         raise AdminError(
@@ -272,7 +226,6 @@ def start() -> None:
         raise AdminError("먼저 자동 시작 등록(install)을 하세요.")
     code, message = launchctl(["bootstrap", _domain(), PLIST_PATH])
     if code != 0:
-        # 이미 등록돼 있으면 bootstrap이 실패한다. 그때는 다시 띄운다.
         code, message = launchctl(["kickstart", "-k", _domain_target()])
         if code != 0:
             raise AdminError("시작하지 못했습니다: " + message)
@@ -283,7 +236,6 @@ def stop() -> None:
 
 
 def restart() -> None:
-    """설정을 바꾼 뒤 부른다. base_url 같은 값은 기동 때 한 번만 읽는다."""
     if not installed():
         raise AdminError("자동 시작 등록이 없어 재시작할 수 없습니다. 직접 띄운 브리지는 손으로 껐다 켜세요.")
     code, message = launchctl(["kickstart", "-k", _domain_target()])
@@ -315,7 +267,6 @@ def _xml_escape(text: str) -> str:
 
 
 def health(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, timeout: float = 3.0) -> Optional[Dict]:
-    """브리지 상태. 응답하지 않으면 None (꺼져 있다는 뜻이고 오류가 아니다)."""
     try:
         with urllib.request.urlopen(health_endpoint(host, port), timeout=timeout) as response:
             body = json.loads(response.read().decode("utf-8"))

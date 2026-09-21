@@ -3,18 +3,6 @@
 # requires-python = ">=3.9"
 # dependencies = ["textual>=1.0"]
 # ///
-"""브리지를 화면으로 다루는 콘솔 (MS2-169).
-
-    uv run demo/console.py
-
-상태를 2초마다 갱신하고, 설정을 고치고, 브리지를 켜고 끈다. 같은 일을 명령줄로
-하려면 demo/otel_bridge.py를 쓴다. 두 진입점이 bridge/admin.py를 함께 쓰므로
-동작이 갈라지지 않는다.
-
-uv가 필요한 이유는 이 파일 하나뿐이다. 위의 script 블록(PEP 723)에 의존성이
-적혀 있어 uv가 알아서 격리 환경에 받아 실행한다. demo의 나머지는 그대로
-python3로 돈다.
-"""
 
 from __future__ import annotations
 
@@ -115,7 +103,6 @@ class ConsoleApp(App):
 
     @work(thread=True, exclusive=True)
     def refresh_status(self) -> None:
-        """브리지에 물어본다. 응답이 늦어도 화면이 멈추지 않게 스레드에서 돈다."""
         body = admin.health(DEFAULT_HOST, DEFAULT_PORT, timeout=1.0)
         self.call_from_thread(self._apply_status, body)
 
@@ -156,11 +143,6 @@ class ConsoleApp(App):
     # ------------------------------------------------------------ 프로젝트 목록
 
     def _known_projects(self) -> list:
-        """설정에 적힌 것과 브리지가 실제로 본 것을 합친다.
-
-        관측된 것을 함께 보여 주는 이유는, 무엇을 실명으로 할지 고르려면 내가 어떤
-        레포에서 일했는지가 먼저 보여야 하기 때문이다.
-        """
         names = set(self.config.allow) | set(self.config.deny)
         try:
             names |= set(BridgeState(self.state_path, self.config.scope()).sessions.values())
@@ -176,16 +158,6 @@ class ConsoleApp(App):
             table.add_row(name, self.config.project_state(name), key=name)
 
     def _merge_projects(self) -> None:
-        """브리지가 새로 본 프로젝트를 목록에 덧붙인다.
-
-        기동 때 한 번만 채우면 콘솔을 켜 둔 사이에 처음 본 레포가 목록에 없다.
-        무엇을 실명으로 할지 고르려면 그것이 보여야 한다는 것이 이 화면의 요지다.
-
-        통째로 다시 채우지 않는 이유는 table.clear()가 저장하지 않은 상태 변경
-        (스페이스로 돌려 둔 값)을 지우기 때문이다. 새 이름만 붙인다. state.json을
-        다시 읽지 않고 health의 projects를 쓰는 것은 어차피 2초마다 받는 값이고,
-        브리지가 도는 동안에는 그쪽이 더 최신이기 때문이다.
-        """
         projects = self.health.get("projects") or {}
         if not projects:
             return
@@ -251,12 +223,6 @@ class ConsoleApp(App):
     # ------------------------------------------------------------ 동작
 
     def action_save(self) -> None:
-        """화면의 값을 설정 파일에 쓴다.
-
-        먼저 사본에 담아 저장이 끝난 뒤에 self.config로 올린다. save는 validate를
-        거치므로 스킴 없는 base_url 같은 값에 ValueError를 던지는데, 원본에 바로
-        쓰면 실패한 값이 메모리에 남아 화면과 어긋난다.
-        """
         candidate = replace(
             self.config,
             owner=self.query_one("#owner", Input).value.strip(),
@@ -279,10 +245,7 @@ class ConsoleApp(App):
             self.notify(
                 "전송 대상이 배포 서버입니다. 보낸 이벤트는 지울 수 없습니다.", severity="warning", timeout=8
             )
-        # 저장은 여기서 끝났다고 먼저 알린다. 아래 재시작은 스레드에서 도는 별개
-        # 작업이라, 그것이 실패해도 저장이 됐는지 아닌지는 알 수 있어야 한다.
         self.notify("저장했습니다.")
-        # base_url 같은 값은 기동 때 한 번만 읽는다. 저장만 하면 도는 브리지는 옛 값을 쓴다.
         if self.reachable:
             self._run(admin.restart, "브리지를 재시작해 새 설정을 반영했습니다.")
 
@@ -315,8 +278,6 @@ class ConsoleApp(App):
         try:
             admin.apply_claude_settings(plan)
         except OSError as error:
-            # 읽기 전용 홈, 가득 찬 디스크, 남의 소유인 settings.json. 잡지 않으면
-            # 예외가 액션 핸들러를 빠져나가 앱이 트레이스백과 함께 내려간다.
             self.notify("Claude 설정을 쓰지 못했습니다: %s" % error, severity="error", timeout=10)
             return
         self.notify(
@@ -325,15 +286,6 @@ class ConsoleApp(App):
 
     @work(thread=True, group="admin")
     def _run(self, action, message) -> None:
-        """브리지를 켜고 끄는 일을 스레드에서 한다.
-
-        launchctl 한 번이 최대 15초를 잡고 install은 두 번 부른다. 이벤트 루프에서
-        부르면 그동안 화면이 그려지지도, 종료되지도 않는다. 상태 갱신
-        (refresh_status)이 같은 이유로 스레드에 있다.
-
-        그쪽은 exclusive=True라 뒤에 온 것이 앞엣것을 자른다. 여기는 그러면 안 돼서
-        (등록이 끝나기 전에 상태 갱신이 취소해 버린다) 그룹을 따로 둔다.
-        """
         try:
             result = action()
         except (admin.AdminError, OSError) as error:

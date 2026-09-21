@@ -1,6 +1,5 @@
 const ROWS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-/** 표를 불러오는 동안 자리를 지킨다. 화면 제목과 필터 행은 이미 그려진 상태다. */
 export function TableSkeleton() {
   return (
     <div className="skeleton" aria-hidden>

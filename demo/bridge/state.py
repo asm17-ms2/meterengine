@@ -1,13 +1,3 @@
-"""브리지의 설정, 세션 매핑, 고객 해석 (MS2-169).
-
-OTel 이벤트에는 어느 폴더에서 돌았는지가 없다. 실리는 것은 session.id뿐이다.
-그래서 hook이 "이 세션은 이 폴더"를 알려 주고, 이 모듈이 그것을 프로젝트 이름과
-고객으로 옮긴다.
-
-개인 프로젝트 이름이 공개된 화면에 뜨지 않도록, 허용 목록에 적은 레포만 실명으로
-쓰고 나머지는 하나의 폴백 프로젝트로 합친다.
-"""
-
 from __future__ import annotations
 
 import json
@@ -25,31 +15,18 @@ from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, is_uuid
 
 DEFAULT_FALLBACK_PROJECT = "기타 프로젝트"
 
-# 세션 매핑을 붙들고 있는 기간. 하루가 지나도록 hook이 오지 않은 세션은 끝난
-# 세션으로 본다. 지우지 않으면 매일 쌓이기만 하는데, 프롬프트를 칠 때마다
-# (UserPromptSubmit hook) 이 파일 전체를 다시 쓰고 fsync하므로 커질수록 hook이
-# 느려진다. 잘못 지워도 다음 프롬프트에서 hook이 다시 묶어 준다.
 SESSION_TTL_SECONDS = 24 * 60 * 60
 
-# 프로젝트 하나가 가질 수 있는 상태. 설정 파일에는 allow와 deny 두 배열로 저장되지만,
-# 사람이 고를 때는 셋 중 하나를 고르는 편이 자연스럽다 (console.py의 목록).
 NAMED = "실명으로 보냄"
 MERGED = "기타 프로젝트로 합침"
 SKIPPED = "보내지 않음"
 PROJECT_STATES = [NAMED, MERGED, SKIPPED]
 
-# 고객 이름 상한. 서버가 255자를 넘기면 400이다 (CreateCustomerRequest).
 MAX_CUSTOMER_NAME = 255
 
 
 @dataclass
 class BridgeConfig:
-    """~/.meterengine/bridge.json의 내용.
-
-    base_url 기본값이 로컬인 것은 일부러다. event 테이블은 append-only라 배포
-    서버로 잘못 보낸 이벤트를 지울 수 없다. 배포 주소는 손으로 적어 넣게 한다.
-    """
-
     owner: str = ""
     base_url: str = DEFAULT_BASE_URL
     org_id: str = DEFAULT_ORG_ID
@@ -82,11 +59,6 @@ class BridgeConfig:
         return config
 
     def validate(self) -> None:
-        """읽을 때도 저장할 때도 통과해야 하는 조건.
-
-        save가 이것을 먼저 부른다. 잘못된 값이 파일에 남으면 그 뒤로는 load가 죽어
-        config 명령으로도 되돌릴 수 없고, 손으로 JSON을 고쳐야 하기 때문이다.
-        """
         if not is_uuid(self.org_id):
             raise ValueError("org_id가 UUID가 아닙니다: " + self.org_id)
         if not self.base_url.startswith(("http://", "https://")):
@@ -108,10 +80,6 @@ class BridgeConfig:
         )
 
     def scope(self) -> str:
-        """고객 캐시가 어느 서버 것인지 가리키는 값.
-
-        customer_id를 발급한 것이 (전송 대상, 도입사)이므로 둘을 함께 본다.
-        """
         return "%s|%s" % (self.base_url.rstrip("/"), self.org_id)
 
     def project_state(self, project: str) -> str:
@@ -123,13 +91,6 @@ class BridgeConfig:
         return MERGED
 
     def set_project_states(self, states: Dict[str, str]) -> None:
-        """목록에서 고른 상태를 allow와 deny로 되돌린다.
-
-        MERGED는 어느 배열에도 넣지 않는다. 그것이 "허용 목록에 없다"의 뜻이다.
-        다만 그 결과 allow가 비면 project_for_cwd가 전부 실명으로 보내므로,
-        고른 것과 정반대가 된다. 부르는 쪽이 그 상태를 사람에게 알려야 한다
-        (console.py의 규칙 줄).
-        """
         self.allow = sorted(name for name, state in states.items() if state == NAMED)
         self.deny = sorted(name for name, state in states.items() if state == SKIPPED)
 
@@ -138,21 +99,11 @@ class BridgeConfig:
         return not self.allow
 
     def customer_name(self, project: str) -> str:
-        """화면에 뜰 고객 이름. 주인을 적어 두면 사람별로 갈라진다."""
         name = "%s(%s)" % (project, self.owner) if self.owner else project
         return name[:MAX_CUSTOMER_NAME]
 
 
 def repo_name(cwd: str) -> Optional[str]:
-    """작업 폴더가 속한 git 레포의 이름.
-
-    --show-toplevel이 아니라 --git-common-dir을 보는 이유는 워크트리 때문이다.
-    toplevel은 워크트리 경로(.../workspaces/meterengine/MS2-169)라 워크트리마다
-    다른 이름이 나온다. common-dir은 본 레포의 .git을 가리키므로 어느 워크트리에서
-    일해도 같은 이름(meterengine)으로 모인다.
-
-    git 저장소가 아니면 None이다. 판정은 호출자가 한다.
-    """
     if not cwd or not os.path.isdir(cwd):
         return None
     try:
@@ -169,18 +120,11 @@ def repo_name(cwd: str) -> Optional[str]:
     git_dir = output.stdout.strip()
     if not git_dir:
         return None
-    # 베어 저장소가 아니면 .git의 부모가 작업 트리 루트다.
     name = os.path.basename(os.path.dirname(git_dir))
     return name or None
 
 
 def project_for_cwd(cwd: str, config: BridgeConfig) -> Optional[str]:
-    """폴더를 프로젝트 이름으로 옮긴다. None이면 보내지 않는다.
-
-    deny에 걸리면 버린다. allow가 비어 있으면 모두 실명이고, 값이 있으면 거기
-    적힌 것만 실명이며 나머지는 폴백 하나로 합쳐진다. 개인 프로젝트 이름이
-    공개된 화면에 뜨지 않게 하는 장치다.
-    """
     name = repo_name(cwd) or (os.path.basename(os.path.normpath(cwd)) if cwd else "")
     if not name:
         return config.fallback_project
@@ -192,21 +136,13 @@ def project_for_cwd(cwd: str, config: BridgeConfig) -> Optional[str]:
 
 
 class BridgeState:
-    """세션 매핑과 고객 캐시. 브리지를 재시작해도 살아남게 디스크에 둔다.
-
-    HTTP 서버가 스레드로 돌기 때문에 잠금이 필요하다.
-    """
-
     def __init__(self, path: str = STATE_PATH, scope: str = ""):
         self.path = path
         self.scope = scope
         self._lock = threading.Lock()
         self.sessions: Dict[str, str] = {}
         self.customers: Dict[str, str] = {}
-        # deny에 걸린 폴더의 세션. 매핑이 그냥 없는 것과 구별해야 한다. 없으면
-        # hook을 놓친 세션으로 보고 폴백으로 보내는데, 그러면 deny가 무력해진다.
         self.denied: Set[str] = set()
-        # 세션별 마지막 hook 시각(epoch 초). 만료 판정에만 쓴다.
         self.seen: Dict[str, float] = {}
         self._load()
 
@@ -232,16 +168,10 @@ class BridgeState:
                     self.seen[str(key)] = float(value)
                 except (TypeError, ValueError):
                     continue
-        # 시각을 모르는 세션(이 필드가 생기기 전 파일)은 지금 본 것으로 친다.
-        # 하루 뒤에 정리되고, 그전에 hook이 오면 그때 다시 갱신된다.
         now = time.time()
         for session_id in list(self.sessions) + list(self.denied):
             self.seen.setdefault(session_id, now)
         self._prune(now)
-        # 고객 캐시는 서버에 딸린 값이다. customer_id를 발급한 것이 그 서버라,
-        # 전송 대상을 바꾸면 그 id는 저쪽에 없어 이벤트가 전부 거절된다
-        # (customer_not_found). 그래서 어느 서버 것인지 함께 적어 두고
-        # 다르면 버린다. 세션 매핑은 폴더에 대한 것이라 서버와 무관하므로 남긴다.
         if self.scope and str(data.get("scope") or "") != self.scope:
             return
         if isinstance(customers, dict):
@@ -274,9 +204,6 @@ class BridgeState:
 
     def remember_session(self, session_id: str, project: str) -> None:
         with self._lock:
-            # 시각은 항상 갱신하되, 그것만 바뀌었으면 파일은 건드리지 않는다.
-            # 이 메서드는 프롬프트마다 불리므로 매번 쓰면 hook이 그만큼 느려진다.
-            # 아직 저장되지 않은 시각은 다음번 실제 변경 때 함께 나간다.
             self.seen[session_id] = time.time()
             if self.sessions.get(session_id) == project and session_id not in self.denied:
                 return
@@ -295,12 +222,6 @@ class BridgeState:
             self._save_locked()
 
     def snapshot(self) -> Tuple[Dict[str, str], Dict[str, str], int]:
-        """health가 보여 줄 값을 잠금 아래에서 한 번에 복사한다.
-
-        잠금 밖에서 sessions를 순회하면 hook이 매핑을 넣는 순간 dict 크기가 바뀌어
-        터진다. 그러면 health가 응답하지 못하고, 콘솔은 그것을 브리지가 꺼진 것으로
-        읽는다.
-        """
         with self._lock:
             return dict(self.sessions), dict(self.customers), len(self.denied)
 
@@ -328,12 +249,6 @@ class BridgeState:
             self._save_locked()
 
     def forget_customer(self, name: str) -> None:
-        """캐시한 customer_id를 버린다. 다음 전송에서 다시 조회하고 없으면 등록한다.
-
-        서버에서 그 고객을 지우면(DELETE /v1/customers/{id}) 캐시한 id는 죽은
-        값인데, 캐시는 디스크에 있어 재시작해도 살아남는다. 버리지 않으면 그
-        프로젝트의 이벤트가 영영 404 customer_not_found로 거절된다.
-        """
         with self._lock:
             if name not in self.customers:
                 return
@@ -342,12 +257,6 @@ class BridgeState:
 
 
 class CustomerResolver:
-    """고객 이름을 customer_id로 옮긴다. 없으면 등록한다.
-
-    등록 전에 반드시 목록을 조회한다. 고객 등록 API는 이름 중복을 막지 않아
-    (backend/openapi.yaml) 조회를 빠뜨리면 같은 이름의 고객이 계속 늘어난다.
-    """
-
     def __init__(self, client: ApiClient, state: BridgeState):
         self.client = client
         self.state = state
@@ -357,7 +266,6 @@ class CustomerResolver:
         cached = self.state.cached_customer(name)
         if cached:
             return cached
-        # 같은 이름을 여러 스레드가 동시에 등록하지 않게 잠근다.
         with self._lock:
             cached = self.state.cached_customer(name)
             if cached:

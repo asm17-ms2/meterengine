@@ -1,14 +1,3 @@
-/**
- * 표시용 포맷터.
- *
- * 전부 KST(Asia/Seoul) 고정이다. 백엔드가 월 경계를 KST 자정으로 판정하므로
- * (MS2-121 팀 정책) 화면도 같은 기준으로 보여야 숫자와 날짜가 어긋나지 않는다.
- *
- * 이 함수들은 Server Component에서만 부른다. 클라이언트에서 부르면 서버와
- * 브라우저의 시간대가 달라 하이드레이션이 어긋난다. 클라이언트 컴포넌트에는
- * 포맷이 끝난 문자열을 넘긴다.
- */
-
 const KST = "Asia/Seoul";
 
 const KST_DATE_TIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
@@ -25,7 +14,6 @@ const KST_DATE_TIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
 function toDateTimeParts(value: Date): Record<string, string> {
   const parts: Record<string, string> = {};
   for (const part of KST_DATE_TIME_FORMAT.formatToParts(value)) parts[part.type] = part.value;
-  // Intl은 자정을 '24'로 낼 수 있다 (hour12: false + hourCycle 기본값).
   if (parts.hour === "24") parts.hour = "00";
   return parts;
 }
@@ -36,12 +24,6 @@ export function formatKstDateTime(iso: string): string {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
-/**
- * `2026-08-09` - 날짜만 쓰는 칸. 고객 목록의 등록일이 이걸 쓴다.
- *
- * 시:분:초를 버리는 이유는 그 칸에서 쓰이지 않아서다. 등록 시각의 정밀한 값이
- * 필요해지면 formatKstDateTime을 쓰면 된다.
- */
 export function formatKstDate(iso: string): string {
   const parts = toDateTimeParts(new Date(iso));
   return `${parts.year}-${parts.month}-${parts.day}`;
@@ -52,20 +34,11 @@ export function formatKstStamp(value: Date): string {
   return `${formatKstDateTime(value.toISOString())} KST`;
 }
 
-/** `2026년 8월` - 화면 제목용. `yyyy-MM`을 받는다. */
 export function formatKoreanMonth(month: string): string {
   const [year, monthOfYear] = month.split("-");
   return `${year}년 ${Number(monthOfYear)}월`;
 }
 
-/**
- * 표시용 숫자. 천 단위 구분을 붙이고 소수는 10자리까지 보여준다.
- * 표의 수량 칸은 tabular-nums와 함께 쓴다.
- *
- * 포맷터를 하나만 두는 이유는 둘이면 호출자가 의미가 아니라 이름으로 고르기
- * 때문이다. 옵션 없는 toLocaleString은 소수 3자리에서 반올림해 집계 수량을
- * 말없이 깎는다. 건수처럼 정수만 오는 값도 이걸 쓴다. 정수에서는 결과가 같다.
- */
 export function formatDecimal(value: number): string {
   return value.toLocaleString("ko-KR", { maximumFractionDigits: 10 });
 }

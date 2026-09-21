@@ -1,13 +1,4 @@
-/* 관리자 콘솔 전용 스타일.
- *
- * Modernist 디자인 시스템(modernist.css)에 없는 것들만 여기 둔다. 디자인 프로토타입
- * (관리자 콘솔.dc.html)이 인라인 style로 쓴 레이아웃, hover, 그리드 표를 옮긴 것이다.
- * modernist.css는 디자인 원본과 diff를 유지해야 해서 건드리지 않는다.
- *
- * 그리드 표의 grid-template-columns는 화면마다 달라서 컴포넌트에서 인라인으로 준다. */
-
 :root {
-  /* 디자인이 반복해서 쓰는 본문색 투명도 단계 */
   --text-45: color-mix(in srgb, var(--color-text) 45%, transparent);
   --text-50: color-mix(in srgb, var(--color-text) 50%, transparent);
   --text-55: color-mix(in srgb, var(--color-text) 55%, transparent);
@@ -56,9 +47,7 @@
   flex: 1;
 }
 
-/* - 사이드바 내비게이션 -
-   활성 항목은 3px 왼쪽 보더를 갖고, 비활성 항목은 그만큼 padding으로 메워
-   상태가 바뀌어도 글자가 좌우로 흔들리지 않는다. */
+/* - 사이드바 내비게이션 - */
 
 .side-nav {
   display: flex;
@@ -90,7 +79,7 @@
   background: var(--color-accent-100);
 }
 
-/* - 개발 모드 표 상태 스위치 (프로덕션에서는 렌더링되지 않는다) - */
+/* - 개발 모드 표 상태 스위치 - */
 
 .dev-switch {
   margin-top: auto;
@@ -187,9 +176,7 @@
   color: var(--text-55);
 }
 
-/* - 그리드 표 -
-   디자인이 <table>이 아니라 CSS grid를 쓴다. 열 정의가 헤더와 본문에 같이
-   들어가야 해서 grid-template-columns는 컴포넌트에서 인라인으로 넘긴다. */
+/* - 그리드 표 - */
 
 .grid-table {
   overflow-x: auto;
@@ -249,8 +236,6 @@
   text-align: right;
 }
 
-/* 숫자와 시각. 줄바꿈을 막는 이유는 '2026-08-28 15:47:06' 같은 값이 칸보다 조금
-   좁을 때 공백에서 접혀 그 행만 두 줄이 되기 때문이다. */
 .grid-cell--num {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -275,7 +260,6 @@
   font-weight: 600;
 }
 
-/* 그룹 행에서 고객 이름 옆에 붙는 짧은 식별자 (UUID 마지막 그룹) */
 .grid-cell__id {
   font-weight: 400;
   font-family: var(--mono);
@@ -283,28 +267,24 @@
   color: var(--text-50);
 }
 
-/* 그룹 행 오른쪽의 부가 정보. 그룹 행이 굵어서 여기만 되돌린다. */
 .grid-cell__count {
   font-weight: 400;
   font-size: 12.5px;
   color: var(--text-55);
 }
 
-/* 합계 행. 위아래 2px 구분선으로 표 본문과 가른다. */
 .grid-row--total {
   border-top: 2px solid var(--color-divider);
   border-bottom: 2px solid var(--color-divider);
   font-weight: 600;
 }
 
-/* 합계 금액. 이 화면에서 가장 힘준 숫자다 (디자인: heading 폰트 800 / 17px). */
 .grid-cell__total-amount {
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 17px;
 }
 
-/* properties 미리보기 칸. grid-cell--mono보다 한 단계 작고 옅다. */
 .grid-cell--props {
   font-family: var(--mono);
   font-size: 12px;
@@ -385,7 +365,6 @@
   color: var(--text-55);
 }
 
-/* 브라우저 기본 dd 들여쓰기를 지운다. 그리드 열이 위치를 정한다. */
 .detail-grid dd {
   margin: 0;
   min-width: 0;
@@ -499,10 +478,6 @@
   color: var(--text-50);
 }
 
-/*
- * 행 안에 버튼이 있는 표 (고객 목록의 수정/삭제). 셀 높이가 텍스트와 버튼으로
- * 갈려서 기본 stretch로는 글자와 버튼의 세로 중심이 어긋난다.
- */
 .grid-row--actions {
   align-items: center;
 }

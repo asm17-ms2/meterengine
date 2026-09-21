@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""MeterEngine 데모/검증 CLI (MS2-128).
-
-이벤트를 실제 HTTP로 백엔드에 흘려보내고(send), 요청과 응답을 1:1로 대조하며,
-소스 기반 기대값과 서버 집계/예정액이 일치하는지 사람이 확인한다(verify).
-자세한 사용법은 demo/README.md 참조.
-"""
 
 import sys
 
@@ -75,7 +69,6 @@ def main(argv=None) -> int:
     except BrokenPipeError:
         return 0
     except Exception:
-        # 미처리 예외의 기본 종료 코드 1은 "불일치"와 충돌한다. 오류는 항상 2로 끝낸다.
         import traceback
 
         traceback.print_exc()

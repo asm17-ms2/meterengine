@@ -26,7 +26,6 @@ public class PricePolicy implements Persistable<PricePolicyId> {
   @Column(name = "dimension_properties", nullable = false)
   private List<String> dimensionProperties;
 
-  /** Hibernate 전용. */
   protected PricePolicy() {}
 
   public PricePolicy(
