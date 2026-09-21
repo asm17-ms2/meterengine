@@ -1,6 +1,6 @@
-# 프론트엔드 실행 이미지. MS2-166의 운영 compose가 이 이미지를 띄운다.
+# 프론트엔드 실행 이미지. 운영 compose(deploy/compose.prod.yml)가 이 이미지를 띄운다.
 #
-# 테스트와 lint는 CI(MS2-167)가 돌린다. 여기서는 빌드만 한다.
+# 테스트와 lint는 CI가 돌린다. 여기서는 빌드만 한다.
 FROM node:24-alpine AS build
 WORKDIR /app
 
