@@ -198,7 +198,7 @@ docker build -t meterengine-backend .
 - `pricing`: 가격 정책과 단가 (`/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices`). 미터의 unit_price를 분리한 뒤 정책 등록 API와 미터별 가격 조회를 얹었다. 단가 등록/수정/삭제는 아직 없다
 - `customer`: 고객 등록/수정/삭제와 조회 (`/v1/customers`). event, metric, invoice가 공통으로 쓰는 아래층이다
 - `payment`: 토스페이먼츠 연동. 지금은 시크릿 키를 담는 `TossPaymentsProperties`만 있고, 빌링키와 결제 이력은 아직 없다. 위 "외부 서비스 키" 참조
-- 도메인 어디에도 속하지 않는 것은 루트(`com.meterengine`)에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다
+- 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인 어디에도 속하지 않는 설정은 `global.config`에 둔다(`OpenApiConfig`)
 - 오류 계약은 `global.error`에 둔다. `ErrorCode`, `ErrorResponse`, `BusinessException`과 종류 클래스(`NotFoundException`, `ConflictException`, `InvalidRequestException`), `GlobalExceptionHandler`다. 한 도메인에 두면 나머지 도메인이 그 도메인을 import하게 된다
 
 경계는 코드 리뷰로 지킨다. 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 도메인 사이 의존은 아래와 같다.

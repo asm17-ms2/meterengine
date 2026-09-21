@@ -1,7 +1,8 @@
-package com.meterengine;
+package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.TestcontainersConfiguration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
