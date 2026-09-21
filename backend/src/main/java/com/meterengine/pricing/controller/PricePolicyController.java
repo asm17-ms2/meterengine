@@ -35,14 +35,13 @@ public class PricePolicyController {
       summary = "가격 정책 등록",
       description =
           """
-          미터에 가격 정책(가격을 가르는 속성 키의 선언)을 등록한다.
-          무차원 미터면 dimension_properties를 빈 배열로 보낸다.
-          단가는 이 API가 받지 않는다. 단가 등록 API는 아직 없다.
-          단가가 아직 없는 미터는 청구 예정액 계산에서 라인이 제외된다.
-          미터당 정책은 1개다. 이미 있으면 409이고, 수정과 삭제 API는 아직 없다.
+          미터의 가격 정책을 등록한다. 가격 정책은 단가를 가르는 이벤트 속성 키를 선언한 것이다.
+          속성에 따라 단가가 갈리지 않으면 dimension_properties를 빈 배열로 보낸다.
+          단가는 이 API로 등록하지 않는다. 단가가 없는 미터는 청구 예정액에 라인이 나오지 않는다.
+          미터 하나에 가격 정책은 하나다. 이미 있으면 409다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "등록된 정책 전체. 반영 결과를 확인하는 창구다"),
+    @ApiResponse(responseCode = "201", description = "등록된 가격 정책"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -52,7 +51,7 @@ public class PricePolicyController {
         description =
             """
             code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: 선언에 중복 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_price_policy: dimension_properties에 중복된 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -60,20 +59,19 @@ public class PricePolicyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 미터가 없다. 다른 도입사 소속이어도 같다"),
+        description = "code=billable_metric_not_found: 그런 미터가 없다"),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=price_policy_already_exists: 이 미터에 정책이 이미 있다. 요청을 고쳐서 될 일이 아니다")
+        description = "code=price_policy_already_exists: 이 미터에 가격 정책이 이미 있다")
   })
   public PricePolicyResponse createPricePolicy(
-      @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Parameter(description = "정책을 붙일 미터의 code.") @PathVariable String code,
+      @Parameter(description = "가격 정책을 등록할 미터의 code.") @PathVariable String code,
       @Valid @RequestBody CreatePricePolicyRequest request) {
     return pricePolicyService.create(organizationId, code, request);
   }

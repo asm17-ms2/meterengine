@@ -34,14 +34,14 @@ public class DraftInvoiceController {
       summary = "청구 예정액 조회",
       description =
           """
-          도입사의 모든 고객에 대해 미터별 사용량 x 단가로 청구 예정액을 계산해 돌려준다.
-          집계는 조회 시점에 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
-          금액은 원 단위 정수이고, 라인(고객 x 미터)마다 원 미만을 절사한 뒤 합산한다.
-          이벤트가 없는 고객도 단가가 있는 모든 미터 라인이 수량 0, 금액 0으로 들어간다.
-          고객 순서는 이름 오름차순, 라인 순서는 미터 code 오름차순으로 고정이다.
+          모든 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+          조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
+          금액은 원 단위 정수다. 라인(고객 x 미터)마다 원 미만을 버린 뒤 합산한다.
+          이벤트가 없는 고객도 단가가 있는 미터마다 수량 0, 금액 0인 라인이 나온다.
+          고객은 이름 오름차순, 라인은 미터 code 오름차순이다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "고객별 청구 예정액. 미터가 없는 도입사는 각 고객의 lines가 빈 배열이다"),
+    @ApiResponse(responseCode = "200", description = "고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -49,10 +49,10 @@ public class DraftInvoiceController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
+            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니다")
   })
   public DraftInvoiceResponse previewDraftInvoice(
-      @Parameter(description = "도입사 ID. 인증이 아직 없어서 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다.", example = "2026-08")
           @RequestParam(required = false)

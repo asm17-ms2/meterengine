@@ -33,17 +33,17 @@ public class BillableMetricUsageController {
       summary = "고객별 월 사용량 조회",
       description =
           """
-          도입사의 미터마다 그 미터의 event_type과 맞는 이벤트를 고객별로 합산해 돌려준다.
+          미터마다 type이 그 미터의 event_type과 같은 이벤트를 고객별로 합산해 돌려준다.
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
-          2026-09-01T00:00:00+09:00 이벤트는 9월에 귀속된다.
-          도입사의 모든 고객이 응답에 들어가며, 이벤트가 없는 고객은 quantity가 0이다.
+          2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
+          모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이다.
           properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
-          금액은 내지 않는다 (사용량 x 단가는 청구 예정액 조회의 몫).
+          금액은 싣지 않는다. 금액은 청구 예정액 조회(GET /v1/invoices/draft)가 준다.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "미터별/고객별 사용량. 미터가 없는 도입사는 billable_metric_usages가 빈 배열이다"),
+        description = "미터별, 고객별 사용량. 등록한 미터가 없으면 billable_metric_usages가 빈 배열이다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -51,10 +51,10 @@ public class BillableMetricUsageController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "X-Organization-Id 누락/형식 오류, 또는 month 형식 오류. code=validation_error이고 errors에 필드명과 사유가 들어 있다")
+            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니다")
   })
   public ListBillableMetricUsagesResponse aggregateBillableMetricUsages(
-      @Parameter(description = "도입사 ID. 인증이 붙으면 대체될 임시 헤더다.") @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Parameter(description = "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다.", example = "2026-08")
           @RequestParam(required = false)

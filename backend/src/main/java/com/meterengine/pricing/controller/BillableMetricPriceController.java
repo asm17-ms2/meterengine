@@ -28,9 +28,9 @@ public class BillableMetricPriceController {
       summary = "미터별 가격 목록 조회",
       description =
           """
-          이 도입사의 미터를 code 오름차순으로 전부 싣고, 미터마다 가격 정책의 축 선언과 기본 단가를 붙인다.
-          정책이 없는 미터도 실리며 dimension_properties가 null이다. 빈 배열은 무차원 정책이라는 뜻이다.
-          unit_price는 무차원 조합에 붙은 기본 단가이고, 없으면 null이다. 조합별 단가는 싣지 않는다.
+          등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 가격 정책과 기본 단가를 붙인다.
+          가격 정책이 없는 미터는 dimension_properties가 null이다. 빈 배열은 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
+          unit_price는 속성 조건 없이 적용되는 기본 단가이고, 없으면 null이다. 속성 값 조합별 단가는 싣지 않는다.
           페이지를 나누지 않는다.
           """)
   @ApiResponses({
@@ -46,8 +46,7 @@ public class BillableMetricPriceController {
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public ListBillableMetricPricesResponse listBillableMetricPrices(
-      @Parameter(description = "도입사 ID. Bearer 인증이 붙으면 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId) {
     return billableMetricPriceService.list(organizationId);
   }

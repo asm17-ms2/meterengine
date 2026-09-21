@@ -41,11 +41,10 @@ public class CustomerController {
       summary = "고객 목록 조회",
       description =
           """
-          이 도입사의 고객을 이름 오름차순으로 전부 돌려준다. 동명이인이 있어도 순서가 흔들리지 않게
-          id가 두 번째 정렬 키다. 사용량 조회, 청구 예정액과 같은 순서다.
-          고객이 없거나 등록되지 않은 도입사면 customers가 빈 배열이다.
-          페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의이며, 사용량과 청구 예정액 응답도
-          같은 고객 집합을 한 번에 담는다.
+          등록한 고객을 이름 오름차순으로 전부 돌려준다. 이름이 같으면 id 순이다.
+          사용량 조회, 청구 예정액 조회의 고객 순서와 같다.
+          X-Organization-Id가 등록되지 않은 도입사여도 오류가 아니라 빈 배열이다.
+          페이지를 나누지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "고객 목록. 한 명도 없으면 customers가 빈 배열이다"),
@@ -69,12 +68,11 @@ public class CustomerController {
       summary = "고객 등록",
       description =
           """
-          고객을 만들고 서버가 발급한 id와 함께 돌려준다. 이벤트 수집은 이 값을 customer_id로 실어 보낸다.
-          이름 중복을 막지 않는다. 같은 이름의 계열사나 부서를 따로 관리할 수 있고, 구별은 id가 한다.
-          Location 헤더를 주지 않는다. 단건 조회 경로가 없어 가리킬 곳이 없다.
+          고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
+          이름이 같은 고객을 여럿 등록할 수 있다. 구별은 id로 한다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "만들어진 고객"),
+    @ApiResponse(responseCode = "201", description = "등록된 고객"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -99,13 +97,10 @@ public class CustomerController {
       summary = "고객 수정",
       description =
           """
-          고객 이름을 바꾸고 갱신된 고객을 돌려준다. 단건 조회가 없으므로 이 응답이 반영 결과를 확인하는 창구다.
-          PATCH가 아닌 이유는 고칠 수 있는 것이 이름 하나이고 그것이 항상 필수라, 부분 갱신이라 부를 것이 없어서다.
-          필드가 늘면서 일부만 보내는 요청이 필요해지면 그때 PATCH를 따로 추가한다.
-          다른 도입사 소속이거나 이미 지워진 고객은 404다. 지운 고객은 행 자체가 없어 없는 고객과 구별되지 않는다.
+          고객 이름을 바꾸고 바뀐 고객을 돌려준다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "갱신된 고객"),
+    @ApiResponse(responseCode = "200", description = "바뀐 고객"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -119,7 +114,7 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 없거나 다른 도입사 소속이다. 둘을 구별해 답하지 않는다")
+        description = "code=customer_not_found: 그런 고객이 없다")
   })
   public CustomerResponse updateCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
@@ -135,11 +130,10 @@ public class CustomerController {
       summary = "고객 삭제",
       description =
           """
-          고객을 지운다. 행이 실제로 사라져 목록과 사용량, 청구 예정액에서 빠지고
-          그 고객 id를 실은 이벤트는 미등록 고객으로 거절된다. 되돌리는 API는 없다.
-          사용량 이벤트가 한 건이라도 있으면 지우지 않고 409로 거절한다. 이벤트는 청구 근거이고
-          지울 수 없어서, 고객만 지우면 그 사용량이 어느 청구서에도 오르지 않는다.
-          같은 고객을 두 번 지우면 두 번째는 204가 아니라 404다.
+          고객을 지운다. 지운 고객은 목록과 사용량, 청구 예정액에서 빠지고
+          그 id로 보낸 이벤트는 404(customer_not_found)로 거절된다. 지운 고객은 되돌릴 수 없다.
+          사용량 이벤트가 한 건이라도 있는 고객은 지울 수 없고 409다.
+          이미 지운 고객을 다시 지우면 404다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
@@ -156,14 +150,14 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 없거나 다른 도입사 소속이다"),
+        description = "code=customer_not_found: 그런 고객이 없다"),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_has_events: 사용량 이벤트가 있어 지울 수 없다. 요청을 고쳐서 될 일이 아니다")
+        description = "code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다")
   })
   public void deleteCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")

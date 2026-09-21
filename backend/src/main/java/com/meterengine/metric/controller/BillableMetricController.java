@@ -38,13 +38,13 @@ public class BillableMetricController {
       summary = "집계 미터 등록",
       description =
           """
-          집계 미터를 등록한다. event_type이 같은 사용량 이벤트가 이 미터의 집계 대상이 된다.
-          집계 함수는 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
+          미터를 등록한다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상이다.
+          aggregation은 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
           target_property가 필수다.
-          코드는 도입사 안에서 유일하고, 등록 뒤 바꿀 수 없다.
+          code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "등록된 미터. 반영 결과를 확인하는 창구다"),
+    @ApiResponse(responseCode = "201", description = "등록된 미터"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -63,11 +63,10 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_already_exists: 같은 코드의 미터가 이미 있다. 다른 코드를 써야 한다")
+        description = "code=billable_metric_already_exists: 같은 code의 미터가 이미 있다")
   })
   public BillableMetricResponse createBillableMetric(
-      @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Valid @RequestBody CreateBillableMetricRequest request) {
     return billableMetricService.create(organizationId, request);
@@ -78,9 +77,9 @@ public class BillableMetricController {
       summary = "미터 목록 조회",
       description =
           """
-          이 도입사의 미터를 code 오름차순으로 전부 돌려준다.
-          미터가 없거나 등록되지 않은 도입사면 billable_metrics가 빈 배열이다.
-          페이지를 나누지 않는다. 이 도입사의 전부가 응답의 정의다.
+          등록한 미터를 code 오름차순으로 전부 돌려준다.
+          X-Organization-Id가 등록되지 않은 도입사여도 오류가 아니라 빈 배열이다.
+          페이지를 나누지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 billable_metrics가 빈 배열이다"),
@@ -93,8 +92,7 @@ public class BillableMetricController {
         description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
   })
   public ListBillableMetricsResponse listBillableMetrics(
-      @Parameter(description = "도입사 ID. Bearer 인증으로 대체될 임시 헤더다.")
-          @RequestHeader("X-Organization-Id")
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId) {
     return billableMetricService.list(organizationId);
   }

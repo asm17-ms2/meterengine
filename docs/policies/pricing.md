@@ -10,10 +10,6 @@
 
 형식 검증과 도메인 검증의 정본은 `backend/openapi.yaml`의 `createPricePolicy` 400 description이다.
 
-## 미터 확인
-
-없는 미터와 다른 도입사의 미터를 구별하지 않는 것의 정본은 `backend/openapi.yaml`의 `billable_metric_not_found` description이다.
-
 ## 단가
 
 기본 단가 조합과 기본 단가가 없는 미터의 정본은 `backend/openapi.yaml`의 `BillableMetricPriceResponse` 스키마다.
