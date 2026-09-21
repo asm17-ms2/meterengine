@@ -5,12 +5,11 @@
 ## 머지 조건
 
 - 작성자 외 1명 이상의 approve. 셀프머지는 하지 않는다. main 룰셋이 강제한다.
-  - "보호 경로"를 건드린 PR은 approve 둘. CODEOWNERS가 `protected-reviewers` 팀 전원에게 리뷰를 요청한다.
+  - "보호 경로"를 건드린 PR은 `protected-reviewers` 팀원의 approve 둘. main 룰셋의 required reviewer 규칙이 강제한다.
 - main은 항상 빌드와 테스트가 통과하는 상태다. CI가 실패하면 머지하지 않는다.
 - 필수 체크는 main 룰셋의 Required status checks에 등록한다.
   - `ci.yml`의 `backend`, `frontend`.
   - `rfc-checklist.yml`의 `rfc-checklist`. `rfc` 라벨이 붙은 PR에서만 돌고 체크 안 된 항목이 있으면 실패한다.
-  - `protected-paths-approval.yml`의 `protected-paths-approval`. 보호 경로를 건드린 PR에서 approve가 둘 미만이면 실패한다.
 - 무엇을 RFC PR, 규칙 PR, `proposal` PR로 올리는지는 `governance.md` "제안".
   - Draft로 열지 않는다. 제안 PR은 `label:proposal`, RFC PR은 `label:rfc`로 거른다.
 
@@ -106,7 +105,8 @@
 - 리뷰어는 org 팀 `reviewers`에서 자동 배정된 한 명이다. `.github/CODEOWNERS`가 모든 경로를 그 팀에 맡긴다.
 - 배정된 사람이 읽고 approve나 changes requested로 답한다. 볼 수 없으면 다른 사람으로 바꾼다.
 - 배정되지 않은 사람은 코멘트만 달고 approve하지 않는다.
-- 보호 경로를 건드린 PR은 approve가 둘이다. CODEOWNERS의 보호 경로 행이 팀 `protected-reviewers`(auto assignment 끔)를 적고 있어 GitHub가 팀 전원에게 요청한다.
+- 보호 경로를 건드린 PR은 approve가 둘이다. CODEOWNERS의 보호 경로 행이 팀 `protected-reviewers`를 적고 있고, 팀의 자동 배정(인원 2)이 작성자를 뺀 전원에게 개인으로 요청한다.
+  - 팀원이 늘면 자동 배정 인원을 팀원 수에서 하나 뺀 값으로 올린다.
 - 판단이 갈릴 것 같으면 작성자가 두 번째 리뷰어를 지정할 수 있다. 지정된 사람은 모두 approve한다.
 - 스택은 리뷰어가 한 명이다. 첫 조각에 배정된 사람으로 나머지 조각을 맞추고, 스택을 한 번에 읽고 조각마다 approve한다.
 - 정족수가 전원인 PR(RFC, 절이 생기거나 없어지는 규칙 개정)은 배정과 무관하게 전원이 본다.
@@ -125,7 +125,7 @@
 | `docs/contributing/`, `CONTRIBUTING.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 쌓이면 되돌릴 것이 코드가 된다 |
 | `.github/` | CI, CODEOWNERS, PR 템플릿 | 머지 조건 자체를 바꾼다 |
 
-- 정규식은 워크플로의 `PROTECTED`에, 리뷰 요청용 경로는 `.github/CODEOWNERS`에 있다. 표를 바꾸면 둘 다 바꾼다.
+- 강제용 패턴은 main 룰셋의 required reviewer 규칙에, 리뷰 요청용 경로는 `.github/CODEOWNERS`에 있다. 표를 바꾸면 둘 다 바꾼다.
 - 넣지 않은 것: `backend/openapi.yaml`. 생성물이라 컨트롤러나 DTO를 건드리면 같이 바뀐다.
 
 ## 리뷰 방법
