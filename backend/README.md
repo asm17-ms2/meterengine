@@ -124,8 +124,9 @@ docker build -t meterengine-backend .
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
 | `payment` | 토스페이먼츠 시크릿 키 설정 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
+| `global.config` | OpenAPI 설정 | 없음 |
 
-- 도메인 어디에도 속하지 않는 것은 루트에 둔다. 부트스트랩(`MeterEngineApplication`)과 설정(`OpenApiConfig`)이다.
+- 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
 - `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다.
 
