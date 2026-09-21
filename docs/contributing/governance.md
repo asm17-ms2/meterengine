@@ -102,7 +102,7 @@
 
 ## 규칙 개정
 
-- 규칙 파일(`CONTRIBUTING.md`, `CLAUDE.md`, `docs/contributing/`, `docs/README.md`)은 보호 경로라 어떤 변경이든 전원 승인이다. `protected-paths-approval` 검사가 강제한다.
+- 규칙 파일(`CONTRIBUTING.md`, `CLAUDE.md`, `docs/contributing/`, `docs/README.md`)은 보호 경로라 어떤 변경이든 전원 승인이다. main 룰셋이 강제한다.
 - RFC 파일은 고치지 않는다. 지금 규칙은 규칙 파일이고 RFC는 그때의 기록이다.
 
 | 변경 | 승인 외에 하는 것 |
