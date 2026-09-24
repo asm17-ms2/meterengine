@@ -6,7 +6,7 @@ import type {
   CustomerDeleteState,
   CustomerFormState,
 } from "@/app/(console)/customers/state";
-import type { ApiError } from "@/lib/api/client";
+import { toDisplayMessage } from "@/lib/api/client";
 import {
   createCustomer,
   deleteCustomer,
@@ -26,21 +26,6 @@ function validateName(name: string): string | null {
   return null;
 }
 
-function toSaveFailureMessage(error: ApiError): string {
-  switch (error.code) {
-    case "validation_error":
-      return `고객명을 확인해주세요. ${NAME_MAX_LENGTH}자 이내여야 합니다.`;
-    case "customer_not_found":
-      return "이미 삭제된 고객입니다. 목록을 새로 고쳐주세요.";
-    case "unknown_organization":
-      return "도입사를 찾을 수 없습니다. 설정을 확인해주세요.";
-    case "network_error":
-      return error.message;
-    default:
-      return "저장하지 못했습니다. 잠시 후 다시 시도해주세요.";
-  }
-}
-
 export async function createCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
@@ -51,7 +36,7 @@ export async function createCustomerAction(
 
   const result = await createCustomer(name);
   if (!result.ok) {
-    return { status: "failed", message: toSaveFailureMessage(result.error) };
+    return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/customers");
@@ -73,7 +58,7 @@ export async function updateCustomerAction(
 
   const result = await updateCustomer(id, name);
   if (!result.ok) {
-    return { status: "failed", message: toSaveFailureMessage(result.error) };
+    return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/customers");
@@ -100,13 +85,7 @@ export async function deleteCustomerAction(
       revalidatePath("/customers");
       return { status: "gone", name: customerName };
     }
-    return {
-      status: "failed",
-      message:
-        result.error.code === "network_error"
-          ? result.error.message
-          : "삭제하지 못했습니다. 잠시 후 다시 시도해주세요.",
-    };
+    return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/customers");
