@@ -19,6 +19,13 @@ export type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: ApiError };
 
+export function toDisplayMessage(error: ApiError): string {
+  if (error.errors && error.errors.length > 0) {
+    return error.errors.map((fieldError) => fieldError.message).join(" / ");
+  }
+  return error.message;
+}
+
 const TIMEOUT_MS = 5_000;
 
 type ErrorBody = {
@@ -49,7 +56,9 @@ async function toApiError(response: Response): Promise<ApiError> {
     status: response.status,
     code: typeof body.code === "string" ? body.code : "http_error",
     message:
-      typeof body.message === "string" ? body.message : `HTTP ${response.status}`,
+      typeof body.message === "string"
+        ? body.message
+        : "서버가 오류 응답 형식이 아닌 응답을 보냈습니다.",
     errors: toFieldErrors(body.errors),
   };
 }

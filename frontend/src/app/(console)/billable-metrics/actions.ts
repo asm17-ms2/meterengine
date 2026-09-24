@@ -8,7 +8,7 @@ import {
   type BillableMetricField,
   type BillableMetricFormState,
 } from "@/app/(console)/billable-metrics/state";
-import type { ApiError } from "@/lib/api/client";
+import { type ApiError, toDisplayMessage } from "@/lib/api/client";
 import { createBillableMetric, deleteBillableMetric, updateBillableMetric } from "@/lib/api/billable-metrics";
 
 const BILLABLE_METRIC_FIELDS: readonly BillableMetricField[] = [
@@ -46,37 +46,13 @@ function toServerFieldErrors(
 
 function toFailureState(error: ApiError): BillableMetricFormState {
   if (error.code === "billable_metric_already_exists") {
-    return {
-      status: "invalid",
-      fieldErrors: { code: "이미 사용 중인 코드입니다. 다른 코드를 쓰세요." },
-    };
+    return { status: "invalid", fieldErrors: { code: error.message } };
   }
-  if (error.code === "validation_error") {
-    const fieldErrors = toServerFieldErrors(error);
-    if (Object.keys(fieldErrors).length > 0) {
-      return { status: "invalid", fieldErrors };
-    }
-    return { status: "failed", message: "입력값을 확인해주세요." };
+  const fieldErrors = toServerFieldErrors(error);
+  if (Object.keys(fieldErrors).length > 0) {
+    return { status: "invalid", fieldErrors };
   }
-  switch (error.code) {
-    case "invalid_billable_metric":
-      return {
-        status: "failed",
-        message: "집계 설정이 올바르지 않습니다. 집계 함수는 sum만 지원하고 집계 대상 속성이 필요합니다.",
-      };
-    case "unknown_organization":
-      return {
-        status: "failed",
-        message: "도입사를 찾을 수 없습니다. 설정을 확인해주세요.",
-      };
-    case "network_error":
-      return { status: "failed", message: error.message };
-    default:
-      return {
-        status: "failed",
-        message: "저장하지 못했습니다. 잠시 후 다시 시도해주세요.",
-      };
-  }
+  return { status: "failed", message: toDisplayMessage(error) };
 }
 
 export async function createBillableMetricAction(
@@ -112,23 +88,6 @@ const UPDATE_FIELDS: readonly BillableMetricField[] = [
   "target_property",
 ];
 
-function toUpdateFailureState(error: ApiError): BillableMetricFormState {
-  if (error.code === "billable_metric_not_found") {
-    return {
-      status: "failed",
-      message: "이미 삭제된 미터입니다. 목록을 새로 고쳐주세요.",
-    };
-  }
-  if (error.code === "metric_basis_has_events") {
-    return {
-      status: "failed",
-      message:
-        "이벤트가 잡히는 미터라 이벤트 타입과 집계 대상 속성을 바꿀 수 없습니다. 이름만 고치거나, 지우고 다시 등록하세요.",
-    };
-  }
-  return toFailureState(error);
-}
-
 export async function updateBillableMetricAction(
   _prev: BillableMetricFormState,
   formData: FormData,
@@ -154,7 +113,7 @@ export async function updateBillableMetricAction(
     aggregation: BILLABLE_METRIC_AGGREGATION,
     target_property: values.target_property,
   });
-  if (!result.ok) return toUpdateFailureState(result.error);
+  if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
   return { status: "done" };
@@ -173,23 +132,17 @@ export async function deleteBillableMetricAction(
 
   const result = await deleteBillableMetric(code);
   if (!result.ok) {
-    if (result.error.code === "metric_has_events") {
+    if (result.error.code === "billable_metric_has_events") {
       return { status: "rejected", reason: "events", name: billableMetricName };
     }
-    if (result.error.code === "metric_has_price_policy") {
+    if (result.error.code === "billable_metric_has_price_policy") {
       return { status: "rejected", reason: "policy", name: billableMetricName };
     }
     if (result.error.code === "billable_metric_not_found") {
       revalidatePath("/billable-metrics");
       return { status: "gone", name: billableMetricName };
     }
-    return {
-      status: "failed",
-      message:
-        result.error.code === "network_error"
-          ? result.error.message
-          : "삭제하지 못했습니다. 잠시 후 다시 시도해주세요.",
-    };
+    return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/billable-metrics");
