@@ -98,6 +98,14 @@ docker run -p 3000:3000 \
 | `src/styles/` | `modernist.css`(디자인 시스템 이식본), `console.css`(콘솔 전용 클래스) |
 | `src/app/globals.css` | Tailwind 임포트와 테마 조정 |
 
+화면 컴포넌트의 접미사는 다음과 같다.
+
+- `Section`은 데이터를 기다렸다가 결과에 따라 그리는 바깥 경계다.
+- `Screen`은 데이터가 도착한 뒤 `Section`이 그리는 화면이다.
+- `Loading`은 `Section`이 기다리는 동안 그 자리에 보이는 것이다.
+- `Frame`은 `Section`의 오류 상태와 `Loading`이 함께 쓰는 틀이다.
+- `Meta`는 화면 제목 옆에 붙는 요약이다.
+
 스타일 규칙은 다음과 같다.
 
 - 컴포넌트 클래스(`.btn`, `.input`, `.tag`, `.nav`, `.card`, `.table`, `.dialog`)는 `modernist.css`의 것을 그대로 쓴다.
