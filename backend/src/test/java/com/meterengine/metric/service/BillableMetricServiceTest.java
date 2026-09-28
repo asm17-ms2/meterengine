@@ -3,23 +3,28 @@ package com.meterengine.metric.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.event.service.EventService;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
+import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +42,13 @@ class BillableMetricServiceTest {
   private static final String BILLABLE_METRIC_CODE = "token-usage";
 
   @Mock private BillableMetricRepository billableMetricRepository;
+  @Mock private EventService eventService;
 
   private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
-    billableMetricService = new BillableMetricService(billableMetricRepository);
+    billableMetricService = new BillableMetricService(billableMetricRepository, eventService);
   }
 
   @Test
@@ -196,6 +202,110 @@ class BillableMetricServiceTest {
     assertThat(response.billableMetrics())
         .extracting(BillableMetricResponse::code)
         .containsExactly("api-calls", BILLABLE_METRIC_CODE);
+  }
+
+  @Test
+  void 없는_미터를_수정하면_NotFound다() {
+    when(billableMetricRepository.findById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> update("chat_completion", "token"))
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
+  }
+
+  @Test
+  void 수정도_SUM이_아니면_조회_전에_Invalid다() {
+    assertThatThrownBy(
+            () ->
+                billableMetricService.update(
+                    ORGANIZATION_ID,
+                    BILLABLE_METRIC_CODE,
+                    new UpdateBillableMetricRequest("이름", "chat_completion", "COUNT", "token")))
+        .isInstanceOf(InvalidRequestException.class);
+    verify(billableMetricRepository, never()).findById(any());
+  }
+
+  @Test
+  void 수정은_요청_값으로_덮어쓰고_바뀐_모양이_응답이_된다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+
+    BillableMetricResponse response = update("embedding", "chars");
+
+    assertThat(stored.getName()).isEqualTo("바뀐 이름");
+    assertThat(stored.getEventType()).isEqualTo("embedding");
+    assertThat(stored.getTargetProperty()).isEqualTo("chars");
+    assertThat(response.code()).isEqualTo(BILLABLE_METRIC_CODE);
+    assertThat(response.eventType()).isEqualTo("embedding");
+  }
+
+  @Test
+  void event_type과_target_property가_그대로면_이벤트와_중복을_확인하지_않는다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+
+    update("chat_completion", "token");
+
+    verify(eventService, never()).existsWithNumericProperty(any(), any(), any());
+    verify(billableMetricRepository, never())
+        .existsByOrganizationIdAndEventTypeAndTargetProperty(any(), any(), any());
+  }
+
+  @Test
+  void 이벤트가_있는_미터의_event_type과_target_property는_바꿀_수_없다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    when(eventService.existsWithNumericProperty(ORGANIZATION_ID, "chat_completion", "token"))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> update("embedding", "chars"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+    assertThat(stored.getEventType()).isEqualTo("chat_completion");
+  }
+
+  @Test
+  void 바꾸려는_event_type과_target_property가_다른_미터에_있으면_AlreadyExists다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    when(billableMetricRepository.existsByOrganizationIdAndEventTypeAndTargetProperty(
+            ORGANIZATION_ID, "embedding", "chars"))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> update("embedding", "chars"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+  }
+
+  @Test
+  void 확인과_flush_사이의_경합도_AlreadyExists로_바뀐다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    doThrow(violation("billable_metric_organization_event_type_target_property_unique"))
+        .when(billableMetricRepository)
+        .flush();
+
+    assertThatThrownBy(() -> update("embedding", "chars"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+  }
+
+  private BillableMetric storedBillableMetric() {
+    return new BillableMetric(
+        ORGANIZATION_ID, BILLABLE_METRIC_CODE, "토큰 사용량", "chat_completion", "sum", "token");
+  }
+
+  private BillableMetricResponse update(String eventType, String targetProperty) {
+    return billableMetricService.update(
+        ORGANIZATION_ID,
+        BILLABLE_METRIC_CODE,
+        new UpdateBillableMetricRequest("바뀐 이름", eventType, "sum", targetProperty));
   }
 
   private BillableMetricResponse create(String aggregation, String targetProperty) {

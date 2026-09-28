@@ -737,6 +737,7 @@ components:
           - method_not_allowed
           - response_type_not_acceptable
           - customer_has_events
+          - billable_metric_has_events
           - billable_metric_already_exists
           - billable_metric_event_type_target_property_already_exists
           - price_policy_already_exists
