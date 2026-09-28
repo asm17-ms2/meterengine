@@ -45,8 +45,8 @@ public class EventController {
           사용량 이벤트 한 건을 저장한다.
           transaction_id가 같은 이벤트를 다시 보내면 저장하지 않고 처음 저장한 이벤트를 유지한다.
           이때도 응답은 200이고 duplicate가 true다. 응답을 받지 못했으면 같은 transaction_id로 다시 보내면 된다.
-          properties의 내용은 검증하지 않는다. 키 순서와 공백은 보존되지 않고,
-          숫자는 정수와 소수 모두 자릿수가 잘리지 않는다.
+          properties는 키나 문자열 값에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나 숫자가 소수점 앞 131072자리나 소수점 뒤 16383자리를 넘으면 거절하고, 그 밖의 내용은 검증하지 않는다.
+          키 순서와 공백은 보존되지 않고, 숫자는 정수와 소수 모두 자릿수가 잘리지 않는다.
           timestamp는 이벤트가 발생한 시각이고 조회 응답에서는 occurred_at으로 나온다.
           received_at은 서버가 받은 시각이며 요청에 실어도 무시된다.
           """)
@@ -62,7 +62,7 @@ public class EventController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: 필수 필드가 없거나 형식이 틀렸다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=validation_error: 필수 필드가 없거나 형식이 틀렸거나, 문자열(properties 안쪽 포함)에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, properties의 숫자가 소수점 앞 131072자리나 소수점 뒤 16383자리를 넘는다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             code=invalid_event: 저장할 수 없는 값이 들어 있다. 같은 본문을 다시 보내도 성공하지 않는다.
             """),
     @ApiResponse(
