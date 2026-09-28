@@ -4,6 +4,7 @@ import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
+import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.service.BillableMetricService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +16,9 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -75,6 +78,55 @@ public class BillableMetricController {
           UUID organizationId,
       @Valid @RequestBody CreateBillableMetricRequest request) {
     return billableMetricService.create(organizationId, request);
+  }
+
+  @PutMapping("/{code}")
+  @Operation(
+      summary = "집계 미터 수정",
+      description =
+          """
+          미터를 요청 값으로 덮어쓰고 바뀐 미터를 돌려준다. code는 바꿀 수 없다.
+          event_type이나 target_property를 바꾸면 사용량은 새 기준으로 다시 집계된다.
+          옛 기준으로 집계된 이벤트가 한 건이라도 있으면 event_type과 target_property는 바꿀 수 없고 409다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "바뀐 미터"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            """),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=billable_metric_has_events: 집계된 이벤트가 있어 event_type과 target_property를 바꿀 수 없다.
+            code=billable_metric_event_type_target_property_already_exists: 바꾸려는 event_type과 target_property의 미터가 이미 있다.
+            """)
+  })
+  public BillableMetricResponse updateBillableMetric(
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "고칠 미터의 code.") @PathVariable String code,
+      @Valid @RequestBody UpdateBillableMetricRequest request) {
+    return billableMetricService.update(organizationId, code, request);
   }
 
   @GetMapping
