@@ -1,6 +1,7 @@
 package com.meterengine.pricing.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.StorableText;
 import com.meterengine.pricing.dto.CreatePricePolicyRequest;
 import com.meterengine.pricing.dto.PricePolicyResponse;
 import com.meterengine.pricing.service.PricePolicyService;
@@ -50,7 +51,7 @@ public class PricePolicyController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: dimension_properties가 없거나, dimension_properties의 키나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_price_policy: dimension_properties에 중복된 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
@@ -71,7 +72,7 @@ public class PricePolicyController {
   public PricePolicyResponse createPricePolicy(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Parameter(description = "가격 정책을 등록할 미터의 code.") @PathVariable String code,
+      @Parameter(description = "가격 정책을 등록할 미터의 code.") @PathVariable @StorableText String code,
       @Valid @RequestBody CreatePricePolicyRequest request) {
     return pricePolicyService.create(organizationId, code, request);
   }

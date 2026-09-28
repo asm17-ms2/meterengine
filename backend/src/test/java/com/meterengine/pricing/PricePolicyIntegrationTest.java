@@ -92,7 +92,66 @@ class PricePolicyIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    assertThat(post(organizationId, "token-usage", "{}"))
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("dimension_properties");
     assertThat(pricePolicyCount(organizationId, "token-usage")).isZero();
+  }
+
+  @Test
+  void 선언의_키에_받지_않는_문자가_있으면_400이고_몇_번째_키인지_알려준다() {
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+
+    MvcTestResult result =
+        post(
+            organizationId,
+            "token-usage",
+            "{\"dimension_properties\": [\"model\", \"a\\u0000b\"]}");
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("dimension_properties[1]");
+    assertThat(pricePolicyCount(organizationId, "token-usage")).isZero();
+  }
+
+  @Test
+  void 경로의_code에_NUL이_있으면_500이_아니라_400이다() {
+    UUID organizationId = insertOrganization();
+
+    MvcTestResult result =
+        postWithCodeVariable(organizationId, "token\u0000usage", dimensionlessBody());
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("code");
+  }
+
+  @Test
+  void 경로의_code와_본문이_함께_틀리면_둘_다_알려준다() {
+    UUID organizationId = insertOrganization();
+
+    MvcTestResult result = postWithCodeVariable(organizationId, "token\u0000usage", "{}");
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactlyInAnyOrder("code", "dimension_properties");
   }
 
   // --- 미터와 테넌트 (404) ---
@@ -157,6 +216,16 @@ class PricePolicyIntegrationTest {
   private MvcTestResult post(UUID organizationId, String billableMetricCode, String jsonBody) {
     return mvc.post()
         .uri("/v1/billable-metrics/%s/price-policy".formatted(billableMetricCode))
+        .header("X-Organization-Id", organizationId.toString())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(jsonBody)
+        .exchange();
+  }
+
+  private MvcTestResult postWithCodeVariable(
+      UUID organizationId, String billableMetricCode, String jsonBody) {
+    return mvc.post()
+        .uri("/v1/billable-metrics/{code}/price-policy", billableMetricCode)
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)

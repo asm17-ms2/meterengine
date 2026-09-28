@@ -307,6 +307,19 @@ class BillableMetricIntegrationTest {
     assertThat(storedName(organizationId, "token-usage")).isEqualTo("토큰 사용량");
   }
 
+  @Test
+  void 수정_경로의_code에_NUL이_있으면_500이_아니라_400이다() {
+    MvcTestResult result =
+        put(insertOrganization(), "token\u0000usage", updateBody("chat_completion", "token"));
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("code");
+  }
+
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/billable-metrics")
@@ -337,7 +350,7 @@ class BillableMetricIntegrationTest {
 
   private MvcTestResult put(UUID organizationId, String code, String jsonBody) {
     return mvc.put()
-        .uri("/v1/billable-metrics/" + code)
+        .uri("/v1/billable-metrics/{code}", code)
         .header("X-Organization-Id", organizationId.toString())
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)

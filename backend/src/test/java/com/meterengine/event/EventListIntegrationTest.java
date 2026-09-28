@@ -439,6 +439,26 @@ class EventListIntegrationTest {
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
+  @Test
+  void type에_NUL이_있으면_500이_아니라_400이다() {
+    UUID organizationId = insertOrganization("도입사");
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/events")
+            .param("month", AUGUST)
+            .param("type", "chat\u0000completion")
+            .header("X-Organization-Id", organizationId.toString())
+            .exchange();
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("type");
+  }
+
   // ---------------------------------------------------------------------------
   // 응답 항목
   // ---------------------------------------------------------------------------
