@@ -129,6 +129,37 @@ class CustomerIntegrationTest {
   }
 
   @Test
+  void 이름에_받지_않는_문자가_있으면_400이고_저장은_0건이다() {
+    UUID organizationId = insertOrganization();
+
+    for (String unstorable : new String[] {"a\\u0000b", "a\\ud800b"}) {
+      MvcTestResult result = post(organizationId, "{\"name\":\"%s\"}".formatted(unstorable));
+
+      assertThat(result)
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.code")
+          .asString()
+          .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+      assertThat(result)
+          .bodyJson()
+          .extractingPath("$.errors[*].field")
+          .asArray()
+          .containsExactly("name");
+    }
+    assertThat(customerCount(organizationId)).isZero();
+  }
+
+  @Test
+  void 이모지와_한국어_이름은_그대로_저장된다() {
+    UUID organizationId = insertOrganization();
+
+    UUID customerId = createCustomer(organizationId, "아크메 \\ud83d\\ude00");
+
+    assertThat(nameOf(customerId)).isEqualTo("아크메 😀");
+  }
+
+  @Test
   void 등록되지_않은_도입사로_등록하면_400이다() {
     assertThat(
             post(
@@ -271,6 +302,22 @@ class CustomerIntegrationTest {
           .extractingPath("$.code")
           .asString()
           .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    }
+    assertThat(nameOf(customerId)).isEqualTo("옛 이름");
+  }
+
+  @Test
+  void 수정도_받지_않는_문자가_있으면_400이고_이름은_그대로다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = createCustomer(organizationId, "옛 이름");
+
+    for (String unstorable : new String[] {"a\\u0000b", "a\\ud800b"}) {
+      assertThat(put(organizationId, customerId, "{\"name\":\"%s\"}".formatted(unstorable)))
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.errors[*].field")
+          .asArray()
+          .containsExactly("name");
     }
     assertThat(nameOf(customerId)).isEqualTo("옛 이름");
   }
