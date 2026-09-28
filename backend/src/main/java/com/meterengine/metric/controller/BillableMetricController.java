@@ -42,6 +42,7 @@ public class BillableMetricController {
           aggregation은 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
           target_property가 필수다.
           code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
+          event_type과 target_property의 조합도 도입사 안에서 유일해야 한다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "등록된 미터"),
@@ -63,7 +64,11 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_already_exists: 같은 code의 미터가 이미 있다")
+        description =
+            """
+            code=billable_metric_already_exists: 같은 code의 미터가 이미 있다.
+            code=billable_metric_event_type_target_property_already_exists: event_type과 target_property가 같은 미터가 이미 있다.
+            """)
   })
   public BillableMetricResponse createBillableMetric(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")

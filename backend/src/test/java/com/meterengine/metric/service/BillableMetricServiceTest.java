@@ -113,6 +113,30 @@ class BillableMetricServiceTest {
   }
 
   @Test
+  void 같은_event_type과_target_property의_미터가_이미_있으면_AlreadyExists다() {
+    when(billableMetricRepository.existsByOrganizationIdAndEventTypeAndTargetProperty(
+            ORGANIZATION_ID, "chat_completion", "token"))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> create("sum", "token"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+    verify(billableMetricRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void 확인과_INSERT_사이의_event_type과_target_property_경합도_AlreadyExists로_바뀐다() {
+    when(billableMetricRepository.saveAndFlush(any()))
+        .thenThrow(violation("billable_metric_organization_event_type_target_property_unique"));
+
+    assertThatThrownBy(() -> create("sum", "token"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+  }
+
+  @Test
   void 미등록_도입사의_제약_위반은_400_예외로_바뀐다() {
     when(billableMetricRepository.existsById(
             new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
