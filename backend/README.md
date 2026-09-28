@@ -113,7 +113,7 @@ docker build -t meterengine-backend .
 
 ## 구조
 
-단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안은 controller, service, repository, dto, entity로 나눈다.
+단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안의 계층은 `docs/contributing/naming.md` "패키지"를 따른다.
 
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
