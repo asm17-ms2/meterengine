@@ -118,7 +118,7 @@ docker build -t meterengine-backend .
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
-| `metric` | 미터 등록과 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
+| `metric` | 미터 등록, 수정, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회 | `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
