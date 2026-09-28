@@ -9,4 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BillableMetricRepository extends JpaRepository<BillableMetric, BillableMetricId> {
 
   List<BillableMetric> findByOrganizationIdOrderByCodeAsc(UUID organizationId);
+
+  boolean existsByOrganizationIdAndEventTypeAndTargetProperty(
+      UUID organizationId, String eventType, String targetProperty);
 }

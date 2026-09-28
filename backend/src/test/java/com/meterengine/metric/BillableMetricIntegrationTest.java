@@ -68,6 +68,30 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
+  void 같은_event_type과_target_property를_다른_코드로_등록하면_409이고_기존_미터만_남는다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(post(organizationId, sumBody("token-usage-copy")))
+        .hasStatus(409)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS.getCode());
+
+    assertThat(billableMetricCount(organizationId, "token-usage-copy")).isZero();
+  }
+
+  @Test
+  void 같은_event_type이라도_target_property가_다르면_등록된다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(post(organizationId, sumBody("character-usage", "chars"))).hasStatus(201);
+  }
+
+  @Test
   void 다른_도입사에는_같은_코드를_등록할_수_있다() {
     UUID organizationId = insertOrganization();
     UUID otherOrganizationId = insertOrganization();
@@ -152,7 +176,7 @@ class BillableMetricIntegrationTest {
   void 등록한_미터가_code_오름차순_목록으로_나온다() {
     UUID organizationId = insertOrganization();
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
-    assertThat(post(organizationId, sumBody("api-calls"))).hasStatus(201);
+    assertThat(post(organizationId, sumBody("api-calls", "calls"))).hasStatus(201);
 
     MvcTestResult result = getList(organizationId);
 
@@ -208,11 +232,15 @@ class BillableMetricIntegrationTest {
   }
 
   private String sumBody(String code) {
+    return sumBody(code, "token");
+  }
+
+  private String sumBody(String code, String targetProperty) {
     return """
         {"code": "%s", "name": "토큰 사용량", "event_type": "chat_completion",
-         "aggregation": "sum", "target_property": "token"}
+         "aggregation": "sum", "target_property": "%s"}
         """
-        .formatted(code);
+        .formatted(code, targetProperty);
   }
 
   private UUID insertOrganization() {

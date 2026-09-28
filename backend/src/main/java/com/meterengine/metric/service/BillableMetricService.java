@@ -1,5 +1,6 @@
 package com.meterengine.metric.service;
 
+import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class BillableMetricService {
 
   private static final String DUPLICATE_CODE_CONSTRAINT = "billable_metric_pk";
+  private static final String DUPLICATE_EVENT_TYPE_TARGET_PROPERTY_CONSTRAINT =
+      "billable_metric_organization_event_type_target_property_unique";
 
   private final BillableMetricRepository billableMetricRepository;
 
@@ -36,6 +39,11 @@ public class BillableMetricService {
     if (billableMetricRepository.existsById(id)) {
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     }
+    if (billableMetricRepository.existsByOrganizationIdAndEventTypeAndTargetProperty(
+        organizationId, request.eventType(), request.targetProperty())) {
+      throw new ConflictException(
+          ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+    }
 
     BillableMetric billableMetric =
         new BillableMetric(
@@ -48,11 +56,7 @@ public class BillableMetricService {
     try {
       billableMetricRepository.saveAndFlush(billableMetric);
     } catch (DataIntegrityViolationException exception) {
-      if (exception.getCause() instanceof ConstraintViolationException cause
-          && DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
-        throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
-      }
-      throw new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
+      throw toBusinessException(exception);
     }
 
     return BillableMetricResponse.from(billableMetric);
@@ -62,6 +66,19 @@ public class BillableMetricService {
   public ListBillableMetricsResponse list(UUID organizationId) {
     return ListBillableMetricsResponse.from(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId));
+  }
+
+  private BusinessException toBusinessException(DataIntegrityViolationException exception) {
+    if (exception.getCause() instanceof ConstraintViolationException cause) {
+      if (DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
+        return new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
+      }
+      if (DUPLICATE_EVENT_TYPE_TARGET_PROPERTY_CONSTRAINT.equals(cause.getConstraintName())) {
+        return new ConflictException(
+            ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+      }
+    }
+    return new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
   }
 
   private void validate(CreateBillableMetricRequest request) {

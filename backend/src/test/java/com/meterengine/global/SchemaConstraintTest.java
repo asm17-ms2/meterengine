@@ -174,6 +174,15 @@ class SchemaConstraintTest {
   }
 
   @Test
+  void 같은_도입사에서_event_type과_target_property가_같은_미터는_두_번_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "token-usage");
+
+    assertThatThrownBy(() -> insertBillableMetric(organizationId, "token-usage-copy"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
   void billable_metric에는_더_이상_unit_price_열이_없다() {
     Boolean columnExists =
         jdbcTemplate.queryForObject(
