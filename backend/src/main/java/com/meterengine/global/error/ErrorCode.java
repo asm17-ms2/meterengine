@@ -8,8 +8,6 @@ public enum ErrorCode {
   // 400 Bad Request
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다"),
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
-  UNKNOWN_ORGANIZATION(HttpStatus.BAD_REQUEST, "등록되지 않은 도입사입니다"),
-  INVALID_EVENT(HttpStatus.BAD_REQUEST, "이벤트를 저장할 수 없습니다"),
   INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
   INVALID_PRICE_POLICY(HttpStatus.BAD_REQUEST, "가격 정책으로 성립하지 않습니다"),
 

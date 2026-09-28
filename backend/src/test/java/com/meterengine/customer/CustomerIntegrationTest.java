@@ -160,21 +160,6 @@ class CustomerIntegrationTest {
   }
 
   @Test
-  void 등록되지_않은_도입사로_등록하면_400이다() {
-    assertThat(
-            post(
-                UUID.randomUUID(),
-                """
-        {"name":"아크메"}
-        """))
-        .hasStatus(400)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION.getCode());
-  }
-
-  @Test
   void 같은_이름을_두_번_등록하면_둘_다_남는다() {
     UUID organizationId = insertOrganization();
 
@@ -404,6 +389,20 @@ class CustomerIntegrationTest {
   }
 
   @Test
+  void 인보이스가_있는_고객을_지우면_500이다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = createCustomer(organizationId, "인보이스 있는 고객");
+    insertInvoice(organizationId, customerId);
+
+    assertThat(delete(organizationId, customerId))
+        .hasStatus(500)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
+  }
+
+  @Test
   void 같은_고객을_두_번_지우면_두_번째는_404다() {
     UUID organizationId = insertOrganization();
     UUID customerId = createCustomer(organizationId, "지울 고객");
@@ -534,6 +533,17 @@ class CustomerIntegrationTest {
         INSERT INTO event
           (organization_id, transaction_id, customer_id, type, properties, occurred_at)
         VALUES (?, 'tx-1', ?, 'chat_completion', '{"token": 1200}', now())
+        """,
+        organizationId,
+        customerId);
+  }
+
+  private void insertInvoice(UUID organizationId, UUID customerId) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO invoice
+          (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
+        VALUES (?, ?, '2026-08', 12000, 1200, now())
         """,
         organizationId,
         customerId);

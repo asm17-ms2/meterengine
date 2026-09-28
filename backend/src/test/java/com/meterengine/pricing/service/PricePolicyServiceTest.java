@@ -73,17 +73,12 @@ class PricePolicyServiceTest {
   }
 
   @Test
-  void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
+  void 저장에서_난_DataIntegrityViolationException은_바꾸지_않고_그대로_올려_보낸다() {
     billableMetricExists();
-    when(pricePolicyRepository.existsById(new PricePolicyId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
-        .thenReturn(false);
-    when(pricePolicyRepository.saveAndFlush(any()))
-        .thenThrow(new DataIntegrityViolationException("pk"));
+    DataIntegrityViolationException violation = new DataIntegrityViolationException("pk");
+    when(pricePolicyRepository.saveAndFlush(any())).thenThrow(violation);
 
-    assertThatThrownBy(() -> create(List.of()))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
+    assertThatThrownBy(() -> create(List.of())).isSameAs(violation);
   }
 
   @Test

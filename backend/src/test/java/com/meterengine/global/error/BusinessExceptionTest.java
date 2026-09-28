@@ -12,7 +12,7 @@ class BusinessExceptionTest {
     assertThatNoException().isThrownBy(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
     assertThatNoException().isThrownBy(() -> new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS));
     assertThatNoException()
-        .isThrownBy(() -> new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION));
+        .isThrownBy(() -> new InvalidRequestException(ErrorCode.INVALID_PRICE_POLICY));
   }
 
   @Test

@@ -16,7 +16,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,11 +48,7 @@ public class PricePolicyService {
 
     PricePolicy pricePolicy =
         new PricePolicy(organizationId, billableMetricCode, request.dimensionProperties());
-    try {
-      pricePolicyRepository.saveAndFlush(pricePolicy);
-    } catch (DataIntegrityViolationException exception) {
-      throw new ConflictException(ErrorCode.PRICE_POLICY_ALREADY_EXISTS);
-    }
+    pricePolicyRepository.saveAndFlush(pricePolicy);
 
     return PricePolicyResponse.from(pricePolicy);
   }

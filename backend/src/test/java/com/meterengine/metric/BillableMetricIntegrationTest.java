@@ -151,16 +151,6 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 미등록_도입사면_400_unknown_organization이다() {
-    assertThat(post(UUID.randomUUID(), sumBody("token-usage")))
-        .hasStatus(400)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION.getCode());
-  }
-
-  @Test
   void 도입사_헤더가_없으면_400이다() {
     assertThat(
             mvc.post()

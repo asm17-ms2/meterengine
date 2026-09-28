@@ -64,7 +64,6 @@ public class EventController {
         description =
             """
             code=validation_error: 필수 필드가 없거나 형식이 틀렸거나, 문자열(properties 안쪽 포함)에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, properties의 숫자가 소수점 앞 131072자리나 소수점 뒤 16383자리를 넘거나, timestamp가 기원전 4713-01-01T00:00:00Z부터 294276-12-31T23:59:59.999999Z까지의 범위 밖이다. 어느 필드가 왜 거절됐는지는 errors에 있다.
-            code=invalid_event: 저장할 수 없는 값이 들어 있다. 같은 본문을 다시 보내도 성공하지 않는다.
             """),
     @ApiResponse(
         responseCode = "404",

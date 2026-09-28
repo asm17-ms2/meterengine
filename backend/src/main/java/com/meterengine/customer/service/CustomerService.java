@@ -5,11 +5,9 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
-import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +29,7 @@ public class CustomerService {
 
   @Transactional
   public Customer create(UUID organizationId, String name) {
-    try {
-      return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
-    } catch (DataIntegrityViolationException exception) {
-      throw new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
-    }
+    return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
   }
 
   @Transactional
@@ -59,11 +53,7 @@ public class CustomerService {
       throw new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS);
     }
 
-    try {
-      customerRepository.delete(customer);
-      customerRepository.flush();
-    } catch (DataIntegrityViolationException exception) {
-      throw new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS);
-    }
+    customerRepository.delete(customer);
+    customerRepository.flush();
   }
 }

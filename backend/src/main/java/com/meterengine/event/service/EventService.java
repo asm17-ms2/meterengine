@@ -7,15 +7,12 @@ import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ErrorCode;
-import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -47,23 +44,17 @@ public class EventService {
 
     String propertiesJson = jsonMapper.writeValueAsString(request.properties());
 
-    try {
-      int inserted =
-          eventRepository.insertIfAbsent(
-              organizationId,
-              request.transactionId(),
-              request.customerId(),
-              request.type(),
-              propertiesJson,
-              request.occurredAt());
-      return inserted == 1
-          ? IngestEventResponse.stored(request.transactionId())
-          : IngestEventResponse.alreadyStored(request.transactionId());
-    } catch (DuplicateKeyException alreadyStored) {
-      return IngestEventResponse.alreadyStored(request.transactionId());
-    } catch (DataIntegrityViolationException rejected) {
-      throw new InvalidRequestException(ErrorCode.INVALID_EVENT);
-    }
+    int inserted =
+        eventRepository.insertIfAbsent(
+            organizationId,
+            request.transactionId(),
+            request.customerId(),
+            request.type(),
+            propertiesJson,
+            request.occurredAt());
+    return inserted == 1
+        ? IngestEventResponse.stored(request.transactionId())
+        : IngestEventResponse.alreadyStored(request.transactionId());
   }
 
   @Transactional(readOnly = true)

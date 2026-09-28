@@ -66,15 +66,16 @@ class EventServiceTest {
   }
 
   @Test
-  void 유니크_제약_위반_예외가_터져도_중복_성공으로_응답한다() {
+  void 중복_키_예외도_중복_성공으로_바꾸지_않고_그대로_올려_보낸다() {
     when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(true);
+    DuplicateKeyException duplicateKey =
+        new DuplicateKeyException("duplicate key value violates unique constraint");
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any()))
-        .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
+        .thenThrow(duplicateKey);
 
-    IngestEventResponse response = eventService.ingest(ORGANIZATION_ID, request("tx-1"));
-
-    assertThat(response.duplicate()).isTrue();
+    assertThatThrownBy(() -> eventService.ingest(ORGANIZATION_ID, request("tx-1")))
+        .isSameAs(duplicateKey);
   }
 
   @Test
