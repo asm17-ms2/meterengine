@@ -5,12 +5,15 @@ import com.meterengine.global.error.ErrorResponse.FieldError;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -70,20 +73,13 @@ class GlobalExceptionHandler {
     return respond(ErrorCode.VALIDATION_ERROR, errors);
   }
 
-  // 400 쿼리 파라미터와 헤더 검증 실패
+  // 400 메서드 파라미터 검증 실패
   @ExceptionHandler(HandlerMethodValidationException.class)
   ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
       HandlerMethodValidationException exception) {
     List<FieldError> errors =
         exception.getParameterValidationResults().stream()
-            .flatMap(
-                result ->
-                    result.getResolvableErrors().stream()
-                        .map(
-                            error ->
-                                new FieldError(
-                                    requestParameterName(result.getMethodParameter()),
-                                    messageOrDefault(error.getDefaultMessage()))))
+            .flatMap(GlobalExceptionHandler::fieldErrors)
             .toList();
     return respond(ErrorCode.VALIDATION_ERROR, errors);
   }
@@ -233,7 +229,40 @@ class GlobalExceptionHandler {
     return name.substring(0, separatorIndex);
   }
 
-  private static String requestFieldName(Object target, String javaField) {
+  private static Stream<FieldError> fieldErrors(ParameterValidationResult result) {
+    if (result instanceof ParameterErrors parameterErrors) {
+      Object target = parameterErrors.getArgument();
+      return parameterErrors.getFieldErrors().stream()
+          .map(
+              error ->
+                  new FieldError(
+                      requestFieldName(target, error.getField()),
+                      messageOrDefault(error.getDefaultMessage())));
+    }
+    return result.getResolvableErrors().stream()
+        .map(
+            error ->
+                new FieldError(
+                    requestParameterName(result.getMethodParameter()),
+                    messageOrDefault(error.getDefaultMessage())));
+  }
+
+  private static String requestFieldName(Object target, String fieldPath) {
+    int headEnd = fieldPathHeadEnd(fieldPath);
+    return jsonFieldName(target, fieldPath.substring(0, headEnd)) + fieldPath.substring(headEnd);
+  }
+
+  private static int fieldPathHeadEnd(String fieldPath) {
+    for (int index = 0; index < fieldPath.length(); index++) {
+      char character = fieldPath.charAt(index);
+      if (character == '[' || character == '.') {
+        return index;
+      }
+    }
+    return fieldPath.length();
+  }
+
+  private static String jsonFieldName(Object target, String javaField) {
     if (target == null) {
       return javaField;
     }
