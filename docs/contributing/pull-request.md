@@ -76,7 +76,7 @@
 - 부모는 `--delete-branch` 없이 머지한다. CLI가 브랜치를 먼저 지우면 자식 PR이 닫힌다.
 - 부모가 머지되면 GitHub가 자식의 base를 main으로 바꾼다. 자식 PR에서 Update with rebase를 누른 뒤 리뷰한다.
   - 거절되면 부모가 커밋 여럿이었던 경우다. Update with merge commit을 누르거나 `git rebase --onto origin/main <부모 브랜치> <자식 브랜치>`.
-- 독립 PR인데 다른 PR 뒤에 머지돼야 하면 본문 "결과와 검증"에 "#N 머지 뒤에 머지한다"고 적는다.
+- 독립 PR인데 다른 PR 뒤에 머지돼야 하면 본문 맨 위에 "#N 머지 뒤에 머지한다"고 적는다. `proposal` PR이면 합의가 필요한 점 다음 줄에 적는다.
 
 ### 머지 순서
 
