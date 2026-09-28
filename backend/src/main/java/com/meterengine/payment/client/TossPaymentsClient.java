@@ -1,5 +1,6 @@
 package com.meterengine.payment.client;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.ResourceAccessException;
@@ -7,6 +8,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 public class TossPaymentsClient {
+
+  private static final String IDEMPOTENT_REQUEST_PROCESSING = "IDEMPOTENT_REQUEST_PROCESSING";
+  private static final String EMPTY_SUCCESS_BODY = "2xx without body";
 
   private final RestClient restClient;
 
@@ -33,16 +37,33 @@ public class TossPaymentsClient {
           (clientRequest, response) -> {
             HttpStatusCode status = response.getStatusCode();
             if (status.is2xxSuccessful()) {
-              return new TossPaymentsResult.Success<>(response.bodyTo(bodyType));
+              return readSuccess(response, bodyType);
             }
             TossPaymentsError error = readError(response);
-            if (status.is4xxClientError()) {
+            if (status.is4xxClientError() && !mayStillBeProcessing(status, error)) {
               return new TossPaymentsResult.Rejected<>(
                   status.value(), error.code(), error.message());
             }
             return new TossPaymentsResult.Unknown<>(status.value() + " " + error.code());
           });
     } catch (ResourceAccessException exception) {
+      return new TossPaymentsResult.Unknown<>(reasonWithoutUrl(exception));
+    }
+  }
+
+  private static boolean mayStillBeProcessing(HttpStatusCode status, TossPaymentsError error) {
+    return IDEMPOTENT_REQUEST_PROCESSING.equals(error.code())
+        || (status.value() == HttpStatus.CONFLICT.value() && error.code() == null);
+  }
+
+  private static <T> TossPaymentsResult<T> readSuccess(
+      RestClient.RequestHeadersSpec.ConvertibleClientHttpResponse response, Class<T> bodyType) {
+    try {
+      T body = response.bodyTo(bodyType);
+      return body == null
+          ? new TossPaymentsResult.Unknown<>(EMPTY_SUCCESS_BODY)
+          : new TossPaymentsResult.Success<>(body);
+    } catch (RestClientException exception) {
       return new TossPaymentsResult.Unknown<>(reasonWithoutUrl(exception));
     }
   }
