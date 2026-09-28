@@ -88,6 +88,23 @@ public class EventRepository {
     return total == null ? 0 : total;
   }
 
+  public boolean existsWithNumericProperty(UUID organizationId, String type, String property) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM event
+              WHERE organization_id = ?
+                AND type = ?
+                AND jsonb_typeof(properties -> ?::text) = 'number'
+            )
+            """,
+            Boolean.class,
+            organizationId,
+            type,
+            property));
+  }
+
   public boolean existsForCustomer(UUID organizationId, UUID customerId) {
     return Boolean.TRUE.equals(
         jdbcTemplate.queryForObject(

@@ -26,6 +26,8 @@ public enum ErrorCode {
 
   // 409 Conflict
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
+  BILLABLE_METRIC_HAS_EVENTS(
+      HttpStatus.CONFLICT, "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다"),
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),

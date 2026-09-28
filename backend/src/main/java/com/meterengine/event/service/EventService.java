@@ -36,6 +36,10 @@ public class EventService {
     this.jsonMapper = jsonMapper;
   }
 
+  public boolean existsWithNumericProperty(UUID organizationId, String type, String property) {
+    return eventRepository.existsWithNumericProperty(organizationId, type, property);
+  }
+
   public IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
     if (!customerRepository.existsByOrganizationIdAndId(organizationId, request.customerId())) {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
