@@ -477,7 +477,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
-            아니거나 month가 yyyy-MM이 아니거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
+            아니거나 month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
             있거나, X-Organization-Id가 없거나 UUID가 아니다.
         "404":
           content:
@@ -573,7 +573,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
-            \ month가 yyyy-MM이 아니다"
+            \ month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
@@ -615,7 +615,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
-            \ month가 yyyy-MM이 아니다"
+            \ month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
       summary: 고객별 월 사용량 조회
       tags:
       - billable-metric-usage-controller

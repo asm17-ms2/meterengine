@@ -1,6 +1,7 @@
 package com.meterengine.invoice.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.service.DraftInvoiceService;
 import com.meterengine.metric.service.BillableMetricUsageService;
@@ -49,7 +50,7 @@ public class DraftInvoiceController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니다")
+            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다")
   })
   public DraftInvoiceResponse previewDraftInvoice(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
@@ -57,6 +58,7 @@ public class DraftInvoiceController {
       @Parameter(description = "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다.", example = "2026-08")
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
           YearMonth month) {
     YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
     return draftInvoiceService.preview(organizationId, targetMonth);

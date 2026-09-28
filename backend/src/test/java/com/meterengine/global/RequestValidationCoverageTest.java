@@ -2,9 +2,11 @@ package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.StorableTimestamp;
+import jakarta.validation.Valid;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -12,6 +14,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +28,7 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.RegexPatternTypeFilter;
 import org.springframework.util.ClassUtils;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +39,18 @@ class RequestValidationCoverageTest {
 
   private static final Set<Class<?>> KNOWN_SCALAR_TYPES =
       Set.of(String.class, Map.class, OffsetDateTime.class, UUID.class);
+
+  private static final Set<Class<?>> KNOWN_PARAMETER_SCALAR_TYPES =
+      Set.of(
+          String.class,
+          YearMonth.class,
+          UUID.class,
+          int.class,
+          Integer.class,
+          long.class,
+          Long.class,
+          boolean.class,
+          Boolean.class);
 
   @Test
   void 요청_DTO를_빠짐없이_찾는다() {
@@ -122,6 +138,53 @@ class RequestValidationCoverageTest {
     assertThat(unknownTypeComponents).isEmpty();
   }
 
+  @Test
+  void 컨트롤러의_파라미터는_이_가드가_검사할_줄_아는_타입뿐이고_YearMonth에는_FourDigitYear가_붙어_있다() {
+    List<String> problems =
+        controllers().stream()
+            .flatMap(controller -> Stream.of(controller.getDeclaredMethods()))
+            .filter(RequestValidationCoverageTest::isHandler)
+            .flatMap(
+                method ->
+                    Stream.of(method.getParameters())
+                        .filter(parameter -> !parameter.isAnnotationPresent(RequestBody.class))
+                        .<String>mapMulti(
+                            (parameter, problem) -> {
+                              if (!isKnownType(parameter)) {
+                                problem.accept(
+                                    describe(method, parameter)
+                                        + ": "
+                                        + parameter.getParameterizedType());
+                              } else if (parameter.getType() == YearMonth.class
+                                  && !parameter.isAnnotationPresent(FourDigitYear.class)) {
+                                problem.accept(describe(method, parameter));
+                              }
+                            }))
+            .toList();
+
+    assertThat(problems).isEmpty();
+  }
+
+  @Test
+  void 요청_본문_파라미터에는_Valid가_붙어_있다() {
+    List<String> unguardedParameters =
+        controllers().stream()
+            .flatMap(controller -> Stream.of(controller.getDeclaredMethods()))
+            .filter(RequestValidationCoverageTest::isHandler)
+            .flatMap(
+                method ->
+                    Stream.of(method.getParameters())
+                        .filter(parameter -> parameter.isAnnotationPresent(RequestBody.class))
+                        .filter(
+                            parameter ->
+                                !parameter.isAnnotationPresent(Valid.class)
+                                    && !parameter.isAnnotationPresent(Validated.class))
+                        .map(parameter -> describe(method, parameter)))
+            .toList();
+
+    assertThat(unguardedParameters).isEmpty();
+  }
+
   static List<Class<?>> requestRecords() {
     ClassPathScanningCandidateComponentProvider scanner =
         new ClassPathScanningCandidateComponentProvider(false);
@@ -184,6 +247,22 @@ class RequestValidationCoverageTest {
       return isListOfString(component);
     }
     return KNOWN_SCALAR_TYPES.contains(component.getType());
+  }
+
+  private static boolean isKnownType(Parameter parameter) {
+    if (parameter.getType() == List.class) {
+      return carriesText(parameter);
+    }
+    return KNOWN_PARAMETER_SCALAR_TYPES.contains(parameter.getType());
+  }
+
+  private static String describe(Method method, Parameter parameter) {
+    return method.getDeclaringClass().getSimpleName()
+        + "."
+        + method.getName()
+        + "("
+        + parameter.getName()
+        + ")";
   }
 
   private static boolean isHandler(Method method) {
