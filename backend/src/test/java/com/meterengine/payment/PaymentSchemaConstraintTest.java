@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -132,6 +133,92 @@ class PaymentSchemaConstraintTest {
                 Integer.class,
                 invoiceId))
         .isEqualTo(3);
+  }
+
+  @Test
+  void pending은_done으로_한_번_바뀐다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "pending");
+
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status = 'done', payment_key = 'pk', completed_at = now() WHERE id = ?",
+        attemptId);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT status FROM payment_attempt WHERE id = ?", String.class, attemptId))
+        .isEqualTo("done");
+  }
+
+  @Test
+  void pending은_failed로_한_번_바뀐다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "pending");
+
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status = 'failed', failure_code = 'code', completed_at = now() WHERE id = ?",
+        attemptId);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT status FROM payment_attempt WHERE id = ?", String.class, attemptId))
+        .isEqualTo("failed");
+  }
+
+  @Test
+  void 확정된_시도는_UPDATE할_수_없다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "failed");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE payment_attempt SET status = 'done', payment_key = 'pk' WHERE id = ?",
+                    attemptId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("payment_attempt is final");
+  }
+
+  @Test
+  void done인_시도는_failed로_바꿀_수_없다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "done");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE payment_attempt SET status = 'failed', payment_key = NULL, failure_code = 'code' WHERE id = ?",
+                    attemptId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("payment_attempt is final");
+  }
+
+  @Test
+  void 요청_값은_pending에서도_바꿀_수_없다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "pending");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE payment_attempt SET status = 'done', payment_key = 'pk', completed_at = now(), amount = 1 WHERE id = ?",
+                    attemptId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("pending to done or failed");
+  }
+
+  @Test
+  void 시도는_DELETE할_수_없다() {
+    UUID attemptId = insertAttempt(fixture(), UUID.randomUUID(), "failed");
+
+    assertThatThrownBy(
+            () -> jdbcTemplate.update("DELETE FROM payment_attempt WHERE id = ?", attemptId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("append-only");
+  }
+
+  @Test
+  void 시도는_TRUNCATE할_수_없다() {
+    insertAttempt(fixture(), UUID.randomUUID(), "failed");
+
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE payment_attempt"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("append-only");
   }
 
   @Test
