@@ -142,7 +142,7 @@
 
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
-| 오류 코드 상수 | UPPER_SNAKE_CASE | 영어 어순. 대상을 주어로 한 상태(not found, already exists, has events)는 대상 뒤, 대상을 꾸미는 한 낱말(invalid, unknown, missing)은 대상 앞, 둘 다 되는 낱말(expired, canceled)은 뒤. 대상은 엔티티 이름 그대로 | `CUSTOMER_NOT_FOUND`, `INVALID_EVENT`, `INVOICE_EXPIRED` |
+| 오류 코드 상수 | UPPER_SNAKE_CASE | 영어 어순. 대상을 주어로 한 상태(not found, already exists, has events)는 대상 뒤, 대상을 꾸미는 한 낱말(invalid, unknown, missing)은 대상 앞, 둘 다 되는 낱말(expired, canceled)은 뒤. 대상은 엔티티 이름 그대로 | `CUSTOMER_NOT_FOUND`, `INVALID_BILLABLE_METRIC`, `INVOICE_EXPIRED` |
 | 예외 종류 클래스 | UpperCamelCase | `<종류>Exception`. 종류는 HTTP 상태의 뜻. 대상별 전용 예외는 `<대상><종류>Exception` | `NotFoundException`, `CustomerNotFoundException` |
 | 핸들러 메서드 | lowerCamelCase | `handle<예외 클래스 단순명>`. `Exception`을 떼지 않는다 | `handleBusinessException`, `handleException` |
 

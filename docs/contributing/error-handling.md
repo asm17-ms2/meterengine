@@ -6,7 +6,7 @@
 ## code
 
 - 받는 쪽이 이 값으로 무엇을 다르게 하는가로 가른다. 문구만 다르면 가르지 않고 `errors[]`로 어디가 틀렸는지만 준다.
-- 상태가 같아도 뜻이 다르면 code가 따로다. 예: 400의 `validation_error`와 `invalid_event`.
+- 상태가 같아도 뜻이 다르면 code가 따로다. 예: 400의 `validation_error`와 `invalid_billable_metric`.
 - code 하나는 (HTTP 상태, 의미) 하나만 가리킨다.
 - 값의 정본은 `ErrorCode` enum이고 목록은 `backend/openapi.yaml`이 낸다. 다른 문서는 베끼지 않고 가리킨다.
 - 새 오류는 `ErrorCode` 상수 하나로 더한다. 상태, code 문자열, 문구를 그 한 줄이 든다.
@@ -17,7 +17,7 @@
   - 계약은 `code`다. 문구는 바꿔도 된다.
 - 도입사가 보낸 값을 문구에 되비추지 않는다. 기대 타입이나 규칙은 적어도 된다.
 - 필드별 사유는 `errors[].message`에만 둔다.
-  - 프레임워크 검증은 Bean Validation의 ko 번들 문구, 도메인 검증은 던지는 자리가 넘긴 문구다.
+  - 프레임워크 검증은 Bean Validation의 ko 번들 문구, 우리가 만든 제약 어노테이션은 그 어노테이션의 `message` 기본값, 도메인 검증은 던지는 자리가 넘긴 문구다.
   - 우리가 만드는 문구는 `GlobalExceptionHandler`의 상수다. Bean Validation이 문구를 만들지 않는 자리(헤더 누락, 타입 불일치)만 둔다.
 
 ## 예외와 핸들러의 자리
@@ -32,7 +32,11 @@
   - 프레임워크 예외는 정확한 타입으로 나열한다. `ResponseEntityExceptionHandler`가 잡는 예외를 빠뜨리지 않는다.
     - 나열하지 않은 것은 `Exception` 핸들러가 500으로 받는다.
     - 500으로 두기로 한 예외는 `GlobalExceptionHandlerCoverageTest`의 목록에 적는다.
-  - `DataIntegrityViolationException`은 핸들러에서 잡지 않는다. 서비스가 저장 전 조회로 거르거나 잡아서 종류 클래스로 바꿔 던진다.
+  - `DataIntegrityViolationException`은 서비스도 핸들러도 잡지 않는다. 나열하지 않은 예외와 같이 500이다.
+    - 클라이언트 입력만으로 DB가 거부하거나 바꿔 저장하는 값은 요청 DTO와 컨트롤러 파라미터의 검증으로 막는다.
+      - 요청 DTO 필드나 컨트롤러 파라미터에 새 타입을 쓰면 `RequestValidationCoverageTest`에 그 타입의 제약을 더한다.
+    - 중복과 존재는 서비스가 저장 전 조회로 막는다.
+    - 저장 전 조회와 저장 사이의 경합으로 난 것도 500이다.
 - 테스트는 종류 클래스를 잡은 뒤 code를 비교한다.
 - 오류 응답의 모양은 통합 테스트가 실제 응답 본문으로 검증한다. 생성된 OpenAPI 문서는 실제 응답과 다를 수 있다.
 
