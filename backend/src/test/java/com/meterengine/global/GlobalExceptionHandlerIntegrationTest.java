@@ -2,8 +2,13 @@ package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.MatrixVariable;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -462,6 +468,50 @@ class GlobalExceptionHandlerIntegrationTest {
     }
   }
 
+  @Test
+  void 목록_원소_검증의_field는_JSON_키에_색인을_붙인_것이다() {
+    MvcTestResult result =
+        postJson(
+            BindingController.BODY_PATH, "{\"snake_name\":\"a\",\"snake_names\":[\"a\",\" \"]}");
+
+    assertThat(result).hasStatus(400);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("snake_names[1]");
+  }
+
+  @Test
+  void 경로_변수에_제약이_있어도_본문_검증의_field는_JSON_키다() {
+    MvcTestResult result =
+        postJson("/test/binding/body/ok", "{\"snake_name\":\"\",\"snake_names\":[\" \"]}");
+
+    assertThat(result).hasStatus(400);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactlyInAnyOrder("snake_name", "snake_names[0]");
+  }
+
+  @Test
+  void 경로_변수와_본문이_함께_틀리면_둘_다_알려준다() {
+    MvcTestResult result =
+        postJson("/test/binding/body/long", "{\"snake_name\":\"\",\"snake_names\":[]}");
+
+    assertThat(result).hasStatus(400);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactlyInAnyOrder("code", "snake_name");
+  }
+
+  private MvcTestResult postJson(String path, String body) {
+    return mvc.post().uri(path).contentType(MediaType.APPLICATION_JSON).content(body).exchange();
+  }
+
   private void assertMessages(MvcTestResult result, String... messages) {
     assertThat(result).hasStatus(400);
     assertThat(result)
@@ -519,6 +569,8 @@ class GlobalExceptionHandlerIntegrationTest {
     static final String COOKIE_PATH = "/test/binding/cookie";
     static final String MATRIX_PATH = "/test/binding/matrix/{id}";
     static final String CONDITION_PATH = "/test/binding/condition";
+    static final String BODY_PATH = "/test/binding/body";
+    static final String BODY_WITH_CODE_PATH = "/test/binding/body/{code}";
 
     @GetMapping(PARAMETER_PATH)
     void requireParameter(@RequestParam("required_parameter") String requiredParameter) {}
@@ -534,5 +586,16 @@ class GlobalExceptionHandlerIntegrationTest {
 
     @GetMapping(path = CONDITION_PATH, params = "type=create")
     void requireCondition() {}
+
+    @PostMapping(BODY_PATH)
+    void validateBody(@Valid @RequestBody ValidatedBody body) {}
+
+    @PostMapping(BODY_WITH_CODE_PATH)
+    void validateBodyWithCode(
+        @PathVariable @Size(max = 3) String code, @Valid @RequestBody ValidatedBody body) {}
   }
+
+  record ValidatedBody(
+      @JsonProperty("snake_name") @NotBlank String snakeName,
+      @JsonProperty("snake_names") List<@NotBlank String> snakeNames) {}
 }
