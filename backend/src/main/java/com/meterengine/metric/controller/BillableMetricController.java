@@ -1,6 +1,7 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.StorableText;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
@@ -57,7 +58,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """),
@@ -99,7 +100,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
@@ -124,7 +125,7 @@ public class BillableMetricController {
   public BillableMetricResponse updateBillableMetric(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
-      @Parameter(description = "고칠 미터의 code.") @PathVariable String code,
+      @Parameter(description = "고칠 미터의 code.") @PathVariable @StorableText String code,
       @Valid @RequestBody UpdateBillableMetricRequest request) {
     return billableMetricService.update(organizationId, code, request);
   }

@@ -111,7 +111,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
         "409":
@@ -165,7 +165,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "404":
           content:
@@ -225,7 +225,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: dimension_properties가 없거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: dimension_properties가 없거나, dimension_properties의 키나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_price_policy: dimension_properties에 중복된 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "404":
           content:
@@ -477,7 +477,8 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
-            아니거나 month가 yyyy-MM이 아니거나, X-Organization-Id가 없거나 UUID가 아니다.
+            아니거나 month가 yyyy-MM이 아니거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
+            있거나, X-Organization-Id가 없거나 UUID가 아니다.
         "404":
           content:
             application/json:

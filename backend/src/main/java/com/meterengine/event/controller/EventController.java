@@ -5,6 +5,7 @@ import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.service.EventService;
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.StorableText;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -102,7 +103,8 @@ public class EventController {
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
-            아니거나 month가 yyyy-MM이 아니거나, X-Organization-Id가 없거나 UUID가 아니다.
+            아니거나 month가 yyyy-MM이 아니거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
+            있거나, X-Organization-Id가 없거나 UUID가 아니다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -126,6 +128,7 @@ public class EventController {
           YearMonth month,
       @Parameter(description = "이벤트 type을 좁힌다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회된다.")
           @RequestParam(required = false)
+          @StorableText
           String type) {
     YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
     return eventService.list(organizationId, customerId, targetMonth, type, page, size);
