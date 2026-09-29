@@ -50,7 +50,7 @@
 | 서비스 | UpperCamelCase | `<대상>Service`, 동작 하나면 `<대상><동작명사>Service` | `CustomerService`, `EventIngestionService` |
 | 컨트롤러 | UpperCamelCase | `<대상>Controller` | `CustomerController` |
 | 설정 | UpperCamelCase | `<무엇>Config`, 외부 설정값 `<무엇>Properties` | `OpenApiConfig`, `TossPaymentsProperties` |
-| 쓰지 않는 접미사 | | `Dto` `Vo` `Cmd` `Json` `Model` `Entity` `Impl` `Util` `Helper` `Manager` `Entry` `Item` `Row` `Data` `Info` |  |
+| 쓰지 않는 접미사 | | `Dto` `Vo` `Cmd` `Json` `Model` `Entity` `Impl` `Util` `Helper` `Manager` `Entry` `Item` `Row` `Data` `Info`. 애노테이션에는 적용하지 않는다 |  |
 
 ### DTO
 
@@ -65,7 +65,7 @@
 
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
-| 서비스 메서드 | lowerCamelCase | 동사 단독. 저장 `create` `update` `delete`, 읽기 `list` `find`(없을 수 있음) `get`(없으면 예외), 계산 `aggregate` `preview`(저장 안 함), 상태 전이는 도메인 동사 | `create`, `preview`, `finalize` |
+| 서비스 메서드 | lowerCamelCase | 동사 단독. 저장 `create` `update` `delete`, 읽기 `list` `find`(없을 수 있음) `get`(없으면 예외), 계산 `aggregate` `preview`(저장 안 함), 상태 전이는 도메인 동사. boolean을 돌려주는 판정 메서드는 동사 뒤에 조건을 적는다 | `create`, `preview`, `finalize`, `existsWithNumericProperty` |
 | 컨트롤러 메서드 | lowerCamelCase | `<동사><리소스>`. 동사는 서비스 메서드와 같은 낱말. 프로젝트 전역 유일(operationId가 된다) | `listCustomers`, `previewDraftInvoice` |
 | 리포지토리 메서드 | lowerCamelCase | 파생 쿼리는 `find` `exists` `count` `delete` + `By...`. 읽기 힘들면 `@Query`와 서술형 이름 | `findByOrganizationIdOrderByNameAscIdAsc`, `findPage` |
 | 접근자와 변경자 | lowerCamelCase | setter 없이 도메인 동사 메서드. boolean 접근자는 `isX()` | `rename(name)`, `isNew()` |
@@ -83,7 +83,7 @@
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
 | 테스트 클래스 | UpperCamelCase | `<대상>[<동작>][<관점>]Test`. 클래스 하나만 검증하면 `<클래스>Test`이고 대상과 같은 패키지. 관점 테스트는 도메인 루트, 도메인이 없으면 `global`, 루트에는 애플리케이션 테스트와 생성된 진입점만. 관점은 검증 대상이지 도구가 아니다 | `customer/service/CustomerServiceTest`, `event/EventIngestIntegrationTest` |
-| 테스트 메서드 | 한국어 밑줄 문장 | "~한다"/"~다" 어미, `@DisplayName` 없음. 한국어는 `@Test`와 `@Nested` 이름에만. 문장 안의 영문 약어는 원 표기 그대로 | `이벤트가_있는_고객은_지울_수_없다`, `기간은_KST_월의_반열린_구간으로_넘긴다` |
+| 테스트 메서드 | 한국어 밑줄 문장 | "~한다"/"~다" 어미, `@DisplayName` 없음. 한국어는 `@Test` `@Nested` `@ArchTest` 이름에만. 문장 안의 영문 약어는 원 표기 그대로 | `이벤트가_있는_고객은_지울_수_없다`, `기간은_KST_월의_반열린_구간으로_넘긴다` |
 
 ## 프론트엔드 TypeScript
 
