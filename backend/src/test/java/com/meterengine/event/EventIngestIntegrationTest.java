@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -359,27 +361,67 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void DB가_담을_수_없는_값은_500이_아니라_400이다() {
+  void properties에_받지_않는_문자가_있으면_400이고_저장은_0건이다() {
     UUID organizationId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(organizationId, "acme");
 
-    String withNulCharacter =
-        """
-        {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
-         "properties":{"prompt":"a\\u0000b"},"timestamp":"%s"}
-        """
-            .formatted(customerId, OCCURRED_AT);
-
-    MvcTestResult result = post(organizationId, withNulCharacter);
+    MvcTestResult result =
+        post(
+            organizationId,
+            eventBody(
+                "tx-1", "chat_completion", "{\"prompt\":\"a\\u0000b\"}", OCCURRED_AT, customerId));
 
     assertThat(result)
         .hasStatus(400)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.INVALID_EVENT.getCode());
-    assertThat(result).bodyJson().doesNotHavePath("$.errors");
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("properties");
+    assertThat(totalCount(organizationId)).isZero();
+  }
+
+  @Test
+  void properties의_숫자가_numeric_범위를_넘으면_400이고_저장은_0건이다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    MvcTestResult result =
+        post(
+            organizationId,
+            eventBody("tx-1", "chat_completion", "{\"x\":1E-16384}", OCCURRED_AT, customerId));
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("properties");
+    assertThat(totalCount(organizationId)).isZero();
+  }
+
+  @Test
+  void properties의_숫자는_numeric_범위_끝까지_받는다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    Map<String, String> propertiesByTransactionId = new LinkedHashMap<>();
+    propertiesByTransactionId.put("tx-integer-digits", "{\"x\":1E+131071}");
+    propertiesByTransactionId.put("tx-fraction-digits", "{\"x\":1E-16383}");
+    propertiesByTransactionId.forEach(
+        (transactionId, properties) ->
+            assertThat(
+                    post(
+                        organizationId,
+                        eventBody(
+                            transactionId, "chat_completion", properties, OCCURRED_AT, customerId)))
+                .hasStatusOk());
+
+    assertThat(totalCount(organizationId)).isEqualTo(2);
   }
 
   @Test
@@ -429,6 +471,15 @@ class EventIngestIntegrationTest {
          "properties":{"model":"gpt-4o-mini","token":1200},"timestamp":"%s"}
         """
         .formatted(transactionId, customerId, OCCURRED_AT);
+  }
+
+  private String eventBody(
+      String transactionId, String type, String propertiesJson, String timestamp, UUID customerId) {
+    return """
+        {"transaction_id":"%s","customer_id":"%s","type":"%s",
+         "properties":%s,"timestamp":"%s"}
+        """
+        .formatted(transactionId, customerId, type, propertiesJson, timestamp);
   }
 
   private UUID insertOrganization(String name) {
