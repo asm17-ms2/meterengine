@@ -106,6 +106,56 @@ class TossPaymentsClientTest {
   }
 
   @Test
+  void 처리중_409는_결과_모름이다() {
+    server
+        .expect(requestTo(BASE + "/v1/billing/bk-1"))
+        .andRespond(
+            withStatus(HttpStatus.CONFLICT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"IDEMPOTENT_REQUEST_PROCESSING\",\"message\":\"처리 중\"}"));
+
+    TossPaymentsResult<TossPaymentsPayment> result =
+        client.approveBilling(
+            "bk-1",
+            new TossPaymentsApproveBillingRequest("c", 1, "order-000001", "n"),
+            "order-000001");
+
+    assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
+  }
+
+  @Test
+  void 본문_없는_409는_결과_모름이다() {
+    server.expect(requestTo(BASE + "/v1/billing/bk-1")).andRespond(withStatus(HttpStatus.CONFLICT));
+
+    TossPaymentsResult<TossPaymentsPayment> result =
+        client.approveBilling(
+            "bk-1",
+            new TossPaymentsApproveBillingRequest("c", 1, "order-000001", "n"),
+            "order-000001");
+
+    assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
+  }
+
+  @Test
+  void 처리중이_아닌_코드의_409는_거절이다() {
+    server
+        .expect(requestTo(BASE + "/v1/billing/bk-1"))
+        .andRespond(
+            withStatus(HttpStatus.CONFLICT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"DUPLICATED_ORDER_ID\",\"message\":\"이미 쓴 주문번호\"}"));
+
+    TossPaymentsResult<TossPaymentsPayment> result =
+        client.approveBilling(
+            "bk-1",
+            new TossPaymentsApproveBillingRequest("c", 1, "order-000001", "n"),
+            "order-000001");
+
+    assertThat(result)
+        .isEqualTo(new TossPaymentsResult.Rejected<>(409, "DUPLICATED_ORDER_ID", "이미 쓴 주문번호"));
+  }
+
+  @Test
   void 응답_5xx는_결과_모름이다() {
     server
         .expect(requestTo(BASE + "/v1/billing/bk-1"))
@@ -135,6 +185,36 @@ class TossPaymentsClientTest {
     assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
     assertThat(((TossPaymentsResult.Unknown<TossPaymentsPayment>) result).reason())
         .doesNotContain("bk-1");
+  }
+
+  @Test
+  void 승인_2xx_본문을_읽지_못하면_결과_모름이다() {
+    server
+        .expect(requestTo(BASE + "/v1/billing/bk-1"))
+        .andRespond(withSuccess("{", MediaType.APPLICATION_JSON));
+
+    TossPaymentsResult<TossPaymentsPayment> result =
+        client.approveBilling(
+            "bk-1",
+            new TossPaymentsApproveBillingRequest("c", 1, "order-000001", "n"),
+            "order-000001");
+
+    assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
+    assertThat(((TossPaymentsResult.Unknown<TossPaymentsPayment>) result).reason())
+        .doesNotContain("bk-1");
+  }
+
+  @Test
+  void 승인_2xx_본문이_비면_결과_모름이다() {
+    server.expect(requestTo(BASE + "/v1/billing/bk-1")).andRespond(withSuccess());
+
+    TossPaymentsResult<TossPaymentsPayment> result =
+        client.approveBilling(
+            "bk-1",
+            new TossPaymentsApproveBillingRequest("c", 1, "order-000001", "n"),
+            "order-000001");
+
+    assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
   }
 
   @Test
