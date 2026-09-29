@@ -91,6 +91,8 @@
 
 ## 프론트엔드 TypeScript
 
+- 케이스와 약어, boolean 접두사, 모듈 수준 상수, 파일과 폴더 이름은 ESLint가 본다. 설정은 `frontend/eslint.config.mjs`.
+
 ### 컴포넌트
 
 | 식별자 | 케이스 | 형식 | 예 |
