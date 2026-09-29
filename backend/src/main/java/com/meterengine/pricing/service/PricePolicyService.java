@@ -32,6 +32,11 @@ public class PricePolicyService {
     this.billableMetricRepository = billableMetricRepository;
   }
 
+  @Transactional(readOnly = true)
+  public boolean existsForBillableMetric(UUID organizationId, String billableMetricCode) {
+    return pricePolicyRepository.existsById(new PricePolicyId(organizationId, billableMetricCode));
+  }
+
   @Transactional
   public PricePolicyResponse create(
       UUID organizationId, String billableMetricCode, CreatePricePolicyRequest request) {
