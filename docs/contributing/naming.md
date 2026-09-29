@@ -35,6 +35,8 @@
 
 ## 백엔드 Java
 
+- 케이스와 약어는 Checkstyle이 본다. 설정은 `backend/config/checkstyle/checkstyle.xml`.
+
 ### 패키지
 
 | 식별자 | 케이스 | 형식 | 예 |
