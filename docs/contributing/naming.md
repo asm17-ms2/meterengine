@@ -39,7 +39,7 @@
 
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
-| 패키지 | 소문자, 밑줄 없음 | `com.meterengine.<domain>.<layer>`. layer는 `config` `controller` `dto` `entity` `repository` `service`. 공용은 `global.<역할>`, 루트에는 진입점만 | `com.meterengine.invoice.dto`, `com.meterengine.global.config` |
+| 패키지 | 소문자, 밑줄 없음 | `com.meterengine.<domain>.<layer>`. layer는 `client` `config` `controller` `dto` `entity` `repository` `service`. 공용은 `global.<역할>`, 루트에는 진입점만 | `com.meterengine.invoice.dto`, `com.meterengine.global.config` |
 
 ### 클래스
 
