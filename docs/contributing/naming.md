@@ -82,6 +82,8 @@
 
 ### 테스트
 
+- 테스트 클래스의 접미사와 위치, 메서드 이름의 한국어 범위는 ArchUnit이 본다. 규칙은 `backend/src/test/java/com/meterengine/global/TestNamingConventionTest.java`.
+
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
 | 테스트 클래스 | UpperCamelCase | `<대상>[<동작>][<관점>]Test`. 클래스 하나만 검증하면 `<클래스>Test`이고 대상과 같은 패키지. 관점 테스트는 도메인 루트, 도메인이 없으면 `global`, 루트에는 애플리케이션 테스트와 생성된 진입점만. 관점은 검증 대상이지 도구가 아니다 | `customer/service/CustomerServiceTest`, `event/EventIngestIntegrationTest` |
@@ -120,6 +122,8 @@
 ## API와 DB
 
 ### API
+
+- URL 경로와 경로 변수, 파라미터와 JSON 키의 케이스, operationId 유일은 `backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java`가 생성된 문서로 본다.
 
 | 식별자 | 케이스 | 형식 | 예 |
 | --- | --- | --- | --- |
