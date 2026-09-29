@@ -1,6 +1,7 @@
 package com.meterengine.metric.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,7 +52,7 @@ public class BillableMetricUsageController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니다")
+            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다")
   })
   public ListBillableMetricUsagesResponse aggregateBillableMetricUsages(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
@@ -59,6 +60,7 @@ public class BillableMetricUsageController {
       @Parameter(description = "집계할 달(yyyy-MM, KST). 생략하면 이번 달이다.", example = "2026-08")
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
           YearMonth month) {
     YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
     return ListBillableMetricUsagesResponse.of(

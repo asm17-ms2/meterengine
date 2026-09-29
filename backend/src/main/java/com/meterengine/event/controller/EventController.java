@@ -5,6 +5,7 @@ import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.service.EventService;
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -103,7 +104,7 @@ public class EventController {
         description =
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
-            아니거나 month가 yyyy-MM이 아니거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
+            아니거나 month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
             있거나, X-Organization-Id가 없거나 UUID가 아니다.
             """),
     @ApiResponse(
@@ -125,6 +126,7 @@ public class EventController {
       @Parameter(description = "조회할 달(yyyy-MM, KST). 생략하면 이번 달이다.", example = "2026-08")
           @RequestParam(required = false)
           @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
           YearMonth month,
       @Parameter(description = "이벤트 type을 좁힌다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회된다.")
           @RequestParam(required = false)

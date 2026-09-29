@@ -459,6 +459,32 @@ class EventListIntegrationTest {
         .containsExactly("type");
   }
 
+  @Test
+  void month의_연도가_네_자리를_넘으면_400이다() {
+    UUID organizationId = insertOrganization("도입사");
+
+    assertThat(get(organizationId, "?month=9999-12")).hasStatusOk();
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/events")
+            .param("month", "+300000-01")
+            .header("X-Organization-Id", organizationId.toString())
+            .exchange();
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("month");
+  }
+
   // ---------------------------------------------------------------------------
   // 응답 항목
   // ---------------------------------------------------------------------------
