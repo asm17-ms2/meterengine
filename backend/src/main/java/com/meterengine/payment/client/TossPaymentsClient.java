@@ -1,5 +1,6 @@
 package com.meterengine.payment.client;
 
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -18,6 +19,17 @@ public class TossPaymentsClient {
     this.restClient = restClient;
   }
 
+  public TossPaymentsResult<TossPaymentsBilling> issueBillingKey(
+      String authKey, String customerKey) {
+    return send(
+        restClient
+            .post()
+            .uri("/v1/billing/authorizations/issue")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of("authKey", authKey, "customerKey", customerKey)),
+        TossPaymentsBilling.class);
+  }
+
   public TossPaymentsResult<TossPaymentsPayment> approveBilling(
       String billingKey, TossPaymentsApproveBillingRequest approval, String idempotencyKey) {
     return send(
@@ -28,6 +40,15 @@ public class TossPaymentsClient {
             .contentType(MediaType.APPLICATION_JSON)
             .body(approval),
         TossPaymentsPayment.class);
+  }
+
+  public TossPaymentsResult<Void> deleteBillingKey(String billingKey) {
+    return send(restClient.delete().uri("/v1/billing/{billingKey}", billingKey), Void.class);
+  }
+
+  public TossPaymentsResult<TossPaymentsPayment> findPaymentByOrderId(String orderId) {
+    return send(
+        restClient.get().uri("/v1/payments/orders/{orderId}", orderId), TossPaymentsPayment.class);
   }
 
   private <T> TossPaymentsResult<T> send(
@@ -58,6 +79,9 @@ public class TossPaymentsClient {
 
   private static <T> TossPaymentsResult<T> readSuccess(
       RestClient.RequestHeadersSpec.ConvertibleClientHttpResponse response, Class<T> bodyType) {
+    if (bodyType == Void.class) {
+      return new TossPaymentsResult.Success<>(null);
+    }
     try {
       T body = response.bodyTo(bodyType);
       return body == null

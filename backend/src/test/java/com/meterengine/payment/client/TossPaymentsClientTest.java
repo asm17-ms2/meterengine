@@ -13,6 +13,7 @@ import com.meterengine.payment.config.TossPaymentsConfig;
 import com.meterengine.payment.config.TossPaymentsProperties;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -36,6 +37,33 @@ class TossPaymentsClientTest {
     TossPaymentsConfig.withTossDefaults(
         builder, new TossPaymentsProperties(SECRET_KEY, URI.create(BASE)));
     client = new TossPaymentsClient(builder.build());
+  }
+
+  @Test
+  void 시크릿_키_뒤에_콜론을_붙여_Basic_인증한다() {
+    String expected = "Basic " + Base64.getEncoder().encodeToString((SECRET_KEY + ":").getBytes());
+    server
+        .expect(requestTo(BASE + "/v1/billing/authorizations/issue"))
+        .andExpect(method(HttpMethod.POST))
+        .andExpect(header("Authorization", expected))
+        .andExpect(content().json("{\"authKey\":\"auth-1\",\"customerKey\":\"customer-1\"}"))
+        .andRespond(
+            withSuccess(
+                """
+                {"billingKey":"bk-1","authenticatedAt":"2026-09-28T10:00:00+09:00",
+                 "card":{"issuerCode":"4V","number":"43301234****123*"},"mId":"tvivarepublica"}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    TossPaymentsResult<TossPaymentsBilling> result = client.issueBillingKey("auth-1", "customer-1");
+
+    assertThat(result).isInstanceOf(TossPaymentsResult.Success.class);
+    TossPaymentsBilling billing =
+        ((TossPaymentsResult.Success<TossPaymentsBilling>) result).value();
+    assertThat(billing.billingKey()).isEqualTo("bk-1");
+    assertThat(billing.card().issuerCode()).isEqualTo("4V");
+    assertThat(billing.card().number()).isEqualTo("43301234****123*");
+    server.verify();
   }
 
   @Test
@@ -215,6 +243,50 @@ class TossPaymentsClientTest {
             "order-000001");
 
     assertThat(result).isInstanceOf(TossPaymentsResult.Unknown.class);
+  }
+
+  @Test
+  void 조회에_있으면_성공이다() {
+    server
+        .expect(requestTo(BASE + "/v1/payments/orders/order-000001"))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(
+            withSuccess(
+                "{\"paymentKey\":\"pk-1\",\"orderId\":\"order-000001\",\"status\":\"DONE\"}",
+                MediaType.APPLICATION_JSON));
+
+    TossPaymentsResult<TossPaymentsPayment> result = client.findPaymentByOrderId("order-000001");
+
+    assertThat(result)
+        .isEqualTo(
+            new TossPaymentsResult.Success<>(
+                new TossPaymentsPayment("pk-1", "order-000001", "DONE")));
+  }
+
+  @Test
+  void 조회에_없으면_404_거절이다() {
+    server
+        .expect(requestTo(BASE + "/v1/payments/orders/order-000001"))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(
+            withStatus(HttpStatus.NOT_FOUND)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"NOT_FOUND_PAYMENT\",\"message\":\"없음\"}"));
+
+    TossPaymentsResult<TossPaymentsPayment> result = client.findPaymentByOrderId("order-000001");
+
+    assertThat(result).isEqualTo(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없음"));
+  }
+
+  @Test
+  void 빌링키_삭제는_빈_본문_200이면_성공이다() {
+    server
+        .expect(requestTo(BASE + "/v1/billing/bk-1"))
+        .andExpect(method(HttpMethod.DELETE))
+        .andRespond(withSuccess());
+
+    assertThat(client.deleteBillingKey("bk-1"))
+        .isEqualTo(new TossPaymentsResult.Success<Void>(null));
   }
 
   @Test
