@@ -81,7 +81,7 @@ public class CustomerController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: name이 비었거나 255자를 넘거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """)
   })
@@ -107,7 +107,8 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: name이 비었거나 255자를 넘거나, 헤더나 경로의 UUID 형식이 틀렸다"),
+        description =
+            "code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, 헤더나 경로의 UUID 형식이 틀렸다"),
     @ApiResponse(
         responseCode = "404",
         content =
