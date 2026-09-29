@@ -145,7 +145,7 @@ docker build -t meterengine-backend .
 | `./gradlew build`가 컨테이너를 띄우지 못하고 실패한다 | Docker 데몬이 꺼져 있다 | Docker Desktop을 켠다 |
 | 기동이 `tosspayments.secret-key` 검증에서 실패한다 | `TOSSPAYMENTS_SECRET_KEY`를 빈 값으로 줬다 | 값을 주거나 변수를 빼서 기본값을 쓴다 |
 | 빌드가 포맷 검사에서 실패한다 | google-java-format 결과와 다르다 | `./gradlew spotlessApply` |
-| 요청이 `unknown_organization`으로 400이 난다 | `X-Organization-Id`가 등록된 도입사가 아니다 | 시드가 넣은 도입사 id를 쓴다 (위 "실행") |
+| 요청이 500 `internal_server_error`로 끝나고 로그에 외래 키 위반이 남는다 | `X-Organization-Id`가 등록된 도입사가 아니다 | 시드가 넣은 도입사 id를 쓴다 (위 "실행") |
 
 ```bash
 # 로컬 DB를 비우고 다시 만든다 (레포 루트에서, 데이터가 사라진다)

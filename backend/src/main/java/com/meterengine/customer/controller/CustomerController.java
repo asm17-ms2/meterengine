@@ -82,7 +82,6 @@ public class CustomerController {
         description =
             """
             code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """)
   })
   public CustomerResponse createCustomer(

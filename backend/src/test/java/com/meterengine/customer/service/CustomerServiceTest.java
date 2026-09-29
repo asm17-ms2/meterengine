@@ -12,7 +12,6 @@ import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
-import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,14 +39,12 @@ class CustomerServiceTest {
   }
 
   @Test
-  void 등록되지_않은_도입사로_DB가_거절하면_400_예외로_바뀐다() {
-    when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any()))
-        .thenThrow(new DataIntegrityViolationException("customer_organization_fk"));
+  void 등록_저장에서_난_DataIntegrityViolationException은_바꾸지_않고_그대로_올려_보낸다() {
+    DataIntegrityViolationException violation =
+        new DataIntegrityViolationException("customer_organization_fk");
+    when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any())).thenThrow(violation);
 
-    assertThatThrownBy(() -> customerService.create(ORGANIZATION_ID, "아크메"))
-        .isInstanceOf(InvalidRequestException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
+    assertThatThrownBy(() -> customerService.create(ORGANIZATION_ID, "아크메")).isSameAs(violation);
   }
 
   @Test
@@ -65,18 +62,16 @@ class CustomerServiceTest {
   }
 
   @Test
-  void 확인_뒤에_DB가_거절하면_같은_409_예외로_바뀐다() {
+  void 삭제_확인_뒤에_난_DataIntegrityViolationException은_바꾸지_않고_그대로_올려_보낸다() {
     when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(Optional.of(customer()));
     when(eventRepository.existsForCustomer(ORGANIZATION_ID, CUSTOMER_ID)).thenReturn(false);
-    doThrow(new DataIntegrityViolationException("event_customer_same_organization_fk"))
-        .when(customerRepository)
-        .flush();
+    DataIntegrityViolationException violation =
+        new DataIntegrityViolationException("event_customer_same_organization_fk");
+    doThrow(violation).when(customerRepository).flush();
 
     assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
+        .isSameAs(violation);
   }
 
   @Test

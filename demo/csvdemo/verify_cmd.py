@@ -118,7 +118,7 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
     known_customer_ids = set(roster_from_usage(usage.body))
 
     prediction = predict_send(events, known_customer_ids)
-    print("CSV 소스는 서버 판정 시뮬레이션입니다 (invalid_event 같은 희귀 거절은 예측하지 못합니다. 실제 판정은 send 로그가 정본).")
+    print("CSV 소스는 서버 판정 시뮬레이션입니다 (저장할 수 없는 문자(NUL, 짝이 없는 UTF-16 서로게이트) 같은 드문 거절은 예측하지 못합니다. 실제 판정은 send 로그가 정본).")
     for outcome in prediction.outcomes:
         if outcome.outcome == "rejected":
             print("  거절 예측 (%d행): %s (%s)" % (outcome.index + 1, outcome.detail, outcome.code))

@@ -1,7 +1,6 @@
 package com.meterengine.metric.service;
 
 import com.meterengine.event.service.EventService;
-import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
@@ -16,17 +15,11 @@ import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BillableMetricService {
-
-  private static final String DUPLICATE_CODE_CONSTRAINT = "billable_metric_pk";
-  private static final String DUPLICATE_EVENT_TYPE_TARGET_PROPERTY_CONSTRAINT =
-      "billable_metric_organization_event_type_target_property_unique";
 
   private final BillableMetricRepository billableMetricRepository;
   private final EventService eventService;
@@ -59,11 +52,7 @@ public class BillableMetricService {
             request.eventType(),
             request.aggregation(),
             request.targetProperty());
-    try {
-      billableMetricRepository.saveAndFlush(billableMetric);
-    } catch (DataIntegrityViolationException exception) {
-      throw toBusinessException(exception);
-    }
+    billableMetricRepository.saveAndFlush(billableMetric);
 
     return BillableMetricResponse.from(billableMetric);
   }
@@ -93,11 +82,7 @@ public class BillableMetricService {
 
     billableMetric.update(
         request.name(), request.eventType(), request.aggregation(), request.targetProperty());
-    try {
-      billableMetricRepository.flush();
-    } catch (DataIntegrityViolationException exception) {
-      throw toBusinessException(exception);
-    }
+    billableMetricRepository.flush();
 
     return BillableMetricResponse.from(billableMetric);
   }
@@ -106,19 +91,6 @@ public class BillableMetricService {
   public ListBillableMetricsResponse list(UUID organizationId) {
     return ListBillableMetricsResponse.from(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId));
-  }
-
-  private BusinessException toBusinessException(DataIntegrityViolationException exception) {
-    if (exception.getCause() instanceof ConstraintViolationException cause) {
-      if (DUPLICATE_CODE_CONSTRAINT.equals(cause.getConstraintName())) {
-        return new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
-      }
-      if (DUPLICATE_EVENT_TYPE_TARGET_PROPERTY_CONSTRAINT.equals(cause.getConstraintName())) {
-        return new ConflictException(
-            ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
-      }
-    }
-    return new InvalidRequestException(ErrorCode.UNKNOWN_ORGANIZATION);
   }
 
   private void validate(String aggregation, String targetProperty) {

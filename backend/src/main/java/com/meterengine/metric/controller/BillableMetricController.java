@@ -60,7 +60,6 @@ public class BillableMetricController {
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
             code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
-            code=unknown_organization: X-Organization-Id가 등록된 도입사가 아니다.
             """),
     @ApiResponse(
         responseCode = "409",

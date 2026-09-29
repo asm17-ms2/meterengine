@@ -47,7 +47,7 @@ class BillableMetricCreateConcurrencyTest {
   }
 
   @Test
-  void 중복_확인을_통과한_등록이_겹치면_늦은_쪽은_409로_끝난다() throws Exception {
+  void 중복_확인을_통과한_등록이_겹치면_늦은_쪽은_500이고_다시_보내면_409다() throws Exception {
     UUID organizationId = insertOrganization();
 
     try (Connection first = dataSource.getConnection()) {
@@ -62,14 +62,20 @@ class BillableMetricCreateConcurrencyTest {
       first.commit();
 
       assertThat(late.get(10, TimeUnit.SECONDS))
-          .hasStatus(409)
+          .hasStatus(500)
           .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
           .bodyJson()
           .extractingPath("$.code")
           .asString()
-          .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
+          .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
     }
 
+    assertThat(post(organizationId))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
     assertThat(storedName(organizationId)).isEqualTo("먼저 등록한 미터");
   }
 

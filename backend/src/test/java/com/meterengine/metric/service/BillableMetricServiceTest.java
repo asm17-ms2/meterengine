@@ -22,11 +22,9 @@ import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,16 +104,12 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 확인과_INSERT_사이의_경합도_AlreadyExists로_바뀐다() {
-    when(billableMetricRepository.existsById(
-            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
-        .thenReturn(false);
-    when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation("billable_metric_pk"));
+  void 등록_저장에서_난_DataIntegrityViolationException은_바꾸지_않고_그대로_올려_보낸다() {
+    DataIntegrityViolationException violation =
+        new DataIntegrityViolationException("billable_metric_pk");
+    when(billableMetricRepository.saveAndFlush(any())).thenThrow(violation);
 
-    assertThatThrownBy(() -> create("sum", "token"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
+    assertThatThrownBy(() -> create("sum", "token")).isSameAs(violation);
   }
 
   @Test
@@ -129,37 +123,6 @@ class BillableMetricServiceTest {
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
     verify(billableMetricRepository, never()).saveAndFlush(any());
-  }
-
-  @Test
-  void 확인과_INSERT_사이의_event_type과_target_property_경합도_AlreadyExists로_바뀐다() {
-    when(billableMetricRepository.saveAndFlush(any()))
-        .thenThrow(violation("billable_metric_organization_event_type_target_property_unique"));
-
-    assertThatThrownBy(() -> create("sum", "token"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
-  }
-
-  @Test
-  void 미등록_도입사의_제약_위반은_400_예외로_바뀐다() {
-    when(billableMetricRepository.existsById(
-            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
-        .thenReturn(false);
-    when(billableMetricRepository.saveAndFlush(any()))
-        .thenThrow(violation("billable_metric_organization_fk"));
-
-    assertThatThrownBy(() -> create("sum", "token"))
-        .isInstanceOf(InvalidRequestException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.UNKNOWN_ORGANIZATION);
-  }
-
-  private DataIntegrityViolationException violation(String constraintName) {
-    return new DataIntegrityViolationException(
-        constraintName,
-        new ConstraintViolationException("rejected", new SQLException(), constraintName));
   }
 
   @Test
@@ -283,17 +246,15 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 확인과_flush_사이의_경합도_AlreadyExists로_바뀐다() {
+  void 수정_flush에서_난_DataIntegrityViolationException은_바꾸지_않고_그대로_올려_보낸다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    doThrow(violation("billable_metric_organization_event_type_target_property_unique"))
-        .when(billableMetricRepository)
-        .flush();
+    DataIntegrityViolationException violation =
+        new DataIntegrityViolationException(
+            "billable_metric_organization_event_type_target_property_unique");
+    doThrow(violation).when(billableMetricRepository).flush();
 
-    assertThatThrownBy(() -> update("embedding", "chars"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+    assertThatThrownBy(() -> update("embedding", "chars")).isSameAs(violation);
   }
 
   private BillableMetric storedBillableMetric() {
