@@ -78,10 +78,12 @@ docker build -t meterengine-backend .
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 | 없음 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 | 없음 |
 | `TOSSPAYMENTS_SECRET_KEY` | 토스페이먼츠 시크릿 키 | `test_sk_LOCAL_PLACEHOLDER` (자리표시자) |
+| `BILLING_KEY_ENCRYPTION_KEY` | 빌링키 열 암호화 키(base64, 32바이트) | 0으로 채운 자리표시자 키 |
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - `TOSSPAYMENTS_SECRET_KEY`의 기본값은 실제 키가 아니다. 이 값으로 토스페이먼츠 API를 부르면 거절당한다.
   - 빈 값을 주면 `TossPaymentsProperties`의 `@NotBlank`가 기동을 실패시킨다.
+- `BILLING_KEY_ENCRYPTION_KEY`의 기본값은 로컬 전용이다. 32바이트가 아니면 기동이 실패한다.
 - 운영에서는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.

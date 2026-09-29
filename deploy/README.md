@@ -186,6 +186,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
 | `tosspayments-secret-key` | SecureString | 백엔드가 토스페이먼츠 API를 부를 때 쓰는 Basic 인증 키 |
 | `tosspayments-client-key` | String | 브라우저에서 토스페이먼츠 SDK 초기화용 |
+| `billing-key-encryption-key` | SecureString | 백엔드가 고객 빌링키를 DB에 암호화해 저장할 때 쓰는 키. base64로 인코딩한 32바이트 |
 
 - 새 파라미터를 등록한다.
 
@@ -194,6 +195,10 @@ aws ssm put-parameter --name /meterengine/prod/<이름> --type String --value '<
 aws ssm put-parameter --name /meterengine/prod/<이름> --type SecureString --value '<값>'
 ```
 
+- `billing-key-encryption-key` 값은 `openssl rand -base64 32`로 만든다.
+  - 빌링키를 DB에 넣기 전에 암호화하는 우리 쪽 키다. 토스 시크릿 키와 다르다.
+  - **값만 바꾸지 않는다.** 지금 코드는 이 키 하나로 `v1:` 암호문만 풀어서, 값을 바꾸면 이미 저장된 빌링키를 풀지 못해 결제가 실패한다.
+  - 암호문 앞의 `v1:`은 어느 키로 암호화했는지 나타낸다. 보안상 키를 정기적으로 바꾸려고 교체 기능보다 먼저 넣어 두었다. 교체 기능이 생기면 새 키로 `v2:`를 쓰고, 옛 키는 `v1:`을 푸는 데만 남긴다.
 - 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
 - `tosspayments-client-key`는 `prod.env`에는 들어가지만 `compose.prod.yml`이 어느 컨테이너에도 넘기지 않는다.
