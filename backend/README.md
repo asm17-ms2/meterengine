@@ -124,7 +124,7 @@ docker build -t meterengine-backend .
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회 | `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
-| `payment` | 토스페이먼츠 시크릿 키 설정 | 없음 |
+| `payment` | 토스페이먼츠 연동: 빌링키 보관 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 
