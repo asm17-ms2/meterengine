@@ -3,6 +3,7 @@ package com.meterengine.event.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.StorableText;
+import com.meterengine.global.validation.StorableTimestamp;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -15,4 +16,4 @@ public record IngestEventRequest(
     @JsonProperty("customer_id") @NotNull UUID customerId,
     @JsonProperty("type") @NotBlank @StorableText String type,
     @NotNull @StorableJson Map<String, Object> properties,
-    @JsonProperty("timestamp") @NotNull OffsetDateTime occurredAt) {}
+    @JsonProperty("timestamp") @NotNull @StorableTimestamp OffsetDateTime occurredAt) {}

@@ -425,6 +425,58 @@ class EventIngestIntegrationTest {
   }
 
   @Test
+  void timestamp가_담을_수_있는_범위_밖이면_400이고_저장은_0건이다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    MvcTestResult result =
+        post(
+            organizationId,
+            eventBody(
+                "tx-1",
+                "chat_completion",
+                "{\"token\":1}",
+                "-4713-12-31T23:59:59.999999999Z",
+                customerId));
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("timestamp");
+    assertThat(totalCount(organizationId)).isZero();
+  }
+
+  @Test
+  void timestamp는_범위_양끝까지_받고_같은_순간으로_저장된다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    Map<String, String> timestampsByTransactionId = new LinkedHashMap<>();
+    timestampsByTransactionId.put("tx-earliest", "-4712-01-01T00:00:00Z");
+    timestampsByTransactionId.put("tx-latest", "+294276-12-31T23:59:59.999999Z");
+    timestampsByTransactionId.put("tx-latest-rounded", "+294276-12-31T23:59:59.9999985Z");
+    timestampsByTransactionId.forEach(
+        (transactionId, timestamp) ->
+            assertThat(
+                    post(
+                        organizationId,
+                        eventBody(
+                            transactionId,
+                            "chat_completion",
+                            "{\"token\":1}",
+                            timestamp,
+                            customerId)))
+                .hasStatusOk());
+
+    assertThat(storedUtc(organizationId, "tx-earliest")).isEqualTo("4713-01-01 00:00:00.000000 BC");
+    assertThat(storedUtc(organizationId, "tx-latest")).isEqualTo("294276-12-31 23:59:59.999999 AD");
+    assertThat(storedUtc(organizationId, "tx-latest-rounded"))
+        .isEqualTo("294276-12-31 23:59:59.999999 AD");
+  }
+
+  @Test
   void 도입사를_잘못_보내면_404이고_보낸_값은_본문에_없다() {
     UUID organizationId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(organizationId, "acme");
@@ -454,6 +506,17 @@ class EventIngestIntegrationTest {
         .extractingPath("$.errors[0].field")
         .asString()
         .isEqualTo("transaction_id");
+  }
+
+  private String storedUtc(UUID organizationId, String transactionId) {
+    return jdbcTemplate.queryForObject(
+        """
+        SELECT to_char(occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS.US BC')
+        FROM event WHERE organization_id = ? AND transaction_id = ?
+        """,
+        String.class,
+        organizationId,
+        transactionId);
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
