@@ -3,6 +3,7 @@ plugins {
 	alias(libs.plugins.spring.boot)
 	alias(libs.plugins.spring.dependency.management)
 	alias(libs.plugins.spotless)
+	checkstyle
 }
 
 group = "com.meterengine"
@@ -51,6 +52,11 @@ spotless {
 		googleJavaFormat(libs.versions.google.java.format.get())
 		formatAnnotations()
 	}
+}
+
+checkstyle {
+	toolVersion = libs.versions.checkstyle.get()
+	maxWarnings = 0
 }
 
 tasks.withType<Test> {

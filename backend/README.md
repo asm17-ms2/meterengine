@@ -8,7 +8,7 @@ MeterEngine 미터링 엔진 API 서버. 이벤트 수집, 집계, rating, 인�
 - 엔티티는 스키마를 만들지 않는다 (`spring.jpa.hibernate.ddl-auto=validate`).
 - API 계약의 정본은 `openapi.yaml`이고 빌드가 다시 만든다.
 - 테스트는 JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 PostgreSQL 컨테이너로 돈다.
-- 포맷은 Spotless + google-java-format. CI가 검사한다.
+- 포맷은 Spotless + google-java-format, 이름 케이스는 Checkstyle. CI가 검사한다.
 - 코드와 문서 작성 규칙은 `docs/contributing/`, 도메인 정책은 `docs/policies/`에 있다.
 
 ## 사전 준비
@@ -46,7 +46,7 @@ docker compose up -d
 
 ```bash
 cd backend
-./gradlew build          # 컴파일, 포맷 검사, 테스트, openapi.yaml 생성
+./gradlew build          # 컴파일, 포맷 검사, 이름 검사, 테스트, openapi.yaml 생성
 ./gradlew test
 ./gradlew spotlessApply  # 포맷 자동 적용
 ```
@@ -147,6 +147,7 @@ docker build -t meterengine-backend .
 | `./gradlew build`가 컨테이너를 띄우지 못하고 실패한다 | Docker 데몬이 꺼져 있다 | Docker Desktop을 켠다 |
 | 기동이 `tosspayments.secret-key` 검증에서 실패한다 | `TOSSPAYMENTS_SECRET_KEY`를 빈 값으로 줬다 | 값을 주거나 변수를 빼서 기본값을 쓴다 |
 | 빌드가 포맷 검사에서 실패한다 | google-java-format 결과와 다르다 | `./gradlew spotlessApply` |
+| 빌드가 이름 검사에서 실패한다 | `docs/contributing/naming.md`의 케이스나 약어 규칙에 어긋난다 | `backend/build/reports/checkstyle/`의 보고서가 가리키는 이름을 고친다 |
 | 요청이 500 `internal_server_error`로 끝나고 로그에 외래 키 위반이 남는다 | `X-Organization-Id`가 등록된 도입사가 아니다 | 시드가 넣은 도입사 id를 쓴다 (위 "실행") |
 
 ```bash

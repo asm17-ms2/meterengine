@@ -35,6 +35,7 @@
 
 ## 백엔드 Java
 
+- 케이스와 약어는 Checkstyle이 본다. 설정은 `backend/config/checkstyle/checkstyle.xml`.
 - 클래스 접미사와 패키지 위치, 타입에 따른 필드와 메서드 이름은 ArchUnit이 본다. 규칙은 `backend/src/test/java/com/meterengine/global/`의 `ClassNamingConventionTest.java`와 `MemberNamingConventionTest.java`.
 
 ### 패키지
