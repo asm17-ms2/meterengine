@@ -46,3 +46,4 @@
 | [002](002-comment-cleanup.md) | 주석 전수 정리와 함수 위 한 줄 설명 허용 | process | accepted | 2026-09-04 |
 | [003](003-rule-management.md) | RFC는 되돌리면 계약, 데이터, 기술 선택이 같이 움직이는 결정에만 쓴다 | process | accepted | 2026-09-05 |
 | [004](004-error-handling.md) | 오류 응답을 problem+json 대신 code와 message를 든 자체 스키마로 낸다 | global | accepted | 2026-09-07 |
+| [005](005-invoice-monthly-auto-finalization.md) | 인보이스는 매월 서버가 자동 확정하고, 확정본과 확정이 지난 달의 사용량은 바꾸지 않는다 | invoice, event | draft | 2026-09-30 |
