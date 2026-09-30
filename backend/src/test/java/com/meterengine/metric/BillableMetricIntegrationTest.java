@@ -167,6 +167,7 @@ class BillableMetricIntegrationTest {
                 .content(updateBody("chat_completion", "token"))
                 .exchange())
         .hasStatus(400);
+    assertThat(mvc.delete().uri("/v1/billable-metrics/token-usage").exchange()).hasStatus(400);
   }
 
   @Test
@@ -308,6 +309,61 @@ class BillableMetricIntegrationTest {
         .extractingPath("$.errors[*].field")
         .asArray()
         .containsExactly("code");
+  }
+
+  @Test
+  void 삭제하면_204이고_다시_삭제하면_404다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+
+    assertThat(delete(organizationId, "token-usage")).hasStatus(204);
+
+    assertThat(billableMetricCount(organizationId, "token-usage")).isZero();
+    assertThat(delete(organizationId, "token-usage"))
+        .hasStatus(404)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND.getCode());
+  }
+
+  @Test
+  void 이벤트가_집계된_미터를_삭제하면_409이고_미터는_남는다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+    insertEvent(organizationId, insertCustomer(organizationId));
+
+    assertThat(delete(organizationId, "token-usage"))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS.getCode());
+    assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
+  }
+
+  @Test
+  void 가격_정책이_붙은_미터를_삭제하면_409이고_미터는_남는다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
+    jdbcTemplate.update(
+        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
+        organizationId);
+
+    assertThat(delete(organizationId, "token-usage"))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_POLICY.getCode());
+    assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
+  }
+
+  private MvcTestResult delete(UUID organizationId, String code) {
+    return mvc.delete()
+        .uri("/v1/billable-metrics/" + code)
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {

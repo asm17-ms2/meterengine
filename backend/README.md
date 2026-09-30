@@ -78,10 +78,12 @@ docker build -t meterengine-backend .
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 | 없음 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 | 없음 |
 | `TOSSPAYMENTS_SECRET_KEY` | 토스페이먼츠 시크릿 키 | `test_sk_LOCAL_PLACEHOLDER` (자리표시자) |
+| `BILLING_KEY_ENCRYPTION_KEY` | 빌링키 열 암호화 키(base64, 32바이트) | 0으로 채운 자리표시자 키 |
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - `TOSSPAYMENTS_SECRET_KEY`의 기본값은 실제 키가 아니다. 이 값으로 토스페이먼츠 API를 부르면 거절당한다.
   - 빈 값을 주면 `TossPaymentsProperties`의 `@NotBlank`가 기동을 실패시킨다.
+- `BILLING_KEY_ENCRYPTION_KEY`의 기본값은 로컬 전용이다. 32바이트가 아니면 기동이 실패한다.
 - 운영에서는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
@@ -118,17 +120,17 @@ docker build -t meterengine-backend .
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
-| `metric` | 미터 등록, 수정, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
+| `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회 | `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
-| `payment` | 토스페이먼츠 시크릿 키 설정 | 없음 |
+| `payment` | 토스페이먼츠 연동: 빌링키 보관 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
-- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다. 미터 수정도 이벤트 유무를 `event`에 묻는다(`metric` -> `event`).
+- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 가격 정책 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`).
 
 ### 마이그레이션
 

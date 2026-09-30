@@ -22,6 +22,7 @@ import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import com.meterengine.pricing.service.PricePolicyService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,12 +42,14 @@ class BillableMetricServiceTest {
 
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private EventService eventService;
+  @Mock private PricePolicyService pricePolicyService;
 
   private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
-    billableMetricService = new BillableMetricService(billableMetricRepository, eventService);
+    billableMetricService =
+        new BillableMetricService(billableMetricRepository, eventService, pricePolicyService);
   }
 
   @Test
@@ -255,6 +258,57 @@ class BillableMetricServiceTest {
     doThrow(violation).when(billableMetricRepository).flush();
 
     assertThatThrownBy(() -> update("embedding", "chars")).isSameAs(violation);
+  }
+
+  @Test
+  void 없는_미터를_삭제하면_NotFound다() {
+    when(billableMetricRepository.findById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
+  }
+
+  @Test
+  void 이벤트가_집계된_미터는_삭제할_수_없다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    when(eventService.existsWithNumericProperty(ORGANIZATION_ID, "chat_completion", "token"))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+    verify(billableMetricRepository, never()).delete(any());
+  }
+
+  @Test
+  void 가격_정책이_붙은_미터는_삭제할_수_없다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    when(pricePolicyService.existsForBillableMetric(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_POLICY);
+    verify(billableMetricRepository, never()).delete(any());
+  }
+
+  @Test
+  void 이벤트와_가격_정책이_없는_미터는_삭제된다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+
+    billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE);
+
+    verify(billableMetricRepository).delete(stored);
+    verify(billableMetricRepository).flush();
   }
 
   private BillableMetric storedBillableMetric() {
