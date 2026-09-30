@@ -109,11 +109,11 @@ class TestNamingConventionTest {
         .areTopLevelClasses()
         .and()
         .resideOutsideOfPackage("com.meterengine")
-        .should(resideWithTheirTargetOrInADomainRoot(simpleNamesByPackage))
+        .should(resideWithTheirTargetOrInDomainRoot(simpleNamesByPackage))
         .check(tests);
   }
 
-  private static ArchCondition<JavaClass> resideWithTheirTargetOrInADomainRoot(
+  private static ArchCondition<JavaClass> resideWithTheirTargetOrInDomainRoot(
       Map<String, Set<String>> simpleNamesByPackage) {
     return new ArchCondition<>("reside with the class they test, or in a domain root or global") {
       @Override

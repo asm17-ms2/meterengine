@@ -75,7 +75,7 @@ class MemberNamingConventionTest {
         .areAnnotatedWith(RestController.class)
         .and()
         .arePublic()
-        .should(startWithOwnDomainServiceVerbThenAResource(serviceVerbsByDomain))
+        .should(startWithOwnDomainServiceVerbThenResource(serviceVerbsByDomain))
         .check(classes);
   }
 
@@ -223,7 +223,7 @@ class MemberNamingConventionTest {
     };
   }
 
-  private static ArchCondition<JavaMethod> startWithOwnDomainServiceVerbThenAResource(
+  private static ArchCondition<JavaMethod> startWithOwnDomainServiceVerbThenResource(
       Map<String, Set<String>> serviceVerbsByDomain) {
     return new ArchCondition<>("start with a same-domain service method name then a resource") {
       @Override
