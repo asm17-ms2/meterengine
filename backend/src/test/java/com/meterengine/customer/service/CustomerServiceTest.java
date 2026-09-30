@@ -2,6 +2,7 @@ package com.meterengine.customer.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.payment.repository.PaymentAttemptRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +32,14 @@ class CustomerServiceTest {
 
   @Mock private CustomerRepository customerRepository;
   @Mock private EventRepository eventRepository;
+  @Mock private PaymentAttemptRepository paymentAttemptRepository;
 
   private CustomerService customerService;
 
   @BeforeEach
   void setUp() {
-    customerService = new CustomerService(customerRepository, eventRepository);
+    customerService =
+        new CustomerService(customerRepository, eventRepository, paymentAttemptRepository);
   }
 
   @Test
@@ -59,6 +63,37 @@ class CustomerServiceTest {
         .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
 
     verify(customerRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void 결제_기록이_있으면_지우지_않고_409_예외다() {
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(customer()));
+    when(paymentAttemptRepository.existsByOrganizationIdAndCustomerId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_PAYMENT_ATTEMPTS);
+
+    verify(customerRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void 이벤트와_결제_기록이_둘_다_있으면_customer_has_events가_먼저다() {
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(customer()));
+    when(eventRepository.existsForCustomer(ORGANIZATION_ID, CUSTOMER_ID)).thenReturn(true);
+    lenient()
+        .when(
+            paymentAttemptRepository.existsByOrganizationIdAndCustomerId(
+                ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> customerService.delete(ORGANIZATION_ID, CUSTOMER_ID))
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS);
   }
 
   @Test

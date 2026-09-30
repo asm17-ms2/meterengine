@@ -157,7 +157,11 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다")
+        description =
+            """
+            code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다.
+            code=customer_has_payment_attempts: 결제 기록이 있는 고객이라 지울 수 없다.
+            """)
   })
   public void deleteCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")

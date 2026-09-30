@@ -389,6 +389,23 @@ class CustomerIntegrationTest {
   }
 
   @Test
+  void 결제_기록이_있는_고객을_지우면_409이고_고객은_그대로다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = createCustomer(organizationId, "결제 기록 있는 고객");
+    insertFailedPaymentAttempt(organizationId, customerId);
+
+    assertThat(delete(organizationId, customerId))
+        .hasStatus(409)
+        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.CUSTOMER_HAS_PAYMENT_ATTEMPTS.getCode());
+
+    assertThat(customerCount(organizationId)).isEqualTo(1);
+  }
+
+  @Test
   void 인보이스가_있는_고객을_지우면_500이다() {
     UUID organizationId = insertOrganization();
     UUID customerId = createCustomer(organizationId, "인보이스 있는 고객");
@@ -544,6 +561,19 @@ class CustomerIntegrationTest {
         INSERT INTO invoice
           (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
         VALUES (?, ?, '2026-08', 12000, 1200, now())
+        """,
+        organizationId,
+        customerId);
+  }
+
+  private void insertFailedPaymentAttempt(UUID organizationId, UUID customerId) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO payment_attempt
+          (id, organization_id, customer_id, invoice_id, amount, order_name, status,
+           failure_code, failure_message, requested_at, completed_at)
+        VALUES (gen_random_uuid(), ?, ?, gen_random_uuid(), 1000, '2026-08 사용료', 'failed',
+                'billing_key_not_registered', '등록된 카드가 없어 결제를 요청하지 않았습니다', now(), now())
         """,
         organizationId,
         customerId);

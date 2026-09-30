@@ -399,7 +399,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다"
+          description: |
+            code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다.
+            code=customer_has_payment_attempts: 결제 기록이 있는 고객이라 지울 수 없다.
       summary: 고객 삭제
       tags:
       - customer-controller
@@ -839,6 +841,7 @@ components:
           - method_not_allowed
           - response_type_not_acceptable
           - customer_has_events
+          - customer_has_payment_attempts
           - billable_metric_has_events
           - billable_metric_has_price_policy
           - billable_metric_already_exists
