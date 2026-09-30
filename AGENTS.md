@@ -61,7 +61,7 @@ This file provides shared guidance to coding agents working with code in this re
 ## OpenAPI 생성물
 
 - **컨트롤러나 DTO를 건드린 PR은 `backend/openapi.yaml`을 같이 커밋한다.** `./gradlew build`가 다시 만든다. `git status`에 떴으면 넣는다.
-  - CI는 검사하지 않는다. 빠뜨리면 프론트엔드가 낡은 계약을 읽는다.
+  - 빠뜨리면 CI가 실패한다. 빌드 뒤 이 파일이 커밋된 것과 다른지 본다.
 
 ## 출력 형식
 

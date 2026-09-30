@@ -53,7 +53,7 @@ cd backend
 
 - `build`와 `test`는 Docker 데몬이 떠 있어야 한다 (Testcontainers).
 - `build`가 `openapi.yaml`을 다시 만든다. 컨트롤러나 DTO를 건드렸으면 빌드 뒤 `git status`에 뜬 이 파일을 같은 커밋에 넣는다.
-  - CI는 이 파일이 낡았는지 검사하지 않는다. 빠뜨려도 아무것도 실패하지 않는다.
+  - 빠뜨리면 CI가 실패한다. CI는 빌드 뒤 이 파일이 커밋된 것과 다른지 본다.
 - `--tests` 필터를 건 실행은 생성 테스트를 건너뛰므로 `openapi.yaml`이 갱신되지 않는다. 커밋된 파일은 그대로 남는다.
 
 ## 컨테이너 이미지
