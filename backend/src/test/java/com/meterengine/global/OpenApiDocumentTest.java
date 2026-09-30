@@ -10,6 +10,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,10 @@ class OpenApiDocumentTest {
 
   private static final String JSON_DOCUMENT = "/v3/api-docs";
   private static final String YAML_DOCUMENT = "/v3/api-docs.yaml";
+
+  private static final String SNAKE_CASE = "^[a-z0-9]+(_[a-z0-9]+)*$";
+  private static final Set<String> HTTP_METHODS =
+      Set.of("get", "put", "post", "delete", "patch", "head", "options", "trace");
 
   @Autowired private WebApplicationContext webApplicationContext;
 
@@ -297,6 +303,81 @@ class OpenApiDocumentTest {
   }
 
   // ---------------------------------------------------------------------------
+  // 이름 규칙
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void operationId는_전역에서_유일하고_springdoc이_접미사를_붙이지_않는다() {
+    List<String> operationIds = new ArrayList<>();
+    root()
+        .path("paths")
+        .forEach(
+            path ->
+                operationsOf(path)
+                    .forEach(
+                        operation -> operationIds.add(operation.path("operationId").asText())));
+    assertThat(operationIds)
+        .isNotEmpty()
+        .doesNotContain("")
+        .doesNotHaveDuplicates()
+        .noneMatch(id -> id.matches(".*_\\d+$"));
+  }
+
+  @Test
+  void 경로는_v1_아래_kebab_case이고_경로_변수는_snake_case다() {
+    assertThat(keysOf(json(), "$.paths"))
+        .allMatch(
+            path -> path.matches("^/v1(/([a-z0-9]+(-[a-z0-9]+)*|\\{[a-z0-9]+(_[a-z0-9]+)*}))+$"));
+  }
+
+  @Test
+  void 쿼리와_경로_파라미터_이름은_snake_case다() {
+    List<String> names = new ArrayList<>();
+    root()
+        .path("paths")
+        .forEach(
+            path ->
+                operationsOf(path)
+                    .forEach(
+                        operation ->
+                            operation
+                                .path("parameters")
+                                .forEach(
+                                    parameter -> {
+                                      String in = parameter.path("in").asText();
+                                      if (in.equals("query") || in.equals("path")) {
+                                        names.add(parameter.path("name").asText());
+                                      }
+                                    })));
+    assertThat(names).isNotEmpty().allMatch(name -> name.matches(SNAKE_CASE));
+  }
+
+  @Test
+  void 스키마_속성_이름과_열거값은_snake_case다() {
+    List<String> names = new ArrayList<>();
+    List<String> enumValues = new ArrayList<>();
+    root()
+        .path("components")
+        .path("schemas")
+        .forEach(
+            schema ->
+                schema
+                    .path("properties")
+                    .fieldNames()
+                    .forEachRemaining(
+                        name -> {
+                          names.add(name);
+                          schema
+                              .path("properties")
+                              .path(name)
+                              .path("enum")
+                              .forEach(value -> enumValues.add(value.asText()));
+                        }));
+    assertThat(names).isNotEmpty().allMatch(name -> name.matches(SNAKE_CASE));
+    assertThat(enumValues).isNotEmpty().allMatch(value -> value.matches(SNAKE_CASE));
+  }
+
+  // ---------------------------------------------------------------------------
 
   private void assertSchemaHasField(String schema, String field) {
     assertThat(json())
@@ -353,6 +434,26 @@ class OpenApiDocumentTest {
     Set<String> only = new TreeSet<>(left);
     only.removeAll(right);
     return only;
+  }
+
+  private static List<JsonNode> operationsOf(JsonNode path) {
+    List<JsonNode> operations = new ArrayList<>();
+    path.fieldNames()
+        .forEachRemaining(
+            method -> {
+              if (HTTP_METHODS.contains(method)) {
+                operations.add(path.path(method));
+              }
+            });
+    return operations;
+  }
+
+  private JsonNode root() {
+    try {
+      return new ObjectMapper().readTree(body(json()));
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   private MvcTestResult json() {
