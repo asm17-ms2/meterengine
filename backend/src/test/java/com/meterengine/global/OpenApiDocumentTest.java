@@ -147,6 +147,10 @@ class OpenApiDocumentTest {
         .isNotNull();
     assertThat(json())
         .bodyJson()
+        .extractingPath("$.paths['/v1/billable-metrics/{code}'].delete.summary")
+        .isNotNull();
+    assertThat(json())
+        .bodyJson()
         .extractingPath("$.paths['/v1/billable-metrics/{code}/price-policy'].post.summary")
         .isNotNull();
     assertThat(json())
@@ -237,6 +241,7 @@ class OpenApiDocumentTest {
     assertErrorResponseSchema("/v1/billable-metrics", "post", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics", "get", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metric-prices", "get", "ErrorResponse");
   }
@@ -249,6 +254,8 @@ class OpenApiDocumentTest {
     assertErrorResponseSchema("/v1/billable-metrics", "post", "409", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "404", "ErrorResponse");
     assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "409", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "404", "ErrorResponse");
+    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "409", "ErrorResponse");
     assertErrorResponseSchema(
         "/v1/billable-metrics/{code}/price-policy", "post", "404", "ErrorResponse");
     assertErrorResponseSchema(

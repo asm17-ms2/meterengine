@@ -118,7 +118,7 @@ docker build -t meterengine-backend .
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
-| `metric` | 미터 등록, 수정, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
+| `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회 | `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
@@ -128,7 +128,7 @@ docker build -t meterengine-backend .
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
-- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다. 미터 수정도 이벤트 유무를 `event`에 묻는다(`metric` -> `event`).
+- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트 유무를 묻는 `customer` -> `event` 하나다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 가격 정책 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`).
 
 ### 마이그레이션
 

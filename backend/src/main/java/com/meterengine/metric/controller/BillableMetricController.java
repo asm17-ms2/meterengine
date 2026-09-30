@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -127,6 +128,52 @@ public class BillableMetricController {
       @Parameter(description = "고칠 미터의 code.") @PathVariable @StorableText String code,
       @Valid @RequestBody UpdateBillableMetricRequest request) {
     return billableMetricService.update(organizationId, code, request);
+  }
+
+  @DeleteMapping("/{code}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Operation(
+      summary = "집계 미터 삭제",
+      description =
+          """
+          미터를 지운다. 지운 미터는 되돌릴 수 없다.
+          집계된 이벤트가 한 건이라도 있거나 가격 정책이 붙은 미터는 지울 수 없고 409다.
+          이미 지운 미터를 다시 지우면 404다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=validation_error: 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다."),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=billable_metric_has_events: 집계된 이벤트가 있어 지울 수 없다.
+            code=billable_metric_has_price_policy: 가격 정책이 붙어 있어 지울 수 없다.
+            """)
+  })
+  public void deleteBillableMetric(
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "지울 미터의 code.") @PathVariable @StorableText String code) {
+    billableMetricService.delete(organizationId, code);
   }
 
   @GetMapping
