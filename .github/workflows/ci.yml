@@ -25,6 +25,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # build = 컴파일 + Spotless 포맷 검사 + 테스트 (Testcontainers가 PostgreSQL 컨테이너 사용)
       - run: ./gradlew build
+      - run: |
+          if [ -n "$(git status --porcelain -- openapi.yaml)" ]; then
+            echo "::error file=backend/openapi.yaml::커밋된 openapi.yaml이 코드와 다르다. ./gradlew build 뒤 바뀐 openapi.yaml을 같이 커밋한다"
+            exit 1
+          fi
 
   frontend:
     name: frontend

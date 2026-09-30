@@ -12,7 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,130 +98,18 @@ class OpenApiDocumentTest {
   }
 
   // ---------------------------------------------------------------------------
-  // 오퍼레이션 (컨트롤러 정의만으로 자동 반영되는지)
+  // 오퍼레이션
   // ---------------------------------------------------------------------------
 
   @Test
-  void 컨트롤러의_모든_오퍼레이션이_들어_있다() {
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths")
-        .asMap()
-        .containsOnlyKeys(
-            "/v1/events",
-            "/v1/usage",
-            "/v1/invoices/draft",
-            "/v1/customers",
-            "/v1/customers/{id}",
-            "/v1/billable-metrics",
-            "/v1/billable-metrics/{code}",
-            "/v1/billable-metrics/{code}/price-policy",
-            "/v1/billable-metric-prices");
-
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].post.summary").isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/events'].get.summary").isNotNull();
-    assertThat(json()).bodyJson().extractingPath("$.paths['/v1/usage'].get.summary").isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/invoices/draft'].get.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/customers'].get.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/customers'].post.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/customers/{id}'].put.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/customers/{id}'].delete.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metrics'].post.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metrics'].get.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metrics/{code}'].put.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metrics/{code}'].delete.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metrics/{code}/price-policy'].post.summary")
-        .isNotNull();
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/billable-metric-prices'].get.summary")
-        .isNotNull();
-  }
-
-  @Test
-  void 쿼리_파라미터_이름이_실제_요청과_같다() {
-    assertThat(json())
-        .bodyJson()
-        .extractingPath("$.paths['/v1/events'].get.parameters[*].name")
-        .asArray()
-        .contains("X-Organization-Id", "page", "size", "customer_id", "month", "type");
-  }
-
-  @Test
-  void 스키마_필드_이름이_실제_JSON과_같다() {
-    assertSchemaHasField("EventResponse", "transaction_id");
-    assertSchemaHasField("EventResponse", "customer_name");
-    assertSchemaHasField("IngestEventRequest", "customer_id");
-    assertSchemaHasField("IngestEventResponse", "transaction_id");
-    assertSchemaHasField("BillableMetricUsageResponse", "target_property");
-    assertSchemaHasField("DraftInvoiceCustomer", "customer_id");
-    assertSchemaHasField("DraftInvoiceResponse", "total_amount");
-    assertSchemaHasField("CustomerResponse", "id");
-    assertSchemaHasField("CreatePricePolicyRequest", "dimension_properties");
-    assertSchemaHasField("PricePolicyResponse", "billable_metric_code");
-    assertSchemaHasField("CustomerResponse", "created_at");
-    assertSchemaHasField("ListBillableMetricPricesResponse", "billable_metric_prices");
-    assertSchemaHasField("BillableMetricPriceResponse", "billable_metric_code");
-    assertSchemaHasField("BillableMetricPriceResponse", "dimension_properties");
-    assertSchemaHasField("BillableMetricPriceResponse", "unit_price");
-    assertThat(json())
-        .bodyJson()
-        .extractingPath(
-            "$.components.schemas.BillableMetricPriceResponse.properties.dimension_properties.type")
-        .asArray()
-        .contains("null");
-    assertThat(json())
-        .bodyJson()
-        .extractingPath(
-            "$.components.schemas.BillableMetricPriceResponse.properties.unit_price.type")
-        .asArray()
-        .contains("null");
-
-    assertThat(body(json()))
-        .doesNotContain(
-            "transactionId",
-            "customerId",
-            "customerName",
-            "eventType",
-            "occurredAt",
-            "receivedAt",
-            "targetProperty",
-            "totalAmount",
-            "calculatedAt",
-            "dimensionProperties",
-            "dimensionValues",
-            "unitPrice",
-            "billableMetricPrices",
-            "createdAt");
+  void 모든_오퍼레이션에_summary가_있다() {
+    assertThat(operations())
+        .isNotEmpty()
+        .allSatisfy(
+            operation ->
+                assertThat(operation.path("summary").asText())
+                    .as(operation.path("operationId").asText())
+                    .isNotBlank());
   }
 
   // ---------------------------------------------------------------------------
@@ -235,37 +125,47 @@ class OpenApiDocumentTest {
   }
 
   @Test
-  void 모든_400이_200_스키마를_물려받지_않는다() {
-    assertErrorResponseSchema("/v1/events", "get", "ErrorResponse");
-    assertErrorResponseSchema("/v1/events", "post", "ErrorResponse");
-    assertErrorResponseSchema("/v1/usage", "get", "ErrorResponse");
-    assertErrorResponseSchema("/v1/invoices/draft", "get", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers", "get", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers", "post", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers/{id}", "put", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers/{id}", "delete", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics", "post", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics", "get", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}/price-policy", "post", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metric-prices", "get", "ErrorResponse");
+  void 미터별_가격의_차원과_단가가_null을_허용한다() {
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            "$.components.schemas.BillableMetricPriceResponse.properties.dimension_properties.type")
+        .asArray()
+        .contains("null");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            "$.components.schemas.BillableMetricPriceResponse.properties.unit_price.type")
+        .asArray()
+        .contains("null");
   }
 
   @Test
-  void 다른_오류_상태도_200_스키마를_물려받지_않는다() {
-    assertErrorResponseSchema("/v1/customers/{id}", "put", "404", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers/{id}", "delete", "404", "ErrorResponse");
-    assertErrorResponseSchema("/v1/customers/{id}", "delete", "409", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics", "post", "409", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "404", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "put", "409", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "404", "ErrorResponse");
-    assertErrorResponseSchema("/v1/billable-metrics/{code}", "delete", "409", "ErrorResponse");
-    assertErrorResponseSchema(
-        "/v1/billable-metrics/{code}/price-policy", "post", "404", "ErrorResponse");
-    assertErrorResponseSchema(
-        "/v1/billable-metrics/{code}/price-policy", "post", "409", "ErrorResponse");
+  void 오류_응답이_200_스키마를_물려받지_않는다() {
+    Map<String, List<String>> schemasByErrorResponse = new TreeMap<>();
+    operations()
+        .forEach(
+            operation ->
+                operation
+                    .path("responses")
+                    .fieldNames()
+                    .forEachRemaining(
+                        status -> {
+                          if (status.startsWith("4") || status.startsWith("5")) {
+                            schemasByErrorResponse.put(
+                                operation.path("operationId").asText() + " " + status,
+                                schemasByMediaType(
+                                    operation.path("responses").path(status).path("content")));
+                          }
+                        }));
+
+    assertThat(schemasByErrorResponse)
+        .isNotEmpty()
+        .allSatisfy(
+            (response, schemas) ->
+                assertThat(schemas)
+                    .as(response)
+                    .containsExactly("application/json #/components/schemas/ErrorResponse"));
   }
 
   @Test
@@ -396,21 +296,6 @@ class OpenApiDocumentTest {
         .isNotBlank();
   }
 
-  /** 400 응답이 problem+json으로, 기대한 오류 스키마를 가리키는지 본다. */
-  private void assertErrorResponseSchema(String path, String method, String schema) {
-    assertErrorResponseSchema(path, method, "400", schema);
-  }
-
-  private void assertErrorResponseSchema(String path, String method, String status, String schema) {
-    assertThat(json())
-        .bodyJson()
-        .extractingPath(
-            "$.paths['%s'].%s.responses['%s'].content['application/json'].schema.$ref"
-                .formatted(path, method, status))
-        .asString()
-        .isEqualTo("#/components/schemas/%s".formatted(schema));
-  }
-
   private Set<String> keysOf(MvcTestResult result, String path) {
     try {
       JsonNode node = new ObjectMapper().readTree(body(result)).at(toPointer(path));
@@ -434,6 +319,25 @@ class OpenApiDocumentTest {
     Set<String> only = new TreeSet<>(left);
     only.removeAll(right);
     return only;
+  }
+
+  private static List<String> schemasByMediaType(JsonNode content) {
+    List<String> schemas = new ArrayList<>();
+    content
+        .fieldNames()
+        .forEachRemaining(
+            mediaType ->
+                schemas.add(
+                    mediaType
+                        + " "
+                        + content.path(mediaType).path("schema").path("$ref").asText()));
+    return schemas;
+  }
+
+  private List<JsonNode> operations() {
+    List<JsonNode> operations = new ArrayList<>();
+    root().path("paths").forEach(path -> operations.addAll(operationsOf(path)));
+    return operations;
   }
 
   private static List<JsonNode> operationsOf(JsonNode path) {
