@@ -24,6 +24,7 @@ public enum ErrorCode {
 
   // 409 Conflict
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
+  CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 삭제할 수 없습니다"),
   BILLABLE_METRIC_HAS_EVENTS(
       HttpStatus.CONFLICT, "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다"),
   BILLABLE_METRIC_HAS_PRICE_POLICY(HttpStatus.CONFLICT, "가격 정책이 붙어 있어 미터를 삭제할 수 없습니다"),

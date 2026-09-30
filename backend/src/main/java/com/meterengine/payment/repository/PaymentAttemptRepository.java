@@ -21,6 +21,8 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
   List<PaymentAttempt> findByOrganizationIdAndInvoiceIdOrderByRequestedAtAsc(
       UUID organizationId, UUID invoiceId);
 
+  boolean existsByOrganizationIdAndCustomerId(UUID organizationId, UUID customerId);
+
   @Query(
       "select a from PaymentAttempt a where a.status = 'pending'"
           + " and a.requestedAt < :requestedBefore order by a.requestedAt")

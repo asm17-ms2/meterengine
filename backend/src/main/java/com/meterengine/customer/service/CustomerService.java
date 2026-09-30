@@ -6,6 +6,7 @@ import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.payment.repository.PaymentAttemptRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -16,10 +17,15 @@ public class CustomerService {
 
   private final CustomerRepository customerRepository;
   private final EventRepository eventRepository;
+  private final PaymentAttemptRepository paymentAttemptRepository;
 
-  CustomerService(CustomerRepository customerRepository, EventRepository eventRepository) {
+  CustomerService(
+      CustomerRepository customerRepository,
+      EventRepository eventRepository,
+      PaymentAttemptRepository paymentAttemptRepository) {
     this.customerRepository = customerRepository;
     this.eventRepository = eventRepository;
+    this.paymentAttemptRepository = paymentAttemptRepository;
   }
 
   @Transactional(readOnly = true)
@@ -51,6 +57,9 @@ public class CustomerService {
 
     if (eventRepository.existsForCustomer(organizationId, customerId)) {
       throw new ConflictException(ErrorCode.CUSTOMER_HAS_EVENTS);
+    }
+    if (paymentAttemptRepository.existsByOrganizationIdAndCustomerId(organizationId, customerId)) {
+      throw new ConflictException(ErrorCode.CUSTOMER_HAS_PAYMENT_ATTEMPTS);
     }
 
     customerRepository.delete(customer);
