@@ -35,6 +35,8 @@
 
 ## 백엔드 Java
 
+- 클래스 접미사와 패키지 위치는 ArchUnit이 본다. 규칙은 `backend/src/test/java/com/meterengine/global/ClassNamingConventionTest.java`.
+
 ### 패키지
 
 | 식별자 | 케이스 | 형식 | 예 |

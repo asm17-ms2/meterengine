@@ -4,8 +4,10 @@ spring-dependency-management = "1.1.7"
 spotless = "8.9.0"
 google-java-format = "1.36.1"
 springdoc = "3.0.3"
+archunit = "1.5.1"
 
 [libraries]
+archunit-junit6 = { module = "com.tngtech.archunit:archunit-junit6", version.ref = "archunit" }
 springdoc-openapi-starter-webmvc-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
 
 [plugins]
