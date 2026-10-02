@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/billing", label: "청구 예정액" },
   { href: "/customers", label: "고객" },
   { href: "/billable-metrics", label: "미터" },
+  { href: "/billable-metric-prices", label: "가격" },
 ] as const;
 
 export function SideNav() {
