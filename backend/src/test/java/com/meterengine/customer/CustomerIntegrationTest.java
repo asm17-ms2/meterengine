@@ -559,8 +559,9 @@ class CustomerIntegrationTest {
     jdbcTemplate.update(
         """
         INSERT INTO invoice
-          (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
-        VALUES (?, ?, '2026-08', 12000, 1200, now())
+          (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
+           finalized_at)
+        VALUES (?, ?, '2026-08', 12000, 1200, 13200, now())
         """,
         organizationId,
         customerId);
