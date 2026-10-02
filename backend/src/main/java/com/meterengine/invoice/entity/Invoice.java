@@ -26,6 +26,9 @@ public class Invoice {
   @Column(name = "tax_amount", nullable = false)
   private long taxAmount;
 
+  @Column(name = "total_amount", nullable = false)
+  private long totalAmount;
+
   @Column(name = "finalized_at", nullable = false)
   private OffsetDateTime finalizedAt;
 
@@ -45,6 +48,7 @@ public class Invoice {
     this.period = period;
     this.supplyAmount = supplyAmount;
     this.taxAmount = taxAmount;
+    this.totalAmount = supplyAmount + taxAmount;
     this.finalizedAt = finalizedAt;
   }
 
@@ -70,6 +74,10 @@ public class Invoice {
 
   public long getTaxAmount() {
     return taxAmount;
+  }
+
+  public long getTotalAmount() {
+    return totalAmount;
   }
 
   public OffsetDateTime getFinalizedAt() {

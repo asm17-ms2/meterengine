@@ -321,8 +321,8 @@ class SchemaConstraintTest {
                 jdbcTemplate.update(
                     """
                     INSERT INTO invoice
-                      (organization_id, customer_id, period, supply_amount, tax_amount)
-                    VALUES (?, ?, '2026-08', 12000, 1200)
+                      (organization_id, customer_id, period, supply_amount, tax_amount, total_amount)
+                    VALUES (?, ?, '2026-08', 12000, 1200, 13200)
                     """,
                     organizationId,
                     customerId))
@@ -352,14 +352,101 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 라인이_있는_인보이스는_지울_수_없다() {
+  void 합계가_공급가액과_세액의_합과_다른_인보이스는_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
+                       finalized_at)
+                    VALUES (?, ?, '2026-08', 12000, 1200, 13201, now())
+                    """,
+                    organizationId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_total_amount_check");
+  }
+
+  @Test
+  void 합계는_생략하면_DB가_대신_채우지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
+                    VALUES (?, ?, '2026-08', 12000, 1200, now())
+                    """,
+                    organizationId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("total_amount");
+  }
+
+  @Test
+  void 저장된_인보이스는_UPDATE할_수_없다() {
+    UUID invoiceId = insertInvoiceWithLine();
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE invoice SET finalized_at = now() WHERE id = ?", invoiceId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice is append-only");
+  }
+
+  @Test
+  void 저장된_인보이스는_DELETE할_수_없다() {
     UUID organizationId = insertOrganization();
     UUID invoiceId =
         insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
-    insertInvoiceLine(organizationId, invoiceId, "token-usage");
 
     assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM invoice WHERE id = ?", invoiceId))
-        .isInstanceOf(DataIntegrityViolationException.class);
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice is append-only");
+  }
+
+  @Test
+  void 인보이스_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice, invoice_line"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice is append-only");
+  }
+
+  @Test
+  void 저장된_라인은_UPDATE할_수_없다() {
+    UUID invoiceId = insertInvoiceWithLine();
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE invoice_line SET amount = 0 WHERE invoice_id = ?", invoiceId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_line is append-only");
+  }
+
+  @Test
+  void 저장된_라인은_DELETE할_수_없다() {
+    UUID invoiceId = insertInvoiceWithLine();
+
+    assertThatThrownBy(
+            () -> jdbcTemplate.update("DELETE FROM invoice_line WHERE invoice_id = ?", invoiceId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_line is append-only");
+  }
+
+  @Test
+  void 라인_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice_line"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_line is append-only");
   }
 
   @Test
@@ -451,7 +538,7 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 확정된_인보이스는_공급가액과_세액을_따로_담는다() {
+  void 확정된_인보이스는_공급가액과_세액과_합계를_따로_담는다() {
     UUID organizationId = insertOrganization();
     UUID invoiceId =
         insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
@@ -459,12 +546,11 @@ class SchemaConstraintTest {
 
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT supply_amount + tax_amount FROM invoice WHERE id = ?",
-                Long.class,
-                invoiceId))
+                "SELECT total_amount FROM invoice WHERE id = ?", Long.class, invoiceId))
         .isEqualTo(13200L);
     assertThat(invoiceLineCountOf(invoiceId)).isEqualTo(1);
-    assertThat(amountColumnsOf("invoice")).containsExactly("supply_amount", "tax_amount");
+    assertThat(amountColumnsOf("invoice"))
+        .containsExactly("supply_amount", "tax_amount", "total_amount");
     assertThat(amountColumnsOf("invoice_line")).containsExactly("amount");
   }
 
@@ -483,14 +569,23 @@ class SchemaConstraintTest {
     return jdbcTemplate.queryForObject(
         """
         INSERT INTO invoice
-          (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
-        VALUES (?, ?, ?, 12000, 1200, now())
+          (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
+           finalized_at)
+        VALUES (?, ?, ?, 12000, 1200, 13200, now())
         RETURNING id
         """,
         UUID.class,
         organizationId,
         customerId,
         period);
+  }
+
+  private UUID insertInvoiceWithLine() {
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    insertInvoiceLine(organizationId, invoiceId, "token-usage");
+    return invoiceId;
   }
 
   private void insertInvoiceLine(UUID organizationId, UUID invoiceId, String billableMetricCode) {
