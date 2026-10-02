@@ -166,8 +166,11 @@ class SumQuantitiesTest(unittest.TestCase):
 
 
 class LineAmountTest(unittest.TestCase):
-    def test_라인마다_절사한다(self):
-        self.assertEqual(line_amount(Decimal("3"), Decimal("0.5")), 1)
+    def test_라인마다_10원_미만을_절사한다(self):
+        self.assertEqual(line_amount(Decimal("39"), Decimal("0.5")), 10)
+
+    def test_10원이_안_되면_0이다(self):
+        self.assertEqual(line_amount(Decimal("19"), Decimal("0.5")), 0)
 
     def test_정확히_떨어지면_그대로다(self):
         self.assertEqual(line_amount(Decimal("40000"), Decimal("0.5")), 20000)
@@ -176,13 +179,13 @@ class LineAmountTest(unittest.TestCase):
 class BuildExpectedTest(unittest.TestCase):
     def test_라인별_절사가_고객별로_적용된다(self):
         stored = [
-            _stored("evt-1", customer=ACME, props={"token": 3}),
-            _stored("evt-2", customer=BETA, props={"token": 3}),
+            _stored("evt-1", customer=ACME, props={"token": 39}),
+            _stored("evt-2", customer=BETA, props={"token": 39}),
         ]
         result = build_expected(stored, [TOKEN_USAGE], "2026-08", [ACME, BETA])
-        self.assertEqual(result.customers[ACME].amount, 1)
-        self.assertEqual(result.customers[BETA].amount, 1)
-        self.assertEqual(result.total_amount, 2)
+        self.assertEqual(result.customers[ACME].amount, 10)
+        self.assertEqual(result.customers[BETA].amount, 10)
+        self.assertEqual(result.total_amount, 20)
 
     def test_이벤트가_없는_고객은_0으로_채운다(self):
         stored = [_stored("evt-1", customer=ACME)]

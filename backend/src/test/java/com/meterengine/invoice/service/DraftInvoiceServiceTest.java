@@ -50,7 +50,7 @@ class DraftInvoiceServiceTest {
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
-        .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3290")));
+        .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3280")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
@@ -59,32 +59,48 @@ class DraftInvoiceServiceTest {
     assertThat(response.month()).isEqualTo("2026-08");
     assertThat(response.calculatedAt()).isNotNull();
     assertThat(response.calculatedAt().getOffset()).isEqualTo(ZoneOffset.ofHours(9));
-    assertThat(response.totalAmount()).isEqualTo(1645);
+    assertThat(response.totalAmount()).isEqualTo(1640);
     DraftInvoiceCustomer draftInvoiceCustomer = response.customers().getFirst();
     assertThat(draftInvoiceCustomer.customerId()).isEqualTo(acme.getId());
     assertThat(draftInvoiceCustomer.customerName()).isEqualTo("아크메");
-    assertThat(draftInvoiceCustomer.amount()).isEqualTo(1645);
+    assertThat(draftInvoiceCustomer.amount()).isEqualTo(1640);
     DraftInvoiceLine draftInvoiceLine = draftInvoiceCustomer.lines().getFirst();
     assertThat(draftInvoiceLine.billableMetricCode()).isEqualTo("token-usage");
     assertThat(draftInvoiceLine.targetProperty()).isEqualTo("token");
-    assertThat(draftInvoiceLine.quantity()).isEqualByComparingTo("3290");
+    assertThat(draftInvoiceLine.quantity()).isEqualByComparingTo("3280");
     assertThat(draftInvoiceLine.unitPrice()).isEqualByComparingTo("0.5");
-    assertThat(draftInvoiceLine.amount()).isEqualTo(1645);
+    assertThat(draftInvoiceLine.amount()).isEqualTo(1640);
   }
 
   @Test
-  void 원_미만은_버린다() {
+  void 라인_금액은_10원_미만을_버린다() {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
-        .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3291")));
+        .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3299")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
-    assertThat(response.customers().getFirst().amount()).isEqualTo(1645);
+    assertThat(response.customers().getFirst().amount()).isEqualTo(1640);
+  }
+
+  @Test
+  void 금액이_10원이_안_되는_라인은_0원이다() {
+    Customer acme = customer("아크메");
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(acme));
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+        .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "19")));
+    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
+        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.customers().getFirst().lines().getFirst().amount()).isZero();
+    assertThat(response.totalAmount()).isZero();
   }
 
   @Test
@@ -95,8 +111,8 @@ class DraftInvoiceServiceTest {
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(
             List.of(
-                usage(billableMetric("token-usage", "token"), acme, "3291"),
-                usage(billableMetric("api-request-count", "count"), acme, "5")));
+                usage(billableMetric("token-usage", "token"), acme, "3299"),
+                usage(billableMetric("api-request-count", "count"), acme, "39")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(
             Map.of(
@@ -108,9 +124,9 @@ class DraftInvoiceServiceTest {
     DraftInvoiceCustomer draftInvoiceCustomer = response.customers().getFirst();
     assertThat(draftInvoiceCustomer.lines())
         .extracting(DraftInvoiceLine::amount)
-        .containsExactly(1645L, 2L);
-    assertThat(draftInvoiceCustomer.amount()).isEqualTo(1647);
-    assertThat(response.totalAmount()).isEqualTo(1647);
+        .containsExactly(1640L, 10L);
+    assertThat(draftInvoiceCustomer.amount()).isEqualTo(1650);
+    assertThat(response.totalAmount()).isEqualTo(1650);
   }
 
   @Test
@@ -173,7 +189,7 @@ class DraftInvoiceServiceTest {
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(
             List.of(
-                usage(billableMetric("token-usage", "token"), acme, "3290"),
+                usage(billableMetric("token-usage", "token"), acme, "3280"),
                 usage(billableMetric("api-calls", "count"), acme, "3")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
@@ -185,7 +201,7 @@ class DraftInvoiceServiceTest {
         .satisfies(
             draftInvoiceLine ->
                 assertThat(draftInvoiceLine.billableMetricCode()).isEqualTo("token-usage"));
-    assertThat(response.totalAmount()).isEqualTo(1645);
+    assertThat(response.totalAmount()).isEqualTo(1640);
   }
 
   private static Customer customer(String name) {
