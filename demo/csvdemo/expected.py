@@ -164,7 +164,7 @@ def sum_quantities(
 def line_amount(quantity: Decimal, unit_price: Decimal) -> int:
     with localcontext() as context:
         context.prec = CALC_PRECISION
-        return int((quantity * unit_price).to_integral_value(rounding=ROUND_DOWN))
+        return int((quantity * unit_price).quantize(Decimal("1E1"), rounding=ROUND_DOWN))
 
 
 def build_expected(

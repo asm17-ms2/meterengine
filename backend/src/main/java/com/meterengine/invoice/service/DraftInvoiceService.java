@@ -115,6 +115,6 @@ public class DraftInvoiceService {
   }
 
   private static long charge(BigDecimal quantity, BigDecimal unitPrice) {
-    return quantity.multiply(unitPrice).setScale(0, RoundingMode.DOWN).longValueExact();
+    return quantity.multiply(unitPrice).setScale(-1, RoundingMode.DOWN).longValueExact();
   }
 }

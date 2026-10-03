@@ -42,18 +42,18 @@ class DraftInvoiceIntegrationTest {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
-    insertEvent(organizationId, "tx-2", acme, 2791, "2026-08-11T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acme, 2799, "2026-08-11T12:00:00+09:00");
 
     MvcTestResult result = get(organizationId, AUGUST);
 
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo(AUGUST);
-    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(1645);
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(1640);
     assertThat(result)
         .bodyJson()
         .extractingPath("$.customers[0].customer_id")
         .isEqualTo(acme.toString());
     assertThat(result).bodyJson().extractingPath("$.customers[0].customer_name").isEqualTo("아크메");
-    assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(1645);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(1640);
     assertThat(result)
         .bodyJson()
         .extractingPath("$.customers[0].lines[0].billable_metric_code")
@@ -65,12 +65,12 @@ class DraftInvoiceIntegrationTest {
     assertThat(result)
         .bodyJson()
         .extractingPath("$.customers[0].lines[0].quantity")
-        .isEqualTo(3291);
+        .isEqualTo(3299);
     assertThat(result)
         .bodyJson()
         .extractingPath("$.customers[0].lines[0].unit_price")
         .isEqualTo(0.5);
-    assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(1645);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(1640);
     assertThat(result)
         .bodyJson()
         .extractingPath("$.calculated_at")
