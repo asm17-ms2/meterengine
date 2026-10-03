@@ -835,6 +835,7 @@ components:
           - malformed_request_body
           - invalid_billable_metric
           - invalid_price_policy
+          - invalid_price_rate
           - customer_not_found
           - billable_metric_not_found
           - price_policy_not_found

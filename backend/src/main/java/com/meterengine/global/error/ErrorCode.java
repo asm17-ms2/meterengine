@@ -10,6 +10,7 @@ public enum ErrorCode {
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
   INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
   INVALID_PRICE_POLICY(HttpStatus.BAD_REQUEST, "가격 정책으로 성립하지 않습니다"),
+  INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가로 성립하지 않습니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
