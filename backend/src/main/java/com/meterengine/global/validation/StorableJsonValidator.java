@@ -8,6 +8,12 @@ import java.util.Map;
 
 public class StorableJsonValidator implements ConstraintValidator<StorableJson, Map<String, ?>> {
 
+  // PostgreSQL NUMERIC이 받는 소수점 앞 자릿수.
+  public static final int MAX_INTEGER_DIGITS = 131072;
+
+  // PostgreSQL NUMERIC이 받는 소수점 뒤 자릿수.
+  public static final int MAX_FRACTION_DIGITS = 16383;
+
   @Override
   public boolean isValid(Map<String, ?> value, ConstraintValidatorContext context) {
     return value == null || isStorable(value);
@@ -21,7 +27,8 @@ public class StorableJsonValidator implements ConstraintValidator<StorableJson, 
               .allMatch(entry -> isStorable(entry.getKey()) && isStorable(entry.getValue()));
       case List<?> array -> array.stream().allMatch(StorableJsonValidator::isStorable);
       case BigDecimal number ->
-          number.precision() - number.scale() <= 131072 && number.scale() <= 16383;
+          number.precision() - number.scale() <= MAX_INTEGER_DIGITS
+              && number.scale() <= MAX_FRACTION_DIGITS;
       case null, default -> true;
     };
   }
