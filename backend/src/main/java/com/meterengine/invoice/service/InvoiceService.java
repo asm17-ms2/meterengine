@@ -4,7 +4,6 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.invoice.dto.InvoiceResponse;
-import com.meterengine.invoice.dto.InvoiceWithCustomerName;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
@@ -34,18 +33,16 @@ public class InvoiceService {
 
     String period = month == null ? null : month.toString();
     return new ListInvoicesResponse(
-        invoiceRepository.findWithCustomerName(organizationId, customerId, period).stream()
+        invoiceRepository.findNewestFirst(organizationId, customerId, period).stream()
             .map(InvoiceService::toInvoiceResponse)
             .toList());
   }
 
-  private static InvoiceResponse toInvoiceResponse(
-      InvoiceWithCustomerName invoiceWithCustomerName) {
-    Invoice invoice = invoiceWithCustomerName.invoice();
+  private static InvoiceResponse toInvoiceResponse(Invoice invoice) {
     return new InvoiceResponse(
         invoice.getId(),
         invoice.getCustomerId(),
-        invoiceWithCustomerName.customerName(),
+        invoice.getCustomerName(),
         invoice.getPeriod(),
         invoice
             .getFinalizedAt()

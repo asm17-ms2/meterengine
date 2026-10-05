@@ -17,6 +17,9 @@ public class Invoice {
   @Column(name = "customer_id", nullable = false)
   private UUID customerId;
 
+  @Column(name = "customer_name", nullable = false)
+  private String customerName;
+
   @Column(nullable = false)
   private String period;
 
@@ -38,6 +41,7 @@ public class Invoice {
       UUID id,
       UUID organizationId,
       UUID customerId,
+      String customerName,
       String period,
       long supplyAmount,
       long taxAmount,
@@ -45,6 +49,7 @@ public class Invoice {
     this.id = id;
     this.organizationId = organizationId;
     this.customerId = customerId;
+    this.customerName = customerName;
     this.period = period;
     this.supplyAmount = supplyAmount;
     this.taxAmount = taxAmount;
@@ -62,6 +67,10 @@ public class Invoice {
 
   public UUID getCustomerId() {
     return customerId;
+  }
+
+  public String getCustomerName() {
+    return customerName;
   }
 
   public String getPeriod() {

@@ -26,7 +26,7 @@ class InvoiceRoundTripTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  void 저장한_인보이스는_기간과_금액과_합계와_확정_시각이_그대로_되읽힌다() {
+  void 저장한_인보이스는_고객_이름과_기간과_금액과_합계와_확정_시각이_그대로_되읽힌다() {
     UUID organizationId = insertOrganization();
     OffsetDateTime finalizedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     UUID invoiceId = UUID.randomUUID();
@@ -35,6 +35,7 @@ class InvoiceRoundTripTest {
             invoiceId,
             organizationId,
             insertCustomer(organizationId),
+            "acme",
             "2026-08",
             12000L,
             1200L,
@@ -44,6 +45,7 @@ class InvoiceRoundTripTest {
 
     Invoice reloadedInvoice = invoiceRepository.findById(invoiceId).orElseThrow();
 
+    assertThat(reloadedInvoice.getCustomerName()).isEqualTo("acme");
     assertThat(reloadedInvoice.getPeriod()).isEqualTo("2026-08");
     assertThat(reloadedInvoice.getSupplyAmount()).isEqualTo(12000L);
     assertThat(reloadedInvoice.getTaxAmount()).isEqualTo(1200L);
