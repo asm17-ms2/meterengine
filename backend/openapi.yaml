@@ -890,8 +890,10 @@ components:
           - malformed_request_body
           - invalid_billable_metric
           - invalid_price_policy
+          - invalid_price_rate
           - customer_not_found
           - billable_metric_not_found
+          - price_policy_not_found
           - endpoint_not_found
           - method_not_allowed
           - response_type_not_acceptable
@@ -902,6 +904,7 @@ components:
           - billable_metric_already_exists
           - billable_metric_event_type_target_property_already_exists
           - price_policy_already_exists
+          - price_rate_already_exists
           - upload_size_exceeded
           - request_type_not_supported
           - internal_server_error
