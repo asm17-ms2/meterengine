@@ -1,0 +1,69 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        하나의 핵심 제안이나 아이디어와 적용 범위를 적어 주세요.
+        아직 확인하지 못한 내용은 표시할 수 있습니다. 모든 조건과 테스트 목록을 정한 뒤에야 제안할 필요는 없습니다.
+        문서 초안 PR에서 같은 결정을 검토하고 있다면 그 PR에서 논의를 이어갈 수 있습니다.
+        자세한 입력 안내와 분리 기준은 [팀 규칙](https://github.com/asm17-ms2/meterengine/blob/main/docs/contributing/governance.md#제안-입력-양식)을 확인해 주세요.
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 목적과 문제
+      description: 해결할 문제와 원하는 결과를 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안 내용
+      description: >-
+        바꾸려는 내용, 적용 범위, 중요한 조건과 예외, 제외 범위를 적어 주세요.
+        다른 안과 비교했다면 선택 이유도 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 영향
+      description: >-
+        영향을 받는 사용자와 팀, 시스템을 적어 주세요.
+        동작, 데이터, 호환성, 비용, 권한과 업무 방식 중 해당하는 변화와 미확인 영향을 표시해 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: questions
+    attributes:
+      label: 합의할 점
+      description: >-
+        별도로 결정할 질문이 있으면 작성합니다.
+        생략하면 제안 내용 전체의 채택을 요청하는 것으로 봅니다.
+        아직 확인할 내용도 적을 수 있습니다.
+    validations:
+      required: false
+  - type: textarea
+    id: verification
+    attributes:
+      label: 검증 기준
+      description: >-
+        해당하면 작성합니다. 핵심 상황의 입력 조건과 기대 결과를 적어 주세요.
+        구체적인 테스트 방법과 코드는 구현 과정에서 정합니다.
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: 관련 기록
+      description: >-
+        해당하면 작성합니다.
+        관련 ADR이나 RFC, 현재 정책과 규칙, API 명세, Jira 작업과 PR의 링크를 적어 주세요.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        단순 도구나 절차 변경에는 해당하지 않는 제품 동작과 테스트 항목을 요구하지 않습니다.
+        논의가 끝나면 제안자가 최종 합의안을 별도 댓글에 정리하고, 팀원은 어느 최종안에 동의하는지 표시합니다.
+        ADR이나 문서 PR에서 같은 결론을 확정했다면 그 기록을 연결합니다.
+        최종 합의안은 처음 제안할 때 작성하지 않습니다. 합의와 구현 완료는 구분합니다.
+        자세한 결론 표시 방법은 [팀 규칙](https://github.com/asm17-ms2/meterengine/blob/main/docs/contributing/governance.md#논의-후-결론)을 확인해 주세요.
