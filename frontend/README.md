@@ -126,6 +126,6 @@ docker run -p 3000:3000 \
 | `/billing` | 청구 예정액 |
 | `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) |
 | `/billable-metrics` | 미터 관리 (이름 검색, 등록/수정 다이얼로그, 삭제) |
-| `/billable-metric-prices` | 미터별 가격 (이름/코드 검색, 정책 유무와 기본 단가) |
+| `/billable-metric-prices` | 미터별 가격 (이름/코드 검색, 정책 유무와 기본 단가, 정책 등록 다이얼로그) |
 
 - 화면이 부르는 백엔드 오퍼레이션은 `src/lib/api/`에 있다.

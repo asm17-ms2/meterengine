@@ -8,10 +8,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @IdClass(PriceRateId.class)
-public class PriceRate {
+public class PriceRate implements Persistable<PriceRateId> {
 
   // 기본 단가가 붙는 조합이다.
   public static final String BASE_DIMENSION_VALUES = "{}";
@@ -34,6 +35,17 @@ public class PriceRate {
 
   protected PriceRate() {}
 
+  public PriceRate(
+      UUID organizationId,
+      String billableMetricCode,
+      String dimensionValues,
+      BigDecimal unitPrice) {
+    this.organizationId = organizationId;
+    this.billableMetricCode = billableMetricCode;
+    this.dimensionValues = dimensionValues;
+    this.unitPrice = unitPrice;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -48,5 +60,15 @@ public class PriceRate {
 
   public BigDecimal getUnitPrice() {
     return unitPrice;
+  }
+
+  @Override
+  public PriceRateId getId() {
+    return new PriceRateId(organizationId, billableMetricCode, dimensionValues);
+  }
+
+  @Override
+  public boolean isNew() {
+    return true;
   }
 }

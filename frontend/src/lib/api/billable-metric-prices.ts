@@ -1,6 +1,6 @@
 import "server-only";
 
-import { serverFetch, type Result } from "@/lib/api/client";
+import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
@@ -12,6 +12,15 @@ export type BillableMetricPriceResponse = {
 
 export type ListBillableMetricPricesResponse = {
   billable_metric_prices: BillableMetricPriceResponse[];
+};
+
+export type CreatePricePolicyRequest = {
+  dimension_properties: string[];
+};
+
+export type PricePolicyResponse = {
+  billable_metric_code: string;
+  dimension_properties: string[];
 };
 
 export async function listBillableMetricPrices(
@@ -35,5 +44,16 @@ export async function listBillableMetricPrices(
   return serverFetch<ListBillableMetricPricesResponse>(
     config.apiBaseUrl,
     "/v1/billable-metric-prices",
+  );
+}
+
+export async function createPricePolicy(
+  billableMetricCode: string,
+  request: CreatePricePolicyRequest,
+): Promise<Result<PricePolicyResponse>> {
+  return serverSend<PricePolicyResponse>(
+    config.apiBaseUrl,
+    `/v1/billable-metrics/${encodeURIComponent(billableMetricCode)}/price-policy`,
+    { method: "POST", body: request },
   );
 }
