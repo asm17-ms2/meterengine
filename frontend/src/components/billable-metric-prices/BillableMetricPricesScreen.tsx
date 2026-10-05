@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { BillableMetricPriceRowView } from "@/app/(console)/billable-metric-prices/state";
 import { BillableMetricPricesTable } from "@/components/billable-metric-prices/BillableMetricPricesTable";
+import { PricePolicyFormDialog } from "@/components/billable-metric-prices/PricePolicyFormDialog";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
 export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPriceRowView[] }) {
   const [search, setSearch] = useState("");
+  const [registering, setRegistering] = useState<BillableMetricPriceRowView | null>(null);
+
+  const closeForm = useCallback(() => setRegistering(null), []);
 
   const query = search.trim().toLowerCase();
   const visibleRows =
@@ -77,14 +81,23 @@ export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPrice
         </div>
       ) : (
         <>
-          <BillableMetricPricesTable rows={visibleRows} />
+          <BillableMetricPricesTable rows={visibleRows} onRegisterPolicy={setRegistering} />
           <div className="screen-footer">
             <span className="screen-note">
-              정렬: 코드 오름차순. 단가는 속성 조건 없는 기본 단가만 보입니다.
+              정렬: 코드 오름차순. 단가는 속성 조건 없는 기본 단가만 보입니다. 단가가 없는
+              미터는 청구 예정액에서 빠집니다.
             </span>
           </div>
         </>
       )}
+
+      {registering ? (
+        <PricePolicyFormDialog
+          key={registering.code}
+          billableMetricPrice={registering}
+          onClose={closeForm}
+        />
+      ) : null}
     </>
   );
 }
