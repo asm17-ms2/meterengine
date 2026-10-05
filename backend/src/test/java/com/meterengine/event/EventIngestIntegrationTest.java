@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -25,7 +28,10 @@ import org.springframework.web.context.WebApplicationContext;
 @Transactional
 class EventIngestIntegrationTest {
 
-  private static final String OCCURRED_AT = "2026-08-10T12:00:00+09:00";
+  private static final String OCCURRED_AT =
+      OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE)
+          .truncatedTo(ChronoUnit.SECONDS)
+          .toString();
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -61,6 +67,66 @@ class EventIngestIntegrationTest {
             OffsetDateTime.class,
             organizationId);
     assertThat(occurredAt).isEqualTo(OffsetDateTime.parse(OCCURRED_AT));
+  }
+
+  @Test
+  void 발생한_지_34일인_이벤트는_저장된다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    String timestamp = daysAgoUtc(34).toString();
+
+    MvcTestResult result =
+        post(organizationId, eventBody("tx-1", "chat_completion", "{}", timestamp, customerId));
+
+    assertThat(result).hasStatusOk().bodyJson().extractingPath("$.duplicate").asBoolean().isFalse();
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
+  }
+
+  @Test
+  void 발생한_지_36일인_이벤트는_400이고_code가_event_too_old이며_저장은_0건이다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    String timestamp = daysAgoUtc(36).toString();
+
+    MvcTestResult result =
+        post(organizationId, eventBody("tx-1", "chat_completion", "{}", timestamp, customerId));
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.EVENT_TOO_OLD.getCode());
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .asString()
+        .isEqualTo("timestamp");
+    assertThat(totalCount(organizationId)).isZero();
+  }
+
+  @Test
+  void 받는_기간보다_이른_이벤트라도_이미_저장된_transaction_id면_200이고_duplicate가_true다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    OffsetDateTime occurredAt = daysAgoUtc(36);
+    jdbcTemplate.update(
+        """
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
+        VALUES (?, 'tx-1', ?, 'chat_completion', '{}', ?)
+        """,
+        organizationId,
+        customerId,
+        occurredAt);
+
+    MvcTestResult result =
+        post(
+            organizationId,
+            eventBody("tx-1", "chat_completion", "{}", occurredAt.toString(), customerId));
+
+    assertThat(result).hasStatusOk().bodyJson().extractingPath("$.duplicate").asBoolean().isTrue();
+    assertThat(storedCount(organizationId, "tx-1")).isEqualTo(1);
   }
 
   @Test
@@ -226,9 +292,9 @@ class EventIngestIntegrationTest {
     String different =
         """
         {"transaction_id":"tx-1","customer_id":"%s","type":"embedding",
-         "properties":{"token":999999},"timestamp":"2026-08-11T00:00:00+09:00"}
+         "properties":{"token":999999},"timestamp":"%s"}
         """
-            .formatted(customerId);
+            .formatted(customerId, OCCURRED_AT);
     assertThat(post(organizationId, different))
         .hasStatusOk()
         .bodyJson()
@@ -449,12 +515,11 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void timestamp는_범위_양끝까지_받고_같은_순간으로_저장된다() {
+  void timestamp는_범위_위쪽_끝까지_받고_같은_순간으로_저장된다() {
     UUID organizationId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(organizationId, "acme");
 
     Map<String, String> timestampsByTransactionId = new LinkedHashMap<>();
-    timestampsByTransactionId.put("tx-earliest", "-4712-01-01T00:00:00Z");
     timestampsByTransactionId.put("tx-latest", "+294276-12-31T23:59:59.999999Z");
     timestampsByTransactionId.put("tx-latest-rounded", "+294276-12-31T23:59:59.9999985Z");
     timestampsByTransactionId.forEach(
@@ -470,7 +535,6 @@ class EventIngestIntegrationTest {
                             customerId)))
                 .hasStatusOk());
 
-    assertThat(storedUtc(organizationId, "tx-earliest")).isEqualTo("4713-01-01 00:00:00.000000 BC");
     assertThat(storedUtc(organizationId, "tx-latest")).isEqualTo("294276-12-31 23:59:59.999999 AD");
     assertThat(storedUtc(organizationId, "tx-latest-rounded"))
         .isEqualTo("294276-12-31 23:59:59.999999 AD");
@@ -506,6 +570,10 @@ class EventIngestIntegrationTest {
         .extractingPath("$.errors[0].field")
         .asString()
         .isEqualTo("transaction_id");
+  }
+
+  private OffsetDateTime daysAgoUtc(int days) {
+    return OffsetDateTime.now(ZoneOffset.UTC).minusDays(days).truncatedTo(ChronoUnit.MICROS);
   }
 
   private String storedUtc(UUID organizationId, String transactionId) {

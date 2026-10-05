@@ -7,8 +7,12 @@ import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -19,6 +23,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class EventService {
+
+  private static final Duration MAX_EVENT_AGE = Duration.ofDays(35);
 
   private final EventRepository eventRepository;
   private final CustomerRepository customerRepository;
@@ -42,6 +48,15 @@ public class EventService {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
 
+    if (isTooOld(request.occurredAt().toInstant(), Instant.now())) {
+      if (eventRepository.exists(organizationId, request.transactionId())) {
+        return IngestEventResponse.alreadyStored(request.transactionId());
+      }
+      throw new InvalidRequestException(
+          ErrorCode.EVENT_TOO_OLD,
+          List.of(new FieldError("timestamp", "수집 판정 시각보다 35일 넘게 과거인 시각입니다")));
+    }
+
     String propertiesJson = jsonMapper.writeValueAsString(request.properties());
 
     int inserted =
@@ -55,6 +70,10 @@ public class EventService {
     return inserted == 1
         ? IngestEventResponse.stored(request.transactionId())
         : IngestEventResponse.alreadyStored(request.transactionId());
+  }
+
+  static boolean isTooOld(Instant occurredAt, Instant now) {
+    return occurredAt.isBefore(now.minus(MAX_EVENT_AGE));
   }
 
   @Transactional(readOnly = true)
