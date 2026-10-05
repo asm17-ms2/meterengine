@@ -10,10 +10,12 @@ public enum ErrorCode {
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
   INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
   INVALID_PRICE_POLICY(HttpStatus.BAD_REQUEST, "가격 정책으로 성립하지 않습니다"),
+  INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가로 성립하지 않습니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
   BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "미터를 찾을 수 없습니다"),
+  PRICE_POLICY_NOT_FOUND(HttpStatus.NOT_FOUND, "가격 정책을 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
 
   // 405 Method Not Allowed
@@ -32,6 +34,7 @@ public enum ErrorCode {
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
   PRICE_POLICY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 미터에는 가격 정책이 이미 있습니다"),
+  PRICE_RATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 조합의 단가가 이미 있습니다"),
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),

@@ -4,15 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableJson;
+import com.meterengine.global.validation.StorableJsonValidator;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.StorableTimestamp;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -38,7 +41,7 @@ class RequestValidationCoverageTest {
   private static final String BASE_PACKAGE = "com.meterengine";
 
   private static final Set<Class<?>> KNOWN_SCALAR_TYPES =
-      Set.of(String.class, Map.class, OffsetDateTime.class, UUID.class);
+      Set.of(String.class, Map.class, OffsetDateTime.class, UUID.class, BigDecimal.class);
 
   private static final Set<Class<?>> KNOWN_PARAMETER_SCALAR_TYPES =
       Set.of(
@@ -109,7 +112,7 @@ class RequestValidationCoverageTest {
   }
 
   @Test
-  void 요청_DTO의_JSON_객체와_시각에는_저장_가능_제약이_붙어_있다() {
+  void 요청_DTO의_JSON_객체와_시각과_소수에는_저장_가능_제약이_붙어_있다() {
     List<String> unguardedComponents =
         requestRecords().stream()
             .flatMap(record -> Stream.of(record.getRecordComponents()))
@@ -119,7 +122,8 @@ class RequestValidationCoverageTest {
                             && !backingField(component).isAnnotationPresent(StorableJson.class))
                         || (component.getType() == OffsetDateTime.class
                             && !backingField(component)
-                                .isAnnotationPresent(StorableTimestamp.class)))
+                                .isAnnotationPresent(StorableTimestamp.class))
+                        || (component.getType() == BigDecimal.class && !guardsDecimal(component)))
             .map(RequestValidationCoverageTest::describe)
             .toList();
 
@@ -234,6 +238,13 @@ class RequestValidationCoverageTest {
     return field.getAnnotatedType() instanceof AnnotatedParameterizedType parameterized
         && parameterized.getAnnotatedActualTypeArguments()[0].isAnnotationPresent(
             StorableText.class);
+  }
+
+  private static boolean guardsDecimal(RecordComponent component) {
+    Digits digits = backingField(component).getAnnotation(Digits.class);
+    return digits != null
+        && digits.integer() == StorableJsonValidator.MAX_INTEGER_DIGITS
+        && digits.fraction() == StorableJsonValidator.MAX_FRACTION_DIGITS;
   }
 
   private static boolean isListOfString(RecordComponent component) {
