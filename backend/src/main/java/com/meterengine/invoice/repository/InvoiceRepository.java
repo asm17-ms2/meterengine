@@ -1,6 +1,6 @@
 package com.meterengine.invoice.repository;
 
-import com.meterengine.invoice.dto.InvoiceResponse;
+import com.meterengine.invoice.dto.InvoiceWithCustomerName;
 import com.meterengine.invoice.entity.Invoice;
 import java.util.List;
 import java.util.UUID;
@@ -11,8 +11,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   @Query(
       """
-      SELECT new com.meterengine.invoice.dto.InvoiceResponse(
-        i.id, i.customerId, c.name, i.period, i.finalizedAt, i.totalAmount)
+      SELECT new com.meterengine.invoice.dto.InvoiceWithCustomerName(i, c.name)
       FROM Invoice i
       JOIN Customer c ON c.organizationId = i.organizationId AND c.id = i.customerId
       WHERE i.organizationId = :organizationId
@@ -20,5 +19,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
         AND (:period IS NULL OR i.period = :period)
       ORDER BY i.period DESC, c.name ASC, c.id ASC
       """)
-  List<InvoiceResponse> findWithCustomerName(UUID organizationId, UUID customerId, String period);
+  List<InvoiceWithCustomerName> findWithCustomerName(
+      UUID organizationId, UUID customerId, String period);
 }

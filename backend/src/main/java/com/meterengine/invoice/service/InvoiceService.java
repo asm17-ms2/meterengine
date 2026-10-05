@@ -4,7 +4,9 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.invoice.dto.InvoiceResponse;
+import com.meterengine.invoice.dto.InvoiceWithCustomerName;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
+import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.YearMonth;
@@ -33,20 +35,22 @@ public class InvoiceService {
     String period = month == null ? null : month.toString();
     return new ListInvoicesResponse(
         invoiceRepository.findWithCustomerName(organizationId, customerId, period).stream()
-            .map(InvoiceService::toBillingZone)
+            .map(InvoiceService::toInvoiceResponse)
             .toList());
   }
 
-  private static InvoiceResponse toBillingZone(InvoiceResponse invoice) {
+  private static InvoiceResponse toInvoiceResponse(
+      InvoiceWithCustomerName invoiceWithCustomerName) {
+    Invoice invoice = invoiceWithCustomerName.invoice();
     return new InvoiceResponse(
-        invoice.id(),
-        invoice.customerId(),
-        invoice.customerName(),
-        invoice.month(),
+        invoice.getId(),
+        invoice.getCustomerId(),
+        invoiceWithCustomerName.customerName(),
+        invoice.getPeriod(),
         invoice
-            .finalizedAt()
+            .getFinalizedAt()
             .atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE)
             .toOffsetDateTime(),
-        invoice.totalAmount());
+        invoice.getTotalAmount());
   }
 }

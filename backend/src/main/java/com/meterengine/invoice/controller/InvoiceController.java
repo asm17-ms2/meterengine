@@ -38,7 +38,7 @@ public class InvoiceController {
           customer_id와 month를 함께 주면 둘 다 만족하는 인보이스만 나온다. month를 생략하면 모든 달이다.
           달 내림차순이고, 같은 달은 고객 이름 오름차순, 이름이 같으면 고객 id 순이다.
           total_amount는 확정할 때 저장한 합계(공급가액 + 세액)이고 원 단위 정수다. 라인은 싣지 않는다.
-          finalized_at은 KST(+09:00)로 나온다. 페이지를 나누지 않는다.
+          finalized_at은 KST(+09:00)로 나온다. customer_name은 조회 시점의 고객 이름이다. 페이지를 나누지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "인보이스 목록. 조건에 맞는 것이 없으면 invoices가 빈 배열이다"),
