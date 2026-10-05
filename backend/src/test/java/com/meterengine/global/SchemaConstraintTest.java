@@ -214,6 +214,7 @@ class SchemaConstraintTest {
     assertThat(collationOf("customer", "name")).isEqualTo("korean");
     assertThat(collationOf("organization", "name")).isEqualTo("korean");
     assertThat(collationOf("billable_metric", "name")).isEqualTo("korean");
+    assertThat(collationOf("invoice", "customer_name")).isEqualTo("korean");
   }
 
   @Test
@@ -321,8 +322,9 @@ class SchemaConstraintTest {
                 jdbcTemplate.update(
                     """
                     INSERT INTO invoice
-                      (organization_id, customer_id, period, supply_amount, tax_amount, total_amount)
-                    VALUES (?, ?, '2026-08', 12000, 1200, 13200)
+                      (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+                       total_amount)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200)
                     """,
                     organizationId,
                     customerId))
@@ -361,14 +363,34 @@ class SchemaConstraintTest {
                 jdbcTemplate.update(
                     """
                     INSERT INTO invoice
-                      (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
-                       finalized_at)
-                    VALUES (?, ?, '2026-08', 12000, 1200, 13201, now())
+                      (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+                       total_amount, finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13201, now())
                     """,
                     organizationId,
                     customerId))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("invoice_total_amount_check");
+  }
+
+  @Test
+  void 고객_이름은_생략하면_DB가_대신_채우지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
+                       finalized_at)
+                    VALUES (?, ?, '2026-08', 12000, 1200, 13200, now())
+                    """,
+                    organizationId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("customer_name");
   }
 
   @Test
@@ -381,8 +403,9 @@ class SchemaConstraintTest {
                 jdbcTemplate.update(
                     """
                     INSERT INTO invoice
-                      (organization_id, customer_id, period, supply_amount, tax_amount, finalized_at)
-                    VALUES (?, ?, '2026-08', 12000, 1200, now())
+                      (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+                       finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, now())
                     """,
                     organizationId,
                     customerId))
@@ -569,9 +592,9 @@ class SchemaConstraintTest {
     return jdbcTemplate.queryForObject(
         """
         INSERT INTO invoice
-          (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
-           finalized_at)
-        VALUES (?, ?, ?, 12000, 1200, 13200, now())
+          (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+           total_amount, finalized_at)
+        VALUES (?, ?, 'acme', ?, 12000, 1200, 13200, now())
         RETURNING id
         """,
         UUID.class,

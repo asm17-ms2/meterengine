@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -68,6 +69,27 @@ class InvoiceListIntegrationTest {
     assertIds(list(organizationId, "?month=2026-08"), acmeAugust, zetaAugust);
     assertIds(list(organizationId, "?customer_id=" + acme), acmeAugust, acmeJuly);
     assertIds(list(organizationId, "?customer_id=%s&month=2026-07".formatted(acme)), acmeJuly);
+  }
+
+  @Test
+  void 확정_뒤에_고객_이름을_고쳐도_확정할_때의_이름이_나온다() {
+    UUID organizationId = insertOrganization();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertInvoice(organizationId, acme, "2026-08", 12000);
+
+    assertThat(
+            mvc.put()
+                .uri("/v1/customers/" + acme)
+                .header("X-Organization-Id", organizationId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"아크메코리아\"}")
+                .exchange())
+        .hasStatusOk();
+
+    assertThat(list(organizationId, ""))
+        .bodyJson()
+        .extractingPath("$.invoices[0].customer_name")
+        .isEqualTo("아크메");
   }
 
   @Test
@@ -128,6 +150,8 @@ class InvoiceListIntegrationTest {
             UUID.randomUUID(),
             organizationId,
             customerId,
+            jdbcTemplate.queryForObject(
+                "SELECT name FROM customer WHERE id = ?", String.class, customerId),
             period,
             supplyAmount,
             supplyAmount / 10,
