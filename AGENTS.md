@@ -26,6 +26,7 @@ This file provides shared guidance to coding agents working with code in this re
 - 팀 규칙의 입구는 CONTRIBUTING.md이고 규칙은 `docs/contributing/`에 있다. 규칙을 여기 베끼지 않는다.
   - 커밋 메시지: `git-workflow.md`. PR 크기, 스택, 리뷰: `pull-request.md`. 문서 양식과 README 점검: `documents.md`. 주석: `comments.md`.
   - 무엇의 정본이 어디인지는 `governance.md` "정본". 새 문서를 만들기 전에 그 표를 보고 없으면 먼저 물어본다.
+- Discussion 제안을 작성하기 전에 `docs/contributing/governance.md`의 "토의 위치"와 거기서 연결한 양식을 읽고 따른다. API로 작성할 때도 양식의 항목과 필수 여부를 확인한다.
 - PR을 올리기 전에 `documents.md` "README 점검"을 본다.
 - 아래는 코딩 에이전트가 특히 틀리기 쉬운 것만 짚는다.
 
