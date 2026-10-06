@@ -24,8 +24,11 @@
 
 | 항목 | 값 | 코드 위치 |
 |---|---|---|
+| 확정 단위 | (고객, 달) 하나 | `invoice_organization_customer_period_unique` |
 | 단가에 세금이 들어 있는지 | 세금 별도(공급가액) | `InvoiceFinalizeIntegrationTest.단가는_세금_별도이고_세액은_공급가액의_10퍼센트이며_합계는_둘의_합이다` |
 | 세액률 | 공급가액의 10% | `InvoiceFinalizationService.TAX_RATE_PERCENT` |
+| 확정 대상 | 그 달 이벤트가 있는 고객만 | `InvoiceFinalizeIntegrationTest.그_달_이벤트가_없는_고객은_확정하지_않는다` |
 | 단가가 없는 미터 | 라인에서 빠진 채 확정한다 | `InvoiceFinalizeIntegrationTest.단가가_없는_미터는_라인에서_빠진_채_확정한다` |
+| 이미 확정된 (고객, 달) | 건너뛴다 | `InvoiceFinalizeIntegrationTest.이미_확정된_고객과_달은_건너뛴다` |
 | 확정 뒤에 들어온 그 달 이벤트 | 수집 기간(`docs/policies/event.md`) 안이면 저장하지만 어느 인보이스에도 청구하지 않는다 | `InvoiceFinalizeIntegrationTest.확정_뒤에_새_이벤트가_들어오고_단가가_바뀌어도_금액과_라인이_변하지_않는다` |
 | 확정 뒤의 단가 변경 | 확정 금액과 라인의 수량, 단가가 바뀌지 않는다 | `InvoiceFinalizeIntegrationTest.확정_뒤에_새_이벤트가_들어오고_단가가_바뀌어도_금액과_라인이_변하지_않는다` |

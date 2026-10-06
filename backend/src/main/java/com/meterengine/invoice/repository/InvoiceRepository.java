@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
+  boolean existsByOrganizationIdAndCustomerIdAndPeriod(
+      UUID organizationId, UUID customerId, String period);
+
   @Query(
       """
       SELECT i
