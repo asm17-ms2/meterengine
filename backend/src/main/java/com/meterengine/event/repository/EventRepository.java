@@ -105,6 +105,20 @@ public class EventRepository {
             property));
   }
 
+  public boolean exists(UUID organizationId, String transactionId) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM event
+              WHERE organization_id = ? AND transaction_id = ?
+            )
+            """,
+            Boolean.class,
+            organizationId,
+            transactionId));
+  }
+
   public boolean existsForCustomer(UUID organizationId, UUID customerId) {
     return Boolean.TRUE.equals(
         jdbcTemplate.queryForObject(

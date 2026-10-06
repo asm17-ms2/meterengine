@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -79,9 +80,11 @@ class CustomerIntegrationTest {
                 .content(
                     """
                     {"transaction_id":"tx-1","customer_id":"%s","type":"chat_completion",
-                     "properties":{"token":1200},"timestamp":"2026-08-10T12:00:00+09:00"}
+                     "properties":{"token":1200},"timestamp":"%s"}
                     """
-                        .formatted(customerId))
+                        .formatted(
+                            customerId,
+                            OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE)))
                 .exchange())
         .hasStatusOk();
   }

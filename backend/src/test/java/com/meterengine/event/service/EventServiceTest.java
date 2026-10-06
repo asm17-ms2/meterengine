@@ -16,6 +16,8 @@ import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.metric.service.BillableMetricUsageService;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +34,8 @@ class EventServiceTest {
 
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
+  private static final OffsetDateTime OCCURRED_AT =
+      OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
   @Mock private EventRepository eventRepository;
   @Mock private CustomerRepository customerRepository;
@@ -100,11 +104,7 @@ class EventServiceTest {
     eventService.ingest(
         ORGANIZATION_ID,
         new IngestEventRequest(
-            "tx-1",
-            CUSTOMER_ID,
-            "chat_completion",
-            Map.of("whatever", "value"),
-            OffsetDateTime.parse("2026-08-10T12:00:00+09:00")));
+            "tx-1", CUSTOMER_ID, "chat_completion", Map.of("whatever", "value"), OCCURRED_AT));
 
     verify(eventRepository)
         .insertIfAbsent(
@@ -113,7 +113,7 @@ class EventServiceTest {
             eq(CUSTOMER_ID),
             eq("chat_completion"),
             anyString(),
-            eq(OffsetDateTime.parse("2026-08-10T12:00:00+09:00")));
+            eq(OCCURRED_AT));
   }
 
   private IngestEventRequest request(String transactionId) {
@@ -122,6 +122,30 @@ class EventServiceTest {
         CUSTOMER_ID,
         "chat_completion",
         Map.of("model", "gpt-4o-mini", "token", 1200),
-        OffsetDateTime.parse("2026-08-10T12:00:00+09:00"));
+        OCCURRED_AT);
+  }
+
+  @Test
+  void 발생한_지_35일이_되기_직전의_이벤트는_받는다() {
+    Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
+    Instant occurredAt = OffsetDateTime.parse("2026-09-15T14:00:00.000000001+09:00").toInstant();
+
+    assertThat(EventService.isTooOld(occurredAt, now)).isFalse();
+  }
+
+  @Test
+  void 발생한_지_정확히_35일인_이벤트는_받는다() {
+    Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
+    Instant occurredAt = Instant.parse("2026-09-15T05:00:00Z");
+
+    assertThat(EventService.isTooOld(occurredAt, now)).isFalse();
+  }
+
+  @Test
+  void 발생한_지_35일이_넘은_이벤트는_거절한다() {
+    Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
+    Instant occurredAt = OffsetDateTime.parse("2026-09-15T13:59:59.999999999+09:00").toInstant();
+
+    assertThat(EventService.isTooOld(occurredAt, now)).isTrue();
   }
 }
