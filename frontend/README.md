@@ -5,7 +5,7 @@ MeterEngine 관리자 콘솔. Next.js App Router + TypeScript.
 - Next.js 16, React 19, TypeScript 5 (`package.json`).
 - 패키지 매니저는 pnpm이고 버전은 `package.json`의 `packageManager`가 정본이다.
 - 데이터를 읽는 화면은 Server Component에서 그리고, 상태 관리 라이브러리는 쓰지 않는다.
-  - 조회 조건은 쿼리스트링(`?month=`, `?page=`).
+  - 조회 조건은 쿼리스트링(`?month=`, `?page=`, `?customer_id=`).
   - 접기/펼치기 같은 화면 안의 상태만 Client Component.
 - API 계약의 정본은 `backend/openapi.yaml`이다 (백엔드를 띄우지 않고 이 파일로 읽는다).
 - 코드와 문서 작성 규칙은 `docs/contributing/`에 있다.
@@ -124,7 +124,7 @@ docker run -p 3000:3000 \
 | `/events` | 이벤트 로그 (페이지 나누기, 상세 드로어) |
 | `/usage` | 사용량 집계 (고객 그룹 + 미터 자식 행) |
 | `/billing` | 청구 예정액 |
-| `/invoices` | 인보이스 목록 (확정분, 기간 필터, 월 합계) |
+| `/invoices` | 인보이스 목록 (확정분, 기간과 고객 필터, 월 합계) |
 | `/customers` | 고객 관리 (검색, 등록/수정 다이얼로그, 삭제) |
 | `/billable-metrics` | 미터 관리 (이름 검색, 등록/수정 다이얼로그, 삭제) |
 | `/billable-metric-prices` | 미터별 가격 (이름/코드 검색, 정책 유무와 기본 단가, 정책 등록 다이얼로그) |

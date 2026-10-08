@@ -19,6 +19,7 @@ export type InvoiceResponse = {
 
 export type ListInvoicesQuery = {
   month?: string;
+  customerId?: string;
 };
 
 export async function listInvoices(
@@ -42,5 +43,6 @@ export async function listInvoices(
 
   return serverFetch<ListInvoicesResponse>(config.apiBaseUrl, "/v1/invoices", {
     month: query.month,
+    customer_id: query.customerId,
   });
 }

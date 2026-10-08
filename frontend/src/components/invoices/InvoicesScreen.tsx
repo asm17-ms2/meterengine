@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { InvoicesFrame } from "@/components/invoices/InvoicesFrame";
 import { InvoicesTable, type InvoiceRowView } from "@/components/invoices/InvoicesTable";
+import type { CustomerOption } from "@/components/screen/CustomerSelect";
 import { EmptyState } from "@/components/screen/EmptyState";
 import type { InvoiceResponse } from "@/lib/api/invoices";
 import { formatKoreanMonth, formatKrw, formatKstDateTime, formatKstStamp } from "@/lib/format";
@@ -10,29 +11,42 @@ import { formatKstMonth, isAwaitingFinalization, shiftMonth } from "@/lib/month"
 export function InvoicesScreen({
   invoices,
   month,
+  customerId,
+  customerOptions,
+  lockedCustomerOption,
 }: {
   invoices: InvoiceResponse[];
   month: string | undefined;
+  customerId: string | undefined;
+  /** 없으면 고객 목록을 못 받은 것이라 고객 필터를 잠근다. */
+  customerOptions: CustomerOption[] | undefined;
+  lockedCustomerOption: CustomerOption | undefined;
 }) {
   const customerCount = new Set(invoices.map((invoice) => invoice.customer_id)).size;
+  const isCustomerFilterLocked = customerId !== undefined && customerOptions === undefined;
 
   return (
     <InvoicesFrame
       month={month}
+      customerId={customerId}
+      customerOptions={customerOptions}
+      lockedCustomerOption={lockedCustomerOption}
       meta={
         <>
           인보이스 <b>{invoices.length}</b>건, 고객 <b>{customerCount}</b>곳
-          {invoices.length > 0 ? (
-            <>
-              <br />
-              마지막 확정 {formatKstStamp(latestFinalizedAt(invoices))}
-            </>
+          <br />
+          {isCustomerFilterLocked ? (
+            <span className="screen-note">
+              고객 목록을 불러오지 못해 고객 필터를 바꿀 수 없습니다
+            </span>
+          ) : invoices.length > 0 ? (
+            <>마지막 확정 {formatKstStamp(latestFinalizedAt(invoices))}</>
           ) : null}
         </>
       }
     >
       {invoices.length === 0 ? (
-        <InvoicesEmptyState month={month} />
+        <InvoicesEmptyState month={month} customerId={customerId} />
       ) : (
         <>
           <InvoicesTable
@@ -54,8 +68,14 @@ export function InvoicesScreen({
   );
 }
 
-function InvoicesEmptyState({ month }: { month: string | undefined }) {
-  if (!month) {
+function InvoicesEmptyState({
+  month,
+  customerId,
+}: {
+  month: string | undefined;
+  customerId: string | undefined;
+}) {
+  if (!month && !customerId) {
     return (
       <div className="empty-state">
         <div className="empty-state__title">확정된 인보이스가 없습니다</div>
@@ -85,7 +105,7 @@ function InvoicesEmptyState({ month }: { month: string | undefined }) {
     );
   }
 
-  if (isAwaitingFinalization(month)) {
+  if (month && isAwaitingFinalization(month)) {
     return (
       <div className="empty-state">
         <div className="empty-state__title">
@@ -103,7 +123,7 @@ function InvoicesEmptyState({ month }: { month: string | undefined }) {
   return (
     <EmptyState
       title="조건에 맞는 인보이스가 없습니다"
-      body={`${formatKoreanMonth(month)} 분으로 확정된 인보이스가 없습니다. 그 달에 이벤트가 없던 고객은 확정 대상이 아닙니다.`}
+      body={`${describeMissing(month, customerId)} 그 달에 이벤트가 없던 고객은 확정 대상이 아닙니다.`}
       resetHref="/invoices"
     />
   );
@@ -120,6 +140,14 @@ function NotYetFinalizedActions({ month }: { month: string }) {
       </Link>
     </div>
   );
+}
+
+function describeMissing(month: string | undefined, customerId: string | undefined): string {
+  if (month && customerId) {
+    return `${formatKoreanMonth(month)} 분으로 확정된 선택한 고객의 인보이스가 없습니다.`;
+  }
+  if (month) return `${formatKoreanMonth(month)} 분으로 확정된 인보이스가 없습니다.`;
+  return "선택한 고객의 확정된 인보이스가 없습니다.";
 }
 
 function toInvoiceRowView(invoice: InvoiceResponse): InvoiceRowView {
