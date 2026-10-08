@@ -1,13 +1,13 @@
-name: RFC checklist
+name: ADR checklist
 
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 jobs:
-  rfc-checklist:
-    name: rfc-checklist
-    if: contains(github.event.pull_request.labels.*.name, 'rfc')
+  adr-checklist:
+    name: adr-checklist
+    if: contains(github.event.pull_request.labels.*.name, 'adr')
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any checklist item is unchecked
