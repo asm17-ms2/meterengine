@@ -64,6 +64,7 @@ body:
       value: |
         단순 도구나 절차 변경에는 해당하지 않는 제품 동작과 테스트 항목을 요구하지 않습니다.
         논의가 끝나면 제안자가 최종 합의안을 별도 댓글에 정리하고, 팀원은 어느 최종안에 동의하는지 표시합니다.
+        동의 인원과 확정 조건은 [사전 합의 기준](https://github.com/asm17-ms2/meterengine/blob/main/docs/contributing/governance.md#사전-합의)을 따릅니다.
         ADR이나 문서 PR에서 같은 결론을 확정했다면 그 기록을 연결합니다.
         최종 합의안은 처음 제안할 때 작성하지 않습니다. 합의와 구현 완료는 구분합니다.
         자세한 결론 표시 방법은 [팀 규칙](https://github.com/asm17-ms2/meterengine/blob/main/docs/contributing/governance.md#논의-후-결론)을 확인해 주세요.

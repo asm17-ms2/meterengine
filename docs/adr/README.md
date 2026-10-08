@@ -25,7 +25,7 @@
    ```text
    https://github.com/asm17-ms2/meterengine/compare/main...<브랜치>?quick_pull=1&template=adr.md&labels=adr
    ```
-4. 같은 최종안에 대한 작성자 외 전원의 명시적 동의로 채택하거나 기각한다.
+4. [governance.md](../contributing/governance.md)의 "사전 합의" 조건에 따라 채택하거나 기각한다.
    - Discussion이나 회의에서 이미 동의받은 같은 결정을 기록하면 최종안, 동의 기록과 합의 날짜를 연결한다. 같은 결정을 다시 합의하지 않는다.
    - PR의 리뷰, 필수 승인과 검사는 [pull-request.md](../contributing/pull-request.md)를 따른다.
    - 머지 전에 작성자는 채택하면 `accepted`, 기각하면 `rejected`로 바꾸고 확정일을 문서와 아래 목록에 반영한다. 합의 전인 `proposed` 상태로 머지하지 않는다.
@@ -39,7 +39,7 @@
 | --- | --- |
 | `status` | 아래 상태 중 하나 |
 | `date` | 제안 중에는 작성일, 채택하거나 기각하면 그 결정을 확정한 날. 대체할 때는 기존 확정일을 보존 |
-| `author` | 작성자 |
+| `author` | 기록 작성자 |
 | `domain` | 영향을 받는 범위. 백엔드 패키지에 한정하지 않고 여러 범위면 목록으로 작성. ADR 대상 판정의 문턱으로 쓰지 않음 |
 | `supersedes`, `superseded-by` | 대체하는 기록과 대체한 기록의 상대 경로 목록. 해당하지 않는 필드는 생략 |
 
