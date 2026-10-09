@@ -1,8 +1,11 @@
 package com.meterengine.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
@@ -44,7 +47,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-2", acme, "token", 2799, "2026-08-31T23:59:59+09:00");
     insertEvent(organizationId, "tx-3", acme, "token", 1000, "2026-09-01T00:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, acme, AUGUST);
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
     flushAndClear();
 
     Invoice reloadedInvoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
@@ -73,7 +77,8 @@ class InvoiceFinalizeIntegrationTest {
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, acme, AUGUST);
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
     assertThat(invoice.getTaxAmount()).isEqualTo(164);
@@ -81,11 +86,24 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   @Test
+  void 확정_금액은_같은_달의_청구_예정액과_같다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
+
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
+
+    assertThat(invoice.getSupplyAmount()).isEqualTo(draftAmount(organizationId));
+  }
+
+  @Test
   void 확정_뒤에_새_이벤트가_들어오고_단가가_바뀌어도_금액과_라인이_변하지_않는다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, acme, AUGUST);
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
     flushAndClear();
 
     insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-08-20T12:00:00+09:00");
@@ -109,6 +127,20 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   @Test
+  void 그_달_이벤트가_없는_고객은_확정하지_않는다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, "token", 500, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, "token", 500, "2026-07-31T23:59:59+09:00");
+    insertEvent(organizationId, "tx-3", beta, "token", 500, "2026-09-01T00:00:00+09:00");
+
+    assertThat(invoiceFinalizationService.finalize(organizationId, beta, AUGUST)).isEmpty();
+
+    assertThat(invoiceRepository.findNewestFirst(organizationId, null, null)).isEmpty();
+  }
+
+  @Test
   void 단가가_없는_미터는_라인에서_빠진_채_확정한다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     insertBillableMetric(organizationId, "api-calls", "count");
@@ -116,13 +148,92 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
     insertEvent(organizationId, "tx-2", acme, "count", 3, "2026-08-11T12:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, acme, AUGUST);
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
     flushAndClear();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
     assertThat(lines(organizationId, invoice))
         .extracting(InvoiceLine::getBillableMetricCode)
         .containsExactly("token-usage");
+  }
+
+  @Test
+  void 단가가_있는_미터가_하나도_없어도_이벤트가_있으면_라인_없이_0원으로_확정한다() {
+    UUID organizationId = insertOrganization();
+    insertBillableMetric(organizationId, "api-calls", "count");
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "count", 3, "2026-08-11T12:00:00+09:00");
+
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
+    flushAndClear();
+
+    assertThat(invoice.getTotalAmount()).isZero();
+    assertThat(lines(organizationId, invoice)).isEmpty();
+  }
+
+  @Test
+  void 이미_확정된_고객과_달은_건너뛴다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, acme, AUGUST).orElseThrow();
+    insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-08-20T12:00:00+09:00");
+
+    assertThat(invoiceFinalizationService.finalize(organizationId, acme, AUGUST)).isEmpty();
+
+    assertThat(invoiceRepository.findNewestFirst(organizationId, acme, "2026-08"))
+        .extracting(Invoice::getId)
+        .containsExactly(invoice.getId());
+  }
+
+  @Test
+  void 같은_고객도_달이_다르면_따로_확정한다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-09-10T12:00:00+09:00");
+
+    invoiceFinalizationService.finalize(organizationId, acme, AUGUST);
+    Invoice september =
+        invoiceFinalizationService
+            .finalize(organizationId, acme, AUGUST.plusMonths(1))
+            .orElseThrow();
+
+    assertThat(september.getPeriod()).isEqualTo("2026-09");
+    assertThat(september.getSupplyAmount()).isEqualTo(500);
+  }
+
+  @Test
+  void 다른_고객의_사용량은_금액에_들어가지_않는다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, "token", 1000, "2026-08-10T12:00:00+09:00");
+
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, beta, AUGUST).orElseThrow();
+
+    assertThat(invoice.getCustomerName()).isEqualTo("베타");
+    assertThat(invoice.getSupplyAmount()).isEqualTo(500);
+  }
+
+  @Test
+  void 없는_고객이나_다른_도입사의_고객이면_customer_not_found다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID otherCustomerId = insertCustomer(insertOrganization(), "베타");
+
+    assertThatThrownBy(
+            () -> invoiceFinalizationService.finalize(organizationId, UUID.randomUUID(), AUGUST))
+        .isInstanceOf(NotFoundException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND);
+    assertThatThrownBy(
+            () -> invoiceFinalizationService.finalize(organizationId, otherCustomerId, AUGUST))
+        .isInstanceOf(NotFoundException.class);
   }
 
   // --- 헬퍼 ---
