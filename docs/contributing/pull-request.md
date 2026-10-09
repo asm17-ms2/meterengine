@@ -10,7 +10,7 @@
 - 필수 체크는 main 룰셋의 Required status checks에 등록한다.
   - `ci.yml`의 `backend`, `frontend`.
   - `adr-checklist.yml`의 `adr-checklist`. `adr` 라벨이 붙은 PR에서 돌고 체크 안 된 항목이 있으면 실패한다.
-- 제안과 사전 합의 절차는 `governance.md` "제안"과 "토의 위치"를 따른다.
+- 제안과 사전 합의 절차는 `governance.md` "사전 합의", "제안"과 "토의 위치"를 따른다.
   - Draft로 열지 않는다. ADR PR은 `label:adr`로 거른다.
 
 ## PR 크기와 쪼개기
@@ -123,7 +123,7 @@
 | `deploy/` | 운영 배포 설정과 스크립트 | 잘못 나가면 서비스가 내려간다 |
 | `docker-compose.yml` | 로컬 환경 정의 | 깨지면 전원이 같이 멈춘다 |
 | `docs/adr/`, `docs/rfcs/` | 아키텍처 결정과 기존 기록 | 정족수가 전원이다 |
-| `docs/policies/` | 정책 값 | 코드 동작을 정한다 |
+| `docs/policies/` | 처리 조건, 예외와 적용값 | 코드 동작을 정한다 |
 | `docs/contributing/`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 쌓이면 되돌릴 것이 코드가 된다 |
 | `.github/` | CI, CODEOWNERS, PR 템플릿 | 머지 조건 자체를 바꾼다 |
 
