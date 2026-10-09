@@ -14,6 +14,14 @@ export type CustomerResponse = {
   created_at: string;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** 쿼리의 고객 id. UUID가 아니면 undefined로 두어 서버에 보내지 않는다. */
+export function readCustomerId(raw: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value && UUID_PATTERN.test(value) ? value : undefined;
+}
+
 export async function listCustomers(
   devState: DevState,
 ): Promise<Result<ListCustomersResponse>> {
