@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/events", label: "이벤트 로그" },
   { href: "/usage", label: "사용량 집계" },
   { href: "/billing", label: "청구 예정액" },
+  { href: "/invoices", label: "인보이스" },
   { href: "/customers", label: "고객" },
   { href: "/billable-metrics", label: "미터" },
   { href: "/billable-metric-prices", label: "가격" },

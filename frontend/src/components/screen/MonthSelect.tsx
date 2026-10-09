@@ -17,7 +17,8 @@ export function MonthSelect({
 
   function handleChange(nextMonth: string) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("month", nextMonth);
+    if (nextMonth === "") params.delete("month");
+    else params.set("month", nextMonth);
     params.delete("page");
     router.push(`${pathname}?${params.toString()}`);
   }
