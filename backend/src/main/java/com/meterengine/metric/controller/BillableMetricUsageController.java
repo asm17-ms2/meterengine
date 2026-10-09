@@ -1,5 +1,6 @@
 package com.meterengine.metric.controller;
 
+import com.meterengine.event.dto.ReceivedAtRange;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
@@ -64,6 +65,8 @@ public class BillableMetricUsageController {
           YearMonth month) {
     YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
     return ListBillableMetricUsagesResponse.of(
-        targetMonth, billableMetricUsageService.aggregate(organizationId, targetMonth));
+        targetMonth,
+        billableMetricUsageService.aggregate(
+            organizationId, targetMonth, ReceivedAtRange.unbounded()));
   }
 }

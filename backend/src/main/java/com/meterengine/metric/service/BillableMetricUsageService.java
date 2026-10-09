@@ -2,6 +2,7 @@ package com.meterengine.metric.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.event.dto.ReceivedAtRange;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.entity.BillableMetric;
@@ -40,7 +41,8 @@ public class BillableMetricUsageService {
   }
 
   @Transactional(readOnly = true)
-  public List<BillableMetricUsage> aggregate(UUID organizationId, YearMonth month) {
+  public List<BillableMetricUsage> aggregate(
+      UUID organizationId, YearMonth month, ReceivedAtRange receivedAtRange) {
     List<BillableMetric> billableMetrics =
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId);
     if (billableMetrics.isEmpty()) {
@@ -54,7 +56,7 @@ public class BillableMetricUsageService {
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
 
     return billableMetrics.stream()
-        .map(billableMetric -> aggregate(billableMetric, customers, start, end))
+        .map(billableMetric -> aggregate(billableMetric, customers, start, end, receivedAtRange))
         .toList();
   }
 
@@ -62,7 +64,8 @@ public class BillableMetricUsageService {
       BillableMetric billableMetric,
       List<Customer> customers,
       OffsetDateTime start,
-      OffsetDateTime end) {
+      OffsetDateTime end,
+      ReceivedAtRange receivedAtRange) {
     requireSupported(billableMetric);
 
     Map<UUID, BigDecimal> quantityByCustomerId =
@@ -71,7 +74,8 @@ public class BillableMetricUsageService {
             billableMetric.getEventType(),
             billableMetric.getTargetProperty(),
             start,
-            end);
+            end,
+            receivedAtRange);
 
     List<CustomerUsage> customerUsages =
         customers.stream()

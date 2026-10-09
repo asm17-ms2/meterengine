@@ -1,5 +1,6 @@
 package com.meterengine.invoice.controller;
 
+import com.meterengine.event.dto.ReceivedAtRange;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
@@ -61,6 +62,6 @@ public class DraftInvoiceController {
           @FourDigitYear
           YearMonth month) {
     YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return draftInvoiceService.preview(organizationId, targetMonth);
+    return draftInvoiceService.preview(organizationId, targetMonth, ReceivedAtRange.unbounded());
   }
 }

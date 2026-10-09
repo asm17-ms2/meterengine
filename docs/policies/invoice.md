@@ -17,3 +17,8 @@
 ## 집계 기준
 
 기간과 월 경계와 `month` 파라미터는 청구 예정액이 집계에서 그대로 받아 쓴다. 그 값의 정본은 `backend/openapi.yaml`의 `aggregateBillableMetricUsages` description이다.
+
+| 항목 | 값 | 코드 위치 |
+|---|---|---|
+| 수신 시각 구간 | 조회는 달과 함께 서버가 이벤트를 받은 시각의 시작과 마감을 받는다. 시작 이상, 마감 미만만 읽는다 | `ReceivedAtRange`, `ReceivedAtRangeIntegrationTest` |
+| 예정액 조회와 사용량 조회의 구간 | 거르지 않는다. 받은 이벤트를 모두 넣는다 | `ReceivedAtRange.unbounded` |

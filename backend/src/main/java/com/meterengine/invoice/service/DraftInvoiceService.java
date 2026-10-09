@@ -2,6 +2,7 @@ package com.meterengine.invoice.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.event.dto.ReceivedAtRange;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -10,7 +11,6 @@ import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -37,7 +37,8 @@ public class DraftInvoiceService {
   }
 
   @Transactional(readOnly = true)
-  public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
+  public DraftInvoiceResponse preview(
+      UUID organizationId, YearMonth month, ReceivedAtRange receivedAtRange) {
     OffsetDateTime calculatedAt = OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
     List<Customer> organizationCustomers =
@@ -47,7 +48,7 @@ public class DraftInvoiceService {
         priceRateRepository.findBaseUnitPriceByBillableMetricCode(organizationId);
 
     List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers =
-        billableMetricUsageService.aggregate(organizationId, month).stream()
+        billableMetricUsageService.aggregate(organizationId, month, receivedAtRange).stream()
             .filter(
                 billableMetricUsage ->
                     baseUnitPriceByBillableMetricCode.containsKey(
@@ -64,9 +65,7 @@ public class DraftInvoiceService {
             .toList();
 
     long totalAmount =
-        draftInvoiceCustomers.stream()
-            .mapToLong(DraftInvoiceCustomer::amount)
-            .reduce(0L, Math::addExact);
+        InvoiceAmount.sum(draftInvoiceCustomers.stream().mapToLong(DraftInvoiceCustomer::amount));
 
     return new DraftInvoiceResponse(
         month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
@@ -80,8 +79,7 @@ public class DraftInvoiceService {
             .map(quantities -> quantities.toDraftInvoiceLine(customer.getId()))
             .toList();
 
-    long amount =
-        draftInvoiceLines.stream().mapToLong(DraftInvoiceLine::amount).reduce(0L, Math::addExact);
+    long amount = InvoiceAmount.sum(draftInvoiceLines.stream().mapToLong(DraftInvoiceLine::amount));
 
     return new DraftInvoiceCustomer(
         customer.getId(), customer.getName(), amount, draftInvoiceLines);
@@ -110,11 +108,11 @@ public class DraftInvoiceService {
       BigDecimal quantity = quantityByCustomerId.getOrDefault(customerId, BigDecimal.ZERO);
 
       return new DraftInvoiceLine(
-          billableMetricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
+          billableMetricCode,
+          targetProperty,
+          quantity,
+          unitPrice,
+          InvoiceAmount.ofLine(quantity, unitPrice));
     }
-  }
-
-  private static long charge(BigDecimal quantity, BigDecimal unitPrice) {
-    return quantity.multiply(unitPrice).setScale(-1, RoundingMode.DOWN).longValueExact();
   }
 }
