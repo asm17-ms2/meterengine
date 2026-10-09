@@ -122,7 +122,7 @@ docker build -t meterengine-backend .
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
 | `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
-| `invoice` | 청구 예정액 조회, 확정 인보이스 목록 조회 | `/v1/invoices`, `/v1/invoices/draft` |
+| `invoice` | 청구 예정액 조회, 인보이스 확정, 확정 인보이스 목록 조회 | `/v1/invoices`, `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
 | `payment` | 토스페이먼츠 연동: 빌링키 보관, 결제 시도 기록 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
