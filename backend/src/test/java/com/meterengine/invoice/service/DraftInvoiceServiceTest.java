@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.event.dto.ReceivedAtRange;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -30,6 +31,7 @@ class DraftInvoiceServiceTest {
 
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
+  private static final ReceivedAtRange UNBOUNDED = ReceivedAtRange.unbounded();
 
   @Mock private BillableMetricUsageService billableMetricUsageService;
   @Mock private CustomerRepository customerRepository;
@@ -49,12 +51,12 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3280")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     assertThat(response.month()).isEqualTo("2026-08");
     assertThat(response.calculatedAt()).isNotNull();
@@ -77,12 +79,12 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3299")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     assertThat(response.customers().getFirst().amount()).isEqualTo(1640);
   }
@@ -92,12 +94,12 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "19")));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     assertThat(response.customers().getFirst().lines().getFirst().amount()).isZero();
     assertThat(response.totalAmount()).isZero();
@@ -108,7 +110,7 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3299"),
@@ -119,7 +121,7 @@ class DraftInvoiceServiceTest {
                 "token-usage", new BigDecimal("0.5"),
                 "api-request-count", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     DraftInvoiceCustomer draftInvoiceCustomer = response.customers().getFirst();
     assertThat(draftInvoiceCustomer.lines())
@@ -135,7 +137,7 @@ class DraftInvoiceServiceTest {
     Customer beta = customer("베타");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme, beta));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(
             List.of(
                 new BillableMetricUsage(
@@ -147,7 +149,7 @@ class DraftInvoiceServiceTest {
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        draftInvoiceService.preview(ORGANIZATION_ID, AUGUST).customers();
+        draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED).customers();
 
     DraftInvoiceCustomer betaDraftInvoiceCustomer = draftInvoiceCustomers.get(1);
     assertThat(betaDraftInvoiceCustomer.amount()).isZero();
@@ -163,11 +165,12 @@ class DraftInvoiceServiceTest {
     Customer beta = customer("베타");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme, beta));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST)).thenReturn(List.of());
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
+        .thenReturn(List.of());
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of());
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     assertThat(response.totalAmount()).isZero();
     assertThat(response.customers())
@@ -186,7 +189,7 @@ class DraftInvoiceServiceTest {
     Customer acme = customer("아크메");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST, UNBOUNDED))
         .thenReturn(
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3280"),
@@ -194,7 +197,7 @@ class DraftInvoiceServiceTest {
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
-    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, UNBOUNDED);
 
     assertThat(response.customers().getFirst().lines())
         .singleElement()
