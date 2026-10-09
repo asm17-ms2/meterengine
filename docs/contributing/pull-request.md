@@ -9,9 +9,9 @@
 - main은 항상 빌드와 테스트가 통과하는 상태다. CI가 실패하면 머지하지 않는다.
 - 필수 체크는 main 룰셋의 Required status checks에 등록한다.
   - `ci.yml`의 `backend`, `frontend`.
-  - `rfc-checklist.yml`의 `rfc-checklist`. `rfc` 라벨이 붙은 PR에서만 돌고 체크 안 된 항목이 있으면 실패한다.
-- 무엇을 RFC PR, 규칙 PR, `proposal` PR로 올리는지는 `governance.md` "제안".
-  - Draft로 열지 않는다. 제안 PR은 `label:proposal`, RFC PR은 `label:rfc`로 거른다.
+  - `adr-checklist.yml`의 `adr-checklist`. `adr` 라벨이 붙은 PR에서 돌고 체크 안 된 항목이 있으면 실패한다.
+- 제안과 사전 합의 절차는 `governance.md` "제안"과 "토의 위치"를 따른다.
+  - Draft로 열지 않는다. ADR PR은 `label:adr`로 거른다.
 
 ## PR 크기와 쪼개기
 
@@ -73,7 +73,7 @@
 - 부모는 `--delete-branch` 없이 머지한다. CLI가 브랜치를 먼저 지우면 자식 PR이 닫힌다.
 - 부모가 머지되면 GitHub가 자식의 base를 main으로 바꾼다. 자식 PR에서 Update with rebase를 누른 뒤 리뷰한다.
   - 거절되면 부모가 커밋 여럿이었던 경우다. Update with merge commit을 누르거나 `git rebase --onto origin/main <부모 브랜치> <자식 브랜치>`.
-- 다른 PR 뒤에 머지돼야 하는 PR은 본문 맨 위에 "#N 머지 뒤에 머지한다"고 적는다. `proposal` PR이면 합의가 필요한 점 다음 줄에 적는다.
+- 다른 PR 뒤에 머지돼야 하는 PR은 본문 맨 위에 "#N 머지 뒤에 머지한다"고 적는다.
 
 ### 머지 순서
 
@@ -111,7 +111,7 @@
   - 팀원이 늘면 자동 배정 인원을 팀원 수에서 하나 뺀 값으로 올린다.
 - 판단이 갈릴 것 같으면 작성자가 두 번째 리뷰어를 지정할 수 있다. 지정된 사람은 모두 approve한다.
 - 스택은 리뷰어가 한 명이다. 첫 조각에 배정된 사람으로 나머지 조각을 맞추고, 스택을 한 번에 읽고 조각마다 approve한다.
-- 정족수가 전원인 PR(RFC, 절이 생기거나 없어지는 규칙 개정)은 배정과 무관하게 전원이 본다.
+- 정족수가 전원인 PR(ADR, 절이 생기거나 없어지는 규칙 개정)은 배정과 무관하게 전원이 본다.
 
 ### 보호 경로
 
@@ -122,7 +122,7 @@
 | `backend/build.gradle.kts`, `backend/settings.gradle.kts`, `backend/gradle/` | 의존성, 버전 카탈로그, Gradle 버전 | 하나를 올리면 다른 것이 어긋난다. 전원의 로컬 환경이 같이 바뀐다 |
 | `deploy/` | 운영 배포 설정과 스크립트 | 잘못 나가면 서비스가 내려간다 |
 | `docker-compose.yml` | 로컬 환경 정의 | 깨지면 전원이 같이 멈춘다 |
-| `docs/rfcs/` | 방향 결정 기록 | 정족수가 전원이다 |
+| `docs/adr/`, `docs/rfcs/` | 아키텍처 결정과 기존 기록 | 정족수가 전원이다 |
 | `docs/policies/` | 정책 값 | 코드 동작을 정한다 |
 | `docs/contributing/`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `docs/README.md` | 규칙과 정본 표 | 틀린 규칙대로 쌓이면 되돌릴 것이 코드가 된다 |
 | `.github/` | CI, CODEOWNERS, PR 템플릿 | 머지 조건 자체를 바꾼다 |
