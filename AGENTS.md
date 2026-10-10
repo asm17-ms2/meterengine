@@ -24,10 +24,10 @@ This file provides shared guidance to coding agents working with code in this re
 ## 규칙의 정본
 
 - 팀 규칙의 입구는 CONTRIBUTING.md이고 규칙은 `docs/contributing/`에 있다. 규칙을 여기 베끼지 않는다.
-  - 커밋 메시지: `git-workflow.md`. PR 크기, 스택, 리뷰: `pull-request.md`. 문서 양식과 README 점검: `documents.md`. 주석: `comments.md`.
-  - 무엇의 정본이 어디인지는 `governance.md` "정본". 새 문서를 만들기 전에 그 표를 보고 없으면 먼저 물어본다.
-- Discussion 제안을 작성하기 전에 `docs/contributing/governance.md`의 "토의 위치"와 거기서 연결한 양식을 읽고 따른다. API로 작성할 때도 양식의 항목과 필수 여부를 확인한다.
+  - 커밋 메시지: `git-workflow.md`. 머지 조건, PR 크기, 리뷰: `pull-request.md`. 금지 문자와 README 점검: `documents.md`. 주석: `comments.md`.
+  - 무엇을 어디에 두는지는 CONTRIBUTING.md의 표. 표에 없는 문서는 만들기 전에 먼저 물어본다.
 - PR을 올리기 전에 `documents.md` "README 점검"을 본다.
+- PR 리뷰와 Discussion 의견은 합의가 아닌 동의(consent)로 낸다. 다른 사람 영역은 one-way door 결정으로 내 영역이 깨질 때만 막고, 그 밖에는 p4 이하로 달거나 달지 않는다. 기준은 CONTRIBUTING.md "결정"과 `pull-request.md` "리뷰".
 - 아래는 코딩 에이전트가 특히 틀리기 쉬운 것만 짚는다.
 
 ## 팀과 협업 도구
@@ -35,23 +35,20 @@ This file provides shared guidance to coding agents working with code in this re
 - 팀: 박성종(팀 리드), 문인호, 양성지. 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기).
 - Jira/Confluence: https://asm17-ms2.atlassian.net (프로젝트 키 MS2).
 - Miro: 회의록, 일정, 브레인스토밍 초안.
-- Notion: 쓰지 않는다. 무료 플랜으로 얼려 두었고 내용을 옮기지 않는다 (`docs/contributing/governance.md` "노션"). 옛 기록을 볼 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다.
+- Notion: 쓰지 않는다. 무료 플랜으로 얼려 두었고 내용을 옮기지 않는다. 옛 기록을 볼 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다.
 - GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling).
 
 ## 개발 방법론
 
 - 빅뱅 설계를 하지 않는다. 얇은 수직 슬라이스 단위로 개발한다. 슬라이스 하나는 최소 폭으로 끝-대-끝을 관통한다.
-- PR은 사람이 리뷰하기 쉬운 단위가 대원칙이고 300줄 상한은 부가 규칙이다. 넘거나 읽기 힘들면 동작 단위로 조각내 스택 PR로 쌓는다.
-- 리팩터는 왜 하는지만 사람이 정하고 구체적인 이동은 도구에 맡긴다. 판정은 본문의 왜와 기존 테스트 통과다.
+- PR은 사람이 리뷰하기 쉬운 단위가 대원칙이고 300줄 상한은 부가 규칙이다.
 - 문서를 옮기거나 양식을 바꿀 때 에이전트는 중대한 내용이 빠지지 않았는지 확인한다. 사소한 누락도 사용자에게 보고하고 확인한다.
-  - 리뷰 규칙이 가벼운 것은 사람의 부담을 줄이려는 것이지 에이전트의 검증을 줄이는 것이 아니다.
 
 ## 스택 PR
 
-- 독립 PR이 먼저다. 스택 조건과 명령 대응표는 `docs/contributing/pull-request.md` "스택 PR".
-- GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.
+- 스택은 GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.
   - 2026-08 기준 public preview라 학습 데이터에 없다. `git checkout -b`, `git rebase --onto`, `git push --force` 대신 `gh stack init`, `gh stack sync`, `gh stack submit`.
-  - 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 `gh stack --help`.
+  - 확장이 없으면 `gh extension install github/gh-stack`. 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 `gh stack --help`.
 
 ## 주석
 
@@ -66,6 +63,6 @@ This file provides shared guidance to coding agents working with code in this re
 
 ## 출력 형식
 
-- 문서 양식과 금지 문자는 `docs/contributing/documents.md`. 응답에도 같다.
+- 금지 문자는 `docs/contributing/documents.md`. 응답에도 같다.
 - 한영 병기는 고유 제품명 첫 등장 시에만.
 - AI가 쓴 티가 나는 문구를 쓰지 않는다.

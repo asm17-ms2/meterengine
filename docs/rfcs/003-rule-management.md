@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "superseded"
 date: "2026-09-05"
 author: "박성종"
 domain: "process"
 ---
 
-> 기록 변경 안내: 2026-10-07에 확정한 [Discussion #276 최종안](https://github.com/asm17-ms2/meterengine/discussions/276#discussioncomment-18788293)으로 결정 기록의 명칭과 대상 판정 기준이 대체됐다. 현재 기준은 [governance.md](../contributing/governance.md)의 "가르는 기준"을 따른다. 기록을 저장소에 보관하고 현재 규칙은 규칙 문서에서 관리한다는 결정은 유지한다.
+> 폐기 안내: 이 RFC의 결정은 더 이상 적용하지 않는다. 결정 방식은 CONTRIBUTING.md "결정"을 따른다. 본문은 당시 기록으로 남긴다.
 
 # RFC-003: RFC는 되돌리면 계약, 데이터, 기술 선택이 같이 움직이는 결정에만 쓴다
 
