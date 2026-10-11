@@ -27,7 +27,7 @@ This file provides shared guidance to coding agents working with code in this re
   - 커밋 메시지: `git-workflow.md`. 머지 조건, PR 크기, 리뷰: `pull-request.md`. 금지 문자와 README 점검: `documents.md`. 주석: `comments.md`.
   - 무엇을 어디에 두는지는 CONTRIBUTING.md의 표. 표에 없는 문서는 만들기 전에 먼저 물어본다.
 - PR을 올리기 전에 `documents.md` "README 점검"을 본다.
-- PR 리뷰와 Discussion 의견은 합의가 아닌 동의(consent)로 낸다. 다른 사람 영역은 one-way door 결정으로 내 영역이 깨질 때만 막고, 그 밖에는 p4 이하로 달거나 달지 않는다. 기준은 CONTRIBUTING.md "결정"과 `pull-request.md` "리뷰".
+- PR 리뷰와 Discussion 의견은 합의(consensus)가 아닌 동의(consent)로 낸다. 다른 사람 영역은 one-way door 결정으로 내 영역이 깨질 때만 막고, 그 밖에는 p4 이하로 달거나 달지 않는다. 팀 전체에 제약을 거는 도구나 방식은 예외로 합의 대상이다. 기준은 CONTRIBUTING.md "결정"과 `pull-request.md` "리뷰".
 - 아래는 코딩 에이전트가 특히 틀리기 쉬운 것만 짚는다.
 
 ## 팀과 협업 도구
