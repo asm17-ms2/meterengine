@@ -4,8 +4,8 @@ import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 
-const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 110px";
-const MIN_WIDTH = 940;
+const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 160px 110px";
+const MIN_WIDTH = 1100;
 
 const HEAD_LABELS = [
   "코드",
@@ -13,8 +13,26 @@ const HEAD_LABELS = [
   "이벤트 타입",
   "집계 함수",
   "집계 대상 속성",
+  "차원 키",
   { label: "작업", right: true },
 ] as const;
+
+function DimensionPropertiesCell({ dimensionProperties }: { dimensionProperties: string[] }) {
+  if (dimensionProperties.length === 0) {
+    return <GridCell className="grid-cell--muted">없음</GridCell>;
+  }
+  return (
+    <GridCell>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {dimensionProperties.map((dimensionProperty) => (
+          <span key={dimensionProperty} className="tag tag-neutral grid-cell--mono">
+            {dimensionProperty}
+          </span>
+        ))}
+      </div>
+    </GridCell>
+  );
+}
 
 export function BillableMetricsTable({
   rows,
@@ -41,6 +59,7 @@ export function BillableMetricsTable({
           <GridCell className="grid-cell--mono grid-cell--muted grid-cell--truncate">
             {row.targetProperty}
           </GridCell>
+          <DimensionPropertiesCell dimensionProperties={row.dimensionProperties} />
           <GridCell className="grid-cell--actions">
             <button
               type="button"

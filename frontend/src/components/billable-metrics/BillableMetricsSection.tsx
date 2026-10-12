@@ -29,6 +29,7 @@ export async function BillableMetricsSection({
     eventType: billableMetric.event_type,
     aggregation: billableMetric.aggregation,
     targetProperty: billableMetric.target_property,
+    dimensionProperties: billableMetric.dimension_properties,
   }));
 
   return <BillableMetricsScreen rows={rows} />;

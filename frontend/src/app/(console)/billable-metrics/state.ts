@@ -6,9 +6,15 @@ export type BillableMetricRowView = {
   eventType: string;
   aggregation: string;
   targetProperty: string;
+  dimensionProperties: string[];
 };
 
-export type BillableMetricField = "code" | "name" | "event_type" | "target_property";
+export type BillableMetricField =
+  | "code"
+  | "name"
+  | "event_type"
+  | "target_property"
+  | "dimension_properties";
 
 export type BillableMetricFormState =
   | { status: "idle" }
@@ -21,7 +27,7 @@ export const BILLABLE_METRIC_FORM_IDLE: BillableMetricFormState = { status: "idl
 export type BillableMetricDeleteState =
   | { status: "idle" }
   | { status: "failed"; message: string }
-  | { status: "rejected"; reason: "events" | "policy"; name: string }
+  | { status: "rejected"; reason: "events" | "price_rates"; name: string }
   | { status: "gone"; name: string }
   | { status: "done" };
 

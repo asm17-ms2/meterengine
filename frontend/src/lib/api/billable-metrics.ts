@@ -10,13 +10,19 @@ export type BillableMetricResponse = {
   event_type: string;
   aggregation: string;
   target_property: string;
+  dimension_properties: string[];
 };
 
 export type ListBillableMetricsResponse = {
   billable_metrics: BillableMetricResponse[];
 };
 
-export type CreateBillableMetricRequest = BillableMetricResponse;
+export type CreateBillableMetricRequest = Omit<
+  BillableMetricResponse,
+  "dimension_properties"
+> & {
+  dimension_properties?: string[];
+};
 
 export type UpdateBillableMetricRequest = Omit<CreateBillableMetricRequest, "code">;
 

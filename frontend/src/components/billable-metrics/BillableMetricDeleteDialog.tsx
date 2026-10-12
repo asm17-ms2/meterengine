@@ -36,8 +36,8 @@ export function BillableMetricDeleteDialog({
     ) : (
       <Notice
         title="삭제할 수 없습니다"
-        body={`${state.name} 미터를 가격 정책이 참조하고 있습니다. 정책이 참조하는 미터는 삭제할 수 없습니다.`}
-        note="서버가 가격 정책 참조를 확인하고 거절했습니다 (409)."
+        body={`${state.name} 미터에 단가가 붙어 있습니다. 단가가 있는 미터는 삭제할 수 없습니다.`}
+        note="서버가 단가 존재를 확인하고 거절했습니다 (409)."
         onClose={onClose}
       />
     );
