@@ -4,24 +4,26 @@ import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
+export type DimensionValues = Record<string, string | number | boolean>;
+
+export type BillableMetricPricePriceRate = {
+  dimension_values: DimensionValues;
+  unit_price: number;
+};
+
 export type BillableMetricPriceResponse = {
   billable_metric_code: string;
-  dimension_properties: string[] | null;
-  unit_price: number | null;
+  dimension_properties: string[];
+  price_rates: BillableMetricPricePriceRate[];
 };
 
 export type ListBillableMetricPricesResponse = {
   billable_metric_prices: BillableMetricPriceResponse[];
 };
 
-export type CreatePricePolicyRequest = {
-  dimension_properties: string[];
-};
+export type CreatePriceRateRequest = BillableMetricPricePriceRate;
 
-export type PricePolicyResponse = {
-  billable_metric_code: string;
-  dimension_properties: string[];
-};
+export type PriceRateResponse = BillableMetricPricePriceRate & { billable_metric_code: string };
 
 export async function listBillableMetricPrices(
   devState: DevState,
@@ -47,13 +49,25 @@ export async function listBillableMetricPrices(
   );
 }
 
-export async function createPricePolicy(
+export async function createPriceRate(
   billableMetricCode: string,
-  request: CreatePricePolicyRequest,
-): Promise<Result<PricePolicyResponse>> {
-  return serverSend<PricePolicyResponse>(
+  request: CreatePriceRateRequest,
+): Promise<Result<PriceRateResponse>> {
+  return serverSend<PriceRateResponse>(
     config.apiBaseUrl,
-    `/v1/billable-metrics/${encodeURIComponent(billableMetricCode)}/price-policy`,
+    `/v1/billable-metrics/${encodeURIComponent(billableMetricCode)}/price-rates`,
     { method: "POST", body: request },
+  );
+}
+
+export async function deletePriceRate(
+  billableMetricCode: string,
+  dimensionValues: DimensionValues,
+): Promise<Result<void>> {
+  const query = encodeURIComponent(JSON.stringify(dimensionValues));
+  return serverSend<void>(
+    config.apiBaseUrl,
+    `/v1/billable-metrics/${encodeURIComponent(billableMetricCode)}/price-rates?dimension_values=${query}`,
+    { method: "DELETE" },
   );
 }

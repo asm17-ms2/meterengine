@@ -1,22 +1,27 @@
 import type {
   BillableMetricPriceRowView,
-  BillableMetricPriceStatus,
+  PriceRateRowView,
 } from "@/app/(console)/billable-metric-prices/state";
 import { BillableMetricPricesFrame } from "@/components/billable-metric-prices/BillableMetricPricesFrame";
 import { BillableMetricPricesScreen } from "@/components/billable-metric-prices/BillableMetricPricesScreen";
 import { ErrorState } from "@/components/screen/ErrorState";
 import type {
-  BillableMetricPriceResponse,
+  BillableMetricPricePriceRate,
   ListBillableMetricPricesResponse,
 } from "@/lib/api/billable-metric-prices";
 import type { ListBillableMetricsResponse } from "@/lib/api/billable-metrics";
 import type { Result } from "@/lib/api/client";
 import { formatKrw } from "@/lib/format";
 
-function toStatus(price: BillableMetricPriceResponse): BillableMetricPriceStatus {
-  if (price.dimension_properties === null) return "no_policy";
-  if (price.unit_price === null) return "no_rate";
-  return "billing";
+const DEFAULT_COMBINATION_LABEL = "기본";
+
+function toPriceRateRow(priceRate: BillableMetricPricePriceRate): PriceRateRowView {
+  const pairs = Object.entries(priceRate.dimension_values).map(([key, value]) => `${key}=${value}`);
+  return {
+    dimensionValues: priceRate.dimension_values,
+    combination: pairs.length === 0 ? DEFAULT_COMBINATION_LABEL : pairs.join(", "),
+    unitPrice: formatKrw(priceRate.unit_price),
+  };
 }
 
 export async function BillableMetricPricesSection({
@@ -49,8 +54,8 @@ export async function BillableMetricPricesSection({
       code: price.billable_metric_code,
       name: nameByCode.get(price.billable_metric_code) ?? price.billable_metric_code,
       dimensionProperties: price.dimension_properties,
-      unitPrice: price.unit_price === null ? null : formatKrw(price.unit_price),
-      status: toStatus(price),
+      priceRates: price.price_rates.map(toPriceRateRow),
+      status: price.price_rates.length === 0 ? "no_rate" : "billing",
     }),
   );
 

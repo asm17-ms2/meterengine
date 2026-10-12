@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 
 import type { BillableMetricPriceRowView } from "@/app/(console)/billable-metric-prices/state";
 import { BillableMetricPricesTable } from "@/components/billable-metric-prices/BillableMetricPricesTable";
-import { PricePolicyFormDialog } from "@/components/billable-metric-prices/PricePolicyFormDialog";
+import { PriceRateFormDialog } from "@/components/billable-metric-prices/PriceRateFormDialog";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 
@@ -23,7 +23,6 @@ export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPrice
           (row) =>
             row.name.toLowerCase().includes(query) || row.code.toLowerCase().includes(query),
         );
-  const noPolicyCount = visibleRows.filter((row) => row.status === "no_policy").length;
   const noRateCount = visibleRows.filter((row) => row.status === "no_rate").length;
 
   return (
@@ -32,9 +31,6 @@ export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPrice
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span>
             미터 <b>{visibleRows.length}</b>개
-          </span>
-          <span>
-            정책 없음 <b>{noPolicyCount}</b>개
           </span>
           <span>
             단가 없음 <b>{noRateCount}</b>개
@@ -81,18 +77,18 @@ export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPrice
         </div>
       ) : (
         <>
-          <BillableMetricPricesTable rows={visibleRows} onRegisterPolicy={setRegistering} />
+          <BillableMetricPricesTable rows={visibleRows} onRegisterRate={setRegistering} />
           <div className="screen-footer">
             <span className="screen-note">
-              정렬: 코드 오름차순. 단가는 속성 조건 없는 기본 단가만 보입니다. 단가가 없는
-              미터는 청구 예정액에서 빠집니다.
+              정렬: 코드 오름차순, 조합 오름차순. 조합 &quot;기본&quot;은 속성 조건 없이 적용됩니다. 단가가
+              없는 조합은 청구 예정액에서 빠집니다.
             </span>
           </div>
         </>
       )}
 
       {registering ? (
-        <PricePolicyFormDialog
+        <PriceRateFormDialog
           key={registering.code}
           billableMetricPrice={registering}
           onClose={closeForm}

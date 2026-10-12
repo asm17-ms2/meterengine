@@ -2,52 +2,62 @@
 
 import { revalidatePath } from "next/cache";
 
-import {
-  DIMENSION_PROPERTIES_FIELD,
-  readDimensionProperties,
-} from "@/app/(console)/billable-metric-prices/dimension-properties";
-import type { PricePolicyFormState } from "@/app/(console)/billable-metric-prices/state";
-import { createPricePolicy } from "@/lib/api/billable-metric-prices";
-import { type ApiError, toDisplayMessage } from "@/lib/api/client";
+import type { PriceRateDeleteState, PriceRateFormState } from "@/app/(console)/billable-metric-prices/state";
+import { createPriceRate, deletePriceRate, type DimensionValues } from "@/lib/api/billable-metric-prices";
+import { toDisplayMessage } from "@/lib/api/client";
 
-const STALE_ROW_CODES = ["price_policy_already_exists", "billable_metric_not_found"];
+const PATH = "/billable-metric-prices";
 
-function isDimensionPropertiesField(field: string): boolean {
-  return (
-    field === DIMENSION_PROPERTIES_FIELD || field.startsWith(`${DIMENSION_PROPERTIES_FIELD}[`)
+function readText(formData: FormData, field: string): string {
+  const raw = formData.get(field);
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+function readDimensionValues(formData: FormData): DimensionValues {
+  const values = formData.getAll("dimension_value");
+  return Object.fromEntries(
+    formData.getAll("dimension_key").map((key, index) => [String(key), String(values[index] ?? "").trim()]),
   );
 }
 
-function toFailureState(error: ApiError): PricePolicyFormState {
-  const fieldError = error.errors?.find((candidate) =>
-    isDimensionPropertiesField(candidate.field),
-  );
-  if (fieldError) {
-    return { status: "invalid", fieldErrors: { dimension_properties: fieldError.message } };
-  }
-  if (STALE_ROW_CODES.includes(error.code)) {
-    revalidatePath("/billable-metric-prices");
-  }
-  return { status: "failed", message: toDisplayMessage(error) };
-}
-
-export async function createPricePolicyAction(
-  _prev: PricePolicyFormState,
+export async function createPriceRateAction(
+  _prev: PriceRateFormState,
   formData: FormData,
-): Promise<PricePolicyFormState> {
-  const code = formData.get("code");
-  if (typeof code !== "string" || code === "") {
-    return { status: "failed", message: "미터를 특정하지 못했습니다." };
+): Promise<PriceRateFormState> {
+  const code = readText(formData, "code");
+  const dimensionValues = readDimensionValues(formData);
+  const unitPriceText = readText(formData, "unit_price");
+  if (code === "") return { status: "failed", message: "미터를 특정하지 못했습니다." };
+  if (Object.values(dimensionValues).includes("")) {
+    return { status: "failed", message: "차원 키마다 값을 입력하세요." };
   }
+  if (unitPriceText === "") return { status: "failed", message: "단가를 입력하세요." };
 
-  const read = readDimensionProperties(formData);
-  if (!read.ok) {
-    return { status: "invalid", fieldErrors: { dimension_properties: read.message } };
-  }
+  const result = await createPriceRate(code, {
+    dimension_values: dimensionValues,
+    unit_price: Number(unitPriceText),
+  });
+  if (!result.ok) return { status: "failed", message: toDisplayMessage(result.error) };
 
-  const result = await createPricePolicy(code, { dimension_properties: read.keys });
-  if (!result.ok) return toFailureState(result.error);
-
-  revalidatePath("/billable-metric-prices");
+  revalidatePath(PATH);
   return { status: "done" };
+}
+
+export async function deletePriceRateAction(
+  _prev: PriceRateDeleteState,
+  formData: FormData,
+): Promise<PriceRateDeleteState> {
+  const code = readText(formData, "code");
+  const dimensionValues = readText(formData, "dimension_values");
+  if (code === "" || dimensionValues === "") {
+    return { status: "failed", message: "단가를 특정하지 못했습니다." };
+  }
+
+  const result = await deletePriceRate(code, JSON.parse(dimensionValues) as DimensionValues);
+  if (!result.ok && result.error.code !== "price_rate_not_found") {
+    return { status: "failed", message: toDisplayMessage(result.error) };
+  }
+
+  revalidatePath(PATH);
+  return { status: "idle" };
 }
