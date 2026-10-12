@@ -2,7 +2,9 @@ package com.meterengine.invoice.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.validation.FourDigitYear;
+import com.meterengine.invoice.dto.FinalizeInvoicesResponse;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
+import com.meterengine.invoice.service.InvoiceFinalizationService;
 import com.meterengine.invoice.service.InvoiceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +16,7 @@ import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,9 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class InvoiceController {
 
   private final InvoiceService invoiceService;
+  private final InvoiceFinalizationService invoiceFinalizationService;
 
-  InvoiceController(InvoiceService invoiceService) {
+  InvoiceController(
+      InvoiceService invoiceService, InvoiceFinalizationService invoiceFinalizationService) {
     this.invoiceService = invoiceService;
+    this.invoiceFinalizationService = invoiceFinalizationService;
   }
 
   @GetMapping
@@ -71,5 +77,39 @@ public class InvoiceController {
           @FourDigitYear
           YearMonth month) {
     return invoiceService.list(organizationId, customerId, month);
+  }
+
+  @PostMapping
+  @Operation(
+      summary = "인보이스 일괄 확정",
+      description =
+          """
+          그 달 청구 예정액이 0원이 아닌 고객을 한 번에 확정한다. 확정 금액과 라인은 그 시점의 청구 예정액과 같고, 세액은 공급가액의 10%다.
+          수량이 0인 라인은 인보이스에 싣지 않는다. 확정한 고객은 그 달 청구 예정액에서 빠진다.
+          그 달이 이미 확정된 고객은 건너뛴다. 그래서 같은 달로 다시 불러도 인보이스가 겹치지 않는다.
+          확정은 되돌릴 수 없고, 확정한 뒤 그 달에 들어온 그 고객의 이벤트는 청구되지 않는다.
+          finalized_count는 이번 호출로 새로 확정한 인보이스 수다. 확정된 내용은 인보이스 목록 조회로 본다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "확정한 달과 새로 확정한 인보이스 수. 확정할 고객이 없으면 0이다"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 없거나 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다")
+  })
+  public FinalizeInvoicesResponse finalizeInvoices(
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "확정할 달(yyyy-MM, KST).", example = "2026-08")
+          @RequestParam
+          @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
+          YearMonth month) {
+    return new FinalizeInvoicesResponse(
+        month.toString(), invoiceFinalizationService.finalize(organizationId, month).size());
   }
 }
