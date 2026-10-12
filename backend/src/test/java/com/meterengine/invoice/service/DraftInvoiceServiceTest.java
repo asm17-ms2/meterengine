@@ -143,8 +143,8 @@ class DraftInvoiceServiceTest {
                 new BillableMetricUsage(
                     billableMetric("token-usage", "token"),
                     List.of(
-                        new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500")),
-                        new CustomerUsage(beta.getId(), "베타", BigDecimal.ZERO)))));
+                        new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500"), List.of()),
+                        new CustomerUsage(beta.getId(), "베타", BigDecimal.ZERO, List.of())))));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
 
@@ -219,6 +219,8 @@ class DraftInvoiceServiceTest {
       BillableMetric billableMetric, Customer customer, String quantity) {
     return new BillableMetricUsage(
         billableMetric,
-        List.of(new CustomerUsage(customer.getId(), customer.getName(), new BigDecimal(quantity))));
+        List.of(
+            new CustomerUsage(
+                customer.getId(), customer.getName(), new BigDecimal(quantity), List.of())));
   }
 }
