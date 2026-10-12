@@ -115,7 +115,7 @@ docker build -t meterengine-backend .
 
 ## 구조
 
-단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안의 계층은 `docs/contributing/naming.md` "패키지"를 따른다.
+단일 Gradle 모듈이다. `com.meterengine` 아래에 도메인 패키지를 두고, 도메인 안의 계층은 `ClassNamingConventionTest.java`의 패키지 규칙이 검사한다.
 
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ docker build -t meterengine-backend .
 | `./gradlew build`가 컨테이너를 띄우지 못하고 실패한다 | Docker 데몬이 꺼져 있다 | Docker Desktop을 켠다 |
 | 기동이 `tosspayments.secret-key` 검증에서 실패한다 | `TOSSPAYMENTS_SECRET_KEY`를 빈 값으로 줬다 | 값을 주거나 변수를 빼서 기본값을 쓴다 |
 | 빌드가 포맷 검사에서 실패한다 | google-java-format 결과와 다르다 | `./gradlew spotlessApply` |
-| 빌드가 이름 검사에서 실패한다 | `docs/contributing/naming.md`의 케이스나 약어 규칙에 어긋난다 | `backend/build/reports/checkstyle/`의 보고서가 가리키는 이름을 고친다 |
+| 빌드가 이름 검사에서 실패한다 | Checkstyle의 케이스나 약어 규칙에 어긋난다 | `backend/build/reports/checkstyle/`의 보고서가 가리키는 이름을 고친다 |
 | 요청이 500 `internal_server_error`로 끝나고 로그에 외래 키 위반이 남는다 | `X-Organization-Id`가 등록된 도입사가 아니다 | 시드가 넣은 도입사 id를 쓴다 (위 "실행") |
 
 ```bash
