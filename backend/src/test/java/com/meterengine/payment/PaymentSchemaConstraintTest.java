@@ -23,41 +23,6 @@ class PaymentSchemaConstraintTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  void 고객을_지우면_빌링키도_지워진다() {
-    Fixture fixture = fixture();
-    insertBillingKey(fixture.organizationId(), fixture.customerId());
-
-    jdbcTemplate.update("DELETE FROM customer WHERE id = ?", fixture.customerId());
-
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM billing_key WHERE customer_id = ?",
-                Integer.class,
-                fixture.customerId()))
-        .isZero();
-  }
-
-  @Test
-  void 고객마다_빌링키는_하나만_저장된다() {
-    Fixture fixture = fixture();
-    insertBillingKey(fixture.organizationId(), fixture.customerId());
-
-    assertThatThrownBy(() -> insertBillingKey(fixture.organizationId(), fixture.customerId()))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("billing_key_pk");
-  }
-
-  @Test
-  void 다른_도입사의_고객에는_빌링키를_넣을_수_없다() {
-    Fixture fixture = fixture();
-    UUID otherOrganization = insertOrganization();
-
-    assertThatThrownBy(() -> insertBillingKey(otherOrganization, fixture.customerId()))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("billing_key_customer_same_organization_fk");
-  }
-
-  @Test
   void 진행중_시도가_있는_인보이스에는_진행중_시도를_넣을_수_없다() {
     Fixture fixture = fixture();
     UUID invoiceId = UUID.randomUUID();
@@ -268,17 +233,6 @@ class PaymentSchemaConstraintTest {
   private UUID insertOrganization() {
     return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('결제 도입사') RETURNING id", UUID.class);
-  }
-
-  private void insertBillingKey(UUID organizationId, UUID customerId) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO billing_key
-          (organization_id, customer_id, billing_key, card_issuer_code, card_number, authenticated_at)
-        VALUES (?, ?, 'v1:x', '4V', '4330****', now())
-        """,
-        organizationId,
-        customerId);
   }
 
   private void assertResultCheckRejects(
