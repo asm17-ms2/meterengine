@@ -77,13 +77,8 @@ docker build -t meterengine-backend .
 | `SPRING_DATASOURCE_URL` | DB 접속 URL (`jdbc:postgresql://<host>:5432/meterengine`) | 없음 |
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 | 없음 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 | 없음 |
-| `TOSSPAYMENTS_SECRET_KEY` | 토스페이먼츠 시크릿 키 | `test_sk_LOCAL_PLACEHOLDER` (자리표시자) |
-| `BILLING_KEY_ENCRYPTION_KEY` | 빌링키 열 암호화 키(base64, 32바이트) | 0으로 채운 자리표시자 키 |
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
-- `TOSSPAYMENTS_SECRET_KEY`의 기본값은 실제 키가 아니다. 이 값으로 토스페이먼츠 API를 부르면 거절당한다.
-  - 빈 값을 주면 `TossPaymentsProperties`의 `@NotBlank`가 기동을 실패시킨다.
-- `BILLING_KEY_ENCRYPTION_KEY`의 기본값은 로컬 전용이다. 32바이트가 아니면 기동이 실패한다.
 - 운영에서는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
@@ -124,7 +119,7 @@ docker build -t meterengine-backend .
 | `pricing` | 가격 정책과 단가 | `/v1/billable-metrics/{code}/price-policy`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회, 확정 인보이스 목록 조회 | `/v1/invoices`, `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
-| `payment` | 토스페이먼츠 연동: 빌링키 보관, 결제 시도 기록 | 없음 |
+| `payment` | 결제 시도 기록 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 
@@ -145,7 +140,6 @@ docker build -t meterengine-backend .
 | 기동이 Flyway 체크섬 불일치로 실패한다 | 이미 적용된 `V__` 파일을 고쳤다 | 로컬은 볼륨을 지우고 다시 만든다 (아래 명령). 배포 DB는 `deploy/README.md` |
 | 기동이 스키마 검증에서 실패한다 | 엔티티와 실제 테이블이 어긋났다 | 마이그레이션을 더하거나 엔티티를 맞춘다 |
 | `./gradlew build`가 컨테이너를 띄우지 못하고 실패한다 | Docker 데몬이 꺼져 있다 | Docker Desktop을 켠다 |
-| 기동이 `tosspayments.secret-key` 검증에서 실패한다 | `TOSSPAYMENTS_SECRET_KEY`를 빈 값으로 줬다 | 값을 주거나 변수를 빼서 기본값을 쓴다 |
 | 빌드가 포맷 검사에서 실패한다 | google-java-format 결과와 다르다 | `./gradlew spotlessApply` |
 | 빌드가 이름 검사에서 실패한다 | Checkstyle의 케이스나 약어 규칙에 어긋난다 | `backend/build/reports/checkstyle/`의 보고서가 가리키는 이름을 고친다 |
 | 요청이 500 `internal_server_error`로 끝나고 로그에 외래 키 위반이 남는다 | `X-Organization-Id`가 등록된 도입사가 아니다 | 시드가 넣은 도입사 id를 쓴다 (위 "실행") |

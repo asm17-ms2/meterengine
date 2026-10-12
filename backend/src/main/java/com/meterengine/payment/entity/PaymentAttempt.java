@@ -75,7 +75,7 @@ public class PaymentAttempt implements Persistable<UUID> {
     this.completedAt = completedAt;
   }
 
-  // 토스에 보내기 전의 시도를 만든다.
+  // PG에 보내기 전의 시도를 만든다.
   public static PaymentAttempt pending(
       UUID organizationId, UUID customerId, UUID invoiceId, long amount, String orderName) {
     return new PaymentAttempt(
@@ -91,7 +91,7 @@ public class PaymentAttempt implements Persistable<UUID> {
         null);
   }
 
-  // 토스에 보내지 못하고 끝난 시도를 만든다.
+  // PG에 보내지 못하고 끝난 시도를 만든다.
   public static PaymentAttempt failedBeforeRequest(
       UUID organizationId,
       UUID customerId,
