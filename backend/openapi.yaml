@@ -641,10 +641,51 @@ paths:
       summary: 인보이스 목록 조회
       tags:
       - invoice-controller
+    post:
+      description: |
+        그 달 청구 예정액이 0원이 아닌 고객을 한 번에 확정한다. 확정 금액과 라인은 그 시점의 청구 예정액과 같고, 세액은 공급가액의 10%다.
+        수량이 0인 라인은 인보이스에 싣지 않는다. 확정한 고객은 그 달 청구 예정액에서 빠진다.
+        그 달이 이미 확정된 고객은 건너뛴다. 그래서 같은 달로 다시 불러도 인보이스가 겹치지 않는다.
+        확정은 되돌릴 수 없고, 확정한 뒤 그 달에 들어온 그 고객의 이벤트는 청구되지 않는다.
+        finalized_count는 이번 호출로 새로 확정한 인보이스 수다. 확정된 내용은 인보이스 목록 조회로 본다.
+      operationId: finalizeInvoices
+      parameters:
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: "확정할 달(yyyy-MM, KST)."
+        example: 2026-08
+        in: query
+        name: month
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FinalizeInvoicesResponse"
+          description: 확정한 달과 새로 확정한 인보이스 수. 확정할 고객이 없으면 0이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
+            \ month가 없거나 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
+      summary: 인보이스 일괄 확정
+      tags:
+      - invoice-controller
   /v1/invoices/draft:
     get:
       description: |
-        모든 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+        아직 확정하지 않은 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+        그 달이 확정된 고객은 나오지 않고 total_amount는 남은 고객의 합이다. 확정된 금액은 인보이스 목록 조회로 본다.
         조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
         금액은 원 단위 정수다. 라인(고객 x 미터)마다 10원 미만을 버린 뒤 합산한다. 10원이 안 되는 라인은 0원이다.
         이벤트가 없는 고객도 단가가 있는 미터마다 수량 0, 금액 0인 라인이 나온다.
@@ -671,7 +712,8 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/DraftInvoiceResponse"
-          description: 고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다
+          description: 고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다. 모든 고객이 확정됐으면 customers가
+            빈 배열이고 total_amount가 0이다
         "400":
           content:
             application/json:
@@ -682,6 +724,60 @@ paths:
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
+  /v1/invoices/{id}/payment-attempts:
+    post:
+      description: |
+        인보이스의 total_amount를 그 인보이스의 고객에게 청구한다. 본문은 받지 않는다.
+        지금은 Mock PG라 항상 승인되고, status=done인 결제 시도가 남는다. payment_key는 PG가 준 승인 키다.
+        인보이스 하나에 결제 중이거나 결제된 시도는 하나뿐이다. 이미 있으면 409다.
+        requested_at과 completed_at은 KST(+09:00)로 나온다.
+      operationId: createPaymentAttempt
+      parameters:
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 결제할 인보이스의 id.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentAttemptResponse"
+          description: 승인된 결제 시도
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
+            \ 경로의 id가 UUID가 아니다"
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invoice_not_found: 그런 인보이스가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=invoice_already_paid: 이 인보이스에 결제 중이거나 결제된 시도가 이미 있다.
+            code=invoice_amount_zero: 인보이스의 total_amount가 0원이다.
+      summary: 인보이스 결제 요청
+      tags:
+      - payment-attempt-controller
   /v1/usage:
     get:
       description: |
@@ -899,6 +995,7 @@ components:
           - customer_not_found
           - billable_metric_not_found
           - price_policy_not_found
+          - invoice_not_found
           - endpoint_not_found
           - method_not_allowed
           - response_type_not_acceptable
@@ -910,6 +1007,8 @@ components:
           - billable_metric_event_type_target_property_already_exists
           - price_policy_already_exists
           - price_rate_already_exists
+          - invoice_already_paid
+          - invoice_amount_zero
           - upload_size_exceeded
           - request_type_not_supported
           - internal_server_error
@@ -959,6 +1058,14 @@ components:
           type: string
           description: 이 자리의 값이 거절된 이유.
           example: 공백일 수 없습니다
+    FinalizeInvoicesResponse:
+      type: object
+      properties:
+        finalized_count:
+          type: integer
+          format: int32
+        month:
+          type: string
     IngestEventRequest:
       type: object
       properties:
@@ -1089,6 +1196,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceResponse"
+    PaymentAttemptResponse:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        completed_at:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        invoice_id:
+          type: string
+          format: uuid
+        payment_key:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+        status:
+          type: string
     PricePolicyResponse:
       type: object
       properties:

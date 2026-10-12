@@ -214,6 +214,47 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
+  void 그_달이_확정된_고객은_나오지_않고_total_amount에서도_빠진다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, 1000, "2026-08-10T12:00:00+09:00");
+    insertInvoice(organizationId, acme, AUGUST);
+
+    MvcTestResult result = get(organizationId, AUGUST);
+
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.customers[*].customer_id")
+        .asArray()
+        .containsExactly(beta.toString());
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(500);
+  }
+
+  @Test
+  void 다른_달의_확정은_영향을_주지_않고_모두_확정되면_customers가_빈_배열이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, 3280, "2026-08-10T12:00:00+09:00");
+    insertInvoice(organizationId, acme, "2026-09");
+
+    assertThat(get(organizationId, AUGUST))
+        .bodyJson()
+        .extractingPath("$.total_amount")
+        .isEqualTo(1640);
+    assertThat(get(organizationId, "2026-09"))
+        .bodyJson()
+        .extractingPath("$.customers")
+        .asArray()
+        .isEmpty();
+    assertThat(get(organizationId, "2026-09"))
+        .bodyJson()
+        .extractingPath("$.total_amount")
+        .isEqualTo(0);
+  }
+
+  @Test
   void 도입사_헤더가_없거나_형식이_틀리면_400이다() {
     assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(400);
     assertThat(
@@ -266,6 +307,19 @@ class DraftInvoiceIntegrationTest {
         UUID.class,
         organizationId,
         name);
+  }
+
+  private void insertInvoice(UUID organizationId, UUID customerId, String period) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO invoice
+          (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+           total_amount, finalized_at)
+        VALUES (?, ?, '확정 고객', ?, 1000, 100, 1100, now())
+        """,
+        organizationId,
+        customerId,
+        period);
   }
 
   private void insertEvent(
