@@ -17,9 +17,6 @@ import org.springframework.data.domain.Persistable;
 @IdClass(PriceRateId.class)
 public class PriceRate implements Persistable<PriceRateId> {
 
-  // 기본 단가가 붙는 조합이다.
-  public static final String BASE_DIMENSION_VALUES = "{}";
-
   @Id
   @Column(name = "organization_id")
   private UUID organizationId;

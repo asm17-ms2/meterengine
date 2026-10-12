@@ -7,13 +7,13 @@ import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
-import com.meterengine.pricing.entity.PriceRate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class InvoiceFinalizationService {
@@ -23,14 +23,17 @@ public class InvoiceFinalizationService {
   private final DraftInvoiceService draftInvoiceService;
   private final InvoiceRepository invoiceRepository;
   private final InvoiceLineRepository invoiceLineRepository;
+  private final JsonMapper jsonMapper;
 
   InvoiceFinalizationService(
       DraftInvoiceService draftInvoiceService,
       InvoiceRepository invoiceRepository,
-      InvoiceLineRepository invoiceLineRepository) {
+      InvoiceLineRepository invoiceLineRepository,
+      JsonMapper jsonMapper) {
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
+    this.jsonMapper = jsonMapper;
   }
 
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정한다.
@@ -77,14 +80,14 @@ public class InvoiceFinalizationService {
             .toList());
   }
 
-  private static InvoiceLine toInvoiceLine(Invoice invoice, DraftInvoiceLine draftInvoiceLine) {
+  private InvoiceLine toInvoiceLine(Invoice invoice, DraftInvoiceLine draftInvoiceLine) {
     return new InvoiceLine(
         UUID.randomUUID(),
         invoice.getOrganizationId(),
         invoice.getId(),
         draftInvoiceLine.billableMetricCode(),
         draftInvoiceLine.targetProperty(),
-        PriceRate.BASE_DIMENSION_VALUES,
+        jsonMapper.writeValueAsString(draftInvoiceLine.dimensionValues()),
         draftInvoiceLine.quantity(),
         draftInvoiceLine.unitPrice(),
         draftInvoiceLine.amount());

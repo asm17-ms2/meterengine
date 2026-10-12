@@ -156,7 +156,7 @@ def _verify_month(client: ApiClient, console: Console, stored: List[StoredEvent]
     print("== %s 검증 (서버: %s) ==" % (month, client.base_url))
     print("사용한 미터 정의 (서버 응답에서 유도, 시드와 눈으로 대조 가능):")
     for billable_metric in billable_metrics:
-        price = str(billable_metric.unit_price) if billable_metric.unit_price is not None else "미상(인보이스에 라인 없음)"
+        price = str(billable_metric.unit_price) if billable_metric.unit_price is not None else "없음(인보이스에 라인 없음, 금액 0)"
         print("  %s: event_type=%s, target_property=%s, %s, 단가 %s" % (billable_metric.code, billable_metric.event_type, billable_metric.target_property, billable_metric.aggregation, price))
 
     month_match = True
@@ -247,7 +247,7 @@ def _print_amount_table(console, expected: ExpectedMonth, invoice, roster, custo
         all_match = all_match and matched
         rows.append([
             roster[customer_id],
-            "미상" if expected_amount is None else str(expected_amount),
+            str(expected_amount),
             str(invoice_amount),
             console.ok("일치") if matched else console.fail("불일치"),
         ])
@@ -256,7 +256,7 @@ def _print_amount_table(console, expected: ExpectedMonth, invoice, roster, custo
     all_match = all_match and total_matched
     rows.append([
         "합계",
-        "미상" if expected.total_amount is None else str(expected.total_amount),
+        str(expected.total_amount),
         str(invoice_total),
         console.ok("일치") if total_matched else console.fail("불일치"),
     ])

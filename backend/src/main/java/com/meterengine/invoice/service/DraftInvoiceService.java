@@ -8,37 +8,51 @@ import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
+import com.meterengine.metric.dto.DimensionUsage;
+import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import com.meterengine.pricing.entity.PriceRate;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class DraftInvoiceService {
+
+  private static final TypeReference<Map<String, Object>> DIMENSION_VALUES_TYPE =
+      new TypeReference<>() {};
 
   private final BillableMetricUsageService billableMetricUsageService;
   private final CustomerRepository customerRepository;
   private final PriceRateRepository priceRateRepository;
   private final InvoiceRepository invoiceRepository;
+  private final JsonMapper jsonMapper;
 
   DraftInvoiceService(
       BillableMetricUsageService billableMetricUsageService,
       CustomerRepository customerRepository,
       PriceRateRepository priceRateRepository,
-      InvoiceRepository invoiceRepository) {
+      InvoiceRepository invoiceRepository,
+      JsonMapper jsonMapper) {
     this.billableMetricUsageService = billableMetricUsageService;
     this.customerRepository = customerRepository;
     this.priceRateRepository = priceRateRepository;
     this.invoiceRepository = invoiceRepository;
+    this.jsonMapper = jsonMapper;
   }
 
   @Transactional(readOnly = true)
@@ -52,24 +66,19 @@ public class DraftInvoiceService {
             .filter(customer -> !finalizedCustomerIds.contains(customer.getId()))
             .toList();
 
-    Map<String, BigDecimal> baseUnitPriceByBillableMetricCode =
-        priceRateRepository.findBaseUnitPriceByBillableMetricCode(organizationId);
+    Map<PriceRateKey, BigDecimal> unitPriceByPriceRateKey = unitPriceByPriceRateKey(organizationId);
 
-    List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers =
-        billableMetricUsageService.aggregate(organizationId, month).stream()
-            .filter(
-                billableMetricUsage ->
-                    baseUnitPriceByBillableMetricCode.containsKey(
-                        billableMetricUsage.billableMetric().getCode()))
-            .map(
-                billableMetricUsage ->
-                    BillableMetricQuantitiesByCustomer.of(
-                        billableMetricUsage, baseUnitPriceByBillableMetricCode))
-            .toList();
+    Map<UUID, List<DraftInvoiceLine>> draftInvoiceLinesByCustomerId =
+        draftInvoiceLinesByCustomerId(
+            billableMetricUsageService.aggregate(organizationId, month), unitPriceByPriceRateKey);
 
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
         organizationCustomers.stream()
-            .map(customer -> toDraftInvoiceCustomer(customer, billableMetricQuantitiesByCustomers))
+            .map(
+                customer ->
+                    toDraftInvoiceCustomer(
+                        customer,
+                        draftInvoiceLinesByCustomerId.getOrDefault(customer.getId(), List.of())))
             .toList();
 
     long totalAmount =
@@ -81,14 +90,65 @@ public class DraftInvoiceService {
         month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
   }
 
-  private static DraftInvoiceCustomer toDraftInvoiceCustomer(
-      Customer customer,
-      List<BillableMetricQuantitiesByCustomer> billableMetricQuantitiesByCustomers) {
-    List<DraftInvoiceLine> draftInvoiceLines =
-        billableMetricQuantitiesByCustomers.stream()
-            .map(quantities -> quantities.toDraftInvoiceLine(customer.getId()))
-            .toList();
+  private Map<PriceRateKey, BigDecimal> unitPriceByPriceRateKey(UUID organizationId) {
+    return priceRateRepository
+        .findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(organizationId)
+        .stream()
+        .collect(Collectors.toMap(this::toPriceRateKey, PriceRate::getUnitPrice));
+  }
 
+  private PriceRateKey toPriceRateKey(PriceRate priceRate) {
+    return new PriceRateKey(
+        priceRate.getBillableMetricCode(),
+        jsonMapper.readValue(priceRate.getDimensionValues(), DIMENSION_VALUES_TYPE));
+  }
+
+  private static Map<UUID, List<DraftInvoiceLine>> draftInvoiceLinesByCustomerId(
+      List<BillableMetricUsage> billableMetricUsages,
+      Map<PriceRateKey, BigDecimal> unitPriceByPriceRateKey) {
+    Map<UUID, List<DraftInvoiceLine>> draftInvoiceLinesByCustomerId = new HashMap<>();
+    for (BillableMetricUsage billableMetricUsage : billableMetricUsages) {
+      for (CustomerUsage customerUsage : billableMetricUsage.customers()) {
+        draftInvoiceLinesByCustomerId
+            .computeIfAbsent(customerUsage.customerId(), customerId -> new ArrayList<>())
+            .addAll(
+                toDraftInvoiceLines(
+                    billableMetricUsage.billableMetric(), customerUsage, unitPriceByPriceRateKey));
+      }
+    }
+    return draftInvoiceLinesByCustomerId;
+  }
+
+  // 단가가 있는 조합만 라인이 된다.
+  private static List<DraftInvoiceLine> toDraftInvoiceLines(
+      BillableMetric billableMetric,
+      CustomerUsage customerUsage,
+      Map<PriceRateKey, BigDecimal> unitPriceByPriceRateKey) {
+    return customerUsage.dimensionUsages().stream()
+        .flatMap(
+            dimensionUsage ->
+                Optional.ofNullable(
+                    unitPriceByPriceRateKey.get(
+                        new PriceRateKey(
+                            billableMetric.getCode(), dimensionUsage.dimensionValues())))
+                    .map(unitPrice -> toDraftInvoiceLine(billableMetric, dimensionUsage, unitPrice))
+                    .stream())
+        .toList();
+  }
+
+  private static DraftInvoiceLine toDraftInvoiceLine(
+      BillableMetric billableMetric, DimensionUsage dimensionUsage, BigDecimal unitPrice) {
+    return new DraftInvoiceLine(
+        billableMetric.getCode(),
+        billableMetric.getTargetProperty(),
+        dimensionUsage.dimensionValues(),
+        dimensionUsage.quantity(),
+        unitPrice,
+        charge(dimensionUsage.quantity(), unitPrice));
+  }
+
+  private static DraftInvoiceCustomer toDraftInvoiceCustomer(
+      Customer customer, List<DraftInvoiceLine> draftInvoiceLines) {
     long amount =
         draftInvoiceLines.stream().mapToLong(DraftInvoiceLine::amount).reduce(0L, Math::addExact);
 
@@ -96,34 +156,11 @@ public class DraftInvoiceService {
         customer.getId(), customer.getName(), amount, draftInvoiceLines);
   }
 
-  private record BillableMetricQuantitiesByCustomer(
-      String billableMetricCode,
-      String targetProperty,
-      BigDecimal unitPrice,
-      Map<UUID, BigDecimal> quantityByCustomerId) {
-
-    static BillableMetricQuantitiesByCustomer of(
-        BillableMetricUsage billableMetricUsage,
-        Map<String, BigDecimal> baseUnitPriceByBillableMetricCode) {
-      String billableMetricCode = billableMetricUsage.billableMetric().getCode();
-
-      return new BillableMetricQuantitiesByCustomer(
-          billableMetricCode,
-          billableMetricUsage.billableMetric().getTargetProperty(),
-          baseUnitPriceByBillableMetricCode.get(billableMetricCode),
-          billableMetricUsage.customers().stream()
-              .collect(Collectors.toMap(CustomerUsage::customerId, CustomerUsage::quantity)));
-    }
-
-    DraftInvoiceLine toDraftInvoiceLine(UUID customerId) {
-      BigDecimal quantity = quantityByCustomerId.getOrDefault(customerId, BigDecimal.ZERO);
-
-      return new DraftInvoiceLine(
-          billableMetricCode, targetProperty, quantity, unitPrice, charge(quantity, unitPrice));
-    }
-  }
-
   private static long charge(BigDecimal quantity, BigDecimal unitPrice) {
     return quantity.multiply(unitPrice).setScale(-1, RoundingMode.DOWN).longValueExact();
   }
+
+  // 단가를 찾는 키다.
+  private record PriceRateKey(
+      String billableMetricCode, Map<String, Object> dimensionValueByDimensionProperty) {}
 }
