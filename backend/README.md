@@ -9,7 +9,7 @@ MeterEngine 미터링 엔진 API 서버. 이벤트 수집, 집계, rating, 인�
 - API 계약의 정본은 `openapi.yaml`이고 빌드가 다시 만든다.
 - 테스트는 JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 PostgreSQL 컨테이너로 돈다.
 - 포맷은 Spotless + google-java-format, 이름 케이스는 Checkstyle. CI가 검사한다.
-- 코드와 문서 작성 규칙은 `docs/contributing/`, 도메인 정책은 `docs/policies/`에 있다.
+- 코드와 문서 작성 규칙은 `docs/contributing/`에 있다.
 
 ## 사전 준비
 
