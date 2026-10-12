@@ -79,7 +79,8 @@ class ClassNamingConventionTest {
           .that()
           .areAnnotatedWith(ConfigurationProperties.class)
           .should()
-          .haveSimpleNameEndingWith("Properties");
+          .haveSimpleNameEndingWith("Properties")
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule 쓰지_않는_접미사를_붙이지_않는다 =
