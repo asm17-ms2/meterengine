@@ -52,13 +52,15 @@ public class BillableMetric implements Persistable<BillableMetricId> {
       String name,
       String eventType,
       String aggregation,
-      String targetProperty) {
+      String targetProperty,
+      List<String> dimensionProperties) {
     this.organizationId = organizationId;
     this.code = code;
     this.name = name;
     this.eventType = eventType;
     this.aggregation = aggregation;
     this.targetProperty = targetProperty;
+    this.dimensionProperties = List.copyOf(dimensionProperties);
   }
 
   @PostLoad
@@ -86,11 +88,17 @@ public class BillableMetric implements Persistable<BillableMetricId> {
         && Objects.equals(this.targetProperty, targetProperty);
   }
 
-  public void update(String name, String eventType, String aggregation, String targetProperty) {
+  public void update(
+      String name,
+      String eventType,
+      String aggregation,
+      String targetProperty,
+      List<String> dimensionProperties) {
     this.name = name;
     this.eventType = eventType;
     this.aggregation = aggregation;
     this.targetProperty = targetProperty;
+    this.dimensionProperties = List.copyOf(dimensionProperties);
   }
 
   public UUID getOrganizationId() {

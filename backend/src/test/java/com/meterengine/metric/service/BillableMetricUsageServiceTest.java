@@ -142,7 +142,13 @@ class BillableMetricUsageServiceTest {
         .thenReturn(
             List.of(
                 new BillableMetric(
-                    ORGANIZATION_ID, "api-calls", "API 호출 수", "chat_completion", "COUNT", null)));
+                    ORGANIZATION_ID,
+                    "api-calls",
+                    "API 호출 수",
+                    "chat_completion",
+                    "COUNT",
+                    null,
+                    List.of())));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
 
@@ -161,7 +167,13 @@ class BillableMetricUsageServiceTest {
         .thenReturn(
             List.of(
                 new BillableMetric(
-                    ORGANIZATION_ID, "broken", "잘못 등록된 미터", "chat_completion", "sum", null)));
+                    ORGANIZATION_ID,
+                    "broken",
+                    "잘못 등록된 미터",
+                    "chat_completion",
+                    "sum",
+                    null,
+                    List.of())));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
 
@@ -175,6 +187,6 @@ class BillableMetricUsageServiceTest {
 
   private BillableMetric billableMetric(String code, String targetProperty) {
     return new BillableMetric(
-        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty);
+        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty, List.of());
   }
 }
