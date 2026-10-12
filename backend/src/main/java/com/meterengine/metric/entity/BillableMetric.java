@@ -7,8 +7,11 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
 @Entity
@@ -34,6 +37,10 @@ public class BillableMetric implements Persistable<BillableMetricId> {
 
   @Column(name = "target_property")
   private String targetProperty;
+
+  @JdbcTypeCode(SqlTypes.ARRAY)
+  @Column(name = "dimension_properties", nullable = false)
+  private List<String> dimensionProperties = List.of();
 
   @Transient private boolean isNew = true;
 
@@ -108,5 +115,9 @@ public class BillableMetric implements Persistable<BillableMetricId> {
 
   public String getTargetProperty() {
     return targetProperty;
+  }
+
+  public List<String> getDimensionProperties() {
+    return dimensionProperties;
   }
 }
