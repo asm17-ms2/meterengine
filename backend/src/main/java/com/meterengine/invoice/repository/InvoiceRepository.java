@@ -2,6 +2,7 @@ package com.meterengine.invoice.repository;
 
 import com.meterengine.invoice.entity.Invoice;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,4 +19,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
       ORDER BY i.period DESC, i.customerName ASC, i.customerId ASC
       """)
   List<Invoice> findNewestFirst(UUID organizationId, UUID customerId, String period);
+
+  Optional<Invoice> findByOrganizationIdAndId(UUID organizationId, UUID id);
 }
