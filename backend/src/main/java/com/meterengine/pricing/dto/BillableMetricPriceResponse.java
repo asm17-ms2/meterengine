@@ -2,7 +2,6 @@ package com.meterengine.pricing.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.math.BigDecimal;
 import java.util.List;
 
 public record BillableMetricPriceResponse(
@@ -11,14 +10,15 @@ public record BillableMetricPriceResponse(
         @JsonProperty("dimension_properties")
         List<String> dimensionProperties,
     @Schema(
-            nullable = true,
             description =
-                "속성 조건 없이 적용되는 기본 단가. 없으면 null이고, 그 미터는 청구 예정액에 라인이 나오지 않는다. 0은 무료라는 뜻이라 null과 다르다")
-        @JsonProperty("unit_price")
-        BigDecimal unitPrice) {
+                "속성 값 조합별 단가. dimension_values 오름차순이고, 단가가 하나도 없으면 빈 배열이라 그 미터는 청구 예정액에 라인이 나오지 않는다")
+        @JsonProperty("price_rates")
+        List<BillableMetricPricePriceRate> priceRates) {
 
   public static BillableMetricPriceResponse of(
-      String billableMetricCode, List<String> dimensionProperties, BigDecimal unitPrice) {
-    return new BillableMetricPriceResponse(billableMetricCode, dimensionProperties, unitPrice);
+      String billableMetricCode,
+      List<String> dimensionProperties,
+      List<BillableMetricPricePriceRate> priceRates) {
+    return new BillableMetricPriceResponse(billableMetricCode, dimensionProperties, priceRates);
   }
 }

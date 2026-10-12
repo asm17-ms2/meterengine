@@ -4,6 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -33,6 +36,8 @@ public class PriceRate implements Persistable<PriceRateId> {
   @Column(name = "unit_price", nullable = false)
   private BigDecimal unitPrice;
 
+  @Transient private boolean isNew = true;
+
   protected PriceRate() {}
 
   public PriceRate(
@@ -43,6 +48,16 @@ public class PriceRate implements Persistable<PriceRateId> {
     this.organizationId = organizationId;
     this.billableMetricCode = billableMetricCode;
     this.dimensionValues = dimensionValues;
+    this.unitPrice = unitPrice;
+  }
+
+  @PostLoad
+  @PostPersist
+  private void markNotNew() {
+    this.isNew = false;
+  }
+
+  public void updateUnitPrice(BigDecimal unitPrice) {
     this.unitPrice = unitPrice;
   }
 
@@ -69,6 +84,6 @@ public class PriceRate implements Persistable<PriceRateId> {
 
   @Override
   public boolean isNew() {
-    return true;
+    return isNew;
   }
 }

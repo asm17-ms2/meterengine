@@ -125,13 +125,33 @@ class OpenApiDocumentTest {
   }
 
   @Test
-  void 미터별_가격의_단가가_null을_허용한다() {
+  void 미터별_가격의_조합별_단가가_배열이다() {
     assertThat(json())
         .bodyJson()
         .extractingPath(
-            "$.components.schemas.BillableMetricPriceResponse.properties.unit_price.type")
-        .asArray()
-        .contains("null");
+            "$.components.schemas.BillableMetricPriceResponse.properties.price_rates.type")
+        .isEqualTo("array");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            "$.components.schemas.BillableMetricPricePriceRate.properties.dimension_values.type")
+        .isEqualTo("object");
+  }
+
+  @Test
+  void 단가_등록_경로가_있고_오류_응답이_ErrorResponse다() {
+    String priceRates = "$.paths['/v1/billable-metrics/{code}/price-rates']";
+    assertThat(json()).bodyJson().extractingPath(priceRates).asMap().containsKeys("post", "delete");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            priceRates + ".delete.responses.404.content['application/json'].schema['$ref']")
+        .isEqualTo("#/components/schemas/ErrorResponse");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath(
+            priceRates + ".post.responses.404.content['application/json'].schema['$ref']")
+        .isEqualTo("#/components/schemas/ErrorResponse");
   }
 
   @Test

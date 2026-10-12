@@ -14,6 +14,9 @@ public interface PriceRateRepository extends JpaRepository<PriceRate, PriceRateI
   boolean existsByOrganizationIdAndBillableMetricCode(
       UUID organizationId, String billableMetricCode);
 
+  List<PriceRate> findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+      UUID organizationId);
+
   List<PriceRate> findByOrganizationIdAndDimensionValues(
       UUID organizationId, String dimensionValues);
 

@@ -15,6 +15,7 @@ public enum ErrorCode {
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
   BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "미터를 찾을 수 없습니다"),
+  PRICE_RATE_NOT_FOUND(HttpStatus.NOT_FOUND, "단가를 찾을 수 없습니다"),
   INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "인보이스를 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
 
@@ -33,7 +34,6 @@ public enum ErrorCode {
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
-  PRICE_RATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 조합의 단가가 이미 있습니다"),
   INVOICE_ALREADY_PAID(HttpStatus.CONFLICT, "이미 결제했거나 결제 중인 인보이스입니다"),
   INVOICE_AMOUNT_ZERO(HttpStatus.CONFLICT, "청구 금액이 0원인 인보이스는 결제할 수 없습니다"),
 
