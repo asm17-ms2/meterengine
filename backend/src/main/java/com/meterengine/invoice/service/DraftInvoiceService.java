@@ -5,6 +5,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
+import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.service.BillableMetricUsageService;
@@ -15,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -26,22 +28,29 @@ public class DraftInvoiceService {
   private final BillableMetricUsageService billableMetricUsageService;
   private final CustomerRepository customerRepository;
   private final PriceRateRepository priceRateRepository;
+  private final InvoiceRepository invoiceRepository;
 
   DraftInvoiceService(
       BillableMetricUsageService billableMetricUsageService,
       CustomerRepository customerRepository,
-      PriceRateRepository priceRateRepository) {
+      PriceRateRepository priceRateRepository,
+      InvoiceRepository invoiceRepository) {
     this.billableMetricUsageService = billableMetricUsageService;
     this.customerRepository = customerRepository;
     this.priceRateRepository = priceRateRepository;
+    this.invoiceRepository = invoiceRepository;
   }
 
   @Transactional(readOnly = true)
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
     OffsetDateTime calculatedAt = OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
+    Set<UUID> finalizedCustomerIds =
+        Set.copyOf(invoiceRepository.findCustomerIds(organizationId, month.toString()));
     List<Customer> organizationCustomers =
-        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId).stream()
+            .filter(customer -> !finalizedCustomerIds.contains(customer.getId()))
+            .toList();
 
     Map<String, BigDecimal> baseUnitPriceByBillableMetricCode =
         priceRateRepository.findBaseUnitPriceByBillableMetricCode(organizationId);
