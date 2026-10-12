@@ -11,6 +11,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   @Query(
       """
+      SELECT i.customerId
+      FROM Invoice i
+      WHERE i.organizationId = :organizationId
+        AND i.period = :period
+      """)
+  List<UUID> findCustomerIds(UUID organizationId, String period);
+
+  @Query(
+      """
       SELECT i
       FROM Invoice i
       WHERE i.organizationId = :organizationId

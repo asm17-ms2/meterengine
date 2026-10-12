@@ -35,14 +35,18 @@ public class DraftInvoiceController {
       summary = "청구 예정액 조회",
       description =
           """
-          모든 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+          아직 확정하지 않은 고객의 청구 예정액을 미터별 사용량 x 단가로 계산해 돌려준다.
+          그 달이 확정된 고객은 나오지 않고 total_amount는 남은 고객의 합이다. 확정된 금액은 인보이스 목록 조회로 본다.
           조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
           금액은 원 단위 정수다. 라인(고객 x 미터)마다 10원 미만을 버린 뒤 합산한다. 10원이 안 되는 라인은 0원이다.
           이벤트가 없는 고객도 단가가 있는 미터마다 수량 0, 금액 0인 라인이 나온다.
           고객은 이름 오름차순, 라인은 미터 code 오름차순이다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다"),
+    @ApiResponse(
+        responseCode = "200",
+        description =
+            "고객별 청구 예정액. 등록한 미터가 없으면 각 고객의 lines가 빈 배열이다. 모든 고객이 확정됐으면 customers가 빈 배열이고 total_amount가 0이다"),
     @ApiResponse(
         responseCode = "400",
         content =
