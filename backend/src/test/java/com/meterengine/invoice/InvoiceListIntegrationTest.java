@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.invoice.entity.Invoice;
+import com.meterengine.invoice.entity.InvoiceLine;
+import com.meterengine.invoice.repository.InvoiceLineRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.UUID;
@@ -29,6 +32,7 @@ class InvoiceListIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private InvoiceRepository invoiceRepository;
+  @Autowired private InvoiceLineRepository invoiceLineRepository;
 
   private MockMvcTester mvc;
 
@@ -38,10 +42,12 @@ class InvoiceListIntegrationTest {
   }
 
   @Test
-  void 응답에_고객과_달과_KST_확정_시각과_저장된_합계가_나온다() {
+  void 응답에_고객과_달과_KST_확정_시각과_저장된_금액_구성과_라인이_나온다() {
     UUID organizationId = insertOrganization();
     UUID acme = insertCustomer(organizationId, "아크메");
     UUID invoiceId = insertInvoice(organizationId, acme, "2026-08", 12000);
+    insertInvoiceLine(organizationId, invoiceId, "token-usage", "token", "24000", "0.25", 6000);
+    insertInvoiceLine(organizationId, invoiceId, "api-call", null, "600", "10", 6000);
 
     assertThat(list(organizationId, ""))
         .hasStatusOk()
@@ -50,10 +56,42 @@ class InvoiceListIntegrationTest {
             """
             {"invoices": [{
               "id": "%s", "customer_id": "%s", "customer_name": "아크메", "month": "2026-08",
-              "finalized_at": "2026-09-01T14:00:00+09:00", "total_amount": 13200
+              "finalized_at": "2026-09-01T14:00:00+09:00",
+              "supply_amount": 12000, "tax_amount": 1200, "total_amount": 13200,
+              "lines": [
+                {"billable_metric_code": "api-call", "target_property": null,
+                 "quantity": 600, "unit_price": 10, "amount": 6000},
+                {"billable_metric_code": "token-usage", "target_property": "token",
+                 "quantity": 24000, "unit_price": 0.25, "amount": 6000}
+              ]
             }]}
             """
                 .formatted(invoiceId, acme));
+  }
+
+  @Test
+  void 라인은_자기_인보이스에만_실리고_라인이_없으면_빈_배열이다() {
+    UUID organizationId = insertOrganization();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID zeta = insertCustomer(organizationId, "제타상사");
+    UUID beta = insertCustomer(organizationId, "베타");
+    UUID acmeAugust = insertInvoice(organizationId, acme, "2026-08", 12000);
+    UUID zetaAugust = insertInvoice(organizationId, zeta, "2026-08", 5000);
+    insertInvoice(organizationId, beta, "2026-08", 0);
+    insertInvoiceLine(organizationId, acmeAugust, "api-call", null, "1200", "10", 12000);
+    insertInvoiceLine(organizationId, zetaAugust, "api-call", null, "500", "10", 5000);
+
+    assertThat(list(organizationId, ""))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.invoices[*].lines[*].amount")
+        .asArray()
+        .containsExactly(12000, 5000);
+    assertThat(list(organizationId, "?customer_id=" + beta))
+        .bodyJson()
+        .extractingPath("$.invoices[0].lines")
+        .asArray()
+        .isEmpty();
   }
 
   @Test
@@ -141,6 +179,27 @@ class InvoiceListIntegrationTest {
         UUID.class,
         organizationId,
         name);
+  }
+
+  private void insertInvoiceLine(
+      UUID organizationId,
+      UUID invoiceId,
+      String billableMetricCode,
+      String targetProperty,
+      String quantity,
+      String unitPrice,
+      long amount) {
+    invoiceLineRepository.save(
+        new InvoiceLine(
+            UUID.randomUUID(),
+            organizationId,
+            invoiceId,
+            billableMetricCode,
+            targetProperty,
+            "{}",
+            new BigDecimal(quantity),
+            new BigDecimal(unitPrice),
+            amount));
   }
 
   private UUID insertInvoice(
