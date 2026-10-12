@@ -17,6 +17,7 @@ public enum ErrorCode {
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
   BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "미터를 찾을 수 없습니다"),
   PRICE_POLICY_NOT_FOUND(HttpStatus.NOT_FOUND, "가격 정책을 찾을 수 없습니다"),
+  INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "인보이스를 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
 
   // 405 Method Not Allowed
@@ -36,6 +37,8 @@ public enum ErrorCode {
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
   PRICE_POLICY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 미터에는 가격 정책이 이미 있습니다"),
   PRICE_RATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 조합의 단가가 이미 있습니다"),
+  INVOICE_ALREADY_PAID(HttpStatus.CONFLICT, "이미 결제했거나 결제 중인 인보이스입니다"),
+  INVOICE_AMOUNT_ZERO(HttpStatus.CONFLICT, "청구 금액이 0원인 인보이스는 결제할 수 없습니다"),
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),

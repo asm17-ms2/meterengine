@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
@@ -52,66 +53,39 @@ public class PaymentAttempt implements Persistable<UUID> {
   protected PaymentAttempt() {}
 
   private PaymentAttempt(
+      UUID id,
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
       long amount,
       String orderName,
       String status,
-      String failureCode,
-      String failureMessage,
+      String paymentKey,
       OffsetDateTime requestedAt,
       OffsetDateTime completedAt) {
-    this.id = UUID.randomUUID();
+    this.id = id;
     this.organizationId = organizationId;
     this.customerId = customerId;
     this.invoiceId = invoiceId;
     this.amount = amount;
     this.orderName = orderName;
     this.status = status;
-    this.failureCode = failureCode;
-    this.failureMessage = failureMessage;
+    this.paymentKey = paymentKey;
     this.requestedAt = requestedAt;
     this.completedAt = completedAt;
   }
 
-  // PG에 보내기 전의 시도를 만든다.
-  public static PaymentAttempt pending(
-      UUID organizationId, UUID customerId, UUID invoiceId, long amount, String orderName) {
-    return new PaymentAttempt(
-        organizationId,
-        customerId,
-        invoiceId,
-        amount,
-        orderName,
-        PENDING,
-        null,
-        null,
-        OffsetDateTime.now(),
-        null);
-  }
-
-  // PG에 보내지 못하고 끝난 시도를 만든다.
-  public static PaymentAttempt failedBeforeRequest(
+  public static PaymentAttempt done(
+      UUID id,
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
       long amount,
       String orderName,
-      String failureCode,
-      String failureMessage) {
-    OffsetDateTime now = OffsetDateTime.now();
+      String paymentKey) {
+    OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     return new PaymentAttempt(
-        organizationId,
-        customerId,
-        invoiceId,
-        amount,
-        orderName,
-        FAILED,
-        failureCode,
-        failureMessage,
-        now,
-        now);
+        id, organizationId, customerId, invoiceId, amount, orderName, DONE, paymentKey, now, now);
   }
 
   @Override
@@ -122,14 +96,6 @@ public class PaymentAttempt implements Persistable<UUID> {
   @Override
   public boolean isNew() {
     return true;
-  }
-
-  public boolean isDone() {
-    return DONE.equals(status);
-  }
-
-  public boolean isPending() {
-    return PENDING.equals(status);
   }
 
   public UUID getOrganizationId() {

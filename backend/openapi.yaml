@@ -682,6 +682,60 @@ paths:
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
+  /v1/invoices/{id}/payment-attempts:
+    post:
+      description: |
+        인보이스의 total_amount를 그 인보이스의 고객에게 청구한다. 본문은 받지 않는다.
+        지금은 Mock PG라 항상 승인되고, status=done인 결제 시도가 남는다. payment_key는 PG가 준 승인 키다.
+        인보이스 하나에 결제 중이거나 결제된 시도는 하나뿐이다. 이미 있으면 409다.
+        requested_at과 completed_at은 KST(+09:00)로 나온다.
+      operationId: createPaymentAttempt
+      parameters:
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 결제할 인보이스의 id.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentAttemptResponse"
+          description: 승인된 결제 시도
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나,\
+            \ 경로의 id가 UUID가 아니다"
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invoice_not_found: 그런 인보이스가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=invoice_already_paid: 이 인보이스에 결제 중이거나 결제된 시도가 이미 있다.
+            code=invoice_amount_zero: 인보이스의 total_amount가 0원이다.
+      summary: 인보이스 결제 요청
+      tags:
+      - payment-attempt-controller
   /v1/usage:
     get:
       description: |
@@ -899,6 +953,7 @@ components:
           - customer_not_found
           - billable_metric_not_found
           - price_policy_not_found
+          - invoice_not_found
           - endpoint_not_found
           - method_not_allowed
           - response_type_not_acceptable
@@ -910,6 +965,8 @@ components:
           - billable_metric_event_type_target_property_already_exists
           - price_policy_already_exists
           - price_rate_already_exists
+          - invoice_already_paid
+          - invoice_amount_zero
           - upload_size_exceeded
           - request_type_not_supported
           - internal_server_error
@@ -1089,6 +1146,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceResponse"
+    PaymentAttemptResponse:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        completed_at:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        invoice_id:
+          type: string
+          format: uuid
+        payment_key:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+        status:
+          type: string
     PricePolicyResponse:
       type: object
       properties:

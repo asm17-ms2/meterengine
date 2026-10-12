@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Limit;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,45 +24,6 @@ class PaymentAttemptRepositoryTest {
 
   @Autowired private PaymentAttemptRepository paymentAttemptRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
-
-  @Test
-  void markDone은_pending인_시도만_닫고_두_번째_호출은_0건이다() {
-    UUID attemptId = insertPending();
-
-    assertThat(paymentAttemptRepository.markDone(attemptId, "first", OffsetDateTime.now()))
-        .isEqualTo(1);
-    assertThat(paymentAttemptRepository.markDone(attemptId, "second", OffsetDateTime.now()))
-        .isZero();
-
-    assertThat(paymentAttemptRepository.findById(attemptId).orElseThrow().getPaymentKey())
-        .isEqualTo("first");
-  }
-
-  @Test
-  void done으로_닫힌_시도는_markFailed로_바뀌지_않는다() {
-    UUID attemptId = insertPending();
-    paymentAttemptRepository.markDone(attemptId, "pk", OffsetDateTime.now());
-
-    assertThat(paymentAttemptRepository.markFailed(attemptId, "code", "실패", OffsetDateTime.now()))
-        .isZero();
-
-    PaymentAttempt attempt = paymentAttemptRepository.findById(attemptId).orElseThrow();
-    assertThat(attempt.getStatus()).isEqualTo(PaymentAttempt.DONE);
-    assertThat(attempt.getFailureCode()).isNull();
-  }
-
-  @Test
-  void failed로_닫힌_시도는_markDone으로_바뀌지_않는다() {
-    UUID attemptId = insertPending();
-
-    assertThat(paymentAttemptRepository.markFailed(attemptId, "code", "실패", OffsetDateTime.now()))
-        .isEqualTo(1);
-    assertThat(paymentAttemptRepository.markDone(attemptId, "pk", OffsetDateTime.now())).isZero();
-
-    PaymentAttempt attempt = paymentAttemptRepository.findById(attemptId).orElseThrow();
-    assertThat(attempt.getStatus()).isEqualTo(PaymentAttempt.FAILED);
-    assertThat(attempt.getPaymentKey()).isNull();
-  }
 
   @Test
   void findActive는_인보이스의_pending이나_done_시도를_찾고_failed는_건너뛴다() {
@@ -86,40 +46,6 @@ class PaymentAttemptRepositoryTest {
         .isEmpty();
     assertThat(paymentAttemptRepository.findActive(insertFixture().organizationId(), doneInvoice))
         .isEmpty();
-  }
-
-  @Test
-  void findPendingRequestedBefore는_기준_시각_전의_pending을_오래된_순으로_limit건까지_찾는다() {
-    Fixture fixture = insertFixture();
-    UUID second = insertAttempt(fixture, UUID.randomUUID(), PaymentAttempt.PENDING, minutes(2));
-    UUID first = insertAttempt(fixture, UUID.randomUUID(), PaymentAttempt.PENDING, minutes(1));
-    insertAttempt(fixture, UUID.randomUUID(), PaymentAttempt.PENDING, minutes(5));
-    insertAttempt(fixture, UUID.randomUUID(), PaymentAttempt.DONE, LONG_AGO);
-    insertAttempt(fixture, UUID.randomUUID(), PaymentAttempt.FAILED, LONG_AGO);
-
-    assertThat(paymentAttemptRepository.findPendingRequestedBefore(minutes(5), Limit.of(10)))
-        .extracting(PaymentAttempt::getId)
-        .containsExactly(first, second);
-    assertThat(paymentAttemptRepository.findPendingRequestedBefore(minutes(5), Limit.of(1)))
-        .extracting(PaymentAttempt::getId)
-        .containsExactly(first);
-  }
-
-  private static OffsetDateTime minutes(int minutes) {
-    return LONG_AGO.plusMinutes(minutes);
-  }
-
-  private UUID insertPending() {
-    Fixture fixture = insertFixture();
-    return paymentAttemptRepository
-        .saveAndFlush(
-            PaymentAttempt.pending(
-                fixture.organizationId(),
-                fixture.customerId(),
-                UUID.randomUUID(),
-                1000,
-                "2026-09 사용료"))
-        .getId();
   }
 
   private Fixture insertFixture() {
