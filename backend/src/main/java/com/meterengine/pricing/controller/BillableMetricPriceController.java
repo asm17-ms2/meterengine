@@ -28,8 +28,8 @@ public class BillableMetricPriceController {
       summary = "미터별 가격 목록 조회",
       description =
           """
-          등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 가격 정책과 기본 단가를 붙인다.
-          가격 정책이 없는 미터는 dimension_properties가 null이다. 빈 배열은 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
+          등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 dimension_properties와 기본 단가를 붙인다.
+          dimension_properties가 빈 배열이면 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
           unit_price는 속성 조건 없이 적용되는 기본 단가이고, 없으면 null이다. 속성 값 조합별 단가는 싣지 않는다.
           페이지를 나누지 않는다.
           """)

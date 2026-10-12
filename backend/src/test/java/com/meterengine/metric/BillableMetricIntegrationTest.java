@@ -343,11 +343,14 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 가격_정책이_붙은_미터를_삭제하면_409이고_미터는_남는다() {
+  void 단가가_붙은_미터를_삭제하면_409이고_미터는_남는다() {
     UUID organizationId = insertOrganization();
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
     jdbcTemplate.update(
-        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
+        """
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
+        VALUES (?, 'token-usage', '{}', 0.5)
+        """,
         organizationId);
 
     assertThat(delete(organizationId, "token-usage"))
@@ -355,7 +358,7 @@ class BillableMetricIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_POLICY.getCode());
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE.getCode());
     assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
   }
 

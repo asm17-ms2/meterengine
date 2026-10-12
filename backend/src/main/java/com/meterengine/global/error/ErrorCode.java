@@ -9,14 +9,12 @@ public enum ErrorCode {
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다"),
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
   INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
-  INVALID_PRICE_POLICY(HttpStatus.BAD_REQUEST, "가격 정책으로 성립하지 않습니다"),
   INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가로 성립하지 않습니다"),
   EVENT_TOO_OLD(HttpStatus.BAD_REQUEST, "받는 기간이 지난 이벤트입니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
   BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "미터를 찾을 수 없습니다"),
-  PRICE_POLICY_NOT_FOUND(HttpStatus.NOT_FOUND, "가격 정책을 찾을 수 없습니다"),
   INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "인보이스를 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
 
@@ -31,11 +29,10 @@ public enum ErrorCode {
   CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 삭제할 수 없습니다"),
   BILLABLE_METRIC_HAS_EVENTS(
       HttpStatus.CONFLICT, "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다"),
-  BILLABLE_METRIC_HAS_PRICE_POLICY(HttpStatus.CONFLICT, "가격 정책이 붙어 있어 미터를 삭제할 수 없습니다"),
+  BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 미터를 삭제할 수 없습니다"),
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
-  PRICE_POLICY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 미터에는 가격 정책이 이미 있습니다"),
   PRICE_RATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 조합의 단가가 이미 있습니다"),
   INVOICE_ALREADY_PAID(HttpStatus.CONFLICT, "이미 결제했거나 결제 중인 인보이스입니다"),
   INVOICE_AMOUNT_ZERO(HttpStatus.CONFLICT, "청구 금액이 0원인 인보이스는 결제할 수 없습니다"),

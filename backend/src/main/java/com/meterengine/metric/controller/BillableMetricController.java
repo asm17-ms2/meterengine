@@ -137,7 +137,7 @@ public class BillableMetricController {
       description =
           """
           미터를 지운다. 지운 미터는 되돌릴 수 없다.
-          집계된 이벤트가 한 건이라도 있거나 가격 정책이 붙은 미터는 지울 수 없고 409다.
+          집계된 이벤트가 한 건이라도 있거나 단가가 붙은 미터는 지울 수 없고 409다.
           이미 지운 미터를 다시 지우면 404다.
           """)
   @ApiResponses({
@@ -166,7 +166,7 @@ public class BillableMetricController {
         description =
             """
             code=billable_metric_has_events: 집계된 이벤트가 있어 지울 수 없다.
-            code=billable_metric_has_price_policy: 가격 정책이 붙어 있어 지울 수 없다.
+            code=billable_metric_has_price_rate: 단가가 붙어 있어 지울 수 없다.
             """)
   })
   public void deleteBillableMetric(

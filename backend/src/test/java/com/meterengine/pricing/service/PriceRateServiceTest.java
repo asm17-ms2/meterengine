@@ -3,6 +3,7 @@ package com.meterengine.pricing.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,12 +12,12 @@ import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.metric.entity.BillableMetric;
+import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
-import com.meterengine.pricing.entity.PricePolicy;
-import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.entity.PriceRate;
-import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -40,7 +41,7 @@ class PriceRateServiceTest {
   private static final BigDecimal UNIT_PRICE = new BigDecimal("0.007");
 
   @Mock private PriceRateRepository priceRateRepository;
-  @Mock private PricePolicyRepository pricePolicyRepository;
+  @Mock private BillableMetricRepository billableMetricRepository;
 
   private PriceRateService priceRateService;
 
@@ -48,12 +49,12 @@ class PriceRateServiceTest {
   void setUp() {
     priceRateService =
         new PriceRateService(
-            priceRateRepository, pricePolicyRepository, JsonMapper.builder().build());
+            priceRateRepository, billableMetricRepository, JsonMapper.builder().build());
   }
 
   @Test
-  void 키_집합이_정책의_dimension_properties와_다르면_Invalid다() {
-    pricePolicyDeclares(List.of("model", "region"));
+  void 키_집합이_미터의_dimension_properties와_다르면_Invalid다() {
+    billableMetricDeclares(List.of("model", "region"));
 
     assertThatThrownBy(() -> create(Map.of("model", "opus")))
         .isInstanceOfSatisfying(
@@ -71,7 +72,7 @@ class PriceRateServiceTest {
 
   @Test
   void 값이_객체나_배열이나_null이면_Invalid다() {
-    pricePolicyDeclares(List.of("model"));
+    billableMetricDeclares(List.of("model"));
     Map<String, Object> nullValue = new LinkedHashMap<>();
     nullValue.put("model", null);
 
@@ -87,7 +88,7 @@ class PriceRateServiceTest {
 
   @Test
   void 정상_등록이면_조합과_단가가_저장되고_저장된_모양이_응답이_된다() {
-    pricePolicyDeclares(List.of("model", "region"));
+    billableMetricDeclares(List.of("model", "region"));
     Map<String, Object> dimensionValues = new LinkedHashMap<>();
     dimensionValues.put("model", "opus");
     dimensionValues.put("region", "kr");
@@ -107,11 +108,12 @@ class PriceRateServiceTest {
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
   }
 
-  private void pricePolicyDeclares(List<String> dimensionProperties) {
-    when(pricePolicyRepository.findById(new PricePolicyId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
-        .thenReturn(
-            Optional.of(
-                new PricePolicy(ORGANIZATION_ID, BILLABLE_METRIC_CODE, dimensionProperties)));
+  private void billableMetricDeclares(List<String> dimensionProperties) {
+    BillableMetric billableMetric = mock(BillableMetric.class);
+    when(billableMetric.getDimensionProperties()).thenReturn(dimensionProperties);
+    when(billableMetricRepository.findById(
+            new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
+        .thenReturn(Optional.of(billableMetric));
   }
 
   private PriceRateResponse create(Map<String, Object> dimensionValues) {

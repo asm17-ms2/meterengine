@@ -19,11 +19,6 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
   aggregation     = EXCLUDED.aggregation,
   target_property = EXCLUDED.target_property;
 
-INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage')
-ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
-  dimension_properties = EXCLUDED.dimension_properties;
-
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.007)
 ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
@@ -52,13 +47,6 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
   aggregation     = EXCLUDED.aggregation,
   target_property = EXCLUDED.target_property;
 
-INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens'),
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens'),
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress')
-ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
-  dimension_properties = EXCLUDED.dimension_properties;
-
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.007),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 0.035),
@@ -77,12 +65,6 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
   event_type      = EXCLUDED.event_type,
   aggregation     = EXCLUDED.aggregation,
   target_property = EXCLUDED.target_property;
-
-INSERT INTO price_policy (organization_id, billable_metric_code) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens'),
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens')
-ON CONFLICT (organization_id, billable_metric_code) DO UPDATE SET
-  dimension_properties = EXCLUDED.dimension_properties;
 
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '{}', 0.0007),

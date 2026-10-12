@@ -22,7 +22,7 @@ import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.service.PricePolicyService;
+import com.meterengine.pricing.service.PriceRateService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,14 +42,14 @@ class BillableMetricServiceTest {
 
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private EventService eventService;
-  @Mock private PricePolicyService pricePolicyService;
+  @Mock private PriceRateService priceRateService;
 
   private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
     billableMetricService =
-        new BillableMetricService(billableMetricRepository, eventService, pricePolicyService);
+        new BillableMetricService(billableMetricRepository, eventService, priceRateService);
   }
 
   @Test
@@ -287,21 +287,21 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 가격_정책이_붙은_미터는_삭제할_수_없다() {
+  void 단가가_붙은_미터는_삭제할_수_없다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(pricePolicyService.existsForBillableMetric(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
+    when(priceRateService.existsForBillableMetric(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
         .thenReturn(true);
 
     assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_POLICY);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE);
     verify(billableMetricRepository, never()).delete(any());
   }
 
   @Test
-  void 이벤트와_가격_정책이_없는_미터는_삭제된다() {
+  void 이벤트와_단가가_없는_미터는_삭제된다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
 
