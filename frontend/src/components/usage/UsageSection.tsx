@@ -55,6 +55,8 @@ export async function UsageSection({
     customerName: group.customerName,
     billableMetricLines: group.billableMetricLines.map((billableMetricLine) => ({
       label: billableMetricLine.label,
+      dimensionValues: billableMetricLine.dimensionValues,
+      combination: billableMetricLine.combination,
       quantity: formatDecimal(billableMetricLine.quantity),
     })),
   }));

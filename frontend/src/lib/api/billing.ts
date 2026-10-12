@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { DimensionValues } from "@/lib/api/billable-metric-prices";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
@@ -21,6 +22,7 @@ export type DraftInvoiceCustomer = {
 export type DraftInvoiceLine = {
   billable_metric_code: string;
   target_property: string | null;
+  dimension_values: DimensionValues;
   quantity: number;
   unit_price: number;
   amount: number;

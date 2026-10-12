@@ -9,13 +9,20 @@ import { GridTable } from "@/components/table/GridTable";
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
-  billableMetricLines: { label: string; quantity: string }[];
+  billableMetricLines: UsageLineView[];
 };
 
-const COLUMNS = "minmax(0, 1fr) 200px";
-const MIN_WIDTH = 640;
+export type UsageLineView = {
+  label: string;
+  dimensionValues: Record<string, unknown>;
+  combination: string;
+  quantity: string;
+};
 
-const HEAD_LABELS = ["고객 / 미터", { label: "집계 수량", right: true }] as const;
+const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 200px";
+const MIN_WIDTH = 760;
+
+const HEAD_LABELS = ["고객 / 미터", "조합", { label: "집계 수량", right: true }] as const;
 
 export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
   const { isCollapsed, toggle } = useCollapse();
@@ -39,17 +46,24 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
+              <div className="grid-cell grid-cell--group" />
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                미터 {group.billableMetricLines.length}개
+                집계 라인 {group.billableMetricLines.length}줄
               </div>
             </button>
 
             {isGroupCollapsed
               ? null
               : group.billableMetricLines.map((billableMetricLine) => (
-                  <GridRow key={billableMetricLine.label} columns={COLUMNS}>
+                  <GridRow
+                    key={`${billableMetricLine.label} ${JSON.stringify(billableMetricLine.dimensionValues)}`}
+                    columns={COLUMNS}
+                  >
                     <GridCell className="grid-cell--child grid-cell--mono">
                       {billableMetricLine.label}
+                    </GridCell>
+                    <GridCell className="grid-cell--mono grid-cell--truncate">
+                      {billableMetricLine.combination}
                     </GridCell>
                     <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
                       {billableMetricLine.quantity}
