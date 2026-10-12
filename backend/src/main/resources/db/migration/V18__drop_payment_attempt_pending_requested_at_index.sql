@@ -1,0 +1,1 @@
+DROP INDEX payment_attempt_pending_requested_at;

@@ -8,6 +8,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
+import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.entity.BillableMetric;
@@ -34,6 +35,7 @@ class DraftInvoiceServiceTest {
   @Mock private BillableMetricUsageService billableMetricUsageService;
   @Mock private CustomerRepository customerRepository;
   @Mock private PriceRateRepository priceRateRepository;
+  @Mock private InvoiceRepository invoiceRepository;
 
   private DraftInvoiceService draftInvoiceService;
 
@@ -41,7 +43,7 @@ class DraftInvoiceServiceTest {
   void setUp() {
     draftInvoiceService =
         new DraftInvoiceService(
-            billableMetricUsageService, customerRepository, priceRateRepository);
+            billableMetricUsageService, customerRepository, priceRateRepository, invoiceRepository);
   }
 
   @Test
