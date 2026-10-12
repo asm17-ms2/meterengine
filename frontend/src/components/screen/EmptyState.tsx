@@ -4,10 +4,12 @@ export function EmptyState({
   title,
   body,
   resetHref,
+  resetLabel = "필터 초기화",
 }: {
   title: string;
   body: string;
   resetHref: string;
+  resetLabel?: string;
 }) {
   return (
     <div className="empty-state">
@@ -18,7 +20,7 @@ export function EmptyState({
         href={resetHref}
         style={{ marginTop: 4 }}
       >
-        필터 초기화
+        {resetLabel}
       </Link>
     </div>
   );

@@ -2,6 +2,10 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const MONTH_OPTION_COUNT = 3;
 
+export function isMonth(value: string): boolean {
+  return MONTH_PATTERN.test(value);
+}
+
 /** KST 기준 현재 월을 `yyyy-MM`으로. */
 export function formatKstMonth(now: Date = new Date()): string {
   const isoDate = new Intl.DateTimeFormat("sv-SE", {

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { serverFetch, type Result } from "@/lib/api/client";
+import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 
@@ -27,6 +27,17 @@ export type InvoiceLineResponse = {
   unit_price: number;
   amount: number;
 };
+
+export type FinalizeInvoicesResponse = {
+  month: string;
+  finalized_count: number;
+};
+
+export async function finalizeInvoices(month: string): Promise<Result<FinalizeInvoicesResponse>> {
+  return serverSend<FinalizeInvoicesResponse>(config.apiBaseUrl, `/v1/invoices?month=${month}`, {
+    method: "POST",
+  });
+}
 
 export async function listInvoices(
   month: string,
