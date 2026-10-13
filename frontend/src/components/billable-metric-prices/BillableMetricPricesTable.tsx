@@ -1,27 +1,33 @@
-import type { BillableMetricPriceRowView } from "@/app/(console)/billable-metric-prices/state";
+"use client";
+
+import { useActionState } from "react";
+
+import { deletePriceRateAction } from "@/app/(console)/billable-metric-prices/actions";
+import {
+  PRICE_RATE_DELETE_IDLE,
+  type BillableMetricPriceRowView,
+  type PriceRateRowView,
+} from "@/app/(console)/billable-metric-prices/state";
 import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 
-const COLUMNS = "190px minmax(0, 1fr) 220px 140px 110px 110px";
-const MIN_WIDTH = 960;
+const COLUMNS = "190px minmax(0, 1fr) 200px minmax(0, 1fr) 140px 110px";
+const MIN_WIDTH = 1040;
 
 const HEAD_LABELS = [
   "코드",
   "이름",
-  "단가를 가르는 속성",
-  { label: "기본 단가", right: true },
-  "상태",
+  "차원 키",
+  "조합",
+  { label: "단가", right: true },
   { label: "작업", right: true },
 ] as const;
 
-function DimensionPropertiesCell({ dimensionProperties }: { dimensionProperties: string[] | null }) {
-  if (dimensionProperties === null) {
-    return <GridCell className="grid-cell--muted">정책 없음</GridCell>;
-  }
+function DimensionPropertiesCell({ dimensionProperties }: { dimensionProperties: string[] }) {
   if (dimensionProperties.length === 0) {
-    return <GridCell className="grid-cell--muted">속성 구분 없음</GridCell>;
+    return <GridCell className="grid-cell--muted">없음</GridCell>;
   }
   return (
     <GridCell>
@@ -36,68 +42,104 @@ function DimensionPropertiesCell({ dimensionProperties }: { dimensionProperties:
   );
 }
 
-function StatusCell({ status }: { status: BillableMetricPriceRowView["status"] }) {
-  if (status === "no_policy") return <GridCell>정책 없음</GridCell>;
-  if (status === "no_rate") {
-    return (
-      <GridCell className="grid-cell--strong">
-        <span style={{ color: "var(--color-accent-700)" }}>단가 없음</span>
-      </GridCell>
-    );
-  }
-  return <GridCell className="grid-cell--muted">청구 중</GridCell>;
-}
-
-function ActionCell({
+function PriceRateRow({
   row,
-  onRegisterPolicy,
+  priceRate,
 }: {
   row: BillableMetricPriceRowView;
-  onRegisterPolicy: (row: BillableMetricPriceRowView) => void;
+  priceRate: PriceRateRowView;
 }) {
-  if (row.status !== "no_policy") return <GridCell className="grid-cell--actions" />;
+  const [state, formAction, isPending] = useActionState(
+    deletePriceRateAction,
+    PRICE_RATE_DELETE_IDLE,
+  );
   return (
-    <GridCell className="grid-cell--actions">
-      <button
-        type="button"
-        className="btn btn-ghost"
-        style={{ fontSize: 13 }}
-        aria-label={`${row.name} 가격 정책 등록`}
-        onClick={() => onRegisterPolicy(row)}
-      >
-        정책 등록
-      </button>
-    </GridCell>
+    <GridRow columns={COLUMNS} className="grid-row--actions">
+      <GridCell />
+      <GridCell />
+      <GridCell />
+      <GridCell className="grid-cell--child grid-cell--mono grid-cell--truncate">
+        {priceRate.combination}
+        {state.status === "failed" ? (
+          <span role="alert" style={{ marginLeft: 8, color: "var(--color-accent-700)" }}>
+            {state.message}
+          </span>
+        ) : null}
+      </GridCell>
+      <GridCell className="grid-cell--num grid-cell--right grid-cell--strong">
+        {priceRate.unitPrice}
+      </GridCell>
+      <GridCell className="grid-cell--actions">
+        <form action={formAction}>
+          <input type="hidden" name="code" value={row.code} />
+          <input
+            type="hidden"
+            name="dimension_values"
+            value={JSON.stringify(priceRate.dimensionValues)}
+          />
+          <button
+            type="submit"
+            className="btn btn-ghost"
+            style={{ fontSize: 13 }}
+            disabled={isPending}
+            aria-label={`${row.name} ${priceRate.combination} 단가 삭제`}
+          >
+            {isPending ? "삭제 중..." : "삭제"}
+          </button>
+        </form>
+      </GridCell>
+    </GridRow>
   );
 }
 
 export function BillableMetricPricesTable({
   rows,
-  onRegisterPolicy,
+  onRegisterRate,
 }: {
   rows: BillableMetricPriceRowView[];
-  onRegisterPolicy: (row: BillableMetricPriceRowView) => void;
+  onRegisterRate: (row: BillableMetricPriceRowView) => void;
 }) {
   return (
     <GridTable minWidth={MIN_WIDTH}>
       <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
       {rows.map((row) => (
-        <GridRow key={row.code} columns={COLUMNS} className="grid-row--actions">
-          <GridCell className="grid-cell--mono grid-cell--strong grid-cell--truncate">
-            {row.code}
-          </GridCell>
-          <GridCell className="grid-cell--truncate">{row.name}</GridCell>
-          <DimensionPropertiesCell dimensionProperties={row.dimensionProperties} />
-          <GridCell
-            className={
-              row.unitPrice === null ? "grid-cell--num grid-cell--muted" : "grid-cell--num"
-            }
-          >
-            {row.unitPrice ?? "없음"}
-          </GridCell>
-          <StatusCell status={row.status} />
-          <ActionCell row={row} onRegisterPolicy={onRegisterPolicy} />
-        </GridRow>
+        <div key={row.code}>
+          <GridRow columns={COLUMNS} className="grid-row--actions grid-row--group">
+            <GridCell className="grid-cell--mono grid-cell--strong grid-cell--truncate">
+              {row.code}
+            </GridCell>
+            <GridCell className="grid-cell--truncate">{row.name}</GridCell>
+            <DimensionPropertiesCell dimensionProperties={row.dimensionProperties} />
+            {row.status === "no_rate" ? (
+              <GridCell className="grid-cell--strong">
+                <span style={{ color: "var(--color-accent-700)" }}>단가 없음</span>
+              </GridCell>
+            ) : (
+              <GridCell className="grid-cell--muted">청구 중</GridCell>
+            )}
+            <GridCell className="grid-cell--right grid-cell__count">
+              단가 {row.priceRates.length}개
+            </GridCell>
+            <GridCell className="grid-cell--actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 13 }}
+                onClick={() => onRegisterRate(row)}
+                aria-label={`${row.name} 단가 등록`}
+              >
+                단가 등록
+              </button>
+            </GridCell>
+          </GridRow>
+          {row.priceRates.map((priceRate) => (
+            <PriceRateRow
+              key={JSON.stringify(priceRate.dimensionValues)}
+              row={row}
+              priceRate={priceRate}
+            />
+          ))}
+        </div>
       ))}
     </GridTable>
   );
