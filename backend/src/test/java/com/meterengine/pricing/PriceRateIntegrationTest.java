@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.BusinessException;
-import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
@@ -15,12 +15,17 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -31,6 +36,14 @@ class PriceRateIntegrationTest {
 
   @Autowired private PriceRateService priceRateService;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private WebApplicationContext webApplicationContext;
+
+  private MockMvcTester mvc;
+
+  @BeforeEach
+  void setUp() {
+    mvc = MockMvcTester.from(webApplicationContext);
+  }
 
   @Test
   void 조합_단가를_등록하면_jsonb_조합과_단가가_저장된다() {
@@ -45,27 +58,42 @@ class PriceRateIntegrationTest {
   }
 
   @Test
-  void 키_순서만_다른_같은_조합은_DB가_같은_행으로_보아_AlreadyExists다() {
+  void 키_순서만_다른_같은_조합을_다시_등록하면_단가를_덮어쓰고_행은_하나다() {
     UUID organizationId = insertOrganizationWithDimensionProperties("{model,region}");
-    create(organizationId, Map.of("model", "opus", "region", "kr"), "0.007");
+    Map<String, Object> ordered = new LinkedHashMap<>();
+    ordered.put("model", "opus");
+    ordered.put("region", "kr");
+    create(organizationId, ordered, "0.007");
     Map<String, Object> reordered = new LinkedHashMap<>();
     reordered.put("region", "kr");
     reordered.put("model", "opus");
 
-    assertThatThrownBy(() -> create(organizationId, reordered, "0.009"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.PRICE_RATE_ALREADY_EXISTS);
+    PriceRateResponse response = create(organizationId, reordered, "0.009");
+
+    assertThat(response.unitPrice()).isEqualByComparingTo("0.009");
+    assertThat(storedUnitPrice(organizationId, "{\"model\": \"opus\", \"region\": \"kr\"}"))
+        .isEqualByComparingTo("0.009");
     assertThat(priceRateCount(organizationId)).isEqualTo(1);
   }
 
   @Test
-  void 기본_단가는_빈_객체로_저장되고_청구가_읽는_기본_단가_조회에_잡힌다() {
-    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+  void 키가_없는_미터는_빈_객체_단가를_저장한다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{}");
 
     create(organizationId, Map.of(), "120");
 
     assertThat(storedUnitPrice(organizationId, "{}")).isEqualByComparingTo("120");
+  }
+
+  @Test
+  void 키가_있는_미터에_빈_객체_단가는_Invalid고_저장은_0건이다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+
+    assertThatThrownBy(() -> create(organizationId, Map.of(), "120"))
+        .isInstanceOf(InvalidRequestException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_PRICE_RATE);
+    assertThat(priceRateCount(organizationId)).isZero();
   }
 
   @Test
@@ -77,6 +105,76 @@ class PriceRateIntegrationTest {
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
     assertThat(priceRateCount(organizationId)).isZero();
+  }
+
+  @Test
+  void POST하면_201이고_저장된_단가가_응답이다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+
+    assertThat(
+            post(
+                organizationId,
+                "{\"dimension_values\": {\"model\": \"opus\"}, \"unit_price\": 0.007}"))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.dimension_values.model")
+        .isEqualTo("opus");
+    assertThat(priceRateCount(organizationId)).isEqualTo(1);
+  }
+
+  @Test
+  void DELETE하면_204이고_그_조합만_사라진다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+    create(organizationId, Map.of("model", "opus"), "0.007");
+    create(organizationId, Map.of("model", "haiku"), "1");
+
+    assertThat(delete(organizationId, "{\"model\":\"opus\"}")).hasStatus(204);
+
+    assertThat(priceRateCount(organizationId)).isEqualTo(1);
+    assertThat(storedUnitPrice(organizationId, "{\"model\": \"haiku\"}")).isEqualByComparingTo("1");
+  }
+
+  @Test
+  void DELETE에_없는_조합이면_404_price_rate_not_found다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+
+    assertThat(delete(organizationId, "{\"model\":\"opus\"}"))
+        .hasStatus(404)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.PRICE_RATE_NOT_FOUND.getCode());
+  }
+
+  @Test
+  void DELETE의_dimension_values가_JSON_객체가_아니면_400_validation_error다() {
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
+
+    assertThat(delete(organizationId, "opus"))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+  }
+
+  // --- 헬퍼 ---
+
+  private MvcTestResult delete(UUID organizationId, String dimensionValues) {
+    return mvc.delete()
+        .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
+        .queryParam("dimension_values", dimensionValues)
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
+  }
+
+  private MvcTestResult post(UUID organizationId, String jsonBody) {
+    return mvc.post()
+        .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
+        .header("X-Organization-Id", organizationId.toString())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(jsonBody)
+        .exchange();
   }
 
   private PriceRateResponse create(

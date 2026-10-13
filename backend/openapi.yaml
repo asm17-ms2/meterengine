@@ -16,9 +16,10 @@ paths:
   /v1/billable-metric-prices:
     get:
       description: |
-        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 dimension_properties와 기본 단가를 붙인다.
+        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 dimension_properties와 조합별 단가를 붙인다.
         dimension_properties가 빈 배열이면 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
-        unit_price는 속성 조건 없이 적용되는 기본 단가이고, 없으면 null이다. 속성 값 조합별 단가는 싣지 않는다.
+        price_rates는 그 미터의 단가 전부를 dimension_values 오름차순으로 실은 배열이고, 단가가 없으면 빈 배열이다.
+        dimension_values가 빈 객체인 요소가 속성 조건 없이 적용되는 기본 단가다.
         페이지를 나누지 않는다.
       operationId: listBillableMetricPrices
       parameters:
@@ -230,6 +231,102 @@ paths:
       summary: 집계 미터 수정
       tags:
       - billable-metric-controller
+  /v1/billable-metrics/{code}/price-rates:
+    delete:
+      description: |
+        미터에서 속성 값 조합 하나의 단가를 지운다. dimension_values는 JSON 객체 문자열이고,
+        빈 객체 {}는 기본 단가다. 같은 조합인지는 키 순서와 상관없이 본다.
+      operationId: deletePriceRate
+      parameters:
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 단가를 지울 미터의 code.
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      - description: 지울 조합. JSON 객체 문자열이다.
+        in: query
+        name: dimension_values
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: 지웠다. 본문 없음
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: dimension_values가 없거나 JSON 객체가 아니거나\
+            , 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가\
+            \ 아니다."
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=price_rate_not_found: 그 미터에 그 조합의 단가가 없다"
+      summary: 단가 삭제
+      tags:
+      - price-rate-controller
+    post:
+      description: |
+        미터에 속성 값 조합별 단가를 넣는다. dimension_values의 키 집합은 미터의 dimension_properties와 같아야 하고,
+        키가 없는 미터는 빈 객체 하나만 받는다. 청구는 조합이 정확히 같은 단가만 쓰고 폴백은 없다.
+        같은 조합의 단가가 이미 있으면 unit_price를 덮어쓴다. 수정 엔드포인트는 따로 없다.
+      operationId: createPriceRate
+      parameters:
+      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
+        in: header
+        name: X-Organization-Id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 단가를 넣을 미터의 code.
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePriceRateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PriceRateResponse"
+          description: 저장된 단가. 덮어쓴 경우에도 201이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
+      summary: 단가 등록
+      tags:
+      - price-rate-controller
   /v1/customers:
     get:
       description: |
@@ -764,6 +861,16 @@ paths:
       - billable-metric-usage-controller
 components:
   schemas:
+    BillableMetricPricePriceRate:
+      type: object
+      properties:
+        dimension_values:
+          type: object
+          additionalProperties: {}
+          description: 단가가 적용되는 속성 값 조합. 빈 객체는 속성 조건 없이 적용되는 기본 단가다
+        unit_price:
+          type: number
+          description: 그 조합의 단가. 0은 무료라는 뜻이다
     BillableMetricPriceResponse:
       type: object
       properties:
@@ -774,12 +881,12 @@ components:
           description: 단가를 가르는 이벤트 속성 키. 속성에 따라 단가가 갈리지 않는 미터는 빈 배열이다
           items:
             type: string
-        unit_price:
-          type:
-          - number
-          - "null"
-          description: "속성 조건 없이 적용되는 기본 단가. 없으면 null이고, 그 미터는 청구 예정액에 라인이 나오지 않는다\
-            . 0은 무료라는 뜻이라 null과 다르다"
+        price_rates:
+          type: array
+          description: "속성 값 조합별 단가. dimension_values 오름차순이고, 단가가 하나도 없으면 빈 배열이라 그\
+            \ 미터는 청구 예정액에 라인이 나오지 않는다"
+          items:
+            $ref: "#/components/schemas/BillableMetricPricePriceRate"
     BillableMetricResponse:
       type: object
       properties:
@@ -863,6 +970,20 @@ components:
           minLength: 0
       required:
       - name
+    CreatePriceRateRequest:
+      type: object
+      properties:
+        dimension_values:
+          type: object
+          additionalProperties: {}
+          description: "단가가 적용되는 속성 값 조합. 키 집합은 미터의 dimension_properties와 같아야 하고,\
+            \ 빈 객체는 기본 단가다"
+        unit_price:
+          type: number
+          minimum: 0
+      required:
+      - dimension_values
+      - unit_price
     CustomerResponse:
       type: object
       properties:
@@ -933,6 +1054,7 @@ components:
           - event_too_old
           - customer_not_found
           - billable_metric_not_found
+          - price_rate_not_found
           - invoice_not_found
           - endpoint_not_found
           - method_not_allowed
@@ -943,7 +1065,6 @@ components:
           - billable_metric_has_price_rate
           - billable_metric_already_exists
           - billable_metric_event_type_target_property_already_exists
-          - price_rate_already_exists
           - invoice_already_paid
           - invoice_amount_zero
           - upload_size_exceeded
@@ -1155,6 +1276,16 @@ components:
           format: date-time
         status:
           type: string
+    PriceRateResponse:
+      type: object
+      properties:
+        billable_metric_code:
+          type: string
+        dimension_values:
+          type: object
+          additionalProperties: {}
+        unit_price:
+          type: number
     UpdateBillableMetricRequest:
       type: object
       properties:

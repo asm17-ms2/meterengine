@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -101,49 +102,41 @@ class BillableMetricPriceIntegrationTest {
         .isEmpty();
   }
 
-  // --- 기본 단가 (unit_price) ---
+  // --- 조합별 단가 (price_rates) ---
 
   @Test
-  void 단가가_없는_미터는_unit_price가_JSON_null이고_0이_아니다() {
+  void 단가가_없는_미터는_price_rates가_빈_배열이다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
 
     assertThat(get(organizationId))
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.billable_metric_prices[0]")
-        .asMap()
-        .containsEntry("unit_price", null);
+        .extractingPath("$.billable_metric_prices[0].price_rates")
+        .asArray()
+        .isEmpty();
   }
 
   @Test
-  void 기본_단가가_있으면_unit_price에_실린다() {
+  void 조합별_단가가_dimension_values_오름차순으로_실린다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertBasePriceRate(organizationId, "token-usage", "0.007");
+    insertPriceRate(organizationId, "token-usage", "{}", "0.007");
+    insertPriceRate(organizationId, "token-usage", "{\"model\": \"opus\"}", "0");
 
-    assertThat(get(organizationId))
+    MvcTestResult result = get(organizationId);
+
+    assertThat(result)
         .hasStatus(200)
         .bodyJson()
-        .extractingPath("$.billable_metric_prices[0].unit_price")
-        .asNumber()
-        .extracting(Number::doubleValue)
-        .isEqualTo(0.007);
-  }
-
-  @Test
-  void 단가가_0이면_null이_아니라_0으로_실린다() {
-    UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId, "token-usage");
-    insertBasePriceRate(organizationId, "token-usage", "0");
-
-    assertThat(get(organizationId))
-        .hasStatus(200)
+        .extractingPath("$.billable_metric_prices[0].price_rates[*].dimension_values")
+        .isEqualTo(List.of(Map.of(), Map.of("model", "opus")));
+    assertThat(result)
         .bodyJson()
-        .extractingPath("$.billable_metric_prices[0].unit_price")
-        .asNumber()
-        .extracting(Number::doubleValue)
-        .isEqualTo(0.0);
+        .extractingPath("$.billable_metric_prices[0].price_rates[*].unit_price")
+        .asArray()
+        .extracting(unitPrice -> ((Number) unitPrice).doubleValue())
+        .containsExactly(0.007, 0.0);
   }
 
   // --- 공통 ---
@@ -194,15 +187,16 @@ class BillableMetricPriceIntegrationTest {
         billableMetricCode);
   }
 
-  private void insertBasePriceRate(
-      UUID organizationId, String billableMetricCode, String unitPrice) {
+  private void insertPriceRate(
+      UUID organizationId, String billableMetricCode, String dimensionValues, String unitPrice) {
     jdbcTemplate.update(
         """
         INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
-        VALUES (?, ?, '{}'::jsonb, ?::numeric)
+        VALUES (?, ?, ?::jsonb, ?::numeric)
         """,
         organizationId,
         billableMetricCode,
+        dimensionValues,
         unitPrice);
   }
 }

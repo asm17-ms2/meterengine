@@ -1,0 +1,113 @@
+package com.meterengine.pricing.controller;
+
+import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.validation.StorableText;
+import com.meterengine.pricing.dto.CreatePriceRateRequest;
+import com.meterengine.pricing.dto.PriceRateResponse;
+import com.meterengine.pricing.service.PriceRateService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/v1/billable-metrics/{code}/price-rates")
+public class PriceRateController {
+
+  private final PriceRateService priceRateService;
+
+  PriceRateController(PriceRateService priceRateService) {
+    this.priceRateService = priceRateService;
+  }
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(
+      summary = "단가 등록",
+      description =
+          """
+          미터에 속성 값 조합별 단가를 넣는다. dimension_values의 키 집합은 미터의 dimension_properties와 같아야 하고,
+          키가 없는 미터는 빈 객체 하나만 받는다. 청구는 조합이 정확히 같은 단가만 쓰고 폴백은 없다.
+          같은 조합의 단가가 이미 있으면 unit_price를 덮어쓴다. 수정 엔드포인트는 따로 없다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "201", description = "저장된 단가. 덮어쓴 경우에도 201이다"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            """),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
+  })
+  public PriceRateResponse createPriceRate(
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "단가를 넣을 미터의 code.") @PathVariable @StorableText String code,
+      @Valid @RequestBody CreatePriceRateRequest request) {
+    return priceRateService.create(organizationId, code, request);
+  }
+
+  @DeleteMapping
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Operation(
+      summary = "단가 삭제",
+      description =
+          """
+          미터에서 속성 값 조합 하나의 단가를 지운다. dimension_values는 JSON 객체 문자열이고,
+          빈 객체 {}는 기본 단가다. 같은 조합인지는 키 순서와 상관없이 본다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=validation_error: dimension_values가 없거나 JSON 객체가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다."),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=price_rate_not_found: 그 미터에 그 조합의 단가가 없다")
+  })
+  public void deletePriceRate(
+      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
+          UUID organizationId,
+      @Parameter(description = "단가를 지울 미터의 code.") @PathVariable @StorableText String code,
+      @Parameter(description = "지울 조합. JSON 객체 문자열이다.")
+          @RequestParam("dimension_values")
+          @StorableText
+          String dimensionValues) {
+    priceRateService.delete(organizationId, code, dimensionValues);
+  }
+}

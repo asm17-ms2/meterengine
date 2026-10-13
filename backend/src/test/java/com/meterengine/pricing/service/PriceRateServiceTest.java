@@ -18,6 +18,7 @@ import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.entity.PriceRate;
+import com.meterengine.pricing.entity.PriceRateId;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -67,6 +68,7 @@ class PriceRateServiceTest {
             });
     assertThatThrownBy(() -> create(Map.of("model", "opus", "region", "kr", "tier", "pro")))
         .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> create(Map.of())).isInstanceOf(InvalidRequestException.class);
     verify(priceRateRepository, never()).saveAndFlush(any());
   }
 
@@ -105,6 +107,23 @@ class PriceRateServiceTest {
     assertThat(saved.getValue().isNew()).isTrue();
     assertThat(response.billableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(response.dimensionValues()).isEqualTo("{\"model\":\"opus\",\"region\":\"kr\"}");
+    assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
+  }
+
+  @Test
+  void 같은_조합이_있으면_그_행의_단가만_덮어쓴다() {
+    billableMetricDeclares(List.of("model"));
+    PriceRate existing =
+        new PriceRate(
+            ORGANIZATION_ID, BILLABLE_METRIC_CODE, "{\"model\":\"opus\"}", new BigDecimal("1"));
+    when(priceRateRepository.findById(
+            new PriceRateId(ORGANIZATION_ID, BILLABLE_METRIC_CODE, "{\"model\":\"opus\"}")))
+        .thenReturn(Optional.of(existing));
+
+    PriceRateResponse response = create(Map.of("model", "opus"));
+
+    verify(priceRateRepository).saveAndFlush(existing);
+    assertThat(existing.getUnitPrice()).isEqualByComparingTo(UNIT_PRICE);
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
   }
 

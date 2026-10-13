@@ -116,7 +116,7 @@ docker build -t meterengine-backend .
 | --- | --- | --- |
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
 | `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계 | `/v1/billable-metrics`, `/v1/usage` |
-| `pricing` | 단가 | `/v1/billable-metric-prices` |
+| `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 삭제, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회, 인보이스 일괄 확정, 확정 인보이스 목록 조회(금액 구성과 라인 포함) | `/v1/invoices`, `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
 | `payment` | 인보이스 결제 요청과 결제 시도 기록. PG는 항상 승인하는 Mock이다 | `/v1/invoices/{id}/payment-attempts` |

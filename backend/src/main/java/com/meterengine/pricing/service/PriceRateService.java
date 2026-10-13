@@ -1,6 +1,5 @@
 package com.meterengine.pricing.service;
 
-import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
@@ -16,13 +15,19 @@ import com.meterengine.pricing.repository.PriceRateRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class PriceRateService {
+
+  private static final TypeReference<Map<String, Object>> DIMENSION_VALUES_TYPE =
+      new TypeReference<>() {};
 
   private final PriceRateRepository priceRateRepository;
   private final BillableMetricRepository billableMetricRepository;
@@ -54,21 +59,43 @@ public class PriceRateService {
     validate(request.dimensionValues(), billableMetric.getDimensionProperties());
 
     String dimensionValues = jsonMapper.writeValueAsString(request.dimensionValues());
-    if (priceRateRepository.existsById(
-        new PriceRateId(organizationId, billableMetricCode, dimensionValues))) {
-      throw new ConflictException(ErrorCode.PRICE_RATE_ALREADY_EXISTS);
+    PriceRateId priceRateId = new PriceRateId(organizationId, billableMetricCode, dimensionValues);
+    Optional<PriceRate> found = priceRateRepository.findById(priceRateId);
+    PriceRate priceRate;
+    if (found.isPresent()) {
+      priceRate = found.get();
+      priceRate.updateUnitPrice(request.unitPrice());
+    } else {
+      priceRate =
+          new PriceRate(organizationId, billableMetricCode, dimensionValues, request.unitPrice());
     }
-
-    PriceRate priceRate =
-        new PriceRate(organizationId, billableMetricCode, dimensionValues, request.unitPrice());
     priceRateRepository.saveAndFlush(priceRate);
 
     return PriceRateResponse.from(priceRate);
   }
 
+  @Transactional
+  public void delete(UUID organizationId, String billableMetricCode, String dimensionValuesJson) {
+    String dimensionValues = jsonMapper.writeValueAsString(parse(dimensionValuesJson));
+    PriceRate priceRate =
+        priceRateRepository
+            .findById(new PriceRateId(organizationId, billableMetricCode, dimensionValues))
+            .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
+    priceRateRepository.delete(priceRate);
+    priceRateRepository.flush();
+  }
+
+  private Map<String, Object> parse(String dimensionValuesJson) {
+    try {
+      return jsonMapper.readValue(dimensionValuesJson, DIMENSION_VALUES_TYPE);
+    } catch (JacksonException exception) {
+      throw new InvalidRequestException(
+          ErrorCode.VALIDATION_ERROR, List.of(new FieldError("dimension_values", "JSON 객체여야 합니다")));
+    }
+  }
+
   private void validate(Map<String, Object> dimensionValues, List<String> dimensionProperties) {
-    if (!dimensionValues.isEmpty()
-        && !dimensionValues.keySet().equals(new HashSet<>(dimensionProperties))) {
+    if (!dimensionValues.keySet().equals(new HashSet<>(dimensionProperties))) {
       throw new InvalidRequestException(
           ErrorCode.INVALID_PRICE_RATE,
           List.of(new FieldError("dimension_values", "키 집합이 미터의 dimension_properties와 같아야 합니다")));
