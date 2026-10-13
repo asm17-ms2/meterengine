@@ -38,14 +38,14 @@ class ExpectedLine:
 class ExpectedCustomer:
     customer_id: str
     lines: List[ExpectedLine]
-    amount: Optional[int]
+    amount: int
 
 
 @dataclass
 class ExpectedMonth:
     month: str
     customers: Dict[str, ExpectedCustomer]
-    total_amount: Optional[int]
+    total_amount: int
 
 
 @dataclass
@@ -178,25 +178,23 @@ def build_expected(
         for billable_metric in billable_metrics
     }
     customers: Dict[str, ExpectedCustomer] = {}
-    total_amount: Optional[int] = 0
+    total_amount = 0
     for customer_id in customer_ids:
         lines = []
-        customer_amount: Optional[int] = 0
+        customer_amount = 0
         for billable_metric in billable_metrics:
             quantity = sums_by_metric[billable_metric.code].get(customer_id, Decimal("0"))
-            if billable_metric.unit_price is None:
-                amount = None
-                customer_amount = None
-            else:
-                amount = line_amount(quantity, billable_metric.unit_price)
-                if customer_amount is not None:
-                    customer_amount += amount
+            amount = _line_amount_or_none(quantity, billable_metric.unit_price)
+            customer_amount += amount or 0
             lines.append(ExpectedLine(billable_metric_code=billable_metric.code, quantity=quantity, amount=amount))
         customers[customer_id] = ExpectedCustomer(
             customer_id=customer_id, lines=lines, amount=customer_amount
         )
-        if customer_amount is None:
-            total_amount = None
-        elif total_amount is not None:
-            total_amount += customer_amount
+        total_amount += customer_amount
     return ExpectedMonth(month=month, customers=customers, total_amount=total_amount)
+
+
+def _line_amount_or_none(quantity: Decimal, unit_price: Optional[Decimal]) -> Optional[int]:
+    if unit_price is None:
+        return None
+    return line_amount(quantity, unit_price)

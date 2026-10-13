@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,10 @@ class DraftInvoiceIntegrationTest {
         .isEqualTo("token");
     assertThat(result)
         .bodyJson()
+        .extractingPath("$.customers[0].lines[0].dimension_values")
+        .isEqualTo(Map.of());
+    assertThat(result)
+        .bodyJson()
         .extractingPath("$.customers[0].lines[0].quantity")
         .isEqualTo(3299);
     assertThat(result)
@@ -82,7 +87,7 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
-  void 이벤트가_없는_고객도_금액_0으로_응답에_들어간다() {
+  void 이벤트가_없는_고객도_라인_없이_금액_0으로_응답에_들어간다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     insertCustomer(organizationId, "제타상사");
@@ -93,12 +98,43 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.customers.length()").isEqualTo(2);
     assertThat(result).bodyJson().extractingPath("$.customers[1].customer_name").isEqualTo("제타상사");
     assertThat(result).bodyJson().extractingPath("$.customers[1].amount").isEqualTo(0);
-    assertThat(result).bodyJson().extractingPath("$.customers[1].lines[0].quantity").isEqualTo(0);
-    assertThat(result).bodyJson().extractingPath("$.customers[1].lines[0].amount").isEqualTo(0);
+    assertThat(result).bodyJson().extractingPath("$.customers[1].lines.length()").isEqualTo(0);
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+  }
+
+  @Test
+  void 같은_조합의_단가가_있는_조합만_라인이_된다() {
+    UUID organizationId = insertOrganization();
+    jdbcTemplate.update(
+        """
+        INSERT INTO billable_metric
+          (organization_id, code, name, event_type, aggregation, target_property,
+           dimension_properties)
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token', '{model}')
+        """,
+        organizationId);
+    jdbcTemplate.update(
+        """
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
+        VALUES (?, 'token-usage', '{"model": "a"}', 0.5)
+        """,
+        organizationId);
+    UUID acme = insertCustomer(organizationId, "아크메");
+    OffsetDateTime august10 = OffsetDateTime.parse("2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-1", acme, "a", 500, august10);
+    insertEvent(organizationId, "tx-2", acme, "b", 700, august10);
+
+    MvcTestResult result = get(organizationId, AUGUST);
+
+    assertThat(result).hasStatusOk();
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(1);
     assertThat(result)
         .bodyJson()
-        .extractingPath("$.customers[1].lines[0].unit_price")
-        .isEqualTo(0.5);
+        .extractingPath("$.customers[0].lines[0].dimension_values")
+        .isEqualTo(Map.of("model", "a"));
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].quantity").isEqualTo(500);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(250);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(250);
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
   }
 
@@ -266,7 +302,7 @@ class DraftInvoiceIntegrationTest {
         .exchange();
   }
 
-  // 토큰 사용량 미터와 그 기본 단가를 가진 도입사를 만든다.
+  // 키 없는 토큰 사용량 미터와 빈 조합 단가를 가진 도입사를 만든다.
   private UUID organizationWithTokenBillableMetric() {
     UUID organizationId = insertOrganization();
     jdbcTemplate.update(
@@ -322,6 +358,16 @@ class DraftInvoiceIntegrationTest {
       UUID customerId,
       int token,
       OffsetDateTime occurredAt) {
+    insertEvent(organizationId, transactionId, customerId, "opus-5", token, occurredAt);
+  }
+
+  private void insertEvent(
+      UUID organizationId,
+      String transactionId,
+      UUID customerId,
+      String model,
+      int token,
+      OffsetDateTime occurredAt) {
     jdbcTemplate.update(
         """
         INSERT INTO event
@@ -331,7 +377,7 @@ class DraftInvoiceIntegrationTest {
         organizationId,
         transactionId,
         customerId,
-        "{\"model\":\"opus-5\",\"token\":%d}".formatted(token),
+        "{\"model\":\"%s\",\"token\":%d}".formatted(model, token),
         occurredAt);
   }
 }

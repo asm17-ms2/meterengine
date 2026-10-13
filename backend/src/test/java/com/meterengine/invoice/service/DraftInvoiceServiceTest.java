@@ -11,8 +11,10 @@ import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
+import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import com.meterengine.pricing.entity.PriceRate;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class DraftInvoiceServiceTest {
@@ -43,7 +46,11 @@ class DraftInvoiceServiceTest {
   void setUp() {
     draftInvoiceService =
         new DraftInvoiceService(
-            billableMetricUsageService, customerRepository, priceRateRepository, invoiceRepository);
+            billableMetricUsageService,
+            customerRepository,
+            priceRateRepository,
+            invoiceRepository,
+            JsonMapper.builder().build());
   }
 
   @Test
@@ -53,8 +60,7 @@ class DraftInvoiceServiceTest {
         .thenReturn(List.of(acme));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3280")));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+    stubPriceRates(priceRate("token-usage", "{}", "0.5"));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -81,8 +87,7 @@ class DraftInvoiceServiceTest {
         .thenReturn(List.of(acme));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "3299")));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+    stubPriceRates(priceRate("token-usage", "{}", "0.5"));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -96,8 +101,7 @@ class DraftInvoiceServiceTest {
         .thenReturn(List.of(acme));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .thenReturn(List.of(usage(billableMetric("token-usage", "token"), acme, "19")));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+    stubPriceRates(priceRate("token-usage", "{}", "0.5"));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -115,11 +119,8 @@ class DraftInvoiceServiceTest {
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3299"),
                 usage(billableMetric("api-request-count", "count"), acme, "39")));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(
-            Map.of(
-                "token-usage", new BigDecimal("0.5"),
-                "api-request-count", new BigDecimal("0.5")));
+    stubPriceRates(
+        priceRate("token-usage", "{}", "0.5"), priceRate("api-request-count", "{}", "0.5"));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -132,7 +133,7 @@ class DraftInvoiceServiceTest {
   }
 
   @Test
-  void 이벤트가_없는_고객은_사용량_0_금액_0이다() {
+  void 이벤트가_없는_고객은_라인_없이_금액_0이다() {
     Customer acme = customer("아크메");
     Customer beta = customer("베타");
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
@@ -143,20 +144,43 @@ class DraftInvoiceServiceTest {
                 new BillableMetricUsage(
                     billableMetric("token-usage", "token"),
                     List.of(
-                        new CustomerUsage(acme.getId(), "아크메", new BigDecimal("500"), List.of()),
+                        customerUsage(acme, new DimensionUsage(Map.of(), new BigDecimal("500"))),
                         new CustomerUsage(beta.getId(), "베타", BigDecimal.ZERO, List.of())))));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+    stubPriceRates(priceRate("token-usage", "{}", "0.5"));
 
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
         draftInvoiceService.preview(ORGANIZATION_ID, AUGUST).customers();
 
     DraftInvoiceCustomer betaDraftInvoiceCustomer = draftInvoiceCustomers.get(1);
     assertThat(betaDraftInvoiceCustomer.amount()).isZero();
-    DraftInvoiceLine betaDraftInvoiceLine = betaDraftInvoiceCustomer.lines().getFirst();
-    assertThat(betaDraftInvoiceLine.quantity()).isEqualByComparingTo("0");
-    assertThat(betaDraftInvoiceLine.amount()).isZero();
-    assertThat(betaDraftInvoiceLine.unitPrice()).isEqualByComparingTo("0.5");
+    assertThat(betaDraftInvoiceCustomer.lines()).isEmpty();
+  }
+
+  @Test
+  void 같은_조합의_단가가_있는_조합만_라인이_된다() {
+    Customer acme = customer("아크메");
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(acme));
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+        .thenReturn(
+            List.of(
+                new BillableMetricUsage(
+                    billableMetric("token-usage", "token"),
+                    List.of(
+                        customerUsage(
+                            acme,
+                            new DimensionUsage(Map.of("model", "a"), new BigDecimal("500")),
+                            new DimensionUsage(Map.of("model", "b"), new BigDecimal("700")))))));
+    stubPriceRates(priceRate("token-usage", "{\"model\": \"a\"}", "0.5"));
+
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+
+    DraftInvoiceLine draftInvoiceLine = response.customers().getFirst().lines().getFirst();
+    assertThat(response.customers().getFirst().lines()).hasSize(1);
+    assertThat(draftInvoiceLine.dimensionValues()).isEqualTo(Map.of("model", "a"));
+    assertThat(draftInvoiceLine.quantity()).isEqualByComparingTo("500");
+    assertThat(draftInvoiceLine.amount()).isEqualTo(250);
+    assertThat(response.totalAmount()).isEqualTo(250);
   }
 
   @Test
@@ -166,8 +190,7 @@ class DraftInvoiceServiceTest {
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(acme, beta));
     when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST)).thenReturn(List.of());
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of());
+    stubPriceRates();
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -193,8 +216,7 @@ class DraftInvoiceServiceTest {
             List.of(
                 usage(billableMetric("token-usage", "token"), acme, "3280"),
                 usage(billableMetric("api-calls", "count"), acme, "3")));
-    when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("token-usage", new BigDecimal("0.5")));
+    stubPriceRates(priceRate("token-usage", "{}", "0.5"));
 
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
@@ -219,8 +241,27 @@ class DraftInvoiceServiceTest {
       BillableMetric billableMetric, Customer customer, String quantity) {
     return new BillableMetricUsage(
         billableMetric,
-        List.of(
-            new CustomerUsage(
-                customer.getId(), customer.getName(), new BigDecimal(quantity), List.of())));
+        List.of(customerUsage(customer, new DimensionUsage(Map.of(), new BigDecimal(quantity)))));
+  }
+
+  private static CustomerUsage customerUsage(Customer customer, DimensionUsage... dimensionUsages) {
+    BigDecimal quantity =
+        List.of(dimensionUsages).stream()
+            .map(DimensionUsage::quantity)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return new CustomerUsage(
+        customer.getId(), customer.getName(), quantity, List.of(dimensionUsages));
+  }
+
+  private static PriceRate priceRate(
+      String billableMetricCode, String dimensionValues, String unitPrice) {
+    return new PriceRate(
+        ORGANIZATION_ID, billableMetricCode, dimensionValues, new BigDecimal(unitPrice));
+  }
+
+  private void stubPriceRates(PriceRate... priceRates) {
+    when(priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            ORGANIZATION_ID))
+        .thenReturn(List.of(priceRates));
   }
 }

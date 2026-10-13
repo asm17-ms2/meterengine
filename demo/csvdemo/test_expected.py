@@ -193,7 +193,7 @@ class BuildExpectedTest(unittest.TestCase):
         self.assertEqual(result.customers[BETA].lines[0].quantity, Decimal("0"))
         self.assertEqual(result.customers[BETA].amount, 0)
 
-    def test_단가를_모르는_미터는_금액이_없다(self):
+    def test_단가가_없는_미터는_금액에_더하지_않는다(self):
         no_price = BillableMetricMeta(
             code="api-calls",
             event_type="api_call",
@@ -201,10 +201,11 @@ class BuildExpectedTest(unittest.TestCase):
             target_property="count",
             unit_price=None,
         )
-        stored = [_stored("evt-1")]
+        stored = [_stored("evt-1"), _stored("evt-2", event_type="api_call", props={"count": 3})]
         result = build_expected(stored, [TOKEN_USAGE, no_price], "2026-08", [ACME])
-        self.assertIsNone(result.customers[ACME].amount)
-        self.assertIsNone(result.total_amount)
+        self.assertIsNone(result.customers[ACME].lines[1].amount)
+        self.assertEqual(result.customers[ACME].amount, 250)
+        self.assertEqual(result.total_amount, 250)
 
 
 if __name__ == "__main__":

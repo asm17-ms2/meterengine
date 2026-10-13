@@ -101,6 +101,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
   - 4xx 거절분 제외.
   - `target_property` 값이 JSON number가 아닌 이벤트 제외. 저장은 되지만 합산에서 빠진다.
   - 청구 예정액은 수량 x 단가를 라인마다 10원 미만에서 절사한 정수.
+  - 그 달 인보이스에 라인이 없는 미터는 단가를 유도할 수 없어 금액에 더하지 않는다. 서버도 그 미터를 청구에서 빼므로 둘 다 0이다.
 - `--log`와 `--csv`를 둘 다 주면 로그를 쓴다.
 - CSV 소스는 서버 판정을 시뮬레이션한다. 필수 필드 검증과 서버 고객 명단 대조로 거절을 예측하되 저장할 수 없는 문자(NUL, 짝이 없는 UTF-16 서로게이트) 같은 드문 거절은 예측하지 못하고 그 한계를 출력에 적는다.
 - 중간이 깨진 `send` 로그로는 판정하지 않고 종료 코드 2로 끝낸다. 헤더가 여럿인 브리지 로그는 경고까지만 한다.
@@ -253,8 +254,8 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다. Claude Opus 5 공시가를 1달러 1,400원으로 환산한 토큰당 원 단가다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
 - 캐시 쓰기는 5분 캐시 기준이다. OTel의 `cache_creation_tokens`가 5분과 1시간을 구분하지 않는다.
-- 모델별 단가는 켜지지 않는다. `properties`에 `model`이 실려 있어도 `PriceRateRepository.findBaseUnitPriceByBillableMetricCode`가 `dimension_values = '{}'` 행만 읽는다.
-  - 시드에는 기본 단가 한 행만 둔다. 기본 단가 행을 지우면 그 미터가 인보이스에서 통째로 빠진다.
+- 모델별 단가는 켜지지 않는다. 시드의 미터는 `dimension_properties`가 비어 있어 `properties`에 `model`이 실려 있어도 `dimension_values = '{}'` 단가 한 행으로 계산한다.
+  - 시드에는 그 한 행만 둔다. 지우면 그 미터가 인보이스에서 통째로 빠진다.
 - 금액은 실제 가격이라 작다. 라인마다 10원 미만을 버리므로 입력 토큰처럼 적은 항목은 0원이 되기도 한다.
 
 ### 검증
