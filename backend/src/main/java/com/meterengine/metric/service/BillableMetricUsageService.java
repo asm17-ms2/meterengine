@@ -4,6 +4,7 @@ import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
+import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
@@ -65,11 +66,12 @@ public class BillableMetricUsageService {
       OffsetDateTime end) {
     requireSupported(billableMetric);
 
-    Map<UUID, BigDecimal> quantityByCustomerId =
-        billableMetricUsageRepository.sumQuantityByCustomerId(
+    Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId =
+        billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
             billableMetric.getOrganizationId(),
             billableMetric.getEventType(),
             billableMetric.getTargetProperty(),
+            billableMetric.getDimensionProperties(),
             start,
             end);
 
@@ -77,13 +79,21 @@ public class BillableMetricUsageService {
         customers.stream()
             .map(
                 customer ->
-                    new CustomerUsage(
-                        customer.getId(),
-                        customer.getName(),
-                        quantityByCustomerId.getOrDefault(customer.getId(), BigDecimal.ZERO)))
+                    toCustomerUsage(
+                        customer,
+                        dimensionUsagesByCustomerId.getOrDefault(customer.getId(), List.of())))
             .toList();
 
     return new BillableMetricUsage(billableMetric, customerUsages);
+  }
+
+  private static CustomerUsage toCustomerUsage(
+      Customer customer, List<DimensionUsage> dimensionUsages) {
+    BigDecimal quantity =
+        dimensionUsages.stream()
+            .map(DimensionUsage::quantity)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return new CustomerUsage(customer.getId(), customer.getName(), quantity, dimensionUsages);
   }
 
   private void requireSupported(BillableMetric billableMetric) {

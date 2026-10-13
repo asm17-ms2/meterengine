@@ -3,6 +3,8 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageCustomer;
+import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageDimensionUsage;
 import com.meterengine.metric.dto.ListBillableMetricUsagesResponse;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -10,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -203,6 +207,63 @@ class BillableMetricUsageIntegrationTest {
         .isEqualByComparingTo("0.1234567890123456790");
   }
 
+  // ---------------------------------------------------------------------------
+  // 속성 값 조합
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void 차원_키가_없는_미터는_빈_객체_조합_하나에_합계가_실린다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acmeId = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acmeId, 500, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acmeId, 300, "2026-08-11T12:00:00+09:00");
+
+    List<BillableMetricUsageDimensionUsage> dimensionUsages =
+        dimensionUsagesOf(organizationId, AUGUST, acmeId);
+
+    assertThat(dimensionUsages).hasSize(1);
+    assertThat(dimensionUsages.getFirst().dimensionValues()).isEmpty();
+    assertThat(dimensionUsages.getFirst().quantity()).isEqualByComparingTo("800");
+  }
+
+  @Test
+  void 차원_키가_있는_미터는_키_값마다_조합이_갈리고_고객_합계는_그_합이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    setDimensionProperties(organizationId, "{model}");
+    UUID acmeId = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acmeId, 500, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", acmeId, 200, "2026-08-11T12:00:00+09:00");
+    insertEvent(
+        organizationId,
+        "tx-3",
+        acmeId,
+        "chat_completion",
+        "{\"model\":\"haiku-5\",\"token\":300}",
+        "2026-08-12T12:00:00+09:00");
+
+    List<BillableMetricUsageDimensionUsage> dimensionUsages =
+        dimensionUsagesOf(organizationId, AUGUST, acmeId);
+
+    assertThat(dimensionUsages)
+        .extracting(BillableMetricUsageDimensionUsage::dimensionValues)
+        .containsExactlyInAnyOrder(Map.of("model", "opus-5"), Map.of("model", "haiku-5"));
+    assertThat(dimensionUsages)
+        .filteredOn(dimensionUsage -> dimensionUsage.dimensionValues().containsValue("opus-5"))
+        .first()
+        .extracting(BillableMetricUsageDimensionUsage::quantity)
+        .satisfies(quantity -> assertThat(quantity).isEqualByComparingTo("700"));
+    assertThat(quantityOf(organizationId, AUGUST, acmeId)).isEqualByComparingTo("1000");
+  }
+
+  @Test
+  void 이벤트가_없는_고객은_조합_목록이_빈_배열이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    setDimensionProperties(organizationId, "{model}");
+    UUID betaId = insertCustomer(organizationId, "베타");
+
+    assertThat(dimensionUsagesOf(organizationId, AUGUST, betaId)).isEmpty();
+  }
+
   @Test
   void 미터가_없는_도입사는_billable_metric_usages가_빈_배열이다() {
     UUID organizationId = insertOrganization();
@@ -322,12 +383,21 @@ class BillableMetricUsageIntegrationTest {
   }
 
   private BigDecimal quantityOf(UUID organizationId, String month, UUID customerId) {
+    return customerOf(organizationId, month, customerId).quantity();
+  }
+
+  private List<BillableMetricUsageDimensionUsage> dimensionUsagesOf(
+      UUID organizationId, String month, UUID customerId) {
+    return customerOf(organizationId, month, customerId).dimensionUsages();
+  }
+
+  private BillableMetricUsageCustomer customerOf(
+      UUID organizationId, String month, UUID customerId) {
     return usageOf(organizationId, month).billableMetricUsages().stream()
         .flatMap(billableMetricUsage -> billableMetricUsage.customers().stream())
         .filter(customer -> customer.customerId().equals(customerId))
         .findFirst()
-        .orElseThrow(() -> new AssertionError("고객 %s가 응답에 없다".formatted(customerId)))
-        .quantity();
+        .orElseThrow(() -> new AssertionError("고객 %s가 응답에 없다".formatted(customerId)));
   }
 
   /** 이번 달 1일 정오(KST)를 낸다. */
@@ -346,6 +416,13 @@ class BillableMetricUsageIntegrationTest {
         """,
         organizationId);
     return organizationId;
+  }
+
+  private void setDimensionProperties(UUID organizationId, String dimensionProperties) {
+    jdbcTemplate.update(
+        "UPDATE billable_metric SET dimension_properties = ?::text[] WHERE organization_id = ?",
+        dimensionProperties,
+        organizationId);
   }
 
   private UUID insertOrganization() {

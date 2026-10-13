@@ -13,6 +13,7 @@ import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
+import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
@@ -59,16 +60,18 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
-    when(billableMetricUsageRepository.sumQuantityByCustomerId(any(), any(), any(), any(), any()))
+    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+            any(), any(), any(), any(), any(), any()))
         .thenReturn(Map.of());
 
     billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
 
     verify(billableMetricUsageRepository)
-        .sumQuantityByCustomerId(
+        .sumQuantityByCustomerIdAndDimensionValues(
             eq(ORGANIZATION_ID),
             eq("chat_completion"),
             eq("token"),
+            eq(List.of()),
             startCaptor.capture(),
             endCaptor.capture());
     assertThat(startCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00+09:00"));
@@ -86,16 +89,42 @@ class BillableMetricUsageServiceTest {
             List.of(
                 new Customer(withEvents, ORGANIZATION_ID, "아크메"),
                 new Customer(withoutEvents, ORGANIZATION_ID, "베타")));
-    when(billableMetricUsageRepository.sumQuantityByCustomerId(any(), any(), any(), any(), any()))
-        .thenReturn(Map.of(withEvents, new BigDecimal("1200")));
+    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+            any(), any(), any(), any(), any(), any()))
+        .thenReturn(Map.of(withEvents, List.of(baseDimensionUsage("1200"))));
 
     List<CustomerUsage> customerUsages =
         billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST).getFirst().customers();
 
     assertThat(customerUsages)
         .containsExactly(
-            new CustomerUsage(withEvents, "아크메", new BigDecimal("1200")),
-            new CustomerUsage(withoutEvents, "베타", BigDecimal.ZERO));
+            new CustomerUsage(
+                withEvents, "아크메", new BigDecimal("1200"), List.of(baseDimensionUsage("1200"))),
+            new CustomerUsage(withoutEvents, "베타", BigDecimal.ZERO, List.of()));
+  }
+
+  @Test
+  void 고객의_수량은_조합별_수량의_합이다() {
+    UUID customerId = UUID.randomUUID();
+    DimensionUsage opus = new DimensionUsage(Map.of("model", "opus-5"), new BigDecimal("500"));
+    DimensionUsage haiku = new DimensionUsage(Map.of("model", "haiku-5"), new BigDecimal("300"));
+    when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(billableMetric("token-usage", "token")));
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
+    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+            any(), any(), any(), any(), any(), any()))
+        .thenReturn(Map.of(customerId, List.of(opus, haiku)));
+
+    CustomerUsage customerUsage =
+        billableMetricUsageService
+            .aggregate(ORGANIZATION_ID, AUGUST)
+            .getFirst()
+            .customers()
+            .getFirst();
+
+    assertThat(customerUsage.quantity()).isEqualByComparingTo("800");
+    assertThat(customerUsage.dimensionUsages()).containsExactly(opus, haiku);
   }
 
   @Test
@@ -107,12 +136,12 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(tokens, requests));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
-    when(billableMetricUsageRepository.sumQuantityByCustomerId(
-            any(), any(), eq("token"), any(), any()))
-        .thenReturn(Map.of(customerId, new BigDecimal("1200")));
-    when(billableMetricUsageRepository.sumQuantityByCustomerId(
-            any(), any(), eq("request"), any(), any()))
-        .thenReturn(Map.of(customerId, new BigDecimal("7")));
+    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+            any(), any(), eq("token"), any(), any(), any()))
+        .thenReturn(Map.of(customerId, List.of(baseDimensionUsage("1200"))));
+    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+            any(), any(), eq("request"), any(), any(), any()))
+        .thenReturn(Map.of(customerId, List.of(baseDimensionUsage("7"))));
 
     List<BillableMetricUsage> billableMetricUsages =
         billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
@@ -158,7 +187,7 @@ class BillableMetricUsageServiceTest {
         .hasMessageContaining("COUNT");
 
     verify(billableMetricUsageRepository, never())
-        .sumQuantityByCustomerId(any(), any(), any(), any(), any());
+        .sumQuantityByCustomerIdAndDimensionValues(any(), any(), any(), any(), any(), any());
   }
 
   @Test
@@ -182,7 +211,11 @@ class BillableMetricUsageServiceTest {
         .hasMessageContaining("target_property");
 
     verify(billableMetricUsageRepository, never())
-        .sumQuantityByCustomerId(any(), any(), any(), any(), any());
+        .sumQuantityByCustomerIdAndDimensionValues(any(), any(), any(), any(), any(), any());
+  }
+
+  private static DimensionUsage baseDimensionUsage(String quantity) {
+    return new DimensionUsage(Map.of(), new BigDecimal(quantity));
   }
 
   private BillableMetric billableMetric(String code, String targetProperty) {
