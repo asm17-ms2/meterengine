@@ -1,7 +1,6 @@
 package com.meterengine.pricing.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.metric.entity.BillableMetric;
@@ -88,13 +87,11 @@ class BillableMetricPriceServiceTest {
   }
 
   private static BillableMetric billableMetric(String code) {
-    return new BillableMetric(ORGANIZATION_ID, code, "토큰 사용량", "chat_completion", "sum", "token");
+    return billableMetric(code, List.of());
   }
 
   private static BillableMetric billableMetric(String code, List<String> dimensionProperties) {
-    BillableMetric billableMetric = mock(BillableMetric.class);
-    when(billableMetric.getCode()).thenReturn(code);
-    when(billableMetric.getDimensionProperties()).thenReturn(dimensionProperties);
-    return billableMetric;
+    return new BillableMetric(
+        ORGANIZATION_ID, code, "토큰 사용량", "chat_completion", "sum", "token", dimensionProperties);
   }
 }

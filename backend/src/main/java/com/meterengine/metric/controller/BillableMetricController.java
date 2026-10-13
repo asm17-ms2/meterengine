@@ -60,7 +60,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "409",
@@ -101,7 +101,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "404",

@@ -212,7 +212,7 @@ class DraftInvoiceServiceTest {
 
   private static BillableMetric billableMetric(String code, String targetProperty) {
     return new BillableMetric(
-        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty);
+        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty, List.of());
   }
 
   private static BillableMetricUsage usage(

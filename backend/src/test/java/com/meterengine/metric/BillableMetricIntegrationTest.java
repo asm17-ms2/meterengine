@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,47 @@ class BillableMetricIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.target_property").isEqualTo("token");
     assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
     assertThat(storedAggregation(organizationId, "token-usage")).isEqualTo("sum");
+  }
+
+  @Test
+  void 차원_키를_넣어_등록하면_응답과_DB에_그_키가_순서대로_들어간다() {
+    UUID organizationId = insertOrganization();
+
+    MvcTestResult result = post(organizationId, sumBodyWithDimensionProperties("model", "region"));
+
+    assertThat(result)
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.dimension_properties")
+        .asArray()
+        .containsExactly("model", "region");
+    assertThat(storedDimensionProperties(organizationId, "token-usage")).isEqualTo("model,region");
+  }
+
+  @Test
+  void 차원_키_없이_등록하면_빈_배열이다() {
+    UUID organizationId = insertOrganization();
+
+    assertThat(post(organizationId, sumBody("token-usage")))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.dimension_properties")
+        .asArray()
+        .isEmpty();
+    assertThat(storedDimensionProperties(organizationId, "token-usage")).isEmpty();
+  }
+
+  @Test
+  void 같은_차원_키가_두_번_있으면_400이고_저장은_0건이다() {
+    UUID organizationId = insertOrganization();
+
+    assertThat(post(organizationId, sumBodyWithDimensionProperties("model", "model")))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC.getCode());
+    assertThat(billableMetricCount(organizationId, "token-usage")).isZero();
   }
 
   @Test
@@ -230,6 +273,29 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
+  void 수정으로_차원_키를_바꾸면_응답과_DB가_새_키다() {
+    UUID organizationId = insertOrganization();
+    assertThat(post(organizationId, sumBodyWithDimensionProperties("model"))).hasStatus(201);
+
+    MvcTestResult result =
+        put(
+            organizationId,
+            "token-usage",
+            """
+            {"name": "토큰 사용량", "event_type": "chat_completion", "aggregation": "sum",
+             "target_property": "token", "dimension_properties": ["region"]}
+            """);
+
+    assertThat(result)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.dimension_properties")
+        .asArray()
+        .containsExactly("region");
+    assertThat(storedDimensionProperties(organizationId, "token-usage")).isEqualTo("region");
+  }
+
+  @Test
   void 없는_미터를_수정하면_404다() {
     assertThat(put(insertOrganization(), "token-usage", updateBody("chat_completion", "token")))
         .hasStatus(404)
@@ -397,6 +463,17 @@ class BillableMetricIntegrationTest {
         .formatted(code, targetProperty);
   }
 
+  private String sumBodyWithDimensionProperties(String... dimensionProperties) {
+    return """
+        {"code": "token-usage", "name": "토큰 사용량", "event_type": "chat_completion",
+         "aggregation": "sum", "target_property": "token", "dimension_properties": [%s]}
+        """
+        .formatted(
+            Stream.of(dimensionProperties)
+                .map(key -> "\"" + key + "\"")
+                .collect(Collectors.joining(", ")));
+  }
+
   private MvcTestResult put(UUID organizationId, String code, String jsonBody) {
     return mvc.put()
         .uri("/v1/billable-metrics/{code}", code)
@@ -422,6 +499,17 @@ class BillableMetricIntegrationTest {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM billable_metric WHERE organization_id = ? AND code = ?",
         Integer.class,
+        organizationId,
+        code);
+  }
+
+  private String storedDimensionProperties(UUID organizationId, String code) {
+    return jdbcTemplate.queryForObject(
+        """
+        SELECT array_to_string(dimension_properties, ',') FROM billable_metric
+        WHERE organization_id = ? AND code = ?
+        """,
+        String.class,
         organizationId,
         code);
   }

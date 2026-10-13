@@ -14,7 +14,9 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.service.PriceRateService;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,8 @@ public class BillableMetricService {
   @Transactional
   public BillableMetricResponse create(UUID organizationId, CreateBillableMetricRequest request) {
     validate(request.aggregation(), request.targetProperty());
+    List<String> dimensionProperties = dimensionPropertiesOrEmpty(request.dimensionProperties());
+    validateDimensionProperties(dimensionProperties);
 
     BillableMetricId id = new BillableMetricId(organizationId, request.code());
     if (billableMetricRepository.existsById(id)) {
@@ -56,7 +60,8 @@ public class BillableMetricService {
             request.name(),
             request.eventType(),
             request.aggregation(),
-            request.targetProperty());
+            request.targetProperty(),
+            dimensionProperties);
     billableMetricRepository.saveAndFlush(billableMetric);
 
     return BillableMetricResponse.from(billableMetric);
@@ -66,6 +71,8 @@ public class BillableMetricService {
   public BillableMetricResponse update(
       UUID organizationId, String code, UpdateBillableMetricRequest request) {
     validate(request.aggregation(), request.targetProperty());
+    List<String> dimensionProperties = dimensionPropertiesOrEmpty(request.dimensionProperties());
+    validateDimensionProperties(dimensionProperties);
 
     BillableMetric billableMetric =
         billableMetricRepository
@@ -86,7 +93,11 @@ public class BillableMetricService {
     }
 
     billableMetric.update(
-        request.name(), request.eventType(), request.aggregation(), request.targetProperty());
+        request.name(),
+        request.eventType(),
+        request.aggregation(),
+        request.targetProperty(),
+        dimensionProperties);
     billableMetricRepository.flush();
 
     return BillableMetricResponse.from(billableMetric);
@@ -126,6 +137,24 @@ public class BillableMetricService {
       throw new InvalidRequestException(
           ErrorCode.INVALID_BILLABLE_METRIC,
           List.of(new FieldError("target_property", "sum 집계에는 target_property가 필요합니다")));
+    }
+  }
+
+  private static List<String> dimensionPropertiesOrEmpty(List<String> dimensionProperties) {
+    return dimensionProperties == null ? List.of() : dimensionProperties;
+  }
+
+  private void validateDimensionProperties(List<String> dimensionProperties) {
+    Set<String> declared = new HashSet<>(dimensionProperties);
+    if (declared.size() < dimensionProperties.size()) {
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_BILLABLE_METRIC,
+          List.of(new FieldError("dimension_properties", "같은 키가 두 번 있습니다")));
+    }
+    if (dimensionProperties.stream().anyMatch(key -> key == null || key.isBlank())) {
+      throw new InvalidRequestException(
+          ErrorCode.INVALID_BILLABLE_METRIC,
+          List.of(new FieldError("dimension_properties", "빈 키를 담을 수 없습니다")));
     }
   }
 }

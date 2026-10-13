@@ -94,6 +94,31 @@ class BillableMetricServiceTest {
   }
 
   @Test
+  void 차원_키의_중복이나_빈_키는_Invalid고_dimension_properties를_errors에_담는다() {
+    for (List<String> dimensionProperties : List.of(List.of("model", "model"), List.of(" "))) {
+      assertThatThrownBy(() -> create("sum", "token", dimensionProperties))
+          .isInstanceOfSatisfying(
+              InvalidRequestException.class,
+              exception -> {
+                assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("dimension_properties");
+              });
+    }
+    verify(billableMetricRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void 차원_키가_null이면_빈_배열로_저장된다() {
+    create("sum", "token", null);
+
+    ArgumentCaptor<BillableMetric> saved = ArgumentCaptor.forClass(BillableMetric.class);
+    verify(billableMetricRepository).saveAndFlush(saved.capture());
+    assertThat(saved.getValue().getDimensionProperties()).isEmpty();
+  }
+
+  @Test
   void 같은_코드의_미터가_이미_있으면_AlreadyExists다() {
     when(billableMetricRepository.existsById(
             new BillableMetricId(ORGANIZATION_ID, BILLABLE_METRIC_CODE)))
@@ -154,14 +179,14 @@ class BillableMetricServiceTest {
         .thenReturn(
             List.of(
                 new BillableMetric(
-                    ORGANIZATION_ID, "api-calls", "호출 수", "chat_completion", "sum", "calls"),
-                new BillableMetric(
                     ORGANIZATION_ID,
-                    BILLABLE_METRIC_CODE,
-                    "토큰 사용량",
+                    "api-calls",
+                    "호출 수",
                     "chat_completion",
                     "sum",
-                    "token")));
+                    "calls",
+                    List.of()),
+                storedBillableMetric()));
 
     ListBillableMetricsResponse response = billableMetricService.list(ORGANIZATION_ID);
 
@@ -189,7 +214,8 @@ class BillableMetricServiceTest {
                 billableMetricService.update(
                     ORGANIZATION_ID,
                     BILLABLE_METRIC_CODE,
-                    new UpdateBillableMetricRequest("이름", "chat_completion", "COUNT", "token")))
+                    new UpdateBillableMetricRequest(
+                        "이름", "chat_completion", "COUNT", "token", List.of())))
         .isInstanceOf(InvalidRequestException.class);
     verify(billableMetricRepository, never()).findById(any());
   }
@@ -313,20 +339,36 @@ class BillableMetricServiceTest {
 
   private BillableMetric storedBillableMetric() {
     return new BillableMetric(
-        ORGANIZATION_ID, BILLABLE_METRIC_CODE, "토큰 사용량", "chat_completion", "sum", "token");
+        ORGANIZATION_ID,
+        BILLABLE_METRIC_CODE,
+        "토큰 사용량",
+        "chat_completion",
+        "sum",
+        "token",
+        List.of());
   }
 
   private BillableMetricResponse update(String eventType, String targetProperty) {
     return billableMetricService.update(
         ORGANIZATION_ID,
         BILLABLE_METRIC_CODE,
-        new UpdateBillableMetricRequest("바뀐 이름", eventType, "sum", targetProperty));
+        new UpdateBillableMetricRequest("바뀐 이름", eventType, "sum", targetProperty, List.of()));
   }
 
   private BillableMetricResponse create(String aggregation, String targetProperty) {
+    return create(aggregation, targetProperty, List.of());
+  }
+
+  private BillableMetricResponse create(
+      String aggregation, String targetProperty, List<String> dimensionProperties) {
     return billableMetricService.create(
         ORGANIZATION_ID,
         new CreateBillableMetricRequest(
-            BILLABLE_METRIC_CODE, "토큰 사용량", "chat_completion", aggregation, targetProperty));
+            BILLABLE_METRIC_CODE,
+            "토큰 사용량",
+            "chat_completion",
+            aggregation,
+            targetProperty,
+            dimensionProperties));
   }
 }
