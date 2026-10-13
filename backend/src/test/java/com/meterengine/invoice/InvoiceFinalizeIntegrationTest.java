@@ -5,18 +5,22 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
+import com.meterengine.invoice.dto.InvoiceResponse.InvoiceLineResponse;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.invoice.service.DraftInvoiceService;
 import com.meterengine.invoice.service.InvoiceFinalizationService;
+import com.meterengine.invoice.service.InvoiceService;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +42,7 @@ class InvoiceFinalizeIntegrationTest {
 
   @Autowired private InvoiceFinalizationService invoiceFinalizationService;
   @Autowired private DraftInvoiceService draftInvoiceService;
+  @Autowired private InvoiceService invoiceService;
   @Autowired private InvoiceRepository invoiceRepository;
   @Autowired private InvoiceLineRepository invoiceLineRepository;
   @Autowired private EntityManager entityManager;
@@ -105,6 +110,39 @@ class InvoiceFinalizeIntegrationTest {
     Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(draftAmount).isEqualTo(1640);
+  }
+
+  @Test
+  void 한_미터에_조합이_여럿이면_인보이스_목록의_라인이_확정_직전의_청구_예정액_라인과_같다() {
+    UUID organizationId = insertOrganization();
+    jdbcTemplate.update(
+        """
+        INSERT INTO billable_metric
+          (organization_id, code, name, event_type, aggregation, target_property,
+           dimension_properties)
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token', '{model}')
+        """,
+        organizationId);
+    insertPrice(organizationId, "token-usage", "{\"model\": \"a\"}", "0.5");
+    insertPrice(organizationId, "token-usage", "{\"model\": \"b\"}", "2");
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "b", 700);
+    insertEvent(organizationId, "tx-2", acme, "a", 500);
+    insertEvent(organizationId, "tx-3", acme, "b", 300);
+    List<DraftInvoiceLine> draftInvoiceLines = draft(organizationId).customers().getFirst().lines();
+
+    invoiceFinalizationService.finalize(organizationId, AUGUST);
+    flushAndClear();
+
+    List<InvoiceLineResponse> invoiceLines =
+        invoiceService.list(organizationId, acme, AUGUST).invoices().getFirst().lines();
+    assertThat(invoiceLines)
+        .extracting(InvoiceLineResponse::dimensionValues, InvoiceLineResponse::amount)
+        .containsExactly(tuple(Map.of("model", "a"), 250L), tuple(Map.of("model", "b"), 2000L));
+    assertThat(invoiceLines)
+        .usingRecursiveComparison()
+        .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .isEqualTo(draftInvoiceLines);
   }
 
   @Test
@@ -315,8 +353,9 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   private List<InvoiceLine> lines(UUID organizationId, Invoice invoice) {
-    return invoiceLineRepository.findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAsc(
-        organizationId, invoice.getId());
+    return invoiceLineRepository
+        .findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            organizationId, invoice.getId());
   }
 
   private void flushAndClear() {
@@ -333,13 +372,19 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   private void insertPrice(UUID organizationId, String billableMetricCode, String unitPrice) {
+    insertPrice(organizationId, billableMetricCode, "{}", unitPrice);
+  }
+
+  private void insertPrice(
+      UUID organizationId, String billableMetricCode, String dimensionValues, String unitPrice) {
     jdbcTemplate.update(
         """
         INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
-        VALUES (?, ?, '{}', ?)
+        VALUES (?, ?, ?::jsonb, ?)
         """,
         organizationId,
         billableMetricCode,
+        dimensionValues,
         new BigDecimal(unitPrice));
   }
 
@@ -367,6 +412,21 @@ class InvoiceFinalizeIntegrationTest {
         UUID.class,
         organizationId,
         name);
+  }
+
+  private void insertEvent(
+      UUID organizationId, String transactionId, UUID customerId, String model, int token) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
+        VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
+        """,
+        organizationId,
+        transactionId,
+        customerId,
+        "{\"model\":\"%s\",\"token\":%d}".formatted(model, token),
+        OffsetDateTime.parse("2026-08-10T12:00:00+09:00"));
   }
 
   private void insertEvent(
