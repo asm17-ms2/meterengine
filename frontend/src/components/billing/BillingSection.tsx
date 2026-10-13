@@ -11,7 +11,7 @@ import {
   type DraftInvoiceCustomer,
 } from "@/lib/api/billing";
 import type { ListInvoicesResponse } from "@/lib/api/invoices";
-import { formatDecimal, formatKrw } from "@/lib/format";
+import { formatDecimal, formatDimensionValues, formatKrw } from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 export async function BillingSection({
@@ -97,6 +97,8 @@ function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupVie
       label: line.target_property
         ? `${line.billable_metric_code} (${line.target_property})`
         : line.billable_metric_code,
+      dimensionValues: line.dimension_values,
+      combination: formatDimensionValues(line.dimension_values),
       quantity: formatDecimal(line.quantity),
       unitPrice: formatKrw(line.unit_price),
       amount: formatKrw(line.amount),

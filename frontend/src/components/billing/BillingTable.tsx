@@ -5,6 +5,7 @@ import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
+import type { DimensionValues } from "@/lib/api/billable-metric-prices";
 
 export type BillingGroupView = {
   customerId: string;
@@ -15,16 +16,19 @@ export type BillingGroupView = {
 
 export type BillingLineView = {
   label: string;
+  dimensionValues: DimensionValues;
+  combination: string;
   quantity: string;
   unitPrice: string;
   amount: string;
 };
 
-const COLUMNS = "minmax(0, 1fr) 170px 130px 180px";
-const MIN_WIDTH = 760;
+const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 170px 130px 180px";
+const MIN_WIDTH = 900;
 
 const HEAD_LABELS = [
   "고객 / 미터 라인",
+  "조합",
   { label: "집계 수량", right: true },
   { label: "단가", right: true },
   { label: "금액", right: true },
@@ -58,6 +62,7 @@ export function BillingTable({
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
+              <div className="grid-cell grid-cell--group" />
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
                 청구 라인 {group.lines.length}줄
               </div>
@@ -70,9 +75,15 @@ export function BillingTable({
             {isGroupCollapsed
               ? null
               : group.lines.map((line) => (
-                  <GridRow key={line.label} columns={COLUMNS}>
+                  <GridRow
+                    key={`${line.label} ${JSON.stringify(line.dimensionValues)}`}
+                    columns={COLUMNS}
+                  >
                     <GridCell className="grid-cell--child grid-cell--mono">
                       {line.label}
+                    </GridCell>
+                    <GridCell className="grid-cell--mono grid-cell--truncate">
+                      {line.combination}
                     </GridCell>
                     <GridCell className="grid-cell--right grid-cell--num">
                       {line.quantity}
@@ -91,6 +102,7 @@ export function BillingTable({
 
       <GridRow columns={COLUMNS} className="grid-row--total">
         <GridCell className="grid-cell--group">합계</GridCell>
+        <GridCell />
         <GridCell />
         <GridCell />
         <GridCell className="grid-cell--right grid-cell--num grid-cell__total-amount">

@@ -11,15 +11,12 @@ import type {
 } from "@/lib/api/billable-metric-prices";
 import type { ListBillableMetricsResponse } from "@/lib/api/billable-metrics";
 import type { Result } from "@/lib/api/client";
-import { formatKrw } from "@/lib/format";
-
-const DEFAULT_COMBINATION_LABEL = "기본";
+import { formatDimensionValues, formatKrw } from "@/lib/format";
 
 function toPriceRateRow(priceRate: BillableMetricPricePriceRate): PriceRateRowView {
-  const pairs = Object.entries(priceRate.dimension_values).map(([key, value]) => `${key}=${value}`);
   return {
     dimensionValues: priceRate.dimension_values,
-    combination: pairs.length === 0 ? DEFAULT_COMBINATION_LABEL : pairs.join(", "),
+    combination: formatDimensionValues(priceRate.dimension_values),
     unitPrice: formatKrw(priceRate.unit_price),
   };
 }
