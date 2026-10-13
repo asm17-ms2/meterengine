@@ -137,11 +137,10 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 가격_정책이_없으면_단가를_만들_수_없다() {
+  void 미터가_없으면_단가를_만들_수_없다() {
     UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertPriceRate(organizationId, "token-usage", "{}", "0.5"))
+    assertThatThrownBy(() -> insertPriceRate(organizationId, "no-such-metric", "{}", "0.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -245,7 +244,7 @@ class SchemaConstraintTest {
             "invoice_line_organization_fk",
             "event_customer_same_organization_fk",
             "price_policy_billable_metric_same_organization_fk",
-            "price_rate_price_policy_same_organization_fk",
+            "price_rate_billable_metric_same_organization_fk",
             "invoice_customer_same_organization_fk",
             "invoice_line_invoice_same_organization_fk");
   }
