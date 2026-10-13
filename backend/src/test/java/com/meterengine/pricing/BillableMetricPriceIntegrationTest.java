@@ -22,8 +22,6 @@ import org.springframework.web.context.WebApplicationContext;
 @Transactional
 class BillableMetricPriceIntegrationTest {
 
-  private static final String DIMENSIONLESS = "{}";
-
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -62,10 +60,9 @@ class BillableMetricPriceIntegrationTest {
   }
 
   @Test
-  void 다른_도입사의_미터와_정책은_조회되지_않는다() {
+  void 다른_도입사의_미터는_조회되지_않는다() {
     UUID otherOrganizationId = insertOrganization();
     insertBillableMetric(otherOrganizationId, "token-usage");
-    insertPricePolicy(otherOrganizationId, "token-usage", DIMENSIONLESS);
     UUID organizationId = insertOrganization();
 
     assertThat(get(organizationId))
@@ -76,32 +73,13 @@ class BillableMetricPriceIntegrationTest {
         .isEmpty();
   }
 
-  // --- 정책 (dimension_properties) ---
+  // --- dimension_properties ---
 
   @Test
-  void 정책이_없는_미터는_dimension_properties가_JSON_null로_실린다() {
+  void 미터의_dimension_properties가_목록에_그대로_실린다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-
-    MvcTestResult result = get(organizationId);
-
-    assertThat(result)
-        .hasStatus(200)
-        .bodyJson()
-        .extractingPath("$.billable_metric_prices[0].billable_metric_code")
-        .isEqualTo("token-usage");
-    assertThat(result)
-        .bodyJson()
-        .extractingPath("$.billable_metric_prices[0]")
-        .asMap()
-        .containsEntry("dimension_properties", null);
-  }
-
-  @Test
-  void 정책의_선언이_목록에_그대로_실린다() {
-    UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage", "{model}");
+    updateDimensionProperties(organizationId, "token-usage", "{model}");
 
     assertThat(get(organizationId))
         .hasStatus(200)
@@ -111,10 +89,9 @@ class BillableMetricPriceIntegrationTest {
   }
 
   @Test
-  void 무차원_정책은_dimension_properties가_빈_배열이다() {
+  void 키를_정하지_않은_미터는_dimension_properties가_빈_배열이다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage", DIMENSIONLESS);
 
     assertThat(get(organizationId))
         .hasStatus(200)
@@ -127,10 +104,9 @@ class BillableMetricPriceIntegrationTest {
   // --- 기본 단가 (unit_price) ---
 
   @Test
-  void 단가가_없는_정책은_unit_price가_JSON_null이고_0이_아니다() {
+  void 단가가_없는_미터는_unit_price가_JSON_null이고_0이_아니다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage", DIMENSIONLESS);
 
     assertThat(get(organizationId))
         .hasStatus(200)
@@ -144,7 +120,6 @@ class BillableMetricPriceIntegrationTest {
   void 기본_단가가_있으면_unit_price에_실린다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage", DIMENSIONLESS);
     insertBasePriceRate(organizationId, "token-usage", "0.007");
 
     assertThat(get(organizationId))
@@ -160,7 +135,6 @@ class BillableMetricPriceIntegrationTest {
   void 단가가_0이면_null이_아니라_0으로_실린다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage", DIMENSIONLESS);
     insertBasePriceRate(organizationId, "token-usage", "0");
 
     assertThat(get(organizationId))
@@ -210,16 +184,14 @@ class BillableMetricPriceIntegrationTest {
         code);
   }
 
-  private void insertPricePolicy(
+  private void updateDimensionProperties(
       UUID organizationId, String billableMetricCode, String dimensionProperties) {
     jdbcTemplate.update(
-        """
-        INSERT INTO price_policy (organization_id, billable_metric_code, dimension_properties)
-        VALUES (?, ?, ?::text[])
-        """,
+        "UPDATE billable_metric SET dimension_properties = ?::text[]"
+            + " WHERE organization_id = ? AND code = ?",
+        dimensionProperties,
         organizationId,
-        billableMetricCode,
-        dimensionProperties);
+        billableMetricCode);
   }
 
   private void insertBasePriceRate(

@@ -135,14 +135,6 @@ class DraftInvoiceIntegrationTest {
         VALUES (?, 'api-calls', 'API 호출량', 'api_call', 'sum', 'count')
         """,
         organizationId);
-    assertThat(
-            mvc.post()
-                .uri("/v1/billable-metrics/api-calls/price-policy")
-                .header("X-Organization-Id", organizationId.toString())
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .content("{\"dimension_properties\": []}")
-                .exchange())
-        .hasStatus(201);
     jdbcTemplate.update(
         """
         INSERT INTO event
@@ -283,9 +275,6 @@ class DraftInvoiceIntegrationTest {
           (organization_id, code, name, event_type, aggregation, target_property)
         VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token')
         """,
-        organizationId);
-    jdbcTemplate.update(
-        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, 'token-usage')",
         organizationId);
     jdbcTemplate.update(
         """

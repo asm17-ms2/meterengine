@@ -1,16 +1,13 @@
 package com.meterengine.pricing.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.meterengine.pricing.entity.PricePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
 
 public record BillableMetricPriceResponse(
     @JsonProperty("billable_metric_code") String billableMetricCode,
-    @Schema(
-            nullable = true,
-            description = "단가를 가르는 이벤트 속성 키. 가격 정책이 없는 미터는 null이고, 속성에 따라 단가가 갈리지 않는 미터는 빈 배열이다")
+    @Schema(description = "단가를 가르는 이벤트 속성 키. 속성에 따라 단가가 갈리지 않는 미터는 빈 배열이다")
         @JsonProperty("dimension_properties")
         List<String> dimensionProperties,
     @Schema(
@@ -21,10 +18,7 @@ public record BillableMetricPriceResponse(
         BigDecimal unitPrice) {
 
   public static BillableMetricPriceResponse of(
-      String billableMetricCode, PricePolicy pricePolicy, BigDecimal unitPrice) {
-    return pricePolicy == null
-        ? new BillableMetricPriceResponse(billableMetricCode, null, null)
-        : new BillableMetricPriceResponse(
-            billableMetricCode, pricePolicy.getDimensionProperties(), unitPrice);
+      String billableMetricCode, List<String> dimensionProperties, BigDecimal unitPrice) {
+    return new BillableMetricPriceResponse(billableMetricCode, dimensionProperties, unitPrice);
   }
 }

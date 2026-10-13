@@ -13,7 +13,7 @@ import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.service.PricePolicyService;
+import com.meterengine.pricing.service.PriceRateService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -24,15 +24,15 @@ public class BillableMetricService {
 
   private final BillableMetricRepository billableMetricRepository;
   private final EventService eventService;
-  private final PricePolicyService pricePolicyService;
+  private final PriceRateService priceRateService;
 
   BillableMetricService(
       BillableMetricRepository billableMetricRepository,
       EventService eventService,
-      PricePolicyService pricePolicyService) {
+      PriceRateService priceRateService) {
     this.billableMetricRepository = billableMetricRepository;
     this.eventService = eventService;
-    this.pricePolicyService = pricePolicyService;
+    this.priceRateService = priceRateService;
   }
 
   @Transactional
@@ -103,8 +103,8 @@ public class BillableMetricService {
         organizationId, billableMetric.getEventType(), billableMetric.getTargetProperty())) {
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
     }
-    if (pricePolicyService.existsForBillableMetric(organizationId, code)) {
-      throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_PRICE_POLICY);
+    if (priceRateService.existsForBillableMetric(organizationId, code)) {
+      throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE);
     }
 
     billableMetricRepository.delete(billableMetric);

@@ -64,7 +64,7 @@ class RequestValidationCoverageTest {
             "UpdateCustomerRequest",
             "CreateBillableMetricRequest",
             "UpdateBillableMetricRequest",
-            "CreatePricePolicyRequest",
+            "CreatePriceRateRequest",
             "IngestEventRequest");
   }
 
@@ -72,7 +72,7 @@ class RequestValidationCoverageTest {
   void 컨트롤러를_빠짐없이_찾는다() {
     assertThat(controllers())
         .extracting(Class::getSimpleName)
-        .contains("CustomerController", "EventController", "PricePolicyController");
+        .contains("CustomerController", "EventController", "BillableMetricController");
   }
 
   @Test

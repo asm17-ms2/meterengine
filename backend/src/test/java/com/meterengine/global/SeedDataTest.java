@@ -25,7 +25,6 @@ class SeedDataTest {
 
   private static final int CUSTOMERS = 2 + 3;
   private static final int BILLABLE_METRICS = 1 + 3 + 2;
-  private static final int PRICE_POLICIES = BILLABLE_METRICS;
   private static final int PRICE_RATES = BILLABLE_METRICS;
 
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -35,7 +34,6 @@ class SeedDataTest {
     assertThat(rowCount("organization")).isEqualTo(1);
     assertThat(rowCount("customer")).isEqualTo(CUSTOMERS);
     assertThat(rowCount("billable_metric")).isEqualTo(BILLABLE_METRICS);
-    assertThat(rowCount("price_policy")).isEqualTo(PRICE_POLICIES);
     assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
 
@@ -46,14 +44,12 @@ class SeedDataTest {
     assertThat(rowCount("organization")).isEqualTo(1);
     assertThat(rowCount("customer")).isEqualTo(CUSTOMERS);
     assertThat(rowCount("billable_metric")).isEqualTo(BILLABLE_METRICS);
-    assertThat(rowCount("price_policy")).isEqualTo(PRICE_POLICIES);
     assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
 
   @Test
   void 값이_바뀐_상태에서_시드를_다시_실행하면_파일_기준으로_되돌아온다() {
     jdbcTemplate.update("UPDATE billable_metric SET name = '손으로 바꾼 이름'");
-    jdbcTemplate.update("UPDATE price_policy SET dimension_properties = '{model}'");
     jdbcTemplate.update("UPDATE price_rate SET unit_price = 999");
 
     jdbcTemplate.execute(readSeedScript());
@@ -62,12 +58,6 @@ class SeedDataTest {
             jdbcTemplate.queryForObject(
                 "SELECT name FROM billable_metric WHERE code = 'token-usage'", String.class))
         .isEqualTo("토큰 사용량");
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT dimension_properties::text FROM price_policy WHERE billable_metric_code ="
-                    + " 'token-usage'",
-                String.class))
-        .isEqualTo("{}");
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT unit_price FROM price_rate WHERE billable_metric_code = 'token-usage'",
@@ -81,8 +71,8 @@ class SeedDataTest {
   void 시드_가격은_미터마다_무차원_단가_1행이다() {
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT dimension_properties::text FROM price_policy", String.class))
-        .hasSize(PRICE_POLICIES)
+                "SELECT dimension_properties::text FROM billable_metric", String.class))
+        .hasSize(BILLABLE_METRICS)
         .containsOnly("{}");
     assertThat(
             jdbcTemplate.queryForList(

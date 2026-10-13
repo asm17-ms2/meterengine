@@ -16,8 +16,8 @@ paths:
   /v1/billable-metric-prices:
     get:
       description: |
-        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 가격 정책과 기본 단가를 붙인다.
-        가격 정책이 없는 미터는 dimension_properties가 null이다. 빈 배열은 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
+        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 dimension_properties와 기본 단가를 붙인다.
+        dimension_properties가 빈 배열이면 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
         unit_price는 속성 조건 없이 적용되는 기본 단가이고, 없으면 null이다. 속성 값 조합별 단가는 싣지 않는다.
         페이지를 나누지 않는다.
       operationId: listBillableMetricPrices
@@ -128,7 +128,7 @@ paths:
     delete:
       description: |
         미터를 지운다. 지운 미터는 되돌릴 수 없다.
-        집계된 이벤트가 한 건이라도 있거나 가격 정책이 붙은 미터는 지울 수 없고 409다.
+        집계된 이벤트가 한 건이라도 있거나 단가가 붙은 미터는 지울 수 없고 409다.
         이미 지운 미터를 다시 지우면 404다.
       operationId: deleteBillableMetric
       parameters:
@@ -168,7 +168,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=billable_metric_has_events: 집계된 이벤트가 있어 지울 수 없다.
-            code=billable_metric_has_price_policy: 가격 정책이 붙어 있어 지울 수 없다.
+            code=billable_metric_has_price_rate: 단가가 붙어 있어 지울 수 없다.
       summary: 집계 미터 삭제
       tags:
       - billable-metric-controller
@@ -230,64 +230,6 @@ paths:
       summary: 집계 미터 수정
       tags:
       - billable-metric-controller
-  /v1/billable-metrics/{code}/price-policy:
-    post:
-      description: |
-        미터의 가격 정책을 등록한다. 가격 정책은 단가를 가르는 이벤트 속성 키를 선언한 것이다.
-        속성에 따라 단가가 갈리지 않으면 dimension_properties를 빈 배열로 보낸다.
-        단가는 이 API로 등록하지 않는다. 단가가 없는 미터는 청구 예정액에 라인이 나오지 않는다.
-        미터 하나에 가격 정책은 하나다. 이미 있으면 409다.
-      operationId: createPricePolicy
-      parameters:
-      - description: 도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.
-        in: header
-        name: X-Organization-Id
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - description: 가격 정책을 등록할 미터의 code.
-        in: path
-        name: code
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreatePricePolicyRequest"
-        required: true
-      responses:
-        "201":
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/PricePolicyResponse"
-          description: 등록된 가격 정책
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: |
-            code=validation_error: dimension_properties가 없거나, dimension_properties의 키나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
-            code=invalid_price_policy: dimension_properties에 중복된 키나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=billable_metric_not_found: 그런 미터가 없다"
-        "409":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=price_policy_already_exists: 이 미터에 가격 정책이 이미 있다"
-      summary: 가격 정책 등록
-      tags:
-      - price-policy-controller
   /v1/customers:
     get:
       description: |
@@ -828,11 +770,8 @@ components:
         billable_metric_code:
           type: string
         dimension_properties:
-          type:
-          - array
-          - "null"
-          description: "단가를 가르는 이벤트 속성 키. 가격 정책이 없는 미터는 null이고, 속성에 따라 단가가 갈리지 않는\
-            \ 미터는 빈 배열이다"
+          type: array
+          description: 단가를 가르는 이벤트 속성 키. 속성에 따라 단가가 갈리지 않는 미터는 빈 배열이다
           items:
             type: string
         unit_price:
@@ -914,15 +853,6 @@ components:
           minLength: 0
       required:
       - name
-    CreatePricePolicyRequest:
-      type: object
-      properties:
-        dimension_properties:
-          type: array
-          items:
-            type: string
-      required:
-      - dimension_properties
     CustomerResponse:
       type: object
       properties:
@@ -989,12 +919,10 @@ components:
           - validation_error
           - malformed_request_body
           - invalid_billable_metric
-          - invalid_price_policy
           - invalid_price_rate
           - event_too_old
           - customer_not_found
           - billable_metric_not_found
-          - price_policy_not_found
           - invoice_not_found
           - endpoint_not_found
           - method_not_allowed
@@ -1002,10 +930,9 @@ components:
           - customer_has_events
           - customer_has_payment_attempts
           - billable_metric_has_events
-          - billable_metric_has_price_policy
+          - billable_metric_has_price_rate
           - billable_metric_already_exists
           - billable_metric_event_type_target_property_already_exists
-          - price_policy_already_exists
           - price_rate_already_exists
           - invoice_already_paid
           - invoice_amount_zero
@@ -1218,15 +1145,6 @@ components:
           format: date-time
         status:
           type: string
-    PricePolicyResponse:
-      type: object
-      properties:
-        billable_metric_code:
-          type: string
-        dimension_properties:
-          type: array
-          items:
-            type: string
     UpdateBillableMetricRequest:
       type: object
       properties:

@@ -106,35 +106,7 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
-  // --- 가격 정책 / 단가 ---
-
-  @Test
-  void 미터가_없으면_가격_정책을_만들_수_없다() {
-    UUID organizationId = insertOrganization();
-
-    assertThatThrownBy(() -> insertPricePolicy(organizationId, "no-such-metric"))
-        .isInstanceOf(DataIntegrityViolationException.class);
-  }
-
-  @Test
-  void 다른_도입사의_미터에는_가격_정책을_붙일_수_없다() {
-    UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId, "token-usage");
-    UUID otherOrganizationId = insertOrganization();
-
-    assertThatThrownBy(() -> insertPricePolicy(otherOrganizationId, "token-usage"))
-        .isInstanceOf(DataIntegrityViolationException.class);
-  }
-
-  @Test
-  void 같은_미터에_가격_정책은_하나만_만들_수_있다() {
-    UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage");
-
-    assertThatThrownBy(() -> insertPricePolicy(organizationId, "token-usage"))
-        .isInstanceOf(DataIntegrityViolationException.class);
-  }
+  // --- 단가 ---
 
   @Test
   void 미터가_없으면_단가를_만들_수_없다() {
@@ -148,7 +120,6 @@ class SchemaConstraintTest {
   void 단가는_음수일_수_없다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage");
 
     assertThatThrownBy(() -> insertPriceRate(organizationId, "token-usage", "{}", "-0.5"))
         .isInstanceOf(DataIntegrityViolationException.class);
@@ -158,7 +129,6 @@ class SchemaConstraintTest {
   void 같은_조합의_단가는_키_순서가_달라도_두_번_저장되지_않는다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
-    insertPricePolicy(organizationId, "token-usage");
     insertPriceRate(
         organizationId, "token-usage", "{\"model\": \"opus5\", \"region\": \"kr\"}", "0.5");
 
@@ -231,19 +201,16 @@ class SchemaConstraintTest {
             "customer_pk",
             "billable_metric_pk",
             "event_pk",
-            "price_policy_pk",
             "price_rate_pk",
             "invoice_pk",
             "invoice_line_pk",
             "customer_organization_fk",
             "billable_metric_organization_fk",
             "event_organization_fk",
-            "price_policy_organization_fk",
             "price_rate_organization_fk",
             "invoice_organization_fk",
             "invoice_line_organization_fk",
             "event_customer_same_organization_fk",
-            "price_policy_billable_metric_same_organization_fk",
             "price_rate_billable_metric_same_organization_fk",
             "invoice_customer_same_organization_fk",
             "invoice_line_invoice_same_organization_fk");
@@ -642,13 +609,6 @@ class SchemaConstraintTest {
         ORDER BY ordinal_position
         """,
         String.class, table);
-  }
-
-  private void insertPricePolicy(UUID organizationId, String billableMetricCode) {
-    jdbcTemplate.update(
-        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, ?)",
-        organizationId,
-        billableMetricCode);
   }
 
   private void insertPriceRate(

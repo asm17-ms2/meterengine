@@ -1,13 +1,12 @@
 package com.meterengine.pricing.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.BillableMetricPriceResponse;
-import com.meterengine.pricing.entity.PricePolicy;
-import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,7 +23,6 @@ class BillableMetricPriceServiceTest {
 
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
 
-  @Mock private PricePolicyRepository pricePolicyRepository;
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private PriceRateRepository priceRateRepository;
 
@@ -33,17 +31,13 @@ class BillableMetricPriceServiceTest {
   @BeforeEach
   void setUp() {
     billableMetricPriceService =
-        new BillableMetricPriceService(
-            pricePolicyRepository, billableMetricRepository, priceRateRepository);
+        new BillableMetricPriceService(billableMetricRepository, priceRateRepository);
   }
 
   @Test
   void 목록의_순서는_미터_조회가_정한다() {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("input-tokens"), billableMetric("token-usage")));
-    when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
-        .thenReturn(
-            List.of(pricePolicy("token-usage", List.of()), pricePolicy("input-tokens", List.of())));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of());
 
@@ -53,11 +47,10 @@ class BillableMetricPriceServiceTest {
   }
 
   @Test
-  void 정책과_단가가_모두_있으면_둘_다_실린다() {
+  void 미터의_dimension_properties와_단가가_함께_실린다() {
+    BillableMetric billableMetric = billableMetric("input-tokens", List.of("model"));
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(billableMetric("input-tokens")));
-    when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
-        .thenReturn(List.of(pricePolicy("input-tokens", List.of("model"))));
+        .thenReturn(List.of(billableMetric));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
 
@@ -68,16 +61,15 @@ class BillableMetricPriceServiceTest {
   }
 
   @Test
-  void 정책이_없는_미터는_단가가_있어도_싣지_않는다() {
+  void 단가가_없는_미터는_키는_실리고_unit_price는_null이다() {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("input-tokens")));
-    when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID)).thenReturn(List.of());
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
-        .thenReturn(Map.of("input-tokens", new BigDecimal("0.007")));
+        .thenReturn(Map.of());
 
     BillableMetricPriceResponse onlyBillableMetricPrice = onlyBillableMetricPrice();
 
-    assertThat(onlyBillableMetricPrice.dimensionProperties()).isNull();
+    assertThat(onlyBillableMetricPrice.dimensionProperties()).isEmpty();
     assertThat(onlyBillableMetricPrice.unitPrice()).isNull();
   }
 
@@ -85,8 +77,6 @@ class BillableMetricPriceServiceTest {
   void 다른_미터의_단가가_섞이지_않는다() {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("input-tokens")));
-    when(pricePolicyRepository.findByOrganizationId(ORGANIZATION_ID))
-        .thenReturn(List.of(pricePolicy("input-tokens", List.of())));
     when(priceRateRepository.findBaseUnitPriceByBillableMetricCode(ORGANIZATION_ID))
         .thenReturn(Map.of("token-usage", new BigDecimal("99")));
 
@@ -101,7 +91,10 @@ class BillableMetricPriceServiceTest {
     return new BillableMetric(ORGANIZATION_ID, code, "토큰 사용량", "chat_completion", "sum", "token");
   }
 
-  private static PricePolicy pricePolicy(String code, List<String> dimensionProperties) {
-    return new PricePolicy(ORGANIZATION_ID, code, dimensionProperties);
+  private static BillableMetric billableMetric(String code, List<String> dimensionProperties) {
+    BillableMetric billableMetric = mock(BillableMetric.class);
+    when(billableMetric.getCode()).thenReturn(code);
+    when(billableMetric.getDimensionProperties()).thenReturn(dimensionProperties);
+    return billableMetric;
   }
 }

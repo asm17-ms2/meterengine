@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 public record CreatePriceRateRequest(
-    @Schema(description = "단가가 적용되는 속성 값 조합. 키 집합은 정책의 dimension_properties와 같아야 하고, 빈 객체는 기본 단가다")
+    @Schema(description = "단가가 적용되는 속성 값 조합. 키 집합은 미터의 dimension_properties와 같아야 하고, 빈 객체는 기본 단가다")
         @NotNull @StorableJson
         @JsonProperty("dimension_values")
         Map<String, Object> dimensionValues,

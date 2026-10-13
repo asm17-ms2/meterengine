@@ -5,13 +5,13 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.metric.entity.BillableMetric;
+import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
-import com.meterengine.pricing.entity.PricePolicy;
-import com.meterengine.pricing.entity.PricePolicyId;
 import com.meterengine.pricing.entity.PriceRate;
 import com.meterengine.pricing.entity.PriceRateId;
-import com.meterengine.pricing.repository.PricePolicyRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.util.HashSet;
 import java.util.List;
@@ -25,27 +25,33 @@ import tools.jackson.databind.json.JsonMapper;
 public class PriceRateService {
 
   private final PriceRateRepository priceRateRepository;
-  private final PricePolicyRepository pricePolicyRepository;
+  private final BillableMetricRepository billableMetricRepository;
   private final JsonMapper jsonMapper;
 
   PriceRateService(
       PriceRateRepository priceRateRepository,
-      PricePolicyRepository pricePolicyRepository,
+      BillableMetricRepository billableMetricRepository,
       JsonMapper jsonMapper) {
     this.priceRateRepository = priceRateRepository;
-    this.pricePolicyRepository = pricePolicyRepository;
+    this.billableMetricRepository = billableMetricRepository;
     this.jsonMapper = jsonMapper;
+  }
+
+  @Transactional(readOnly = true)
+  public boolean existsForBillableMetric(UUID organizationId, String billableMetricCode) {
+    return priceRateRepository.existsByOrganizationIdAndBillableMetricCode(
+        organizationId, billableMetricCode);
   }
 
   @Transactional
   public PriceRateResponse create(
       UUID organizationId, String billableMetricCode, CreatePriceRateRequest request) {
-    PricePolicy pricePolicy =
-        pricePolicyRepository
-            .findById(new PricePolicyId(organizationId, billableMetricCode))
-            .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_POLICY_NOT_FOUND));
+    BillableMetric billableMetric =
+        billableMetricRepository
+            .findById(new BillableMetricId(organizationId, billableMetricCode))
+            .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
-    validate(request.dimensionValues(), pricePolicy.getDimensionProperties());
+    validate(request.dimensionValues(), billableMetric.getDimensionProperties());
 
     String dimensionValues = jsonMapper.writeValueAsString(request.dimensionValues());
     if (priceRateRepository.existsById(
@@ -65,7 +71,7 @@ public class PriceRateService {
         && !dimensionValues.keySet().equals(new HashSet<>(dimensionProperties))) {
       throw new InvalidRequestException(
           ErrorCode.INVALID_PRICE_RATE,
-          List.of(new FieldError("dimension_values", "키 집합이 정책의 dimension_properties와 같아야 합니다")));
+          List.of(new FieldError("dimension_values", "키 집합이 미터의 dimension_properties와 같아야 합니다")));
     }
     if (dimensionValues.values().stream().anyMatch(value -> !isScalar(value))) {
       throw new InvalidRequestException(

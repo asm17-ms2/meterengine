@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PriceRateRepository extends JpaRepository<PriceRate, PriceRateId> {
 
+  boolean existsByOrganizationIdAndBillableMetricCode(
+      UUID organizationId, String billableMetricCode);
+
   List<PriceRate> findByOrganizationIdAndDimensionValues(
       UUID organizationId, String dimensionValues);
 

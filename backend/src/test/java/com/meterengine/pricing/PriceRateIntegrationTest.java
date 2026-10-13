@@ -34,7 +34,7 @@ class PriceRateIntegrationTest {
 
   @Test
   void 조합_단가를_등록하면_jsonb_조합과_단가가_저장된다() {
-    UUID organizationId = insertOrganizationWithPolicy("{model,region}");
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model,region}");
 
     PriceRateResponse response =
         create(organizationId, Map.of("model", "opus", "region", "kr"), "0.007");
@@ -46,7 +46,7 @@ class PriceRateIntegrationTest {
 
   @Test
   void 키_순서만_다른_같은_조합은_DB가_같은_행으로_보아_AlreadyExists다() {
-    UUID organizationId = insertOrganizationWithPolicy("{model,region}");
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model,region}");
     create(organizationId, Map.of("model", "opus", "region", "kr"), "0.007");
     Map<String, Object> reordered = new LinkedHashMap<>();
     reordered.put("region", "kr");
@@ -61,7 +61,7 @@ class PriceRateIntegrationTest {
 
   @Test
   void 기본_단가는_빈_객체로_저장되고_청구가_읽는_기본_단가_조회에_잡힌다() {
-    UUID organizationId = insertOrganizationWithPolicy("{model}");
+    UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
 
     create(organizationId, Map.of(), "120");
 
@@ -69,14 +69,13 @@ class PriceRateIntegrationTest {
   }
 
   @Test
-  void 정책이_없는_미터면_NotFound고_저장은_0건이다() {
+  void 미터가_없으면_NotFound고_저장은_0건이다() {
     UUID organizationId = insertOrganization();
-    insertBillableMetric(organizationId);
 
     assertThatThrownBy(() -> create(organizationId, Map.of(), "1"))
         .isInstanceOf(NotFoundException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.PRICE_POLICY_NOT_FOUND);
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND);
     assertThat(priceRateCount(organizationId)).isZero();
   }
 
@@ -88,15 +87,15 @@ class PriceRateIntegrationTest {
         new CreatePriceRateRequest(dimensionValues, new BigDecimal(unitPrice)));
   }
 
-  private UUID insertOrganizationWithPolicy(String dimensionProperties) {
+  private UUID insertOrganizationWithDimensionProperties(String dimensionProperties) {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId);
     jdbcTemplate.update(
-        "INSERT INTO price_policy (organization_id, billable_metric_code, dimension_properties)"
-            + " VALUES (?, ?, ?::text[])",
+        "UPDATE billable_metric SET dimension_properties = ?::text[]"
+            + " WHERE organization_id = ? AND code = ?",
+        dimensionProperties,
         organizationId,
-        BILLABLE_METRIC_CODE,
-        dimensionProperties);
+        BILLABLE_METRIC_CODE);
     return organizationId;
   }
 

@@ -334,10 +334,6 @@ class InvoiceFinalizeIntegrationTest {
 
   private void insertPrice(UUID organizationId, String billableMetricCode, String unitPrice) {
     jdbcTemplate.update(
-        "INSERT INTO price_policy (organization_id, billable_metric_code) VALUES (?, ?)",
-        organizationId,
-        billableMetricCode);
-    jdbcTemplate.update(
         """
         INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
         VALUES (?, ?, '{}', ?)

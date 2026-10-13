@@ -125,13 +125,7 @@ class OpenApiDocumentTest {
   }
 
   @Test
-  void 미터별_가격의_차원과_단가가_null을_허용한다() {
-    assertThat(json())
-        .bodyJson()
-        .extractingPath(
-            "$.components.schemas.BillableMetricPriceResponse.properties.dimension_properties.type")
-        .asArray()
-        .contains("null");
+  void 미터별_가격의_단가가_null을_허용한다() {
     assertThat(json())
         .bodyJson()
         .extractingPath(
