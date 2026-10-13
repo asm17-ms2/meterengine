@@ -14,6 +14,8 @@ import {
 } from "@/app/(console)/billable-metrics/state";
 import { Dialog } from "@/components/screen/Dialog";
 
+const DIMENSION_PROPERTIES_JOINER = ", ";
+
 export function BillableMetricFormDialog({
   billableMetric,
   onClose,
@@ -31,6 +33,9 @@ export function BillableMetricFormDialog({
     name: isEdit ? billableMetric.name : "",
     event_type: isEdit ? billableMetric.eventType : "",
     target_property: isEdit ? billableMetric.targetProperty : "",
+    dimension_properties: isEdit
+      ? billableMetric.dimensionProperties.join(DIMENSION_PROPERTIES_JOINER)
+      : "",
   });
 
   useEffect(() => {
@@ -128,6 +133,16 @@ export function BillableMetricFormDialog({
         mono
         {...buildFieldProps("target_property")}
       />
+      <TextField
+        id="billable-metric-dimension-properties"
+        name="dimension_properties"
+        label="차원 키"
+        placeholder="model"
+        hint="단가를 가르는 이벤트 속성 키. 예: model. 여럿이면 쉼표로 나눕니다."
+        mono
+        optional
+        {...buildFieldProps("dimension_properties")}
+      />
 
       {isEdit ? (
         <dl
@@ -193,6 +208,7 @@ function TextField({
   hint,
   error,
   mono = false,
+  optional = false,
   autoFocus = false,
   disabled,
 }: {
@@ -205,13 +221,20 @@ function TextField({
   hint?: string;
   error?: string;
   mono?: boolean;
+  optional?: boolean;
   autoFocus?: boolean;
   disabled: boolean;
 }) {
   return (
     <div className="field">
       <label htmlFor={id}>
-        {label} <span style={{ color: "var(--color-accent)" }}>*</span>
+        {label}
+        {optional ? null : (
+          <>
+            {" "}
+            <span style={{ color: "var(--color-accent)" }}>*</span>
+          </>
+        )}
       </label>
       <input
         id={id}

@@ -11,23 +11,64 @@ import {
 import { type ApiError, toDisplayMessage } from "@/lib/api/client";
 import { createBillableMetric, deleteBillableMetric, updateBillableMetric } from "@/lib/api/billable-metrics";
 
+type RequiredBillableMetricField = Exclude<BillableMetricField, "dimension_properties">;
+
 const BILLABLE_METRIC_FIELDS: readonly BillableMetricField[] = [
+  "code",
+  "name",
+  "event_type",
+  "target_property",
+  "dimension_properties",
+];
+
+const CREATE_REQUIRED_FIELDS: readonly RequiredBillableMetricField[] = [
   "code",
   "name",
   "event_type",
   "target_property",
 ];
 
-const REQUIRED_MESSAGES: Record<BillableMetricField, string> = {
+const UPDATE_REQUIRED_FIELDS: readonly RequiredBillableMetricField[] = [
+  "name",
+  "event_type",
+  "target_property",
+];
+
+const REQUIRED_MESSAGES: Record<RequiredBillableMetricField, string> = {
   code: "코드를 입력하세요",
   name: "이름을 입력하세요",
   event_type: "이벤트 타입을 입력하세요",
   target_property: "집계 대상 속성을 입력하세요. sum 집계는 필수입니다",
 };
 
+const DIMENSION_PROPERTIES_SEPARATOR = ",";
+
 function readField(formData: FormData, field: BillableMetricField): string {
   const raw = formData.get(field);
   return typeof raw === "string" ? raw.trim() : "";
+}
+
+function readDimensionProperties(formData: FormData): string[] {
+  return readField(formData, "dimension_properties")
+    .split(DIMENSION_PROPERTIES_SEPARATOR)
+    .map((key) => key.trim())
+    .filter((key) => key !== "");
+}
+
+function readRequiredFields(
+  formData: FormData,
+  fields: readonly RequiredBillableMetricField[],
+): {
+  values: Record<RequiredBillableMetricField, string>;
+  fieldErrors: Partial<Record<BillableMetricField, string>>;
+} {
+  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
+  const values = {} as Record<RequiredBillableMetricField, string>;
+  for (const field of fields) {
+    values[field] = readField(formData, field);
+    if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
+  }
+  return { values, fieldErrors };
 }
 
 function isBillableMetricField(field: string): field is BillableMetricField {
@@ -59,12 +100,7 @@ export async function createBillableMetricAction(
   _prev: BillableMetricFormState,
   formData: FormData,
 ): Promise<BillableMetricFormState> {
-  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
-  const values = {} as Record<BillableMetricField, string>;
-  for (const field of BILLABLE_METRIC_FIELDS) {
-    values[field] = readField(formData, field);
-    if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
-  }
+  const { values, fieldErrors } = readRequiredFields(formData, CREATE_REQUIRED_FIELDS);
   if (Object.keys(fieldErrors).length > 0) {
     return { status: "invalid", fieldErrors };
   }
@@ -75,18 +111,13 @@ export async function createBillableMetricAction(
     event_type: values.event_type,
     aggregation: BILLABLE_METRIC_AGGREGATION,
     target_property: values.target_property,
+    dimension_properties: readDimensionProperties(formData),
   });
   if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
   return { status: "done" };
 }
-
-const UPDATE_FIELDS: readonly BillableMetricField[] = [
-  "name",
-  "event_type",
-  "target_property",
-];
 
 export async function updateBillableMetricAction(
   _prev: BillableMetricFormState,
@@ -97,12 +128,7 @@ export async function updateBillableMetricAction(
     return { status: "failed", message: "미터를 특정하지 못했습니다." };
   }
 
-  const fieldErrors: Partial<Record<BillableMetricField, string>> = {};
-  const values = {} as Record<BillableMetricField, string>;
-  for (const field of UPDATE_FIELDS) {
-    values[field] = readField(formData, field);
-    if (values[field] === "") fieldErrors[field] = REQUIRED_MESSAGES[field];
-  }
+  const { values, fieldErrors } = readRequiredFields(formData, UPDATE_REQUIRED_FIELDS);
   if (Object.keys(fieldErrors).length > 0) {
     return { status: "invalid", fieldErrors };
   }
@@ -112,6 +138,7 @@ export async function updateBillableMetricAction(
     event_type: values.event_type,
     aggregation: BILLABLE_METRIC_AGGREGATION,
     target_property: values.target_property,
+    dimension_properties: readDimensionProperties(formData),
   });
   if (!result.ok) return toFailureState(result.error);
 
@@ -135,8 +162,8 @@ export async function deleteBillableMetricAction(
     if (result.error.code === "billable_metric_has_events") {
       return { status: "rejected", reason: "events", name: billableMetricName };
     }
-    if (result.error.code === "billable_metric_has_price_policy") {
-      return { status: "rejected", reason: "policy", name: billableMetricName };
+    if (result.error.code === "billable_metric_has_price_rate") {
+      return { status: "rejected", reason: "price_rates", name: billableMetricName };
     }
     if (result.error.code === "billable_metric_not_found") {
       revalidatePath("/billable-metrics");
