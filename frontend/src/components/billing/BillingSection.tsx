@@ -1,3 +1,4 @@
+import { BillingFinalizedNotice } from "@/components/billing/BillingFinalizedNotice";
 import {
   BillingTable,
   type BillingGroupView,
@@ -7,11 +8,18 @@ import { ErrorState } from "@/components/screen/ErrorState";
 import type { Result } from "@/lib/api/client";
 import {
   countDraftInvoiceLines,
+  isFinalizedMonth,
   type DraftInvoiceResponse,
   type DraftInvoiceCustomer,
 } from "@/lib/api/billing";
-import type { ListInvoicesResponse } from "@/lib/api/invoices";
-import { formatDecimal, formatDimensionValues, formatKrw } from "@/lib/format";
+import type { InvoiceResponse, ListInvoicesResponse } from "@/lib/api/invoices";
+import {
+  formatDecimal,
+  formatDimensionValues,
+  formatKoreanMonth,
+  formatKrw,
+  formatKstDateTime,
+} from "@/lib/format";
 import { shiftMonth } from "@/lib/month";
 
 export async function BillingSection({
@@ -59,18 +67,22 @@ export async function BillingSection({
     );
   }
 
-  if (countDraftInvoiceLines(result.data.customers) === 0) {
+  const finalized = await invoices;
+  const finalizedInvoices = finalized.ok ? finalized.data.invoices : [];
+  const isFinalized = isFinalizedMonth(result.data.customers, finalizedInvoices);
+
+  if (!isFinalized && countDraftInvoiceLines(result.data.customers) === 0) {
     return (
       <EmptyState
-        title="단가가 등록된 미터가 없습니다"
-        body={`고객 ${result.data.customers.length}곳이 있지만 단가가 등록된 미터가 없어 ${result.data.month} 청구 예정 라인이 만들어지지 않았습니다. 가격 화면에서 단가를 먼저 등록하세요.`}
+        title={`${formatKoreanMonth(month)} 청구 예정액이 없습니다`}
+        body={`고객 ${result.data.customers.length}곳 모두 단가가 매겨진 사용량이 없습니다. 사용량이 없거나, 사용량이 있는 조합에 단가가 등록되지 않은 경우입니다.`}
         resetHref="/billable-metric-prices"
         resetLabel="가격 화면으로"
       />
     );
   }
 
-  return (
+  const billingTable = (
     <>
       <BillingTable
         groups={toBillingGroupViews(result.data.customers)}
@@ -86,6 +98,29 @@ export async function BillingSection({
       </div>
     </>
   );
+
+  if (isFinalized) {
+    return (
+      <BillingFinalizedNotice
+        title={toFinalizedTitle(month, finalizedInvoices)}
+        invoicesHref={`/invoices?month=${month}`}
+        zeroAmountCustomerCount={result.data.customers.length}
+      >
+        {billingTable}
+      </BillingFinalizedNotice>
+    );
+  }
+
+  return billingTable;
+}
+
+function toFinalizedTitle(month: string, invoices: InvoiceResponse[]): string {
+  const finalizedAts = invoices.map((invoice) => formatKstDateTime(invoice.finalized_at)).sort();
+  const lastFinalizedAt = finalizedAts[finalizedAts.length - 1];
+  const prefix = `${formatKoreanMonth(month)} 인보이스 ${invoices.length}건이`;
+  return finalizedAts[0] === lastFinalizedAt
+    ? `${prefix} ${lastFinalizedAt}에 확정됐습니다`
+    : `${prefix} 확정됐습니다. 마지막 확정은 ${lastFinalizedAt}입니다`;
 }
 
 function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupView[] {

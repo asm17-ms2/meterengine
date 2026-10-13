@@ -1,5 +1,5 @@
 import { InvoiceFinalizeDialog } from "@/components/billing/InvoiceFinalizeDialog";
-import type { DraftInvoiceResponse } from "@/lib/api/billing";
+import { listFinalizeTargets, type DraftInvoiceResponse } from "@/lib/api/billing";
 import type { Result } from "@/lib/api/client";
 import { formatKoreanMonth, formatKrw } from "@/lib/format";
 import { formatKstMonth } from "@/lib/month";
@@ -12,7 +12,7 @@ export async function InvoiceFinalizeSection({
   month: string;
 }) {
   const result = await draftInvoice;
-  const targets = result.ok ? result.data.customers.filter((customer) => customer.amount !== 0) : [];
+  const targets = result.ok ? listFinalizeTargets(result.data.customers) : [];
 
   return (
     <InvoiceFinalizeDialog
