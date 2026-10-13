@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 
+import { BillingExpandControls } from "@/components/billing/BillingExpandControls";
 import { BillingFinalizedLink } from "@/components/billing/BillingFinalizedLink";
 import { BillingMeta } from "@/components/billing/BillingMeta";
 import { BillingSection } from "@/components/billing/BillingSection";
+import { BillingStatusTag } from "@/components/billing/BillingStatusTag";
 import { InvoiceFinalizeSection } from "@/components/billing/InvoiceFinalizeSection";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { MonthSelect } from "@/components/screen/MonthSelect";
@@ -42,7 +44,11 @@ export default async function BillingPage({
         title={
           <>
             청구 예정액 - {formatKoreanMonth(month)}{" "}
-            <span className="tag tag-outline">확정 전 (draft)</span>
+            {draftInvoice ? (
+              <Suspense fallback={null}>
+                <BillingStatusTag draftInvoice={draftInvoice} invoices={invoices} />
+              </Suspense>
+            ) : null}
           </>
         }
       >
@@ -67,7 +73,13 @@ export default async function BillingPage({
         ) : (
           disabledFinalizeButton
         )}
-        <ExpandControls />
+        {draftInvoice ? (
+          <Suspense fallback={null}>
+            <BillingExpandControls draftInvoice={draftInvoice} invoices={invoices} />
+          </Suspense>
+        ) : (
+          <ExpandControls />
+        )}
       </FilterBar>
 
       {draftInvoice ? (
