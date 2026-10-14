@@ -15,7 +15,6 @@ import {
 import type { InvoiceResponse, ListInvoicesResponse } from "@/lib/api/invoices";
 import {
   formatDecimal,
-  formatDimensionValues,
   formatKoreanMonth,
   formatKrw,
   formatKstDateTime,
@@ -133,7 +132,6 @@ function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupVie
         ? `${line.billable_metric_code} (${line.target_property})`
         : line.billable_metric_code,
       dimensionValues: line.dimension_values,
-      combination: formatDimensionValues(line.dimension_values),
       quantity: formatDecimal(line.quantity),
       unitPrice: formatKrw(line.unit_price),
       amount: formatKrw(line.amount),

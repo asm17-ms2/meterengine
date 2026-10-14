@@ -80,8 +80,8 @@ export function BillableMetricPricesScreen({ rows }: { rows: BillableMetricPrice
           <BillableMetricPricesTable rows={visibleRows} onRegisterRate={setRegistering} />
           <div className="screen-footer">
             <span className="screen-note">
-              정렬: 코드 오름차순, 조합 오름차순. 조합 &quot;기본&quot;은 속성 조건 없이 적용됩니다. 단가가
-              없는 조합은 청구 예정액에서 빠집니다.
+              정렬: 코드 오름차순, 조합 오름차순. 차원 키가 없는 미터의 단가는 조합 칸이 비고 속성
+              조건 없이 적용됩니다. 단가가 없는 조합은 청구 예정액에서 빠집니다.
             </span>
           </div>
         </>

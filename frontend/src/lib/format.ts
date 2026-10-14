@@ -47,10 +47,12 @@ export function formatKrw(value: number): string {
   return `${formatDecimal(value)}원`;
 }
 
-const DEFAULT_DIMENSION_VALUES_LABEL = "기본";
-
 /** `model=claude-opus-5, region=kr` - 조합 열에 쓰는 형태. */
 export function formatDimensionValues(dimensionValues: Record<string, unknown>): string {
-  const pairs = Object.entries(dimensionValues).map(([key, value]) => `${key}=${value}`);
-  return pairs.length === 0 ? DEFAULT_DIMENSION_VALUES_LABEL : pairs.join(", ");
+  return formatDimensionValuePairs(dimensionValues).join(", ");
+}
+
+/** `["model=claude-opus-5", "region=kr"]` - 조합을 키마다 한 칸씩 나눠 그릴 때 쓰는 형태. */
+export function formatDimensionValuePairs(dimensionValues: Record<string, unknown>): string[] {
+  return Object.entries(dimensionValues).map(([key, value]) => `${key}=${value}`);
 }

@@ -256,6 +256,15 @@
   text-overflow: ellipsis;
 }
 
+.grid-cell--span-2 {
+  grid-column: span 2;
+}
+
+.grid-cell__slots {
+  display: grid;
+  column-gap: 16px;
+}
+
 .grid-cell--strong {
   font-weight: 600;
 }
