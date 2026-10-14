@@ -6,13 +6,15 @@ import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
+import { MeterGroupRow } from "@/components/table/MeterGroupRow";
 import type { DimensionValues } from "@/lib/api/billable-metric-prices";
+import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type BillingGroupView = {
   customerId: string;
   customerName: string;
   amount: string;
-  lines: BillingLineView[];
+  items: MeterItem<BillingLineView>[];
 };
 
 export type BillingLineView = {
@@ -43,7 +45,7 @@ export function BillingTable({
 }) {
   const { isCollapsed, toggle } = useCollapse();
   const slotCount = countDimensionSlots(
-    groups.flatMap((group) => group.lines.map((line) => line.dimensionValues)),
+    groups.flatMap((group) => linesOf(group.items).map((line) => line.dimensionValues)),
   );
 
   return (
@@ -66,7 +68,7 @@ export function BillingTable({
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                청구 라인 {group.lines.length}줄
+                청구 라인 {linesOf(group.items).length}줄
               </div>
               <div className="grid-cell grid-cell--group" />
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell--num">
@@ -76,29 +78,47 @@ export function BillingTable({
 
             {isGroupCollapsed
               ? null
-              : group.lines.map((line) => (
-                  <GridRow
-                    key={`${line.label} ${JSON.stringify(line.dimensionValues)}`}
-                    columns={COLUMNS}
-                  >
-                    <GridCell className="grid-cell--child grid-cell--mono">
-                      {line.label}
-                    </GridCell>
-                    <DimensionValuesCell
-                      dimensionValues={line.dimensionValues}
-                      slotCount={slotCount}
-                    />
-                    <GridCell className="grid-cell--right grid-cell--num">
-                      {line.quantity}
-                    </GridCell>
-                    <GridCell className="grid-cell--right grid-cell--num grid-cell--muted">
-                      {line.unitPrice}
-                    </GridCell>
-                    <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
-                      {line.amount}
-                    </GridCell>
-                  </GridRow>
-                ))}
+              : group.items.map((item) => {
+                  if (item.kind === "line") {
+                    return (
+                      <BillingLineRow
+                        key={`${item.line.label} ${JSON.stringify(item.line.dimensionValues)}`}
+                        line={item.line}
+                        slotCount={slotCount}
+                      />
+                    );
+                  }
+                  const isMeterCollapsed = isCollapsed(item.id, true);
+                  return (
+                    <div key={item.id}>
+                      <MeterGroupRow
+                        columns={COLUMNS}
+                        label={item.label}
+                        combinationCount={item.lines.length}
+                        isCollapsed={isMeterCollapsed}
+                        onToggle={() => toggle(item.id)}
+                      >
+                        <div className="grid-cell grid-cell--right grid-cell--num">
+                          {item.quantity}
+                        </div>
+                        <div className="grid-cell" />
+                        <div className="grid-cell grid-cell--right grid-cell--num grid-cell--strong">
+                          {item.amount}
+                        </div>
+                      </MeterGroupRow>
+                      {isMeterCollapsed
+                        ? null
+                        : item.lines.map((line) => (
+                            <BillingLineRow
+                              key={JSON.stringify(line.dimensionValues)}
+                              line={line}
+                              slotCount={slotCount}
+                              isNested
+                            />
+                          ))}
+                    </div>
+                  );
+                })}
           </div>
         );
       })}
@@ -113,5 +133,35 @@ export function BillingTable({
         </GridCell>
       </GridRow>
     </GridTable>
+  );
+}
+
+function BillingLineRow({
+  line,
+  slotCount,
+  isNested = false,
+}: {
+  line: BillingLineView;
+  slotCount: number;
+  isNested?: boolean;
+}) {
+  return (
+    <GridRow columns={COLUMNS}>
+      <GridCell className="grid-cell--child grid-cell--mono">
+        {isNested ? null : line.label}
+      </GridCell>
+      <DimensionValuesCell
+        dimensionValues={line.dimensionValues}
+        slotCount={slotCount}
+        className={isNested ? "grid-cell--nested" : undefined}
+      />
+      <GridCell className="grid-cell--right grid-cell--num">{line.quantity}</GridCell>
+      <GridCell className="grid-cell--right grid-cell--num grid-cell--muted">
+        {line.unitPrice}
+      </GridCell>
+      <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
+        {line.amount}
+      </GridCell>
+    </GridRow>
   );
 }

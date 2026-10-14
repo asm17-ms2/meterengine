@@ -2,10 +2,10 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
-type CollapseMode = "expanded" | "collapsed";
+type CollapseMode = "default" | "expanded" | "collapsed";
 
 type CollapseState = {
-  isCollapsed: (id: string) => boolean;
+  isCollapsed: (id: string, collapsedByDefault?: boolean) => boolean;
   toggle: (id: string) => void;
   expandAll: () => void;
   collapseAll: () => void;
@@ -14,11 +14,12 @@ type CollapseState = {
 const CollapseContext = createContext<CollapseState | null>(null);
 
 export function CollapseProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<CollapseMode>("expanded");
+  const [mode, setMode] = useState<CollapseMode>("default");
   const [flippedIds, setFlippedIds] = useState<ReadonlySet<string>>(new Set());
 
   const isCollapsed = useCallback(
-    (id: string) => (mode === "collapsed") !== flippedIds.has(id),
+    (id: string, collapsedByDefault = false) =>
+      (mode === "default" ? collapsedByDefault : mode === "collapsed") !== flippedIds.has(id),
     [mode, flippedIds],
   );
 
