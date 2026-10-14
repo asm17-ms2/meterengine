@@ -1,10 +1,6 @@
-# 운영 스택. 로컬용인 루트 docker-compose.yml과 다른 파일이고, DB가 RDS라 postgres 서비스가 없다.
-# 손으로 부를 때는 --env-file이 반드시 필요하다:
-#   docker compose --env-file /etc/meterengine/prod.env -f compose.prod.yml up -d
-
 name: meterengine-prod
 
-# EBS가 20GB뿐이라 컨테이너당 30MB로 묶는다.
+# 디스크가 작아 컨테이너 로그 크기를 묶는다.
 x-logging: &default-logging
   driver: json-file
   options:
@@ -22,10 +18,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # 파일이 아니라 디렉터리를 마운트한다. 파일 단위 bind mount는 inode에 묶이는데 git checkout은
-      # 파일을 새로 써서 갈아끼우므로, 배포해도 Caddyfile 변경이 반영되지 않는다.
+      # 파일이 아니라 디렉터리를 마운트해야 git checkout으로 바뀐 Caddyfile이 컨테이너에 보인다.
       - ./caddy:/etc/caddy:ro
-      # 지우면 인증서를 새로 발급받는데 Let's Encrypt는 같은 도메인에 주 5회 제한이 있다.
+      # 지우면 인증서를 새로 발급받아 발급 횟수 제한에 걸릴 수 있다.
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
@@ -37,12 +32,11 @@ services:
     image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/meterengine-backend:${IMAGE_TAG:?IMAGE_TAG가 없다}
     restart: unless-stopped
     environment:
-      # 이미지에 datasource 설정이 없어서, 운영에서 DB에 붙는 유일한 경로가 이 변수들이다.
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?DB_USERNAME이 없다}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 없다}
     ports:
-      # 컨테이너에 healthcheck를 넣지 않은 이유: 실행 이미지가 JRE만 담고 있어 curl도 wget도 없다.
+      # 실행 이미지에 curl과 wget이 없어 healthcheck를 두지 않는다.
       - "127.0.0.1:8080:8080"
     logging: *default-logging
 
@@ -50,7 +44,7 @@ services:
     image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/meterengine-frontend:${IMAGE_TAG:?IMAGE_TAG가 없다}
     restart: unless-stopped
     environment:
-      # 프론트는 브라우저가 아니라 자기 서버에서 백엔드를 부른다(서버 컴포넌트).
+      # 브라우저가 아니라 프론트 서버가 백엔드를 부른다.
       METERENGINE_API_BASE_URL: http://backend:8080
       METERENGINE_ORGANIZATION_ID: ${ORGANIZATION_ID:?ORGANIZATION_ID가 없다}
       METERENGINE_ORGANIZATION_NAME: ${ORGANIZATION_NAME:?ORGANIZATION_NAME이 없다}
@@ -58,12 +52,10 @@ services:
       - "127.0.0.1:3000:3000"
     logging: *default-logging
 
-  # 모니터링 컨테이너는 서비스 트래픽을 받지 않고, 죽어도 서비스는 돈다. 접근법은 deploy/README.md.
-
   prometheus:
     image: prom/prometheus:v3
     restart: unless-stopped
-    # command를 주면 이미지의 기본 인자가 통째로 사라져서 config 경로도 같이 줘야 한다.
+    # command를 주면 이미지 기본 인자가 사라져 config 경로도 같이 준다.
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -74,7 +66,6 @@ services:
       - prometheus-data:/prometheus
     logging: *default-logging
 
-  # /proc과 /sys 마운트만으로 호스트 값이 나온다. 호스트 네트워크 모드는 쓰지 않는다.
   node-exporter:
     image: prom/node-exporter:v1
     restart: unless-stopped
@@ -94,10 +85,10 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD가 없다}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      # provisioning 파일(grafana/provisioning/alerting)이 이 변수를 읽는다.
+      # 경보 provisioning이 이 변수를 읽는다.
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL이 없다}
     ports:
-      # 3000은 frontend가 쓰고 있어 3001이다. SSM 포트 포워딩이 인스턴스의 localhost로 들어온다.
+      # 3000은 frontend가 쓴다.
       - "127.0.0.1:3001:3000"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
