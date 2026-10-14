@@ -1,6 +1,7 @@
 "use client";
 
 import { useCollapse } from "@/components/table/CollapseProvider";
+import { countDimensionSlots, DimensionValuesCell } from "@/components/table/DimensionValuesCell";
 import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
@@ -17,7 +18,6 @@ export type BillingGroupView = {
 export type BillingLineView = {
   label: string;
   dimensionValues: DimensionValues;
-  combination: string;
   quantity: string;
   unitPrice: string;
   amount: string;
@@ -42,6 +42,9 @@ export function BillingTable({
   totalAmount: string;
 }) {
   const { isCollapsed, toggle } = useCollapse();
+  const slotCount = countDimensionSlots(
+    groups.flatMap((group) => group.lines.map((line) => line.dimensionValues)),
+  );
 
   return (
     <GridTable minWidth={MIN_WIDTH}>
@@ -57,12 +60,11 @@ export function BillingTable({
               aria-expanded={!isGroupCollapsed}
               onClick={() => toggle(group.customerId)}
             >
-              <div className="grid-cell grid-cell--group">
+              <div className="grid-cell grid-cell--group grid-cell--span-2 grid-cell--truncate">
                 <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
-              <div className="grid-cell grid-cell--group" />
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
                 청구 라인 {group.lines.length}줄
               </div>
@@ -82,9 +84,10 @@ export function BillingTable({
                     <GridCell className="grid-cell--child grid-cell--mono">
                       {line.label}
                     </GridCell>
-                    <GridCell className="grid-cell--mono grid-cell--truncate">
-                      {line.combination}
-                    </GridCell>
+                    <DimensionValuesCell
+                      dimensionValues={line.dimensionValues}
+                      slotCount={slotCount}
+                    />
                     <GridCell className="grid-cell--right grid-cell--num">
                       {line.quantity}
                     </GridCell>

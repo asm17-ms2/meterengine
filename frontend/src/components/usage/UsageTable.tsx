@@ -1,6 +1,7 @@
 "use client";
 
 import { useCollapse } from "@/components/table/CollapseProvider";
+import { countDimensionSlots, DimensionValuesCell } from "@/components/table/DimensionValuesCell";
 import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
@@ -15,7 +16,6 @@ export type UsageGroupView = {
 export type UsageLineView = {
   label: string;
   dimensionValues: Record<string, unknown>;
-  combination: string;
   quantity: string;
 };
 
@@ -26,6 +26,11 @@ const HEAD_LABELS = ["고객 / 미터", "조합", { label: "집계 수량", righ
 
 export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
   const { isCollapsed, toggle } = useCollapse();
+  const slotCount = countDimensionSlots(
+    groups.flatMap((group) =>
+      group.billableMetricLines.map((billableMetricLine) => billableMetricLine.dimensionValues),
+    ),
+  );
 
   return (
     <GridTable minWidth={MIN_WIDTH}>
@@ -41,12 +46,11 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
               aria-expanded={!isGroupCollapsed}
               onClick={() => toggle(group.customerId)}
             >
-              <div className="grid-cell grid-cell--group">
+              <div className="grid-cell grid-cell--group grid-cell--span-2 grid-cell--truncate">
                 <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
                 {group.customerName}{" "}
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
-              <div className="grid-cell grid-cell--group" />
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
                 집계 라인 {group.billableMetricLines.length}줄
               </div>
@@ -62,9 +66,10 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
                     <GridCell className="grid-cell--child grid-cell--mono">
                       {billableMetricLine.label}
                     </GridCell>
-                    <GridCell className="grid-cell--mono grid-cell--truncate">
-                      {billableMetricLine.combination}
-                    </GridCell>
+                    <DimensionValuesCell
+                      dimensionValues={billableMetricLine.dimensionValues}
+                      slotCount={slotCount}
+                    />
                     <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
                       {billableMetricLine.quantity}
                     </GridCell>

@@ -3,7 +3,6 @@ import "server-only";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
-import { formatDimensionValues } from "@/lib/format";
 
 export type ListBillableMetricUsagesResponse = {
   month: string;
@@ -40,7 +39,6 @@ export type CustomerGroup = {
 export type BillableMetricLine = {
   label: string;
   dimensionValues: BillableMetricUsageDimensionUsage["dimension_values"];
-  combination: string;
   quantity: number;
 };
 
@@ -57,7 +55,6 @@ function toBillableMetricLines(
   return rows.map((dimensionUsage) => ({
     label,
     dimensionValues: dimensionUsage.dimension_values,
-    combination: formatDimensionValues(dimensionUsage.dimension_values),
     quantity: dimensionUsage.quantity,
   }));
 }

@@ -66,6 +66,7 @@ function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
       label: line.target_property
         ? `${line.billable_metric_code} (${line.target_property})`
         : line.billable_metric_code,
+      dimensionValues: line.dimension_values,
       quantity: formatDecimal(line.quantity),
       unitPrice: formatKrw(line.unit_price),
       amount: formatKrw(line.amount),
