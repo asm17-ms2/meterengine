@@ -1,0 +1,71 @@
+# cloudwatch_exporter 설정. 계정의 모든 RDS 인스턴스를 읽고 대시보드가 dbinstance_identifier로 고른다.
+# 자격은 EC2 역할이다. 5분 단위로만 나오는 지표(크레딧, EBS 잔량)는 period_seconds가 300이다.
+
+region: ap-northeast-2
+period_seconds: 60
+delay_seconds: 120
+set_timestamp: false
+metrics:
+  - aws_namespace: AWS/RDS
+    aws_metric_name: CPUUtilization
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: DatabaseConnections
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: WriteIOPS
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: WriteLatency
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: WriteThroughput
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: DiskQueueDepth
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: EBSIOBalance%
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+    period_seconds: 300
+  - aws_namespace: AWS/RDS
+    aws_metric_name: EBSByteBalance%
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+    period_seconds: 300
+  - aws_namespace: AWS/RDS
+    aws_metric_name: CPUCreditBalance
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+    period_seconds: 300
+  - aws_namespace: AWS/RDS
+    aws_metric_name: FreeableMemory
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: SwapUsage
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: FreeStorageSpace
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: TransactionLogsGeneration
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: TransactionLogsDiskUsage
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: CheckpointLag
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
