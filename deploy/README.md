@@ -71,6 +71,19 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 - 이 서버는 arm64라 compose 플러그인도 `aarch64` 파일을 받는다.
 - `/etc/meterengine/prod.env`는 만들지 않는다. 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
+- 지금 서버와 다른 파라미터 경로나 도메인을 쓰는 서버에만 `/etc/meterengine/deploy.conf`를 만든다. 이 파일이 없으면 `deploy.sh`는 지금 서버의 값을 쓴다.
+
+```bash
+cat > /etc/meterengine/deploy.conf <<'EOF'
+PARAM_PATH=/meterengine/<이름>
+SITE_DOMAIN=<도메인>
+SITE_ALIASES=
+EOF
+```
+
+- **적지 않은 변수는 지금 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 지금 서버의 DB에 붙는다.
+- `SITE_ALIASES`에 적은 주소는 `SITE_DOMAIN`으로 리다이렉트되고, 비우면 `SITE_DOMAIN` 하나만 받는다.
+- Caddy가 인증서를 받으려면 `SITE_DOMAIN`과 `SITE_ALIASES`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
 
 ## 배포
 
@@ -110,7 +123,7 @@ aws ssm send-command \
 - `deploy.sh`가 하는 일의 순서다.
 
 1. `/opt/meterengine`을 그 커밋으로 맞춘다.
-2. Parameter Store `/meterengine/prod/*`를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600).
+2. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600).
 3. ECR에 로그인하고 그 SHA 태그의 이미지를 받는다.
 4. `docker compose up -d --remove-orphans` 후 Caddy 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
