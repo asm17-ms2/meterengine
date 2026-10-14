@@ -20,7 +20,14 @@ set -euo pipefail
 
 REPO_DIR=/opt/meterengine
 ENV_FILE=/etc/meterengine/prod.env
+CONFIG_FILE=/etc/meterengine/deploy.conf
 PARAM_PATH=/meterengine/prod
+SITE_DOMAIN=meterengine.com
+SITE_ALIASES=www.meterengine.com
+
+if [ -f "$CONFIG_FILE" ]; then
+	. "$CONFIG_FILE"
+fi
 
 # 계정과 리전은 aws-access-check.yml에도 같은 값이 박혀 있다. 계정을 옮기면 두 곳을 함께 고친다.
 export AWS_REGION=ap-northeast-2
@@ -64,6 +71,8 @@ write_env_file() {
 	{
 		printf 'IMAGE_TAG=%s\n' "$image_tag"
 		printf 'ECR_REGISTRY=%s\n' "$ECR_REGISTRY"
+		printf 'SITE_DOMAIN=%s\n' "$SITE_DOMAIN"
+		printf 'SITE_ALIASES=%s\n' "$SITE_ALIASES"
 	} >>"$tmp"
 
 	mv "$tmp" "$ENV_FILE"
@@ -91,6 +100,7 @@ main() {
 	[ -n "$sha" ] || die "배포할 git SHA를 인자로 줘야 한다. 예: $0 979e251..."
 
 	log "배포 시작: $sha"
+	log "파라미터 경로: $PARAM_PATH, 도메인: $SITE_DOMAIN, 별칭: ${SITE_ALIASES:-없음}"
 
 	# 1. 레포를 그 커밋으로 맞춘다. compose 파일과 Caddyfile이 이미지와 같은 커밋을 쓰게 된다.
 	cd "$REPO_DIR"
