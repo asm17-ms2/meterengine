@@ -1,9 +1,18 @@
-import { InvoicesTable, type InvoiceGroupView } from "@/components/invoices/InvoicesTable";
+import {
+  InvoicesTable,
+  type InvoiceGroupView,
+  type InvoiceLineView,
+} from "@/components/invoices/InvoicesTable";
 import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
 import type { Result } from "@/lib/api/client";
-import type { InvoiceResponse, ListInvoicesResponse } from "@/lib/api/invoices";
+import type {
+  InvoiceLineResponse,
+  InvoiceResponse,
+  ListInvoicesResponse,
+} from "@/lib/api/invoices";
 import { formatDecimal, formatKrw, formatKstDateTime } from "@/lib/format";
+import { sumOf, toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
 export async function InvoicesSection({
@@ -62,14 +71,27 @@ function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
     supplyAmount: formatKrw(invoice.supply_amount),
     taxAmount: formatKrw(invoice.tax_amount),
     totalAmount: formatKrw(invoice.total_amount),
-    lines: invoice.lines.map((line) => ({
-      label: line.target_property
-        ? `${line.billable_metric_code} (${line.target_property})`
-        : line.billable_metric_code,
-      dimensionValues: line.dimension_values,
-      quantity: formatDecimal(line.quantity),
-      unitPrice: formatKrw(line.unit_price),
-      amount: formatKrw(line.amount),
-    })),
+    items: toMeterItems(
+      invoice.id,
+      invoice.lines,
+      (line) => line.billable_metric_code,
+      toInvoiceLineView,
+      (lines) => ({
+        quantity: formatDecimal(sumOf(lines.map((line) => line.quantity))),
+        amount: formatKrw(sumOf(lines.map((line) => line.amount))),
+      }),
+    ),
+  };
+}
+
+function toInvoiceLineView(line: InvoiceLineResponse): InvoiceLineView {
+  return {
+    label: line.target_property
+      ? `${line.billable_metric_code} (${line.target_property})`
+      : line.billable_metric_code,
+    dimensionValues: line.dimension_values,
+    quantity: formatDecimal(line.quantity),
+    unitPrice: formatKrw(line.unit_price),
+    amount: formatKrw(line.amount),
   };
 }

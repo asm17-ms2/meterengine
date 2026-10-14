@@ -7,6 +7,7 @@ import {
   type ListBillableMetricUsagesResponse,
 } from "@/lib/api/usage";
 import { formatDecimal } from "@/lib/format";
+import { sumOf, toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
 export async function UsageSection({
@@ -53,11 +54,22 @@ export async function UsageSection({
   const usageGroupViews: UsageGroupView[] = groups.map((group) => ({
     customerId: group.customerId,
     customerName: group.customerName,
-    billableMetricLines: group.billableMetricLines.map((billableMetricLine) => ({
-      label: billableMetricLine.label,
-      dimensionValues: billableMetricLine.dimensionValues,
-      quantity: formatDecimal(billableMetricLine.quantity),
-    })),
+    items: toMeterItems(
+      group.customerId,
+      group.billableMetricLines,
+      (billableMetricLine) => billableMetricLine.label,
+      (billableMetricLine) => ({
+        label: billableMetricLine.label,
+        dimensionValues: billableMetricLine.dimensionValues,
+        quantity: formatDecimal(billableMetricLine.quantity),
+      }),
+      (billableMetricLines) => ({
+        quantity: formatDecimal(
+          sumOf(billableMetricLines.map((billableMetricLine) => billableMetricLine.quantity)),
+        ),
+        amount: null,
+      }),
+    ),
   }));
 
   return (

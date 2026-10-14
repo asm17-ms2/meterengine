@@ -6,11 +6,13 @@ import { GridCell } from "@/components/table/GridCell";
 import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
+import { MeterGroupRow } from "@/components/table/MeterGroupRow";
+import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
-  billableMetricLines: UsageLineView[];
+  items: MeterItem<UsageLineView>[];
 };
 
 export type UsageLineView = {
@@ -27,9 +29,7 @@ const HEAD_LABELS = ["고객 / 미터", "조합", { label: "집계 수량", righ
 export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
   const { isCollapsed, toggle } = useCollapse();
   const slotCount = countDimensionSlots(
-    groups.flatMap((group) =>
-      group.billableMetricLines.map((billableMetricLine) => billableMetricLine.dimensionValues),
-    ),
+    groups.flatMap((group) => linesOf(group.items).map((line) => line.dimensionValues)),
   );
 
   return (
@@ -52,32 +52,78 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
                 <span className="grid-cell__id">{group.customerId}</span>
               </div>
               <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                집계 라인 {group.billableMetricLines.length}줄
+                집계 라인 {linesOf(group.items).length}줄
               </div>
             </button>
 
             {isGroupCollapsed
               ? null
-              : group.billableMetricLines.map((billableMetricLine) => (
-                  <GridRow
-                    key={`${billableMetricLine.label} ${JSON.stringify(billableMetricLine.dimensionValues)}`}
-                    columns={COLUMNS}
-                  >
-                    <GridCell className="grid-cell--child grid-cell--mono">
-                      {billableMetricLine.label}
-                    </GridCell>
-                    <DimensionValuesCell
-                      dimensionValues={billableMetricLine.dimensionValues}
-                      slotCount={slotCount}
-                    />
-                    <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
-                      {billableMetricLine.quantity}
-                    </GridCell>
-                  </GridRow>
-                ))}
+              : group.items.map((item) => {
+                  if (item.kind === "line") {
+                    return (
+                      <UsageLineRow
+                        key={`${item.line.label} ${JSON.stringify(item.line.dimensionValues)}`}
+                        line={item.line}
+                        slotCount={slotCount}
+                      />
+                    );
+                  }
+                  const isMeterCollapsed = isCollapsed(item.id, true);
+                  return (
+                    <div key={item.id}>
+                      <MeterGroupRow
+                        columns={COLUMNS}
+                        label={item.label}
+                        combinationCount={item.lines.length}
+                        isCollapsed={isMeterCollapsed}
+                        onToggle={() => toggle(item.id)}
+                      >
+                        <div className="grid-cell grid-cell--right grid-cell--num grid-cell--strong">
+                          {item.quantity}
+                        </div>
+                      </MeterGroupRow>
+                      {isMeterCollapsed
+                        ? null
+                        : item.lines.map((line) => (
+                            <UsageLineRow
+                              key={JSON.stringify(line.dimensionValues)}
+                              line={line}
+                              slotCount={slotCount}
+                              isNested
+                            />
+                          ))}
+                    </div>
+                  );
+                })}
           </div>
         );
       })}
     </GridTable>
+  );
+}
+
+function UsageLineRow({
+  line,
+  slotCount,
+  isNested = false,
+}: {
+  line: UsageLineView;
+  slotCount: number;
+  isNested?: boolean;
+}) {
+  return (
+    <GridRow columns={COLUMNS}>
+      <GridCell className="grid-cell--child grid-cell--mono">
+        {isNested ? null : line.label}
+      </GridCell>
+      <DimensionValuesCell
+        dimensionValues={line.dimensionValues}
+        slotCount={slotCount}
+        className={isNested ? "grid-cell--nested" : undefined}
+      />
+      <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
+        {line.quantity}
+      </GridCell>
+    </GridRow>
   );
 }
