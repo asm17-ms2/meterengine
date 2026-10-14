@@ -232,6 +232,14 @@
   padding-left: 28px;
 }
 
+.grid-cell--nested {
+  padding-left: 24px;
+}
+
+.grid-row--meter {
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+}
+
 .grid-cell--right {
   text-align: right;
 }
