@@ -11,6 +11,7 @@ import com.meterengine.invoice.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,13 +61,33 @@ class InvoiceListIntegrationTest {
               "supply_amount": 12000, "tax_amount": 1200, "total_amount": 13200,
               "lines": [
                 {"billable_metric_code": "api-call", "target_property": null,
-                 "quantity": 600, "unit_price": 10, "amount": 6000},
+                 "dimension_values": {}, "quantity": 600, "unit_price": 10, "amount": 6000},
                 {"billable_metric_code": "token-usage", "target_property": "token",
-                 "quantity": 24000, "unit_price": 0.25, "amount": 6000}
+                 "dimension_values": {}, "quantity": 24000, "unit_price": 0.25, "amount": 6000}
               ]
             }]}
             """
                 .formatted(invoiceId, acme));
+  }
+
+  @Test
+  void 같은_미터의_라인은_조합을_싣고_dimension_values_오름차순이다() {
+    UUID organizationId = insertOrganization();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID invoiceId = insertInvoice(organizationId, acme, "2026-08", 9000);
+    insertInvoiceLine(
+        organizationId, invoiceId, "token-usage", "token", "{\"model\": \"b\"}", "700", "10", 7000);
+    insertInvoiceLine(
+        organizationId, invoiceId, "token-usage", "token", "{\"model\": \"a\"}", "500", "2", 1000);
+    insertInvoiceLine(organizationId, invoiceId, "api-call", null, "100", "10", 1000);
+    disableIndexScans();
+
+    assertThat(list(organizationId, ""))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.invoices[0].lines[*].dimension_values")
+        .asArray()
+        .containsExactly(Map.of(), Map.of("model", "a"), Map.of("model", "b"));
   }
 
   @Test
@@ -168,6 +189,13 @@ class InvoiceListIntegrationTest {
         .containsExactly(Arrays.stream(invoiceIds).map(UUID::toString).toArray());
   }
 
+  // 이 트랜잭션의 조회가 인덱스를 쓰지 않게 한다.
+  private void disableIndexScans() {
+    jdbcTemplate.execute("SET LOCAL enable_indexscan = off");
+    jdbcTemplate.execute("SET LOCAL enable_indexonlyscan = off");
+    jdbcTemplate.execute("SET LOCAL enable_bitmapscan = off");
+  }
+
   private UUID insertOrganization() {
     return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('도입사') RETURNING id", UUID.class);
@@ -189,6 +217,26 @@ class InvoiceListIntegrationTest {
       String quantity,
       String unitPrice,
       long amount) {
+    insertInvoiceLine(
+        organizationId,
+        invoiceId,
+        billableMetricCode,
+        targetProperty,
+        "{}",
+        quantity,
+        unitPrice,
+        amount);
+  }
+
+  private void insertInvoiceLine(
+      UUID organizationId,
+      UUID invoiceId,
+      String billableMetricCode,
+      String targetProperty,
+      String dimensionValues,
+      String quantity,
+      String unitPrice,
+      long amount) {
     invoiceLineRepository.save(
         new InvoiceLine(
             UUID.randomUUID(),
@@ -196,7 +244,7 @@ class InvoiceListIntegrationTest {
             invoiceId,
             billableMetricCode,
             targetProperty,
-            "{}",
+            dimensionValues,
             new BigDecimal(quantity),
             new BigDecimal(unitPrice),
             amount));

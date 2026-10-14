@@ -8,9 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InvoiceLineRepository extends JpaRepository<InvoiceLine, UUID> {
 
-  List<InvoiceLine> findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAsc(
+  List<InvoiceLine> findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
       UUID organizationId, UUID invoiceId);
 
-  List<InvoiceLine> findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAsc(
-      UUID organizationId, Collection<UUID> invoiceIds);
+  List<InvoiceLine>
+      findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAscDimensionValuesAsc(
+          UUID organizationId, Collection<UUID> invoiceIds);
 }

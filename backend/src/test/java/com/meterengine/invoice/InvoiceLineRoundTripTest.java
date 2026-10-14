@@ -49,8 +49,9 @@ class InvoiceLineRoundTripTest {
     flushAndClear();
 
     List<InvoiceLine> reloadedInvoiceLines =
-        invoiceLineRepository.findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAsc(
-            organizationId, invoiceId);
+        invoiceLineRepository
+            .findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+                organizationId, invoiceId);
 
     assertThat(reloadedInvoiceLines)
         .extracting(InvoiceLine::getBillableMetricCode)

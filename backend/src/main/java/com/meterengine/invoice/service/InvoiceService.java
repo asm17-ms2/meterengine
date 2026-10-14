@@ -18,21 +18,29 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class InvoiceService {
 
+  private static final TypeReference<Map<String, Object>> DIMENSION_VALUES_TYPE =
+      new TypeReference<>() {};
+
   private final InvoiceRepository invoiceRepository;
   private final InvoiceLineRepository invoiceLineRepository;
   private final CustomerRepository customerRepository;
+  private final JsonMapper jsonMapper;
 
   InvoiceService(
       InvoiceRepository invoiceRepository,
       InvoiceLineRepository invoiceLineRepository,
-      CustomerRepository customerRepository) {
+      CustomerRepository customerRepository,
+      JsonMapper jsonMapper) {
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
     this.customerRepository = customerRepository;
+    this.jsonMapper = jsonMapper;
   }
 
   @Transactional(readOnly = true)
@@ -46,7 +54,7 @@ public class InvoiceService {
     List<Invoice> invoices = invoiceRepository.findNewestFirst(organizationId, customerId, period);
     Map<UUID, List<InvoiceLine>> invoiceLinesByInvoiceId =
         invoiceLineRepository
-            .findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAsc(
+            .findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAscDimensionValuesAsc(
                 organizationId, invoices.stream().map(Invoice::getId).toList())
             .stream()
             .collect(Collectors.groupingBy(InvoiceLine::getInvoiceId));
@@ -60,8 +68,7 @@ public class InvoiceService {
             .toList());
   }
 
-  private static InvoiceResponse toInvoiceResponse(
-      Invoice invoice, List<InvoiceLine> invoiceLines) {
+  private InvoiceResponse toInvoiceResponse(Invoice invoice, List<InvoiceLine> invoiceLines) {
     return new InvoiceResponse(
         invoice.getId(),
         invoice.getCustomerId(),
@@ -74,13 +81,14 @@ public class InvoiceService {
         invoice.getSupplyAmount(),
         invoice.getTaxAmount(),
         invoice.getTotalAmount(),
-        invoiceLines.stream().map(InvoiceService::toInvoiceLineResponse).toList());
+        invoiceLines.stream().map(this::toInvoiceLineResponse).toList());
   }
 
-  private static InvoiceLineResponse toInvoiceLineResponse(InvoiceLine invoiceLine) {
+  private InvoiceLineResponse toInvoiceLineResponse(InvoiceLine invoiceLine) {
     return new InvoiceLineResponse(
         invoiceLine.getBillableMetricCode(),
         invoiceLine.getTargetProperty(),
+        jsonMapper.readValue(invoiceLine.getDimensionValues(), DIMENSION_VALUES_TYPE),
         invoiceLine.getQuantity(),
         invoiceLine.getUnitPrice(),
         invoiceLine.getAmount());
