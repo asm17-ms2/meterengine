@@ -4,7 +4,7 @@
 
 - 작성자 외 1명 이상의 approve. 보호 경로를 건드리면 `protected-reviewers` 팀원의 approve 둘.
   - 강제는 main 룰셋의 required reviewer 패턴이 하고, 리뷰 요청은 `.github/CODEOWNERS`가 한다.
-- `ci.yml`의 `backend`, `frontend`가 통과해야 한다.
+- `ci.yml`의 `backend`, `frontend`가 통과해야 한다. 안 바뀐 쪽은 skip되어 통과로 친다.
 - 리뷰 스레드를 모두 resolve해야 한다.
 - main보다 뒤처졌으면 Update branch로 올린 뒤 머지한다.
 
