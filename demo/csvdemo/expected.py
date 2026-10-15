@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal, localcontext
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from core.jsonl_log import SendRecord
 from core.model import (
@@ -18,13 +19,23 @@ from core.model import (
 CALC_PRECISION = 50
 
 
+DimensionValuesKey = Tuple[Tuple[str, tuple], ...]
+
+
 @dataclass
 class BillableMetricMeta:
     code: str
     event_type: str
     aggregation: str
     target_property: str
-    unit_price: Optional[Decimal]
+    dimension_properties: List[str] = field(default_factory=list)
+    unit_prices: Dict[DimensionValuesKey, Decimal] = field(default_factory=dict)
+
+
+@dataclass
+class DimensionUsage:
+    dimension_values: dict
+    quantity: Decimal
 
 
 @dataclass
@@ -32,6 +43,8 @@ class ExpectedLine:
     billable_metric_code: str
     quantity: Decimal
     amount: Optional[int]
+    priced_quantity: Decimal = Decimal("0")
+    unpriced: List[DimensionUsage] = field(default_factory=list)
 
 
 @dataclass
@@ -141,23 +154,47 @@ def _is_number(value) -> bool:
     return isinstance(value, (int, Decimal))
 
 
-def sum_quantities(
-    stored: List[StoredEvent], month: str, event_type: str, target_property: str
-) -> Dict[str, Decimal]:
-    sums: Dict[str, Decimal] = {}
+def dimension_values_key(dimension_values: dict) -> DimensionValuesKey:
+    return tuple(sorted((key, _typed_value(value)) for key, value in dimension_values.items()))
+
+
+def _typed_value(value) -> tuple:
+    if value is None:
+        return ("null",)
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, (int, float, Decimal)):
+        return ("number", Decimal(str(value)).normalize())
+    if isinstance(value, str):
+        return ("string", value)
+    return ("json", json.dumps(value, sort_keys=True, default=str))
+
+
+def sum_quantities_by_dimension_values(
+    stored: List[StoredEvent], month: str, billable_metric: BillableMetricMeta
+) -> Dict[str, Dict[DimensionValuesKey, DimensionUsage]]:
+    sums: Dict[str, Dict[DimensionValuesKey, DimensionUsage]] = {}
     with localcontext() as context:
         context.prec = CALC_PRECISION
         for event in stored:
-            if event.event_type != event_type:
+            if event.event_type != billable_metric.event_type:
                 continue
             if kst_month(event.occurred_at) != month:
                 continue
-            value = event.properties.get(target_property)
+            value = event.properties.get(billable_metric.target_property)
             if not _is_number(value):
                 continue
-            customer_id = event.customer_id.lower()
-            current = sums.get(customer_id, Decimal("0"))
-            sums[customer_id] = current + Decimal(value)
+            dimension_values = {
+                dimension_property: event.properties.get(dimension_property)
+                for dimension_property in billable_metric.dimension_properties
+            }
+            by_dimension_values = sums.setdefault(event.customer_id.lower(), {})
+            key = dimension_values_key(dimension_values)
+            current = by_dimension_values.get(key)
+            if current is None:
+                by_dimension_values[key] = DimensionUsage(dimension_values, Decimal(value))
+            else:
+                current.quantity = current.quantity + Decimal(value)
     return sums
 
 
@@ -174,7 +211,7 @@ def build_expected(
     customer_ids: List[str],
 ) -> ExpectedMonth:
     sums_by_metric = {
-        billable_metric.code: sum_quantities(stored, month, billable_metric.event_type, billable_metric.target_property)
+        billable_metric.code: sum_quantities_by_dimension_values(stored, month, billable_metric)
         for billable_metric in billable_metrics
     }
     customers: Dict[str, ExpectedCustomer] = {}
@@ -183,10 +220,9 @@ def build_expected(
         lines = []
         customer_amount = 0
         for billable_metric in billable_metrics:
-            quantity = sums_by_metric[billable_metric.code].get(customer_id, Decimal("0"))
-            amount = _line_amount_or_none(quantity, billable_metric.unit_price)
-            customer_amount += amount or 0
-            lines.append(ExpectedLine(billable_metric_code=billable_metric.code, quantity=quantity, amount=amount))
+            line = _expected_line(billable_metric, sums_by_metric[billable_metric.code].get(customer_id, {}))
+            customer_amount += line.amount or 0
+            lines.append(line)
         customers[customer_id] = ExpectedCustomer(
             customer_id=customer_id, lines=lines, amount=customer_amount
         )
@@ -194,7 +230,28 @@ def build_expected(
     return ExpectedMonth(month=month, customers=customers, total_amount=total_amount)
 
 
-def _line_amount_or_none(quantity: Decimal, unit_price: Optional[Decimal]) -> Optional[int]:
-    if unit_price is None:
-        return None
-    return line_amount(quantity, unit_price)
+def _expected_line(
+    billable_metric: BillableMetricMeta, by_dimension_values: Dict[DimensionValuesKey, DimensionUsage]
+) -> ExpectedLine:
+    quantity = Decimal("0")
+    priced_quantity = Decimal("0")
+    amount: Optional[int] = 0 if billable_metric.unit_prices else None
+    unpriced = []
+    with localcontext() as context:
+        context.prec = CALC_PRECISION
+        for key, usage in by_dimension_values.items():
+            quantity += usage.quantity
+            unit_price = billable_metric.unit_prices.get(key)
+            if unit_price is None:
+                if usage.quantity != 0:
+                    unpriced.append(usage)
+                continue
+            priced_quantity += usage.quantity
+            amount += line_amount(usage.quantity, unit_price)
+    return ExpectedLine(
+        billable_metric_code=billable_metric.code,
+        quantity=quantity,
+        amount=amount,
+        priced_quantity=priced_quantity,
+        unpriced=unpriced,
+    )

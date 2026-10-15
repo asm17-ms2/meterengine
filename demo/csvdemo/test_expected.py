@@ -4,10 +4,11 @@ from decimal import Decimal
 from csvdemo.expected import (
     BillableMetricMeta,
     build_expected,
+    dimension_values_key,
     line_amount,
     predict_send,
     stored_events_from_log,
-    sum_quantities,
+    sum_quantities_by_dimension_values,
 )
 from core.jsonl_log import SendRecord
 from core.model import Event, StoredEvent, parse_rfc3339
@@ -21,7 +22,19 @@ TOKEN_USAGE = BillableMetricMeta(
     event_type="chat_completion",
     aggregation="sum",
     target_property="token",
-    unit_price=Decimal("0.5"),
+    unit_prices={dimension_values_key({}): Decimal("0.5")},
+)
+
+INPUT_TOKENS = BillableMetricMeta(
+    code="input-tokens",
+    event_type="llm_request",
+    aggregation="sum",
+    target_property="input_tokens",
+    dimension_properties=["model"],
+    unit_prices={
+        dimension_values_key({"model": "claude-haiku-4-5"}): Decimal("0.00159"),
+        dimension_values_key({"model": "claude-sonnet-5"}): Decimal("0.00318"),
+    },
 )
 
 
@@ -33,6 +46,18 @@ def _event(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00
         timestamp_text=ts,
         properties_text=props,
     )
+
+
+def _sum_quantities(stored, month, event_type, target_property):
+    billable_metric = BillableMetricMeta(
+        code="token-usage", event_type=event_type, aggregation="sum", target_property=target_property
+    )
+    return {
+        customer_id: by_dimension_values[dimension_values_key({})].quantity
+        for customer_id, by_dimension_values in sum_quantities_by_dimension_values(
+            stored, month, billable_metric
+        ).items()
+    }
 
 
 def _stored(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00:00+09:00", props=None):
@@ -119,7 +144,7 @@ class StoredEventsFromLogTest(unittest.TestCase):
 class SumQuantitiesTest(unittest.TestCase):
     def test_80건분_token_합이_나온다(self):
         stored = [_stored("evt-%03d" % i) for i in range(80)]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("40000"))
 
     def test_kst_월_경계로_귀속한다(self):
@@ -128,14 +153,14 @@ class SumQuantitiesTest(unittest.TestCase):
             _stored("evt-2", ts="2026-08-31T14:59:59Z"),
             _stored("evt-3", ts="2026-08-31T15:00:00Z"),
         ]
-        aug = sum_quantities(stored, "2026-08", "chat_completion", "token")
-        sep = sum_quantities(stored, "2026-09", "chat_completion", "token")
+        aug = _sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sep = _sum_quantities(stored, "2026-09", "chat_completion", "token")
         self.assertEqual(aug[ACME], Decimal("1000"))
         self.assertEqual(sep[ACME], Decimal("500"))
 
     def test_다른_event_type은_합산하지_않는다(self):
         stored = [_stored("evt-1"), _stored("evt-2", event_type="embedding")]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("500"))
 
     def test_비숫자와_누락과_불리언은_제외한다(self):
@@ -145,23 +170,23 @@ class SumQuantitiesTest(unittest.TestCase):
             _stored("evt-3", props={"model": "claude"}),
             _stored("evt-4", props={"token": True}),
         ]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("500"))
 
     def test_고정밀_소수_자릿수를_유지한다(self):
         stored = [_stored("evt-1", props={"token": Decimal("1234567890.123456789012345")})]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("1234567890.123456789012345"))
 
     def test_유효숫자_28자리를_넘는_합도_정확하다(self):
         value = Decimal("12345678901234567890.123456789")
         stored = [_stored("evt-1", props={"token": value}), _stored("evt-2", props={"token": value})]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("24691357802469135780.246913578"))
 
     def test_대문자_uuid도_같은_고객으로_집계한다(self):
         stored = [_stored("evt-1", customer=ACME.upper())]
-        sums = sum_quantities(stored, "2026-08", "chat_completion", "token")
+        sums = _sum_quantities(stored, "2026-08", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("500"))
 
 
@@ -199,13 +224,60 @@ class BuildExpectedTest(unittest.TestCase):
             event_type="api_call",
             aggregation="sum",
             target_property="count",
-            unit_price=None,
         )
         stored = [_stored("evt-1"), _stored("evt-2", event_type="api_call", props={"count": 3})]
         result = build_expected(stored, [TOKEN_USAGE, no_price], "2026-08", [ACME])
         self.assertIsNone(result.customers[ACME].lines[1].amount)
         self.assertEqual(result.customers[ACME].amount, 250)
         self.assertEqual(result.total_amount, 250)
+
+    def test_조합마다_그_조합의_단가로_계산한다(self):
+        stored = [
+            _stored("evt-1", customer=ACME, event_type="llm_request", props={"input_tokens": 5010, "model": "claude-haiku-4-5"}),
+            _stored("evt-2", customer=BETA, event_type="llm_request", props={"input_tokens": 4820, "model": "claude-sonnet-5"}),
+        ]
+        result = build_expected(stored, [INPUT_TOKENS], "2026-08", [ACME, BETA])
+        self.assertEqual(result.customers[ACME].amount, 0)
+        self.assertEqual(result.customers[BETA].amount, 10)
+
+    def test_한_고객의_여러_조합은_조합마다_절사한_뒤_더한다(self):
+        stored = [
+            _stored("evt-1", event_type="llm_request", props={"input_tokens": 9000, "model": "claude-haiku-4-5"}),
+            _stored("evt-2", event_type="llm_request", props={"input_tokens": 9000, "model": "claude-sonnet-5"}),
+        ]
+        line = build_expected(stored, [INPUT_TOKENS], "2026-08", [ACME]).customers[ACME].lines[0]
+        self.assertEqual(line.quantity, Decimal("18000"))
+        self.assertEqual(line.amount, 10 + 20)
+
+    def test_단가가_없는_조합은_금액과_청구_수량에서_빠지고_따로_남는다(self):
+        stored = [
+            _stored("evt-1", event_type="llm_request", props={"input_tokens": 4820, "model": "claude-sonnet-5"}),
+            _stored("evt-2", event_type="llm_request", props={"input_tokens": 700, "model": "claude-unknown"}),
+            _stored("evt-3", event_type="llm_request", props={"input_tokens": 300}),
+        ]
+        line = build_expected(stored, [INPUT_TOKENS], "2026-08", [ACME]).customers[ACME].lines[0]
+        self.assertEqual(line.quantity, Decimal("5820"))
+        self.assertEqual(line.priced_quantity, Decimal("4820"))
+        self.assertEqual(line.amount, 10)
+        self.assertEqual(
+            [(usage.dimension_values, usage.quantity) for usage in line.unpriced],
+            [({"model": "claude-unknown"}, Decimal("700")), ({"model": None}, Decimal("300"))],
+        )
+
+
+class DimensionValuesKeyTest(unittest.TestCase):
+    def test_숫자는_표기가_달라도_값이_같으면_같은_조합이다(self):
+        self.assertEqual(dimension_values_key({"tier": 9}), dimension_values_key({"tier": Decimal("9.0")}))
+        self.assertEqual(dimension_values_key({"tier": Decimal("9.00")}), dimension_values_key({"tier": 9}))
+        self.assertEqual(dimension_values_key({"tier": Decimal("1E+2")}), dimension_values_key({"tier": 100}))
+
+    def test_숫자와_문자열과_참거짓은_서로_다른_조합이다(self):
+        self.assertNotEqual(dimension_values_key({"tier": 9}), dimension_values_key({"tier": "9"}))
+        self.assertNotEqual(dimension_values_key({"tier": 1}), dimension_values_key({"tier": True}))
+        self.assertNotEqual(dimension_values_key({"tier": None}), dimension_values_key({}))
+
+    def test_키_순서와_상관없이_같다(self):
+        self.assertEqual(dimension_values_key({"a": 1, "b": "x"}), dimension_values_key({"b": "x", "a": 1}))
 
 
 if __name__ == "__main__":
