@@ -29,14 +29,17 @@ public class EventService {
   private final EventRepository eventRepository;
   private final CustomerRepository customerRepository;
   private final JsonMapper jsonMapper;
+  private final EventIngestMetrics eventIngestMetrics;
 
   EventService(
       EventRepository eventRepository,
       CustomerRepository customerRepository,
-      JsonMapper jsonMapper) {
+      JsonMapper jsonMapper,
+      EventIngestMetrics eventIngestMetrics) {
     this.eventRepository = eventRepository;
     this.customerRepository = customerRepository;
     this.jsonMapper = jsonMapper;
+    this.eventIngestMetrics = eventIngestMetrics;
   }
 
   public boolean existsWithNumericProperty(UUID organizationId, String type, String property) {
@@ -50,6 +53,7 @@ public class EventService {
 
     if (isTooOld(request.occurredAt().toInstant(), Instant.now())) {
       if (eventRepository.exists(organizationId, request.transactionId())) {
+        eventIngestMetrics.recordDuplicate();
         return IngestEventResponse.alreadyStored(request.transactionId());
       }
       throw new InvalidRequestException(
@@ -67,9 +71,12 @@ public class EventService {
             request.type(),
             propertiesJson,
             request.occurredAt());
-    return inserted == 1
-        ? IngestEventResponse.stored(request.transactionId())
-        : IngestEventResponse.alreadyStored(request.transactionId());
+    if (inserted == 1) {
+      eventIngestMetrics.recordStored(request.occurredAt().toInstant(), Instant.now());
+      return IngestEventResponse.stored(request.transactionId());
+    }
+    eventIngestMetrics.recordDuplicate();
+    return IngestEventResponse.alreadyStored(request.transactionId());
   }
 
   static boolean isTooOld(Instant occurredAt, Instant now) {
