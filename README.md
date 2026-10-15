@@ -10,6 +10,7 @@
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
 | `demo/` | 수집-조회 데모/검증 CLI와 Claude Code 사용량 브리지. Python 3.9+, 표준 라이브러리만 쓴다 |
 | `deploy/` | 배포 구성. compose, Caddy, 배포 스크립트 |
+| `measurements/` | 측정과 측정에 쓰는 SUT |
 
 ## 시작하기
 
