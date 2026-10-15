@@ -21,6 +21,7 @@ readonly SSM_COMMAND_WAIT_LIMIT_SECONDS=$((SSM_EXECUTION_TIMEOUT_SECONDS + SSM_D
 readonly SSM_MAX_CONSECUTIVE_POLL_ERRORS=6
 readonly SSM_COMMENT_MAX_LENGTH=100
 readonly SSM_ONLINE_WAIT_LIMIT_SECONDS=600
+readonly REMOTE_SCRIPT_DELIMITER=MEASUREMENTS_REMOTE_SCRIPT_EOF
 readonly USAGE_REQUEST_TIMEOUT_SECONDS=10
 readonly USAGE_RETRY_LIMIT=60
 readonly USAGE_RETRY_INTERVAL_SECONDS=5
@@ -328,5 +329,26 @@ send_shell_command() {
 run_remote_command() {
 	local instance_id="$1" comment="$2" command="$3"
 	[ -n "$command" ] || die "run_remote_command에 실행할 명령이 없다"
+	send_shell_command "$instance_id" "$comment" "$command"
+}
+
+# 로컬 스크립트 파일 내용을 원격 bash의 표준 입력으로 보낸다. 서버의 레포 사본에 의존하지 않는다.
+run_remote_script() {
+	local instance_id="$1" comment="$2" script_file="$3"
+	shift 3
+	[ -r "$script_file" ] || die "보낼 스크립트 $script_file 을 읽지 못했다"
+	if grep -Fq "$REMOTE_SCRIPT_DELIMITER" "$script_file"; then
+		die "$script_file 에 구분자 $REMOTE_SCRIPT_DELIMITER 가 들어 있다"
+	fi
+
+	local arg args=""
+	for arg in "$@"; do
+		require_shell_safe "원격 스크립트 인자" "$arg"
+		args="$args $arg"
+	done
+
+	local content command
+	content=$(cat "$script_file")
+	command=$(printf "bash -s --%s <<'%s'\n%s\n%s" "$args" "$REMOTE_SCRIPT_DELIMITER" "$content" "$REMOTE_SCRIPT_DELIMITER")
 	send_shell_command "$instance_id" "$comment" "$command"
 }
