@@ -11,7 +11,12 @@ import type {
   InvoiceResponse,
   ListInvoicesResponse,
 } from "@/lib/api/invoices";
-import { formatDecimal, formatKrw, formatKstDateTime } from "@/lib/format";
+import {
+  formatDecimal,
+  formatKrw,
+  formatKstDateTime,
+  formatTargetPropertyTooltip,
+} from "@/lib/format";
 import { sumOf, toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
@@ -86,9 +91,8 @@ function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
 
 function toInvoiceLineView(line: InvoiceLineResponse): InvoiceLineView {
   return {
-    label: line.target_property
-      ? `${line.billable_metric_code} (${line.target_property})`
-      : line.billable_metric_code,
+    label: line.billable_metric_code,
+    labelTooltip: formatTargetPropertyTooltip(line.target_property),
     dimensionValues: line.dimension_values,
     quantity: formatDecimal(line.quantity),
     unitPrice: formatKrw(line.unit_price),

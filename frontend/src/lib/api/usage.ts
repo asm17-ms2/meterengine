@@ -3,6 +3,7 @@ import "server-only";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { formatTargetPropertyTooltip } from "@/lib/format";
 
 export type ListBillableMetricUsagesResponse = {
   month: string;
@@ -38,6 +39,7 @@ export type CustomerGroup = {
 
 export type BillableMetricLine = {
   label: string;
+  labelTooltip?: string;
   dimensionValues: BillableMetricUsageDimensionUsage["dimension_values"];
   quantity: number;
 };
@@ -49,11 +51,13 @@ const NO_USAGE_DIMENSION_USAGE: BillableMetricUsageDimensionUsage = {
 
 function toBillableMetricLines(
   label: string,
+  labelTooltip: string | undefined,
   dimensionUsages: BillableMetricUsageDimensionUsage[],
 ): BillableMetricLine[] {
   const rows = dimensionUsages.length === 0 ? [NO_USAGE_DIMENSION_USAGE] : dimensionUsages;
   return rows.map((dimensionUsage) => ({
     label,
+    labelTooltip,
     dimensionValues: dimensionUsage.dimension_values,
     quantity: dimensionUsage.quantity,
   }));
@@ -63,9 +67,8 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
   const customerGroupByCustomerId = new Map<string, CustomerGroup>();
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
-    const label = billableMetricUsage.target_property
-      ? `${billableMetricUsage.code} (${billableMetricUsage.target_property})`
-      : billableMetricUsage.code;
+    const label = billableMetricUsage.code;
+    const labelTooltip = formatTargetPropertyTooltip(billableMetricUsage.target_property);
 
     for (const customer of billableMetricUsage.customers) {
       let group = customerGroupByCustomerId.get(customer.customer_id);
@@ -77,7 +80,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
         };
         customerGroupByCustomerId.set(customer.customer_id, group);
       }
-      group.billableMetricLines.push(...toBillableMetricLines(label, customer.dimension_usages));
+      group.billableMetricLines.push(...toBillableMetricLines(label, labelTooltip, customer.dimension_usages));
     }
   }
 

@@ -1,5 +1,5 @@
 import { GridCell } from "@/components/table/GridCell";
-import { formatDimensionValuePairs } from "@/lib/format";
+import { toDimensionValueSlots } from "@/lib/format";
 
 export function countDimensionSlots(dimensionValuesList: Record<string, unknown>[]): number {
   return Math.max(
@@ -19,17 +19,23 @@ export function DimensionValuesCell({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const pairs = formatDimensionValuePairs(dimensionValues);
   return (
     <GridCell className={className ? `grid-cell--mono ${className}` : "grid-cell--mono"}>
       <div
         className="grid-cell__slots"
         style={{ gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))` }}
-        title={pairs.length === 0 ? undefined : pairs.join(", ")}
       >
-        {pairs.map((pair) => (
-          <span key={pair} className="grid-cell--truncate">
-            {pair}
+        {toDimensionValueSlots(dimensionValues).map((slot) => (
+          <span key={slot.hint} className="grid-cell__slot hover-hint" data-hint={slot.hint}>
+            <span
+              className={
+                slot.isMissing
+                  ? "grid-cell__slot-value grid-cell--truncate grid-cell--muted"
+                  : "grid-cell__slot-value grid-cell--truncate"
+              }
+            >
+              {slot.value}
+            </span>
           </span>
         ))}
       </div>

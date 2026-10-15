@@ -60,6 +60,7 @@ export async function UsageSection({
       (billableMetricLine) => billableMetricLine.label,
       (billableMetricLine) => ({
         label: billableMetricLine.label,
+        labelTooltip: billableMetricLine.labelTooltip,
         dimensionValues: billableMetricLine.dimensionValues,
         quantity: formatDecimal(billableMetricLine.quantity),
       }),

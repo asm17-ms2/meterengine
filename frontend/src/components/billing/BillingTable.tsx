@@ -7,6 +7,7 @@ import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 import { MeterGroupRow } from "@/components/table/MeterGroupRow";
+import { MeterLabel } from "@/components/table/MeterLabel";
 import type { DimensionValues } from "@/lib/api/billable-metric-prices";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
@@ -19,6 +20,7 @@ export type BillingGroupView = {
 
 export type BillingLineView = {
   label: string;
+  labelTooltip?: string;
   dimensionValues: DimensionValues;
   quantity: string;
   unitPrice: string;
@@ -94,6 +96,7 @@ export function BillingTable({
                       <MeterGroupRow
                         columns={COLUMNS}
                         label={item.label}
+                        labelTooltip={item.labelTooltip}
                         combinationCount={item.lines.length}
                         isCollapsed={isMeterCollapsed}
                         onToggle={() => toggle(item.id)}
@@ -148,7 +151,9 @@ function BillingLineRow({
   return (
     <GridRow columns={COLUMNS}>
       <GridCell className="grid-cell--child grid-cell--mono">
-        {isNested ? null : line.label}
+        {isNested ? null : (
+          <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
+        )}
       </GridCell>
       <DimensionValuesCell
         dimensionValues={line.dimensionValues}
