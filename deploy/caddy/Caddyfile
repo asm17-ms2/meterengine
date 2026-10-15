@@ -1,4 +1,4 @@
-# 운영 리버스 프록시. 사이트 주소만 적으면 Caddy가 인증서 발급과 HTTPS 리다이렉트를 맡는다.
+# 리버스 프록시. 사이트 주소만 적으면 Caddy가 인증서 발급과 HTTPS 리다이렉트를 맡는다.
 
 {$SITE_DOMAIN} {$SITE_ALIASES} {
 	@alias not host {$SITE_DOMAIN}

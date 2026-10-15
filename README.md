@@ -9,7 +9,7 @@
 | `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
 | `demo/` | 수집-조회 데모/검증 CLI와 Claude Code 사용량 브리지. Python 3.9+, 표준 라이브러리만 쓴다 |
-| `deploy/` | 운영 배포 구성. compose, Caddy, 배포 스크립트 |
+| `deploy/` | 배포 구성. compose, Caddy, 배포 스크립트 |
 
 ## 시작하기
 
@@ -39,7 +39,7 @@ docker compose up -d
 
 ## 배포
 
-- 운영 구성과 배포 절차는 `deploy/README.md`에 있다.
+- 배포 구성과 절차는 `deploy/README.md`에 있다.
 
 ## 기여
 
