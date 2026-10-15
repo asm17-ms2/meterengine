@@ -240,6 +240,36 @@
   background: color-mix(in srgb, var(--color-surface) 50%, transparent);
 }
 
+.grid-cell__slot {
+  justify-self: start;
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.grid-cell__slot-value {
+  display: block;
+}
+
+.hover-hint {
+  position: relative;
+}
+
+.hover-hint[data-hint]:hover::after {
+  content: attr(data-hint);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  padding: 2px 8px;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-bg);
+  background: var(--color-text);
+}
+
 .grid-cell--right {
   text-align: right;
 }

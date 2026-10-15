@@ -7,6 +7,7 @@ import { GridHead } from "@/components/table/GridHead";
 import { GridRow } from "@/components/table/GridRow";
 import { GridTable } from "@/components/table/GridTable";
 import { MeterGroupRow } from "@/components/table/MeterGroupRow";
+import { MeterLabel } from "@/components/table/MeterLabel";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type UsageGroupView = {
@@ -17,6 +18,7 @@ export type UsageGroupView = {
 
 export type UsageLineView = {
   label: string;
+  labelTooltip?: string;
   dimensionValues: Record<string, unknown>;
   quantity: string;
 };
@@ -74,6 +76,7 @@ export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
                       <MeterGroupRow
                         columns={COLUMNS}
                         label={item.label}
+                        labelTooltip={item.labelTooltip}
                         combinationCount={item.lines.length}
                         isCollapsed={isMeterCollapsed}
                         onToggle={() => toggle(item.id)}
@@ -114,7 +117,9 @@ function UsageLineRow({
   return (
     <GridRow columns={COLUMNS}>
       <GridCell className="grid-cell--child grid-cell--mono">
-        {isNested ? null : line.label}
+        {isNested ? null : (
+          <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
+        )}
       </GridCell>
       <DimensionValuesCell
         dimensionValues={line.dimensionValues}

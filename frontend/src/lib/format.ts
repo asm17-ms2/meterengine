@@ -47,12 +47,31 @@ export function formatKrw(value: number): string {
   return `${formatDecimal(value)}원`;
 }
 
-/** `model=claude-opus-5, region=kr` - 조합 열에 쓰는 형태. */
+/** `model=claude-opus-5, region=kr` - 조합을 한 줄 글로 읽을 때 쓰는 형태. */
 export function formatDimensionValues(dimensionValues: Record<string, unknown>): string {
-  return formatDimensionValuePairs(dimensionValues).join(", ");
+  return Object.entries(dimensionValues)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ");
 }
 
-/** `["model=claude-opus-5", "region=kr"]` - 조합을 키마다 한 칸씩 나눠 그릴 때 쓰는 형태. */
-export function formatDimensionValuePairs(dimensionValues: Record<string, unknown>): string[] {
-  return Object.entries(dimensionValues).map(([key, value]) => `${key}=${value}`);
+export type DimensionValueSlot = {
+  value: string;
+  hint: string;
+  isMissing: boolean;
+};
+
+/** 조합을 키마다 한 칸으로 나눈다. 칸에는 값만, 툴팁에는 키와 값을 쓴다. */
+export function toDimensionValueSlots(dimensionValues: Record<string, unknown>): DimensionValueSlot[] {
+  return Object.entries(dimensionValues).map(([key, value]) => {
+    const isMissing = value === null || value === undefined;
+    return {
+      value: isMissing ? "(값 없음)" : String(value),
+      hint: `${key}: ${isMissing ? "값 없음" : String(value)}`,
+      isMissing,
+    };
+  });
+}
+
+export function formatTargetPropertyTooltip(targetProperty: string | null): string | undefined {
+  return targetProperty ? `집계 대상 속성: ${targetProperty}` : undefined;
 }

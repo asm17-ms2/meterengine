@@ -4,13 +4,14 @@ export type MeterItem<Line> =
       kind: "meter";
       id: string;
       label: string;
+      labelTooltip?: string;
       quantity: string;
       amount: string | null;
       lines: Line[];
     };
 
 /** 같은 미터의 줄이 둘 이상 붙어 있으면 소계 줄 아래로 묶는다. */
-export function toMeterItems<Row, Line extends { label: string }>(
+export function toMeterItems<Row, Line extends { label: string; labelTooltip?: string }>(
   groupId: string,
   rows: Row[],
   meterKeyOf: (row: Row) => string,
@@ -31,6 +32,7 @@ export function toMeterItems<Row, Line extends { label: string }>(
             kind: "meter",
             id: `${groupId}/${meterKeyOf(run[0])}`,
             label: lines[0].label,
+            labelTooltip: lines[0].labelTooltip,
             ...subtotalOf(run),
             lines,
           },
