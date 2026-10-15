@@ -56,8 +56,8 @@ pnpm build
 | `METERENGINE_ORGANIZATION_ID` | 조회할 도입사. `X-Organization-Id` 헤더로 나간다 | `backend/src/main/resources/db/migration/R__seed.sql`의 데모 도입사 |
 | `METERENGINE_ORGANIZATION_NAME` | 상단 바에 표시할 도입사 이름 | `데모 도입사` |
 
-- 운영에서는 `deploy/compose.prod.yml`이 세 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
-- 운영의 백엔드 주소는 공개 도메인이 아니라 컨테이너 네트워크 안의 `http://backend:8080`이다
+- 배포할 때는 `deploy/compose.prod.yml`이 세 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
+- 배포 환경의 백엔드 주소는 공개 도메인이 아니라 컨테이너 네트워크 안의 `http://backend:8080`이다
 
 ## 컨테이너 이미지
 

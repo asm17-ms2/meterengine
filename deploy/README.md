@@ -1,8 +1,10 @@
 # 배포
 
-운영 환경 구성과 배포, 롤백, 서버 접속, 모니터링 확인 절차다.
+구성과 배포, 롤백, 서버 접속, 모니터링 확인 절차다.
 
 ## 구성
+
+지금 띄운 서버는 개발 서버 하나이고 운영 서버는 없다.
 
 ```
 인터넷 --443--> [Caddy] --/v1/*----> [backend:8080] --> RDS PostgreSQL
@@ -29,14 +31,14 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
+| `compose.prod.yml` | 배포 스택 정의. Caddy, backend, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
 | `cloudwatch/cloudwatch.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 
-- 루트의 `docker-compose.yml`은 로컬 개발용이고 운영 스택과 무관하다.
+- 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
 - Grafana와 대시보드는 파일이 정본이다. UI에서 고친 것은 재배포 때 파일 내용으로 돌아간다.
 
 ## 사전 준비
@@ -73,7 +75,7 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 - 이 서버는 arm64라 compose 플러그인도 `aarch64` 파일을 받는다.
 - `/etc/meterengine/prod.env`는 만들지 않는다. 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
-- 지금 서버와 다른 파라미터 경로나 도메인을 쓰는 서버에만 `/etc/meterengine/deploy.conf`를 만든다. 이 파일이 없으면 `deploy.sh`는 지금 서버의 값을 쓴다.
+- 개발 서버와 다른 파라미터 경로나 도메인을 쓰는 서버에만 `/etc/meterengine/deploy.conf`를 만든다. 이 파일이 없으면 `deploy.sh`는 개발 서버의 값을 쓴다.
 
 ```bash
 cat > /etc/meterengine/deploy.conf <<'EOF'
@@ -83,7 +85,7 @@ SITE_ALIASES=
 EOF
 ```
 
-- **적지 않은 변수는 지금 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 지금 서버의 DB에 붙는다.
+- **적지 않은 변수는 개발 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 개발 서버의 DB에 붙는다.
 - `SITE_ALIASES`에 적은 주소는 `SITE_DOMAIN`으로 리다이렉트되고, 비우면 `SITE_DOMAIN` 하나만 받는다.
 - Caddy가 인증서를 받으려면 `SITE_DOMAIN`과 `SITE_ALIASES`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
 

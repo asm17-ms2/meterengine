@@ -79,7 +79,7 @@ docker build -t meterengine-backend .
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 | 없음 |
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
-- 운영에서는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
+- 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
 
