@@ -40,7 +40,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "결과: 저장 지연과 오류. 무엇을 바꿀지는 아래 네 단계 중 먼저 찬 자원을 따른다. 기준값은 저장단 변화 기준 문서에 있다",
+      "title": "결과: 응답 시간과 오류. 무엇을 바꿀지는 아래 네 단계 중 먼저 찬 자원을 따른다. 기준값은 저장단 변화 기준 문서에 있다",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -53,11 +53,11 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "저장 지연 p99 (발생부터 저장까지)",
-      "description": "고객이 쓴 순간(요청 timestamp)부터 DB에 남기까지. 지금 구조는 요청 안에서 저장하므로 응답 시간과 거의 같다. 고객이 늦게 보낸 것도 섞인다.",
+      "title": "수집 API 응답 p99 (POST /v1/events)",
+      "description": "서버가 받은 뒤 저장하고 응답할 때까지. 지금 구조는 요청 안에서 저장하므로 이 값이 곧 서버 쪽 저장 지연이다. 커넥션 쥔 시간과 비교해 DB 몫이 크면 아래 2, 3단계 행을 본다.",
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -68,12 +68,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(meterengine_event_storage_delay_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/events\",method=\"POST\"}[5m])))",
           "legendFormat": "p99"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(meterengine_event_storage_delay_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/events\",method=\"POST\"}[5m])))",
           "legendFormat": "p50"
         }
       ],
@@ -97,51 +97,12 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "수집 API 응답 p99 (POST /v1/events)",
-      "description": "서버가 받은 뒤부터 응답까지. 커넥션 쥔 시간과 비교해 DB 몫이 크면 아래 2, 3단계 행을 본다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/events\",method=\"POST\"}[5m])))",
-          "legendFormat": "p99"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 4,
-      "type": "timeseries",
       "title": "수집 API 오류율 (5xx)",
       "description": "수집 요청 중 5xx 비율. 무엇을 바꿀지가 아니라 얼마나 급한지를 정한다.",
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 12,
+        "x": 12,
         "y": 1
       },
       "datasource": {
@@ -173,7 +134,7 @@
       }
     },
     {
-      "id": 5,
+      "id": 4,
       "type": "timeseries",
       "title": "중복 응답 비율 (duplicate true)",
       "description": "200 응답 중 duplicate true 비율. 오르면 저장단이 아니라 클라이언트 재시도 쪽 문제다. 기본 키 조회가 늘어 DB CPU에 나타날 수 있다.",
@@ -212,7 +173,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 5,
       "type": "timeseries",
       "title": "초당 저장 응답 대 DB 삽입 행",
       "description": "둘이 같아야 한다. 저장 응답이 삽입 행보다 많은 상태가 이어지면 유실이라 사고 조사. 큐를 두면 이 차이가 적체량이 된다.",
@@ -256,7 +217,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 6,
       "type": "timeseries",
       "title": "커넥션을 쥐고 있던 시간 p99",
       "description": "커넥션을 받아서 돌려줄 때까지. 늘면 DB가 느려진 신호라 2, 3단계 중 같이 오른 행을 본다.",
@@ -295,7 +256,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 7,
       "type": "row",
       "title": "1 설정: 풀 크기나 PostgreSQL 파라미터만 바꾼다",
       "collapsed": false,
@@ -308,7 +269,7 @@
       }
     },
     {
-      "id": 9,
+      "id": 8,
       "type": "timeseries",
       "title": "커넥션을 기다리는 스레드 수",
       "description": "커넥션이 모자라 기다리는 스레드. 0을 넘는 상태가 이어지면 풀 크기를 올리는 신호다.",
@@ -348,7 +309,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 9,
       "type": "timeseries",
       "title": "커넥션을 받기까지 줄 선 시간 p99",
       "description": "커넥션을 받기까지 기다린 시간. 늘면 풀이 모자란 것이다.",
@@ -387,7 +348,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 10,
       "type": "timeseries",
       "title": "사용 중 커넥션 대 최대",
       "description": "사용 중 커넥션과 풀 최대. 최대에 붙어 있어도 기다리는 스레드가 0이면 아직 바꾸지 않는다.",
@@ -432,7 +393,7 @@
       }
     },
     {
-      "id": 12,
+      "id": 11,
       "type": "timeseries",
       "title": "커넥션을 못 받고 포기한 횟수 (5분)",
       "description": "커넥션을 기다리다 포기한 요청 수. 포기까지 30초라 그 요청은 이미 30초 늦었다.",
@@ -472,7 +433,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 12,
       "type": "timeseries",
       "title": "체크포인트 평균 간격 (15분 창)",
       "description": "체크포인트 사이의 평균 시간. checkpoint_timeout보다 훨씬 짧아지면 WAL이 금방 차는 것이라 max_wal_size를 보는 신호다. 15분 창에 체크포인트가 없으면 15분으로 보인다.",
@@ -511,7 +472,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 13,
       "type": "timeseries",
       "title": "체크포인트 시간형 대 요청형 (15분 증가분)",
       "description": "시간형은 checkpoint_timeout마다, 요청형은 WAL이 차서 생긴 것. 요청형이 많아지면 max_wal_size가 작은 것이다.",
@@ -556,7 +517,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 14,
       "type": "row",
       "title": "2 쓰기 방식: 요청마다 커밋하던 것을 묶어 쓰기나 비동기 저장으로 바꾼다",
       "collapsed": false,
@@ -569,7 +530,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 15,
       "type": "timeseries",
       "title": "RDS 디스크 쓰기 한 번에 걸리는 시간",
       "description": "디스크 쓰기 한 번의 시간. 대기 큐와 같이 오르면 디스크가 느린 것이라 묶어 쓰기를 보는 신호다.",
@@ -608,7 +569,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 16,
       "type": "timeseries",
       "title": "RDS 디스크 대기 큐",
       "description": "디스크를 기다리는 I/O 수. 0을 넘는 상태가 이어지면 디스크가 요청을 다 못 받는 것이다.",
@@ -647,7 +608,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 17,
       "type": "timeseries",
       "title": "RDS 초당 디스크 쓰기",
       "description": "초당 디스크 쓰기 횟수. 커밋 한 번이 WAL 쓰기 한 번 이상이라 커밋을 묶으면 준다.",
@@ -686,7 +647,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 18,
       "type": "timeseries",
       "title": "RDS 초당 WAL 생성량",
       "description": "초당 새로 쓰이는 WAL 양. 묶어 쓰기를 하면 행당 WAL이 준다.",
@@ -725,7 +686,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 19,
       "type": "timeseries",
       "title": "RDS 디스크 쓰기 처리량",
       "description": "참고 값. WAL 생성량과 같이 본다.",
@@ -764,7 +725,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 20,
       "type": "timeseries",
       "title": "DB 잠금 수 (종류별)",
       "description": "참고 값. 수집 경로는 INSERT 하나라 서로 막을 일이 없다. 막힘이 보이면 조회나 확정 작업과 부딪친 것.",
@@ -804,7 +765,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 21,
       "type": "row",
       "title": "3 DB 자원: RDS 등급을 올리거나 스토리지를 늘린다",
       "collapsed": false,
@@ -817,7 +778,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 22,
       "type": "timeseries",
       "title": "RDS CPU 사용률",
       "description": "RDS CPU. 높은 상태가 이어지고 커넥션 쥔 시간도 늘면 등급을 올리는 신호다. CloudWatch는 1분 해상도라 짧은 포화는 숨을 수 있다.",
@@ -857,7 +818,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 23,
       "type": "timeseries",
       "title": "RDS 연결 수 대 max_connections",
       "description": "RDS 연결 수와 max_connections. 평상은 풀 크기와 같다. 풀을 올리다 max_connections에 가까워지면 등급을 올리는 신호다.",
@@ -902,7 +863,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 24,
       "type": "timeseries",
       "title": "RDS CPU 크레딧 잔량",
       "description": "t4g의 CPU 크레딧. 0이 되면 CPU가 기준선(vCPU당 20%)으로 떨어진다. unlimited라 지금은 비용으로 바뀐다.",
@@ -941,7 +902,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 25,
       "type": "timeseries",
       "title": "EBS 버스트 잔량",
       "description": "EBS 버스트 잔량. 떨어지는 중이면 디스크 기준선을 넘겨 쓰는 것이라 등급을 올리는 신호다.",
@@ -986,7 +947,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 26,
       "type": "timeseries",
       "title": "RDS 남은 메모리",
       "description": "RDS 남은 메모리.",
@@ -1025,7 +986,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 27,
       "type": "timeseries",
       "title": "RDS 스왑 사용량",
       "description": "스왑이 생기면 메모리가 모자란 것이라 메모리가 큰 등급으로 올리는 신호다.",
@@ -1064,7 +1025,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 28,
       "type": "timeseries",
       "title": "저장 공간이 찰 때까지 남은 날 (하루 증가량 기준)",
       "description": "남은 공간을 하루 사이 줄어든 양으로 나눈 값. 하루 사이 줄어든 양이 없으면 값이 매우 커진다.",
@@ -1103,7 +1064,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 29,
       "type": "timeseries",
       "title": "RDS 남은 저장 공간",
       "description": "참고 값. gp3 20GB.",
@@ -1142,7 +1103,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 30,
       "type": "timeseries",
       "title": "디스크에서 읽은 블록 수 (초당)",
       "description": "수집 중에 늘고 조회 응답도 같이 늘면 메모리가 큰 등급으로. 등급을 올려도 느리면 읽기 분리(4 구조).",
@@ -1181,7 +1142,7 @@
       }
     },
     {
-      "id": 32,
+      "id": 31,
       "type": "row",
       "title": "4 구조: 앞단에 큐를 두거나 읽기를 분리하거나 테이블을 나눈다",
       "collapsed": false,
@@ -1194,7 +1155,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 32,
       "type": "timeseries",
       "title": "사용량 조회 p99 (GET /v1/usage)",
       "description": "수집 부하 중에만 늘면 읽기 분리를 보는 신호다. 부하가 없어도 느리면 쿼리 문제라 저장단 변화가 아니다.",
@@ -1233,7 +1194,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 33,
       "type": "timeseries",
       "title": "청구 예정액 조회 p99 (GET /v1/invoices/draft)",
       "description": "사용량 조회와 같은 뜻이다.",
@@ -1272,7 +1233,7 @@
       }
     },
     {
-      "id": 35,
+      "id": 34,
       "type": "timeseries",
       "title": "event 테이블과 인덱스 크기",
       "description": "기본 키 인덱스가 메모리에 안 들어가면 삽입마다 디스크를 읽는다. 커지면서 조회가 같이 느려지면 파티셔닝이나 읽기 분리를 보는 신호다.",
@@ -1321,7 +1282,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 35,
       "type": "timeseries",
       "title": "바쁜 톰캣 스레드 대 최대",
       "description": "동시에 처리 중인 요청 수. 요청이 느려져 스레드가 돌아오지 않는 결과 지표라 먼저 찬 자원을 따른다.",
@@ -1366,7 +1327,7 @@
       }
     },
     {
-      "id": 37,
+      "id": 36,
       "type": "timeseries",
       "title": "초당 저장 응답 (stored)",
       "description": "사다리 측정에서 칸마다 실제로 들어간 속도. 지속 부하는 되는데 순간 부하에서만 위 결과 지표가 깨지면 앞단에 큐.",
@@ -1405,7 +1366,7 @@
       }
     },
     {
-      "id": 38,
+      "id": 37,
       "type": "timeseries",
       "title": "WAL 크기 (pg_wal)",
       "description": "참고 값. max_wal_size에 붙어 있으면 체크포인트가 자주 일어난다.",

@@ -72,7 +72,7 @@ public class EventService {
             propertiesJson,
             request.occurredAt());
     if (inserted == 1) {
-      eventIngestMetrics.recordStored(request.occurredAt().toInstant(), Instant.now());
+      eventIngestMetrics.recordStored();
       return IngestEventResponse.stored(request.transactionId());
     }
     eventIngestMetrics.recordDuplicate();
