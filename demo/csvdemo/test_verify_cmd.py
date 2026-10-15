@@ -2,12 +2,15 @@ import os
 import sys
 import tempfile
 import unittest
+from decimal import Decimal
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.jsonl_log import JsonlLogWriter
 from csvdemo.render import Console
-from csvdemo.verify_cmd import _load_log_source
+from core.api_client import ApiResult
+from csvdemo.expected import dimension_values_key
+from csvdemo.verify_cmd import _derive_billable_metrics, _load_log_source
 
 
 class Args:
@@ -91,6 +94,46 @@ class DamagedLogTest(unittest.TestCase):
         source = _load_log_source(Args(path), self.console)
         self.assertEqual(len(source.stored), 1)
         self.assertEqual(source.client.base_url, "https://meterengine.com")
+
+
+
+class DeriveBillableMetricsTest(unittest.TestCase):
+    def test_가격_목록에서_차원_키와_조합별_단가를_가져온다(self):
+        usage = _result({
+            "billable_metric_usages": [
+                {"code": "input-tokens", "event_type": "llm_request", "aggregation": "sum", "target_property": "input_tokens"},
+                {"code": "api-calls", "event_type": "api_call", "aggregation": "sum", "target_property": "count"},
+            ]
+        })
+        prices = _result({
+            "billable_metric_prices": [
+                {
+                    "billable_metric_code": "input-tokens",
+                    "dimension_properties": ["model"],
+                    "price_rates": [
+                        {"dimension_values": {"model": "claude-opus-5-5"}, "unit_price": Decimal("0.00636")},
+                        {"dimension_values": {"model": "claude-haiku-5-5"}, "unit_price": Decimal("0.000159")},
+                    ],
+                }
+            ]
+        })
+
+        input_tokens, api_calls = _derive_billable_metrics(usage, prices)
+
+        self.assertEqual(input_tokens.dimension_properties, ["model"])
+        self.assertEqual(
+            input_tokens.unit_prices,
+            {
+                dimension_values_key({"model": "claude-opus-5-5"}): Decimal("0.00636"),
+                dimension_values_key({"model": "claude-haiku-5-5"}): Decimal("0.000159"),
+            },
+        )
+        self.assertEqual(api_calls.dimension_properties, [])
+        self.assertEqual(api_calls.unit_prices, {})
+
+
+def _result(body):
+    return ApiResult(status=200, body=body, body_text="", elapsed_ms=0)
 
 
 if __name__ == "__main__":

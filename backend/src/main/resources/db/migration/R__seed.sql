@@ -10,14 +10,16 @@ INSERT INTO customer (id, organization_id, name) VALUES
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 INSERT INTO billable_metric
-  (organization_id, code, name, event_type, aggregation, target_property) VALUES
+  (organization_id, code, name, event_type, aggregation, target_property,
+   dimension_properties) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '토큰 사용량',
-   'chat_completion', 'sum', 'token')
+   'chat_completion', 'sum', 'token', '{}')
 ON CONFLICT (organization_id, code) DO UPDATE SET
-  name            = EXCLUDED.name,
-  event_type      = EXCLUDED.event_type,
-  aggregation     = EXCLUDED.aggregation,
-  target_property = EXCLUDED.target_property;
+  name                 = EXCLUDED.name,
+  event_type           = EXCLUDED.event_type,
+  aggregation          = EXCLUDED.aggregation,
+  target_property      = EXCLUDED.target_property,
+  dimension_properties = EXCLUDED.dimension_properties;
 
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.007)
@@ -34,37 +36,62 @@ INSERT INTO customer (id, organization_id, name) VALUES
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 INSERT INTO billable_metric
-  (organization_id, code, name, event_type, aggregation, target_property) VALUES
+  (organization_id, code, name, event_type, aggregation, target_property,
+   dimension_properties) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '입력 토큰',
-   'llm_request', 'sum', 'input_tokens'),
+   'llm_request', 'sum', 'input_tokens', '{model}'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '출력 토큰',
-   'llm_request', 'sum', 'output_tokens'),
+   'llm_request', 'sum', 'output_tokens', '{model}'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '외부 전송량',
-   'network_traffic', 'sum', 'egress_gb')
+   'network_traffic', 'sum', 'egress_gb', '{}')
 ON CONFLICT (organization_id, code) DO UPDATE SET
-  name            = EXCLUDED.name,
-  event_type      = EXCLUDED.event_type,
-  aggregation     = EXCLUDED.aggregation,
-  target_property = EXCLUDED.target_property;
+  name                 = EXCLUDED.name,
+  event_type           = EXCLUDED.event_type,
+  aggregation          = EXCLUDED.aggregation,
+  target_property      = EXCLUDED.target_property,
+  dimension_properties = EXCLUDED.dimension_properties;
+
+DELETE FROM price_rate
+WHERE organization_id = 'd7cee55d-8c82-4afc-b996-6749d8b26a4e'
+  AND billable_metric_code IN ('input-tokens', 'output-tokens')
+  AND dimension_values = '{}';
 
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{}', 0.007),
-  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{}', 0.035),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-fable-5"}', 0.0159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-fable-5-1"}', 0.0159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-haiku-4-5"}', 0.00159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-haiku-4-5-20251001"}', 0.00159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-haiku-5-5"}', 0.000159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-opus-5"}', 0.00795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-opus-5-5"}', 0.00636),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-sonnet-5"}', 0.00318),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'input-tokens', '{"model": "claude-sonnet-5-5"}', 0.00318),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-fable-5"}', 0.0795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-fable-5-1"}', 0.0795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-haiku-4-5"}', 0.00795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-haiku-4-5-20251001"}', 0.00795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-haiku-5-5"}', 0.000795),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-opus-5"}', 0.03975),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-opus-5-5"}', 0.0318),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-sonnet-5"}', 0.0159),
+  ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-sonnet-5-5"}', 0.0159),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '{}', 120.0)
 ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
 INSERT INTO billable_metric
-  (organization_id, code, name, event_type, aggregation, target_property) VALUES
+  (organization_id, code, name, event_type, aggregation, target_property,
+   dimension_properties) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '캐시 읽기 토큰',
-   'llm_request', 'sum', 'cache_read_tokens'),
+   'llm_request', 'sum', 'cache_read_tokens', '{}'),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '캐시 생성 토큰',
-   'llm_request', 'sum', 'cache_creation_tokens')
+   'llm_request', 'sum', 'cache_creation_tokens', '{}')
 ON CONFLICT (organization_id, code) DO UPDATE SET
-  name            = EXCLUDED.name,
-  event_type      = EXCLUDED.event_type,
-  aggregation     = EXCLUDED.aggregation,
-  target_property = EXCLUDED.target_property;
+  name                 = EXCLUDED.name,
+  event_type           = EXCLUDED.event_type,
+  aggregation          = EXCLUDED.aggregation,
+  target_property      = EXCLUDED.target_property,
+  dimension_properties = EXCLUDED.dimension_properties;
 
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '{}', 0.0007),

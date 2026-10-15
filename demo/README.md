@@ -94,14 +94,16 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 ### verify
 
 - 소스에서 이벤트를 읽어 Python이 Decimal로 독립 계산한 고객별 사용량과 청구 예정액을 `GET /v1/usage`, `GET /v1/invoices/draft` 응답과 표로 나란히 비교한다.
-- 미터 정의(`event_type`, `target_property`, 단가)는 서버 응답에서 유도해 화면에 출력한다.
+- 미터 정의(`event_type`, `target_property`, 차원 키, 조합별 단가)는 `GET /v1/usage`와 `GET /v1/billable-metric-prices`에서 받아 화면에 출력한다. 단가를 청구 예정액에서 가져오지 않아 서버 계산과 독립이다.
 - 독립 계산 규칙.
   - 중복 `transaction_id` 제거. 로그 소스는 서버 판정 그대로 `outcome=new`만 집계한다.
   - `occurred_at`의 KST 자정 경계로 월 귀속.
   - 4xx 거절분 제외.
   - `target_property` 값이 JSON number가 아닌 이벤트 제외. 저장은 되지만 합산에서 빠진다.
-  - 청구 예정액은 수량 x 단가를 라인마다 10원 미만에서 절사한 정수.
-  - 그 달 인보이스에 라인이 없는 미터는 단가를 유도할 수 없어 금액에 더하지 않는다. 서버도 그 미터를 청구에서 빼므로 둘 다 0이다.
+  - 청구 예정액은 미터의 차원 키 값 조합마다 수량 x 그 조합의 단가를 10원 미만에서 절사한 뒤 더한 정수.
+  - 단가가 없는 조합은 금액에 더하지 않고 "단가가 없어 청구 예정액에서 빠지는 조합"으로 따로 출력한다. 서버도 그 조합을 청구에서 뺀다.
+  - 사용량 표의 `청구 기대값`은 단가가 있는 조합의 수량 합이라 `/v1/invoices/draft`와 비교하고, `기대값`은 전체 수량이라 `/v1/usage`와 비교한다.
+  - 차원 값이 숫자면 `9`와 `9.0`처럼 표기만 다른 값을 한 조합으로 묶는다. 서버도 사용량을 이렇게 묶지만 단가는 표기까지 같아야 찾으므로, 표기를 섞은 숫자 차원 값에서는 verify와 서버가 어긋날 수 있다.
 - `--log`와 `--csv`를 둘 다 주면 로그를 쓴다.
 - CSV 소스는 서버 판정을 시뮬레이션한다. 필수 필드 검증과 서버 고객 명단 대조로 거절을 예측하되 저장할 수 없는 문자(NUL, 짝이 없는 UTF-16 서로게이트) 같은 드문 거절은 예측하지 못하고 그 한계를 출력에 적는다.
 - 중간이 깨진 `send` 로그로는 판정하지 않고 종료 코드 2로 끝낸다. 헤더가 여럿인 브리지 로그는 경고까지만 한다.
@@ -135,8 +137,8 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 ```csv
 transaction_id,customer_id,event_type,timestamp,properties,note
-demo-001,35bc8d12-9d38-57ab-bc9b-bbd35d779a26,llm_request,2026-08-05T10:00:00+09:00,"{""input_tokens"": 101, ""output_tokens"": 51}",
-demo-bad,9f31c2aa-0000-0000-0000-000000000000,llm_request,2026-08-05T11:00:00+09:00,"{""input_tokens"": 120}",미등록 고객
+demo-001,35bc8d12-9d38-57ab-bc9b-bbd35d779a26,llm_request,2026-08-05T10:00:00+09:00,"{""input_tokens"": 101, ""output_tokens"": 51, ""model"": ""claude-sonnet-5""}",
+demo-bad,9f31c2aa-0000-0000-0000-000000000000,llm_request,2026-08-05T11:00:00+09:00,"{""input_tokens"": 120, ""model"": ""claude-sonnet-5""}",미등록 고객
 ```
 
 ## otel_bridge.py
@@ -251,11 +253,14 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 ### 단가
 
-- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다. Claude Opus 5 공시가를 1달러 1,400원으로 환산한 토큰당 원 단가다.
+- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
-- 캐시 쓰기는 5분 캐시 기준이다. OTel의 `cache_creation_tokens`가 5분과 1시간을 구분하지 않는다.
-- 모델별 단가는 켜지지 않는다. 시드의 미터는 `dimension_properties`가 비어 있어 `properties`에 `model`이 실려 있어도 `dimension_values = '{}'` 단가 한 행으로 계산한다.
-  - 시드에는 그 한 행만 둔다. 지우면 그 미터가 인보이스에서 통째로 빠진다.
+- `input-tokens`, `output-tokens`는 차원 키가 `model`이라 모델마다 단가가 다르다.
+  - Claude 공시가(달러, 100만 토큰당)를 1달러 1,590원으로 환산한 토큰당 원 단가다. 1,590원은 Claude 결제 창의 부가세 포함 원화 가격을 1.1로 나눈 환율이다. 인보이스가 세액 10%를 따로 더하기 때문이다.
+  - Claude Haiku 5.5는 프롬프트가 100K 토큰을 넘으면 가격이 오르지만, 토큰당 단가 하나로는 나타낼 수 없어 기본 구간 가격만 넣었다.
+  - 시드에는 배포 서버 이벤트와 샘플 CSV에 나온 모델의 단가가 있다. `model` 값이 글자까지 같아야 하고, 목록에 없는 모델은 청구 예정액에서 빠진다.
+- `cache-creation-tokens`, `cache-read-tokens`는 모델과 상관없이 단가 한 행이고, 예전 기준(Claude Opus 5 공시가, 1달러 1,400원)을 그대로 둔다.
+  - 캐시 쓰기 가격은 5분 캐시와 1시간 캐시가 다른데 OTel의 `cache_creation_tokens`가 둘을 구분하지 않는다. 그래서 캐시 미터를 모델별 단가로 바꾸는 일은 미뤘다. 지금 값은 5분 캐시 기준이다.
 - 금액은 실제 가격이라 작다. 라인마다 10원 미만을 버리므로 입력 토큰처럼 적은 항목은 0원이 되기도 한다.
 
 ### 검증
