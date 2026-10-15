@@ -79,6 +79,28 @@ services:
       - /:/host/root:ro
     logging: *default-logging
 
+  # RDS 안의 PostgreSQL 통계 뷰를 읽는다. 읽기 전용 사용자(meterengine_exporter)로 붙는다.
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.18.1
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: ${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${DB_EXPORTER_PASSWORD:?DB_EXPORTER_PASSWORD가 없다}
+    command:
+      - --collector.stat_checkpointer
+      - --collector.stat_user_tables
+      - --collector.statio_user_tables
+    logging: *default-logging
+
+  # RDS 인스턴스 지표(CPU, 디스크, 크레딧)를 CloudWatch에서 읽는다. 자격은 EC2 역할이다.
+  cloudwatch-exporter:
+    image: prom/cloudwatch-exporter:v0.16.0
+    restart: unless-stopped
+    volumes:
+      - ./cloudwatch:/config:ro
+    logging: *default-logging
+
   grafana:
     image: grafana/grafana:13.1
     restart: unless-stopped
