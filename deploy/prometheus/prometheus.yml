@@ -23,6 +23,18 @@ scrape_configs:
     static_configs:
       - targets: ["node-exporter:9100"]
 
+  # PostgreSQL 안쪽. 체크포인트, 커밋과 삽입 행, 테이블 크기가 여기서 나온다.
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # RDS 인스턴스 자원. CloudWatch가 1분 단위라 1분마다 긁고, API 호출이 몇 초 걸려 timeout을 넉넉히 둔다.
+  - job_name: cloudwatch
+    scrape_interval: 60s
+    scrape_timeout: 50s
+    static_configs:
+      - targets: ["cloudwatch-exporter:9106"]
+
   # 자기 자신. 수집이 밀리거나(scrape_duration) TSDB가 커지는 것을 볼 수 있다.
   - job_name: prometheus
     static_configs:
