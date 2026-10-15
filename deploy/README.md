@@ -33,7 +33,7 @@
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
-| `cloudwatch/cloudwatch.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
+| `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 운영 스택과 무관하다.
@@ -127,8 +127,9 @@ aws ssm send-command \
 1. `/opt/meterengine`을 그 커밋으로 맞춘다.
 2. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600).
 3. ECR에 로그인하고 그 SHA 태그의 이미지를 받는다.
-4. `docker compose up -d --remove-orphans` 후 Caddy 설정을 reload 한다.
+4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
+   - prometheus.yml도 같다. `docker compose -p meterengine-prod kill -s HUP prometheus`로 다시 읽게 한다.
 5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/usage`가 응답하는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
 

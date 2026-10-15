@@ -116,6 +116,10 @@ main() {
 	[ "$reloaded" = yes ] || die "Caddy 설정을 반영하지 못했다. Caddyfile을 확인한다"
 	log "Caddy 설정 반영 완료"
 
+	# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
+	"${compose[@]}" kill -s HUP prometheus
+	log "Prometheus 설정 반영 완료"
+
 	if ! wait_for_http "백엔드" http://127.0.0.1:8080/actuator/health '"status":"UP"'; then
 		"${compose[@]}" logs --tail 50 backend || true
 		die "백엔드가 90초 안에 준비되지 않았다"
