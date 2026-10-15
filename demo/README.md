@@ -135,8 +135,8 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 ```csv
 transaction_id,customer_id,event_type,timestamp,properties,note
-demo-001,35bc8d12-9d38-57ab-bc9b-bbd35d779a26,llm_request,2026-08-05T10:00:00+09:00,"{""input_tokens"": 101, ""output_tokens"": 51}",
-demo-bad,9f31c2aa-0000-0000-0000-000000000000,llm_request,2026-08-05T11:00:00+09:00,"{""input_tokens"": 120}",미등록 고객
+demo-001,35bc8d12-9d38-57ab-bc9b-bbd35d779a26,llm_request,2026-08-05T10:00:00+09:00,"{""input_tokens"": 101, ""output_tokens"": 51, ""model"": ""claude-sonnet-5""}",
+demo-bad,9f31c2aa-0000-0000-0000-000000000000,llm_request,2026-08-05T11:00:00+09:00,"{""input_tokens"": 120, ""model"": ""claude-sonnet-5""}",미등록 고객
 ```
 
 ## otel_bridge.py
@@ -251,11 +251,14 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 ### 단가
 
-- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다. Claude Opus 5 공시가를 1달러 1,400원으로 환산한 토큰당 원 단가다.
+- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
-- 캐시 쓰기는 5분 캐시 기준이다. OTel의 `cache_creation_tokens`가 5분과 1시간을 구분하지 않는다.
-- 모델별 단가는 켜지지 않는다. 시드의 미터는 `dimension_properties`가 비어 있어 `properties`에 `model`이 실려 있어도 `dimension_values = '{}'` 단가 한 행으로 계산한다.
-  - 시드에는 그 한 행만 둔다. 지우면 그 미터가 인보이스에서 통째로 빠진다.
+- `input-tokens`, `output-tokens`는 차원 키가 `model`이라 모델마다 단가가 다르다.
+  - Claude 공시가(달러, 100만 토큰당)를 1달러 1,590원으로 환산한 토큰당 원 단가다. 1,590원은 Claude 결제 창의 부가세 포함 원화 가격을 1.1로 나눈 환율이다. 인보이스가 세액 10%를 따로 더하기 때문이다.
+  - Claude Haiku 5.5는 프롬프트가 100K 토큰을 넘으면 가격이 오르지만, 토큰당 단가 하나로는 나타낼 수 없어 기본 구간 가격만 넣었다.
+  - 시드에는 배포 서버 이벤트와 샘플 CSV에 나온 모델의 단가가 있다. `model` 값이 글자까지 같아야 하고, 목록에 없는 모델은 청구 예정액에서 빠진다.
+- `cache-creation-tokens`, `cache-read-tokens`는 모델과 상관없이 단가 한 행이고, 예전 기준(Claude Opus 5 공시가, 1달러 1,400원)을 그대로 둔다.
+  - 캐시 쓰기 가격은 5분 캐시와 1시간 캐시가 다른데 OTel의 `cache_creation_tokens`가 둘을 구분하지 않는다. 그래서 캐시 미터를 모델별 단가로 바꾸는 일은 미뤘다. 지금 값은 5분 캐시 기준이다.
 - 금액은 실제 가격이라 작다. 라인마다 10원 미만을 버리므로 입력 토큰처럼 적은 항목은 0원이 되기도 한다.
 
 ### 검증

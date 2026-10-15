@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,7 +26,22 @@ class SeedDataTest {
 
   private static final int CUSTOMERS = 2 + 3;
   private static final int BILLABLE_METRICS = 1 + 3 + 2;
-  private static final int PRICE_RATES = BILLABLE_METRICS;
+  private static final List<String> MODELS =
+      List.of(
+          "claude-fable-5",
+          "claude-fable-5-1",
+          "claude-haiku-4-5",
+          "claude-haiku-4-5-20251001",
+          "claude-haiku-5-5",
+          "claude-opus-5",
+          "claude-opus-5-5",
+          "claude-sonnet-5",
+          "claude-sonnet-5-5");
+  private static final int MODEL_PRICED_BILLABLE_METRICS = 2;
+  private static final int PRICE_RATES =
+      BILLABLE_METRICS
+          - MODEL_PRICED_BILLABLE_METRICS
+          + MODEL_PRICED_BILLABLE_METRICS * MODELS.size();
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -68,26 +84,59 @@ class SeedDataTest {
   }
 
   @Test
-  void 시드_가격은_미터마다_무차원_단가_1행이다() {
+  void 입력과_출력_토큰은_model별_단가이고_나머지_미터는_무차원_단가_1행이다() {
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT dimension_properties::text FROM billable_metric", String.class))
-        .hasSize(BILLABLE_METRICS)
-        .containsOnly("{}");
+                "SELECT code || ' ' || dimension_properties::text FROM billable_metric",
+                String.class))
+        .containsExactlyInAnyOrder(
+            "token-usage {}",
+            "input-tokens {model}",
+            "output-tokens {model}",
+            "network-egress {}",
+            "cache-read-tokens {}",
+            "cache-creation-tokens {}");
     assertThat(
             jdbcTemplate.queryForList(
-                "SELECT dimension_values::text FROM price_rate", String.class))
-        .hasSize(PRICE_RATES)
-        .containsOnly("{}");
+                "SELECT billable_metric_code FROM price_rate WHERE dimension_values = '{}'",
+                String.class))
+        .containsExactlyInAnyOrder(
+            "token-usage", "network-egress", "cache-read-tokens", "cache-creation-tokens");
+    assertThat(modelsPricedFor("input-tokens")).isEqualTo(MODELS);
+    assertThat(modelsPricedFor("output-tokens")).isEqualTo(MODELS);
 
-    var priceRate =
-        jdbcTemplate.queryForMap(
-            "SELECT billable_metric_code, dimension_values::text, unit_price FROM price_rate"
-                + " WHERE billable_metric_code = 'token-usage'");
+    assertThat(unitPrice("token-usage", "{}")).isEqualByComparingTo("0.007");
+    assertThat(unitPrice("input-tokens", "{\"model\": \"claude-opus-5-5\"}"))
+        .isEqualByComparingTo("0.00636");
+    assertThat(unitPrice("output-tokens", "{\"model\": \"claude-opus-5-5\"}"))
+        .isEqualByComparingTo("0.0318");
+  }
 
-    assertThat(priceRate.get("billable_metric_code")).isEqualTo("token-usage");
-    assertThat(priceRate.get("dimension_values")).isEqualTo("{}");
-    assertThat((BigDecimal) priceRate.get("unit_price")).isEqualByComparingTo("0.007");
+  @Test
+  void 무차원_단가가_남은_DB에서_시드를_다시_실행하면_model_단가만_남는다() {
+    jdbcTemplate.update(
+        "DELETE FROM price_rate WHERE billable_metric_code IN ('input-tokens', 'output-tokens')");
+    jdbcTemplate.update(
+        "UPDATE billable_metric SET dimension_properties = '{}'"
+            + " WHERE code IN ('input-tokens', 'output-tokens')");
+    jdbcTemplate.update(
+        "INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values,"
+            + " unit_price) VALUES (?::uuid, 'input-tokens', '{}', 0.007),"
+            + " (?::uuid, 'output-tokens', '{}', 0.035)",
+        SEED_ORGANIZATION_ID,
+        SEED_ORGANIZATION_ID);
+
+    jdbcTemplate.execute(readSeedScript());
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT dimension_properties::text FROM billable_metric"
+                    + " WHERE code IN ('input-tokens', 'output-tokens')",
+                String.class))
+        .containsOnly("{model}");
+    assertThat(modelsPricedFor("input-tokens")).isEqualTo(MODELS);
+    assertThat(modelsPricedFor("output-tokens")).isEqualTo(MODELS);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
   }
 
   @Test
@@ -143,6 +192,23 @@ class SeedDataTest {
     assertThat((BigDecimal) rows.get(0).get("unit_price")).isEqualByComparingTo("0.00875");
     assertThat(rows.get(1).get("target_property")).isEqualTo("cache_read_tokens");
     assertThat((BigDecimal) rows.get(1).get("unit_price")).isEqualByComparingTo("0.0007");
+  }
+
+  private List<String> modelsPricedFor(String billableMetricCode) {
+    return jdbcTemplate.queryForList(
+        "SELECT dimension_values ->> 'model' FROM price_rate WHERE billable_metric_code = ?"
+            + " ORDER BY 1",
+        String.class,
+        billableMetricCode);
+  }
+
+  private BigDecimal unitPrice(String billableMetricCode, String dimensionValues) {
+    return jdbcTemplate.queryForObject(
+        "SELECT unit_price FROM price_rate WHERE billable_metric_code = ?"
+            + " AND dimension_values = ?::jsonb",
+        BigDecimal.class,
+        billableMetricCode,
+        dimensionValues);
   }
 
   private Integer rowCount(String table) {
