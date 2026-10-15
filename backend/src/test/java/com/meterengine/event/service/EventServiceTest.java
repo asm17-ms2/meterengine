@@ -17,6 +17,7 @@ import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -40,12 +41,18 @@ class EventServiceTest {
   @Mock private EventRepository eventRepository;
   @Mock private CustomerRepository customerRepository;
 
+  private SimpleMeterRegistry meterRegistry;
   private EventService eventService;
 
   @BeforeEach
   void setUp() {
+    meterRegistry = new SimpleMeterRegistry();
     eventService =
-        new EventService(eventRepository, customerRepository, JsonMapper.builder().build());
+        new EventService(
+            eventRepository,
+            customerRepository,
+            JsonMapper.builder().build(),
+            new EventIngestMetrics(meterRegistry));
   }
 
   @Test
@@ -67,6 +74,47 @@ class EventServiceTest {
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     assertThat(eventService.ingest(ORGANIZATION_ID, request("tx-1")).duplicate()).isTrue();
+  }
+
+  @Test
+  void 저장에_성공하면_stored_건수와_저장_지연을_기록한다() {
+    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
+
+    eventService.ingest(ORGANIZATION_ID, request("tx-1"));
+
+    assertThat(ingestCount("stored")).isEqualTo(1.0);
+    assertThat(ingestCount("duplicate")).isZero();
+    assertThat(storageDelayCount()).isEqualTo(1);
+  }
+
+  @Test
+  void 저장이_건너뛰어지면_duplicate_건수만_기록한다() {
+    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(true);
+    when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
+
+    eventService.ingest(ORGANIZATION_ID, request("tx-1"));
+
+    assertThat(ingestCount("duplicate")).isEqualTo(1.0);
+    assertThat(ingestCount("stored")).isZero();
+    assertThat(storageDelayCount()).isZero();
+  }
+
+  @Test
+  void 받는_기간_밖이지만_이미_저장된_이벤트도_duplicate_건수로_센다() {
+    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(true);
+    when(eventRepository.exists(ORGANIZATION_ID, "tx-1")).thenReturn(true);
+    IngestEventRequest oldRequest =
+        new IngestEventRequest(
+            "tx-1", CUSTOMER_ID, "chat_completion", Map.of(), OCCURRED_AT.minusDays(36));
+
+    eventService.ingest(ORGANIZATION_ID, oldRequest);
+
+    assertThat(ingestCount("duplicate")).isEqualTo(1.0);
+    verify(eventRepository, never()).insertIfAbsent(any(), any(), any(), any(), any(), any());
   }
 
   @Test
@@ -114,6 +162,18 @@ class EventServiceTest {
             eq("chat_completion"),
             anyString(),
             eq(OCCURRED_AT));
+  }
+
+  private double ingestCount(String result) {
+    return meterRegistry
+        .get(EventIngestMetrics.INGEST_COUNTER_NAME)
+        .tag(EventIngestMetrics.RESULT_TAG, result)
+        .counter()
+        .count();
+  }
+
+  private long storageDelayCount() {
+    return meterRegistry.get(EventIngestMetrics.STORAGE_DELAY_TIMER_NAME).timer().count();
   }
 
   private IngestEventRequest request(String transactionId) {

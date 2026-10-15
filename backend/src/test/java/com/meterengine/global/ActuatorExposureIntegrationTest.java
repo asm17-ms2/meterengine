@@ -39,6 +39,26 @@ class ActuatorExposureIntegrationTest {
   }
 
   @Test
+  void 저장단_지표가_나온다() {
+    restTestClient
+        .get()
+        .uri("/actuator/prometheus")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .value(
+            body ->
+                assertThat(body)
+                    .contains("hikaricp_connections_acquire_seconds_bucket")
+                    .contains("hikaricp_connections_usage_seconds_bucket")
+                    .contains("tomcat_threads_busy_threads")
+                    .contains("meterengine_event_storage_delay_seconds_bucket")
+                    .contains("meterengine_event_ingest_total{")
+                    .contains("result=\"duplicate\""));
+  }
+
+  @Test
   void 노출하지_않기로_한_엔드포인트는_닿지_않는다() {
     restTestClient.get().uri("/actuator/env").exchange().expectStatus().isNotFound();
   }
