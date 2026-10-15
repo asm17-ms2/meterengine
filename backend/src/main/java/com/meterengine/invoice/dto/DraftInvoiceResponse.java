@@ -18,7 +18,16 @@ public record DraftInvoiceResponse(
       @JsonProperty("customer_id") UUID customerId,
       @JsonProperty("customer_name") String customerName,
       long amount,
-      List<DraftInvoiceLine> lines) {}
+      List<DraftInvoiceLine> lines,
+      @Schema(description = "단가가 없어 라인에서 빠진 조합의 사용량. 금액에 들지 않는다. 수량이 0인 조합은 싣지 않고, 없으면 빈 배열이다")
+          @JsonProperty("unpriced_usages")
+          List<DraftInvoiceUnpricedUsage> unpricedUsages) {}
+
+  public record DraftInvoiceUnpricedUsage(
+      @JsonProperty("billable_metric_code") String billableMetricCode,
+      @JsonProperty("target_property") String targetProperty,
+      @JsonProperty("dimension_values") Map<String, Object> dimensionValues,
+      BigDecimal quantity) {}
 
   public record DraftInvoiceLine(
       @JsonProperty("billable_metric_code") String billableMetricCode,

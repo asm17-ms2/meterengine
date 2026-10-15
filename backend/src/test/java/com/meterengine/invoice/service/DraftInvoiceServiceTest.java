@@ -8,6 +8,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceUnpricedUsage;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
@@ -181,6 +182,37 @@ class DraftInvoiceServiceTest {
     assertThat(draftInvoiceLine.quantity()).isEqualByComparingTo("500");
     assertThat(draftInvoiceLine.amount()).isEqualTo(250);
     assertThat(response.totalAmount()).isEqualTo(250);
+    assertThat(response.customers().getFirst().unpricedUsages())
+        .singleElement()
+        .satisfies(
+            draftInvoiceUnpricedUsage -> {
+              assertThat(draftInvoiceUnpricedUsage.billableMetricCode()).isEqualTo("token-usage");
+              assertThat(draftInvoiceUnpricedUsage.targetProperty()).isEqualTo("token");
+              assertThat(draftInvoiceUnpricedUsage.dimensionValues())
+                  .isEqualTo(Map.of("model", "b"));
+              assertThat(draftInvoiceUnpricedUsage.quantity()).isEqualByComparingTo("700");
+            });
+  }
+
+  @Test
+  void 수량이_0인_단가_없는_조합은_unpriced_usages에_싣지_않는다() {
+    Customer acme = customer("아크메");
+    when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
+        .thenReturn(List.of(acme));
+    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+        .thenReturn(
+            List.of(
+                new BillableMetricUsage(
+                    billableMetric("token-usage", "token"),
+                    List.of(
+                        customerUsage(
+                            acme, new DimensionUsage(Map.of("model", "b"), BigDecimal.ZERO))))));
+    stubPriceRates();
+
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.customers().getFirst().lines()).isEmpty();
+    assertThat(response.customers().getFirst().unpricedUsages()).isEmpty();
   }
 
   @Test
@@ -203,6 +235,7 @@ class DraftInvoiceServiceTest {
             draftInvoiceCustomer -> {
               assertThat(draftInvoiceCustomer.amount()).isZero();
               assertThat(draftInvoiceCustomer.lines()).isEmpty();
+              assertThat(draftInvoiceCustomer.unpricedUsages()).isEmpty();
             });
   }
 
@@ -226,6 +259,9 @@ class DraftInvoiceServiceTest {
             draftInvoiceLine ->
                 assertThat(draftInvoiceLine.billableMetricCode()).isEqualTo("token-usage"));
     assertThat(response.totalAmount()).isEqualTo(1640);
+    assertThat(response.customers().getFirst().unpricedUsages())
+        .extracting(DraftInvoiceUnpricedUsage::billableMetricCode)
+        .containsExactly("api-calls");
   }
 
   private static Customer customer(String name) {

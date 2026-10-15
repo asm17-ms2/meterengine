@@ -39,7 +39,8 @@ public class DraftInvoiceController {
           그 달이 확정된 고객은 나오지 않고 total_amount는 남은 고객의 합이다. 확정된 금액은 인보이스 목록 조회로 본다.
           조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
           금액은 원 단위 정수다. 라인(고객 x 미터 x 조합)마다 10원 미만을 버린 뒤 합산한다. 10원이 안 되는 라인은 0원이다.
-          라인은 사용량이 있는 조합 가운데 같은 dimension_values의 단가가 있는 것만 나온다. 단가가 없는 조합은 빠지고, 이벤트가 없는 고객은 lines가 빈 배열이다.
+          라인은 사용량이 있는 조합 가운데 같은 dimension_values의 단가가 있는 것만 나온다. 이벤트가 없는 고객은 lines가 빈 배열이다.
+          단가가 없는 조합은 라인과 금액에서 빠지고, 수량이 0이 아니면 그 고객의 unpriced_usages에 미터 code, target_property, 조합, 수량으로 나온다. 순서는 라인과 같다.
           고객은 이름 오름차순, 라인은 미터 code 오름차순, 같은 미터 안에서는 dimension_values 오름차순이다.
           """)
   @ApiResponses({
