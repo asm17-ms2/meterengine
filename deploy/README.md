@@ -239,7 +239,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
-4. MeterEngine 폴더 > MeterEngine SLO 대시보드를 연다.
+4. MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
 
 ### 경보
 
