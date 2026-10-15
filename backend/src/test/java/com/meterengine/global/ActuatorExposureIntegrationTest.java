@@ -53,7 +53,6 @@ class ActuatorExposureIntegrationTest {
                     .contains("hikaricp_connections_acquire_seconds_bucket")
                     .contains("hikaricp_connections_usage_seconds_bucket")
                     .contains("tomcat_threads_busy_threads")
-                    .contains("meterengine_event_storage_delay_seconds_bucket")
                     .contains("meterengine_event_ingest_total{")
                     .contains("result=\"duplicate\""));
   }

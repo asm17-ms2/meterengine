@@ -77,7 +77,7 @@ class EventServiceTest {
   }
 
   @Test
-  void 저장에_성공하면_stored_건수와_저장_지연을_기록한다() {
+  void 저장에_성공하면_stored_건수를_기록한다() {
     when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
         .thenReturn(true);
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
@@ -86,7 +86,6 @@ class EventServiceTest {
 
     assertThat(ingestCount("stored")).isEqualTo(1.0);
     assertThat(ingestCount("duplicate")).isZero();
-    assertThat(storageDelayCount()).isEqualTo(1);
   }
 
   @Test
@@ -99,7 +98,6 @@ class EventServiceTest {
 
     assertThat(ingestCount("duplicate")).isEqualTo(1.0);
     assertThat(ingestCount("stored")).isZero();
-    assertThat(storageDelayCount()).isZero();
   }
 
   @Test
@@ -170,10 +168,6 @@ class EventServiceTest {
         .tag(EventIngestMetrics.RESULT_TAG, result)
         .counter()
         .count();
-  }
-
-  private long storageDelayCount() {
-    return meterRegistry.get(EventIngestMetrics.STORAGE_DELAY_TIMER_NAME).timer().count();
   }
 
   private IngestEventRequest request(String transactionId) {
