@@ -94,6 +94,7 @@ EOF
 ### 자동 배포
 
 - main에 머지되면 `.github/workflows/cd.yml`이 배포까지 끝낸다. 따로 할 일은 없다.
+  - `backend/`, `frontend/`, `deploy/`, `cd.yml` 중 하나라도 바뀐 머지만 배포한다. 문서나 demo만 바뀐 머지는 배포하지 않는다.
 
 ```
 main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에서 병렬

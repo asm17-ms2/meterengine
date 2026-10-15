@@ -12,6 +12,12 @@ name: CD
 on:
   push:
     branches: [main]
+    # 이미지 빌드 컨텍스트와 서버가 읽는 deploy/만 본다
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'deploy/**'
+      - '.github/workflows/cd.yml'
   workflow_dispatch:
     inputs:
       image_tag:
