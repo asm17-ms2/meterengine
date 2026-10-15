@@ -33,7 +33,7 @@ This file provides shared guidance to coding agents working with code in this re
 ## 팀과 협업 도구
 
 - 팀: 박성종(팀 리드), 문인호, 양성지. 멘토: 장시현, 강민준, 남상수 (2026 AI·SW 마에스트로 17기).
-- Jira/Confluence: https://asm17-ms2.atlassian.net (프로젝트 키 MS2).
+- Jira: https://asm17-ms2.atlassian.net (프로젝트 키 MS2). 같은 사이트의 Confluence는 쓰지 않는다.
 - Miro: 회의록, 일정, 브레인스토밍 초안.
 - Notion: 쓰지 않는다. 무료 플랜으로 얼려 두었고 내용을 옮기지 않는다. 옛 기록을 볼 때만 https://app.notion.com/p/MS2-3af0899b32b881f199ede2a87ac32a30 을 연다.
 - GitHub org: https://github.com/asm17-ms2 (meterengine, meterengine-demo, asm-crawling).

@@ -10,7 +10,8 @@
                    |                       |
               인증서 자동 발급    (서버사이드로 backend:8080 직접 호출)
 
-[Prometheus] --scrape--> backend:8080/actuator/prometheus, node-exporter:9100
+[Prometheus] --scrape--> backend:8080/actuator/prometheus, node-exporter:9100,
+             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch)
      ^
 [Grafana:3001(127.0.0.1)] --경보--> Slack
 ```
@@ -28,10 +29,11 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend, Prometheus, node exporter, Grafana |
+| `compose.prod.yml` | 운영 스택 정의. Caddy, backend, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
+| `cloudwatch/cloudwatch.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 운영 스택과 무관하다.
@@ -193,6 +195,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `db-name` | String | 백엔드 datasource URL |
 | `db-username` | String | 백엔드 datasource |
 | `db-password` | SecureString | 백엔드 datasource. 배포 때 KMS로 복호화한다 |
+| `db-exporter-password` | SecureString | postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
 | `organization-id` | String | 프론트가 조회할 도입사 |
 | `organization-name` | String | 프론트 상단 바에 표시할 이름 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
@@ -210,7 +213,15 @@ aws ssm put-parameter --name /meterengine/prod/<이름> --type SecureString --va
 
 ## 모니터링
 
-- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter를 15초마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter와 postgres exporter를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
+
+```sql
+CREATE USER meterengine_exporter WITH PASSWORD '<db-exporter-password>';
+GRANT pg_monitor TO meterengine_exporter;
+```
+
+- cloudwatch exporter는 EC2 역할로 CloudWatch를 읽는다. 역할 정책에 `cloudwatch:GetMetricData`와 `cloudwatch:ListMetrics`가 있어야 한다.
 - 지표 보관은 15일 또는 2GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다.
 - 모니터링 컨테이너는 서비스 트래픽을 받지 않는다.
 
@@ -228,7 +239,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
-4. MeterEngine 폴더 > MeterEngine SLO 대시보드를 연다.
+4. MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
 
 ### 경보
 
