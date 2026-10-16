@@ -77,7 +77,8 @@ public class InvoiceFinalizationService {
         draftInvoiceCustomer.amount(),
         draftInvoiceCustomer.lines().stream()
             .filter(draftInvoiceLine -> draftInvoiceLine.quantity().signum() != 0)
-            .toList());
+            .toList(),
+        draftInvoiceCustomer.unpricedUsages());
   }
 
   private InvoiceLine toInvoiceLine(Invoice invoice, DraftInvoiceLine draftInvoiceLine) {

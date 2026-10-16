@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +79,11 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(1640);
     assertThat(result)
         .bodyJson()
+        .extractingPath("$.customers[0].unpriced_usages")
+        .asArray()
+        .isEmpty();
+    assertThat(result)
+        .bodyJson()
         .extractingPath("$.calculated_at")
         .asString()
         .satisfies(
@@ -136,6 +142,45 @@ class DraftInvoiceIntegrationTest {
     assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].amount").isEqualTo(250);
     assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(250);
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.customers[0].unpriced_usages")
+        .isEqualTo(
+            List.of(
+                Map.of(
+                    "billable_metric_code",
+                    "token-usage",
+                    "target_property",
+                    "token",
+                    "dimension_values",
+                    Map.of("model", "b"),
+                    "quantity",
+                    700)));
+  }
+
+  @Test
+  void 수량이_0인_단가_없는_조합은_unpriced_usages에_싣지_않는다() {
+    UUID organizationId = insertOrganization();
+    jdbcTemplate.update(
+        """
+        INSERT INTO billable_metric
+          (organization_id, code, name, event_type, aggregation, target_property,
+           dimension_properties)
+        VALUES (?, 'token-usage', '토큰 사용량', 'chat_completion', 'sum', 'token', '{model}')
+        """,
+        organizationId);
+    UUID acme = insertCustomer(organizationId, "아크메");
+    OffsetDateTime august10 = OffsetDateTime.parse("2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-1", acme, "b", 0, august10);
+
+    MvcTestResult result = get(organizationId, AUGUST);
+
+    assertThat(result)
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.customers[0].unpriced_usages")
+        .asArray()
+        .isEmpty();
   }
 
   @Test
@@ -189,6 +234,15 @@ class DraftInvoiceIntegrationTest {
         .extractingPath("$.customers[0].lines[0].billable_metric_code")
         .isEqualTo("token-usage");
     assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.customers[0].unpriced_usages[*].billable_metric_code")
+        .asArray()
+        .containsExactly("api-calls");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.customers[0].unpriced_usages[0].quantity")
+        .isEqualTo(3);
   }
 
   @Test
