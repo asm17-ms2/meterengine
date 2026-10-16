@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+dnf install -y git
+
+# k6 rpm 저장소에는 arm64 패키지가 없어 GitHub 릴리스의 바이너리를 받는다.
+cd /tmp
+base=https://github.com/grafana/k6/releases/download/v${k6_version}
+tarball=k6-v${k6_version}-linux-arm64.tar.gz
+curl -fsSLO "$base/$tarball"
+curl -fsSL "$base/k6-v${k6_version}-checksums.txt" | grep -F "$tarball" | sha256sum -c -
+tar -xzf "$tarball" -C /usr/local/bin --strip-components=1 --no-same-owner "k6-v${k6_version}-linux-arm64/k6"
