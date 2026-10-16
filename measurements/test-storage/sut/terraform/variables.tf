@@ -16,10 +16,22 @@ variable "owner" {
   default     = "moonino"
 }
 
+variable "sut_instance_type" {
+  description = "SUT EC2 인스턴스 유형"
+  type        = string
+  default     = "m7g.large"
+}
+
 variable "db_instance_class" {
   description = "SUT RDS 인스턴스 클래스"
   type        = string
   default     = "db.m7g.large"
+}
+
+variable "ami_id" {
+  description = "SUT EC2 AMI. 개발 서버와 같은 Amazon Linux 2023 arm64"
+  type        = string
+  default     = "ami-0f4109eb491b0476f"
 }
 
 variable "db_max_allocated_storage" {
