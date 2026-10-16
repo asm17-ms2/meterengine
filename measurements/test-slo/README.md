@@ -4,6 +4,7 @@
 
 - **측정 중일 수 있으니 배포하거나 끄기 전에 박성종에게 묻는다.**
 - 사양은 운영 가정(T 계열을 빼고 m 계열)을 따른다. 근거는 [Discussion #346](https://github.com/asm17-ms2/meterengine/discussions/346).
+- 부하 발생기와 k6 스크립트는 [`loadgen/`](loadgen/README.md)와 [`k6/`](k6/README.md)에 있다.
 
 ## 구성
 
