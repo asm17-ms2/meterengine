@@ -18,6 +18,7 @@ export type DraftInvoiceCustomer = {
   customer_name: string;
   amount: number;
   lines: DraftInvoiceLine[];
+  unpriced_usages: DraftInvoiceUnpricedUsage[];
 };
 
 export type DraftInvoiceLine = {
@@ -29,8 +30,19 @@ export type DraftInvoiceLine = {
   amount: number;
 };
 
+export type DraftInvoiceUnpricedUsage = {
+  billable_metric_code: string;
+  target_property: string | null;
+  dimension_values: DimensionValues;
+  quantity: number;
+};
+
 export function countDraftInvoiceLines(customers: DraftInvoiceCustomer[]): number {
   return customers.reduce((sum, customer) => sum + customer.lines.length, 0);
+}
+
+export function hasUnpricedUsages(customers: DraftInvoiceCustomer[]): boolean {
+  return customers.some((customer) => customer.unpriced_usages.length > 0);
 }
 
 export function listFinalizeTargets(customers: DraftInvoiceCustomer[]): DraftInvoiceCustomer[] {

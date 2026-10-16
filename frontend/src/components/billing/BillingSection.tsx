@@ -3,16 +3,19 @@ import {
   BillingTable,
   type BillingGroupView,
   type BillingLineView,
+  type BillingUnpricedUsageView,
 } from "@/components/billing/BillingTable";
 import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
 import type { Result } from "@/lib/api/client";
 import {
   countDraftInvoiceLines,
+  hasUnpricedUsages,
   isFinalizedMonth,
   type DraftInvoiceResponse,
   type DraftInvoiceCustomer,
   type DraftInvoiceLine,
+  type DraftInvoiceUnpricedUsage,
 } from "@/lib/api/billing";
 import type { InvoiceResponse, ListInvoicesResponse } from "@/lib/api/invoices";
 import {
@@ -74,13 +77,17 @@ export async function BillingSection({
   const finalizedInvoices = finalized.ok ? finalized.data.invoices : [];
   const isFinalized = isFinalizedMonth(result.data.customers, finalizedInvoices);
 
-  if (!isFinalized && countDraftInvoiceLines(result.data.customers) === 0) {
+  if (
+    !isFinalized &&
+    countDraftInvoiceLines(result.data.customers) === 0 &&
+    !hasUnpricedUsages(result.data.customers)
+  ) {
     return (
       <EmptyState
         title={`${formatKoreanMonth(month)} 청구 예정액이 없습니다`}
-        body={`고객 ${result.data.customers.length}곳 모두 단가가 매겨진 사용량이 없습니다. 사용량이 없거나, 사용량이 있는 조합에 단가가 등록되지 않은 경우입니다.`}
-        resetHref="/billable-metric-prices"
-        resetLabel="가격 화면으로"
+        body={`고객 ${result.data.customers.length}곳 모두 ${result.data.month}에 사용량이 없습니다.`}
+        resetHref={`/usage?month=${month}`}
+        resetLabel="사용량 화면으로"
       />
     );
   }
@@ -94,7 +101,8 @@ export async function BillingSection({
       <div className="screen-footer">
         <p className="screen-note">
           미터 라인은 고객 금액이 어느 미터에서 나왔는지 분해한 줄입니다.
-          금액은 세금 전 공급가액이고 줄마다 10원 미만은 버립니다. 확정하면 청구할 금액이 있는
+          금액은 세금 전 공급가액이고 줄마다 10원 미만은 버립니다. 단가가 등록되지 않은 조합의
+          사용량은 고객마다 기타 줄에 모으고 금액에 넣지 않습니다. 확정하면 청구할 금액이 있는
           고객의 사용량이 있는 줄만 인보이스에 실리고 세액 10%가 더해집니다. 이미 확정된 고객은
           이 표에 나오지 않습니다.
         </p>
@@ -141,7 +149,23 @@ function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupVie
         amount: formatKrw(sumOf(lines.map((line) => line.amount))),
       }),
     ),
+    unpricedUsage: toBillingUnpricedUsageView(customer.unpriced_usages),
   }));
+}
+
+function toBillingUnpricedUsageView(
+  usages: DraftInvoiceUnpricedUsage[],
+): BillingUnpricedUsageView | null {
+  if (usages.length === 0) return null;
+  return {
+    quantity: formatDecimal(sumOf(usages.map((usage) => usage.quantity))),
+    lines: usages.map((usage) => ({
+      label: usage.billable_metric_code,
+      labelTooltip: formatTargetPropertyTooltip(usage.target_property),
+      dimensionValues: usage.dimension_values,
+      quantity: formatDecimal(usage.quantity),
+    })),
+  };
 }
 
 function toBillingLineView(line: DraftInvoiceLine): BillingLineView {

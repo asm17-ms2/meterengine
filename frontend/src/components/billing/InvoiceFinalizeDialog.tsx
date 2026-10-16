@@ -13,7 +13,16 @@ type FinalizeTarget = {
   targetCount: number;
   supplyAmount: string;
   isUnfinishedMonth: boolean;
+  hasUnpricedUsages: boolean;
 };
+
+const CAUTION_STYLE = {
+  margin: 0,
+  paddingLeft: 10,
+  borderLeft: "4px solid var(--color-accent)",
+  color: "var(--color-accent-700)",
+  textWrap: "pretty",
+} as const;
 
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,7 +45,8 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
 }
 
 function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose: () => void }) {
-  const [{ month, monthLabel, targetCount, supplyAmount, isUnfinishedMonth }] = useState(target);
+  const [{ month, monthLabel, targetCount, supplyAmount, isUnfinishedMonth, hasUnpricedUsages }] =
+    useState(target);
   const [state, formAction, isPending] = useActionState(
     finalizeInvoicesAction,
     FINALIZE_INVOICES_IDLE,
@@ -96,18 +106,16 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
       </p>
 
       {isUnfinishedMonth ? (
-        <p
-          className="dialog-body"
-          style={{
-            margin: 0,
-            paddingLeft: 10,
-            borderLeft: "4px solid var(--color-accent)",
-            color: "var(--color-accent-700)",
-            textWrap: "pretty",
-          }}
-        >
+        <p className="dialog-body" style={CAUTION_STYLE}>
           {monthLabel}은 아직 끝나지 않았습니다. 지금 확정하면 확정한 고객의 남은 기간 사용량은
           청구되지 않습니다.
+        </p>
+      ) : null}
+
+      {hasUnpricedUsages ? (
+        <p className="dialog-body" style={CAUTION_STYLE}>
+          확정할 고객에게 단가 없는 사용량이 있습니다. 이 사용량은 청구되지 않고, 확정한 뒤에 단가를
+          등록해도 이 달 인보이스에는 실리지 않습니다.
         </p>
       ) : null}
 
