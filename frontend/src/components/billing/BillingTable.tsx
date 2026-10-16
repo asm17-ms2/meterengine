@@ -16,6 +16,7 @@ export type BillingGroupView = {
   customerName: string;
   amount: string;
   items: MeterItem<BillingLineView>[];
+  unpricedUsage: BillingUnpricedUsageView | null;
 };
 
 export type BillingLineView = {
@@ -25,6 +26,18 @@ export type BillingLineView = {
   quantity: string;
   unitPrice: string;
   amount: string;
+};
+
+export type BillingUnpricedUsageView = {
+  quantity: string;
+  lines: BillingUnpricedLineView[];
+};
+
+export type BillingUnpricedLineView = {
+  label: string;
+  labelTooltip?: string;
+  dimensionValues: DimensionValues;
+  quantity: string;
 };
 
 const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 170px 130px 180px";
@@ -47,7 +60,10 @@ export function BillingTable({
 }) {
   const { isCollapsed, toggle } = useCollapse();
   const slotCount = countDimensionSlots(
-    groups.flatMap((group) => linesOf(group.items).map((line) => line.dimensionValues)),
+    groups.flatMap((group) => [
+      ...linesOf(group.items).map((line) => line.dimensionValues),
+      ...(group.unpricedUsage?.lines.map((line) => line.dimensionValues) ?? []),
+    ]),
   );
 
   return (
@@ -122,6 +138,14 @@ export function BillingTable({
                     </div>
                   );
                 })}
+
+            {isGroupCollapsed || !group.unpricedUsage ? null : (
+              <UnpricedUsageRows
+                id={`${group.customerId}#unpriced`}
+                unpricedUsage={group.unpricedUsage}
+                slotCount={slotCount}
+              />
+            )}
           </div>
         );
       })}
@@ -168,5 +192,56 @@ function BillingLineRow({
         {line.amount}
       </GridCell>
     </GridRow>
+  );
+}
+
+function UnpricedUsageRows({
+  id,
+  unpricedUsage,
+  slotCount,
+}: {
+  id: string;
+  unpricedUsage: BillingUnpricedUsageView;
+  slotCount: number;
+}) {
+  const { isCollapsed, toggle } = useCollapse();
+  const isUnpricedCollapsed = isCollapsed(id, true);
+
+  return (
+    <div>
+      <MeterGroupRow
+        columns={COLUMNS}
+        label="기타 (단가 없음)"
+        labelTooltip="단가가 등록되지 않은 조합이라 금액에 들지 않는 사용량"
+        isCodeLabel={false}
+        combinationCount={unpricedUsage.lines.length}
+        isCollapsed={isUnpricedCollapsed}
+        onToggle={() => toggle(id)}
+      >
+        <div className="grid-cell grid-cell--right grid-cell--num">{unpricedUsage.quantity}</div>
+        <div className="grid-cell" />
+        <div className="grid-cell grid-cell--right grid-cell--muted">청구 안 함</div>
+      </MeterGroupRow>
+      {isUnpricedCollapsed
+        ? null
+        : unpricedUsage.lines.map((line) => (
+            <GridRow
+              key={`${line.label} ${JSON.stringify(line.dimensionValues)}`}
+              columns={COLUMNS}
+            >
+              <GridCell className="grid-cell--child grid-cell--mono">
+                <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
+              </GridCell>
+              <DimensionValuesCell
+                dimensionValues={line.dimensionValues}
+                slotCount={slotCount}
+                className="grid-cell--nested"
+              />
+              <GridCell className="grid-cell--right grid-cell--num">{line.quantity}</GridCell>
+              <GridCell />
+              <GridCell />
+            </GridRow>
+          ))}
+    </div>
   );
 }

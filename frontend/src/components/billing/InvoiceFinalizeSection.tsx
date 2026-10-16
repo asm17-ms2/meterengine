@@ -1,5 +1,9 @@
 import { InvoiceFinalizeDialog } from "@/components/billing/InvoiceFinalizeDialog";
-import { listFinalizeTargets, type DraftInvoiceResponse } from "@/lib/api/billing";
+import {
+  hasUnpricedUsages,
+  listFinalizeTargets,
+  type DraftInvoiceResponse,
+} from "@/lib/api/billing";
 import type { Result } from "@/lib/api/client";
 import { formatKoreanMonth, formatKrw } from "@/lib/format";
 import { formatKstMonth } from "@/lib/month";
@@ -21,6 +25,7 @@ export async function InvoiceFinalizeSection({
       targetCount={targets.length}
       supplyAmount={formatKrw(targets.reduce((sum, customer) => sum + customer.amount, 0))}
       isUnfinishedMonth={month >= formatKstMonth()}
+      hasUnpricedUsages={hasUnpricedUsages(targets)}
     />
   );
 }

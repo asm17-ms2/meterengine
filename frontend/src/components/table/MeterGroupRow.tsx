@@ -4,6 +4,7 @@ export function MeterGroupRow({
   columns,
   label,
   labelTooltip,
+  isCodeLabel = true,
   combinationCount,
   isCollapsed,
   onToggle,
@@ -12,6 +13,7 @@ export function MeterGroupRow({
   columns: string;
   label: string;
   labelTooltip?: string;
+  isCodeLabel?: boolean;
   combinationCount: number;
   isCollapsed: boolean;
   onToggle: () => void;
@@ -25,7 +27,11 @@ export function MeterGroupRow({
       aria-expanded={!isCollapsed}
       onClick={onToggle}
     >
-      <div className="grid-cell grid-cell--child grid-cell--mono">
+      <div
+        className={
+          isCodeLabel ? "grid-cell grid-cell--child grid-cell--mono" : "grid-cell grid-cell--child"
+        }
+      >
         <span aria-hidden>{isCollapsed ? "▸" : "▾"}</span> <MeterLabel label={label} labelTooltip={labelTooltip} />
       </div>
       <div className="grid-cell grid-cell__count">조합 {combinationCount}개</div>
