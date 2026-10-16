@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sut/scripts의 스크립트가 source 한다. macOS 기본 bash 3.2에서 돌아야 하므로 bash 4 문법을 쓰지 않는다.
+# sut/scripts와 load-generator/scripts의 스크립트가 source 한다. macOS 기본 bash 3.2에서 돌아야 하므로 bash 4 문법을 쓰지 않는다.
 # tf_out이 읽는 TF_DIR은 부르는 스크립트가 정한다.
 
 set -euo pipefail

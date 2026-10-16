@@ -12,6 +12,7 @@
 | `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기 |
 | `load-generator/k6/` | k6 스크립트 |
+| `load-generator/scripts/` | 실험 실행, 보낸 것과 저장된 것 대조 |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
@@ -165,6 +166,38 @@ measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA>
 ```bash
 sudo docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/deploy/compose.prod.yml \
   exec -T grafana sh -c 'grafana cli admin reset-admin-password "$GF_SECURITY_ADMIN_PASSWORD"'
+```
+
+## 부하 실험
+
+이벤트를 보내는 속도를 올려 가며 초당 몇 건에서 어디가 먼저 무너지는지 본다.
+
+실험은 부하 발생기에서 root로 실행한다.
+
+```bash
+sudo -i
+git -C /opt/meterengine pull --ff-only
+cd /opt/meterengine/measurements/test-storage/load-generator
+scripts/run-ingest-steps.sh
+```
+
+- 초당 100, 250, 500, 1,000부터 4,000건까지 6분씩 보낸다. 오류율이 0.01%를 넘거나 서버 응답이 느려져 정한 속도를 다 보내지 못하면 멈춘다.
+- 결과는 부하 발생기의 `load-generator/k6/results/<RUN_ID>/`에만 남고, 결과 표는 `<RUN_ID>-steps.tsv`다.
+- 결과 표의 `grafana` 칸 주소로 그 구간의 저장단 대시보드를 연다. 응답 시간 패널은 구간 끝 시각의 값을 읽는다.
+- 부하 발생기 CPU가 80%를 넘은 구간은 결과로 쓰지 않는다(`<RUN_ID>-load-generator-cpu.tsv`).
+
+실험 뒤 보낸 것과 저장된 것을 대조한다. 보낸 이벤트의 1%는 같은 id로 다시 보내므로, 단계마다 `유실 0건, 재전송 N건 중 duplicate N건`이 나와야 한다.
+
+```bash
+for f in k6/results/<RUN_ID>/*-ingest-r*.json; do scripts/reconcile.sh "$f"; done
+```
+
+SUT CPU를 나눠 볼 때는 Grafana Explore에 넣는다. 위부터 백엔드, Prometheus, EC2 전체이고, 나머지는 대부분 Caddy다.
+
+```
+rate(process_cpu_time_ns_total{job="backend"}[1m]) / 1e9 / 2
+rate(process_cpu_seconds_total{job="prometheus"}[1m]) / 2
+1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m]))
 ```
 
 ## 상태 파일과 지우기
