@@ -26,3 +26,16 @@ variable "k6_version" {
   type        = string
   default     = "2.3.0"
 }
+
+# --- 자동 중지 ---
+
+variable "auto_stop_state" {
+  description = "매일 04:00(Asia/Seoul) EC2 자동 중지 스케줄 상태. 밤새 잴 때 DISABLED"
+  type        = string
+  default     = "ENABLED"
+
+  validation {
+    condition     = contains(["ENABLED", "DISABLED"], var.auto_stop_state)
+    error_message = "auto_stop_state는 ENABLED나 DISABLED만 쓸 수 있다."
+  }
+}
