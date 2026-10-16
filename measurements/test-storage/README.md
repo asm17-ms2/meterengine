@@ -42,6 +42,46 @@ terraform -chdir=measurements/test-storage/sut/terraform output
 - plan 마지막 줄이 `N to add, 0 to change, 0 to destroy`가 아니면 멈춘다.
 - RDS 때문에 10-15분 걸린다. EC2는 부팅하면서 docker, compose, 레포, `/etc/meterengine/deploy.conf`를 준비한다.
 
+### 2. 배포
+
+```bash
+measurements/test-storage/sut/scripts/sut-deploy.sh
+```
+
+- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
+- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태, `deploy.conf`를 확인하고 하나라도 틀리면 멈춘다.
+- 성공하면 아래 두 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
+
+```
+[sut-deploy] DB 확인: meterengine-test-storage-db.<...>.rds.amazonaws.com
+[sut-deploy] https://test-storage.meterengine.com/usage 가 200 을 돌려줬다
+```
+
+### 3. exporter 사용자 만들기
+
+```bash
+measurements/test-storage/sut/scripts/create-exporter-user.sh
+```
+
+- SUT EC2 안에서 docker `postgres:18`로 SUT RDS에 `meterengine_exporter`(`pg_monitor`)를 만든다. 여러 번 돌려도 된다.
+- 성공하면 `meterengine_exporter 로그인 가능, pg_monitor 멤버 확인`이 나온다.
+
+## 다시 배포
+
+```bash
+measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
+```
+
+- SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
+- ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
+
+```bash
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-backend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-frontend --image-ids imageTag=<SHA>
+```
+
+- a4bdf42 이전 커밋은 `deploy.conf`를 읽지 않아 스크립트가 거절한다.
+
 ## 켜고 끄기
 
 ```bash
@@ -67,6 +107,63 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
 ```bash
 terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_state=DISABLED
 terraform -chdir=measurements/test-storage/sut/terraform apply
+```
+
+## 서버에 들어가기
+
+SSH가 없어 SSM으로만 붙는다.
+
+```bash
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)"
+```
+
+컨테이너와 로그를 보는 방법은 [`deploy/README.md`](../../deploy/README.md) "문제 해결"과 같다.
+
+## Grafana
+
+Grafana는 SUT 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 포워딩 세션은 켜 둔 채로 브라우저를 쓴다.
+
+```bash
+aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/grafana-admin-password \
+  --with-decryption --query Parameter.Value --output text
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)" \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
+```
+
+- http://localhost:3001 에 `admin`과 위 비밀번호로 들어간다.
+- 저장단 대시보드는 `RDS 인스턴스` 변수 기본값이 개발 서버 DB다. 아래 주소로 SUT DB를 골라 연다.
+  http://localhost:3001/d/meterengine-storage?var-db=meterengine-test-storage-db
+
+## 비밀번호
+
+DB 마스터, exporter, Grafana 비밀번호는 Terraform이 만들고 상태 파일에 남기지 않는다. 값은 Parameter Store에서 본다.
+
+```bash
+aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/db-password \
+  --with-decryption --query Parameter.Value --output text
+```
+
+DB 비밀번호를 바꿀 때는 측정이 없을 때 SUT를 켠 상태에서 한다.
+
+1. `sut/terraform/parameters.tf`의 `password_version`을 하나 올린다.
+2. apply 한다. RDS 마스터와 `db-password`, `db-exporter-password`가 바뀐다.
+3. exporter 비밀번호를 맞추고, 지금 SHA로 다시 배포해 서버의 env 파일을 새 값으로 쓴다.
+
+```bash
+terraform -chdir=measurements/test-storage/sut/terraform apply
+measurements/test-storage/sut/scripts/create-exporter-user.sh
+measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA>
+```
+
+- 지금 SHA는 SUT 안에서 `sudo git -C /opt/meterengine rev-parse HEAD`로 본다.
+- Grafana는 데이터 볼륨을 처음 만들 때만 admin 비밀번호를 받는다. 바꿀 때는 `grafana_admin_password_version`을 올려 apply 하고 다시 배포한 뒤, SUT 안에서 아래를 실행한다.
+
+```bash
+sudo docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/deploy/compose.prod.yml \
+  exec -T grafana sh -c 'grafana cli admin reset-admin-password "$GF_SECURITY_ADMIN_PASSWORD"'
 ```
 
 ## 상태 파일과 지우기
