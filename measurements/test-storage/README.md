@@ -11,6 +11,7 @@
 | --- | --- |
 | `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기 |
+| `load-generator/k6/` | k6 스크립트 |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
