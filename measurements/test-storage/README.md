@@ -11,8 +11,9 @@
 | --- | --- |
 | `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기 |
+| `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
-| `load-generator/scripts/` | 실험 실행, 보낸 것과 저장된 것 대조 |
+| `load-generator/scripts/` | 켜고 끄기, 실험 실행, 보낸 것과 저장된 것 대조 |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
@@ -168,6 +169,29 @@ sudo docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/dep
   exec -T grafana sh -c 'grafana cli admin reset-admin-password "$GF_SECURITY_ADMIN_PASSWORD"'
 ```
 
+## 부하 발생기
+
+SUT를 만든 뒤에 만든다. SUT RDS 보안 그룹에 부하 발생기가 붙는 5432 규칙을 더한다.
+
+```bash
+terraform -chdir=measurements/test-storage/load-generator/terraform init
+terraform -chdir=measurements/test-storage/load-generator/terraform plan
+terraform -chdir=measurements/test-storage/load-generator/terraform apply
+```
+
+- plan 마지막 줄이 `11 to add, 0 to change, 0 to destroy`가 아니면 멈춘다.
+- 첫 부팅 때 레포를 `/opt/meterengine`에 받고 k6, psql, jq를 설치한다.
+- 파라미터는 `/meterengine/test-storage` 아래만 읽는다. 매일 04:00에 자동으로 꺼진다.
+
+켜고 접속한다. 실험이 끝나면 끈다.
+
+```bash
+measurements/test-storage/load-generator/scripts/lg-start.sh
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(terraform -chdir=measurements/test-storage/load-generator/terraform output -raw load_generator_instance_id)"
+measurements/test-storage/load-generator/scripts/lg-stop.sh
+```
+
 ## 부하 실험
 
 이벤트를 보내는 속도를 올려 가며 초당 몇 건에서 어디가 먼저 무너지는지 본다.
@@ -176,13 +200,15 @@ sudo docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/dep
 
 ```bash
 sudo -i
+cloud-init status --wait
 git -C /opt/meterengine pull --ff-only
 cd /opt/meterengine/measurements/test-storage/load-generator
 scripts/run-ingest-steps.sh
 ```
 
+- `cloud-init status`가 `done`이 아니면 `/var/log/cloud-init-output.log`를 본다.
 - 초당 100, 250, 500, 1,000부터 4,000건까지 6분씩 보낸다. 오류율이 0.01%를 넘거나 서버 응답이 느려져 정한 속도를 다 보내지 못하면 멈춘다.
-- 결과는 부하 발생기의 `load-generator/k6/results/<RUN_ID>/`에만 남고, 결과 표는 `<RUN_ID>-steps.tsv`다.
+- 결과는 부하 발생기의 `load-generator/k6/results/<RUN_ID>/`에 남고, 결과 표는 `<RUN_ID>-steps.tsv`다.
 - 결과 표의 `grafana` 칸 주소로 그 구간의 저장단 대시보드를 연다. 응답 시간 패널은 구간 끝 시각의 값을 읽는다.
 - 부하 발생기 CPU가 80%를 넘은 구간은 결과로 쓰지 않는다(`<RUN_ID>-load-generator-cpu.tsv`).
 
@@ -190,6 +216,22 @@ scripts/run-ingest-steps.sh
 
 ```bash
 for f in k6/results/<RUN_ID>/*-ingest-r*.json; do scripts/reconcile.sh "$f"; done
+```
+
+결과는 apply한 컴퓨터의 `work/`로 가져온다. 부하 발생기에서 결과 폴더를 묶어 잠깐 연다.
+
+```bash
+mkdir -p /tmp/results && tar czf /tmp/results/<RUN_ID>.tgz -C k6/results <RUN_ID>
+python3 -m http.server 8000 --bind 127.0.0.1 --directory /tmp/results
+```
+
+apply한 컴퓨터에서 포워딩을 켜 두고 다른 터미널에서 받은 뒤, 부하 발생기의 서버를 Ctrl+C로 끈다.
+
+```bash
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(terraform -chdir=measurements/test-storage/load-generator/terraform output -raw load_generator_instance_id)" \
+  --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["8000"],"localPortNumber":["8000"]}'
+curl -fo work/<RUN_ID>.tgz http://localhost:8000/<RUN_ID>.tgz
 ```
 
 SUT CPU를 나눠 볼 때는 Grafana Explore에 넣는다. 위부터 백엔드, Prometheus, EC2 전체이고, 나머지는 대부분 Caddy다.
@@ -207,8 +249,11 @@ rate(process_cpu_seconds_total{job="prometheus"}[1m]) / 2
 - 평소에는 지우지 않고 끈다. 다시 만들면 인증서를 새로 받는다. RDS는 최종 스냅숏 없이 지워진다.
 
 ```bash
+terraform -chdir=measurements/test-storage/load-generator/terraform destroy
 terraform -chdir=measurements/test-storage/sut/terraform destroy
 ```
+
+- 부하 발생기를 먼저 지운다. SUT RDS 보안 그룹에 부하 발생기 규칙이 붙어 있다.
 
 ## 비용
 
@@ -216,4 +261,5 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 
 - 켜 둔 동안 시간당 약 $0.34(EC2 $0.10, RDS $0.23, 탄력적 IP $0.005).
 - 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP).
+- 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $12.5가 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.
