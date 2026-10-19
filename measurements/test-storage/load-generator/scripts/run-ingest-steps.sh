@@ -68,12 +68,8 @@ main() {
 			log "초당 ${rate}건에서 오류율 ${ERROR_RATE_LIMIT} 초과로 멈춘다"
 			break
 		fi
-		if [ "$(cut -f3 <<<"$row")" != 0 ]; then
-			if all_vus_busy "$(cut -f8 <<<"$row")"; then
-				log "초당 ${rate}건에서 서버 응답이 느려져 정한 속도를 다 보내지 못해 멈춘다"
-			else
-				warn "VU가 남았는데 다 보내지 못했다. 부하 발생기 한계라 이 단계는 쓰지 않는다"
-			fi
+		if all_vus_busy "$(cut -f8 <<<"$row")"; then
+			log "초당 ${rate}건에서 서버 응답이 느려져 VU를 다 써서 멈춘다"
 			break
 		fi
 	done
