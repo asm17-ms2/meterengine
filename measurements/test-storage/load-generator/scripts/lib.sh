@@ -2,11 +2,28 @@ readonly GRAFANA_DASHBOARD_URL="http://localhost:3001/d/meterengine-storage?var-
 readonly CLOUDWATCH_LAG_SECONDS=180
 readonly CPU_SAMPLE_SECONDS=10
 readonly CPU_LIMIT_PERCENT=80
+readonly SUT_PARAM_PATH=/meterengine/test-storage
 
 CPU_SAMPLER_PID=""
 
 json() {
 	jq -r "$2" "$1"
+}
+
+use_sut_db() {
+	local name value
+	while IFS=$'\t' read -r name value; do
+		case "${name##*/}" in
+		db-host) export PGHOST="$value" ;;
+		db-port) export PGPORT="$value" ;;
+		db-name) export PGDATABASE="$value" ;;
+		db-username) export PGUSER="$value" ;;
+		db-password) export PGPASSWORD="$value" ;;
+		esac
+	done < <(aws ssm get-parameters --with-decryption --query 'Parameters[].[Name,Value]' --output text \
+		--names "$SUT_PARAM_PATH"/{db-host,db-port,db-name,db-username,db-password})
+	[ -n "${PGPASSWORD:-}" ] || die "$SUT_PARAM_PATH 에서 DB 접속값을 읽지 못했다"
+	export PGSSLMODE=require
 }
 
 trend() {

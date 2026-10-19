@@ -5,24 +5,6 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/../../lib/common.sh"
 . "$SCRIPT_DIR/lib.sh"
 
-readonly SUT_PARAM_PATH=/meterengine/test-storage
-
-use_sut_db() {
-	local name value
-	while IFS=$'\t' read -r name value; do
-		case "${name##*/}" in
-		db-host) export PGHOST="$value" ;;
-		db-port) export PGPORT="$value" ;;
-		db-name) export PGDATABASE="$value" ;;
-		db-username) export PGUSER="$value" ;;
-		db-password) export PGPASSWORD="$value" ;;
-		esac
-	done < <(aws ssm get-parameters --with-decryption --query 'Parameters[].[Name,Value]' --output text \
-		--names "$SUT_PARAM_PATH"/{db-host,db-port,db-name,db-username,db-password})
-	[ -n "${PGPASSWORD:-}" ] || die "$SUT_PARAM_PATH 에서 DB 접속값을 읽지 못했다"
-	export PGSSLMODE=require
-}
-
 count_ids() {
 	psql -X -q -A -t -F ' ' -v ON_ERROR_STOP=1 -v organization_id="$1" -v prefix="$2" -v iterations="$3" \
 		-v period="$4" -v failed_ids_file="$5" -v started_at="$6" <<'SQL'

@@ -242,6 +242,99 @@ rate(process_cpu_seconds_total{job="prometheus"}[1m]) / 2
 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m]))
 ```
 
+## RDS 장애 주입 실험
+
+초당 500건을 보내는 동안 RDS를 다른 AZ로 두 번 넘겨, 수집이 끊긴 시간과 받지 못한 건수를 잰다.
+
+- "켜고 끄기"의 "RDS Multi-AZ" 절대로 Multi-AZ를 켠 뒤에 한다.
+- 부하 발생기는 04:00 자동 중지를 끌 수 없다. 부하 30분, 대조, 결과 모으기, Multi-AZ 끄기가 04:00 전에 끝나도록 02:30 전에 부하를 시작한다.
+
+### 1. 부하 시작 (부하 발생기)
+
+```bash
+sudo -i
+cloud-init status --wait
+git -C /opt/meterengine pull --ff-only
+cd /opt/meterengine/measurements/test-storage/load-generator
+export RUN_ID=<날짜>-fault
+setsid nohup scripts/run-fault.sh > /root/$RUN_ID.log 2>&1 < /dev/null &
+tail -f /root/$RUN_ID.log
+```
+
+- 30분 동안 초당 500건을 보낸다. 앱 탐침(초당 5건, 시간 제한 3초)과 1초 DB 탐침이 함께 돈다.
+- 둘째 줄에 주입 가능 시각(시작 3분 뒤)과 끝나는 시각이 찍힌다. 앞 3분은 비교 기준 구간이다. 두 번째 주입은 끝나기 10분 전까지 한다.
+- 주입 전에 `k6/results/$RUN_ID/$RUN_ID-ingest-app_probe.console.log`의 줄이 늘고 있는지 본다. 앱 탐침이 멈추면 앱 몫을 잴 수 없다.
+- 중간에 멈출 때는 `kill -- -"$(pgrep -of scripts/run-fault.sh)"`로 k6까지 함께 끈다.
+
+### 2. 백엔드 로그 받기 (SUT, 부하 시작 직후)
+
+로그는 30MB가 차면 지워지므로 주입 뒤에 받기 시작하면 첫 예외가 남지 않는다.
+
+```bash
+sudo -i
+mkdir -p /var/tmp/results
+setsid nohup timeout 2400 docker compose -p meterengine-prod logs -f --timestamps --since 1m backend \
+  > /var/tmp/results/<RUN_ID>-backend.log 2>&1 < /dev/null &
+```
+
+### 3. 장애 주입 (apply한 컴퓨터, 두 번)
+
+"RDS Multi-AZ" 절의 확인 명령이 첫 번째는 `available True ap-northeast-2a ap-northeast-2b`일 때, 두 번째는 대기 인스턴스가 다시 붙어 `available True ap-northeast-2b ap-northeast-2a`일 때 넘긴다.
+
+```bash
+aws rds reboot-db-instance --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db \
+  --force-failover --query 'DBInstance.DBInstanceStatus' --output text
+```
+
+넣은 뒤 이벤트에 `Multi-AZ instance failover completed`가 찍혔는지 본다. 최근에 넘긴 인스턴스는 명령을 받아도 넘기지 않을 수 있다(RDS-EVENT-0034).
+
+```bash
+aws rds describe-events --region ap-northeast-2 --source-type db-instance \
+  --source-identifier meterengine-test-storage-db --duration 10 --query 'Events[].[Date,Message]' --output text
+```
+
+### 4. 대조 (부하 발생기, 부하가 끝난 뒤)
+
+새 세션이면 `sudo -i` 뒤 1의 `cd`와 `export RUN_ID`를 다시 한다. 두 단계 모두 `유실 0건`이 나와야 한다.
+
+```bash
+for s in load app_probe; do scripts/reconcile.sh k6/results/$RUN_ID/$RUN_ID-ingest-$s.json; done
+cp /root/$RUN_ID.log k6/results/$RUN_ID/
+```
+
+### 5. 결과 모으기 (apply한 컴퓨터)
+
+부하 발생기 결과는 "부하 실험"과 같은 방법으로 받는다. RDS 이벤트는 전환(failover)과 대기 복구(recovery)를 함께 여기서 저장한다.
+
+```bash
+mkdir -p work/<RUN_ID>
+aws rds describe-events --region ap-northeast-2 --source-type db-instance \
+  --source-identifier meterengine-test-storage-db --event-categories failover recovery --duration 180 \
+  --query 'Events[].[Date,Message]' --output text > work/<RUN_ID>/<RUN_ID>-rds-events.tsv
+```
+
+백엔드 로그는 SUT에서 `python3 -m http.server 8000 --bind 127.0.0.1 --directory /var/tmp/results`를 띄우고, 부하 발생기 포워딩을 끈 뒤 받는다.
+
+```bash
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)" \
+  --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["8000"],"localPortNumber":["8000"]}'
+curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backend.log
+```
+
+### 6. 결과 읽기
+
+- 요청 줄은 `REQ id 보낸시각ms 걸린ms status error_code duplicate 재전송여부`다. 끝난 순서로 쌓이므로 `grep -o 'REQ [^"]*' <콘솔 파일> | sort -k3,3n`처럼 보낸 시각으로 정렬해 읽는다.
+- `<RUN_ID>-db-probe.tsv`도 끝난 순서로 쌓이므로 첫 칸으로 정렬한다. DB가 돌아온 시각은 주입마다 실패 구간 뒤 `ok` 칸이 처음 1인 줄의 `sent_ms`에 `elapsed_ms`를 더한 값이다.
+- RDS 몫은 DB 탐침이 실패한 구간이고, 앱 몫은 DB가 돌아온 뒤 앱 탐침이 다시 정상이 될 때까지다. 앱 몫에는 앱이 DB에 다시 붙는 시간과 장애 동안 쌓인 요청을 비우는 시간이 함께 들어 있다.
+- load 단계는 VU 최대치가 500이라 응답이 평균 1초를 넘으면 VU를 다 쓰고, 그 뒤 요청은 REQ 줄 없이 못 보냄으로만 센다. 받지 못한 건수는 실패와 못 보냄을 더해 읽고, 끊긴 시간은 탐침으로 읽는다.
+
+### 7. 정리 (apply한 컴퓨터, 03:30 전에 시작)
+
+- "RDS Multi-AZ" 절의 확인 명령으로 주 인스턴스가 `ap-northeast-2a`인지 본다.
+- "RDS Multi-AZ" 절대로 `-var` 없이 apply 해 끈다. plan에 destroy가 없어야 한다.
+- `lg-stop.sh`와 `sut-stop.sh`로 끈다.
+
 ## 상태 파일과 지우기
 
 - 상태 파일은 apply한 컴퓨터에만 있고 커밋하지 않는다. 잃으면 Terraform으로 지울 수 없으니 지우지 않는다.
