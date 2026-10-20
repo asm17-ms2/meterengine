@@ -22,8 +22,8 @@ resource "aws_db_instance" "sut" {
   password_wo         = ephemeral.random_password.db.result
   password_wo_version = local.password_version
 
-  multi_az               = false
-  availability_zone      = local.availability_zone
+  multi_az               = var.db_multi_az
+  availability_zone      = var.db_multi_az ? null : local.availability_zone
   db_subnet_group_name   = data.aws_db_subnet_group.private.name
   vpc_security_group_ids = [aws_security_group.db.id]
   publicly_accessible    = false
@@ -49,6 +49,7 @@ resource "aws_db_instance" "sut" {
   }
 
   lifecycle {
-    ignore_changes = [engine_version]
+    # 장애 주입으로 주 인스턴스 AZ가 바뀌어도 RDS를 다시 만들지 않게 한다. 다시 만들면 스냅숏 없이 데이터가 사라진다.
+    ignore_changes = [engine_version, availability_zone]
   }
 }

@@ -40,6 +40,12 @@ variable "db_max_allocated_storage" {
   default     = 100
 }
 
+variable "db_multi_az" {
+  description = "SUT RDS Multi-AZ 여부. 장애 주입 실험 날에만 켠다"
+  type        = bool
+  default     = false
+}
+
 variable "auto_stop_state" {
   description = "매일 04:00(Asia/Seoul) RDS와 EC2 자동 중지 스케줄 상태. 밤새 측정할 때 DISABLED"
   type        = string
