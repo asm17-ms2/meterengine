@@ -22,7 +22,8 @@ k6 run smoke.js
 ## 배포 중 실패 측정
 
 - `deploy-ingest.js`는 수집 요청(`POST /v1/events`)을 초당 100건, 10분 보내고 요청마다 보낸 시각, 걸린 시간, status를 남긴다.
-- 배포는 그 사이에 내 컴퓨터에서 한다.
+- 배포는 그 사이에 내 컴퓨터에서 한다. 숫자는 부하 발생기에서 [`../scripts/deploy-report.sh`](../scripts/deploy-report.sh)가 낸다: 배포 구간 길이, 구간 안 실패 건수, 가장 긴 끊김, 구간 밖 가용성(시간 기준, 요청 기준).
+- 끊김은 마지막 성공부터 그 뒤 첫 성공까지다. 요청 간격 때문에 실제보다 최대 20ms(초당 100건일 때) 길게 잡힌다.
 
 ### 준비
 
@@ -71,7 +72,17 @@ aws ssm get-command-invocation --command-id $CMD --instance-id $SUT \
 [deploy] 측정 끝 <끝 ms> backend=<배포 뒤 ID> 종료=0
 ```
 
-- 요청 기록은 `results/$RUN_ID/console.log`, 보낸 건수와 못 보낸 요청은 `results/$RUN_ID/summary.txt`에 남는다.
+3. k6가 끝나면 부하 발생기에서 두 줄의 값을 넣는다. 결과는 `results/$RUN_ID/report.txt`에도 남는다.
+
+```bash
+../scripts/deploy-report.sh results/$RUN_ID <시작 ms> <끝 ms> <배포 전 ID> <배포 뒤 ID>
+```
+
+### 결과를 쓰지 않는 경우
+
+- 첫 줄에 "이 측정은 쓰지 않는다"가 나오면 그 이유를 고치고 다시 잰다. 못 보낸 요청이 있으면 부하 발생기의 `instance_type`을 키우고, 배포 전후 컨테이너가 같으면 다른 SHA를 고른다.
+- `측정 끝` 줄의 `종료`가 0이 아니면 배포가 실패한 것이라 쓰지 않는다.
+- 구간 밖 가용성이 100%가 아니면 배포 말고 다른 실패가 섞인 것이다. 원인을 보고 쓸지 정한다.
 
 ## 대시보드
 
