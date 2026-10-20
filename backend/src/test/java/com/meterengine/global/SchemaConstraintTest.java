@@ -404,7 +404,7 @@ class SchemaConstraintTest {
 
   @Test
   void 인보이스_테이블은_TRUNCATE할_수_없다() {
-    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice, invoice_line"))
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice, invoice_line, outbound_email"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("invoice is append-only");
   }
@@ -541,6 +541,138 @@ class SchemaConstraintTest {
     assertThat(amountColumnsOf("invoice"))
         .containsExactly("supply_amount", "tax_amount", "total_amount");
     assertThat(amountColumnsOf("invoice_line")).containsExactly("amount");
+  }
+
+  // --- 보낼 메일 ---
+
+  @Test
+  void 같은_인보이스의_청구_메일은_받는_주소_없이도_여러_건_쌓인다() {
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+
+    insertOutboundEmail(organizationId, "invoice", "2026-08", invoiceId, null);
+    insertOutboundEmail(organizationId, "invoice", "2026-08", invoiceId, "billing@acme.com");
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT recipient_email FROM outbound_email WHERE invoice_id = ?",
+                String.class,
+                invoiceId))
+        .containsExactlyInAnyOrder(null, "billing@acme.com");
+  }
+
+  @Test
+  void 청구_메일에는_인보이스가_있어야_한다() {
+    UUID organizationId = insertOrganization();
+
+    assertThatThrownBy(() -> insertOutboundEmail(organizationId, "invoice", "2026-08", null, null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("outbound_email_kind_invoice_check");
+  }
+
+  @Test
+  void 보고_메일은_인보이스_없이_저장되고_인보이스를_붙이면_거절된다() {
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+
+    insertOutboundEmail(organizationId, "finalization_report", "2026-08", null, "ops@acme.com");
+
+    assertThatThrownBy(
+            () ->
+                insertOutboundEmail(
+                    organizationId, "finalization_report", "2026-08", invoiceId, null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("outbound_email_kind_invoice_check");
+  }
+
+  @Test
+  void 정한_종류가_아닌_메일은_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    assertThatThrownBy(() -> insertOutboundEmail(organizationId, "receipt", "2026-08", null, null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("outbound_email_kind_check");
+  }
+
+  @Test
+  void 메일의_달은_월을_두_자리로_적은_표기만_저장된다() {
+    UUID organizationId = insertOrganization();
+
+    assertThatThrownBy(
+            () ->
+                insertOutboundEmail(
+                    organizationId, "finalization_report", "2026-8", null, "ops@acme.com"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("outbound_email_period_format");
+  }
+
+  @Test
+  void 다른_도입사의_인보이스에는_메일을_붙일_수_없다() {
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+
+    assertThatThrownBy(
+            () -> insertOutboundEmail(insertOrganization(), "invoice", "2026-08", invoiceId, null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("outbound_email_invoice_same_organization_fk");
+  }
+
+  @Test
+  void 저장된_메일은_UPDATE할_수_없다() {
+    UUID outboundEmailId = insertOutboundEmailOfNewInvoice();
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE outbound_email SET recipient_email = 'new@acme.com' WHERE id = ?",
+                    outboundEmailId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("outbound_email is append-only");
+  }
+
+  @Test
+  void 저장된_메일은_DELETE할_수_없다() {
+    UUID outboundEmailId = insertOutboundEmailOfNewInvoice();
+
+    assertThatThrownBy(
+            () -> jdbcTemplate.update("DELETE FROM outbound_email WHERE id = ?", outboundEmailId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("outbound_email is append-only");
+  }
+
+  @Test
+  void 메일_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE outbound_email"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("outbound_email is append-only");
+  }
+
+  private UUID insertOutboundEmail(
+      UUID organizationId, String kind, String period, UUID invoiceId, String recipientEmail) {
+    return jdbcTemplate.queryForObject(
+        """
+        INSERT INTO outbound_email
+          (id, organization_id, kind, period, invoice_id, recipient_email, subject, html_body,
+           created_at)
+        VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, '제목', '<p>본문</p>', now())
+        RETURNING id
+        """,
+        UUID.class,
+        organizationId,
+        kind,
+        period,
+        invoiceId,
+        recipientEmail);
+  }
+
+  private UUID insertOutboundEmailOfNewInvoice() {
+    UUID organizationId = insertOrganization();
+    UUID invoiceId =
+        insertInvoice(organizationId, insertCustomer(organizationId, "acme"), "2026-08");
+    return insertOutboundEmail(organizationId, "invoice", "2026-08", invoiceId, null);
   }
 
   private String collationOf(String table, String column) {

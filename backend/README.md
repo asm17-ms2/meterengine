@@ -120,6 +120,7 @@ docker build -t meterengine-backend .
 | `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정, 확정 인보이스 목록 조회(금액 구성과 라인 포함) | `/v1/invoices`, `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
 | `payment` | 인보이스 결제 요청과 결제 시도 기록. PG는 항상 승인하는 Mock이다 | `/v1/invoices/{id}/payment-attempts` |
+| `mail` | 보낼 메일 기록. 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 
