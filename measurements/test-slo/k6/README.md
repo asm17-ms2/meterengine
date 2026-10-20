@@ -19,6 +19,60 @@ k6 run smoke.js
 
 - `checks`와 `dropped_iterations` threshold가 통과해야 한다. `dropped_iterations`가 0이 아니면 k6가 정한 속도로 보내지 못한 것이니 부하 발생기의 `instance_type`을 키운다.
 
+## 배포 중 실패 측정
+
+- `deploy-ingest.js`는 수집 요청(`POST /v1/events`)을 초당 100건, 10분 보내고 요청마다 보낸 시각, 걸린 시간, status를 남긴다.
+- 배포는 그 사이에 내 컴퓨터에서 한다.
+
+### 준비
+
+1. SUT의 `/etc/meterengine/deploy.conf`에 `DEPLOY_TIMING=on`이 있는지 본다. 없으면 SUT에 붙어 더한다. 한 번만 하면 된다.
+
+```bash
+echo DEPLOY_TIMING=on | sudo tee -a /etc/meterengine/deploy.conf
+```
+
+2. SUT에 떠 있는 SHA와 다른 SHA를 고른다. 같은 SHA를 다시 배포하면 백엔드가 바뀌지 않는다. 고를 수 있는 SHA는 [`deploy/README.md`](../../../deploy/README.md) "되돌릴 SHA 찾기"로 본다.
+   - 배포는 그 SHA의 `deploy.sh`로 돈다. `DEPLOY_TIMING`이 없는 옛 SHA는 시각을 찍지 않으니 고르지 않는다.
+
+```bash
+aws ssm start-session --target i-02147d0eac9d1bafd
+git -C /opt/meterengine rev-parse HEAD
+git -C /opt/meterengine fetch --quiet origin
+git -C /opt/meterengine show <고른 SHA>:deploy/deploy.sh | grep -c DEPLOY_TIMING
+```
+
+### 실행
+
+1. 부하 발생기에서 k6를 띄운다.
+
+```bash
+cd ~/meterengine/measurements/test-slo/k6
+RUN_ID=$(date +%Y%m%d-%H%M)-deploy
+mkdir -p results/$RUN_ID
+k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ingest.js
+```
+
+2. 3분쯤 지나서 내 컴퓨터에서 배포하고, 출력에서 `측정` 두 줄을 본다.
+
+```bash
+SUT=i-02147d0eac9d1bafd
+SHA=<고른 SHA 40자>
+CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
+  --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force $SHA && ./deploy/deploy.sh $SHA" \
+  --query Command.CommandId --output text)
+aws ssm wait command-executed --command-id $CMD --instance-id $SUT || true
+aws ssm get-command-invocation --command-id $CMD --instance-id $SUT \
+  --query StandardOutputContent --output text | grep '측정'
+```
+
+```
+[deploy] 측정 시작 <시작 ms> backend=<배포 전 ID>
+[deploy] 측정 끝 <끝 ms> backend=<배포 뒤 ID> 종료=0
+```
+
+- 요청 기록은 `results/$RUN_ID/console.log`, 보낸 건수와 못 보낸 요청은 `results/$RUN_ID/summary.txt`에 남는다.
+
 ## 대시보드
 
 - `K6_WEB_DASHBOARD=true`를 붙여 돌리고, 내 컴퓨터의 다른 터미널에서 포트를 넘겨 http://localhost:5665 로 본다. 실행이 끝나면 대시보드도 닫힌다.
