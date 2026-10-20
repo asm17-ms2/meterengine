@@ -1,8 +1,10 @@
 export type CustomerFormState =
   | { status: "idle" }
-  | { status: "invalid"; message: string }
+  | { status: "invalid"; field: CustomerFormField; message: string }
   | { status: "failed"; message: string }
   | { status: "done" };
+
+export type CustomerFormField = "name" | "billingEmail";
 
 export const CUSTOMER_FORM_IDLE: CustomerFormState = { status: "idle" };
 

@@ -11,6 +11,7 @@ export type ListCustomersResponse = {
 export type CustomerResponse = {
   id: string;
   name: string;
+  billing_email: string | null;
   created_at: string;
 };
 
@@ -35,20 +36,24 @@ export async function listCustomers(
   return serverFetch<ListCustomersResponse>(config.apiBaseUrl, "/v1/customers");
 }
 
-export async function createCustomer(name: string): Promise<Result<CustomerResponse>> {
+export async function createCustomer(
+  name: string,
+  billingEmail: string | null,
+): Promise<Result<CustomerResponse>> {
   return serverSend<CustomerResponse>(config.apiBaseUrl, "/v1/customers", {
     method: "POST",
-    body: { name },
+    body: { name, billing_email: billingEmail },
   });
 }
 
 export async function updateCustomer(
   id: string,
   name: string,
+  billingEmail: string | null,
 ): Promise<Result<CustomerResponse>> {
   return serverSend<CustomerResponse>(config.apiBaseUrl, `/v1/customers/${id}`, {
     method: "PUT",
-    body: { name },
+    body: { name, billing_email: billingEmail },
   });
 }
 

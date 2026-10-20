@@ -8,15 +8,17 @@ import { GridTable } from "@/components/table/GridTable";
 export type CustomerRowView = {
   id: string;
   name: string;
+  billingEmail: string | null;
   /** `2026-08-14` (KST). */
   createdAt: string;
 };
 
-const COLUMNS = "minmax(0, 1fr) 320px 130px 100px";
-const MIN_WIDTH = 860;
+const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 320px 130px 100px";
+const MIN_WIDTH = 1080;
 
 const HEAD_LABELS = [
   "고객명",
+  "청구 이메일",
   "고객 ID",
   "등록일",
   { label: "작업", right: true },
@@ -38,6 +40,9 @@ export function CustomersTable({
         <GridRow key={row.id} columns={COLUMNS} className="grid-row--actions">
           <GridCell className="grid-cell--truncate grid-cell--strong">
             {row.name}
+          </GridCell>
+          <GridCell className="grid-cell--truncate grid-cell--muted">
+            {row.billingEmail ?? ""}
           </GridCell>
           <GridCell className="grid-cell--mono grid-cell--muted grid-cell--truncate">
             {row.id}
