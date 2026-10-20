@@ -59,7 +59,7 @@ class BillableMetricUsageServiceTest {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
     when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
             any(), any(), any(), any(), any(), any()))
         .thenReturn(Map.of());
@@ -87,8 +87,8 @@ class BillableMetricUsageServiceTest {
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(
             List.of(
-                new Customer(withEvents, ORGANIZATION_ID, "아크메"),
-                new Customer(withoutEvents, ORGANIZATION_ID, "베타")));
+                new Customer(withEvents, ORGANIZATION_ID, "아크메", null),
+                new Customer(withoutEvents, ORGANIZATION_ID, "베타", null)));
     when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
             any(), any(), any(), any(), any(), any()))
         .thenReturn(Map.of(withEvents, List.of(baseDimensionUsage("1200"))));
@@ -111,7 +111,7 @@ class BillableMetricUsageServiceTest {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
     when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
             any(), any(), any(), any(), any(), any()))
         .thenReturn(Map.of(customerId, List.of(opus, haiku)));
@@ -135,7 +135,7 @@ class BillableMetricUsageServiceTest {
     when(billableMetricRepository.findByOrganizationIdOrderByCodeAsc(ORGANIZATION_ID))
         .thenReturn(List.of(tokens, requests));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메")));
+        .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
     when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
             any(), any(), eq("token"), any(), any(), any()))
         .thenReturn(Map.of(customerId, List.of(baseDimensionUsage("1200"))));
@@ -179,7 +179,7 @@ class BillableMetricUsageServiceTest {
                     null,
                     List.of())));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
+        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메", null)));
 
     assertThatThrownBy(() -> billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .isInstanceOf(IllegalStateException.class)
@@ -204,7 +204,7 @@ class BillableMetricUsageServiceTest {
                     null,
                     List.of())));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
-        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메")));
+        .thenReturn(List.of(new Customer(UUID.randomUUID(), ORGANIZATION_ID, "아크메", null)));
 
     assertThatThrownBy(() -> billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
         .isInstanceOf(IllegalStateException.class)

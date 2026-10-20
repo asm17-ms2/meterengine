@@ -12,6 +12,9 @@ import org.hibernate.generator.EventType;
 public class Customer {
 
   public static final int NAME_MAX_LENGTH = 255;
+  public static final int BILLING_EMAIL_MAX_LENGTH = 254;
+  public static final String BILLING_EMAIL_PATTERN = ".+@.+\\..+";
+  public static final String BILLING_EMAIL_FORMAT_MESSAGE = "올바른 형식의 이메일 주소여야 합니다";
 
   @Id private UUID id;
 
@@ -21,20 +24,25 @@ public class Customer {
   @Column(nullable = false)
   private String name;
 
+  @Column(name = "billing_email")
+  private String billingEmail;
+
   @Generated(event = EventType.INSERT)
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
 
   protected Customer() {}
 
-  public Customer(UUID id, UUID organizationId, String name) {
+  public Customer(UUID id, UUID organizationId, String name, String billingEmail) {
     this.id = id;
     this.organizationId = organizationId;
     this.name = name;
+    this.billingEmail = billingEmail;
   }
 
-  public void rename(String name) {
+  public void update(String name, String billingEmail) {
     this.name = name;
+    this.billingEmail = billingEmail;
   }
 
   public UUID getId() {
@@ -47,6 +55,10 @@ public class Customer {
 
   public String getName() {
     return name;
+  }
+
+  public String getBillingEmail() {
+    return billingEmail;
   }
 
   public OffsetDateTime getCreatedAt() {

@@ -48,7 +48,8 @@ class CustomerServiceTest {
         new DataIntegrityViolationException("customer_organization_fk");
     when(customerRepository.saveAndFlush(org.mockito.ArgumentMatchers.any())).thenThrow(violation);
 
-    assertThatThrownBy(() -> customerService.create(ORGANIZATION_ID, "아크메")).isSameAs(violation);
+    assertThatThrownBy(() -> customerService.create(ORGANIZATION_ID, "아크메", null))
+        .isSameAs(violation);
   }
 
   @Test
@@ -123,6 +124,6 @@ class CustomerServiceTest {
   }
 
   private Customer customer() {
-    return new Customer(CUSTOMER_ID, ORGANIZATION_ID, "아크메");
+    return new Customer(CUSTOMER_ID, ORGANIZATION_ID, "아크메", null);
   }
 }

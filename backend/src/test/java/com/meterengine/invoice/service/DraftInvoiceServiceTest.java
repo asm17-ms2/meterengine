@@ -265,7 +265,7 @@ class DraftInvoiceServiceTest {
   }
 
   private static Customer customer(String name) {
-    return new Customer(UUID.randomUUID(), ORGANIZATION_ID, name);
+    return new Customer(UUID.randomUUID(), ORGANIZATION_ID, name, null);
   }
 
   private static BillableMetric billableMetric(String code, String targetProperty) {
