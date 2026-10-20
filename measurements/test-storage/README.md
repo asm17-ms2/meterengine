@@ -112,6 +112,25 @@ terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_st
 terraform -chdir=measurements/test-storage/sut/terraform apply
 ```
 
+### RDS Multi-AZ
+
+장애 주입 실험 날에만 켠다. RDS가 켜져 있어야 바꿀 수 있다.
+
+```bash
+terraform -chdir=measurements/test-storage/sut/terraform apply -var db_multi_az=true
+terraform -chdir=measurements/test-storage/sut/terraform apply
+```
+
+- 켤 때 plan에서 RDS는 `multi_az`만 바뀌고 destroy가 없어야 한다. 스케줄러 권한 정책이 `known after apply`로 함께 뜨는 것은 RDS ARN을 다시 읽어서이고 내용은 같다.
+- 대기 인스턴스를 만드는 동안에도 RDS는 쓸 수 있다. `MultiAZ`가 `True`가 된 뒤 실험한다.
+- 장애를 주입하면 주 인스턴스가 다른 AZ로 넘어간다. 한 번 더 주입해 EC2와 같은 `ap-northeast-2a`로 되돌린 뒤 끈다. 끄면 그때 주 인스턴스가 있던 AZ에 남는다.
+- 끌 때도 plan에 destroy가 없어야 한다. 있으면 apply 하지 않는다.
+
+```bash
+aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db \
+  --query 'DBInstances[0].[DBInstanceStatus,MultiAZ,AvailabilityZone,SecondaryAvailabilityZone]' --output text
+```
+
 ## 서버에 들어가기
 
 SSH가 없어 SSM으로만 붙는다.
@@ -352,7 +371,7 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 
 서울 온디맨드, 2026-10 기준이다.
 
-- 켜 둔 동안 시간당 약 $0.34(EC2 $0.10, RDS $0.23, 탄력적 IP $0.005).
+- 켜 둔 동안 시간당 약 $0.34(EC2 $0.10, RDS $0.23, 탄력적 IP $0.005). RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
 - 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP).
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $12.5가 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.
