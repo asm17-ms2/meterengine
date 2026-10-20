@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Import(TestcontainersConfiguration.class)
@@ -171,6 +172,92 @@ class CustomerIntegrationTest {
 
     assertThat(first).isNotEqualTo(second);
     assertThat(customerCount(organizationId)).isEqualTo(2);
+  }
+
+  @Test
+  void 청구_이메일을_넣어_등록하면_응답과_목록에_실린다() {
+    UUID organizationId = insertOrganization();
+
+    assertThat(
+            post(
+                organizationId,
+                """
+        {"name":"아크메","billing_email":"billing@acme.example"}
+        """))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.billing_email")
+        .isEqualTo("billing@acme.example");
+
+    assertThat(list(organizationId))
+        .bodyJson()
+        .extractingPath("$.customers[0].billing_email")
+        .isEqualTo("billing@acme.example");
+  }
+
+  @Test
+  void 청구_이메일을_빼거나_null로_등록하면_비어_있다() {
+    UUID organizationId = insertOrganization();
+
+    for (String body :
+        new String[] {"{\"name\":\"아크메\"}", "{\"name\":\"베타\",\"billing_email\":null}"}) {
+      MvcTestResult created = post(organizationId, body);
+      assertThat(created).hasStatus(201);
+      assertThat(jsonMapper.readTree(bodyText(created)).get("billing_email").isNull()).isTrue();
+    }
+  }
+
+  @Test
+  void 청구_이메일이_형식이_틀리거나_비었거나_도메인에_점이_없으면_400이고_저장은_0건이다() {
+    UUID organizationId = insertOrganization();
+
+    for (String invalid :
+        new String[] {
+          "billing",
+          "billing@",
+          "@acme.example",
+          "",
+          "   ",
+          "a@b",
+          "billing@acme",
+          "billing@localhost",
+          "billing@acme.example\\r\\nBcc: x@acme.example"
+        }) {
+      MvcTestResult result =
+          post(organizationId, "{\"name\":\"아크메\",\"billing_email\":\"%s\"}".formatted(invalid));
+      assertThat(result)
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.errors[*].field")
+          .asArray()
+          .containsOnly("billing_email");
+      assertThat(result)
+          .bodyJson()
+          .extractingPath("$.errors[*].message")
+          .asArray()
+          .containsOnly("올바른 형식의 이메일 주소여야 합니다");
+    }
+    assertThat(customerCount(organizationId)).isZero();
+  }
+
+  @Test
+  void 청구_이메일은_254자까지_받고_255자는_거절한다() {
+    UUID organizationId = insertOrganization();
+
+    assertThat(
+            post(
+                organizationId,
+                "{\"name\":\"아크메\",\"billing_email\":\"%s\"}".formatted(emailOfLength(254))))
+        .hasStatus(201);
+    assertThat(
+            post(
+                organizationId,
+                "{\"name\":\"베타\",\"billing_email\":\"%s\"}".formatted(emailOfLength(255))))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .asString()
+        .isEqualTo("billing_email");
   }
 
   // --- 목록 ---
@@ -358,6 +445,62 @@ class CustomerIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+  }
+
+  @Test
+  void 수정으로_청구_이메일을_넣고_바꾸고_빼면_지워진다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = createCustomer(organizationId, "아크메");
+
+    assertThat(
+            put(
+                organizationId,
+                customerId,
+                """
+        {"name":"아크메","billing_email":"old@acme.example"}
+        """))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.billing_email")
+        .isEqualTo("old@acme.example");
+    assertThat(listedBillingEmail(organizationId)).isEqualTo("old@acme.example");
+
+    put(
+        organizationId,
+        customerId,
+        """
+        {"name":"아크메","billing_email":"new@acme.example"}
+        """);
+    assertThat(listedBillingEmail(organizationId)).isEqualTo("new@acme.example");
+
+    assertThat(put(organizationId, customerId, "{\"name\":\"아크메\"}")).hasStatusOk();
+    assertThat(listedBillingEmail(organizationId)).isNull();
+  }
+
+  @Test
+  void 수정도_청구_이메일_형식이_틀리면_400이고_이메일은_그대로다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = createCustomer(organizationId, "아크메");
+    put(
+        organizationId,
+        customerId,
+        """
+        {"name":"아크메","billing_email":"billing@acme.example"}
+        """);
+
+    assertThat(
+            put(
+                organizationId,
+                customerId,
+                """
+        {"name":"아크메","billing_email":"billing"}
+        """))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+    assertThat(listedBillingEmail(organizationId)).isEqualTo("billing@acme.example");
   }
 
   // --- 삭제 ---
@@ -591,5 +734,21 @@ class CustomerIntegrationTest {
   private String nameOf(UUID customerId) {
     return jdbcTemplate.queryForObject(
         "SELECT name FROM customer WHERE id = ?", String.class, customerId);
+  }
+
+  private String listedBillingEmail(UUID organizationId) {
+    JsonNode billingEmail =
+        jsonMapper
+            .readTree(bodyText(list(organizationId)))
+            .get("customers")
+            .get(0)
+            .get("billing_email");
+    return billingEmail.isNull() ? null : billingEmail.asString();
+  }
+
+  private static String emailOfLength(int length) {
+    String localPart = "a".repeat(64);
+    String domain = "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(length - 197) + ".com";
+    return localPart + "@" + domain;
   }
 }

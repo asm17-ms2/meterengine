@@ -70,6 +70,7 @@ public class CustomerController {
           """
           고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
           이름이 같은 고객을 여럿 등록할 수 있다. 구별은 id로 한다.
+          billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "등록된 고객"),
@@ -81,14 +82,15 @@ public class CustomerController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘거나, X-Organization-Id가 없거나 UUID가 아니다.
             """)
   })
   public CustomerResponse createCustomer(
       @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
           UUID organizationId,
       @Valid @RequestBody CreateCustomerRequest request) {
-    return CustomerResponse.from(customerService.create(organizationId, request.name()));
+    return CustomerResponse.from(
+        customerService.create(organizationId, request.name(), request.billingEmail()));
   }
 
   @PutMapping("/{id}")
@@ -96,7 +98,8 @@ public class CustomerController {
       summary = "고객 수정",
       description =
           """
-          고객 이름을 바꾸고 바뀐 고객을 돌려준다.
+          고객 이름과 청구 이메일을 바꾸고 바뀐 고객을 돌려준다.
+          보낸 값으로 통째로 바꾼다. billing_email을 빼거나 null로 보내면 청구 이메일이 지워진다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 고객"),
@@ -107,7 +110,7 @@ public class CustomerController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, 헤더나 경로의 UUID 형식이 틀렸다"),
+            "code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘거나, 헤더나 경로의 UUID 형식이 틀렸다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -121,7 +124,8 @@ public class CustomerController {
           UUID organizationId,
       @Parameter(description = "고칠 고객의 ID.") @PathVariable UUID id,
       @Valid @RequestBody UpdateCustomerRequest request) {
-    return CustomerResponse.from(customerService.update(organizationId, id, request.name()));
+    return CustomerResponse.from(
+        customerService.update(organizationId, id, request.name(), request.billingEmail()));
   }
 
   @DeleteMapping("/{id}")

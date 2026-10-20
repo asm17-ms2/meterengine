@@ -34,17 +34,18 @@ public class CustomerService {
   }
 
   @Transactional
-  public Customer create(UUID organizationId, String name) {
-    return customerRepository.saveAndFlush(new Customer(UUID.randomUUID(), organizationId, name));
+  public Customer create(UUID organizationId, String name, String billingEmail) {
+    return customerRepository.saveAndFlush(
+        new Customer(UUID.randomUUID(), organizationId, name, billingEmail));
   }
 
   @Transactional
-  public Customer update(UUID organizationId, UUID customerId, String name) {
+  public Customer update(UUID organizationId, UUID customerId, String name, String billingEmail) {
     Customer customer =
         customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
-    customer.rename(name);
+    customer.update(name, billingEmail);
     return customer;
   }
 
