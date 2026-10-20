@@ -6,6 +6,7 @@ MeterEngine 미터링 엔진 API 서버. 이벤트 수집, 집계, rating, 인�
 - PostgreSQL 단일 저장소. Spring Data JPA로 접근하고 집계는 사전 집계 없이 SQL로 계산한다.
 - 스키마 마이그레이션은 Flyway. 파일은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다.
 - 엔티티는 스키마를 만들지 않는다 (`spring.jpa.hibernate.ddl-auto=validate`).
+- 청구 메일 본문은 Thymeleaf 템플릿(`src/main/resources/templates/mail/`)으로 만든다.
 - API 계약의 정본은 `openapi.yaml`이고 빌드가 다시 만든다.
 - 테스트는 JUnit 5 + AssertJ + Testcontainers. DB가 필요한 테스트는 PostgreSQL 컨테이너로 돈다.
 - 포맷은 Spotless + google-java-format, 이름 케이스는 Checkstyle. CI가 검사한다.
@@ -117,16 +118,17 @@ docker build -t meterengine-backend .
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
 | `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계(속성 값 조합별로 나눔) | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 삭제, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
-| `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정, 확정 인보이스 목록 조회(금액 구성과 라인 포함) | `/v1/invoices`, `/v1/invoices/draft` |
+| `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정(확정한 고객마다 청구 메일을 남김), 확정 인보이스 목록 조회(금액 구성과 라인 포함) | `/v1/invoices`, `/v1/invoices/draft` |
 | `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
 | `payment` | 인보이스 결제 요청과 결제 시도 기록. PG는 항상 승인하는 Mock이다 | `/v1/invoices/{id}/payment-attempts` |
 | `mail` | 보낼 메일 기록. 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
+| `organization` | 도입사 조회 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
-- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽는다(`payment` -> `invoice`).
+- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽는다(`payment` -> `invoice`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`).
 
 ### 마이그레이션
 
