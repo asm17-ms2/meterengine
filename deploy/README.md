@@ -88,6 +88,12 @@ EOF
 - **적지 않은 변수는 개발 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 개발 서버의 DB에 붙는다.
 - `SITE_ALIASES`에 적은 주소는 `SITE_DOMAIN`으로 리다이렉트되고, 비우면 `SITE_DOMAIN` 하나만 받는다.
 - Caddy가 인증서를 받으려면 `SITE_DOMAIN`과 `SITE_ALIASES`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
+- 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
+
+```
+[deploy] 측정 시작 <epoch ms> backend=<백엔드 컨테이너 ID>
+[deploy] 측정 끝 <epoch ms> backend=<백엔드 컨테이너 ID> 종료=<종료 코드>
+```
 
 ## 배포
 

@@ -9,6 +9,7 @@ CONFIG_FILE=/etc/meterengine/deploy.conf
 PARAM_PATH=/meterengine/prod
 SITE_DOMAIN=meterengine.com
 SITE_ALIASES=www.meterengine.com
+DEPLOY_TIMING=off
 
 if [ -f "$CONFIG_FILE" ]; then
 	. "$CONFIG_FILE"
@@ -20,6 +21,19 @@ ECR_REGISTRY=928618307647.dkr.ecr.ap-northeast-2.amazonaws.com
 
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] 실패: %s\n' "$*" >&2; exit 1; }
+
+now_ms() { date +%s%3N; }
+
+backend_container() {
+	local id
+	id=$(docker ps -q --filter label=com.docker.compose.service=backend | paste -sd, -)
+	printf '%s' "${id:-없음}"
+}
+
+log_timing_end() {
+	local code=$?
+	log "측정 끝 $(now_ms) backend=$(backend_container) 종료=$code"
+}
 
 # Parameter Store 값으로 .env를 매번 새로 만든다.
 write_env_file() {
@@ -77,6 +91,11 @@ wait_for_http() {
 main() {
 	local sha="${1:-}"
 	[ -n "$sha" ] || die "배포할 git SHA를 인자로 줘야 한다. 예: $0 979e251..."
+
+	if [ "$DEPLOY_TIMING" = on ]; then
+		log "측정 시작 $(now_ms) backend=$(backend_container)"
+		trap log_timing_end EXIT
+	fi
 
 	log "배포 시작: $sha"
 	log "파라미터 경로: $PARAM_PATH, 도메인: $SITE_DOMAIN, 별칭: ${SITE_ALIASES:-없음}"
