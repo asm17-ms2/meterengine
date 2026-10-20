@@ -25,13 +25,21 @@ export function CustomerFormDialog({
   );
 
   const [name, setName] = useState(isEdit ? customer.name : "");
+  const [billingEmail, setBillingEmail] = useState(
+    isEdit ? (customer.billingEmail ?? "") : "",
+  );
 
   useEffect(() => {
     if (state.status === "done") onClose();
   }, [state, onClose]);
 
-  const message =
-    state.status === "invalid" || state.status === "failed"
+  const nameMessage =
+    (state.status === "invalid" && state.field === "name") ||
+    state.status === "failed"
+      ? state.message
+      : null;
+  const billingEmailMessage =
+    state.status === "invalid" && state.field === "billingEmail"
       ? state.message
       : null;
 
@@ -60,10 +68,10 @@ export function CustomerFormDialog({
           disabled={isPending}
           autoFocus
           maxLength={255}
-          aria-invalid={message !== null}
-          aria-describedby={message ? "customer-name-error" : undefined}
+          aria-invalid={nameMessage !== null}
+          aria-describedby={nameMessage ? "customer-name-error" : undefined}
           style={
-            message
+            nameMessage
               ? {
                   borderColor: "var(--color-accent)",
                   background: "var(--color-accent-100)",
@@ -71,7 +79,7 @@ export function CustomerFormDialog({
               : { borderColor: "var(--color-accent)" }
           }
         />
-        {message ? (
+        {nameMessage ? (
           <p
             id="customer-name-error"
             style={{
@@ -80,9 +88,64 @@ export function CustomerFormDialog({
               color: "var(--color-accent-700)",
             }}
           >
-            {message}
+            {nameMessage}
           </p>
         ) : null}
+      </div>
+
+      <div className="field">
+        <label htmlFor="customer-billing-email">청구 이메일</label>
+        <input
+          id="customer-billing-email"
+          name="billing_email"
+          type="text"
+          inputMode="email"
+          autoComplete="email"
+          spellCheck={false}
+          className="input"
+          value={billingEmail}
+          onChange={(event) => setBillingEmail(event.target.value)}
+          disabled={isPending}
+          maxLength={254}
+          placeholder="billing@example.com"
+          aria-invalid={billingEmailMessage !== null}
+          aria-describedby={
+            billingEmailMessage
+              ? "customer-billing-email-error"
+              : "customer-billing-email-help"
+          }
+          style={
+            billingEmailMessage
+              ? {
+                  borderColor: "var(--color-accent)",
+                  background: "var(--color-accent-100)",
+                }
+              : undefined
+          }
+        />
+        {billingEmailMessage ? (
+          <p
+            id="customer-billing-email-error"
+            style={{
+              margin: "6px 0 0",
+              fontSize: 12.5,
+              color: "var(--color-accent-700)",
+            }}
+          >
+            {billingEmailMessage}
+          </p>
+        ) : (
+          <p
+            id="customer-billing-email-help"
+            style={{
+              margin: "6px 0 0",
+              fontSize: 12.5,
+              color: "var(--text-60)",
+            }}
+          >
+            확정한 인보이스의 청구 메일을 받을 주소입니다. 비워 둘 수 있습니다.
+          </p>
+        )}
       </div>
 
       {isEdit ? (
