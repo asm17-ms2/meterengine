@@ -2,6 +2,7 @@ package com.meterengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,5 +23,12 @@ class MeterEngineApplicationTest {
   void 요청이_끝날_때까지_엔티티_매니저를_열어_두지_않는다() {
     assertThat(applicationContext.getBeanNamesForType(OpenEntityManagerInViewInterceptor.class))
         .isEmpty();
+  }
+
+  @Test
+  void DB_쿼리_응답을_30초까지만_기다린다() {
+    HikariDataSource dataSource = applicationContext.getBean(HikariDataSource.class);
+
+    assertThat(dataSource.getDataSourceProperties().getProperty("socketTimeout")).isEqualTo("30");
   }
 }
