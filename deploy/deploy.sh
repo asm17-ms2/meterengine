@@ -88,7 +88,7 @@ wait_for_http() {
 	return 1
 }
 
-# 방금 뜬 Prometheus는 HUP 처리기를 걸기 전이라 HUP에 죽는다.
+# 방금 뜬 Prometheus는 HUP 처리기를 걸기 전이라 HUP을 놓친다.
 wait_for_prometheus_ready() {
 	local i
 	for i in $(seq 1 45); do
@@ -149,7 +149,7 @@ main() {
 
 	# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
 	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
-	"${compose[@]}" kill -s HUP prometheus
+	"${compose[@]}" exec -T prometheus kill -HUP 1
 	log "Prometheus 설정 반영 완료"
 
 	if ! wait_for_http "백엔드" http://127.0.0.1:8080/actuator/health '"status":"UP"'; then
