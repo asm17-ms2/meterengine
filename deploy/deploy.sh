@@ -88,6 +88,18 @@ wait_for_http() {
 	return 1
 }
 
+# 방금 뜬 Prometheus는 HUP 처리기를 걸기 전이라 HUP에 죽는다.
+wait_for_prometheus_ready() {
+	local i
+	for i in $(seq 1 45); do
+		if "$@" exec -T prometheus wget -qO- http://localhost:9090/-/ready >/dev/null 2>&1; then
+			return 0
+		fi
+		sleep 2
+	done
+	return 1
+}
+
 main() {
 	local sha="${1:-}"
 	[ -n "$sha" ] || die "배포할 git SHA를 인자로 줘야 한다. 예: $0 979e251..."
@@ -136,6 +148,7 @@ main() {
 	log "Caddy 설정 반영 완료"
 
 	# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
+	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
 	"${compose[@]}" kill -s HUP prometheus
 	log "Prometheus 설정 반영 완료"
 
