@@ -139,7 +139,7 @@ aws ssm send-command \
 4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
    - prometheus.yml도 같다. `docker compose -p meterengine-prod kill -s HUP prometheus`로 다시 읽게 한다.
-5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/usage`가 응답하는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
+5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
 
 ## 롤백

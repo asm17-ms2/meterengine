@@ -92,6 +92,7 @@ docker run -p 3000:3000 \
 | 경로 | 내용 |
 | --- | --- |
 | `src/app/(console)/` | 라우트. 화면마다 `page.tsx`, 쓰기 화면은 `actions.ts`, `state.ts` |
+| `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트와 공용 셸, 표, 다이얼로그 |
 | `src/lib/api/` | 백엔드 호출. `client.ts`가 공용 fetch |
 | `src/lib/config.ts` | 서버 사이드 설정 |
