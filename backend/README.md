@@ -70,7 +70,7 @@ docker build -t meterengine-backend .
 
 ## 설정
 
-`application.properties`에 datasource 설정이 없다. 컨테이너로 띄우면 아래 환경변수가 DB에 붙는 유일한 경로다.
+`application.properties`에 DB 접속 정보(URL, 계정)가 없다. 컨테이너로 띄우면 아래 환경변수가 DB에 붙는 유일한 경로다.
 
 | 환경변수 | 용도 | 기본값 |
 | --- | --- | --- |
@@ -80,6 +80,7 @@ docker build -t meterengine-backend .
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
+- DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
 
