@@ -77,9 +77,9 @@ write_env_file() {
 
 # 서비스가 실제로 요청을 받을 때까지 기다린다.
 wait_for_http() {
-	local name="$1" url="$2" expect="$3" i
+	local name="$1" url="$2" expect="$3" i body
 	for i in $(seq 1 45); do
-		if curl -fsS --max-time 3 "$url" 2>/dev/null | grep -qi "$expect"; then
+		if body=$(curl -fsS --max-time 3 "$url" 2>/dev/null) && grep -qi "$expect" <<<"$body"; then
 			log "$name 준비됨 (${i}회 시도)"
 			return 0
 		fi
