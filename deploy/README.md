@@ -138,8 +138,8 @@ aws ssm send-command \
 3. ECR에 로그인하고 그 SHA 태그의 이미지를 받는다.
 4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
-   - prometheus.yml도 같다. `docker compose -p meterengine-prod kill -s HUP prometheus`로 다시 읽게 한다.
-5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/usage`가 응답하는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
+   - prometheus.yml도 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
 
 ## 롤백

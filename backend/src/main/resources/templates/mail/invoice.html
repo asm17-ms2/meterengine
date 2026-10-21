@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <p>
+    <span th:text="${customerName}"></span> 님,
+    <span th:text="${organizationName}"></span>의
+    <span th:text="${period}"></span> 사용료를 알려 드립니다.
+  </p>
+  <table border="1" cellpadding="6" cellspacing="0">
+    <tr><th>미터</th><th>조합</th><th>수량</th><th>단가</th><th>금액</th></tr>
+    <tr th:each="line : ${lines}">
+      <td th:text="${line.billableMetricCode}"></td>
+      <td th:text="${line.dimensionValues}"></td>
+      <td th:text="${line.quantity}" align="right"></td>
+      <td th:text="${line.unitPrice}" align="right"></td>
+      <td th:text="${line.amount}" align="right"></td>
+    </tr>
+  </table>
+  <table cellpadding="6" cellspacing="0">
+    <tr><th align="left">공급가액</th><td th:text="${supplyAmount}" align="right"></td></tr>
+    <tr><th align="left">세액</th><td th:text="${taxAmount}" align="right"></td></tr>
+    <tr><th align="left">합계</th><td th:text="${totalAmount}" align="right"></td></tr>
+  </table>
+</body>
+</html>

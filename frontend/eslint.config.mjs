@@ -5,6 +5,7 @@ import checkFile from "eslint-plugin-check-file";
 
 const NEXT_RESERVED_EXPORTS =
   "^(metadata|viewport|config|dynamic|dynamicParams|revalidate|fetchCache|runtime|preferredRegion|maxDuration|generateMetadata|generateViewport|generateStaticParams)$";
+const ROUTE_HANDLER_METHODS = "^(GET|HEAD|POST|PUT|DELETE|PATCH|OPTIONS)$";
 const HTTP_HEADER_NAME = "^[A-Z][a-z]+(-[A-Z][a-z]+)*$";
 const CONSECUTIVE_CAPITALS = "[A-Z]{2}";
 
@@ -12,6 +13,7 @@ const namingRules = [
   { selector: "default", format: ["camelCase"], custom: { regex: CONSECUTIVE_CAPITALS, match: false } },
   { selector: "variable", format: ["strictCamelCase", "StrictPascalCase", "UPPER_CASE"] },
   { selector: "function", format: ["camelCase", "PascalCase"], custom: { regex: CONSECUTIVE_CAPITALS, match: false } },
+  { selector: "function", modifiers: ["exported"], filter: { regex: ROUTE_HANDLER_METHODS, match: true }, format: null },
   { selector: "parameter", format: ["strictCamelCase"], leadingUnderscore: "allow" },
   { selector: "typeLike", format: ["PascalCase"], custom: { regex: CONSECUTIVE_CAPITALS, match: false } },
   { selector: "interface", format: ["StrictPascalCase"], custom: { regex: "^I[A-Z]", match: false } },
