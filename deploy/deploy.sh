@@ -143,7 +143,7 @@ main() {
 		"${compose[@]}" logs --tail 50 backend || true
 		die "백엔드가 90초 안에 준비되지 않았다"
 	fi
-	if ! wait_for_http "프론트엔드" http://127.0.0.1:3000/usage '<!doctype html'; then
+	if ! wait_for_http "프론트엔드" http://127.0.0.1:3000/health '^ok$'; then
 		"${compose[@]}" logs --tail 50 frontend || true
 		die "프론트엔드가 90초 안에 준비되지 않았다"
 	fi

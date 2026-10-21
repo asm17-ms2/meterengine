@@ -9,10 +9,14 @@
 		reverse_proxy backend:8080
 	}
 
+	handle /health {
+		respond 404
+	}
+
 	handle {
 		reverse_proxy frontend:3000
 	}
 }
 
-# /actuator/*는 노출하지 않는다. 헬스체크는 deploy.sh가 서버 안에서 부른다.
+# /actuator/*와 프론트엔드 /health는 노출하지 않는다. 헬스체크는 deploy.sh가 서버 안에서 부른다.
 # email 지시어는 퍼블릭 레포라 넣지 않는다.
