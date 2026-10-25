@@ -24,6 +24,7 @@ k6 run smoke.js
 - `deploy-ingest.js`는 수집 요청(`POST /v1/events`)을 초당 100건, 10분 보내고 요청마다 보낸 시각, 걸린 시간, status를 남긴다.
 - 배포는 그 사이에 내 컴퓨터에서 한다. 숫자는 부하 발생기에서 [`../scripts/deploy-report.sh`](../scripts/deploy-report.sh)가 낸다: 배포 구간 길이, 구간 안 실패 건수, 가장 긴 끊김, 구간 밖 가용성(시간 기준, 요청 기준).
 - 끊김은 마지막 성공부터 그 뒤 첫 성공까지다. 요청 간격 때문에 실제보다 최대 20ms(초당 100건일 때) 길게 잡힌다.
+- 내 컴퓨터에서 돌리는 명령은 레포 루트에서 실행한다.
 
 ### 준비
 
@@ -37,7 +38,7 @@ echo DEPLOY_TIMING=on | sudo tee -a /etc/meterengine/deploy.conf
    - 배포는 그 SHA의 `deploy.sh`로 돈다. `DEPLOY_TIMING`이 없는 옛 SHA는 시각을 찍지 않으니 고르지 않는다.
 
 ```bash
-aws ssm start-session --target i-02147d0eac9d1bafd
+aws ssm start-session --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)"
 git -C /opt/meterengine rev-parse HEAD
 git -C /opt/meterengine fetch --quiet origin
 git -C /opt/meterengine show <고른 SHA>:deploy/deploy.sh | grep -c DEPLOY_TIMING
@@ -57,7 +58,7 @@ k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ing
 2. 3분쯤 지나서 내 컴퓨터에서 배포하고, 출력에서 `측정` 두 줄을 본다.
 
 ```bash
-SUT=i-02147d0eac9d1bafd
+SUT=$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)
 SHA=<고른 SHA 40자>
 CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
   --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force $SHA && ./deploy/deploy.sh $SHA" \
