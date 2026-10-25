@@ -104,3 +104,47 @@ resource "aws_iam_instance_profile" "sut" {
   name = "${local.prefix}-ec2-profile"
   role = aws_iam_role.sut.name
 }
+
+# --- 자동 중지 스케줄러 ---
+
+data "aws_iam_policy_document" "scheduler_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [local.account_id]
+    }
+  }
+}
+
+resource "aws_iam_role" "scheduler" {
+  name               = "${local.prefix}-scheduler-role"
+  assume_role_policy = data.aws_iam_policy_document.scheduler_assume.json
+}
+
+data "aws_iam_policy_document" "scheduler" {
+  statement {
+    sid       = "StopSutRds"
+    actions   = ["rds:StopDBInstance"]
+    resources = [aws_db_instance.sut.arn]
+  }
+
+  statement {
+    sid       = "StopSutEc2"
+    actions   = ["ec2:StopInstances"]
+    resources = [aws_instance.sut.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "scheduler" {
+  name   = "${local.prefix}-scheduler-policy"
+  role   = aws_iam_role.scheduler.id
+  policy = data.aws_iam_policy_document.scheduler.json
+}
