@@ -70,7 +70,7 @@ k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ing
 SUT=$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)
 SHA=<고른 SHA 40자>
 CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
-  --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force $SHA && ./deploy/deploy.sh $SHA" \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $SHA 8>&- 9>&- && ./deploy/deploy.sh $SHA" \
   --query Command.CommandId --output text)
 aws ssm wait command-executed --command-id $CMD --instance-id $SUT || true
 aws ssm get-command-invocation --command-id $CMD --instance-id $SUT \

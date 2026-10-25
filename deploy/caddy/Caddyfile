@@ -1,12 +1,46 @@
 # 리버스 프록시. 사이트 주소만 적으면 Caddy가 인증서 발급과 HTTPS 리다이렉트를 맡는다.
 
+# 목록의 백엔드가 아직 안 떴거나 죽으면 헬스체크가 계속 실패한다. 그 info 로그가 컨테이너 로그 한도를 채우지 않게 경고 이상만 남긴다.
+{
+	log {
+		exclude http.handlers.reverse_proxy.health_checker.active
+	}
+	log health {
+		include http.handlers.reverse_proxy.health_checker.active
+		level WARN
+	}
+}
+
+# deploy.sh가 정한 백엔드 목록 중 헬스체크를 통과한 쪽으로 보낸다.
+# 배포는 옛 색을 목록에서 빼고 reload한 뒤 멈춰, 멈추는 색에 새 요청이 가지 않는다.
+(backend) {
+	reverse_proxy {
+		# upstreams.caddy는 deploy.sh가 배포마다 쓰는 to 줄이다. 첫 전환 배포용 backend:8080도 여기에 들어간다.
+		import upstreams.caddy
+		# 전체 헬스가 아니라 readiness를 봐야 DB가 잠깐 끊겨도 받고 있는 색이 빠지지 않는다.
+		health_uri /actuator/health/readiness
+		health_interval 1s
+		health_timeout 2s
+		health_fails 3
+		health_passes 1
+		# 바꾸면 deploy.sh의 DRAIN_SECONDS도 같이 바꾼다.
+		lb_try_duration 5s
+		lb_try_interval 250ms
+		# 연결이 끊긴 색을 잠깐 뺀다. lb_try_duration보다 길면 하나뿐인 색이 오류 한 번에 그 시간 내내 503을 낸다.
+		fail_duration 2s
+		max_fails 1
+		header_down X-Upstream {upstream_hostport}
+	}
+}
+
 {$SITE_DOMAIN} {$SITE_ALIASES} {
 	@alias not host {$SITE_DOMAIN}
 	redir @alias https://{$SITE_DOMAIN}{uri} permanent
 
 	# handle_path는 접두사를 벗겨 백엔드가 404를 내므로 handle을 쓴다.
 	handle /v1/* {
-		reverse_proxy backend:8080
+		header -X-Upstream
+		import backend
 	}
 
 	handle /health {
@@ -16,6 +50,11 @@
 	handle {
 		reverse_proxy frontend:3000
 	}
+}
+
+# 프론트엔드와 deploy.sh만 compose 네트워크 안에서 부른다. compose가 8081을 서버 밖으로 열지 않는다.
+http://:8081 {
+	import backend
 }
 
 # /actuator/*와 프론트엔드 /health는 노출하지 않는다. 헬스체크는 deploy.sh가 서버 안에서 부른다.

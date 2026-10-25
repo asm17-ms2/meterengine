@@ -93,10 +93,12 @@ require_dns_points_to() {
 deploy_command() {
 	local sha="$1" param_path="$2" domain="$3"
 	printf '%s' "grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG || { echo '$REMOTE_DEPLOY_CONFIG 의 PARAM_PATH나 SITE_DOMAIN이 SUT 값이 아니다' >&2; exit 1; }
+exec 8>/etc/meterengine/deploy-command.lock || exit 1
+flock -n 8 || { echo '다른 배포가 아직 돌고 있거나 잠금을 잡지 못했다' >&2; exit 1; }
 cd $REMOTE_REPO_DIR || exit 1
-git fetch --quiet origin || exit 1
-git merge-base --is-ancestor $FIRST_SHA_WITH_DEPLOY_CONF $sha || { echo '$sha 는 deploy.conf를 읽기 전 커밋(${FIRST_SHA_WITH_DEPLOY_CONF:0:7} 이전)이거나 원격에 없는 커밋이라 배포하지 않는다' >&2; exit 1; }
-git checkout --quiet --force $sha || exit 1
+git fetch --quiet origin 8>&- 9>&- || exit 1
+git merge-base --is-ancestor $FIRST_SHA_WITH_DEPLOY_CONF $sha 8>&- 9>&- || { echo '$sha 는 deploy.conf를 읽기 전 커밋(${FIRST_SHA_WITH_DEPLOY_CONF:0:7} 이전)이거나 원격에 없는 커밋이라 배포하지 않는다' >&2; exit 1; }
+git checkout --quiet --force $sha 8>&- 9>&- || exit 1
 ./deploy/deploy.sh $sha"
 }
 
