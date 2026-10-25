@@ -41,7 +41,7 @@
       "title": "백엔드 상태 (up)",
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "refId": "A", "expr": "up{job=\"backend\"}" }],
+      "targets": [{ "refId": "A", "expr": "max(up{job=\"backend\"})" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {
