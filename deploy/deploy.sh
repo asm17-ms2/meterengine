@@ -13,6 +13,7 @@ SITE_ALIASES=www.meterengine.com
 DEPLOY_TIMING=off
 BACKEND_MEM_LIMIT=768m
 BACKEND_MAX_RAM_PERCENTAGE=50
+CADDY_ACCESS_LOG=discard
 
 if [ -f "$CONFIG_FILE" ]; then
 	. "$CONFIG_FILE"
@@ -321,6 +322,16 @@ write_env_file() {
 	grep -q '^DB_HOST=' "$ENV_FILE" || die "Parameter Store에서 db-host를 읽지 못했다"
 }
 
+# Caddyfile이 가져오는 요청 로그 출력을 쓴다. 값을 env로 넘기면 바뀔 때마다 Caddy 컨테이너가 다시 만들어져 끊긴다.
+# Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
+write_access_log_file() {
+	local file="$REPO_DIR/deploy/caddy/access-log.caddy" tmp
+	[ -n "$CADDY_ACCESS_LOG" ] || die "deploy.conf의 CADDY_ACCESS_LOG가 비어 있다. 끄려면 줄을 지우거나 discard를 적는다"
+	tmp=$(mktemp "$file.XXXXXX")
+	printf 'output %s\n' "$CADDY_ACCESS_LOG" >"$tmp"
+	mv "$tmp" "$file"
+}
+
 # Caddyfile이 가져오는 백엔드 목록을 쓴다. Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
 write_upstreams_file() {
 	local file="$REPO_DIR/deploy/caddy/upstreams.caddy" tmp
@@ -453,7 +464,8 @@ main() {
 	git fetch --quiet origin 8>&- 9>&-
 	git checkout --quiet --force "$git_ref" 8>&- 9>&- || die "커밋 $git_ref 를 찾지 못했다"
 	log "레포를 $(git rev-parse --short HEAD) 로 맞췄다"
-	# 체크아웃한 Caddyfile이 이 파일을 import하므로, 뒤에서 실패해도 Caddy가 다시 뜰 때 읽을 수 있게 바로 쓴다.
+	# 체크아웃한 Caddyfile이 이 파일들을 import하므로, 뒤에서 실패해도 Caddy가 다시 뜰 때 읽을 수 있게 바로 쓴다.
+	write_access_log_file
 	serving=$(serving_upstreams "$target_color" "$live_color" "$previous_color" "$legacy_container")
 	write_upstreams_file "$serving" || die "Caddy 백엔드 목록 파일을 쓰지 못했다"
 	log "Caddy가 보낼 백엔드: $serving"

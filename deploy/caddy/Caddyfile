@@ -34,12 +34,18 @@
 }
 
 {$SITE_DOMAIN} {$SITE_ALIASES} {
+	# access-log.caddy는 deploy.sh가 deploy.conf의 CADDY_ACCESS_LOG(기본 discard)로 배포마다 쓰는 output 줄이다.
+	log {
+		import access-log.caddy
+	}
+
 	@alias not host {$SITE_DOMAIN}
 	redir @alias https://{$SITE_DOMAIN}{uri} permanent
 
 	# handle_path는 접두사를 벗겨 백엔드가 404를 내므로 handle을 쓴다.
 	handle /v1/* {
 		header -X-Upstream
+		log_append upstream {upstream_hostport}
 		import backend
 	}
 
