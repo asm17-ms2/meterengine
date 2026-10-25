@@ -42,6 +42,9 @@ services:
       # 프론트가 쓰는 키와 그 키가 속할 도입사. 백엔드가 기동할 때 없으면 넣는다.
       FRONTEND_API_KEY: ${FRONTEND_API_KEY:?FRONTEND_API_KEY가 없다}
       FRONTEND_ORGANIZATION_ID: ${ORGANIZATION_ID:?ORGANIZATION_ID가 없다}
+      # 메모리 한도가 1792MB보다 작으면 JVM이 SerialGC를 고르므로, 한도가 없던 때와 같은 G1을 지정한다.
+      JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:MaxRAMPercentage=${BACKEND_MAX_RAM_PERCENTAGE:?BACKEND_MAX_RAM_PERCENTAGE가 없다}
+    mem_limit: ${BACKEND_MEM_LIMIT:?BACKEND_MEM_LIMIT가 없다}
     ports:
       # 실행 이미지에 curl과 wget이 없어 healthcheck를 두지 않는다.
       - "127.0.0.1:8080:8080"
