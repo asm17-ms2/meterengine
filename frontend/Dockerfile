@@ -17,8 +17,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-# 백엔드가 없어도 통과해야 한다. 조회 fetch가 전부 cache: "no-store"라 빌드 타임에
-# 나가지 않는다(src/lib/api/client.ts).
+# 백엔드가 없어도 통과해야 한다. 조회 fetch는 cache: "no-store"이거나 searchParams를 읽은
+# 뒤에 나가서 빌드 타임에 나가지 않는다(src/lib/api/client.ts).
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 

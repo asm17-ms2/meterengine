@@ -10,9 +10,9 @@ import { StatusTag } from "@/components/screen/StatusTag";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
-import { listBillableMetrics } from "@/lib/api/billable-metrics";
+import { BILLABLE_METRICS_CACHE_TAG, listBillableMetrics } from "@/lib/api/billable-metrics";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { listCustomers } from "@/lib/api/customers";
+import { CUSTOMERS_CACHE_TAG, listCustomers } from "@/lib/api/customers";
 import { listInvoices } from "@/lib/api/invoices";
 import { formatKoreanMonth } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
@@ -61,12 +61,12 @@ export default async function InvoicesPage({
               month={monthControl}
               customers={
                 capabilities.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
+                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
                   : undefined
               }
               metrics={
                 capabilities.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
+                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
                   : undefined
               }
             />

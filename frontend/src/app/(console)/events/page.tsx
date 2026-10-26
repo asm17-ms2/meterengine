@@ -9,9 +9,9 @@ import { QueryStamp } from "@/components/screen/QueryStamp";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
-import { listBillableMetrics } from "@/lib/api/billable-metrics";
+import { BILLABLE_METRICS_CACHE_TAG, listBillableMetrics } from "@/lib/api/billable-metrics";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { listCustomers } from "@/lib/api/customers";
+import { CUSTOMERS_CACHE_TAG, listCustomers } from "@/lib/api/customers";
 import { listEvents } from "@/lib/api/events";
 import { formatKstStamp } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
@@ -60,12 +60,12 @@ export default async function EventsPage({
               month={{ value: month }}
               customers={
                 capabilities.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
+                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
                   : undefined
               }
               metrics={
                 capabilities.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
+                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
                   : undefined
               }
             />
