@@ -52,8 +52,7 @@ This file provides shared guidance to coding agents working with code in this re
 
 ## 주석
 
-- 주석을 쓰지 않는다. javadoc도 주석이다. 예외는 선언 위의 한 줄 설명(의무 아님)과 설정 파일의 짧은 주석이다. 형식은 `docs/contributing/comments.md`.
-- 주석을 붙이고 싶어지면 이름이나 분리를 고친다.
+- 주석을 쓴다면 한두 줄로 간결하게 쓴다. 자리와 내용은 묻지 않고 TODO도 같다. 형식은 `docs/contributing/comments.md`.
 - **`V__` 마이그레이션은 주석만 고쳐도 체크섬이 바뀌어 적용된 DB의 기동이 실패한다.** 배포 서버의 DB와 로컬 볼륨의 체크섬을 같이 맞춘다. `R__`는 다시 실행된다. CI는 빈 DB라 둘 다 잡지 못한다.
 
 ## OpenAPI 생성물
