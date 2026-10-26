@@ -161,17 +161,20 @@ aws ssm start-session --region ap-northeast-2 \
 
 ## 비밀번호
 
-DB 마스터, exporter, Grafana 비밀번호는 Terraform이 만들고 상태 파일에 남기지 않는다. 값은 Parameter Store에서 본다.
+DB 마스터, exporter, Grafana, 첫 운영자 비밀번호와 프론트 API 키, 암호화 키는 Terraform이 만들고 상태 파일에 남기지 않는다. 값은 Parameter Store에서 본다.
 
 ```bash
 aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/db-password \
   --with-decryption --query Parameter.Value --output text
 ```
 
+- 운영자로 로그인할 때는 `operator-email`(`operator@test-storage.meterengine.com`)과 `operator-password`를 쓴다.
+- **암호화 키는 `password_version`을 올려도 바뀌지 않는다.** 바꾸면 DB에 저장한 암호문을 풀지 못하므로 DB를 새로 만들 때만 `crypto_encryption_key_version`을 올린다.
+
 DB 비밀번호를 바꿀 때는 측정이 없을 때 SUT를 켠 상태에서 한다.
 
 1. `sut/terraform/parameters.tf`의 `password_version`을 하나 올린다.
-2. apply 한다. RDS 마스터와 `db-password`, `db-exporter-password`가 바뀐다.
+2. apply 한다. RDS 마스터와 `db-password`, `db-exporter-password`, `operator-password`, `frontend-api-key`가 바뀐다. 다시 배포하면 백엔드가 새 운영자 비밀번호와 새 프론트 키를 넣고, 옛 키는 폐기되지 않고 남는다.
 3. exporter 비밀번호를 맞추고, 지금 SHA로 다시 배포해 서버의 env 파일을 새 값으로 쓴다.
 
 ```bash

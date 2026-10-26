@@ -106,7 +106,7 @@ EOF
 main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에서 병렬
           -> ECR push (태그 = 커밋 SHA)
           -> deploy: SSM SendCommand -> 서버에서 deploy.sh
-          -> https://meterengine.com/usage 가 200인지 외부에서 확인
+          -> https://meterengine.com/usage 를 리다이렉트까지 따라가 마지막 응답이 200인지 외부에서 확인
 ```
 
 - **IAM 신뢰 정책이 `refs/heads/main` 한정이라 다른 브랜치에서 실행하면 AssumeRole에서 막힌다.** PR 단계에서는 CD를 시험할 수 없다.
@@ -139,6 +139,7 @@ aws ssm send-command \
 4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
    - prometheus.yml도 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+   - Grafana 경보 설정(`alerting.yml`)은 기동할 때만 읽혀 reload API로 다시 읽게 한다. admin 비밀번호가 `grafana-admin-password`와 다르면 여기서 배포가 멈춘다.
 5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
 
@@ -174,6 +175,119 @@ aws ssm send-command \
   --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force <SHA> && ./deploy/deploy.sh <SHA>"
 ```
 
+## DB 백업과 복구
+
+- DB는 RDS `meterengine-db`다. 자동 백업이 있어 보존 기간 안의 어느 시각으로든 새 인스턴스에 복원할 수 있다. 원본은 그대로 남는다.
+- **백업은 DB만 되살린다. `crypto-encryption-key`가 그 시각의 값과 다르면 복원한 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 풀지 못한다.** "암호화 키 맞추기" 참조.
+
+### 설정 확인
+
+```bash
+aws ssm get-parameter --name /meterengine/prod/db-host --query Parameter.Value --output text
+aws rds describe-db-instances --db-instance-identifier meterengine-db \
+  --query 'DBInstances[0].{endpoint:Endpoint.Address,retentionDays:BackupRetentionPeriod,backupWindowUtc:PreferredBackupWindow,latestRestorable:LatestRestorableTime,deletionProtection:DeletionProtection,multiAz:MultiAZ,encrypted:StorageEncrypted,subnetGroup:DBSubnetGroup.DBSubnetGroupName,securityGroups:VpcSecurityGroups[].VpcSecurityGroupId}'
+aws rds describe-db-instance-automated-backups --db-instance-identifier meterengine-db \
+  --query 'DBInstanceAutomatedBackups[0].RestoreWindow'
+aws rds describe-db-snapshots --db-instance-identifier meterengine-db --snapshot-type manual \
+  --query 'DBSnapshots[].[DBSnapshotIdentifier,SnapshotCreateTime,Status]' --output text
+```
+
+- `endpoint`가 `db-host` 값과 같아야 한다.
+- 보존 기간은 7일 이상, 삭제 방지와 암호화는 켜져 있어야 한다.
+- 보존 기간을 바꾸는 명령이다. **0에서 양수로, 양수에서 0으로 바꾸면 DB가 멈춘다.** 양수끼리 바꾸면 멈추지 않는다.
+
+```bash
+aws rds modify-db-instance --db-instance-identifier meterengine-db --backup-retention-period <일수> --apply-immediately
+aws rds modify-db-instance --db-instance-identifier meterengine-db --deletion-protection
+```
+
+### 위험한 배포 전 스냅숏
+
+- 인증 방식처럼 되돌리기 어려운 변경이나 데이터의 뜻을 바꾸는 마이그레이션을 배포하기 직전에 찍는다.
+- 수동 스냅숏은 보존 기간이 지나도 지울 때까지 남는다.
+
+```bash
+aws rds create-db-snapshot --db-instance-identifier meterengine-db \
+  --db-snapshot-identifier meterengine-db-before-<설명>-<YYYYMMDD>
+aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-before-<설명>-<YYYYMMDD>
+```
+
+### 복원
+
+1. 새 인스턴스로 복원한다. 시각은 UTC다. 가장 최근으로 되살리려면 `--restore-time` 대신 `--use-latest-restorable-time`을 준다.
+   - **서브넷 그룹과 보안 그룹을 원본과 같게 준다.** 빠뜨리면 기본 보안 그룹이 붙어 서버에서 붙지 못한다.
+
+```bash
+aws rds restore-db-instance-to-point-in-time \
+  --source-db-instance-identifier meterengine-db \
+  --target-db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
+  --restore-time <YYYY-MM-DDTHH:MM:SSZ> \
+  --db-subnet-group-name meterengine-rds-subnet-private \
+  --vpc-security-group-ids sg-068a54ab4cfa91730 \
+  --no-publicly-accessible --no-multi-az
+```
+
+   - 스냅숏에서 되살릴 때는 위 명령 대신 아래 명령을 쓴다. 시각 옵션이 없고 새 인스턴스 이름은 `--db-instance-identifier`로 준다.
+
+```bash
+aws rds restore-db-instance-from-db-snapshot \
+  --db-snapshot-identifier meterengine-db-before-<설명>-<YYYYMMDD> \
+  --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
+  --db-subnet-group-name meterengine-rds-subnet-private \
+  --vpc-security-group-ids sg-068a54ab4cfa91730 \
+  --no-publicly-accessible --no-multi-az
+```
+
+   - 어느 쪽이든 쓸 수 있게 될 때까지 기다린 뒤 엔드포인트를 본다.
+
+```bash
+aws rds wait db-instance-available --db-instance-identifier meterengine-db-restore-<YYYYMMDD>
+aws rds describe-db-instances --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
+  --query 'DBInstances[0].Endpoint.Address' --output text
+```
+
+2. 서버에 붙어 `sudo -i` 한 뒤 복원본을 읽어 본다. 마지막으로 적용된 마이그레이션 버전과 주요 표의 행 수가 원하는 시각의 것인지 본다.
+
+```bash
+RESTORED=<복원본 엔드포인트>
+export PGPASSWORD=$(grep '^DB_PASSWORD=' /etc/meterengine/prod.env | cut -d= -f2-)
+DB_NAME=$(grep '^DB_NAME=' /etc/meterengine/prod.env | cut -d= -f2-)
+DB_USERNAME=$(grep '^DB_USERNAME=' /etc/meterengine/prod.env | cut -d= -f2-)
+docker run --rm -e PGPASSWORD postgres:18 psql \
+  "host=$RESTORED port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require" -At \
+  -c 'SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1' \
+  -c 'SELECT count(*) FROM organization' \
+  -c 'SELECT count(*) FROM invoice' \
+  -c 'SELECT count(*) FROM payment_attempt'
+```
+
+3. 배포할 SHA를 정한다. 지금 SHA를 다시 배포하면 복원본보다 새 마이그레이션이 기동 때 다시 적용된다. 그 마이그레이션 때문에 복원했다면 복원본의 마지막 버전까지만 가진 이전 SHA를 배포한다.
+4. 복원 시각 뒤에 암호화 키를 바꿨으면 그 시각의 키로 되돌린다("암호화 키 맞추기").
+5. `db-host`를 복원본으로 바꾸고 3에서 정한 SHA로 다시 배포한다("롤백"의 Actions나 서버 명령). 배포 로그의 `DB:` 줄이 복원본인지 본다.
+
+```bash
+aws ssm put-parameter --name /meterengine/prod/db-host --type String --overwrite --value <복원본 엔드포인트>
+aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> --deletion-protection
+```
+
+- 원본 인스턴스는 바로 지우지 않는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
+
+### 암호화 키 맞추기
+
+- 키는 바꾸지 않는 것이 원칙이다. 이력은 값을 찍지 않고 버전과 시각만 본다.
+
+```bash
+aws ssm get-parameter-history --name /meterengine/prod/crypto-encryption-key \
+  --query 'Parameters[].[Version,LastModifiedDate]' --output text
+```
+
+- 복원 시각에 쓰던 버전으로 되돌린다. 값을 화면에 찍지 않는다.
+
+```bash
+aws ssm put-parameter --name /meterengine/prod/crypto-encryption-key --type SecureString --overwrite \
+  --value "$(aws ssm get-parameter --name /meterengine/prod/crypto-encryption-key:<버전> --with-decryption --query Parameter.Value --output text)"
+```
+
 ## 서버 접속
 
 SSH 키와 22번 포트가 없어 SSM으로만 붙는다.
@@ -206,10 +320,14 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `db-username` | String | 백엔드 datasource |
 | `db-password` | SecureString | 백엔드 datasource. 배포 때 KMS로 복호화한다 |
 | `db-exporter-password` | SecureString | postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
-| `organization-id` | String | 프론트가 조회할 도입사 |
+| `organization-id` | String | 프론트가 조회할 도입사. 프론트 API 키도 이 도입사에 속한다 |
 | `organization-name` | String | 프론트 상단 바에 표시할 이름 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
+| `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
+| `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
+| `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
+| `frontend-api-key` | SecureString | 프론트가 백엔드를 부를 때 쓰는 API 키 원문. 백엔드가 기동할 때 없으면 넣는다 |
 
 - 새 파라미터를 등록한다.
 
@@ -217,6 +335,25 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 aws ssm put-parameter --name /meterengine/prod/<이름> --type String --value '<값>'
 aws ssm put-parameter --name /meterengine/prod/<이름> --type SecureString --value '<값>'
 ```
+
+- 값을 만들어야 하는 비밀값은 아래 명령으로 등록한다. 값을 화면에 찍지 않는다.
+
+```bash
+aws ssm put-parameter --name /meterengine/prod/crypto-encryption-key --type SecureString \
+  --value "$(openssl rand -base64 32)"
+aws ssm put-parameter --name /meterengine/prod/operator-password --type SecureString \
+  --value "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
+aws ssm put-parameter --name /meterengine/prod/frontend-api-key --type SecureString \
+  --value "me_live_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
+```
+
+- 운영자로 로그인할 때 비밀번호는 Parameter Store에서 본다.
+
+```bash
+aws ssm get-parameter --name /meterengine/prod/operator-password --with-decryption --query Parameter.Value --output text
+```
+
+- test-slo와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.
 
 - 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
@@ -249,7 +386,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
-4. MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
+4. MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표, MeterEngine 결제와 예약 작업은 결제, 웹훅 발송, 예약 작업 지표다.
 
 ### 경보
 
@@ -261,6 +398,15 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | 백엔드 헬스체크 실패 | `up{job="backend"} == 0` 3분 지속 | scrape 자체가 실패. 프로세스 다운이나 응답 불능 |
 | 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
 | CPU 사용률 초과 | 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
+| 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
+| 예약 작업 미실행 | 마지막 성공 뒤 5분(30초, 1분 주기), 30분(10분 주기), 25시간(하루 주기) | 작업이 멈췄거나 계속 실패한다. 한 번도 실행되지 않은 작업은 잡지 못한다 |
+| 결제 결과 모름 미해결 | 확정 작업 뒤에도 결과를 모르는 결제 > 0, 10분 지속 | 고객이 돈을 냈는지 모른다 |
+| 결제 재시도 소진 | 1시간 안에 재시도 상한까지 실패한 인보이스 > 0 | 자동 청구가 멈췄다. 고객에게 연락해야 한다 |
+| 결제 대사 불일치 | 1시간 안에 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |
+| 웹훅 전송 실패 | 15분 안에 재시도 상한까지 실패한 웹훅 > 0 | 도입사가 이벤트를 받지 못했다 |
+
+- 예약 작업 경보는 결제, 웹훅 발송, 청구 제외 통보 작업만 본다.
+- 결제 경보는 테스트 모드 결제에서도 울리고 `mode` 라벨로 구분한다.
 
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
