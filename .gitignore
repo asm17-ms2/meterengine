@@ -16,6 +16,9 @@
 
 node_modules/
 
+# deploy.sh가 서버에서 배포마다 쓴다
+/deploy/caddy/upstreams.caddy
+
 # 개인 공간과 개인 지침 (커밋하지 않음)
 /work
 /CLAUDE.local.md

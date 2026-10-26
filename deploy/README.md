@@ -7,12 +7,15 @@
 지금 띄운 서버는 개발 서버 하나이고 운영 서버는 없다.
 
 ```
-인터넷 --443--> [Caddy] --/v1/*----> [backend:8080] --> RDS PostgreSQL
-                   |     \--그 외--> [frontend:3000]
-                   |                       |
-              인증서 자동 발급    (서버사이드로 backend:8080 직접 호출)
+인터넷 --443--> [Caddy] --/v1/*----> [backend-blue:8080 | backend-green:8080] --> RDS PostgreSQL
+                 |   ^ \              (deploy.sh가 정한 색으로 보낸다)
+                 |   |  \--그 외--> [frontend:3000]
+                 |   |                     |
+                 |   \------:8081---------/  (서버사이드 호출도 Caddy를 거쳐 백엔드로)
+            인증서 자동 발급
 
-[Prometheus] --scrape--> backend:8080/actuator/prometheus, node-exporter:9100,
+[Prometheus] --scrape--> backend-blue:8080, backend-green:8080, backend:8080 (블루그린 이전 이름, 첫 전환 배포용)의
+             /actuator/prometheus, node-exporter:9100,
              postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch)
      ^
 [Grafana:3001(127.0.0.1)] --경보--> Slack
@@ -26,13 +29,16 @@
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
-- `8080`, `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다.
+- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`과 Caddy 내부 사이트 `8081`은 compose 네트워크 안에서만 닿는다.
 - compose 프로젝트 이름은 `meterengine-prod`다.
+- 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
+- 마지막으로 성공한 배포의 색과 SHA는 `/etc/meterengine/deploy-state`에 `LIVE_COLOR`, `LIVE_SHA`로 남는다.
+- Caddy가 보낼 백엔드 목록은 `deploy.sh`가 배포마다 `deploy/caddy/upstreams.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 배포 스택 정의. Caddy, backend, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
-| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 백엔드, 나머지는 프론트엔드 |
+| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
+| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
 | `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
@@ -91,9 +97,11 @@ EOF
 - 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
 
 ```
-[deploy] 측정 시작 <epoch ms> backend=<백엔드 컨테이너 ID>
-[deploy] 측정 끝 <epoch ms> backend=<백엔드 컨테이너 ID> 종료=<종료 코드>
+[deploy] 측정 시작 <epoch ms> backend=legacy:<ID 또는 없음>,blue:<ID 또는 없음>,green:<ID 또는 없음>
+[deploy] 측정 끝 <epoch ms> backend=legacy:<ID 또는 없음>,blue:<ID 또는 없음>,green:<ID 또는 없음> 종료=<종료 코드>
 ```
+
+- ID는 그 순간 실행 중인 컨테이너만 적는다. `legacy`는 블루그린 이전의 `backend` 서비스다.
 
 - 메모리 크기가 개발 서버(4GiB)와 다른 서버는 `deploy.conf`에 백엔드 메모리 한도도 적는다.
   - `BACKEND_MEM_LIMIT`: 백엔드 컨테이너의 메모리 한도. 기본 `768m`.
@@ -125,6 +133,8 @@ main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에�
 (exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <git-sha>)
 ```
 
+- 두 번째 인자로 체크아웃할 git ref를 따로 줄 수 있다. 그때는 앞의 `git checkout`에도 그 ref를 준다. 주지 않으면 이미지와 같은 SHA로 맞춘다.
+
 - 서버 밖에서 한 번에 실행한다.
 
 ```bash
@@ -137,20 +147,56 @@ aws ssm send-command \
 
 - `deploy.sh`가 하는 일의 순서다.
 
-1. `/opt/meterengine`을 그 커밋으로 맞춘다.
-2. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600).
-3. ECR에 로그인하고 그 SHA 태그의 이미지를 받는다.
-4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 다시 읽게 한다.
+1. Caddy 컨테이너 안에서 도는 색의 `/actuator/health/readiness`를 1초 간격으로 세 번까지 묻고 대상 색을 정한다.
+   - 한 색만 돌면 반대 색이 대상이다. 도는 색이 UP이 아니어도 다시 만들지 않고 경고만 남긴다.
+   - 두 색이 다 돌면 UP이 아닌 색이 대상이다. 둘 다 UP이면 Caddy 내부 사이트 `:8081` 응답의 `X-Upstream`이 가리키는 색을 살리고, 그 색을 알 수 없으면 기록 파일의 색(파일이 없으면 블루)을 살린다. 둘 다 UP이 아니면 블루가 대상이다.
+   - 둘 다 돌지 않으면 블루가 대상이다.
+2. `/opt/meterengine`을 그 커밋(두 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
+   - 목록은 돌고 있는 반대 색과 블루그린 이전 `backend`다. 그중 UP인 색도 `backend`도 없으면 대상 색을 더한다.
+3. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 대상 색의 태그는 새 SHA, 돌고 있는 반대 색의 태그는 지금 이미지의 태그다.
+4. ECR에 로그인하고 백엔드가 아닌 서비스와 대상 색의 이미지만 받은 뒤, 백엔드가 아닌 서비스를 `up -d`로 올리고(orphan은 지우지 않는다) 대상 색을 띄운다. 이어 Caddy 설정을 reload 한다.
+   - 돌고 있는 반대 색은 받지도 다시 만들지도 않는다. 그 태그가 ECR에서 지워졌어도 배포가 막히지 않는다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
-   - prometheus.yml도 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
-   - 경보 파일도 같다. `docker compose -p meterengine-prod exec grafana sh -c 'curl -fsS -X POST -u "admin:$GF_SECURITY_ADMIN_PASSWORD" http://localhost:3000/api/admin/provisioning/alerting/reload'`로 다시 읽게 한다.
-5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
-6. 336시간보다 오래된 이미지를 정리한다.
-7. Grafana 경보 설정(`alerting.yml`)은 기동할 때만 읽혀 reload API로 다시 읽게 한다. admin 비밀번호가 `grafana-admin-password`와 다르면 401을 받고 0이 아닌 코드로 끝난다. 이때 앱은 이미 새 버전으로 떠 있고 5의 확인도 끝났다. CD는 배포를 실패로 기록하되 외부 확인은 그대로 돈다. 비밀번호를 맞춘 뒤 다시 배포한다.
+5. 대상 색의 `/actuator/health`(DB 포함)가 UP인지 최대 90초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
+6. Prometheus 설정을 다시 읽게 한다.
+   - prometheus.yml도 Caddyfile과 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+7. 백엔드 목록을 대상 색 하나로 바꾸고 Caddy를 reload 한다. 새 요청은 대상 색으로 가고, 반대 색이 받던 요청은 마저 끝난다. 이어 내부 사이트 `:8081`의 응답 헤더 `X-Upstream`이 대상 색인지 최대 60초 확인한다.
+8. 5초(Caddyfile의 `lb_try_duration`) 기다린 뒤 돌고 있던 반대 색을 `stop`으로 멈춘다. 지우지 않아 그 이미지가 정리되지 않는다. 블루그린 이전 `backend` 컨테이너가 있으면 이때 지운다.
+9. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
+10. 336시간보다 오래된 이미지를 정리한다.
+11. Grafana 경보 설정을 다시 읽게 한다. 앱 확인은 이미 끝난 상태다. 401이면 관리자 비밀번호와 `grafana-admin-password`가 일치하는지 확인하고, 다른 오류면 `alerting.yml`과 Grafana 로그를 본다. 이 단계가 실패해도 새 백엔드는 남고 CD의 외부 확인은 실행된다.
+12. 마지막으로 배포 기록 파일을 쓴다.
+
+- 어느 단계든 실패하면 컨테이너 로그나 실패 줄을 찍고 0이 아닌 코드로 끝난다.
+- 실패 정리에서는 기존 백엔드의 현재 readiness와 Caddy 경유 응답을 확인한 뒤 대상 색을 지운다. 기존 백엔드가 응답하지 않거나 복귀를 확인하지 못하면 새 색을 남기고, 새 색이 정상이면 Caddy도 새 색으로 돌린다. 8단계부터는 대상 색을 지우지 않는다.
+- 대상 색은 7단계부터 요청을 받는다. 받고 있는 백엔드가 없던 배포만 2단계 목록에 대상 색이 들어가, readiness를 통과한 순간부터 받는다.
+- `deploy.sh`는 한 번에 하나만 돈다. 앞 배포가 돌고 있으면(`/etc/meterengine/deploy-command.lock`) 바로 실패한다. CD가 기다리다 포기해도 서버의 앞 배포는 끝까지 돈다.
+
+### 첫 전환 배포
+
+블루그린 이전 구성(백엔드 서비스 이름 `backend`)인 서버에 이 구성을 처음 배포할 때다.
+
+- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. prometheus.yml의 `backend:8080`은 이 전환을 위해 남겨 둔 것이다.
+- 프론트엔드는 이 배포에서 백엔드 주소가 `http://caddy:8081`로 바뀌어 다시 만들어진다. 곧이어 Caddy가 reload 될 때까지 몇 초 동안 화면이 백엔드를 부르지 못할 수 있다. 수집 API는 영향이 없다.
+- 개발 서버의 첫 전환 배포는 머지 직전부터 CD가 끝날 때까지 로컬 터미널에서 아래 루프를 돌려 200이 아닌 응답을 센다. 조회 권한이 있는 API 키를 사용한다.
+
+```bash
+URL=https://meterengine.com/v1/billable-metric-prices
+API_KEY='<조회용 API 키>'
+while :; do
+	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Authorization: Bearer $API_KEY" "$URL")
+	printf '%s %s\n' "$(date +%T)" "$code"
+	sleep 0.2
+done | tee first-switch.log
+```
+
+- CD가 끝나면 Ctrl-C로 멈추고 `grep -vc ' 200$' first-switch.log`로 센다. 0이 아니면 그 시각의 `deploy.sh` 로그와 Caddy 로그를 본다.
 
 ## 롤백
 
 - 이미지 태그가 커밋 SHA라 롤백은 이전 SHA로 다시 배포하는 것이다. 그 이미지는 ECR에 이미 있어 빌드가 필요 없다.
+- 롤백도 배포와 같은 블루그린 순서로 돈다. 멈춰 둔 색이 그 SHA의 이미지를 쥐고 있으면 서버에 남아 있고, 없으면 ECR에서 받는다.
+- **블루그린 이전 SHA로 되돌리면 그 시점의 `deploy.sh`가 돌아 한 번 끊긴다.** 옛 스크립트가 블루와 그린을 orphan으로 지우고 `backend`를 띄운다. 그 뒤의 블루그린 배포는 첫 전환 배포처럼 다시 시작한다.
 - **DB 마이그레이션은 되돌아가지 않는다. Flyway는 앞으로만 간다.** 스키마를 바꾼 배포를 되돌리면 옛 코드가 새 스키마 위에서 도는 상태가 된다.
 
 ### 되돌릴 SHA 찾기
@@ -225,7 +271,11 @@ aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-befor
 - 원본이 살아 있는 채로 되돌린다면 1 전에 서버에 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
 
 ```bash
-docker compose -p meterengine-prod stop backend
+for service in backend backend-blue backend-green; do
+  for id in $(docker ps -q --filter label=com.docker.compose.project=meterengine-prod --filter "label=com.docker.compose.service=$service"); do
+    docker stop -t 35 "$id"
+  done
+done
 ```
 
 - 가장 최근으로 되살릴 때는 멈춘 뒤 "설정 확인"의 `latestRestorable`이 멈춘 시각보다 뒤가 될 때까지 기다렸다가 1을 한다. 복원 가능 시각은 몇 분 늦게 따라온다.
@@ -443,13 +493,21 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 docker compose -p meterengine-prod ps
 
 # 로그 (컨테이너당 30MB까지만 보관한다)
-docker compose -p meterengine-prod logs -f backend
+docker compose -p meterengine-prod logs -f backend-blue backend-green
 docker compose -p meterengine-prod logs --tail 100 caddy
 
+# 마지막으로 성공한 배포의 색과 지금 Caddy가 보내는 백엔드 목록
+cat /etc/meterengine/deploy-state
+cat /opt/meterengine/deploy/caddy/upstreams.caddy
+
 # 서버 안에서 직접 두드리기. /actuator/*는 Caddy가 노출하지 않아 인터넷에서는 404다
-curl -s http://127.0.0.1:8080/actuator/health
+docker compose -p meterengine-prod exec caddy wget -qO- http://backend-blue:8080/actuator/health
+docker compose -p meterengine-prod exec caddy wget -qO- http://backend-green:8080/actuator/health
 curl -sI http://127.0.0.1:3000/usage
 ```
+
+- 배포가 돌고 있지 않은데 블루와 그린이 함께 떠 있으면 Caddy가 보내지 않는 색을 멈춘다. 보내는 색은 `docker compose -p meterengine-prod exec caddy wget -S -qO /dev/null -T 3 http://localhost:8081/actuator/health/readiness 2>&1 | grep X-Upstream`으로 보고, 다른 색을 `docker compose -p meterengine-prod stop backend-<색>`으로 멈춘다.
+  - 멈출 색이 `upstreams.caddy`에 있으면 먼저 그 색을 뺀 목록(예: `to backend-blue:8080`)을 쓰고 Caddy를 reload 하고 5초 기다린 뒤 멈춘다. 목록에 둔 채 멈추면 그 색으로 가던 요청 일부가 실패한다.
 
 - compose 명령을 파일 경로로 직접 부를 때는 `--env-file`이 반드시 필요하다.
 
