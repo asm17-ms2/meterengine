@@ -1,8 +1,9 @@
 "use client";
 
+import { Flex, Typography } from "antd";
 import { usePathname, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
+import { LinkButton } from "@/components/screen/LinkButton";
 import {
   DEV_STATES,
   DEV_STATE_LABELS,
@@ -26,21 +27,25 @@ export function DevStateSwitch() {
   }
 
   return (
-    <div className="dev-switch">
-      <span className="dev-switch__label">데모 - 표 상태</span>
-      <div className="dev-switch__options">
-        {DEV_STATES.map((state) => (
-          <Link
-            key={state}
-            href={buildHref(state)}
-            className="dev-switch__btn"
-            aria-current={currentState === state ? "true" : undefined}
-            replace
-          >
-            {DEV_STATE_LABELS[state]}
-          </Link>
-        ))}
-      </div>
-    </div>
+    <Flex vertical gap="small" style={{ padding: 16 }}>
+      <Typography.Text type="secondary">데모 - 표 상태</Typography.Text>
+      <Flex gap="small" wrap>
+        {DEV_STATES.map((state) => {
+          const isCurrent = currentState === state;
+          return (
+            <LinkButton
+              key={state}
+              replace
+              size="small"
+              type={isCurrent ? "primary" : "default"}
+              aria-current={isCurrent ? "true" : undefined}
+              href={buildHref(state)}
+            >
+              {DEV_STATE_LABELS[state]}
+            </LinkButton>
+          );
+        })}
+      </Flex>
+    </Flex>
   );
 }

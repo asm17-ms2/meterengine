@@ -3,14 +3,18 @@ import { Suspense } from "react";
 import { EventsMeta } from "@/components/events/EventsMeta";
 import { EventsSection } from "@/components/events/EventsSection";
 import { FilterBar } from "@/components/screen/FilterBar";
-import { MonthSelect } from "@/components/screen/MonthSelect";
+import { ListControls } from "@/components/screen/ListControls";
+import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { QueryStamp } from "@/components/screen/QueryStamp";
+import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
-import { listEvents, readPage } from "@/lib/api/events";
-import { isDevStateEnabled, readDevState, type DevState } from "@/lib/dev-state";
+import { listBillableMetrics } from "@/lib/api/billable-metrics";
+import { CAPABILITIES } from "@/lib/api/capabilities";
+import { listCustomers } from "@/lib/api/customers";
+import { listEvents } from "@/lib/api/events";
 import { formatKstStamp } from "@/lib/format";
-import { buildMonthOptionsFor, readMonth } from "@/lib/month";
+import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -20,12 +24,11 @@ export default async function EventsPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const month = readMonth(params.month);
-  const page = readPage(params.page);
-  const devState = readDevState(params.state);
+  const capabilities = CAPABILITIES.listEvents;
+  const query = readListQuery(params, capabilities, { hasMonth: true });
+  const { month, devState } = query;
 
-  const events =
-    devState === "loading" ? null : listEvents({ month, page }, devState);
+  const events = devState === "loading" ? null : listEvents(query, devState);
 
   return (
     <>
@@ -37,29 +40,46 @@ export default async function EventsPage({
         ) : null}
       </ScreenHeader>
 
-      <FilterBar>
-        <MonthSelect value={month} options={buildMonthOptionsFor(month)} />
-        <QueryStamp text={formatKstStamp(new Date())} />
-      </FilterBar>
+      <ScreenCard>
+        <FilterBar end={<QueryStamp text={formatKstStamp(new Date())} />}>
+          <Suspense
+            fallback={
+              <ListControls
+                query={query}
+                capabilities={capabilities}
+                month={{ value: month }}
+                customers={[]}
+                eventTypes={[]}
+                isLoadingOptions
+              />
+            }
+          >
+            <ListControlsLoader
+              query={query}
+              capabilities={capabilities}
+              month={{ value: month }}
+              customers={
+                capabilities.customer_id
+                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
+                  : undefined
+              }
+              metrics={
+                capabilities.type
+                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
+                  : undefined
+              }
+            />
+          </Suspense>
+        </FilterBar>
 
-      {events ? (
-        <Suspense fallback={<TableSkeleton />}>
-          <EventsSection
-            events={events}
-            month={month}
-            buildHref={(targetPage) => buildEventsHref(month, targetPage, devState)}
-          />
-        </Suspense>
-      ) : (
-        <TableSkeleton />
-      )}
+        {events ? (
+          <Suspense fallback={<TableSkeleton />}>
+            <EventsSection events={events} query={query} />
+          </Suspense>
+        ) : (
+          <TableSkeleton />
+        )}
+      </ScreenCard>
     </>
   );
-}
-
-function buildEventsHref(month: string, page: number, devState: DevState): string {
-  const params = new URLSearchParams({ month });
-  if (page > 0) params.set("page", String(page));
-  if (isDevStateEnabled && devState !== "normal") params.set("state", devState);
-  return `/events?${params.toString()}`;
 }

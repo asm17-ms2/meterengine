@@ -1,16 +1,40 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { CloseOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Form, Input, type InputRef, Modal, theme } from "antd";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { createPriceRateAction } from "@/app/(console)/billable-metric-prices/actions";
 import {
   PRICE_RATE_FORM_IDLE,
   type BillableMetricPriceRowView,
 } from "@/app/(console)/billable-metric-prices/state";
-import { Dialog } from "@/components/screen/Dialog";
+import { alertIcon } from "@/components/screen/alert-icon";
+import { EnterSubmitButton } from "@/components/screen/EnterSubmitButton";
+import { clearFieldErrors } from "@/components/screen/form-errors";
+import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { ScreenNote } from "@/components/screen/ScreenNote";
+import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
-const UNIT_PRICE_FIELD = "unit_price";
-const MONO_INPUT_STYLE = { fontFamily: "var(--mono)", fontSize: 13 } as const;
+type PriceRateFormValues = {
+  dimensionValues?: Record<string, string>;
+  unitPrice: string;
+};
+
+function toPriceRateFormData(
+  code: string,
+  dimensionProperties: string[],
+  values: PriceRateFormValues,
+): FormData {
+  const formData = new FormData();
+  formData.set("code", code);
+  for (const dimensionProperty of dimensionProperties) {
+    formData.append("dimension_key", dimensionProperty);
+    formData.append("dimension_value", values.dimensionValues?.[dimensionProperty] ?? "");
+  }
+  formData.set("unit_price", values.unitPrice ?? "");
+  return formData;
+}
 
 export function PriceRateFormDialog({
   billableMetricPrice,
@@ -20,73 +44,98 @@ export function PriceRateFormDialog({
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState(createPriceRateAction, PRICE_RATE_FORM_IDLE);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const { dimensionProperties } = billableMetricPrice;
+  const [form] = Form.useForm<PriceRateFormValues>();
+  const { message } = App.useApp();
+  const { token } = theme.useToken();
+  const firstFieldRef = useRef<InputRef>(null);
+  const [dismissedState, setDismissedState] = useState<typeof state | null>(null);
+  const dismissFailed = () => setDismissedState(state);
+  const { code, name, dimensionProperties } = billableMetricPrice;
+  const monoStyle = { fontFamily: token.fontFamilyCode };
+
+  useInitialFocus(firstFieldRef);
 
   useEffect(() => {
-    if (state.status === "done") onClose();
-  }, [state, onClose]);
+    if (state.status === "done") {
+      message.success("등록했습니다");
+      onClose();
+    }
+  }, [state, message, onClose]);
 
-  const buildInputProps = (field: string, autoFocus: boolean) => ({
-    className: "input",
-    value: values[field] ?? "",
-    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-      setValues((prev) => ({ ...prev, [field]: event.target.value })),
-    autoComplete: "off",
-    disabled: isPending,
-    autoFocus,
-    style: MONO_INPUT_STYLE,
-  });
+  const submit = (values: PriceRateFormValues) => {
+    clearFieldErrors(form);
+    startTransition(() => formAction(toPriceRateFormData(code, dimensionProperties, values)));
+  };
 
   return (
-    <Dialog
-      labelledBy="price-rate-form-title"
-      onClose={isPending ? undefined : onClose}
-      action={formAction}
-    >
-      <div className="dialog-title" id="price-rate-form-title">{billableMetricPrice.name} 단가 등록</div>
-      <input type="hidden" name="code" value={billableMetricPrice.code} />
-
-      {dimensionProperties.map((dimensionProperty, index) => (
-        <div key={dimensionProperty} className="field">
-          <label htmlFor={`price-rate-dimension-${dimensionProperty}`}>{dimensionProperty} 값</label>
-          <input type="hidden" name="dimension_key" value={dimensionProperty} />
-          <input
-            id={`price-rate-dimension-${dimensionProperty}`}
-            name="dimension_value"
-            placeholder="claude-opus-5"
-            {...buildInputProps(dimensionProperty, index === 0)}
-          />
-        </div>
-      ))}
-
-      <div className="field">
-        <label htmlFor="price-rate-unit-price">단가 (원)</label>
-        <input
-          id="price-rate-unit-price"
-          name={UNIT_PRICE_FIELD}
-          placeholder="0.5"
-          inputMode="decimal"
-          {...buildInputProps(UNIT_PRICE_FIELD, dimensionProperties.length === 0)}
-        />
-      </div>
-
-      <p className="screen-note" style={{ paddingTop: 4, borderTop: "1px solid var(--color-divider)" }}>
-        같은 조합의 단가가 이미 있으면 새 단가로 덮어씁니다.
-      </p>
-
-      {state.status === "failed" ? (
-        <p role="alert" style={{ margin: 0, fontSize: 12.5, color: "var(--color-accent-700)" }}>{state.message}</p>
-      ) : null}
-
-      <div className="dialog-actions">
-        <button type="button" className="btn btn-secondary" disabled={isPending} onClick={onClose}>
+    <Modal
+      open
+      forceRender
+      width={MODAL_WIDTH}
+      title={`${name} 단가 등록`}
+      onCancel={isPending ? undefined : onClose}
+      keyboard={!isPending}
+      mask={{ closable: !isPending }}
+      closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
+      footer={[
+        <Button key="cancel" disabled={isPending} onClick={onClose}>
           취소
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
+        </Button>,
+        <Button key="submit" type="primary" loading={isPending} onClick={() => form.submit()}>
           {isPending ? "등록 중..." : "등록"}
-        </button>
-      </div>
-    </Dialog>
+        </Button>,
+      ]}
+    >
+      <Form<PriceRateFormValues>
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        disabled={isPending}
+        onFinish={submit}
+        onValuesChange={dismissFailed}
+        onFinishFailed={dismissFailed}
+        initialValues={{ unitPrice: "" }}
+      >
+        {dimensionProperties.map((dimensionProperty, index) => (
+          <Form.Item
+            key={dimensionProperty}
+            name={["dimensionValues", dimensionProperty]}
+            label={`${dimensionProperty} 값`}
+            rules={[{ required: true, whitespace: true, message: "차원 키마다 값을 입력하세요." }]}
+          >
+            <Input
+              ref={index === 0 ? firstFieldRef : undefined}
+              placeholder="claude-opus-5"
+              autoComplete="off"
+              style={monoStyle}
+            />
+          </Form.Item>
+        ))}
+        <Form.Item
+          name="unitPrice"
+          label="단가 (원)"
+          rules={[{ required: true, whitespace: true, message: "단가를 입력하세요." }]}
+        >
+          <Input
+            ref={dimensionProperties.length === 0 ? firstFieldRef : undefined}
+            inputMode="decimal"
+            placeholder="0.5"
+            autoComplete="off"
+            style={monoStyle}
+          />
+        </Form.Item>
+        <EnterSubmitButton disabled={isPending} />
+      </Form>
+      <ScreenNote>같은 조합의 단가가 이미 있으면 새 단가로 덮어씁니다.</ScreenNote>
+      {state.status === "failed" && state !== dismissedState ? (
+        <Alert
+          type="error"
+          showIcon
+          icon={alertIcon("error")}
+          title={state.message}
+          style={{ marginTop: token.margin }}
+        />
+      ) : null}
+    </Modal>
   );
 }

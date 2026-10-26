@@ -1,27 +1,19 @@
 "use client";
 
+import { Button, Flex } from "antd";
+
 import { useCollapse } from "@/components/table/CollapseProvider";
 
 export function ExpandControls() {
   const { expandAll, collapseAll } = useCollapse();
   return (
-    <div className="filter-bar__actions">
-      <button
-        type="button"
-        className="btn btn-ghost"
-        style={{ fontSize: 12.5 }}
-        onClick={expandAll}
-      >
+    <Flex gap="small">
+      <Button size="small" onClick={expandAll}>
         모두 펼치기
-      </button>
-      <button
-        type="button"
-        className="btn btn-ghost"
-        style={{ fontSize: 12.5 }}
-        onClick={collapseAll}
-      >
+      </Button>
+      <Button size="small" onClick={collapseAll}>
         모두 접기
-      </button>
-    </div>
+      </Button>
+    </Flex>
   );
 }

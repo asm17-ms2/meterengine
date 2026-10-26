@@ -1,13 +1,19 @@
 "use client";
 
-import { useCollapse } from "@/components/table/CollapseProvider";
-import { countDimensionSlots, DimensionValuesCell } from "@/components/table/DimensionValuesCell";
-import { GridCell } from "@/components/table/GridCell";
-import { GridHead } from "@/components/table/GridHead";
-import { GridRow } from "@/components/table/GridRow";
-import { GridTable } from "@/components/table/GridTable";
-import { MeterGroupRow } from "@/components/table/MeterGroupRow";
+import { Table, Typography } from "antd";
+import { useMemo } from "react";
+
+import { useExpandedRowKeys } from "@/components/table/CollapseProvider";
+import { CustomerLabel } from "@/components/table/CustomerLabel";
+import { labeledExpandIcon } from "@/components/table/ExpandIcon";
+import { countDimensionSlots, DimensionValues } from "@/components/table/DimensionValues";
 import { MeterLabel } from "@/components/table/MeterLabel";
+import { NumberText } from "@/components/table/NumberText";
+import { koreanCompare, TABLE_STICKY } from "@/components/table/table-defaults";
+import { useTableSort, type SortableColumn } from "@/components/table/table-sort";
+import type { ListCapabilities } from "@/lib/api/capabilities";
+import { toMeterRows, type MeterRow } from "@/lib/grouped-rows";
+import type { ListQuery } from "@/lib/list-query";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type UsageGroupView = {
@@ -23,112 +29,146 @@ export type UsageLineView = {
   quantity: string;
 };
 
-const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 200px";
-const MIN_WIDTH = 760;
+type CustomerRow = {
+  kind: "customer";
+  key: string;
+  customerId: string;
+  customerName: string;
+  lineCount: number;
+  isCollapsedByDefault: false;
+  children?: MeterRow<UsageLineView>[];
+};
 
-const HEAD_LABELS = ["고객 / 미터", "조합", { label: "집계 수량", right: true }] as const;
+type UsageRow = CustomerRow | MeterRow<UsageLineView>;
 
-export function UsageTable({ groups }: { groups: UsageGroupView[] }) {
-  const { isCollapsed, toggle } = useCollapse();
-  const slotCount = countDimensionSlots(
-    groups.flatMap((group) => linesOf(group.items).map((line) => line.dimensionValues)),
-  );
+const TABLE_SCROLL = { x: 760 };
 
-  return (
-    <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
-      {groups.map((group) => {
-        const isGroupCollapsed = isCollapsed(group.customerId);
-        return (
-          <div key={group.customerId}>
-            <button
-              type="button"
-              className="grid-row grid-row--clickable grid-row--group"
-              style={{ gridTemplateColumns: COLUMNS }}
-              aria-expanded={!isGroupCollapsed}
-              onClick={() => toggle(group.customerId)}
-            >
-              <div className="grid-cell grid-cell--group grid-cell--span-2 grid-cell--truncate">
-                <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
-                {group.customerName}{" "}
-                <span className="grid-cell__id">{group.customerId}</span>
-              </div>
-              <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                집계 라인 {linesOf(group.items).length}줄
-              </div>
-            </button>
-
-            {isGroupCollapsed
-              ? null
-              : group.items.map((item) => {
-                  if (item.kind === "line") {
-                    return (
-                      <UsageLineRow
-                        key={`${item.line.label} ${JSON.stringify(item.line.dimensionValues)}`}
-                        line={item.line}
-                        slotCount={slotCount}
-                      />
-                    );
-                  }
-                  const isMeterCollapsed = isCollapsed(item.id, true);
-                  return (
-                    <div key={item.id}>
-                      <MeterGroupRow
-                        columns={COLUMNS}
-                        label={item.label}
-                        labelTooltip={item.labelTooltip}
-                        combinationCount={item.lines.length}
-                        isCollapsed={isMeterCollapsed}
-                        onToggle={() => toggle(item.id)}
-                      >
-                        <div className="grid-cell grid-cell--right grid-cell--num grid-cell--strong">
-                          {item.quantity}
-                        </div>
-                      </MeterGroupRow>
-                      {isMeterCollapsed
-                        ? null
-                        : item.lines.map((line) => (
-                            <UsageLineRow
-                              key={JSON.stringify(line.dimensionValues)}
-                              line={line}
-                              slotCount={slotCount}
-                              isNested
-                            />
-                          ))}
-                    </div>
-                  );
-                })}
-          </div>
-        );
-      })}
-    </GridTable>
-  );
+function byCustomerName(left: UsageRow, right: UsageRow): number {
+  return left.kind === "customer" && right.kind === "customer"
+    ? koreanCompare(left.customerName, right.customerName)
+    : 0;
 }
 
-function UsageLineRow({
-  line,
-  slotCount,
-  isNested = false,
+function byLineCount(left: UsageRow, right: UsageRow): number {
+  return left.kind === "customer" && right.kind === "customer" ? left.lineCount - right.lineCount : 0;
+}
+
+function toExpandLabel(row: UsageRow): string {
+  if (row.kind === "customer") return row.customerName;
+  if (row.kind === "meter") return row.label;
+  return row.line.label;
+}
+
+const USAGE_EXPAND_ICON = labeledExpandIcon(toExpandLabel);
+
+function hasChildRows(row: UsageRow): boolean {
+  return row.kind !== "line" && (row.children?.length ?? 0) > 0;
+}
+
+export function UsageTable({
+  groups,
+  query,
+  capabilities,
 }: {
-  line: UsageLineView;
-  slotCount: number;
-  isNested?: boolean;
+  groups: UsageGroupView[];
+  query: ListQuery;
+  capabilities: ListCapabilities;
 }) {
+
+  const rows = useMemo<UsageRow[]>(
+    () =>
+      groups.map((group) => {
+        const children = toMeterRows(group.customerId, group.items);
+        return {
+          kind: "customer",
+          key: group.customerId,
+          customerId: group.customerId,
+          customerName: group.customerName,
+          lineCount: linesOf(group.items).length,
+          isCollapsedByDefault: false,
+          ...(children.length > 0 ? { children } : {}),
+        };
+      }),
+    [groups],
+  );
+
+  const slotCount = useMemo(
+    () =>
+      countDimensionSlots(
+        groups.flatMap((group) => linesOf(group.items).map((line) => line.dimensionValues)),
+      ),
+    [groups],
+  );
+
+  const { expandedRowKeys, onExpand, toggle } = useExpandedRowKeys(rows);
+
+  const sortableColumns: SortableColumn<UsageRow>[] = [
+    {
+      key: "label",
+      title: "고객 / 미터",
+      ellipsis: true,
+      clientSorter: byCustomerName,
+      onCell: (row) => ({ colSpan: row.kind === "customer" ? 2 : 1 }),
+      render: (_, row) => {
+        if (row.kind === "customer") {
+          return (
+            <CustomerLabel name={row.customerName} id={row.customerId} />
+          );
+        }
+        if (row.kind === "meter") {
+          return <MeterLabel label={row.label} labelTooltip={row.labelTooltip} />;
+        }
+        return row.isNested ? null : (
+          <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} />
+        );
+      },
+    },
+    {
+      key: "combination",
+      title: "조합",
+      onCell: (row) => ({ colSpan: row.kind === "customer" ? 0 : 1 }),
+      render: (_, row) => {
+        if (row.kind === "line") {
+          return <DimensionValues dimensionValues={row.line.dimensionValues} slotCount={slotCount} />;
+        }
+        if (row.kind === "meter") {
+          return <Typography.Text type="secondary">조합 {row.combinationCount}개</Typography.Text>;
+        }
+        return null;
+      },
+    },
+    {
+      key: "quantity",
+      title: "집계 수량",
+      align: "right",
+      width: 200,
+      clientSorter: byLineCount,
+      render: (_, row) => {
+        if (row.kind === "customer") {
+          return <Typography.Text type="secondary">집계 라인 {row.lineCount}줄</Typography.Text>;
+        }
+        return <NumberText strong>{row.kind === "meter" ? row.quantity : row.line.quantity}</NumberText>;
+      },
+    },
+  ];
+
+  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns);
+
   return (
-    <GridRow columns={COLUMNS}>
-      <GridCell className="grid-cell--child grid-cell--mono">
-        {isNested ? null : (
-          <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
-        )}
-      </GridCell>
-      <DimensionValuesCell
-        dimensionValues={line.dimensionValues}
-        slotCount={slotCount}
-        className={isNested ? "grid-cell--nested" : undefined}
-      />
-      <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
-        {line.quantity}
-      </GridCell>
-    </GridRow>
+    <Table<UsageRow>
+      rowKey="key"
+      columns={columns}
+      dataSource={rows}
+      onChange={onChange}
+      pagination={false}
+      size="medium"
+      sticky={TABLE_STICKY}
+      tableLayout="fixed"
+      scroll={TABLE_SCROLL}
+      expandable={{ expandedRowKeys, onExpand, indentSize: 16, expandIcon: USAGE_EXPAND_ICON }}
+      onRow={(row) =>
+        hasChildRows(row) ? { onClick: () => toggle(row.key), style: { cursor: "pointer" } } : {}
+      }
+    />
   );
 }

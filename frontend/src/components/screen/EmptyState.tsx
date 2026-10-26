@@ -1,27 +1,35 @@
-import Link from "next/link";
+"use client";
+
+import { Empty, Flex, Typography } from "antd";
+
+import { LinkButton } from "@/components/screen/LinkButton";
 
 export function EmptyState({
   title,
   body,
   resetHref,
   resetLabel = "필터 초기화",
+  action,
 }: {
   title: string;
   body: string;
-  resetHref: string;
+  resetHref?: string;
   resetLabel?: string;
+  action?: React.ReactNode;
 }) {
+  const footer = action ?? (resetHref ? <LinkButton href={resetHref}>{resetLabel}</LinkButton> : null);
+
   return (
-    <div className="empty-state">
-      <div className="empty-state__title">{title}</div>
-      <p className="empty-state__body">{body}</p>
-      <Link
-        className="btn btn-secondary"
-        href={resetHref}
-        style={{ marginTop: 4 }}
-      >
-        {resetLabel}
-      </Link>
-    </div>
+    <Empty
+      image={Empty.PRESENTED_IMAGE_SIMPLE}
+      description={
+        <Flex vertical gap={4}>
+          <Typography.Text strong>{title}</Typography.Text>
+          <Typography.Text type="secondary">{body}</Typography.Text>
+        </Flex>
+      }
+    >
+      {footer}
+    </Empty>
   );
 }
