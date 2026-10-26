@@ -103,6 +103,7 @@ docker build -t meterengine-backend .
 - 인증 없이 부를 수 있는 것은 로그인(`POST /v1/sessions`), 가입 신청(`POST /v1/signups`), `/actuator/health`, `/actuator/prometheus`, API 문서뿐이다.
 - API 키 관리(`/v1/api-keys`)는 로그인 세션만, 도입사와 사용자 관리는 operator 세션만 할 수 있다.
 - 원문은 발급 응답에만 나오고 다시 볼 수 없다(서버는 해시만 둔다).
+- 키 모드(live, test)는 지금 접두사만 다르고 동작은 같다. test 키도 실제 데이터를 바꾸고 인보이스 확정과 결제 시도를 할 수 있다.
 - 세션은 로그인 뒤 12시간에 끝난다(`meterengine.session.ttl`). 키를 교체하면 옛 키는 24시간 더 쓸 수 있다(`meterengine.api-key.replacement-grace`).
 
 ### 로컬 계정과 키

@@ -23,7 +23,8 @@ public record CreateApiKeyRequest(
             schema = @Schema(allowableValues = {"ingest", "read", "admin"}))
         @NotEmpty List<@NotNull @StorableText @Pattern(regexp = ApiKey.SCOPE_PATTERN) String> scopes,
     @Schema(
-            description = "키 모드. live면 원문이 me_live_로, test면 me_test_로 시작한다",
+            description =
+                "키 모드. live면 원문이 me_live_로, test면 me_test_로 시작한다. 지금은 두 모드의 동작이 같아 test 키도 실제 데이터를 바꾸고 인보이스 확정과 결제 시도를 할 수 있다",
             allowableValues = {"live", "test"})
         @NotBlank @Pattern(regexp = ApiKey.MODE_PATTERN) @StorableText
         String mode,
