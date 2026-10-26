@@ -139,9 +139,9 @@ aws ssm send-command \
 4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
    - prometheus.yml도 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
-   - Grafana 경보 설정(`alerting.yml`)은 기동할 때만 읽혀 reload API로 다시 읽게 한다. admin 비밀번호가 `grafana-admin-password`와 다르면 여기서 배포가 멈춘다.
 5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
+7. Grafana 경보 설정(`alerting.yml`)은 기동할 때만 읽혀 reload API로 다시 읽게 한다. admin 비밀번호가 `grafana-admin-password`와 다르면 401을 받고 0이 아닌 코드로 끝난다. 이때 앱은 이미 새 버전으로 떠 있고 5의 확인도 끝났다. CD는 배포를 실패로 기록하되 외부 확인은 그대로 돈다. 비밀번호를 맞춘 뒤 다시 배포한다.
 
 ## 롤백
 
@@ -185,7 +185,7 @@ aws ssm send-command \
 ```bash
 aws ssm get-parameter --name /meterengine/prod/db-host --query Parameter.Value --output text
 aws rds describe-db-instances --db-instance-identifier meterengine-db \
-  --query 'DBInstances[0].{endpoint:Endpoint.Address,retentionDays:BackupRetentionPeriod,backupWindowUtc:PreferredBackupWindow,latestRestorable:LatestRestorableTime,deletionProtection:DeletionProtection,multiAz:MultiAZ,encrypted:StorageEncrypted,subnetGroup:DBSubnetGroup.DBSubnetGroupName,securityGroups:VpcSecurityGroups[].VpcSecurityGroupId}'
+  --query 'DBInstances[0].{endpoint:Endpoint.Address,retentionDays:BackupRetentionPeriod,backupWindowUtc:PreferredBackupWindow,latestRestorable:LatestRestorableTime,deletionProtection:DeletionProtection,multiAz:MultiAZ,encrypted:StorageEncrypted,subnetGroup:DBSubnetGroup.DBSubnetGroupName,securityGroups:VpcSecurityGroups[].VpcSecurityGroupId,maxStorage:MaxAllocatedStorage,performanceInsights:PerformanceInsightsEnabled,logExports:EnabledCloudwatchLogsExports,copyTags:CopyTagsToSnapshot}'
 aws rds describe-db-instance-automated-backups --db-instance-identifier meterengine-db \
   --query 'DBInstanceAutomatedBackups[0].RestoreWindow'
 aws rds describe-db-snapshots --db-instance-identifier meterengine-db --snapshot-type manual \
@@ -194,6 +194,7 @@ aws rds describe-db-snapshots --db-instance-identifier meterengine-db --snapshot
 
 - `endpoint`가 `db-host` 값과 같아야 한다.
 - 보존 기간은 7일 이상, 삭제 방지와 암호화는 켜져 있어야 한다.
+- `maxStorage`는 50, `performanceInsights`와 `copyTags`는 true, `logExports`는 postgresql이어야 한다. 복원한 인스턴스는 이 값을 원본에서 물려받지 않아 "복원"의 명령으로 맞춘다.
 - 보존 기간을 바꾸는 명령이다. **0에서 양수로, 양수에서 0으로 바꾸면 DB가 멈춘다.** 양수끼리 바꾸면 멈추지 않는다.
 
 ```bash
@@ -214,8 +215,19 @@ aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-befor
 
 ### 복원
 
+- **복원본에는 복원 시각 뒤에 원본에 쓰인 데이터가 없다.** 복원 시각부터 5의 배포로 백엔드가 복원본에 붙을 때까지 원본에 들어온 이벤트, 인보이스, 결제 시도가 복원본에서 빠진다.
+- 먼저 main 머지를 멈추고 Actions에서 CD가 돌고 있지 않은지 본다. CD는 main HEAD를 그때의 `db-host`로 배포해서, 전환 전이면 백엔드가 원본 DB로 다시 뜨고 전환 뒤면 3에서 피한 마이그레이션이 복원본에 적용된다. 5를 마칠 때까지, 3에서 이전 SHA를 골랐다면 그 마이그레이션을 main에서 되돌릴 때까지 멈춘다.
+- 원본이 살아 있는 채로 되돌린다면 1 전에 서버에 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
+
+```bash
+docker compose -p meterengine-prod stop backend
+```
+
+- 가장 최근으로 되살릴 때는 멈춘 뒤 "설정 확인"의 `latestRestorable`이 멈춘 시각보다 뒤가 될 때까지 기다렸다가 1을 한다. 복원 가능 시각은 몇 분 늦게 따라온다.
+
 1. 새 인스턴스로 복원한다. 시각은 UTC다. 가장 최근으로 되살리려면 `--restore-time` 대신 `--use-latest-restorable-time`을 준다.
    - **서브넷 그룹과 보안 그룹을 원본과 같게 준다.** 빠뜨리면 기본 보안 그룹이 붙어 서버에서 붙지 못한다.
+   - 로그 내보내기와 스냅숏 태그 복사는 원본에서 물려받지 않아 명령에 준다. 자동 확장 상한과 Performance Insights는 5에서 켠다.
 
 ```bash
 aws rds restore-db-instance-to-point-in-time \
@@ -224,6 +236,7 @@ aws rds restore-db-instance-to-point-in-time \
   --restore-time <YYYY-MM-DDTHH:MM:SSZ> \
   --db-subnet-group-name meterengine-rds-subnet-private \
   --vpc-security-group-ids sg-068a54ab4cfa91730 \
+  --enable-cloudwatch-logs-exports postgresql --copy-tags-to-snapshot \
   --no-publicly-accessible --no-multi-az
 ```
 
@@ -235,6 +248,7 @@ aws rds restore-db-instance-from-db-snapshot \
   --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
   --db-subnet-group-name meterengine-rds-subnet-private \
   --vpc-security-group-ids sg-068a54ab4cfa91730 \
+  --enable-cloudwatch-logs-exports postgresql --copy-tags-to-snapshot \
   --no-publicly-accessible --no-multi-az
 ```
 
@@ -264,13 +278,16 @@ docker run --rm -e PGPASSWORD postgres:18 psql \
 3. 배포할 SHA를 정한다. 지금 SHA를 다시 배포하면 복원본보다 새 마이그레이션이 기동 때 다시 적용된다. 그 마이그레이션 때문에 복원했다면 복원본의 마지막 버전까지만 가진 이전 SHA를 배포한다.
 4. 복원 시각 뒤에 암호화 키를 바꿨으면 그 시각의 키로 되돌린다("암호화 키 맞추기").
 5. `db-host`를 복원본으로 바꾸고 3에서 정한 SHA로 다시 배포한다("롤백"의 Actions나 서버 명령). 배포 로그의 `DB:` 줄이 복원본인지 본다.
+   - 복원본에 삭제 방지, 자동 확장 상한, Performance Insights를 원본과 같게 켠다. 복원으로는 켜지지 않고, 켜도 DB가 멈추지 않는다.
 
 ```bash
 aws ssm put-parameter --name /meterengine/prod/db-host --type String --overwrite --value <복원본 엔드포인트>
-aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> --deletion-protection
+aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
+  --deletion-protection --max-allocated-storage 50 \
+  --enable-performance-insights --performance-insights-retention-period 7
 ```
 
-- 원본 인스턴스는 바로 지우지 않는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
+- 원본 인스턴스는 바로 지우지 않는다. 복원 시각과 멈춘 시각(멈추지 못했으면 전환한 시각) 사이에 들어온 행은 원본과 복원본을 대조해 찾는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
 
 ### 암호화 키 맞추기
 
@@ -407,6 +424,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 - 예약 작업 경보는 결제, 웹훅 발송, 청구 제외 통보 작업만 본다.
 - 결제 경보는 테스트 모드 결제에서도 울리고 `mode` 라벨로 구분한다.
+- 예약 작업, 결제, 웹훅 경보는 Prometheus 조회가 실패하면 업무 경보 대신 `DatasourceError` 하나로 묶여 온다. 어느 규칙인지는 `rulename` 라벨로 보고, 업무 문제가 아니라 Prometheus와 Grafana 데이터 소스를 확인한다.
 
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
