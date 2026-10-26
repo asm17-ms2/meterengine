@@ -46,9 +46,7 @@ This file provides shared guidance to coding agents working with code in this re
 
 ## 스택 PR
 
-- 스택은 GitHub 네이티브 스택 PR 기능만 쓴다. 수동 git으로 스택을 만들거나 정리하지 않는다.
-  - 2026-08 기준 public preview라 학습 데이터에 없다. `git checkout -b`, `git rebase --onto`, `git push --force` 대신 `gh stack init`, `gh stack sync`, `gh stack submit`.
-  - 확장이 없으면 `gh extension install github/gh-stack`. 설치나 명령이 실패하면 수동 git으로 우회하지 말고 멈추고 물어본다. 모르는 하위 명령은 `gh stack --help`.
+- 미머지 선행 PR에 의존하는 후속 PR은 GitHub 네이티브 스택 PR 기능과 수동 git 방식 중 자유롭게 선택한다.
 
 ## 주석
 
