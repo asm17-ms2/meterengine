@@ -30,24 +30,24 @@ groups:
     interval: 1m
     rules:
       # 헬스체크 실패. Prometheus가 백엔드 scrape에 실패하면 up이 0이 된다.
-      # 프로세스 다운, 포트 불통, 응답 불능을 전부 잡는다. 3분은 재배포(90초 대기)보다 길어서
-      # 정상 배포로는 울리지 않는 값이다.
+      # 프로세스 다운, 포트 불통, 응답 불능을 전부 잡는다. 멈춘 색은 늘 0이라 대상 중 최댓값을 본다.
+      # 블루그린 배포는 배포 중에도 한 색이 응답하므로 1분이면 정상 배포로는 울리지 않는다.
       - uid: backend-down
         title: 백엔드 헬스체크 실패
         condition: C
-        for: 3m
+        for: 1m
         # Prometheus 자체가 죽어 평가할 데이터가 없어도 문제 상황이므로 경보로 취급한다.
         noDataState: Alerting
         execErrState: Alerting
         annotations:
-          summary: 백엔드가 3분 넘게 scrape에 응답하지 않는다. meterengine.com API가 죽었을 가능성이 높다.
+          summary: 어느 백엔드 색도 1분 넘게 scrape에 응답하지 않는다. meterengine.com API가 죽었을 가능성이 높다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: up{job="backend"}
+              expr: max(up{job="backend"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -58,6 +58,35 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [1] }
+
+      # 두 색이 함께 뜨는 것은 배포 중 잠깐뿐이라, 오래 이어지면 배포가 옛 색을 멈추기 전에 중단된 것이다.
+      # 데이터 없음과 조회 실패는 Prometheus 쪽 문제라 헬스체크 실패 경보가 잡는다.
+      # 여기서 울리면 한쪽 색을 멈추라고 잘못 안내하므로 둘 다 Alerting으로 두지 않는다.
+      - uid: backend-both-colors-up
+        title: 백엔드 두 색이 함께 떠 있음
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 블루와 그린이 15분 넘게 함께 떠 있다. 배포가 옛 색을 멈추기 전에 중단됐을 수 있으니 deploy.sh 로그를 보고 한쪽을 멈춘다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum(up{job="backend"})
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1] }
 
       # 5xx율 5% 초과가 5분 지속. outcome은 Micrometer가 상태 코드에서 만들어 주는 라벨이다.
       # /actuator는 제외한다. Prometheus scrape가 항상 성공하는 요청을 분당 4건 깔아서,

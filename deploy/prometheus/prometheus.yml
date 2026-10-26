@@ -1,7 +1,7 @@
 # Prometheus 수집 설정. compose 내부 네트워크의 서비스 이름으로 붙는다.
 #
 # 백엔드의 /actuator/prometheus는 Caddy가 프록시하지 않아 인터넷에서 안 보이지만,
-# 여기는 같은 compose 네트워크 안이라 backend:8080으로 직접 닿는다.
+# 여기는 같은 compose 네트워크 안이라 백엔드 컨테이너에 직접 닿는다.
 
 global:
   # 15초는 Prometheus 기본값이다. 짧을수록 디스크를 더 쓰는데, retention 제한(compose의
@@ -12,11 +12,12 @@ global:
 
 scrape_configs:
   # 앱 지표. 5xx율과 응답 지연(http_server_requests_seconds)이 여기서 나온다.
-  # up{job="backend"} == 0 이 헬스체크 실패 경보의 재료다.
+  # up{job="backend"}가 백엔드 경보의 재료다. 블루와 그린은 instance 라벨로 갈린다.
+  # backend:8080은 첫 전환 배포용인 블루그린 이전 컨테이너다.
   - job_name: backend
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["backend:8080"]
+      - targets: ["backend:8080", "backend-blue:8080", "backend-green:8080"]
 
   # 서버 자원. CPU 경보(node_cpu_seconds_total)와 디스크 감시가 여기서 나온다.
   - job_name: node

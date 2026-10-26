@@ -104,13 +104,21 @@ wait_for_prometheus_ready() {
 	return 1
 }
 
-# 비밀번호가 프로세스 목록에 보이지 않게 curl 설정을 표준 입력으로 넘긴다.
-# curl 설정의 따옴표 안에서는 역슬래시와 따옴표를 풀어 읽으므로 앞에 역슬래시를 붙인다.
+# 비밀번호는 curl 설정의 표준 입력으로 전달하고, 각 요청은 남은 대기 시간 안에 끝낸다.
 reload_grafana_alerting() {
-	local password
-	password=$(grep '^GRAFANA_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | sed 's/[\\"]/\\&/g')
-	printf 'user = "admin:%s"\n' "$password" |
-		curl -fsS --max-time 10 -K - -X POST http://127.0.0.1:3001/api/admin/provisioning/alerting/reload >/dev/null
+	local end=$((SECONDS + 90)) left password
+	password=$(grep '^GRAFANA_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | sed 's/[\\"]/\\&/g') || return 1
+	while :; do
+		left=$((end - SECONDS))
+		[ "$left" -gt 0 ] || return 1
+		[ "$left" -le 5 ] || left=5
+		if printf 'user = "admin:%s"\n' "$password" |
+			curl -fsS --max-time "$left" -K - -X POST http://127.0.0.1:3001/api/admin/provisioning/alerting/reload >/dev/null; then
+			return 0
+		fi
+		[ $((end - SECONDS)) -gt 2 ] || return 1
+		sleep 2
+	done
 }
 
 main() {

@@ -39,7 +39,7 @@
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
-- Grafana와 대시보드는 파일이 정본이다. UI에서 고친 것은 재배포 때 파일 내용으로 돌아간다.
+- Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 대시보드 파일은 Grafana가 스스로 다시 읽고, 경보 파일은 `deploy.sh`가 배포마다 다시 읽게 한다. 데이터 소스 파일은 Grafana를 다시 시작해야 반영된다.
 
 ## 사전 준비
 
@@ -140,9 +140,10 @@ aws ssm send-command \
 1. `/opt/meterengine`을 그 커밋으로 맞춘다.
 2. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600).
 3. ECR에 로그인하고 그 SHA 태그의 이미지를 받는다.
-4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 reload 한다.
+4. `docker compose up -d --remove-orphans` 후 Caddy와 Prometheus 설정을 다시 읽게 한다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
    - prometheus.yml도 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+   - 경보 파일도 같다. `docker compose -p meterengine-prod exec grafana sh -c 'curl -fsS -X POST -u "admin:$GF_SECURITY_ADMIN_PASSWORD" http://localhost:3000/api/admin/provisioning/alerting/reload'`로 다시 읽게 한다.
 5. 백엔드 `/actuator/health`가 UP인지, 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다. 실패하면 컨테이너 로그를 찍고 0이 아닌 코드로 끝난다.
 6. 336시간보다 오래된 이미지를 정리한다.
 7. Grafana 경보 설정(`alerting.yml`)은 기동할 때만 읽혀 reload API로 다시 읽게 한다. admin 비밀번호가 `grafana-admin-password`와 다르면 401을 받고 0이 아닌 코드로 끝난다. 이때 앱은 이미 새 버전으로 떠 있고 5의 확인도 끝났다. CD는 배포를 실패로 기록하되 외부 확인은 그대로 돈다. 비밀번호를 맞춘 뒤 다시 배포한다.
@@ -416,7 +417,8 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 | 경보 | 조건 | 뜻 |
 | --- | --- | --- |
-| 백엔드 헬스체크 실패 | `up{job="backend"} == 0` 3분 지속 | scrape 자체가 실패. 프로세스 다운이나 응답 불능 |
+| 백엔드 헬스체크 실패 | `max(up{job="backend"}) < 1` 1분 지속 | 어느 색도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
+| 백엔드 두 색이 함께 떠 있음 | `sum(up{job="backend"}) > 1` 15분 지속 | 배포가 옛 색을 멈추기 전에 중단됐다 |
 | 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
 | CPU 사용률 초과 | 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
