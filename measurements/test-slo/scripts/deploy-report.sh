@@ -8,16 +8,67 @@ summary_value() {
 	awk -v key="$1" '$1 == key { print $2 }' "$2"
 }
 
+valid_backend() {
+	[[ "$1" =~ ^legacy:[^,]+,blue:[^,]+,green:[^,]+$ ]]
+}
+
+backend_ids() {
+	printf '%s\n' "$1" | tr ',' '\n' | sed 's/^[a-z]*://' | tr '+' '\n' | sed '/^없음$/d'
+}
+
+has_new_backend() {
+	local before id
+	before=" $(backend_ids "$1" | tr '\n' ' ') "
+	for id in $(backend_ids "$2"); do
+		case "$before" in
+		*" $id "*) ;;
+		*) return 0 ;;
+		esac
+	done
+	return 1
+}
+
 invalid_reasons() {
-	local before="$1" after="$2" dropped="$3" reasons=""
+	local before="$1" after="$2" dropped="$3" start="$4" end="$5" first="$6" last="$7" reasons=""
 	[ "$dropped" = 0 ] || reasons="$reasons 못 보낸 요청이 ${dropped}건이다."
-	[ "$after" != 없음 ] || reasons="$reasons 배포 뒤 백엔드 컨테이너가 없다."
-	[ "$before" != "$after" ] || reasons="$reasons 배포 전후 백엔드 컨테이너가 같아 배포가 백엔드를 바꾸지 않았다."
+	case "$after" in
+	*,blue:없음,green:없음) reasons="$reasons 배포 뒤 블루와 그린이 모두 돌지 않는다." ;;
+	esac
+	has_new_backend "$before" "$after" || reasons="$reasons 배포 뒤 백엔드 컨테이너가 모두 배포 전에도 돌던 것이라 배포가 새 백엔드를 띄우지 않았다."
+	if [ -n "$first" ]; then
+		[ "$first" -le "$start" ] || reasons="$reasons 첫 요청을 배포 시작 뒤에 보내 배포 구간 앞부분을 재지 못했다."
+		[ "$last" -ge "$end" ] || reasons="$reasons 마지막 요청을 배포 끝 전에 보내 배포 구간 뒷부분을 재지 못했다."
+	fi
 	printf '%s' "$reasons"
 }
 
+# 요청을 보낸 시각 중 가장 이른 것과 늦은 것(ms)을 찍는다. 요청이 없으면 아무것도 찍지 않는다.
+sent_range() {
+	awk '{ sent = $3 + 0; if (NR == 1 || sent < first) first = sent; if (NR == 1 || sent > last) last = sent }
+		END { if (NR > 0) printf "%.0f %.0f\n", first, last }'
+}
+
+# 배포 구간 안(inside)이나 밖(outside)에 보낸 요청의 걸린 ms에서 nearest-rank p99를 찍는다. 요청이 없으면 없음을 찍는다.
+elapsed_p99() {
+	awk -v start="$1" -v end="$2" -v want="$3" '
+	{
+		sent = $3 + 0
+		inside = (sent >= start && sent <= end) ? "inside" : "outside"
+		if (inside == want) print $4 + 0
+	}' |
+		sort -n |
+		awk '{ v[NR] = $1 } END { if (NR == 0) print "없음"; else print v[int((99 * NR + 99) / 100)] }'
+}
+
+requests() {
+	grep -o 'REQ [^"]*' "$1" || true
+}
+
 report() {
-	awk -v start="$1" -v end="$2" -v rate="$3" '
+	awk -v start="$1" -v end="$2" -v rate="$3" -v inside_p99="$4" -v outside_p99="$5" -v unusable="$6" -v p99_margin=1000 '
+	function ms(value) {
+		return (value == "없음") ? value : value "ms"
+	}
 	function close_gap(until_ms,    from, length_ms) {
 		from = (last_ok == "") ? gap_first_fail : last_ok
 		length_ms = until_ms - from
@@ -71,7 +122,23 @@ report() {
 		} else {
 			print "배포 구간 밖 가용성: 구간 밖에 보낸 요청이 없다"
 		}
+		printf "p99: 배포 구간 %s, 구간 밖 %s\n", ms(inside_p99), ms(outside_p99)
 		if (unrecovered) print "주의: 마지막 요청까지 성공으로 돌아오지 않았다"
+		fails = ""
+		if (inside_failed > 0) fails = fails sprintf(" 배포 구간 요청 %d건이 실패했다.", inside_failed)
+		if (deploy_gaps > 0) fails = fails sprintf(" 배포 구간에 걸친 끊김이 %d개다.", deploy_gaps)
+		if (inside_p99 == "없음" || outside_p99 == "없음") {
+			fails = fails " 배포 구간이나 구간 밖에 보낸 요청이 없어 p99를 견줄 수 없다."
+		} else if (inside_p99 + 0 > outside_p99 + p99_margin) {
+			fails = fails sprintf(" 배포 구간 p99 %dms가 구간 밖 p99 %dms + %dms를 넘는다.", inside_p99, outside_p99, p99_margin)
+		}
+		if (unusable != "") {
+			print "판정: 쓰지 않는 측정이라 판정하지 않는다"
+		} else if (fails == "") {
+			printf "판정: 통과 (배포 구간 실패 0건, 배포 구간에 걸친 끊김 0개, 배포 구간 p99 %dms <= 구간 밖 p99 %dms + %dms)\n", inside_p99, outside_p99, p99_margin
+		} else {
+			print "판정: 실패." fails
+		}
 	}'
 }
 
@@ -82,17 +149,22 @@ main() {
 	[ -f "$console" ] || die "$console 이 없다"
 	[ -f "$summary" ] || die "$summary 가 없다. k6가 끝까지 돌았는지 본다"
 	[ "$start" -lt "$end" ] || die "배포 시작 ms가 끝 ms보다 작아야 한다"
+	valid_backend "$before" || die "배포 전 backend 값이 legacy:<ID>,blue:<ID>,green:<ID> 꼴이 아니다: $before"
+	valid_backend "$after" || die "배포 뒤 backend 값이 legacy:<ID>,blue:<ID>,green:<ID> 꼴이 아니다: $after"
 
-	local rate dropped reasons
+	local rate dropped first last reasons inside_p99 outside_p99
 	rate=$(summary_value rate "$summary")
 	dropped=$(summary_value dropped_iterations "$summary")
-	reasons=$(invalid_reasons "$before" "$after" "$dropped")
+	read -r first last <<<"$(requests "$console" | sent_range)"
+	reasons=$(invalid_reasons "$before" "$after" "$dropped" "$start" "$end" "$first" "$last")
+	inside_p99=$(requests "$console" | elapsed_p99 "$start" "$end" inside)
+	outside_p99=$(requests "$console" | elapsed_p99 "$start" "$end" outside)
 	{
 		[ -z "$reasons" ] || printf '이 측정은 쓰지 않는다.%s\n' "$reasons"
 		printf '실행: %s\n' "$(basename "$dir")"
 		printf '못 보낸 요청: %s건, VU %s, 요청 제한 %s초\n' "$dropped" "$(summary_value vus "$summary")" "$(summary_value timeout_seconds "$summary")"
 		printf '백엔드 컨테이너: %s -> %s\n' "$before" "$after"
-		grep -o 'REQ [^"]*' "$console" | sort -n -k3 | report "$start" "$end" "$rate"
+		requests "$console" | sort -n -k3 | report "$start" "$end" "$rate" "$inside_p99" "$outside_p99" "$reasons"
 	} | tee "$output"
 	log "저장: $output"
 }

@@ -39,7 +39,7 @@ export default function (data) {
   const sequence = exec.scenario.iterationInTest;
   const sentMs = Date.now();
   const res = http.post(`${config.baseUrl}/v1/events`, JSON.stringify(buildEvent(data.customerIds, `${RUN_ID}-${sequence}`, sequence)), {
-    headers: config.headers,
+    headers: { ...config.headers, 'X-Request-Seq': String(sequence) },
     tags: { name: REQUEST },
     timeout: `${TIMEOUT_SECONDS}s`,
   });
