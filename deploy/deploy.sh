@@ -100,6 +100,15 @@ wait_for_prometheus_ready() {
 	return 1
 }
 
+# 비밀번호가 프로세스 목록에 보이지 않게 curl 설정을 표준 입력으로 넘긴다.
+# curl 설정의 따옴표 안에서는 역슬래시와 따옴표를 풀어 읽으므로 앞에 역슬래시를 붙인다.
+reload_grafana_alerting() {
+	local password
+	password=$(grep '^GRAFANA_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | sed 's/[\\"]/\\&/g')
+	printf 'user = "admin:%s"\n' "$password" |
+		curl -fsS --max-time 10 -K - -X POST http://127.0.0.1:3001/api/admin/provisioning/alerting/reload >/dev/null
+}
+
 main() {
 	local sha="${1:-}"
 	[ -n "$sha" ] || die "배포할 git SHA를 인자로 줘야 한다. 예: $0 979e251..."
@@ -151,6 +160,11 @@ main() {
 	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
 	"${compose[@]}" exec -T prometheus kill -HUP 1
 	log "Prometheus 설정 반영 완료"
+
+	# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
+	wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
+	reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. alerting.yml을 확인한다"
+	log "Grafana 경보 설정 반영 완료"
 
 	if ! wait_for_http "백엔드" http://127.0.0.1:8080/actuator/health '"status":"UP"'; then
 		"${compose[@]}" logs --tail 50 backend || true

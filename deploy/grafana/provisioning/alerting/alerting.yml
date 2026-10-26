@@ -116,3 +116,244 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [80] }
+
+      # 예약 작업 경보는 결제와 웹훅, 청구 제외 통보 작업만 본다. 인보이스 쪽 작업은 따로 경보한다.
+      # 인스턴스가 둘이어도 맞게 카운터는 sum, 마지막 성공 시각은 max로 묶는다.
+
+      # 실행이 예외로 끝났거나, 실행은 끝났지만 일부 대상이 실패했다.
+      # 카운터가 첫 실패 때 값 1로 처음 생기면 increase()가 0으로 보므로, 15분 안에 새로 생긴 시계열도 실패로 센다.
+      - uid: scheduled-job-failed
+        title: 예약 작업 실패
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 예약 작업 {{ $labels.job_name }} 이 최근 15분 안에 실패했다. scheduled_job_run의 error_summary와 백엔드 로그를 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (sum by (job_name) (meterengine_scheduled_job_run_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                unless meterengine_scheduled_job_run_total{result="failed"} offset 15m) > 0)
+                or (sum by (job_name) (increase(meterengine_scheduled_job_run_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
+                or (sum by (job_name) (meterengine_scheduled_job_items_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                unless meterengine_scheduled_job_items_total{result="failed"} offset 15m) > 0)
+                or (sum by (job_name) (increase(meterengine_scheduled_job_items_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 마지막 성공 뒤 경과 시간. 성공한 적 없이 지금 프로세스에서 실행만 된 작업은 백엔드 기동 뒤 경과 시간으로 본다.
+      # 30초, 1분 주기 작업은 5분 동안 성공이 없으면 울린다.
+      - uid: scheduled-job-missed-minute
+        title: 예약 작업 미실행 (1분 이하 주기)
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 예약 작업 {{ $labels.job_name }} 이 5분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_attempt_confirmation|webhook_delivery"}))
+                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_attempt_confirmation|webhook_delivery"}) * 0
+                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [300] }
+
+      # 10분 주기 재시도 작업은 세 번 연속 성공이 없으면 울린다.
+      - uid: scheduled-job-missed-ten-minute
+        title: 예약 작업 미실행 (10분 주기)
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 예약 작업 {{ $labels.job_name }} 이 30분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name="payment_retry"}))
+                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name="payment_retry"}) * 0
+                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1800] }
+
+      # 하루 한 번 도는 작업은 정해진 시각에서 1시간이 지나도록 그날 성공이 없으면 울린다.
+      - uid: scheduled-job-missed-day
+        title: 예약 작업 미실행 (하루 주기)
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 예약 작업 {{ $labels.job_name }} 이 25시간 넘게 성공하지 않았다. 오늘 실행이 빠졌거나 실패했다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}))
+                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
+                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [90000] }
+
+      # 결제 경보는 테스트 모드도 본다. 테스트 결제에서도 울려야 경보가 살아 있는지 알 수 있다. mode 라벨로 구분한다.
+
+      # 결과를 모르는 결제가 확정 작업으로도 풀리지 않고 10분 넘게 남았다. 고객이 돈을 냈는지 모르는 상태다.
+      - uid: payment-stale-pending
+        title: 결제 결과 모름 미해결
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 결과를 모르는 결제가 10분 넘게 남아 있다. 토스페이먼츠 조회가 실패하고 있는지 백엔드 로그를 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: max by (mode) (meterengine_payment_stale_pending)
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 재시도 상한까지 실패해 더는 자동으로 청구하지 않는 인보이스가 생겼다. 사람이 고객에게 연락해야 한다.
+      - uid: payment-retry-exhausted
+        title: 결제 재시도 소진
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 재시도 상한까지 결제가 실패한 인보이스가 최근 1시간 안에 생겼다 (mode {{ $labels.mode }}).
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum by (mode) (increase(meterengine_payment_retry_exhausted_total[1h]))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 매일 대사에서 우리 결제 기록과 토스페이먼츠 거래가 어긋났다.
+      - uid: payment-reconciliation-mismatch
+        title: 결제 대사 불일치
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 결제 대사에서 불일치가 나왔다 (mode {{ $labels.mode }}). GET /v1/payment-reconciliation-mismatches 로 내용을 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum by (mode) (increase(meterengine_payment_reconciliation_mismatch_total[1h]))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 재시도 상한까지 보내지 못해 포기한 웹훅이 생겼다. 도입사가 이벤트를 받지 못했다.
+      # 예약 작업 실패와 같은 이유로 15분 안에 새로 생긴 시계열도 센다.
+      - uid: webhook-delivery-failed
+        title: 웹훅 전송 실패
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: 재시도 상한까지 보내지 못한 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (sum (meterengine_webhook_delivery_total{result="failed"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
+                or (sum (increase(meterengine_webhook_delivery_total{result="failed"}[15m])) > 0)
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
