@@ -10,6 +10,11 @@ json() {
 	jq -r "$2" "$1"
 }
 
+require_api_key() {
+	[ -n "${API_KEY:-}" ] || die "API_KEY 환경변수가 없다. ingest, read 스코프 키를 export API_KEY 로 넣는다"
+	export API_KEY
+}
+
 use_sut_db() {
 	local name value
 	while IFS=$'\t' read -r name value; do

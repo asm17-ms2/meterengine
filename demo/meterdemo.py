@@ -9,8 +9,10 @@ if sys.version_info < MINIMUM_PYTHON:
     sys.exit(2)
 
 import argparse
+import os
 
-from core.api_client import TransportError
+from core.api_client import ApiRequestError, TransportError
+from core.model import API_KEY_ENV, resolve_api_key
 from csvdemo.render import Console, color_enabled
 from csvdemo import send_cmd
 from csvdemo import verify_cmd
@@ -23,7 +25,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--base-url", help="백엔드 주소 (기본 http://localhost:8080, verify는 로그 헤더 값 우선)")
-    common.add_argument("--org-id", help="X-Organization-Id (기본: 시드 도입사)")
+    common.add_argument(
+        "--api-key",
+        help="API 키. Authorization: Bearer로 보낸다 (기본: 환경변수 %s, 없으면 로컬 live 키)" % API_KEY_ENV,
+    )
     common.add_argument("--no-color", action="store_true", help="ANSI 색 비활성화")
     common.add_argument("--timeout", type=float, default=10.0, help="HTTP 타임아웃 초 (기본 10)")
 
@@ -50,6 +55,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     console = Console(color_enabled(args.no_color))
+    if args.command in ("send", "verify"):
+        try:
+            args.api_key = resolve_api_key(args.api_key, os.environ)
+        except ValueError as error:
+            print(str(error), file=sys.stderr)
+            return 2
     try:
         if args.command == "send":
             return send_cmd.run_send(args, console)
@@ -60,7 +71,7 @@ def main(argv=None) -> int:
             file=sys.stderr,
         )
         return 2
-    except TransportError as error:
+    except (TransportError, ApiRequestError) as error:
         print(str(error), file=sys.stderr)
         return 2
     except KeyboardInterrupt:

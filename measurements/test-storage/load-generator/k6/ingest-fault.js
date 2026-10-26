@@ -4,6 +4,7 @@ import { Counter } from 'k6/metrics';
 import { config, intEnv, runIdEnv, stepEnv } from './lib/config.js';
 import { loadCustomerIds } from './lib/customers.js';
 import { buildEvent, isResend, transactionId } from './lib/events.js';
+import { loadOrganizationId } from './lib/organization.js';
 
 const REQUEST = 'POST /v1/events';
 const RUN_ID = runIdEnv('RUN_ID');
@@ -42,7 +43,7 @@ export const options = {
 };
 
 export function setup() {
-  return { customerIds: loadCustomerIds(), startedAt: new Date().toISOString() };
+  return { organizationId: loadOrganizationId(), customerIds: loadCustomerIds(), startedAt: new Date().toISOString() };
 }
 
 function duplicateFlag(res) {
@@ -83,7 +84,7 @@ export function handleSummary(data) {
     max_vus: MAX_VUS,
     timeout_seconds: TIMEOUT_SECONDS,
     duplicate_period: DUPLICATE_PERIOD,
-    organization_id: config.organizationId,
+    organization_id: data.setup_data?.organizationId ?? null,
     started_at: data.setup_data?.startedAt ?? null,
     ended_at: new Date().toISOString(),
   };

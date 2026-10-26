@@ -5,6 +5,9 @@ import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.service.EventService;
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.IngestAccess;
+import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.metric.service.BillableMetricUsageService;
@@ -23,7 +26,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +41,7 @@ public class EventController {
   }
 
   @PostMapping
+  @IngestAccess
   @Operation(
       summary = "사용량 이벤트 수집",
       description =
@@ -77,13 +80,12 @@ public class EventController {
         description = "code=customer_not_found: customer_id가 가리키는 고객이 없다")
   })
   public IngestEventResponse ingestEvent(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
-      @Valid @RequestBody IngestEventRequest request) {
+      @CurrentOrganizationId UUID organizationId, @Valid @RequestBody IngestEventRequest request) {
     return eventService.ingest(organizationId, request);
   }
 
   @GetMapping
+  @ReadAccess
   @Operation(
       summary = "사용량 이벤트 조회",
       description =
@@ -107,7 +109,7 @@ public class EventController {
             """
             code=validation_error: page가 음수거나 size가 1~100 밖이거나, customer_id가 UUID가
             아니거나 month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, type에 NUL 문자나 짝이 없는 UTF-16 서로게이트가
-            있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            있다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -118,8 +120,7 @@ public class EventController {
         description = "code=customer_not_found: customer_id가 가리키는 고객이 없다")
   })
   public ListEventsResponse listEvents(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "0부터 세는 페이지 번호.") @RequestParam(defaultValue = "0") @Min(0) int page,
       @Parameter(description = "한 페이지에 담을 개수.") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
       @Parameter(description = "고객을 좁힌다. 생략하면 모든 고객이 대상이다.")

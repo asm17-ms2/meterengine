@@ -21,6 +21,9 @@
 # backend + PostgreSQL (DB는 자동 기동)
 cd backend && ./gradlew bootRun
 
+# 백엔드 확인 (로컬 live 키)
+curl -s http://localhost:8080/v1/customers -H 'Authorization: Bearer me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA'
+
 # frontend
 cd frontend && corepack enable pnpm && pnpm install && pnpm dev
 
@@ -35,6 +38,7 @@ uv run demo/console.py            # 같은 일을 화면으로
 docker compose up -d
 ```
 
+- 위 키는 `bootRun`이 로컬 DB에만 넣는 키이고, 로컬 계정과 키 목록은 `backend/README.md`의 "인증"에 있다.
 - 자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조.
   - API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
 

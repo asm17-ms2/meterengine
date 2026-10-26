@@ -5,30 +5,53 @@ import os
 import queue
 import signal
 import threading
+import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from bridge import otel_map
 from bridge.const import HEALTH_PATH, LOGS_DIR, LOGS_PATH, SESSION_PATH
 from bridge.state import BridgeConfig, BridgeState, CustomerResolver, project_for_cwd
-from core.api_client import ApiClient, TransportError
+from core.api_client import (
+    ApiClient,
+    ApiRequestError,
+    Organization,
+    TransportError,
+    is_auth_failure,
+    parse_problem,
+    require_organization,
+)
 from core.jsonl_log import OUTCOMES, JsonlLogWriter, classify_outcome
-from core.model import KST, build_body_text, loads_decimal
+from core.model import KST, build_body_text, loads_decimal, mask_api_key
+
+
+ORGANIZATION_RETRY_SECONDS = 60.0
 
 
 class Sender:
-    def __init__(self, config: BridgeConfig, state: BridgeState, logs_dir: str):
+    def __init__(
+        self,
+        config: BridgeConfig,
+        state: BridgeState,
+        logs_dir: str,
+        organization: Optional[Organization] = None,
+    ):
         self.config = config
         self.state = state
-        self.client = ApiClient(config.base_url, config.org_id, timeout_seconds=config.timeout_seconds)
+        self.organization = organization
+        self.organization_error: Optional[str] = None
+        self.client = ApiClient(config.base_url, config.api_key, timeout_seconds=config.timeout_seconds)
         self.resolver = CustomerResolver(self.client, state)
         self.queue: "queue.Queue[Optional[Tuple[dict, str, Optional[str]]]]" = queue.Queue()
         self.logs_dir = logs_dir
         self._day = ""
         self._seq = 0
+        self._clock = time.monotonic
+        self._next_organization_attempt: Optional[float] = None
         self.writer: Optional[JsonlLogWriter] = None
-        self._roll()
+        if organization is not None:
+            self._roll()
         self._counts = dict.fromkeys(OUTCOMES + ("skipped",), 0)
         self._thread = threading.Thread(target=self._run, name="sender", daemon=True)
         self._thread.start()
@@ -46,9 +69,31 @@ class Sender:
         self._seq = seq
         self.writer = writer
         self.writer.write_run_header(
-            _now_text(), self.config.base_url, self.config.org_id, None,
+            _now_text(), self.config.base_url, self.organization.id, None,
             ["otel_bridge.py", "serve"],
         )
+
+    def _ensure_organization(self) -> bool:
+        if self.organization is not None:
+            return True
+        now = self._clock()
+        if self._next_organization_attempt is not None and now < self._next_organization_attempt:
+            return False
+        try:
+            organization = require_organization(self.client)
+        except (ApiRequestError, TransportError) as error:
+            self._next_organization_attempt = now + ORGANIZATION_RETRY_SECONDS
+            code = _organization_error_code(error)
+            if code != self.organization_error:
+                _log("도입사를 확인하지 못해 보내지 않습니다. %d초 뒤에 다시 확인합니다: %s" % (ORGANIZATION_RETRY_SECONDS, error))
+            self.organization_error = code
+            return False
+        self.state.set_scope(self.config.scope(organization.id))
+        self.organization = organization
+        self.organization_error = None
+        self._roll()
+        _log("도입사 확인: %s (%s)" % (organization.name, organization.id))
+        return True
 
     def submit(self, record: dict, name: str, session_id: Optional[str]) -> None:
         self.queue.put((record, name, session_id))
@@ -56,7 +101,8 @@ class Sender:
     def close(self) -> None:
         self.queue.put(None)
         self._thread.join(timeout=30)
-        self.writer.close()
+        if self.writer is not None:
+            self.writer.close()
 
     @property
     def counts(self) -> dict:
@@ -80,6 +126,9 @@ class Sender:
         project = self.state.project_of(session_id) or self.config.fallback_project
         if project in self.config.deny:
             self._counts["skipped"] += 1
+            return
+        if not self._ensure_organization():
+            self._counts["error"] += 1
             return
         customer_name = self.config.customer_name(project)
         self._roll()
@@ -132,6 +181,24 @@ class Sender:
         if outcome == "rejected" and _unknown_customer(result):
             self.state.forget_customer(customer_name)
             _log("고객 %s의 캐시를 버렸습니다. 다음 이벤트에서 다시 찾습니다." % customer_name)
+        if is_auth_failure(result.status):
+            self._drop_organization(result)
+
+    def _drop_organization(self, result) -> None:
+        problem = parse_problem(result.status, result.body)
+        code = problem.code or "http_%d" % problem.status
+        if code != self.organization_error:
+            _log("API 키가 거부돼 보내지 않습니다. %d초 뒤에 도입사를 다시 확인합니다: HTTP %d %s"
+                 % (ORGANIZATION_RETRY_SECONDS, problem.status, code))
+        self.organization = None
+        self.organization_error = code
+        self._next_organization_attempt = self._clock() + ORGANIZATION_RETRY_SECONDS
+
+
+def _organization_error_code(error: Exception) -> str:
+    if isinstance(error, ApiRequestError):
+        return error.problem.code or "http_%d" % error.problem.status
+    return "connection_failed"
 
 
 def _unknown_customer(result) -> bool:
@@ -160,11 +227,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
             projects: dict = {}
             for project in sessions.values():
                 projects[project] = projects.get(project, 0) + 1
+            organization = self.server.sender.organization
             body = json.dumps(
                 {
                     "status": "ok",
                     "base_url": self.server.config.base_url,
-                    "org_id": self.server.config.org_id,
+                    "api_key": mask_api_key(self.server.config.api_key),
+                    "organization": (
+                        {"id": organization.id, "name": organization.name} if organization else None
+                    ),
+                    "organization_error": self.server.sender.organization_error,
                     "owner": self.server.config.owner,
                     "projects": projects,
                     "customers": sorted(customers),
@@ -243,6 +315,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
         pass
 
 
+def startup_lines(config: BridgeConfig, host: str, port: int) -> List[str]:
+    return [
+        "브리지 시작: http://%s:%d" % (host, port),
+        "  전송 대상 %s (API 키 %s, 도입사: 첫 전송 때 확인)" % (config.base_url, mask_api_key(config.api_key)),
+        "  주인 %s, 허용 목록 %s" % (config.owner or "(없음)", config.allow or "(전부 실명)"),
+        "  기록 %s" % os.path.join(LOGS_DIR, "bridge-<날짜>.jsonl"),
+    ]
+
+
 def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int:
     server = ThreadingHTTPServer((host, port), BridgeHandler)
     sender = Sender(config, state, LOGS_DIR)
@@ -253,10 +334,8 @@ def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int
     server.listen_host = host
     server.daemon_threads = True
 
-    _log("브리지 시작: http://%s:%d" % (host, port))
-    _log("  전송 대상 %s (도입사 %s)" % (config.base_url, config.org_id))
-    _log("  주인 %s, 허용 목록 %s" % (config.owner or "(없음)", config.allow or "(전부 실명)"))
-    _log("  기록 %s" % os.path.join(LOGS_DIR, "bridge-<날짜>.jsonl"))
+    for line in startup_lines(config, host, port):
+        _log(line)
 
     stopping = threading.Event()
 

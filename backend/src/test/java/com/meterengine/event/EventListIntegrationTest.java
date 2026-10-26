@@ -1,7 +1,10 @@
 package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
@@ -10,7 +13,9 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,11 +42,15 @@ class EventListIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private JsonMapper jsonMapper;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   // ---------------------------------------------------------------------------
@@ -389,13 +398,13 @@ class EventListIntegrationTest {
   }
 
   @Test
-  void 헤더가_없으면_400이고_code가_붙는다() {
+  void 인증이_없으면_401이고_code가_붙는다() {
     assertThat(mvc.get().uri("/v1/events").exchange())
-        .hasStatus(400)
+        .hasStatus(401)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+        .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.getCode());
   }
 
   @Test
@@ -448,7 +457,7 @@ class EventListIntegrationTest {
             .uri("/v1/events")
             .param("month", AUGUST)
             .param("type", "chat\u0000completion")
-            .header("X-Organization-Id", organizationId.toString())
+            .header(AUTHORIZATION, authorization(organizationId))
             .exchange();
 
     assertThat(result)
@@ -469,7 +478,7 @@ class EventListIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("month", "+300000-01")
-            .header("X-Organization-Id", organizationId.toString())
+            .header(AUTHORIZATION, authorization(organizationId))
             .exchange();
 
     assertThat(result)
@@ -545,10 +554,15 @@ class EventListIntegrationTest {
   // 헬퍼
   // ---------------------------------------------------------------------------
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult get(UUID organizationId, String query) {
     return mvc.get()
         .uri("/v1/events" + query)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
@@ -577,7 +591,7 @@ class EventListIntegrationTest {
     MvcTestResult result =
         mvc.get()
             .uri("/v1/usage?month=" + AUGUST)
-            .header("X-Organization-Id", organizationId.toString())
+            .header(AUTHORIZATION, authorization(organizationId))
             .exchange();
     for (JsonNode customer :
         jsonMapper

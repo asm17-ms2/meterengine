@@ -5,6 +5,12 @@
 - SUT와 부하 발생기가 켜져 있어야 한다. 켜는 법과 아래의 `$LOADGEN`은 [`../README.md`](../README.md)와 [`../loadgen/README.md`](../loadgen/README.md)의 "켜고 끄기".
 - `smoke.js`는 초당 5건을 2분 보내 연결을 확인한다.
 
+## API 키
+
+- 모든 스크립트는 `API_KEY` 환경변수가 없으면 시작하지 않는다.
+- test-slo 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
+- 셸 기록에 남지 않게 아래 `read`로 입력받는다. 세션을 새로 열면 다시 입력한다.
+
 ## 실행
 
 ```bash
@@ -14,6 +20,8 @@ aws ssm start-session --target $LOADGEN
 ```bash
 git clone --depth 1 https://github.com/asm17-ms2/meterengine.git ~/meterengine
 cd ~/meterengine/measurements/test-slo/k6
+read -rsp 'API_KEY: ' API_KEY
+export API_KEY
 k6 run smoke.js
 ```
 
@@ -36,6 +44,7 @@ echo DEPLOY_TIMING=on | sudo tee -a /etc/meterengine/deploy.conf
 
 2. SUT에 떠 있는 SHA와 다른 SHA를 고른다. 같은 SHA를 다시 배포하면 백엔드가 바뀌지 않는다. 고를 수 있는 SHA는 [`deploy/README.md`](../../../deploy/README.md) "되돌릴 SHA 찾기"로 본다.
    - 배포는 그 SHA의 `deploy.sh`로 돈다. `DEPLOY_TIMING`이 없는 옛 SHA는 시각을 찍지 않으니 고르지 않는다.
+   - k6가 키를 `Authorization: Bearer`로 보내므로 Bearer 인증이 들어간 SHA만 고른다.
 
 ```bash
 aws ssm start-session --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)"

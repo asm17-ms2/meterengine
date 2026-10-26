@@ -1,7 +1,10 @@
 package com.meterengine.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.invoice.entity.Invoice;
@@ -11,6 +14,7 @@ import com.meterengine.invoice.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,11 +39,15 @@ class InvoiceListIntegrationTest {
   @Autowired private InvoiceRepository invoiceRepository;
   @Autowired private InvoiceLineRepository invoiceLineRepository;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -139,7 +147,7 @@ class InvoiceListIntegrationTest {
     assertThat(
             mvc.put()
                 .uri("/v1/customers/" + acme)
-                .header("X-Organization-Id", organizationId.toString())
+                .header(AUTHORIZATION, authorization(organizationId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"아크메코리아\"}")
                 .exchange())
@@ -167,16 +175,21 @@ class InvoiceListIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더나_customer_id나_month의_형식이_틀리면_400이다() {
-    assertThat(mvc.get().uri("/v1/invoices").exchange()).hasStatus(400);
+  void customer_id나_month의_형식이_틀리면_400이고_인증이_없으면_401이다() {
+    assertThat(mvc.get().uri("/v1/invoices").exchange()).hasStatus(401);
     assertThat(list(UUID.randomUUID(), "?customer_id=not-a-uuid")).hasStatus(400);
     assertThat(list(UUID.randomUUID(), "?month=2026-8")).hasStatus(400);
+  }
+
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
   }
 
   private MvcTestResult list(UUID organizationId, String query) {
     return mvc.get()
         .uri("/v1/invoices" + query)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

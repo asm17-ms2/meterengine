@@ -240,11 +240,7 @@ export function BillableMetricFormDialog({
 
       <Divider size="small" />
       <Typography.Paragraph type="secondary" style={{ margin: 0, fontSize: token.fontSizeSM }}>
-        도입사는 폼이 아니라 공통 헤더{" "}
-        <Typography.Text type="secondary" style={{ ...monoStyle, fontSize: token.fontSizeSM }}>
-          X-Organization-Id
-        </Typography.Text>
-        로 전달됩니다.
+        도입사는 요청에 사용하는 API 키로 정해집니다.
       </Typography.Paragraph>
 
       {state.status === "failed" && state !== dismissedState ? (

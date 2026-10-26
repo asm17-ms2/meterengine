@@ -1,6 +1,8 @@
 package com.meterengine.pricing.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -36,6 +37,7 @@ public class PriceRateController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
+  @AdminAccess
   @Operation(
       summary = "단가 등록",
       description =
@@ -54,7 +56,7 @@ public class PriceRateController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다.
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
             code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
@@ -66,8 +68,7 @@ public class PriceRateController {
         description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
   })
   public PriceRateResponse createPriceRate(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "단가를 넣을 미터의 code.") @PathVariable @StorableText String code,
       @Valid @RequestBody CreatePriceRateRequest request) {
     return priceRateService.create(organizationId, code, request);
@@ -75,6 +76,7 @@ public class PriceRateController {
 
   @DeleteMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)
+  @AdminAccess
   @Operation(
       summary = "단가 삭제",
       description =
@@ -91,7 +93,7 @@ public class PriceRateController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: dimension_values가 없거나 JSON 객체가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나, X-Organization-Id가 없거나 UUID가 아니다."),
+            "code=validation_error: dimension_values가 없거나 JSON 객체가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다."),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -101,8 +103,7 @@ public class PriceRateController {
         description = "code=price_rate_not_found: 그 미터에 그 조합의 단가가 없다")
   })
   public void deletePriceRate(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "단가를 지울 미터의 code.") @PathVariable @StorableText String code,
       @Parameter(description = "지울 조합. JSON 객체 문자열이다.")
           @RequestParam("dimension_values")

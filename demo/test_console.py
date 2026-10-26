@@ -123,6 +123,63 @@ class AdminActionTest(unittest.TestCase):
         self.assertIn("thread", called)
         self.assertNotEqual(called["thread"], threading.current_thread().name)
 
+    def test_설정에_키가_없으면_시작과_등록이_launchd를_부르지_않고_안내한다(self):
+        from bridge import admin
+
+        calls = []
+        notices = []
+        self.patch(admin, "CONFIG_PATH", self.config_path)
+        self.patch(admin, "PLIST_PATH", os.path.join(self.directory.name, "agent.plist"))
+        self.patch(admin, "launchctl", lambda arguments: calls.append(arguments) or (0, ""))
+        app = self.app()
+        self.patch(app, "notify", lambda message, **kwargs: notices.append(message))
+
+        async def scenario():
+            async with app.run_test() as pilot:
+                app.action_start()
+                app.action_install()
+                for _ in range(200):
+                    if len(notices) >= 2:
+                        break
+                    await asyncio.sleep(0.01)
+                await pilot.pause()
+                self.assertTrue(app.is_running)
+
+        asyncio.run(scenario())
+        self.assertEqual(calls, [])
+        self.assertEqual(len(notices), 2)
+        for message in notices:
+            self.assertIn("config --api-key", message)
+
+
+@unittest.skipUnless(HAS_TEXTUAL, "textual이 없다 (uv run --with textual)")
+class StatusTextTest(unittest.TestCase):
+    def status_text(self, health):
+        import console as console_module
+
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        app = console_module.ConsoleApp(
+            os.path.join(directory.name, "bridge.json"), os.path.join(directory.name, "state.json")
+        )
+        app.reachable = True
+        app.health = health
+        return app._status_text()
+
+    def test_가린_키와_도입사_확인_실패_code를_보여준다(self):
+        text = self.status_text(
+            {"api_key": "me_live_****2LtA", "organization": None, "organization_error": "invalid_credentials"}
+        )
+        self.assertIn("me_live_****2LtA", text)
+        self.assertIn("invalid_credentials", text)
+
+    def test_확인한_도입사를_보여준다(self):
+        text = self.status_text(
+            {"organization": {"id": "d7cee55d-8c82-4afc-b996-6749d8b26a4e", "name": "데모 도입사"},
+             "organization_error": None}
+        )
+        self.assertIn("데모 도입사", text)
+
 
 if __name__ == "__main__":
     unittest.main()

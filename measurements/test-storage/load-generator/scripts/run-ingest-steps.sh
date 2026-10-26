@@ -44,6 +44,7 @@ all_vus_busy() {
 
 main() {
 	need_cmd jq k6
+	require_api_key
 	export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M)-ingest}"
 	export RESULT_DIR="$K6_DIR/results/$RUN_ID"
 	[ ! -e "$RESULT_DIR" ] || die "$RESULT_DIR 에 같은 RUN_ID 결과가 있다. RUN_ID를 바꾼다"

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from bridge.const import CONFIG_PATH, STATE_PATH
 from core.api_client import ApiClient
 from core.files import write_json_atomic
-from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, is_uuid
+from core.model import DEFAULT_BASE_URL, is_api_key, is_uuid, mask_api_key
 
 DEFAULT_FALLBACK_PROJECT = "기타 프로젝트"
 
@@ -29,7 +29,7 @@ MAX_CUSTOMER_NAME = 255
 class BridgeConfig:
     owner: str = ""
     base_url: str = DEFAULT_BASE_URL
-    org_id: str = DEFAULT_ORG_ID
+    api_key: str = ""
     allow: List[str] = field(default_factory=list)
     deny: List[str] = field(default_factory=list)
     fallback_project: str = DEFAULT_FALLBACK_PROJECT
@@ -49,7 +49,7 @@ class BridgeConfig:
         config = BridgeConfig(
             owner=str(data.get("owner") or ""),
             base_url=str(data.get("base_url") or DEFAULT_BASE_URL),
-            org_id=str(data.get("org_id") or DEFAULT_ORG_ID),
+            api_key=str(data.get("api_key") or ""),
             allow=[str(x) for x in data.get("allow") or []],
             deny=[str(x) for x in data.get("deny") or []],
             fallback_project=str(data.get("fallback_project") or DEFAULT_FALLBACK_PROJECT),
@@ -59,28 +59,33 @@ class BridgeConfig:
         return config
 
     def validate(self) -> None:
-        if not is_uuid(self.org_id):
-            raise ValueError("org_id가 UUID가 아닙니다: " + self.org_id)
+        if self.api_key and not is_api_key(self.api_key):
+            raise ValueError("api_key가 API 키 형식이 아닙니다 (me_live_ 또는 me_test_ 뒤에 영문과 숫자 32자)")
         if not self.base_url.startswith(("http://", "https://")):
             raise ValueError("base_url이 http:// 또는 https://로 시작해야 합니다: " + self.base_url)
 
     def save(self, path: str = CONFIG_PATH) -> None:
         self.validate()
-        write_json_atomic(
-            path,
-            {
-                "owner": self.owner,
-                "base_url": self.base_url,
-                "org_id": self.org_id,
-                "allow": self.allow,
-                "deny": self.deny,
-                "fallback_project": self.fallback_project,
-                "timeout_seconds": self.timeout_seconds,
-            },
-        )
+        write_json_atomic(path, self._fields(self.api_key), mode=0o600)
 
-    def scope(self) -> str:
-        return "%s|%s" % (self.base_url.rstrip("/"), self.org_id)
+    def display(self) -> dict:
+        return self._fields(mask_api_key(self.api_key) if self.api_key else "(없음)")
+
+    def _fields(self, api_key_value: str) -> dict:
+        return {
+            "owner": self.owner,
+            "base_url": self.base_url,
+            "api_key": api_key_value,
+            "allow": self.allow,
+            "deny": self.deny,
+            "fallback_project": self.fallback_project,
+            "timeout_seconds": self.timeout_seconds,
+        }
+
+    def scope(self, organization_id: str) -> str:
+        if not is_uuid(organization_id):
+            raise ValueError("도입사 id가 UUID가 아닙니다: " + organization_id)
+        return "%s|%s" % (self.base_url.rstrip("/"), organization_id)
 
     def project_state(self, project: str) -> str:
         """이 프로젝트가 지금 어떤 상태인지."""
@@ -136,7 +141,7 @@ def project_for_cwd(cwd: str, config: BridgeConfig) -> Optional[str]:
 
 
 class BridgeState:
-    def __init__(self, path: str = STATE_PATH, scope: str = ""):
+    def __init__(self, path: str = STATE_PATH, scope: Optional[str] = ""):
         self.path = path
         self.scope = scope
         self._lock = threading.Lock()
@@ -144,6 +149,8 @@ class BridgeState:
         self.customers: Dict[str, str] = {}
         self.denied: Set[str] = set()
         self.seen: Dict[str, float] = {}
+        self._stored_scope = ""
+        self._stored_customers: Dict[str, str] = {}
         self._load()
 
     def _load(self) -> None:
@@ -172,10 +179,22 @@ class BridgeState:
         for session_id in list(self.sessions) + list(self.denied):
             self.seen.setdefault(session_id, now)
         self._prune(now)
-        if self.scope and str(data.get("scope") or "") != self.scope:
-            return
+        self._stored_scope = str(data.get("scope") or "")
         if isinstance(customers, dict):
-            self.customers = {str(k): str(v) for k, v in customers.items() if is_uuid(str(v))}
+            self._stored_customers = {str(k): str(v) for k, v in customers.items() if is_uuid(str(v))}
+        self.customers = self._customers_for(self.scope)
+
+    def _customers_for(self, scope: Optional[str]) -> Dict[str, str]:
+        if scope is None or (scope and self._stored_scope != scope):
+            return {}
+        return dict(self._stored_customers)
+
+    def set_scope(self, scope: str) -> None:
+        with self._lock:
+            if self.scope == scope:
+                return
+            self.scope = scope
+            self.customers = self._customers_for(scope)
 
     def _prune(self, now: float) -> None:
         """하루 넘게 hook이 오지 않은 세션을 버린다."""
@@ -191,12 +210,15 @@ class BridgeState:
 
     def _save_locked(self) -> None:
         self._prune(time.time())
+        if self.scope is not None:
+            self._stored_scope = self.scope
+            self._stored_customers = dict(self.customers)
         write_json_atomic(
             self.path,
             {
-                "scope": self.scope,
+                "scope": self._stored_scope,
                 "sessions": self.sessions,
-                "customers": self.customers,
+                "customers": self._stored_customers,
                 "denied": sorted(self.denied),
                 "seen": self.seen,
             },

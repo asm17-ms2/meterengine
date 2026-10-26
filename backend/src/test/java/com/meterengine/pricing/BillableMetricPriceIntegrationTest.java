@@ -1,9 +1,13 @@
 package com.meterengine.pricing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,11 +30,15 @@ class BillableMetricPriceIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   // --- 목록과 순서 ---
@@ -142,21 +150,26 @@ class BillableMetricPriceIntegrationTest {
   // --- 공통 ---
 
   @Test
-  void 도입사_헤더가_없으면_400이고_validation_error다() {
+  void 인증이_없으면_401이고_authentication_required다() {
     assertThat(mvc.get().uri("/v1/billable-metric-prices").exchange())
-        .hasStatus(400)
+        .hasStatus(401)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
-        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+        .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.getCode());
   }
 
   // --- 헬퍼 ---
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult get(UUID organizationId) {
     return mvc.get()
         .uri("/v1/billable-metric-prices")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

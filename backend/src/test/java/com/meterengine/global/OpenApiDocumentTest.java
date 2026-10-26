@@ -1,10 +1,13 @@
 package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +27,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
@@ -41,12 +47,15 @@ class OpenApiDocumentTest {
       Set.of("get", "put", "post", "delete", "patch", "head", "options", "trace");
 
   @Autowired private WebApplicationContext webApplicationContext;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   // ---------------------------------------------------------------------------
@@ -110,6 +119,79 @@ class OpenApiDocumentTest {
                 assertThat(operation.path("summary").asText())
                     .as(operation.path("operationId").asText())
                     .isNotBlank());
+  }
+
+  @Test
+  void 공개_경로인_로그인은_보안_요구가_빈_배열이다() {
+    JsonNode security = root().path("paths").path("/v1/sessions").path("post").path("security");
+
+    assertThat(security.isArray())
+        .as("POST /v1/sessions의 security가 배열이 아니다: %s", security)
+        .isTrue();
+    assertThat(security.isEmpty()).as("POST /v1/sessions의 security: %s", security).isTrue();
+    assertThat(root().path("security").isEmpty()).isFalse();
+  }
+
+  @Test
+  void 공개_경로인_가입_신청은_보안_요구가_빈_배열이다() {
+    JsonNode security = root().path("paths").path("/v1/signups").path("post").path("security");
+
+    assertThat(security.isArray()).as("POST /v1/signups의 security가 배열이 아니다: %s", security).isTrue();
+    assertThat(security.isEmpty()).as("POST /v1/signups의 security: %s", security).isTrue();
+  }
+
+  @Test
+  void 가입과_사용자_응답의_중첩_원소는_자기_응답_이름의_스키마다() {
+    JsonNode schemas = root().path("components").path("schemas");
+
+    assertThat(
+            schemas
+                .path("SignupResponse")
+                .path("properties")
+                .path("organization")
+                .path("$ref")
+                .asText())
+        .isEqualTo("#/components/schemas/SignupOrganization");
+    assertThat(
+            schemas
+                .path("SignupResponse")
+                .path("properties")
+                .path("user_account")
+                .path("$ref")
+                .asText())
+        .isEqualTo("#/components/schemas/SignupUserAccount");
+    assertThat(
+            schemas
+                .path("UserAccountResponse")
+                .path("properties")
+                .path("organizations")
+                .path("items")
+                .path("$ref")
+                .asText())
+        .isEqualTo("#/components/schemas/UserAccountOrganization");
+  }
+
+  @Test
+  void 운영자_경로는_보안_요구를_물려받고_401과_403을_문서화한다() {
+    JsonNode paths = root().path("paths");
+    List<JsonNode> operatorOperations =
+        List.of(
+            paths.path("/v1/organizations").path("get"),
+            paths.path("/v1/organizations/{id}/status").path("put"),
+            paths.path("/v1/organizations/{id}/members").path("post"),
+            paths.path("/v1/user-accounts").path("get"),
+            paths.path("/v1/user-accounts/{id}/role").path("put"));
+
+    assertThat(operatorOperations)
+        .allSatisfy(
+            operation -> {
+              assertThat(operation.isMissingNode()).as("운영자 경로가 문서에 없다").isFalse();
+              assertThat(operation.has("security"))
+                  .as(operation.path("operationId").asText())
+                  .isFalse();
+              assertThat(operation.path("responses").has("401")).isTrue();
+              assertThat(operation.path("responses").has("403")).isTrue();
+            });
   }
 
   // ---------------------------------------------------------------------------
@@ -183,6 +265,7 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  @Transactional
   void 오류_스키마가_실제_본문과_같은_모양이다() {
     assertSchemaHasField("ErrorResponse", "code");
     assertSchemaHasField("ErrorResponse", "errors");
@@ -196,15 +279,43 @@ class OpenApiDocumentTest {
         .doesNotContainKey("ProblemDetail");
 
     Set<String> documented = keysOf(json(), "$.components.schemas.ErrorResponse.properties");
+    String authorization = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID());
     Set<String> actual = new TreeSet<>();
     actual.addAll(keysOf(mvc.get().uri("/v1/events").exchange(), "$"));
-    actual.addAll(keysOf(mvc.get().uri("/v1/nope").exchange(), "$"));
-    actual.addAll(keysOf(mvc.method(HttpMethod.DELETE).uri("/v1/events").exchange(), "$"));
     actual.addAll(
         keysOf(
-            mvc.post().uri("/v1/events").contentType(MediaType.TEXT_PLAIN).content("{}").exchange(),
+            mvc.get()
+                .uri("/v1/events")
+                .param("size", "101")
+                .header(AUTHORIZATION, authorization)
+                .exchange(),
             "$"));
-    actual.addAll(keysOf(mvc.get().uri("/v1/usage").exchange(), "$"));
+    actual.addAll(
+        keysOf(mvc.get().uri("/v1/nope").header(AUTHORIZATION, authorization).exchange(), "$"));
+    actual.addAll(
+        keysOf(
+            mvc.method(HttpMethod.DELETE)
+                .uri("/v1/events")
+                .header(AUTHORIZATION, authorization)
+                .exchange(),
+            "$"));
+    actual.addAll(
+        keysOf(
+            mvc.post()
+                .uri("/v1/events")
+                .header(AUTHORIZATION, authorization)
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("{}")
+                .exchange(),
+            "$"));
+    actual.addAll(
+        keysOf(
+            mvc.get()
+                .uri("/v1/usage")
+                .param("month", "2026-13")
+                .header(AUTHORIZATION, authorization)
+                .exchange(),
+            "$"));
 
     assertThat(actual)
         .as(

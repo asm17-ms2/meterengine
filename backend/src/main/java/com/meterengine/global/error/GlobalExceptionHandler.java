@@ -9,9 +9,12 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
@@ -51,10 +54,19 @@ class GlobalExceptionHandler {
 
   private static final String UNSATISFIED_PARAMETER_MESSAGE = "%s 조건에 맞지 않습니다";
 
+  private static final String BEARER_CHALLENGE = "Bearer";
+
   // 도메인 예외
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
     return respond(exception.getErrorCode(), exception.getErrors());
+  }
+
+  // 403 메서드 보안 거부
+  @ExceptionHandler(AuthorizationDeniedException.class)
+  ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
+      AuthorizationDeniedException exception) {
+    return respond(ErrorCode.PERMISSION_DENIED);
   }
 
   // 400 요청 본문 검증 실패
@@ -200,16 +212,21 @@ class GlobalExceptionHandler {
   }
 
   private static ResponseEntity<ErrorResponse> respond(ErrorCode errorCode) {
-    return ResponseEntity.status(errorCode.getStatus())
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(ErrorResponse.from(errorCode));
+    return statusOf(errorCode).body(ErrorResponse.from(errorCode));
   }
 
   private static ResponseEntity<ErrorResponse> respond(
       ErrorCode errorCode, List<FieldError> errors) {
-    return ResponseEntity.status(errorCode.getStatus())
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(ErrorResponse.of(errorCode, errors));
+    return statusOf(errorCode).body(ErrorResponse.of(errorCode, errors));
+  }
+
+  private static ResponseEntity.BodyBuilder statusOf(ErrorCode errorCode) {
+    ResponseEntity.BodyBuilder builder =
+        ResponseEntity.status(errorCode.getStatus()).contentType(MediaType.APPLICATION_JSON);
+    if (errorCode.getStatus() == HttpStatus.UNAUTHORIZED) {
+      builder.header(HttpHeaders.WWW_AUTHENTICATE, BEARER_CHALLENGE);
+    }
+    return builder;
   }
 
   private static ResponseEntity<ErrorResponse> respondMissingValue(String field) {

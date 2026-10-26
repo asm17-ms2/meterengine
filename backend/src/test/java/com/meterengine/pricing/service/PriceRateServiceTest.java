@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
@@ -43,6 +44,7 @@ class PriceRateServiceTest {
 
   @Mock private PriceRateRepository priceRateRepository;
   @Mock private BillableMetricRepository billableMetricRepository;
+  @Mock private AuditLogService auditLogService;
 
   private PriceRateService priceRateService;
 
@@ -50,7 +52,10 @@ class PriceRateServiceTest {
   void setUp() {
     priceRateService =
         new PriceRateService(
-            priceRateRepository, billableMetricRepository, JsonMapper.builder().build());
+            priceRateRepository,
+            billableMetricRepository,
+            JsonMapper.builder().build(),
+            auditLogService);
   }
 
   @Test
@@ -108,6 +113,13 @@ class PriceRateServiceTest {
     assertThat(response.billableMetricCode()).isEqualTo(BILLABLE_METRIC_CODE);
     assertThat(response.dimensionValues()).isEqualTo("{\"model\":\"opus\",\"region\":\"kr\"}");
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
+    verify(auditLogService)
+        .record(
+            ORGANIZATION_ID,
+            "price_rate_created",
+            "price_rate",
+            BILLABLE_METRIC_CODE,
+            Map.of("dimension_values", dimensionValues, "unit_price", UNIT_PRICE));
   }
 
   @Test
@@ -125,6 +137,19 @@ class PriceRateServiceTest {
     verify(priceRateRepository).saveAndFlush(existing);
     assertThat(existing.getUnitPrice()).isEqualByComparingTo(UNIT_PRICE);
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
+    verify(auditLogService)
+        .record(
+            ORGANIZATION_ID,
+            "price_rate_created",
+            "price_rate",
+            BILLABLE_METRIC_CODE,
+            Map.of(
+                "dimension_values",
+                Map.of("model", "opus"),
+                "unit_price",
+                UNIT_PRICE,
+                "previous_unit_price",
+                new BigDecimal("1")));
   }
 
   private void billableMetricDeclares(List<String> dimensionProperties) {

@@ -5,7 +5,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-from core.api_client import ApiClient, ApiResult, parse_problem, roster_from_usage
+from core.api_client import (
+    ApiClient,
+    ApiResult,
+    Organization,
+    parse_problem,
+    require_organization,
+    roster_from_usage,
+)
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import (
     BillableMetricMeta,
@@ -18,7 +25,7 @@ from csvdemo.expected import (
     stored_events_from_log,
 )
 from core.jsonl_log import read_log
-from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, StoredEvent, kst_month
+from core.model import DEFAULT_BASE_URL, StoredEvent, kst_month
 from csvdemo.render import MISMATCH_GUIDANCE, Console, render_table
 
 EXIT_MATCH = 0
@@ -33,6 +40,8 @@ class VerifySource:
     error_count: int
     client: ApiClient
     label: str
+    organization_id: Optional[str] = None
+    organization: Optional[Organization] = None
 
 
 def run_verify(args, console: Console) -> int:
@@ -46,6 +55,14 @@ def run_verify(args, console: Console) -> int:
     if source is None:
         return EXIT_ERROR
     client = source.client
+    organization = source.organization or require_organization(client)
+    if source.organization_id and source.organization_id != organization.id:
+        print(
+            console.warn(
+                "주의: 기록은 도입사 %s에서 보냈는데 이 키는 다른 도입사 %s (%s)의 키입니다. 결과가 어긋날 수 있습니다."
+                % (source.organization_id, organization.name, organization.id)
+            )
+        )
 
     months = [args.month] if args.month else sorted({kst_month(e.occurred_at) for e in source.stored})
     if not months:
@@ -99,13 +116,13 @@ def _load_log_source(args, console: Console) -> Optional[VerifySource]:
         print("로그의 이벤트를 해석하지 못했습니다: %s" % error, file=sys.stderr)
         return None
     base_url = args.base_url or (log.header.base_url if log.header else None) or DEFAULT_BASE_URL
-    org_id = args.org_id or (log.header.org_id if log.header else None) or DEFAULT_ORG_ID
     return VerifySource(
         stored=stored,
         rejected_count=sum(1 for r in log.records if r.outcome == "rejected"),
         error_count=sum(1 for r in log.records if r.outcome == "error"),
-        client=ApiClient(base_url, org_id, timeout_seconds=args.timeout),
+        client=ApiClient(base_url, args.api_key, timeout_seconds=args.timeout),
         label=args.log + " (send 로그, 서버 판정 기록)",
+        organization_id=log.header.organization_id if log.header else None,
     )
 
 
@@ -119,8 +136,8 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
         print(str(error), file=sys.stderr)
         return None
     base_url = args.base_url or DEFAULT_BASE_URL
-    org_id = args.org_id or DEFAULT_ORG_ID
-    client = ApiClient(base_url, org_id, timeout_seconds=args.timeout)
+    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout)
+    organization = require_organization(client)
 
     usage = client.get_usage(args.month)
     if usage.status != 200:
@@ -143,6 +160,7 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
         error_count=0,
         client=client,
         label=args.csv + " (CSV, 판정 시뮬레이션)",
+        organization=organization,
     )
 
 

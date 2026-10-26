@@ -14,6 +14,7 @@ from bridge.const import (
     BRIDGE_LOG,
     BRIDGE_SCRIPT,
     CLAUDE_SETTINGS_PATH,
+    CONFIG_PATH,
     DEFAULT_HOST,
     DEFAULT_PORT,
     LAUNCHD_LABEL,
@@ -22,6 +23,7 @@ from bridge.const import (
     logs_endpoint,
     session_endpoint,
 )
+from bridge.state import BridgeConfig
 from core.files import write_json_atomic
 
 OTEL_ENV = {
@@ -33,6 +35,13 @@ OTEL_ENV = {
 }
 
 HOOK_EVENT = "UserPromptSubmit"
+
+LOCAL_KEY_HINT = "로컬 키는 backend/src/main/resources/db/local/R__local_credentials.sql에 있습니다."
+
+MISSING_SAVED_API_KEY = (
+    "설정 파일에 API 키가 없어 진행하지 않습니다. launchd로 띄운 브리지는 환경변수를 받지 않습니다.\n"
+    "  python3 demo/otel_bridge.py config --api-key <키>\n"
+) + LOCAL_KEY_HINT
 
 
 @dataclass
@@ -192,7 +201,17 @@ def plist_text(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, python: str =
 """ % (LAUNCHD_LABEL, items, _xml_escape(BRIDGE_LOG), _xml_escape(BRIDGE_ERR))
 
 
+def require_saved_api_key() -> None:
+    try:
+        saved = BridgeConfig.load(CONFIG_PATH).api_key
+    except ValueError as error:
+        raise AdminError(str(error)) from error
+    if not saved:
+        raise AdminError(MISSING_SAVED_API_KEY)
+
+
 def install(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, force: bool = False) -> str:
+    require_saved_api_key()
     worktree = worktree_root()
     if worktree and not force:
         raise AdminError(
@@ -222,6 +241,7 @@ def installed() -> bool:
 
 
 def start() -> None:
+    require_saved_api_key()
     if not installed():
         raise AdminError("먼저 자동 시작 등록(install)을 하세요.")
     code, message = launchctl(["bootstrap", _domain(), PLIST_PATH])

@@ -17,13 +17,27 @@ import os
 from bridge import admin, server
 from bridge.const import CLAUDE_SETTINGS_PATH, DEFAULT_HOST, DEFAULT_PORT, health_endpoint
 from bridge.state import CONFIG_PATH, STATE_PATH, BridgeConfig, BridgeState
+from core.model import API_KEY_ENV, resolve_api_key
+
+MISSING_API_KEY = (
+    "API 키가 없어 브리지를 시작하지 않습니다. 아래 가운데 하나로 키를 주세요.\n"
+    "  python3 demo/otel_bridge.py config --api-key <키>   (설정 파일에 저장)\n"
+    "  %s=<키> python3 demo/otel_bridge.py serve\n" % API_KEY_ENV
+) + admin.LOCAL_KEY_HINT
 
 
 def run_serve(args) -> int:
     config = BridgeConfig.load(args.config)
     if args.base_url:
         config.base_url = args.base_url
-    state = BridgeState(args.state, config.scope())
+    api_key = resolve_api_key(
+        None, os.environ, fallback=config.api_key or None, fallback_label="설정 파일의 api_key"
+    )
+    if api_key is None:
+        print(MISSING_API_KEY, file=sys.stderr)
+        return 2
+    config.api_key = api_key
+    state = BridgeState(args.state, None)
     try:
         return server.serve(config, state, args.host, args.port)
     except OSError as error:
@@ -40,7 +54,7 @@ def run_config(args) -> int:
     path = args.config
     config = BridgeConfig.load(path)
     changed = False
-    for field_name in ("owner", "base_url", "org_id", "fallback_project"):
+    for field_name in ("owner", "base_url", "api_key", "fallback_project"):
         value = getattr(args, field_name, None)
         if value:
             setattr(config, field_name, value)
@@ -54,8 +68,7 @@ def run_config(args) -> int:
     if changed or not os.path.exists(path):
         config.save(path)
         print("설정을 저장했습니다: " + path)
-    with open(path, encoding="utf-8") as f:
-        print(json.dumps(json.load(f), ensure_ascii=False, indent=2))
+    print(json.dumps(config.display(), ensure_ascii=False, indent=2, sort_keys=True))
     if _is_production(config.base_url):
         print()
         print("주의: 전송 대상이 배포 서버입니다. event 테이블은 지울 수 없습니다.")
@@ -154,7 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
     config.add_argument("--config", default=CONFIG_PATH)
     config.add_argument("--owner", help="이 기계의 주인. 고객 이름에 들어간다")
     config.add_argument("--base-url", help="전송 대상 (기본 http://localhost:8080)")
-    config.add_argument("--org-id", help="X-Organization-Id")
+    config.add_argument("--api-key", help="API 키. 설정 파일(권한 600)에 저장하고 화면에는 가려서 보여준다")
     config.add_argument("--allow", help="실명으로 보낼 레포 이름들, 쉼표 구분. 비우면 전부 실명")
     config.add_argument("--deny", help="아예 보내지 않을 레포 이름들, 쉼표 구분")
     config.add_argument("--fallback-project", help="허용 목록 밖 프로젝트를 합칠 이름")

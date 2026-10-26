@@ -69,16 +69,23 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 | 옵션 | 기본값 | 내용 |
 |---|---|---|
 | `--base-url` | `http://localhost:8080` | 백엔드 주소. `verify`는 로그 헤더 값을 우선한다 |
-| `--org-id` | 시드 도입사 | `X-Organization-Id` 헤더 |
+| `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 live 키 | `Authorization: Bearer`로 보내는 API 키 |
 | `--timeout` | `10` | HTTP 타임아웃 초 |
 | `--no-color` | 끔 | ANSI 색 비활성화 |
+
+### API 키
+
+- 형식이 틀리면 아무것도 보내지 않고 끝난다.
+- 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
+- 시작할 때 `GET /v1/organization`으로 키의 도입사를 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
+- 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 도입사 id(`organization_id`)를 남긴다. 옛 기록의 도입사 값은 읽지 않는다.
 
 ### send
 
 - CSV의 이벤트를 `POST /v1/events`로 순차 전송한다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.
-- 전송 전 확인 게이트에서 대상 서버, 도입사, 건수, KST 월별 분포, 서버에 이미 있는 건수, 예상 결과(신규/중복/거절)를 보여주고 `y` 입력을 기다린다.
+- 전송 전 확인 게이트에서 대상 서버, 도입사 이름과 id, 가린 API 키, 건수, KST 월별 분포, 서버에 이미 있는 건수, 예상 결과(신규/중복/거절)를 보여주고 `y` 입력을 기다린다.
   - 문제로 예측된 행은 미리보기 범위 밖이어도 사유와 함께 표시된다.
 - 잘못된 값(빈 필드, 미등록 고객)도 거르지 않고 그대로 보낸다. 판정은 서버가 한다.
 
@@ -88,7 +95,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 | `--interval` | `0` | 전송 간격 초 |
 | `--jitter` | `0` | 간격에 더할 랜덤 슬립 상한 초 |
 | `--yes` | 끔 | 확인 게이트 생략 |
-| `--dry-run` | 끔 | 게이트와 미리보기만. 전송도 로그 기록도 하지 않는다 |
+| `--dry-run` | 끔 | 게이트와 미리보기만. 전송도 로그 기록도 하지 않는다. 도입사 확인과 미리보기 때문에 백엔드에는 연결한다 |
 | `--verbose` | 끔 | 요청과 응답 JSON 전문도 출력 |
 
 ### verify
@@ -107,6 +114,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - `--log`와 `--csv`를 둘 다 주면 로그를 쓴다.
 - CSV 소스는 서버 판정을 시뮬레이션한다. 필수 필드 검증과 서버 고객 명단 대조로 거절을 예측하되 저장할 수 없는 문자(NUL, 짝이 없는 UTF-16 서로게이트) 같은 드문 거절은 예측하지 못하고 그 한계를 출력에 적는다.
 - 중간이 깨진 `send` 로그로는 판정하지 않고 종료 코드 2로 끝낸다. 헤더가 여럿인 브리지 로그는 경고까지만 한다.
+- 로그 머리말의 도입사와 키의 도입사가 다르면 경고한다.
 
 | 옵션 | 기본값 | 내용 |
 |---|---|---|
@@ -157,7 +165,7 @@ Claude Code --UserPromptSubmit hook--> 브리지: 세션 abc는 meterengine 폴�
 
 ```bash
 # 1. 누가 어디로 보낼지 정한다 (~/.meterengine/bridge.json)
-python3 demo/otel_bridge.py config --owner "박성종" --allow "meterengine,meterengine-demo"
+python3 demo/otel_bridge.py config --owner "박성종" --allow "meterengine,meterengine-demo" --api-key <키>
 
 # 2. ~/.claude/settings.json에 OTel 설정과 hook을 병합한다 (기존 내용은 보존된다)
 python3 demo/otel_bridge.py setup
@@ -166,17 +174,29 @@ python3 demo/otel_bridge.py setup
 - `setup`은 반영 내용을 먼저 보여주고 `y`를 기다린다. `--yes`로 생략한다.
 - 첫 반영 때 원본 백업을 남긴다. 다시 실행해도 덮어쓰지 않는다.
 - 새 Claude 세션부터 적용된다.
+- API 키 없이 등록해 둔 브리지는 뜨지 못한다. 키를 저장하고 껐다 켠다.
+
+```zsh
+read -rs '?API 키: ' api_key && echo
+python3 demo/otel_bridge.py config --api-key "$api_key"
+python3 demo/otel_bridge.py stop && python3 demo/otel_bridge.py start
+```
+
+- 첫 줄은 zsh 문법이다. bash에서는 `read -rsp 'API 키: ' api_key && echo`를 쓴다.
 
 | `config` 옵션 | 내용 |
 |---|---|
 | `--owner` | 이 기계의 주인. 고객 이름에 들어간다 |
 | `--base-url` | 전송 대상. 기본 `http://localhost:8080` |
-| `--org-id` | `X-Organization-Id` |
+| `--api-key` | API 키. 설정 파일에 저장하고 출력에는 가려서 보인다 |
 | `--allow` | 실명으로 보낼 레포 이름들, 쉼표 구분. 비우면 전부 실명 |
 | `--deny` | 아예 보내지 않을 레포 이름들, 쉼표 구분 |
 | `--fallback-project` | 허용 목록 밖 프로젝트를 합칠 이름 |
 | `--config` | 설정 파일 경로. 기본 `~/.meterengine/bridge.json` |
 
+- 설정 파일은 권한 600으로 쓴다. 옛 설정 파일의 도입사 값은 읽지 않는다.
+- 키는 `METERENGINE_API_KEY`, 설정 파일 순서로 고른다. 둘 다 없으면 안내를 띄우고 시작하지 않는다.
+  - launchd로 띄운 브리지는 환경변수를 받지 않는다. 그래서 설정 파일에 키가 없으면 `install`과 `start`를 거부한다. `console.py`의 등록과 시작도 같다.
 - 설정을 바꿔도 이미 도는 브리지에는 반영되지 않는다. `stop` 후 `start`를 한다.
 - 배포 주소는 로컬에서 확인한 뒤 손으로 적는다.
 
@@ -197,6 +217,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 - 모든 하위 명령이 `--host`(기본 `127.0.0.1`)와 `--port`(기본 `4318`)를 받는다. `config`는 받지 않는다.
 - `serve`는 `--config`, `--state`(기본 `~/.meterengine/state.json`), `--base-url`을 추가로 받는다. `--base-url`은 이번 실행에만 적용된다.
+- 키의 도입사는 첫 전송 때 `GET /v1/organization`으로 확인한다. 실패하면(연결 실패, 401, 403) 브리지는 떠 있고 이벤트를 보내지 않은 채 오류로 센 뒤 60초 뒤에 다시 확인한다. 확인한 뒤 전송이 401이나 403을 받아도(키 폐기, 도입사 정지) 그 이벤트를 거절로 세고 같은 방식으로 다시 확인한다. `status`의 `organization_error`에 마지막 실패 code가 나온다.
 - `install`은 워크트리에서 실행하면 거부한다. 본 저장소의 `demo/otel_bridge.py`로 등록한다. `--force`로 무시할 수 있다.
 - `status`는 브리지가 응답하지 않으면 종료 코드 1로 끝난다.
 - 브리지가 꺼져 있으면 Claude Code는 그대로 동작하고 사용량만 수집되지 않는다.
@@ -222,7 +243,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
 - 고객은 브리지가 만든다. `GET /v1/customers`로 같은 이름을 찾고 없을 때만 `POST /v1/customers`로 등록한다.
-- 찾아낸 고객 id는 `~/.meterengine/state.json`에 담는다. 서버가 404 `customer_not_found`로 답하면 그 자리에서 캐시를 버리고 다음 이벤트에서 다시 찾는다.
+- 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상과 도입사 id별로 담는다. 서버가 404 `customer_not_found`로 답하면 그 자리에서 캐시를 버리고 다음 이벤트에서 다시 찾는다.
 
 ### 보내는 이벤트와 properties
 
@@ -284,7 +305,7 @@ uv run demo/console.py
 
 - 의존성이 파일 안에 적혀 있어(PEP 723) uv가 받아서 실행한다. demo의 나머지는 `python3`로 돈다.
 - `--config`, `--state`를 받는다.
-- 상태가 2초마다 갱신된다.
+- 상태가 2초마다 갱신된다. 가린 API 키와 도입사 확인 결과(실패하면 code)가 함께 나온다.
 - 설정에 적은 프로젝트와 브리지가 실제로 본 프로젝트가 함께 뜬다. 콘솔을 켜 둔 사이에 처음 본 레포도 다음 갱신에 목록으로 붙는다.
 - 커서를 놓고 스페이스를 누르면 세 상태를 돈다.
 

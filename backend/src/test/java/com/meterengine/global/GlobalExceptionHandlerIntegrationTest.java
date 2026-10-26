@@ -1,8 +1,11 @@
 package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import jakarta.validation.Valid;
@@ -17,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.MatrixVariable;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,7 +49,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 class GlobalExceptionHandlerIntegrationTest {
 
-  private static final String ORGANIZATION_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e";
+  private static final UUID SEED_ORGANIZATION_ID =
+      UUID.fromString("d7cee55d-8c82-4afc-b996-6749d8b26a4e");
 
   private static final String INVALID_BODY =
       """
@@ -59,12 +65,18 @@ class GlobalExceptionHandlerIntegrationTest {
       """;
 
   @Autowired private WebApplicationContext webApplicationContext;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private MockMvcTester mvc;
 
+  private String authorization;
+
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
+    authorization = TestCredentials.issueApiKey(jdbcTemplate, SEED_ORGANIZATION_ID);
   }
 
   @Test
@@ -92,7 +104,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult result =
         mvc.post()
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .contentType(MediaType.TEXT_PLAIN)
             .content("{}")
             .exchange();
@@ -102,7 +114,7 @@ class GlobalExceptionHandlerIntegrationTest {
   @Test
   void 없는_경로는_404이고_code가_endpoint_not_found다() {
     MvcTestResult result =
-        mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION_ID).exchange();
+        mvc.get().uri("/v1/nope").header(AUTHORIZATION, authorization).exchange();
     assertCode(result, 404, ErrorCode.ENDPOINT_NOT_FOUND.getCode());
   }
 
@@ -111,7 +123,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult result =
         mvc.method(HttpMethod.DELETE)
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .exchange();
     assertCode(result, 405, ErrorCode.METHOD_NOT_ALLOWED.getCode());
   }
@@ -122,7 +134,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("month", "2026-08")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .accept(MediaType.TEXT_PLAIN)
             .exchange();
     assertCode(result, 406, ErrorCode.RESPONSE_TYPE_NOT_ACCEPTABLE.getCode());
@@ -135,7 +147,7 @@ class GlobalExceptionHandlerIntegrationTest {
           mvc.get()
               .uri(path)
               .param("month", "2026-13")
-              .header("X-Organization-Id", ORGANIZATION_ID)
+              .header(AUTHORIZATION, authorization)
               .exchange();
       assertCode(result, 400, ErrorCode.VALIDATION_ERROR.getCode());
     }
@@ -148,10 +160,11 @@ class GlobalExceptionHandlerIntegrationTest {
           mvc.get()
               .uri(path)
               .param("month", "2026-13")
-              .header("X-Organization-Id", "not-a-uuid")
+              .header(AUTHORIZATION, authorization)
               .exchange();
-      assertThat(result).bodyText().doesNotContain("not-a-uuid").doesNotContain("2026-13");
+      assertThat(result).bodyText().doesNotContain("2026-13");
     }
+    assertThat(probeHeader("not-a-uuid")).bodyText().doesNotContain("not-a-uuid");
   }
 
   @Test
@@ -170,7 +183,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("customer_id", "not-a-uuid")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .exchange();
 
     assertFields(result, "customer_id");
@@ -182,7 +195,7 @@ class GlobalExceptionHandlerIntegrationTest {
         mvc.get()
             .uri("/v1/events")
             .param("size", "101")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .exchange();
 
     assertFields(result, "size");
@@ -190,17 +203,12 @@ class GlobalExceptionHandlerIntegrationTest {
 
   @Test
   void 누락된_헤더의_field가_헤더_이름이다() {
-    MvcTestResult result = mvc.get().uri("/v1/events").exchange();
-
-    assertFields(result, "X-Organization-Id");
+    assertFields(probeHeader(null), BindingController.HEADER_NAME);
   }
 
   @Test
   void 타입이_틀린_헤더의_field가_헤더_이름이다() {
-    MvcTestResult result =
-        mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange();
-
-    assertFields(result, "X-Organization-Id");
+    assertFields(probeHeader("not-a-uuid"), BindingController.HEADER_NAME);
   }
 
   @Test
@@ -212,10 +220,10 @@ class GlobalExceptionHandlerIntegrationTest {
               .uri("/v1/events")
               .param("customer_id", "not-a-uuid")
               .param("size", "101")
-              .header("X-Organization-Id", ORGANIZATION_ID)
+              .header(AUTHORIZATION, authorization)
               .exchange(),
-          mvc.get().uri("/v1/events").exchange(),
-          mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange()
+          probeHeader(null),
+          probeHeader("not-a-uuid")
         }) {
       assertThat(result)
           .bodyJson()
@@ -236,10 +244,8 @@ class GlobalExceptionHandlerIntegrationTest {
 
   @Test
   void 우리가_만든_문구도_한국어다() {
-    assertMessages(mvc.get().uri("/v1/events").exchange(), "필수 항목입니다");
-    assertMessages(
-        mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange(),
-        "UUID 형식이어야 합니다");
+    assertMessages(probeHeader(null), "필수 항목입니다");
+    assertMessages(probeHeader("not-a-uuid"), "UUID 형식이어야 합니다");
   }
 
   @Test
@@ -247,7 +253,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult english =
         mvc.post()
             .uri("/v1/events")
-            .header("X-Organization-Id", ORGANIZATION_ID)
+            .header(AUTHORIZATION, authorization)
             .header("Accept-Language", "en")
             .contentType(MediaType.APPLICATION_JSON)
             .content(INVALID_BODY)
@@ -264,10 +270,10 @@ class GlobalExceptionHandlerIntegrationTest {
           mvc.get()
               .uri("/v1/events")
               .param("size", "101")
-              .header("X-Organization-Id", ORGANIZATION_ID)
+              .header(AUTHORIZATION, authorization)
               .exchange(),
-          mvc.get().uri("/v1/events").exchange(),
-          mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange()
+          probeHeader(null),
+          probeHeader("not-a-uuid")
         }) {
       assertThat(result)
           .bodyJson()
@@ -288,37 +294,38 @@ class GlobalExceptionHandlerIntegrationTest {
       post(UNKNOWN_CUSTOMER_BODY),
       post("{\"bad"),
       mvc.get().uri("/v1/events").exchange(),
-      mvc.get().uri("/v1/events").header("X-Organization-Id", "not-a-uuid").exchange(),
+      probeHeader(null),
+      probeHeader("not-a-uuid"),
       mvc.post()
           .uri("/v1/events")
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .contentType(MediaType.TEXT_PLAIN)
           .content("{}")
           .exchange(),
-      mvc.get().uri("/v1/nope").header("X-Organization-Id", ORGANIZATION_ID).exchange(),
+      mvc.get().uri("/v1/nope").header(AUTHORIZATION, authorization).exchange(),
       mvc.delete()
           .uri("/v1/customers/" + UUID.randomUUID())
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .exchange(),
       mvc.method(HttpMethod.DELETE)
           .uri("/v1/events")
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .exchange(),
       mvc.get()
           .uri("/v1/events")
           .param("month", "2026-08")
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .accept(MediaType.TEXT_PLAIN)
           .exchange(),
       mvc.get()
           .uri("/v1/usage")
           .param("month", "2026-13")
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .exchange(),
       mvc.get()
           .uri("/v1/invoices/draft")
           .param("month", "2026-13")
-          .header("X-Organization-Id", ORGANIZATION_ID)
+          .header(AUTHORIZATION, authorization)
           .exchange()
     };
 
@@ -340,7 +347,7 @@ class GlobalExceptionHandlerIntegrationTest {
             mvc.get()
                 .uri("/v1/usage")
                 .param("month", "2026-08")
-                .header("X-Organization-Id", ORGANIZATION_ID)
+                .header(AUTHORIZATION, authorization)
                 .exchange())
         .hasStatus(200);
   }
@@ -377,13 +384,13 @@ class GlobalExceptionHandlerIntegrationTest {
   }
 
   private MvcTestResult throwUnknown() {
-    return mvc.get().uri(ThrowingController.PATH).exchange();
+    return get(ThrowingController.PATH);
   }
 
   private MvcTestResult post(String body) {
     return mvc.post()
         .uri("/v1/events")
-        .header("X-Organization-Id", ORGANIZATION_ID)
+        .header(AUTHORIZATION, authorization)
         .contentType(MediaType.APPLICATION_JSON)
         .content(body)
         .exchange();
@@ -391,7 +398,7 @@ class GlobalExceptionHandlerIntegrationTest {
 
   @Test
   void 누락된_필수_쿼리_파라미터의_field가_파라미터_이름이다() {
-    assertFields(mvc.get().uri(BindingController.PARAMETER_PATH).exchange(), "required_parameter");
+    assertFields(get(BindingController.PARAMETER_PATH), "required_parameter");
   }
 
   @Test
@@ -399,6 +406,7 @@ class GlobalExceptionHandlerIntegrationTest {
     MvcTestResult result =
         mvc.post()
             .uri(BindingController.PART_PATH)
+            .header(AUTHORIZATION, authorization)
             .multipart()
             .file(new MockMultipartFile("other", new byte[] {1}))
             .exchange();
@@ -408,27 +416,27 @@ class GlobalExceptionHandlerIntegrationTest {
 
   @Test
   void 누락된_필수_쿠키의_field가_쿠키_이름이다() {
-    assertFields(mvc.get().uri(BindingController.COOKIE_PATH).exchange(), "session");
+    assertFields(get(BindingController.COOKIE_PATH), "session");
   }
 
   @Test
   void 누락된_매트릭스_변수의_field가_변수_이름이다() {
-    assertFields(mvc.get().uri(BindingController.MATRIX_PATH, "42").exchange(), "kind");
+    assertFields(get(BindingController.MATRIX_PATH, "42"), "kind");
   }
 
   @Test
   void 만족되지_않은_params_조건의_field가_파라미터_이름이다() {
-    assertFields(mvc.get().uri(BindingController.CONDITION_PATH).exchange(), "type");
+    assertFields(get(BindingController.CONDITION_PATH), "type");
   }
 
   @Test
   void 바인딩_누락은_모두_400이고_code가_validation_error다() {
     for (MvcTestResult result :
         new MvcTestResult[] {
-          mvc.get().uri(BindingController.PARAMETER_PATH).exchange(),
-          mvc.get().uri(BindingController.COOKIE_PATH).exchange(),
-          mvc.get().uri(BindingController.MATRIX_PATH, "42").exchange(),
-          mvc.get().uri(BindingController.CONDITION_PATH).exchange(),
+          get(BindingController.PARAMETER_PATH),
+          get(BindingController.COOKIE_PATH),
+          get(BindingController.MATRIX_PATH, "42"),
+          get(BindingController.CONDITION_PATH),
         }) {
       assertCode(result, 400, ErrorCode.VALIDATION_ERROR.getCode());
     }
@@ -436,26 +444,19 @@ class GlobalExceptionHandlerIntegrationTest {
 
   @Test
   void 업로드_상한_초과는_413이고_code가_upload_size_exceeded다() {
-    assertCode(
-        mvc.get().uri(ThrowingController.UPLOAD_PATH).exchange(),
-        413,
-        ErrorCode.UPLOAD_SIZE_EXCEEDED.getCode());
+    assertCode(get(ThrowingController.UPLOAD_PATH), 413, ErrorCode.UPLOAD_SIZE_EXCEEDED.getCode());
   }
 
   @Test
   void 비동기_시간_초과는_503이고_code가_request_timed_out다() {
-    assertCode(
-        mvc.get().uri(ThrowingController.TIMEOUT_PATH).exchange(),
-        503,
-        ErrorCode.REQUEST_TIMED_OUT.getCode());
+    assertCode(get(ThrowingController.TIMEOUT_PATH), 503, ErrorCode.REQUEST_TIMED_OUT.getCode());
   }
 
   @Test
   void 새_상태의_오류도_code와_message만_싣고_errors가_없다() {
     for (MvcTestResult result :
         new MvcTestResult[] {
-          mvc.get().uri(ThrowingController.UPLOAD_PATH).exchange(),
-          mvc.get().uri(ThrowingController.TIMEOUT_PATH).exchange(),
+          get(ThrowingController.UPLOAD_PATH), get(ThrowingController.TIMEOUT_PATH),
         }) {
       assertThat(result).hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON);
       assertThat(result)
@@ -509,7 +510,24 @@ class GlobalExceptionHandlerIntegrationTest {
   }
 
   private MvcTestResult postJson(String path, String body) {
-    return mvc.post().uri(path).contentType(MediaType.APPLICATION_JSON).content(body).exchange();
+    return mvc.post()
+        .uri(path)
+        .header(AUTHORIZATION, authorization)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(body)
+        .exchange();
+  }
+
+  private MvcTestResult get(String path, Object... uriVariables) {
+    return mvc.get().uri(path, uriVariables).header(AUTHORIZATION, authorization).exchange();
+  }
+
+  private MvcTestResult probeHeader(String value) {
+    var request = mvc.get().uri(BindingController.HEADER_PATH).header(AUTHORIZATION, authorization);
+    if (value != null) {
+      request.header(BindingController.HEADER_NAME, value);
+    }
+    return request.exchange();
   }
 
   private void assertMessages(MvcTestResult result, String... messages) {
@@ -571,6 +589,8 @@ class GlobalExceptionHandlerIntegrationTest {
     static final String CONDITION_PATH = "/test/binding/condition";
     static final String BODY_PATH = "/test/binding/body";
     static final String BODY_WITH_CODE_PATH = "/test/binding/body/{code}";
+    static final String HEADER_PATH = "/test/binding/header";
+    static final String HEADER_NAME = "X-Probe-Id";
 
     @GetMapping(PARAMETER_PATH)
     void requireParameter(@RequestParam("required_parameter") String requiredParameter) {}
@@ -586,6 +606,9 @@ class GlobalExceptionHandlerIntegrationTest {
 
     @GetMapping(path = CONDITION_PATH, params = "type=create")
     void requireCondition() {}
+
+    @GetMapping(HEADER_PATH)
+    void requireHeader(@RequestHeader(HEADER_NAME) UUID probeId) {}
 
     @PostMapping(BODY_PATH)
     void validateBody(@Valid @RequestBody ValidatedBody body) {}
