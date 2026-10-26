@@ -1,13 +1,24 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { CloseOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Flex, Modal, theme, Typography } from "antd";
+import { useActionState, useEffect, useRef, useTransition } from "react";
 
 import { deleteBillableMetricAction } from "@/app/(console)/billable-metrics/actions";
 import {
   BILLABLE_METRIC_DELETE_IDLE,
   type BillableMetricRowView,
 } from "@/app/(console)/billable-metrics/state";
-import { Dialog } from "@/components/screen/Dialog";
+import { alertIcon } from "@/components/screen/alert-icon";
+import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { MODAL_WIDTH } from "@/components/table/table-defaults";
+
+function toDeleteFormData(code: string, name: string): FormData {
+  const formData = new FormData();
+  formData.set("code", code);
+  formData.set("name", name);
+  return formData;
+}
 
 export function BillableMetricDeleteDialog({
   billableMetric,
@@ -20,10 +31,20 @@ export function BillableMetricDeleteDialog({
     deleteBillableMetricAction,
     BILLABLE_METRIC_DELETE_IDLE,
   );
+  const [, startTransition] = useTransition();
+  const { message } = App.useApp();
+  const { token } = theme.useToken();
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const isConfirming = state.status !== "rejected" && state.status !== "gone";
+
+  useInitialFocus(cancelButtonRef, isConfirming);
 
   useEffect(() => {
-    if (state.status === "done") onClose();
-  }, [state, onClose]);
+    if (state.status === "done") {
+      message.success("삭제했습니다");
+      onClose();
+    }
+  }, [state, message, onClose]);
 
   if (state.status === "rejected") {
     return state.reason === "events" ? (
@@ -55,52 +76,52 @@ export function BillableMetricDeleteDialog({
   }
 
   return (
-    <Dialog
-      labelledBy="billable-metric-delete-title"
-      onClose={isPending ? undefined : onClose}
-      action={formAction}
-    >
-      <div className="dialog-title" id="billable-metric-delete-title">
-        미터를 삭제할까요?
-      </div>
-
-      <input type="hidden" name="code" value={billableMetric.code} />
-      <input type="hidden" name="name" value={billableMetric.name} />
-
-      <div style={{ fontSize: 15 }}>{billableMetric.name}</div>
-      <div
-        className="detail-grid__mono"
-        style={{ fontSize: 12.5, color: "var(--text-55)" }}
-      >
-        {billableMetric.code}
-      </div>
-      <p className="dialog-body" style={{ margin: 0 }}>
-        삭제하면 이 미터의 사용량 집계와 청구 예정액 라인이 함께 사라집니다.
-        삭제 가능 여부는 저장할 때 서버가 확인합니다.
-      </p>
-
-      {state.status === "failed" ? (
-        <p
-          style={{ margin: 0, fontSize: 12.5, color: "var(--color-accent-700)" }}
-        >
-          {state.message}
-        </p>
-      ) : null}
-
-      <div className="dialog-actions">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled={isPending}
-          onClick={onClose}
-        >
+    <Modal
+      open
+      width={MODAL_WIDTH}
+      title="미터를 삭제할까요?"
+      onCancel={isPending ? undefined : onClose}
+      keyboard={!isPending}
+      mask={{ closable: !isPending }}
+      closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
+      footer={[
+        <Button key="cancel" ref={cancelButtonRef} disabled={isPending} onClick={onClose}>
           취소
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
+        </Button>,
+        <Button
+          key="delete"
+          danger
+          type="primary"
+          loading={isPending}
+          onClick={() =>
+            startTransition(() =>
+              formAction(toDeleteFormData(billableMetric.code, billableMetric.name)),
+            )
+          }
+        >
           {isPending ? "삭제 중..." : "삭제"}
-        </button>
-      </div>
-    </Dialog>
+        </Button>,
+      ]}
+    >
+      <Flex vertical gap="small">
+        <Flex vertical gap={2}>
+          <Typography.Text strong>{billableMetric.name}</Typography.Text>
+          <Typography.Text
+            type="secondary"
+            style={{ fontFamily: token.fontFamilyCode, fontSize: token.fontSizeSM }}
+          >
+            {billableMetric.code}
+          </Typography.Text>
+        </Flex>
+        <Typography.Paragraph style={{ margin: 0 }}>
+          삭제하면 이 미터의 사용량 집계와 청구 예정액 라인이 함께 사라집니다. 삭제 가능 여부는
+          저장할 때 서버가 확인합니다.
+        </Typography.Paragraph>
+        {state.status === "failed" ? (
+          <Alert type="error" showIcon icon={alertIcon("error")} title={state.message} />
+        ) : null}
+      </Flex>
+    </Modal>
   );
 }
 
@@ -115,35 +136,31 @@ function Notice({
   note: string;
   onClose: () => void;
 }) {
+  const { token } = theme.useToken();
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useInitialFocus(confirmRef);
+
   return (
-    <Dialog
-      labelledBy="billable-metric-delete-notice-title"
-      onClose={onClose}
-      style={{ borderLeft: "4px solid var(--color-accent)" }}
-    >
-      <div
-        className="dialog-title"
-        id="billable-metric-delete-notice-title"
-        style={{ color: "var(--color-accent-700)" }}
-      >
-        {title}
-      </div>
-      <p className="dialog-body" style={{ margin: 0, textWrap: "pretty" }}>
-        {body}
-      </p>
-      <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-55)" }}>
-        {note}
-      </p>
-      <div className="dialog-actions">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          autoFocus
-          onClick={onClose}
-        >
+    <Modal
+      key="notice"
+      open
+      width={MODAL_WIDTH}
+      title={title}
+      onCancel={onClose}
+      closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} /> }}
+      footer={
+        <Button ref={confirmRef} onClick={onClose}>
           확인
-        </button>
-      </div>
-    </Dialog>
+        </Button>
+      }
+    >
+      <Flex vertical gap="small">
+        <Alert type="warning" showIcon icon={alertIcon("warning")} title={body} />
+        <Typography.Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+          {note}
+        </Typography.Text>
+      </Flex>
+    </Modal>
   );
 }

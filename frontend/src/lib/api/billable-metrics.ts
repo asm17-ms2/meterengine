@@ -1,8 +1,10 @@
 import "server-only";
 
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/list-query";
 
 export type BillableMetricResponse = {
   code: string;
@@ -13,7 +15,7 @@ export type BillableMetricResponse = {
   dimension_properties: string[];
 };
 
-export type ListBillableMetricsResponse = {
+export type ListBillableMetricsResponse = PaginationFields & {
   billable_metrics: BillableMetricResponse[];
 };
 
@@ -27,6 +29,7 @@ export type CreateBillableMetricRequest = Omit<
 export type UpdateBillableMetricRequest = Omit<CreateBillableMetricRequest, "code">;
 
 export async function listBillableMetrics(
+  query: ListQuery,
   devState: DevState,
 ): Promise<Result<ListBillableMetricsResponse>> {
   if (devState === "empty") {
@@ -47,6 +50,7 @@ export async function listBillableMetrics(
   return serverFetch<ListBillableMetricsResponse>(
     config.apiBaseUrl,
     "/v1/billable-metrics",
+    toServerParams(query, CAPABILITIES.listBillableMetrics),
   );
 }
 

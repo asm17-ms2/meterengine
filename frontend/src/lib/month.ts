@@ -1,6 +1,6 @@
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-const MONTH_OPTION_COUNT = 3;
+export const ALL_MONTHS = "all";
 
 export function isMonth(value: string): boolean {
   return MONTH_PATTERN.test(value);
@@ -26,27 +26,6 @@ export function shiftMonth(month: string, delta: number): string {
   return `${shiftedYear}-${shiftedMonth}`;
 }
 
-export type MonthOption = { value: string; label: string };
-
-export function buildMonthOptions(now: Date = new Date()): MonthOption[] {
-  const currentMonth = formatKstMonth(now);
-  return Array.from({ length: MONTH_OPTION_COUNT }, (_, index) => {
-    const value = shiftMonth(currentMonth, -index);
-    return { value, label: index === 0 ? `${value} (이번 달)` : value };
-  });
-}
-
-export function buildMonthOptionsFor(
-  selected: string,
-  now: Date = new Date(),
-): MonthOption[] {
-  const monthOptions = buildMonthOptions(now);
-  if (monthOptions.some((option) => option.value === selected)) return monthOptions;
-  return [...monthOptions, { value: selected, label: selected }].sort((a, b) =>
-    b.value.localeCompare(a.value),
-  );
-}
-
 export function readMonth(
   raw: string | string[] | undefined,
   now: Date = new Date(),
@@ -55,4 +34,12 @@ export function readMonth(
   return monthParam && MONTH_PATTERN.test(monthParam)
     ? monthParam
     : formatKstMonth(now);
+}
+
+export function readMonthOrAll(
+  raw: string | string[] | undefined,
+  now: Date = new Date(),
+): string {
+  const monthParam = Array.isArray(raw) ? raw[0] : raw;
+  return monthParam === ALL_MONTHS ? ALL_MONTHS : readMonth(raw, now);
 }

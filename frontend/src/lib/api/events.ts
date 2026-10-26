@@ -1,8 +1,10 @@
 import "server-only";
 
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { toServerParams, type MonthlyListQuery } from "@/lib/list-query";
 
 export type ListEventsResponse = {
   month: string;
@@ -21,23 +23,6 @@ export type EventResponse = {
   occurred_at: string;
   received_at: string;
 };
-
-export type EventQuery = {
-  month: string;
-  /** 0부터 세는 페이지 번호. */
-  page: number;
-};
-
-export const PAGE_SIZE = 20;
-
-export function readPage(raw: string | string[] | undefined): number {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  const parsed = Number(value);
-  if (value === undefined || value === "" || !Number.isInteger(parsed) || parsed < 0) {
-    return 0;
-  }
-  return parsed;
-}
 
 export function countPages(listEventsResponse: ListEventsResponse): number {
   if (listEventsResponse.total <= 0) return 1;
@@ -68,7 +53,7 @@ export function toRawJson(event: EventResponse): string {
 }
 
 export async function listEvents(
-  query: EventQuery,
+  query: MonthlyListQuery,
   devState: DevState,
 ): Promise<Result<ListEventsResponse>> {
   if (devState === "empty") {
@@ -77,7 +62,7 @@ export async function listEvents(
       data: {
         month: query.month,
         page: query.page,
-        size: PAGE_SIZE,
+        size: query.size,
         total: 0,
         events: [],
       },
@@ -95,9 +80,9 @@ export async function listEvents(
     };
   }
 
-  return serverFetch<ListEventsResponse>(config.apiBaseUrl, "/v1/events", {
-    month: query.month,
-    page: String(query.page),
-    size: String(PAGE_SIZE),
-  });
+  return serverFetch<ListEventsResponse>(
+    config.apiBaseUrl,
+    "/v1/events",
+    toServerParams(query, CAPABILITIES.listEvents),
+  );
 }

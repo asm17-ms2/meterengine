@@ -1,6 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { CloseOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  App,
+  Button,
+  Descriptions,
+  Divider,
+  Form,
+  Input,
+  type InputRef,
+  Modal,
+  Tag,
+  theme,
+  Typography,
+} from "antd";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import {
   createBillableMetricAction,
@@ -12,9 +27,43 @@ import {
   type BillableMetricField,
   type BillableMetricRowView,
 } from "@/app/(console)/billable-metrics/state";
-import { Dialog } from "@/components/screen/Dialog";
+import { alertIcon } from "@/components/screen/alert-icon";
+import { EnterSubmitButton } from "@/components/screen/EnterSubmitButton";
+import { clearFieldErrors } from "@/components/screen/form-errors";
+import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
 const DIMENSION_PROPERTIES_JOINER = ", ";
+
+type BillableMetricFormValues = {
+  code: string;
+  name: string;
+  eventType: string;
+  targetProperty: string;
+  dimensionProperties: string;
+};
+
+const FORM_FIELD_BY_SERVER_FIELD: Record<BillableMetricField, keyof BillableMetricFormValues> = {
+  code: "code",
+  name: "name",
+  event_type: "eventType",
+  target_property: "targetProperty",
+  dimension_properties: "dimensionProperties",
+};
+
+const trimText = (value: string | undefined) => value?.trim();
+
+const PASSING_RULE = { validator: () => Promise.resolve() };
+
+function toFormData(values: BillableMetricFormValues, editingCode: string | undefined): FormData {
+  const formData = new FormData();
+  formData.set("code", editingCode ?? values.code ?? "");
+  formData.set("name", values.name ?? "");
+  formData.set("event_type", values.eventType ?? "");
+  formData.set("target_property", values.targetProperty ?? "");
+  formData.set("dimension_properties", values.dimensionProperties ?? "");
+  return formData;
+}
 
 export function BillableMetricFormDialog({
   billableMetric,
@@ -28,253 +77,185 @@ export function BillableMetricFormDialog({
     isEdit ? updateBillableMetricAction : createBillableMetricAction,
     BILLABLE_METRIC_FORM_IDLE,
   );
-  const [values, setValues] = useState<Record<BillableMetricField, string>>({
-    code: isEdit ? billableMetric.code : "",
-    name: isEdit ? billableMetric.name : "",
-    event_type: isEdit ? billableMetric.eventType : "",
-    target_property: isEdit ? billableMetric.targetProperty : "",
-    dimension_properties: isEdit
-      ? billableMetric.dimensionProperties.join(DIMENSION_PROPERTIES_JOINER)
-      : "",
-  });
+  const [form] = Form.useForm<BillableMetricFormValues>();
+  const [, startTransition] = useTransition();
+  const { message } = App.useApp();
+  const { token } = theme.useToken();
+  const firstFieldRef = useRef<InputRef>(null);
+  const [dismissedState, setDismissedState] = useState<typeof state | null>(null);
+  const dismissFailed = () => setDismissedState(state);
+  const monoStyle = { fontFamily: token.fontFamilyCode };
+
+  useInitialFocus(firstFieldRef);
 
   useEffect(() => {
     if (state.status === "done") {
+      message.success("저장했습니다");
       onClose();
     }
-  }, [state, onClose]);
+    if (state.status === "invalid") {
+      form.setFields(
+        Object.entries(state.fieldErrors).map(([field, error]) => ({
+          name: FORM_FIELD_BY_SERVER_FIELD[field as BillableMetricField],
+          errors: [error],
+        })),
+      );
+    }
+  }, [state, form, message, onClose]);
 
-  const fieldErrors = state.status === "invalid" ? state.fieldErrors : {};
-  const message = state.status === "failed" ? state.message : null;
+  const submit = (values: BillableMetricFormValues) => {
+    clearFieldErrors(form);
+    startTransition(() => formAction(toFormData(values, billableMetric?.code)));
+  };
 
-  const buildFieldProps = (field: BillableMetricField) => ({
-    value: values[field],
-    onChange: (value: string) =>
-      setValues((prev) => ({ ...prev, [field]: value })),
-    error: fieldErrors[field],
-    disabled: isPending,
-  });
+  const submitForm = () => form.submit();
 
   return (
-    <Dialog
-      labelledBy="billable-metric-form-title"
-      onClose={isPending ? undefined : onClose}
-      action={formAction}
+    <Modal
+      open
+      forceRender
+      width={MODAL_WIDTH}
+      title={isEdit ? "미터 수정" : "미터 등록"}
+      onCancel={isPending ? undefined : onClose}
+      keyboard={!isPending}
+      mask={{ closable: !isPending }}
+      closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
+      footer={[
+        <Button key="cancel" disabled={isPending} onClick={onClose}>
+          취소
+        </Button>,
+        <Button key="submit" type="primary" loading={isPending} onClick={submitForm}>
+          {isPending ? "저장 중..." : "저장"}
+        </Button>,
+      ]}
     >
-      <div className="dialog-title" id="billable-metric-form-title">
-        {isEdit ? "미터 수정" : "미터 등록"}
-      </div>
-
-      {isEdit ? (
-        <input type="hidden" name="code" value={billableMetric.code} />
-      ) : (
-        <TextField
-          id="billable-metric-code"
-          name="code"
-          label="코드"
-          placeholder="input-tokens"
-          hint="조직 내에서 유일해야 합니다. 등록 뒤 바꿀 수 없습니다."
-          mono
-          autoFocus
-          {...buildFieldProps("code")}
-        />
-      )}
-      <TextField
-        id="billable-metric-name"
-        name="name"
-        label="이름"
-        placeholder="입력 토큰"
-        autoFocus={isEdit}
-        {...buildFieldProps("name")}
-      />
-      <TextField
-        id="billable-metric-event-type"
-        name="event_type"
-        label="이벤트 타입"
-        placeholder="llm_request"
-        hint="어떤 사용량 이벤트를 집계할지 정하는 매칭 키입니다."
-        mono
-        {...buildFieldProps("event_type")}
-      />
-
-      <div className="field">
-        <span
-          style={{
-            display: "block",
-            fontSize: 12,
-            marginBottom: 5,
-            color: "var(--text-70)",
-          }}
-        >
-          집계 함수
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              padding: "7px 12px",
-              fontSize: 13,
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-            }}
-          >
-            {BILLABLE_METRIC_AGGREGATION}
-          </span>
-          <span className="screen-note">지금은 sum만 지원합니다.</span>
-        </div>
-      </div>
-
-      <TextField
-        id="billable-metric-target-property"
-        name="target_property"
-        label="집계 대상 속성"
-        placeholder="input_tokens"
-        hint="이벤트 properties에서 합산할 키입니다. sum 집계는 필수입니다."
-        mono
-        {...buildFieldProps("target_property")}
-      />
-      <TextField
-        id="billable-metric-dimension-properties"
-        name="dimension_properties"
-        label="차원 키"
-        placeholder="model"
-        hint="단가를 가르는 이벤트 속성 키. 예: model. 여럿이면 쉼표로 나눕니다."
-        mono
-        optional
-        {...buildFieldProps("dimension_properties")}
-      />
-
-      {isEdit ? (
-        <dl
-          className="detail-grid"
-          style={{ gridTemplateColumns: "88px minmax(0, 1fr)" }}
-        >
-          <dt>코드</dt>
-          <dd className="detail-grid__mono">{billableMetric.code}</dd>
-        </dl>
-      ) : null}
-
-      <p
-        className="screen-note"
-        style={{
-          paddingTop: 4,
-          borderTop: "1px solid var(--color-divider)",
+      <Form<BillableMetricFormValues>
+        form={form}
+        layout="vertical"
+        disabled={isPending}
+        onFinish={submit}
+        onValuesChange={dismissFailed}
+        onFinishFailed={dismissFailed}
+        initialValues={{
+          code: billableMetric?.code ?? "",
+          name: billableMetric?.name ?? "",
+          eventType: billableMetric?.eventType ?? "",
+          targetProperty: billableMetric?.targetProperty ?? "",
+          dimensionProperties:
+            billableMetric?.dimensionProperties.join(DIMENSION_PROPERTIES_JOINER) ?? "",
         }}
       >
-        도입사는 폼이 아니라 공통 헤더{" "}
-        <span style={{ fontFamily: "var(--mono)", fontSize: 11.5 }}>
-          X-Organization-Id
-        </span>
-        로 전달됩니다.
-      </p>
-
-      {message ? (
-        <p
-          role="alert"
-          style={{
-            margin: 0,
-            fontSize: 12.5,
-            color: "var(--color-accent-700)",
-          }}
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <div className="dialog-actions">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled={isPending}
-          onClick={onClose}
-        >
-          취소
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
-          {isPending ? "저장 중..." : "저장"}
-        </button>
-      </div>
-    </Dialog>
-  );
-}
-
-function TextField({
-  id,
-  name,
-  label,
-  value,
-  onChange,
-  placeholder,
-  hint,
-  error,
-  mono = false,
-  optional = false,
-  autoFocus = false,
-  disabled,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  hint?: string;
-  error?: string;
-  mono?: boolean;
-  optional?: boolean;
-  autoFocus?: boolean;
-  disabled: boolean;
-}) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>
-        {label}
-        {optional ? null : (
-          <>
-            {" "}
-            <span style={{ color: "var(--color-accent)" }}>*</span>
-          </>
+        {isEdit ? null : (
+          <Form.Item
+            name="code"
+            label="코드"
+            extra="조직 내에서 유일해야 합니다. 등록 뒤 바꿀 수 없습니다."
+            rules={[{ required: true, transform: trimText, message: "코드를 입력하세요" }]}
+          >
+            <Input
+              ref={firstFieldRef}
+              placeholder="input-tokens"
+              spellCheck={false}
+              autoComplete="off"
+              style={monoStyle}
+            />
+          </Form.Item>
         )}
-      </label>
-      <input
-        id={id}
-        name={name}
-        className="input"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        spellCheck={mono ? false : undefined}
-        disabled={disabled}
-        autoFocus={autoFocus}
-        aria-invalid={error !== undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        style={{
-          ...(mono ? { fontFamily: "var(--mono)", fontSize: 13 } : {}),
-          ...(error
-            ? {
-                borderColor: "var(--color-accent)",
-                background: "var(--color-accent-100)",
-              }
-            : {}),
-        }}
-      />
-      {error ? (
-        <p
-          id={`${id}-error`}
-          style={{
-            margin: "6px 0 0",
-            fontSize: 12.5,
-            color: "var(--color-accent-700)",
-          }}
+        <Form.Item
+          name="name"
+          label="이름"
+          rules={[{ required: true, transform: trimText, message: "이름을 입력하세요" }]}
         >
-          {error}
-        </p>
+          <Input
+            ref={isEdit ? firstFieldRef : undefined}
+            placeholder="입력 토큰"
+            autoComplete="off"
+          />
+        </Form.Item>
+        <Form.Item
+          name="eventType"
+          label="이벤트 타입"
+          extra="어떤 사용량 이벤트를 집계할지 정하는 매칭 키입니다."
+          rules={[{ required: true, transform: trimText, message: "이벤트 타입을 입력하세요" }]}
+        >
+          <Input
+            placeholder="llm_request"
+            spellCheck={false}
+            autoComplete="off"
+            style={monoStyle}
+          />
+        </Form.Item>
+        <Form.Item label="집계 함수" extra="지금은 sum만 지원합니다.">
+          <Tag color="processing">{BILLABLE_METRIC_AGGREGATION}</Tag>
+        </Form.Item>
+        <Form.Item
+          name="targetProperty"
+          label="집계 대상 속성"
+          extra="이벤트 properties에서 합산할 키입니다. sum 집계는 필수입니다."
+          rules={[
+            {
+              required: true,
+              transform: trimText,
+              message: "집계 대상 속성을 입력하세요. sum 집계는 필수입니다",
+            },
+          ]}
+        >
+          <Input
+            placeholder="input_tokens"
+            spellCheck={false}
+            autoComplete="off"
+            style={monoStyle}
+          />
+        </Form.Item>
+        <Form.Item
+          name="dimensionProperties"
+          label="차원 키"
+          extra="단가를 가르는 이벤트 속성 키. 예: model. 여럿이면 쉼표로 나눕니다."
+          rules={[PASSING_RULE]}
+        >
+          <Input
+            placeholder="model"
+            spellCheck={false}
+            autoComplete="off"
+            style={monoStyle}
+          />
+        </Form.Item>
+        <EnterSubmitButton disabled={isPending} />
+      </Form>
+
+      {isEdit ? (
+        <Descriptions
+          size="small"
+          colon={false}
+          column={1}
+          items={[
+            {
+              key: "code",
+              label: "코드",
+              children: <Typography.Text style={monoStyle}>{billableMetric.code}</Typography.Text>,
+            },
+          ]}
+        />
       ) : null}
-      {hint ? (
-        <p className="screen-note" style={{ marginTop: 5 }}>
-          {hint}
-        </p>
+
+      <Divider size="small" />
+      <Typography.Paragraph type="secondary" style={{ margin: 0, fontSize: token.fontSizeSM }}>
+        도입사는 폼이 아니라 공통 헤더{" "}
+        <Typography.Text type="secondary" style={{ ...monoStyle, fontSize: token.fontSizeSM }}>
+          X-Organization-Id
+        </Typography.Text>
+        로 전달됩니다.
+      </Typography.Paragraph>
+
+      {state.status === "failed" && state !== dismissedState ? (
+        <Alert
+          type="error"
+          showIcon
+          icon={alertIcon("error")}
+          title={state.message}
+          style={{ marginTop: token.margin }}
+        />
       ) : null}
-    </div>
+    </Modal>
   );
 }

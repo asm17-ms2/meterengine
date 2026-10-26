@@ -1,22 +1,28 @@
 import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
+import { ListPagination } from "@/components/screen/ListPagination";
+import { ScreenNote } from "@/components/screen/ScreenNote";
 import { UsageTable, type UsageGroupView } from "@/components/usage/UsageTable";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import type { Result } from "@/lib/api/client";
 import {
   toCustomerGroups,
   type ListBillableMetricUsagesResponse,
 } from "@/lib/api/usage";
 import { formatDecimal } from "@/lib/format";
+import type { MonthlyListQuery } from "@/lib/list-query";
 import { sumOf, toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
 export async function UsageSection({
   usage,
-  month,
+  query,
 }: {
   usage: Promise<Result<ListBillableMetricUsagesResponse>>;
-  month: string;
+  query: MonthlyListQuery;
 }) {
+  const { month } = query;
+  const capabilities = CAPABILITIES.aggregateBillableMetricUsages;
   const result = await usage;
 
   if (!result.ok) {
@@ -75,13 +81,12 @@ export async function UsageSection({
 
   return (
     <>
-      <UsageTable groups={usageGroupViews} />
-      <div className="screen-footer">
-        <p className="screen-note">
-          사용량이 0인 미터와 이벤트가 0건인 고객도 0으로 표시됩니다. 계약된
-          미터는 값이 없어도 라인이 유지됩니다.
-        </p>
-      </div>
+      <UsageTable groups={usageGroupViews} query={query} capabilities={capabilities} />
+      <ListPagination query={query} capabilities={capabilities} total={result.data.total} />
+      <ScreenNote>
+        사용량이 0인 미터와 이벤트가 0건인 고객도 0으로 표시됩니다. 계약된
+        미터는 값이 없어도 라인이 유지됩니다.
+      </ScreenNote>
     </>
   );
 }

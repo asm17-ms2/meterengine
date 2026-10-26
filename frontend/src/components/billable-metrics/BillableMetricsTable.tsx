@@ -1,87 +1,166 @@
+"use client";
+
+import { Button, Flex, Table, Tag, theme, Typography } from "antd";
+
 import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
-import { GridCell } from "@/components/table/GridCell";
-import { GridHead } from "@/components/table/GridHead";
-import { GridRow } from "@/components/table/GridRow";
-import { GridTable } from "@/components/table/GridTable";
+import { koreanCompare, TABLE_STICKY } from "@/components/table/table-defaults";
+import {
+  type ClientSortSelectionState,
+  type SortableColumn,
+  useTableSort,
+} from "@/components/table/table-sort";
+import type { ListCapabilities } from "@/lib/api/capabilities";
+import type { ListQuery } from "@/lib/list-query";
 
-const COLUMNS = "190px minmax(0, 1fr) 150px 100px 190px 160px 110px";
-const MIN_WIDTH = 1100;
+const MIN_WIDTH = 940;
 
-const HEAD_LABELS = [
-  "코드",
-  "이름",
-  "이벤트 타입",
-  "집계 함수",
-  "집계 대상 속성",
-  "차원 키",
-  { label: "작업", right: true },
-] as const;
-
-function DimensionPropertiesCell({ dimensionProperties }: { dimensionProperties: string[] }) {
+function DimensionPropertyTags({
+  dimensionProperties,
+  fontFamily,
+}: {
+  dimensionProperties: string[];
+  fontFamily: string;
+}) {
   if (dimensionProperties.length === 0) {
-    return <GridCell className="grid-cell--muted">없음</GridCell>;
+    return <Typography.Text type="secondary">없음</Typography.Text>;
   }
   return (
-    <GridCell>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        {dimensionProperties.map((dimensionProperty) => (
-          <span key={dimensionProperty} className="tag tag-neutral grid-cell--mono">
-            {dimensionProperty}
-          </span>
-        ))}
-      </div>
-    </GridCell>
+    <Flex wrap gap={4}>
+      {dimensionProperties.map((dimensionProperty) => (
+        <Tag key={dimensionProperty} style={{ marginInlineEnd: 0, fontFamily }}>
+          {dimensionProperty}
+        </Tag>
+      ))}
+    </Flex>
   );
 }
 
 export function BillableMetricsTable({
   rows,
+  query,
+  capabilities,
   onEdit,
   onDelete,
+  clientSortSelection,
 }: {
   rows: BillableMetricRowView[];
+  query: ListQuery;
+  capabilities: ListCapabilities;
   onEdit: (row: BillableMetricRowView) => void;
   onDelete: (row: BillableMetricRowView) => void;
+  clientSortSelection?: ClientSortSelectionState;
 }) {
+  const { token } = theme.useToken();
+  const monoStyle = { fontFamily: token.fontFamilyCode };
+
+  const sortableColumns: SortableColumn<BillableMetricRowView>[] = [
+    {
+      key: "code",
+      title: "코드",
+      width: 195,
+      ellipsis: true,
+      sortKey: "code",
+      clientSorter: (left, right) => koreanCompare(left.code, right.code),
+      render: (_, row) => (
+        <Typography.Text strong style={monoStyle}>
+          {row.code}
+        </Typography.Text>
+      ),
+    },
+    {
+      key: "name",
+      title: "이름",
+      ellipsis: true,
+      sortKey: "name",
+      clientSorter: (left, right) => koreanCompare(left.name, right.name),
+      render: (_, row) => row.name,
+    },
+    {
+      key: "eventType",
+      title: "이벤트 타입",
+      width: 145,
+      ellipsis: true,
+      sortKey: "event_type",
+      clientSorter: (left, right) => koreanCompare(left.eventType, right.eventType),
+      render: (_, row) => (
+        <Typography.Text type="secondary" style={monoStyle}>
+          {row.eventType}
+        </Typography.Text>
+      ),
+    },
+    {
+      key: "aggregation",
+      title: "집계 함수",
+      width: 90,
+      render: (_, row) => row.aggregation,
+    },
+    {
+      key: "targetProperty",
+      title: "집계 대상 속성",
+      width: 195,
+      ellipsis: true,
+      render: (_, row) => (
+        <Typography.Text type="secondary" style={monoStyle}>
+          {row.targetProperty}
+        </Typography.Text>
+      ),
+    },
+    {
+      key: "dimensionProperties",
+      title: "차원 키",
+      width: 100,
+      render: (_, row) => (
+        <DimensionPropertyTags
+          dimensionProperties={row.dimensionProperties}
+          fontFamily={token.fontFamilyCode}
+        />
+      ),
+    },
+    {
+      key: "actions",
+      title: "작업",
+      width: 110,
+      align: "right",
+      fixed: "end",
+      render: (_, row) => (
+        <Flex justify="end" gap={4}>
+          <Button
+            type="link"
+            size="small"
+            aria-label={`${row.name} 수정`}
+            onClick={() => onEdit(row)}
+          >
+            수정
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            danger
+            aria-label={`${row.name} 삭제`}
+            onClick={() => onDelete(row)}
+          >
+            삭제
+          </Button>
+        </Flex>
+      ),
+    },
+  ];
+
+  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns, {
+    clientSortSelection,
+  });
+
   return (
-    <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
-      {rows.map((row) => (
-        <GridRow key={row.code} columns={COLUMNS} className="grid-row--actions">
-          <GridCell className="grid-cell--mono grid-cell--strong grid-cell--truncate">
-            {row.code}
-          </GridCell>
-          <GridCell className="grid-cell--truncate">{row.name}</GridCell>
-          <GridCell className="grid-cell--mono grid-cell--muted grid-cell--truncate">
-            {row.eventType}
-          </GridCell>
-          <GridCell>{row.aggregation}</GridCell>
-          <GridCell className="grid-cell--mono grid-cell--muted grid-cell--truncate">
-            {row.targetProperty}
-          </GridCell>
-          <DimensionPropertiesCell dimensionProperties={row.dimensionProperties} />
-          <GridCell className="grid-cell--actions">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ fontSize: 13 }}
-              aria-label={`${row.name} 수정`}
-              onClick={() => onEdit(row)}
-            >
-              수정
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ fontSize: 13 }}
-              aria-label={`${row.name} 삭제`}
-              onClick={() => onDelete(row)}
-            >
-              삭제
-            </button>
-          </GridCell>
-        </GridRow>
-      ))}
-    </GridTable>
+    <Table<BillableMetricRowView>
+      rowKey="code"
+      columns={columns}
+      dataSource={rows}
+      onChange={onChange}
+      pagination={false}
+      size="medium"
+      sticky={TABLE_STICKY}
+      tableLayout="fixed"
+      scroll={{ x: MIN_WIDTH }}
+    />
   );
 }

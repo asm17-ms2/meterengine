@@ -1,10 +1,12 @@
 import "server-only";
 
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/list-query";
 
-export type ListCustomersResponse = {
+export type ListCustomersResponse = PaginationFields & {
   customers: CustomerResponse[];
 };
 
@@ -16,6 +18,7 @@ export type CustomerResponse = {
 };
 
 export async function listCustomers(
+  query: ListQuery,
   devState: DevState,
 ): Promise<Result<ListCustomersResponse>> {
   if (devState === "empty") {
@@ -33,7 +36,11 @@ export async function listCustomers(
     };
   }
 
-  return serverFetch<ListCustomersResponse>(config.apiBaseUrl, "/v1/customers");
+  return serverFetch<ListCustomersResponse>(
+    config.apiBaseUrl,
+    "/v1/customers",
+    toServerParams(query, CAPABILITIES.listCustomers),
+  );
 }
 
 export async function createCustomer(

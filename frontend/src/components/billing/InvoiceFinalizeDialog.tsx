@@ -1,11 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useState } from "react";
+import { CloseOutlined } from "@ant-design/icons";
+import { Alert, Button, Flex, Modal, Typography } from "antd";
+import { startTransition, useActionState, useRef, useState } from "react";
 
 import { finalizeInvoicesAction } from "@/app/(console)/billing/actions";
 import { FINALIZE_INVOICES_IDLE } from "@/app/(console)/billing/state";
-import { Dialog } from "@/components/screen/Dialog";
+import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButton";
+import { alertIcon } from "@/components/screen/alert-icon";
+import { LinkButton } from "@/components/screen/LinkButton";
+import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
 type FinalizeTarget = {
   month: string;
@@ -16,28 +21,25 @@ type FinalizeTarget = {
   hasUnpricedUsages: boolean;
 };
 
-const CAUTION_STYLE = {
-  margin: 0,
-  paddingLeft: 10,
-  borderLeft: "4px solid var(--color-accent)",
-  color: "var(--color-accent-700)",
-  textWrap: "pretty",
-} as const;
+const PARAGRAPH_STYLE = { margin: 0, textWrap: "pretty" } as const;
+
+function toFinalizeFormData(month: string): FormData {
+  const formData = new FormData();
+  formData.set("month", month);
+  return formData;
+}
 
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
+  const isEmpty = target.targetCount === 0;
 
   return (
     <>
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={target.targetCount === 0}
-        title={target.targetCount === 0 ? "청구할 금액이 있는 고객이 없습니다" : undefined}
+      <InvoiceFinalizeButton
+        disabled={isEmpty}
+        title={isEmpty ? "청구할 금액이 있는 고객이 없습니다" : undefined}
         onClick={() => setIsOpen(true)}
-      >
-        인보이스 확정
-      </button>
+      />
 
       {isOpen ? <InvoiceFinalizeForm {...target} onClose={() => setIsOpen(false)} /> : null}
     </>
@@ -51,88 +53,107 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
     finalizeInvoicesAction,
     FINALIZE_INVOICES_IDLE,
   );
+  const isSucceeded = state.status === "succeeded";
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useInitialFocus(cancelButtonRef, !isSucceeded);
+  useInitialFocus(closeButtonRef, isSucceeded);
 
   if (state.status === "succeeded") {
     return (
-      <Dialog key="result" labelledBy="invoice-finalize-title" onClose={onClose}>
-        <div className="dialog-title" id="invoice-finalize-title">
-          {state.finalizedCount > 0
+      <Modal
+        key="result"
+        open
+        width={MODAL_WIDTH}
+        title={
+          state.finalizedCount > 0
             ? `${monthLabel} 인보이스 ${state.finalizedCount}건을 확정했습니다`
-            : "새로 확정한 인보이스가 없습니다"}
-        </div>
-        <p className="dialog-body" style={{ margin: 0, textWrap: "pretty" }}>
+            : "새로 확정한 인보이스가 없습니다"
+        }
+        onCancel={onClose}
+        closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} /> }}
+        footer={[
+          <Button key="close" ref={closeButtonRef} onClick={onClose}>
+            닫기
+          </Button>,
+          <LinkButton key="invoices" type="primary" href={`/invoices?month=${month}`}>
+            인보이스 보기
+          </LinkButton>,
+        ]}
+      >
+        <Typography.Paragraph style={PARAGRAPH_STYLE}>
           {state.finalizedCount === 0
             ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.`
             : state.finalizedCount === targetCount
               ? "확정한 인보이스에는 공급가액에 세액 10%를 더한 합계가 찍혔습니다."
               : `창을 연 뒤 사용량이 바뀌어 처음 안내한 ${targetCount}곳과 다릅니다. 금액은 인보이스에서 확인하세요.`}
-        </p>
-        <div className="dialog-actions">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
-            닫기
-          </button>
-          <Link className="btn btn-primary" href={`/invoices?month=${month}`}>
-            인보이스 보기
-          </Link>
-        </div>
-      </Dialog>
+        </Typography.Paragraph>
+      </Modal>
     );
   }
 
   return (
-    <Dialog
-      labelledBy="invoice-finalize-title"
-      onClose={isPending ? undefined : onClose}
-      action={formAction}
-    >
-      <div className="dialog-title" id="invoice-finalize-title">
-        {monthLabel} 인보이스를 확정할까요?
-      </div>
-
-      <input type="hidden" name="month" value={month} />
-
-      <p className="dialog-body" style={{ margin: 0, textWrap: "pretty" }}>
-        청구할 금액이 있는 고객 {targetCount}곳의 인보이스를 확정합니다. 공급가액 합은{" "}
-        {supplyAmount}이고, 인보이스에는 세액 10%를 더한 합계가 찍힙니다. 금액은 확정하는 순간의
-        사용량으로 다시 계산합니다.
-      </p>
-      <p className="dialog-body" style={{ margin: 0, textWrap: "pretty" }}>
-        확정한 인보이스는 고치거나 지울 수 없습니다. 확정한 고객에게 그 뒤 이 달에 들어온
-        이벤트는 청구되지 않습니다.
-      </p>
-      <p className="dialog-body" style={{ margin: 0, textWrap: "pretty" }}>
-        청구할 금액이 없는 고객은 이번에 확정되지 않습니다. 나중에 금액이 생기면 다시 확정할 수
-        있습니다.
-      </p>
-
-      {isUnfinishedMonth ? (
-        <p className="dialog-body" style={CAUTION_STYLE}>
-          {monthLabel}은 아직 끝나지 않았습니다. 지금 확정하면 확정한 고객의 남은 기간 사용량은
-          청구되지 않습니다.
-        </p>
-      ) : null}
-
-      {hasUnpricedUsages ? (
-        <p className="dialog-body" style={CAUTION_STYLE}>
-          확정할 고객에게 단가 없는 사용량이 있습니다. 이 사용량은 청구되지 않고, 확정한 뒤에 단가를
-          등록해도 이 달 인보이스에는 실리지 않습니다.
-        </p>
-      ) : null}
-
-      {state.status === "failed" ? (
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-accent-700)" }}>
-          {state.message}
-        </p>
-      ) : null}
-
-      <div className="dialog-actions">
-        <button type="button" className="btn btn-secondary" disabled={isPending} onClick={onClose}>
+    <Modal
+      key="confirm"
+      open
+      width={MODAL_WIDTH}
+      title={`${monthLabel} 인보이스를 확정할까요?`}
+      onCancel={isPending ? undefined : onClose}
+      keyboard={!isPending}
+      mask={{ closable: !isPending }}
+      closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
+      footer={[
+        <Button key="cancel" ref={cancelButtonRef} disabled={isPending} onClick={onClose}>
           취소
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
+        </Button>,
+        <Button
+          key="submit"
+          type="primary"
+          loading={isPending}
+          onClick={() => startTransition(() => formAction(toFinalizeFormData(month)))}
+        >
           {isPending ? "확정 중..." : "확정"}
-        </button>
-      </div>
-    </Dialog>
+        </Button>,
+      ]}
+    >
+      <Flex vertical gap="medium">
+        <Typography.Paragraph style={PARAGRAPH_STYLE}>
+          청구할 금액이 있는 고객 {targetCount}곳의 인보이스를 확정합니다. 공급가액 합은{" "}
+          {supplyAmount}이고, 인보이스에는 세액 10%를 더한 합계가 찍힙니다. 금액은 확정하는 순간의
+          사용량으로 다시 계산합니다.
+        </Typography.Paragraph>
+        <Typography.Paragraph style={PARAGRAPH_STYLE}>
+          확정한 인보이스는 고치거나 지울 수 없습니다. 확정한 고객에게 그 뒤 이 달에 들어온
+          이벤트는 청구되지 않습니다.
+        </Typography.Paragraph>
+        <Typography.Paragraph style={PARAGRAPH_STYLE}>
+          청구할 금액이 없는 고객은 이번에 확정되지 않습니다. 나중에 금액이 생기면 다시 확정할 수
+          있습니다.
+        </Typography.Paragraph>
+
+        {isUnfinishedMonth ? (
+          <Alert
+            type="warning"
+            showIcon
+            icon={alertIcon("warning")}
+            title={`${monthLabel}은 아직 끝나지 않았습니다. 지금 확정하면 확정한 고객의 남은 기간 사용량은 청구되지 않습니다.`}
+          />
+        ) : null}
+
+        {hasUnpricedUsages ? (
+          <Alert
+            type="warning"
+            showIcon
+            icon={alertIcon("warning")}
+            title="확정할 고객에게 단가 없는 사용량이 있습니다. 이 사용량은 청구되지 않고, 확정한 뒤에 단가를 등록해도 이 달 인보이스에는 실리지 않습니다."
+          />
+        ) : null}
+
+        {state.status === "failed" ? (
+          <Alert type="error" showIcon icon={alertIcon("error")} title={state.message} />
+        ) : null}
+      </Flex>
+    </Modal>
   );
 }

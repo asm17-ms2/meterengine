@@ -2,8 +2,9 @@ import { Suspense } from "react";
 
 import { CustomersLoading } from "@/components/customers/CustomersLoading";
 import { CustomersSection } from "@/components/customers/CustomersSection";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { listCustomers } from "@/lib/api/customers";
-import { readDevState } from "@/lib/dev-state";
+import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -13,15 +14,17 @@ export default async function CustomersPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const devState = readDevState(params.state);
+  const capabilities = CAPABILITIES.listCustomers;
+  const query = readListQuery(params, capabilities);
+  const { devState } = query;
 
-  const customers = devState === "loading" ? null : listCustomers(devState);
+  const customers = devState === "loading" ? null : listCustomers(query, devState);
 
-  if (!customers) return <CustomersLoading />;
+  if (!customers) return <CustomersLoading query={query} capabilities={capabilities} />;
 
   return (
-    <Suspense fallback={<CustomersLoading />}>
-      <CustomersSection customers={customers} />
+    <Suspense fallback={<CustomersLoading query={query} capabilities={capabilities} />}>
+      <CustomersSection customers={customers} query={query} />
     </Suspense>
   );
 }

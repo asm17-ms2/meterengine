@@ -7,6 +7,9 @@ import {
 } from "@/components/billing/BillingTable";
 import { EmptyState } from "@/components/screen/EmptyState";
 import { ErrorState } from "@/components/screen/ErrorState";
+import { ListPagination } from "@/components/screen/ListPagination";
+import { ScreenNote } from "@/components/screen/ScreenNote";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import type { Result } from "@/lib/api/client";
 import {
   countDraftInvoiceLines,
@@ -25,18 +28,20 @@ import {
   formatKstDateTime,
   formatTargetPropertyTooltip,
 } from "@/lib/format";
+import type { MonthlyListQuery } from "@/lib/list-query";
 import { sumOf, toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
 export async function BillingSection({
   draftInvoice,
   invoices,
-  month,
+  query,
 }: {
   draftInvoice: Promise<Result<DraftInvoiceResponse>>;
   invoices: Promise<Result<ListInvoicesResponse>>;
-  month: string;
+  query: MonthlyListQuery;
 }) {
+  const { month } = query;
   const result = await draftInvoice;
 
   if (!result.ok) {
@@ -97,16 +102,21 @@ export async function BillingSection({
       <BillingTable
         groups={toBillingGroupViews(result.data.customers)}
         totalAmount={formatKrw(result.data.total_amount)}
+        query={query}
+        capabilities={CAPABILITIES.previewDraftInvoice}
       />
-      <div className="screen-footer">
-        <p className="screen-note">
-          미터 라인은 고객 금액이 어느 미터에서 나왔는지 분해한 줄입니다.
-          금액은 세금 전 공급가액이고 줄마다 10원 미만은 버립니다. 단가가 등록되지 않은 조합의
-          사용량은 고객마다 기타 줄에 모으고 금액에 넣지 않습니다. 확정하면 청구할 금액이 있는
-          고객의 사용량이 있는 줄만 인보이스에 실리고 세액 10%가 더해집니다. 이미 확정된 고객은
-          이 표에 나오지 않습니다.
-        </p>
-      </div>
+      <ListPagination
+        query={query}
+        capabilities={CAPABILITIES.previewDraftInvoice}
+        total={result.data.total}
+      />
+      <ScreenNote>
+        미터 라인은 고객 금액이 어느 미터에서 나왔는지 분해한 줄입니다.
+        금액은 세금 전 공급가액이고 줄마다 10원 미만은 버립니다. 단가가 등록되지 않은 조합의
+        사용량은 고객마다 기타 줄에 모으고 금액에 넣지 않습니다. 확정하면 청구할 금액이 있는
+        고객의 사용량이 있는 줄만 인보이스에 실리고 세액 10%가 더해집니다. 이미 확정된 고객은
+        이 표에 나오지 않습니다.
+      </ScreenNote>
     </>
   );
 
@@ -139,6 +149,7 @@ function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupVie
     customerId: customer.customer_id,
     customerName: customer.customer_name,
     amount: formatKrw(customer.amount),
+    amountValue: customer.amount,
     items: toMeterItems(
       customer.customer_id,
       customer.lines,

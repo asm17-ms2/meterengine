@@ -1,20 +1,27 @@
 "use client";
 
-import { useCollapse } from "@/components/table/CollapseProvider";
-import { countDimensionSlots, DimensionValuesCell } from "@/components/table/DimensionValuesCell";
-import { GridCell } from "@/components/table/GridCell";
-import { GridHead } from "@/components/table/GridHead";
-import { GridRow } from "@/components/table/GridRow";
-import { GridTable } from "@/components/table/GridTable";
-import { MeterGroupRow } from "@/components/table/MeterGroupRow";
+import { Table, theme, Typography } from "antd";
+import { useMemo } from "react";
+
+import { useExpandedRowKeys } from "@/components/table/CollapseProvider";
+import { CustomerLabel } from "@/components/table/CustomerLabel";
+import { labeledExpandIcon } from "@/components/table/ExpandIcon";
+import { countDimensionSlots, DimensionValues } from "@/components/table/DimensionValues";
 import { MeterLabel } from "@/components/table/MeterLabel";
-import type { DimensionValues } from "@/lib/api/billable-metric-prices";
+import { NumberText } from "@/components/table/NumberText";
+import { koreanCompare, TABLE_STICKY } from "@/components/table/table-defaults";
+import { useTableSort, type SortableColumn } from "@/components/table/table-sort";
+import type { DimensionValues as DimensionValueMap } from "@/lib/api/billable-metric-prices";
+import type { ListCapabilities } from "@/lib/api/capabilities";
+import { toMeterRows, type MeterRow } from "@/lib/grouped-rows";
+import type { ListQuery } from "@/lib/list-query";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type BillingGroupView = {
   customerId: string;
   customerName: string;
   amount: string;
+  amountValue: number;
   items: MeterItem<BillingLineView>[];
   unpricedUsage: BillingUnpricedUsageView | null;
 };
@@ -22,7 +29,7 @@ export type BillingGroupView = {
 export type BillingLineView = {
   label: string;
   labelTooltip?: string;
-  dimensionValues: DimensionValues;
+  dimensionValues: DimensionValueMap;
   quantity: string;
   unitPrice: string;
   amount: string;
@@ -36,212 +43,251 @@ export type BillingUnpricedUsageView = {
 export type BillingUnpricedLineView = {
   label: string;
   labelTooltip?: string;
-  dimensionValues: DimensionValues;
+  dimensionValues: DimensionValueMap;
   quantity: string;
 };
 
-const COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) 170px 130px 180px";
-const MIN_WIDTH = 900;
+type BillingUnpricedLineRow = {
+  kind: "unpricedLine";
+  key: string;
+  line: BillingUnpricedLineView;
+};
 
-const HEAD_LABELS = [
-  "고객 / 미터 라인",
-  "조합",
-  { label: "집계 수량", right: true },
-  { label: "단가", right: true },
-  { label: "금액", right: true },
-] as const;
+type BillingUnpricedRow = {
+  kind: "unpriced";
+  key: string;
+  isCollapsedByDefault: true;
+  combinationCount: number;
+  quantity: string;
+  children: BillingUnpricedLineRow[];
+};
+
+type BillingCustomerRow = {
+  kind: "customer";
+  key: string;
+  customerId: string;
+  customerName: string;
+  amount: string;
+  amountValue: number;
+  lineCount: number;
+  isCollapsedByDefault: false;
+  children?: BillingRow[];
+};
+
+type BillingRow =
+  | BillingCustomerRow
+  | MeterRow<BillingLineView>
+  | BillingUnpricedRow
+  | BillingUnpricedLineRow;
+
+const MIN_WIDTH = 900;
+const UNPRICED_LABEL = "기타 (단가 없음)";
+
+function byCustomerName(left: BillingRow, right: BillingRow): number {
+  return left.kind === "customer" && right.kind === "customer"
+    ? koreanCompare(left.customerName, right.customerName)
+    : 0;
+}
+
+function byCustomerAmount(left: BillingRow, right: BillingRow): number {
+  return left.kind === "customer" && right.kind === "customer"
+    ? left.amountValue - right.amountValue
+    : 0;
+}
+
+function toExpandLabel(row: BillingRow): string {
+  if (row.kind === "customer") return row.customerName;
+  if (row.kind === "meter") return row.label;
+  if (row.kind === "unpriced") return UNPRICED_LABEL;
+  return row.line.label;
+}
+
+const BILLING_EXPAND_ICON = labeledExpandIcon(toExpandLabel);
+
+function toUnpricedRow(customerId: string, unpricedUsage: BillingUnpricedUsageView): BillingUnpricedRow {
+  const key = `${customerId}#unpriced`;
+  return {
+    kind: "unpriced",
+    key,
+    isCollapsedByDefault: true,
+    combinationCount: unpricedUsage.lines.length,
+    quantity: unpricedUsage.quantity,
+    children: unpricedUsage.lines.map((line) => ({
+      kind: "unpricedLine",
+      key: `${key}/${line.label} ${JSON.stringify(line.dimensionValues)}`,
+      line,
+    })),
+  };
+}
+
+function toCustomerRow(group: BillingGroupView): BillingCustomerRow {
+  const children: BillingRow[] = [
+    ...toMeterRows(group.customerId, group.items),
+    ...(group.unpricedUsage ? [toUnpricedRow(group.customerId, group.unpricedUsage)] : []),
+  ];
+  return {
+    kind: "customer",
+    key: group.customerId,
+    customerId: group.customerId,
+    customerName: group.customerName,
+    amount: group.amount,
+    amountValue: group.amountValue,
+    lineCount: linesOf(group.items).length,
+    isCollapsedByDefault: false,
+    ...(children.length > 0 ? { children } : {}),
+  };
+}
 
 export function BillingTable({
   groups,
   totalAmount,
+  query,
+  capabilities,
 }: {
   groups: BillingGroupView[];
   totalAmount: string;
+  query: ListQuery;
+  capabilities: ListCapabilities;
 }) {
-  const { isCollapsed, toggle } = useCollapse();
-  const slotCount = countDimensionSlots(
-    groups.flatMap((group) => [
-      ...linesOf(group.items).map((line) => line.dimensionValues),
-      ...(group.unpricedUsage?.lines.map((line) => line.dimensionValues) ?? []),
-    ]),
+  const { token } = theme.useToken();
+  const rows = useMemo(() => groups.map(toCustomerRow), [groups]);
+  const slotCount = useMemo(
+    () =>
+      countDimensionSlots(
+        groups.flatMap((group) => [
+          ...linesOf(group.items).map((line) => line.dimensionValues),
+          ...(group.unpricedUsage?.lines.map((line) => line.dimensionValues) ?? []),
+        ]),
+      ),
+    [groups],
   );
+  const { expandedRowKeys, onExpand, toggle } = useExpandedRowKeys<BillingRow>(rows);
+
+  const sortableColumns: SortableColumn<BillingRow>[] = [
+    {
+      key: "label",
+      title: "고객 / 미터 라인",
+      ellipsis: true,
+      sortKey: "customer_name",
+      clientSorter: byCustomerName,
+      onCell: (row) => ({ colSpan: row.kind === "customer" ? 2 : 1 }),
+      render: (_, row) => {
+        if (row.kind === "customer") {
+          return (
+            <CustomerLabel name={row.customerName} id={row.customerId} />
+          );
+        }
+        if (row.kind === "meter") {
+          return <MeterLabel label={row.label} labelTooltip={row.labelTooltip} />;
+        }
+        if (row.kind === "unpriced") {
+          return (
+            <MeterLabel
+              label={UNPRICED_LABEL}
+              labelTooltip="단가가 등록되지 않은 조합이라 금액에 들지 않는 사용량"
+              isCodeLabel={false}
+            />
+          );
+        }
+        if (row.kind === "line" && row.isNested) return null;
+        return <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} />;
+      },
+    },
+    {
+      key: "combination",
+      title: "조합",
+      onCell: (row) => ({ colSpan: row.kind === "customer" ? 0 : 1 }),
+      render: (_, row) => {
+        if (row.kind === "line" || row.kind === "unpricedLine") {
+          return <DimensionValues dimensionValues={row.line.dimensionValues} slotCount={slotCount} />;
+        }
+        if (row.kind === "meter" || row.kind === "unpriced") {
+          return <Typography.Text type="secondary">조합 {row.combinationCount}개</Typography.Text>;
+        }
+        return null;
+      },
+    },
+    {
+      key: "quantity",
+      title: "집계 수량",
+      align: "right",
+      width: 170,
+      render: (_, row) => {
+        if (row.kind === "customer") {
+          return <Typography.Text type="secondary">청구 라인 {row.lineCount}줄</Typography.Text>;
+        }
+        if (row.kind === "meter" || row.kind === "unpriced") {
+          return <NumberText>{row.quantity}</NumberText>;
+        }
+        return <NumberText>{row.line.quantity}</NumberText>;
+      },
+    },
+    {
+      key: "unitPrice",
+      title: "단가",
+      align: "right",
+      width: 130,
+      render: (_, row) =>
+        row.kind === "line" ? <NumberText type="secondary">{row.line.unitPrice}</NumberText> : null,
+    },
+    {
+      key: "amount",
+      title: "금액",
+      align: "right",
+      width: 180,
+      sortKey: "amount",
+      clientSorter: byCustomerAmount,
+      render: (_, row) => {
+        if (row.kind === "customer") return <NumberText strong>{row.amount}</NumberText>;
+        if (row.kind === "meter") return <NumberText strong>{row.amount}</NumberText>;
+        if (row.kind === "line") return <NumberText strong>{row.line.amount}</NumberText>;
+        if (row.kind === "unpriced") return <Typography.Text type="secondary">청구 안 함</Typography.Text>;
+        return null;
+      },
+    },
+  ];
+  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns);
 
   return (
-    <GridTable minWidth={MIN_WIDTH}>
-      <GridHead columns={COLUMNS} labels={HEAD_LABELS} />
-      {groups.map((group) => {
-        const isGroupCollapsed = isCollapsed(group.customerId);
-        return (
-          <div key={group.customerId}>
-            <button
-              type="button"
-              className="grid-row grid-row--clickable grid-row--group"
-              style={{ gridTemplateColumns: COLUMNS }}
-              aria-expanded={!isGroupCollapsed}
-              onClick={() => toggle(group.customerId)}
-            >
-              <div className="grid-cell grid-cell--group grid-cell--span-2 grid-cell--truncate">
-                <span aria-hidden>{isGroupCollapsed ? "▸" : "▾"}</span>{" "}
-                {group.customerName}{" "}
-                <span className="grid-cell__id">{group.customerId}</span>
-              </div>
-              <div className="grid-cell grid-cell--group grid-cell--right grid-cell__count">
-                청구 라인 {linesOf(group.items).length}줄
-              </div>
-              <div className="grid-cell grid-cell--group" />
-              <div className="grid-cell grid-cell--group grid-cell--right grid-cell--num">
-                {group.amount}
-              </div>
-            </button>
-
-            {isGroupCollapsed
-              ? null
-              : group.items.map((item) => {
-                  if (item.kind === "line") {
-                    return (
-                      <BillingLineRow
-                        key={`${item.line.label} ${JSON.stringify(item.line.dimensionValues)}`}
-                        line={item.line}
-                        slotCount={slotCount}
-                      />
-                    );
-                  }
-                  const isMeterCollapsed = isCollapsed(item.id, true);
-                  return (
-                    <div key={item.id}>
-                      <MeterGroupRow
-                        columns={COLUMNS}
-                        label={item.label}
-                        labelTooltip={item.labelTooltip}
-                        combinationCount={item.lines.length}
-                        isCollapsed={isMeterCollapsed}
-                        onToggle={() => toggle(item.id)}
-                      >
-                        <div className="grid-cell grid-cell--right grid-cell--num">
-                          {item.quantity}
-                        </div>
-                        <div className="grid-cell" />
-                        <div className="grid-cell grid-cell--right grid-cell--num grid-cell--strong">
-                          {item.amount}
-                        </div>
-                      </MeterGroupRow>
-                      {isMeterCollapsed
-                        ? null
-                        : item.lines.map((line) => (
-                            <BillingLineRow
-                              key={JSON.stringify(line.dimensionValues)}
-                              line={line}
-                              slotCount={slotCount}
-                              isNested
-                            />
-                          ))}
-                    </div>
-                  );
-                })}
-
-            {isGroupCollapsed || !group.unpricedUsage ? null : (
-              <UnpricedUsageRows
-                id={`${group.customerId}#unpriced`}
-                unpricedUsage={group.unpricedUsage}
-                slotCount={slotCount}
-              />
-            )}
-          </div>
-        );
-      })}
-
-      <GridRow columns={COLUMNS} className="grid-row--total">
-        <GridCell className="grid-cell--group">합계</GridCell>
-        <GridCell />
-        <GridCell />
-        <GridCell />
-        <GridCell className="grid-cell--right grid-cell--num grid-cell__total-amount">
-          {totalAmount}
-        </GridCell>
-      </GridRow>
-    </GridTable>
-  );
-}
-
-function BillingLineRow({
-  line,
-  slotCount,
-  isNested = false,
-}: {
-  line: BillingLineView;
-  slotCount: number;
-  isNested?: boolean;
-}) {
-  return (
-    <GridRow columns={COLUMNS}>
-      <GridCell className="grid-cell--child grid-cell--mono">
-        {isNested ? null : (
-          <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
-        )}
-      </GridCell>
-      <DimensionValuesCell
-        dimensionValues={line.dimensionValues}
-        slotCount={slotCount}
-        className={isNested ? "grid-cell--nested" : undefined}
-      />
-      <GridCell className="grid-cell--right grid-cell--num">{line.quantity}</GridCell>
-      <GridCell className="grid-cell--right grid-cell--num grid-cell--muted">
-        {line.unitPrice}
-      </GridCell>
-      <GridCell className="grid-cell--right grid-cell--num grid-cell--strong">
-        {line.amount}
-      </GridCell>
-    </GridRow>
-  );
-}
-
-function UnpricedUsageRows({
-  id,
-  unpricedUsage,
-  slotCount,
-}: {
-  id: string;
-  unpricedUsage: BillingUnpricedUsageView;
-  slotCount: number;
-}) {
-  const { isCollapsed, toggle } = useCollapse();
-  const isUnpricedCollapsed = isCollapsed(id, true);
-
-  return (
-    <div>
-      <MeterGroupRow
-        columns={COLUMNS}
-        label="기타 (단가 없음)"
-        labelTooltip="단가가 등록되지 않은 조합이라 금액에 들지 않는 사용량"
-        isCodeLabel={false}
-        combinationCount={unpricedUsage.lines.length}
-        isCollapsed={isUnpricedCollapsed}
-        onToggle={() => toggle(id)}
-      >
-        <div className="grid-cell grid-cell--right grid-cell--num">{unpricedUsage.quantity}</div>
-        <div className="grid-cell" />
-        <div className="grid-cell grid-cell--right grid-cell--muted">청구 안 함</div>
-      </MeterGroupRow>
-      {isUnpricedCollapsed
-        ? null
-        : unpricedUsage.lines.map((line) => (
-            <GridRow
-              key={`${line.label} ${JSON.stringify(line.dimensionValues)}`}
-              columns={COLUMNS}
-            >
-              <GridCell className="grid-cell--child grid-cell--mono">
-                <MeterLabel label={line.label} labelTooltip={line.labelTooltip} />
-              </GridCell>
-              <DimensionValuesCell
-                dimensionValues={line.dimensionValues}
-                slotCount={slotCount}
-                className="grid-cell--nested"
-              />
-              <GridCell className="grid-cell--right grid-cell--num">{line.quantity}</GridCell>
-              <GridCell />
-              <GridCell />
-            </GridRow>
-          ))}
-    </div>
+    <Table<BillingRow>
+      rowKey="key"
+      columns={columns}
+      dataSource={rows}
+      onChange={onChange}
+      pagination={false}
+      size="medium"
+      sticky={TABLE_STICKY}
+      tableLayout="fixed"
+      scroll={{ x: MIN_WIDTH }}
+      expandable={{ expandedRowKeys, onExpand, indentSize: 16, expandIcon: BILLING_EXPAND_ICON }}
+      onRow={(row) =>
+        (row.kind === "customer" || row.kind === "meter" || row.kind === "unpriced") &&
+        (row.children?.length ?? 0) > 0
+          ? { onClick: () => toggle(row.key), style: { cursor: "pointer" } }
+          : {}
+      }
+      summary={() => (
+        <Table.Summary>
+          <Table.Summary.Row>
+            <Table.Summary.Cell index={0}>
+              <Typography.Text strong>합계</Typography.Text>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={1} colSpan={3} />
+            <Table.Summary.Cell index={4} align="right">
+              <Typography.Text
+                strong
+                style={{
+                  fontSize: token.fontSizeLG,
+                  fontVariantNumeric: "tabular-nums",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {totalAmount}
+              </Typography.Text>
+            </Table.Summary.Cell>
+          </Table.Summary.Row>
+        </Table.Summary>
+      )}
+    />
   );
 }

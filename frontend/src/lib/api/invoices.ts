@@ -1,11 +1,18 @@
 import "server-only";
 
 import type { DimensionValues } from "@/lib/api/billable-metric-prices";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import {
+  MAX_PAGE_SIZE,
+  toServerParams,
+  type ListQuery,
+  type PaginationFields,
+} from "@/lib/list-query";
 
-export type ListInvoicesResponse = {
+export type ListInvoicesResponse = PaginationFields & {
   invoices: InvoiceResponse[];
 };
 
@@ -42,7 +49,7 @@ export async function finalizeInvoices(month: string): Promise<Result<FinalizeIn
 }
 
 export async function listInvoices(
-  month: string,
+  query: ListQuery,
   devState: DevState,
 ): Promise<Result<ListInvoicesResponse>> {
   if (devState === "empty") {
@@ -59,5 +66,30 @@ export async function listInvoices(
       },
     };
   }
-  return serverFetch<ListInvoicesResponse>(config.apiBaseUrl, "/v1/invoices", { month });
+  return serverFetch<ListInvoicesResponse>(
+    config.apiBaseUrl,
+    "/v1/invoices",
+    toServerParams(query, CAPABILITIES.listInvoices),
+  );
+}
+
+export async function listAllInvoices(
+  query: ListQuery,
+  devState: DevState,
+): Promise<Result<ListInvoicesResponse>> {
+  if (!CAPABILITIES.listInvoices.page) {
+    return listInvoices(query, devState);
+  }
+  const invoices: InvoiceResponse[] = [];
+  for (let page = 0; ; page += 1) {
+    const result = await listInvoices({ ...query, page, size: MAX_PAGE_SIZE }, devState);
+    if (!result.ok) {
+      return result;
+    }
+    invoices.push(...result.data.invoices);
+    const { total } = result.data;
+    if (total === undefined || invoices.length >= total || result.data.invoices.length === 0) {
+      return { ok: true, data: { invoices, total: invoices.length } };
+    }
+  }
 }

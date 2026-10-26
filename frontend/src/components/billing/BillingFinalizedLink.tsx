@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { LinkButton } from "@/components/screen/LinkButton";
 import type { Result } from "@/lib/api/client";
 import type { ListInvoicesResponse } from "@/lib/api/invoices";
 
@@ -14,8 +13,8 @@ export async function BillingFinalizedLink({
   if (!result.ok || result.data.invoices.length === 0) return null;
 
   return (
-    <Link className="filter-bar__stamp" href={`/invoices?month=${month}`}>
+    <LinkButton type="link" href={`/invoices?month=${month}`}>
       이 달에 확정된 인보이스 {result.data.invoices.length}건 보기
-    </Link>
+    </LinkButton>
   );
 }

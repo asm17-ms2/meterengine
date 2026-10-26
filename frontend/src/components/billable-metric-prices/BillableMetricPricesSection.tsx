@@ -10,8 +10,10 @@ import type {
   ListBillableMetricPricesResponse,
 } from "@/lib/api/billable-metric-prices";
 import type { ListBillableMetricsResponse } from "@/lib/api/billable-metrics";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import type { Result } from "@/lib/api/client";
 import { formatDimensionValues, formatKrw } from "@/lib/format";
+import type { ListQuery } from "@/lib/list-query";
 
 function toPriceRateRow(priceRate: BillableMetricPricePriceRate): PriceRateRowView {
   return {
@@ -22,9 +24,11 @@ function toPriceRateRow(priceRate: BillableMetricPricePriceRate): PriceRateRowVi
 }
 
 export async function BillableMetricPricesSection({
+  query,
   billableMetricPrices,
   billableMetrics,
 }: {
+  query: ListQuery;
   billableMetricPrices: Promise<Result<ListBillableMetricPricesResponse>>;
   billableMetrics: Promise<Result<ListBillableMetricsResponse>>;
 }) {
@@ -32,7 +36,7 @@ export async function BillableMetricPricesSection({
 
   if (!pricesResult.ok) {
     return (
-      <BillableMetricPricesFrame>
+      <BillableMetricPricesFrame query={query} capabilities={CAPABILITIES.listBillableMetricPrices}>
         <ErrorState title="가격 목록을 불러오지 못했습니다" error={pricesResult.error} />
       </BillableMetricPricesFrame>
     );
@@ -56,5 +60,7 @@ export async function BillableMetricPricesSection({
     }),
   );
 
-  return <BillableMetricPricesScreen rows={rows} />;
+  return (
+    <BillableMetricPricesScreen query={query} rows={rows} total={pricesResult.data.total} />
+  );
 }

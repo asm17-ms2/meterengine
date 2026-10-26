@@ -4,7 +4,8 @@ import { BillableMetricPricesLoading } from "@/components/billable-metric-prices
 import { BillableMetricPricesSection } from "@/components/billable-metric-prices/BillableMetricPricesSection";
 import { listBillableMetricPrices } from "@/lib/api/billable-metric-prices";
 import { listBillableMetrics } from "@/lib/api/billable-metrics";
-import { readDevState } from "@/lib/dev-state";
+import { CAPABILITIES } from "@/lib/api/capabilities";
+import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -14,15 +15,19 @@ export default async function BillableMetricPricesPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const devState = readDevState(params.state);
+  const capabilities = CAPABILITIES.listBillableMetricPrices;
+  const query = readListQuery(params, capabilities);
+  const { devState } = query;
+  const metricsQuery = readListQuery({}, CAPABILITIES.listBillableMetrics);
 
-  if (devState === "loading") return <BillableMetricPricesLoading />;
+  if (devState === "loading") return <BillableMetricPricesLoading query={query} capabilities={capabilities} />;
 
   return (
-    <Suspense fallback={<BillableMetricPricesLoading />}>
+    <Suspense fallback={<BillableMetricPricesLoading query={query} capabilities={capabilities} />}>
       <BillableMetricPricesSection
-        billableMetricPrices={listBillableMetricPrices(devState)}
-        billableMetrics={listBillableMetrics(devState)}
+        query={query}
+        billableMetricPrices={listBillableMetricPrices(query, devState)}
+        billableMetrics={listBillableMetrics(metricsQuery, devState)}
       />
     </Suspense>
   );

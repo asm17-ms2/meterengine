@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { Alert, Button, Flex } from "antd";
 import { useState } from "react";
+
+import { alertIcon } from "@/components/screen/alert-icon";
+import { LinkButton } from "@/components/screen/LinkButton";
 
 export function BillingFinalizedNotice({
   title,
@@ -18,25 +21,21 @@ export function BillingFinalizedNotice({
 
   return (
     <>
-      <div className="empty-state">
-        <div className="empty-state__title">{title}</div>
-        <p className="empty-state__body">
-          청구 예정액이 0원인 고객 {zeroAmountCustomerCount}곳은 인보이스가 만들어지지 않았습니다.
-        </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-          <Link className="btn btn-secondary" href={invoicesHref}>
-            인보이스 보기
-          </Link>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            0원 고객 {zeroAmountCustomerCount}곳 {isOpen ? "접기" : "보기"}
-          </button>
-        </div>
-      </div>
+      <Alert
+        type="success"
+        showIcon
+        icon={alertIcon("success")}
+        title={title}
+        description={`청구 예정액이 0원인 고객 ${zeroAmountCustomerCount}곳은 인보이스가 만들어지지 않았습니다.`}
+        action={
+          <Flex vertical gap="small">
+            <LinkButton href={invoicesHref}>인보이스 보기</LinkButton>
+            <Button aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
+              0원 고객 {zeroAmountCustomerCount}곳 {isOpen ? "접기" : "보기"}
+            </Button>
+          </Flex>
+        }
+      />
       {isOpen ? children : null}
     </>
   );

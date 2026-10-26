@@ -1,8 +1,10 @@
 import "server-only";
 
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/list-query";
 
 export type DimensionValues = Record<string, string | number | boolean>;
 
@@ -17,7 +19,7 @@ export type BillableMetricPriceResponse = {
   price_rates: BillableMetricPricePriceRate[];
 };
 
-export type ListBillableMetricPricesResponse = {
+export type ListBillableMetricPricesResponse = PaginationFields & {
   billable_metric_prices: BillableMetricPriceResponse[];
 };
 
@@ -26,6 +28,7 @@ export type CreatePriceRateRequest = BillableMetricPricePriceRate;
 export type PriceRateResponse = BillableMetricPricePriceRate & { billable_metric_code: string };
 
 export async function listBillableMetricPrices(
+  query: ListQuery,
   devState: DevState,
 ): Promise<Result<ListBillableMetricPricesResponse>> {
   if (devState === "empty") {
@@ -46,6 +49,7 @@ export async function listBillableMetricPrices(
   return serverFetch<ListBillableMetricPricesResponse>(
     config.apiBaseUrl,
     "/v1/billable-metric-prices",
+    toServerParams(query, CAPABILITIES.listBillableMetricPrices),
   );
 }
 

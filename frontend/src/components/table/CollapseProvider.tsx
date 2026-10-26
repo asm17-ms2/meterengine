@@ -54,3 +54,25 @@ export function useCollapse(): CollapseState {
   if (!value) throw new Error("CollapseProvider 안에서만 쓸 수 있다");
   return value;
 }
+
+export type CollapsibleRow = {
+  key: string;
+  isCollapsedByDefault?: boolean;
+  children?: readonly CollapsibleRow[];
+};
+
+export function useExpandedRowKeys<Row extends CollapsibleRow>(rows: readonly Row[]) {
+  const { isCollapsed, toggle } = useCollapse();
+  const expandedRowKeys: string[] = [];
+  const visit = (row: CollapsibleRow) => {
+    if (!row.children?.length) return;
+    if (!isCollapsed(row.key, row.isCollapsedByDefault ?? false)) expandedRowKeys.push(row.key);
+    row.children.forEach(visit);
+  };
+  rows.forEach(visit);
+  return {
+    expandedRowKeys,
+    onExpand: (_isExpanded: boolean, row: Row) => toggle(row.key),
+    toggle,
+  };
+}
