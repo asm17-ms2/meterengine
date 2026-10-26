@@ -1,9 +1,11 @@
 ---
-status: "accepted"
+status: "superseded"
 date: "2026-09-04"
 author: "양성지"
 domain: "process"
 ---
+
+> 대체 안내: "남기는 것" 결정은 더 이상 적용하지 않는다. 주석 규칙은 `docs/contributing/comments.md`를 따른다. 본문은 당시 기록으로 남긴다.
 
 # RFC-002: 주석을 전수 정리하고 함수 위 한 줄 설명만 남긴다
 
