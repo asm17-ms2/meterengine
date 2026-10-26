@@ -95,6 +95,10 @@ EOF
 [deploy] 측정 끝 <epoch ms> backend=<백엔드 컨테이너 ID> 종료=<종료 코드>
 ```
 
+- 메모리 크기가 개발 서버(4GiB)와 다른 서버는 `deploy.conf`에 백엔드 메모리 한도도 적는다.
+  - `BACKEND_MEM_LIMIT`: 백엔드 컨테이너의 메모리 한도. 기본 `768m`.
+  - `BACKEND_MAX_RAM_PERCENTAGE`: 그 한도 중 JVM 힙의 최대 비율(%). 기본 `50`.
+
 ## 배포
 
 ### 자동 배포
@@ -115,10 +119,10 @@ main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에�
 
 ### 수동 배포
 
-- 서버 안에서 실행한다.
+- checkout 전에 잠금을 잡고 대상 커밋의 `deploy.sh`를 실행한다. 다른 배포가 돌고 있으면 checkout 전에 종료한다.
 
 ```bash
-/opt/meterengine/deploy/deploy.sh <git-sha>
+(exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <git-sha>)
 ```
 
 - 서버 밖에서 한 번에 실행한다.
@@ -127,7 +131,7 @@ main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에�
 aws ssm send-command \
   --instance-ids i-0f47bb1f028cd29a9 \
   --document-name AWS-RunShellScript \
-  --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force <git-sha> && ./deploy/deploy.sh <git-sha>" \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <git-sha>" \
   --query 'Command.CommandId' --output text
 ```
 
@@ -172,7 +176,7 @@ Actions에 들어갈 수 없을 때 쓴다.
 aws ssm send-command \
   --instance-ids i-0f47bb1f028cd29a9 \
   --document-name AWS-RunShellScript \
-  --parameters commands="cd /opt/meterengine && git fetch --quiet origin && git checkout --quiet --force <SHA> && ./deploy/deploy.sh <SHA>"
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && ./deploy/deploy.sh <SHA>"
 ```
 
 ## DB 백업과 복구

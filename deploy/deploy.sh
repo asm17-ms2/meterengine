@@ -10,6 +10,8 @@ PARAM_PATH=/meterengine/prod
 SITE_DOMAIN=meterengine.com
 SITE_ALIASES=www.meterengine.com
 DEPLOY_TIMING=off
+BACKEND_MEM_LIMIT=768m
+BACKEND_MAX_RAM_PERCENTAGE=50
 
 if [ -f "$CONFIG_FILE" ]; then
 	. "$CONFIG_FILE"
@@ -67,6 +69,8 @@ write_env_file() {
 		printf 'ECR_REGISTRY=%s\n' "$ECR_REGISTRY"
 		printf 'SITE_DOMAIN=%s\n' "$SITE_DOMAIN"
 		printf 'SITE_ALIASES=%s\n' "$SITE_ALIASES"
+		printf 'BACKEND_MEM_LIMIT=%s\n' "$BACKEND_MEM_LIMIT"
+		printf 'BACKEND_MAX_RAM_PERCENTAGE=%s\n' "$BACKEND_MAX_RAM_PERCENTAGE"
 	} >>"$tmp"
 
 	mv "$tmp" "$ENV_FILE"
