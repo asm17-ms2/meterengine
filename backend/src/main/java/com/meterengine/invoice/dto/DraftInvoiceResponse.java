@@ -21,9 +21,18 @@ public record DraftInvoiceResponse(
       List<DraftInvoiceLine> lines,
       @Schema(description = "단가가 없어 라인에서 빠진 조합의 사용량. 금액에 들지 않는다. 수량이 0인 조합은 싣지 않고, 없으면 빈 배열이다")
           @JsonProperty("unpriced_usages")
-          List<DraftInvoiceUnpricedUsage> unpricedUsages) {}
+          List<DraftInvoiceUnpricedUsage> unpricedUsages,
+      @Schema(description = "수량 합이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈 배열이다")
+          @JsonProperty("negative_usages")
+          List<DraftInvoiceNegativeUsage> negativeUsages) {}
 
   public record DraftInvoiceUnpricedUsage(
+      @JsonProperty("billable_metric_code") String billableMetricCode,
+      @JsonProperty("target_property") String targetProperty,
+      @JsonProperty("dimension_values") Map<String, Object> dimensionValues,
+      BigDecimal quantity) {}
+
+  public record DraftInvoiceNegativeUsage(
       @JsonProperty("billable_metric_code") String billableMetricCode,
       @JsonProperty("target_property") String targetProperty,
       @JsonProperty("dimension_values") Map<String, Object> dimensionValues,

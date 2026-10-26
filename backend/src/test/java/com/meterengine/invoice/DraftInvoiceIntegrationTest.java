@@ -268,8 +268,7 @@ class DraftInvoiceIntegrationTest {
   void month를_생략하면_이번_달_KST로_집계한다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
-    OffsetDateTime thisMonth =
-        YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
+    OffsetDateTime thisMonth = YearMonth.now(KST).atDay(1).atStartOfDay(KST).toOffsetDateTime();
     insertEvent(organizationId, "tx-1", acme, 500, thisMonth);
 
     MvcTestResult result =

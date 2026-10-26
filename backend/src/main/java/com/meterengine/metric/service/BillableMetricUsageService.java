@@ -40,6 +40,12 @@ public class BillableMetricUsageService {
     return YearMonth.now(BILLING_ZONE);
   }
 
+  public static OffsetDateTime aggregationEnd(YearMonth month, OffsetDateTime now) {
+    OffsetDateTime monthEnd =
+        month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
+    return now.isBefore(monthEnd) ? now : monthEnd;
+  }
+
   @Transactional(readOnly = true)
   public List<BillableMetricUsage> aggregate(UUID organizationId, YearMonth month) {
     List<BillableMetric> billableMetrics =
@@ -49,7 +55,7 @@ public class BillableMetricUsageService {
     }
 
     OffsetDateTime start = month.atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
-    OffsetDateTime end = month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
+    OffsetDateTime end = aggregationEnd(month, OffsetDateTime.now(BILLING_ZONE));
 
     List<Customer> customers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);

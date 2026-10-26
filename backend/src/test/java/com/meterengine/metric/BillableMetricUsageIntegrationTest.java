@@ -1,6 +1,7 @@
 package com.meterengine.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageCustomer;
@@ -89,6 +90,57 @@ class BillableMetricUsageIntegrationTest {
 
     assertThat(quantityOf(organizationId, AUGUST, customerId)).isEqualByComparingTo("500");
     assertThat(quantityOf(organizationId, SEPTEMBER, customerId)).isEqualByComparingTo("700");
+  }
+
+  // ---------------------------------------------------------------------------
+  // 지금 이후 시각
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void 지금_이후_시각의_이벤트는_사용량과_청구_예정액에서_빠진다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    insertPriceRate(organizationId, "0.5");
+    UUID acmeId = insertCustomer(organizationId, "아크메");
+    OffsetDateTime now = OffsetDateTime.now(KST);
+    String thisMonth = YearMonth.from(now).toString();
+    insertEvent(
+        organizationId,
+        "tx-future",
+        acmeId,
+        "chat_completion",
+        "{\"token\":10000}",
+        now.plusHours(1));
+
+    assertThat(quantityOf(organizationId, thisMonth, acmeId)).isEqualByComparingTo("0");
+    MvcTestResult draft = getDraftInvoice(organizationId, thisMonth);
+    assertThat(draft).hasStatusOk().bodyJson().extractingPath("$.total_amount").isEqualTo(0);
+    assertThat(draft).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(0);
+  }
+
+  @Test
+  void 방금_전_이벤트는_사용량과_청구_예정액에_들어간다() {
+    OffsetDateTime now = OffsetDateTime.now(KST);
+    OffsetDateTime justBefore = now.minusMinutes(1);
+    assumeTrue(YearMonth.from(justBefore).equals(YearMonth.from(now)));
+    UUID organizationId = organizationWithTokenBillableMetric();
+    insertPriceRate(organizationId, "0.5");
+    UUID acmeId = insertCustomer(organizationId, "아크메");
+    String thisMonth = YearMonth.from(now).toString();
+    insertEvent(
+        organizationId, "tx-past", acmeId, "chat_completion", "{\"token\":500}", justBefore);
+    insertEvent(
+        organizationId,
+        "tx-future",
+        acmeId,
+        "chat_completion",
+        "{\"token\":10000}",
+        now.plusHours(1));
+
+    assertThat(quantityOf(organizationId, thisMonth, acmeId)).isEqualByComparingTo("500");
+    MvcTestResult draft = getDraftInvoice(organizationId, thisMonth);
+    assertThat(draft).hasStatusOk().bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+    assertThat(draft).bodyJson().extractingPath("$.customers[0].lines[0].quantity").isEqualTo(500);
+    assertThat(draft).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(250);
   }
 
   // ---------------------------------------------------------------------------
@@ -366,6 +418,13 @@ class BillableMetricUsageIntegrationTest {
         .exchange();
   }
 
+  private MvcTestResult getDraftInvoice(UUID organizationId, String month) {
+    return mvc.get()
+        .uri("/v1/invoices/draft?month={month}", month)
+        .header("X-Organization-Id", organizationId.toString())
+        .exchange();
+  }
+
   private ListBillableMetricUsagesResponse usageOf(UUID organizationId, String month) {
     MvcTestResult result = get(organizationId, month);
     assertThat(result).hasStatusOk();
@@ -400,9 +459,9 @@ class BillableMetricUsageIntegrationTest {
         .orElseThrow(() -> new AssertionError("고객 %s가 응답에 없다".formatted(customerId)));
   }
 
-  /** 이번 달 1일 정오(KST)를 낸다. */
+  /** 이번 달 1일 자정(KST)을 낸다. */
   private static OffsetDateTime withinThisMonth() {
-    return YearMonth.now(KST).atDay(1).atTime(12, 0).atZone(KST).toOffsetDateTime();
+    return YearMonth.now(KST).atDay(1).atStartOfDay(KST).toOffsetDateTime();
   }
 
   /** chat_completion의 token을 SUM하는 미터를 가진 도입사를 만든다. */
@@ -416,6 +475,16 @@ class BillableMetricUsageIntegrationTest {
         """,
         organizationId);
     return organizationId;
+  }
+
+  private void insertPriceRate(UUID organizationId, String unitPrice) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
+        VALUES (?, 'token-usage', '{}', ?::numeric)
+        """,
+        organizationId,
+        unitPrice);
   }
 
   private void setDimensionProperties(UUID organizationId, String dimensionProperties) {
