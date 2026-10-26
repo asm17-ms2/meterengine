@@ -28,9 +28,12 @@ export type CreateBillableMetricRequest = Omit<
 
 export type UpdateBillableMetricRequest = Omit<CreateBillableMetricRequest, "code">;
 
+export const BILLABLE_METRICS_CACHE_TAG = "billable-metrics";
+
 export async function listBillableMetrics(
   query: ListQuery,
   devState: DevState,
+  cacheTag?: string,
 ): Promise<Result<ListBillableMetricsResponse>> {
   if (devState === "empty") {
     return { ok: true, data: { billable_metrics: [] } };
@@ -51,6 +54,7 @@ export async function listBillableMetrics(
     config.apiBaseUrl,
     "/v1/billable-metrics",
     toServerParams(query, CAPABILITIES.listBillableMetrics),
+    cacheTag,
   );
 }
 

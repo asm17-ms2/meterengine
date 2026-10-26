@@ -27,6 +27,7 @@ export function toDisplayMessage(error: ApiError): string {
 }
 
 const TIMEOUT_MS = 5_000;
+const CACHE_REVALIDATE_SECONDS = 60;
 
 type ErrorBody = {
   code?: unknown;
@@ -78,9 +79,14 @@ async function readJson<T>(response: Response): Promise<Result<T>> {
   }
 }
 
+function toCacheInit(cacheTag?: string): RequestInit {
+  if (cacheTag === undefined) return { cache: "no-store" };
+  return { next: { revalidate: CACHE_REVALIDATE_SECONDS, tags: [cacheTag] } };
+}
+
 async function call(
   url: URL,
-  init: { method: string; body?: string },
+  init: { method: string; body?: string; cacheTag?: string },
 ): Promise<Result<Response>> {
   let response: Response;
   try {
@@ -94,7 +100,7 @@ async function call(
           : { "Content-Type": "application/json" }),
       },
       body: init.body,
-      cache: "no-store",
+      ...toCacheInit(init.cacheTag),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (cause) {
@@ -119,13 +125,14 @@ export async function serverFetch<T>(
   baseUrl: string,
   path: string,
   searchParams?: Record<string, string | undefined>,
+  cacheTag?: string,
 ): Promise<Result<T>> {
   const url = new URL(path, baseUrl);
   for (const [key, value] of Object.entries(searchParams ?? {})) {
     if (value !== undefined) url.searchParams.set(key, value);
   }
 
-  const result = await call(url, { method: "GET" });
+  const result = await call(url, { method: "GET", cacheTag });
   if (!result.ok) return result;
   return readJson<T>(result.data);
 }

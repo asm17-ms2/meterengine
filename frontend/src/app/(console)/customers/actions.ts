@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import type {
   CustomerDeleteState,
@@ -8,6 +8,7 @@ import type {
 } from "@/app/(console)/customers/state";
 import { toDisplayMessage, type ApiError } from "@/lib/api/client";
 import {
+  CUSTOMERS_CACHE_TAG,
   createCustomer,
   deleteCustomer,
   updateCustomer,
@@ -79,6 +80,7 @@ export async function createCustomerAction(
   if (!result.ok) return toFailedState(result.error);
 
   revalidatePath("/customers");
+  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -100,6 +102,7 @@ export async function updateCustomerAction(
   if (!result.ok) return toFailedState(result.error);
 
   revalidatePath("/customers");
+  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -121,11 +124,13 @@ export async function deleteCustomerAction(
     }
     if (result.error.code === "customer_not_found") {
       revalidatePath("/customers");
+      updateTag(CUSTOMERS_CACHE_TAG);
       return { status: "gone", name: customerName };
     }
     return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/customers");
+  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }

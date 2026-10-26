@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import {
   BILLABLE_METRIC_AGGREGATION,
@@ -9,7 +9,12 @@ import {
   type BillableMetricFormState,
 } from "@/app/(console)/billable-metrics/state";
 import { type ApiError, toDisplayMessage } from "@/lib/api/client";
-import { createBillableMetric, deleteBillableMetric, updateBillableMetric } from "@/lib/api/billable-metrics";
+import {
+  BILLABLE_METRICS_CACHE_TAG,
+  createBillableMetric,
+  deleteBillableMetric,
+  updateBillableMetric,
+} from "@/lib/api/billable-metrics";
 
 type RequiredBillableMetricField = Exclude<BillableMetricField, "dimension_properties">;
 
@@ -116,6 +121,7 @@ export async function createBillableMetricAction(
   if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
+  updateTag(BILLABLE_METRICS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -143,6 +149,7 @@ export async function updateBillableMetricAction(
   if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
+  updateTag(BILLABLE_METRICS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -167,11 +174,13 @@ export async function deleteBillableMetricAction(
     }
     if (result.error.code === "billable_metric_not_found") {
       revalidatePath("/billable-metrics");
+      updateTag(BILLABLE_METRICS_CACHE_TAG);
       return { status: "gone", name: billableMetricName };
     }
     return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/billable-metrics");
+  updateTag(BILLABLE_METRICS_CACHE_TAG);
   return { status: "done" };
 }

@@ -52,7 +52,7 @@ pnpm build
 ```
 
 - `pnpm build`는 백엔드가 꺼져 있어도 통과한다. CI가 그 상태로 돌린다.
-  - 조회 fetch가 전부 `cache: "no-store"`라 빌드 타임에 나가지 않는다 (`src/lib/api/client.ts`).
+  - 조회 fetch는 `cache: "no-store"`이거나 `searchParams`를 읽은 뒤에 나가서 빌드 타임에 나가지 않는다 (`src/lib/api/client.ts`).
 - 프로덕션 실행은 `pnpm start`가 아니라 standalone 서버다 (`next.config.ts`의 `output: "standalone"`). 아래 "컨테이너 이미지" 참조.
 
 ## 설정
@@ -97,6 +97,8 @@ docker run -p 3000:3000 \
 - 브라우저는 백엔드(:8080)를 직접 호출하지 않는다. 쓰기 화면도 같다 (각 라우트의 `actions.ts`가 Server Action).
 - 모든 백엔드 호출은 Server Component에서 서버 사이드 fetch로 나간다 (`src/lib/api/client.ts`).
   - API 키를 담은 `Authorization: Bearer` 헤더도 여기서 붙어서 클라이언트에 가지 않는다.
+- 필터 선택지(고객, 미터 목록)만 Next 데이터 캐시에 잠깐 둔다. 캐시 키에 `Authorization` 헤더가 들어가 API 키의 도입사끼리 섞이지 않는다.
+  - 콘솔에서 고객이나 미터를 바꾸면 Server Action이 `updateTag`로 바로 비운다. 콘솔 밖에서 바꾼 값은 `CACHE_REVALIDATE_SECONDS`(`src/lib/api/client.ts`)가 지난 뒤 첫 조회 다음부터 보인다.
 - `next.config.ts`의 `rewrites()`로 프록시하지 않는다.
 - `src/lib/config.ts`는 `server-only`를 임포트한다. Client Component에서 쓰면 빌드가 깨진다.
 

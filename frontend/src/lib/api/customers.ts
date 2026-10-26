@@ -17,9 +17,12 @@ export type CustomerResponse = {
   created_at: string;
 };
 
+export const CUSTOMERS_CACHE_TAG = "customers";
+
 export async function listCustomers(
   query: ListQuery,
   devState: DevState,
+  cacheTag?: string,
 ): Promise<Result<ListCustomersResponse>> {
   if (devState === "empty") {
     return { ok: true, data: { customers: [] } };
@@ -40,6 +43,7 @@ export async function listCustomers(
     config.apiBaseUrl,
     "/v1/customers",
     toServerParams(query, CAPABILITIES.listCustomers),
+    cacheTag,
   );
 }
 
