@@ -156,6 +156,7 @@ jobs:
       # 인터넷에서 보이는지 본다. Caddy나 DNS 문제는 이 단계에서만 드러난다.
       # 로그인하지 않은 요청은 로그인 화면으로 리다이렉트되므로 따라가서 마지막 응답을 본다.
       - name: 외부에서 확인
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           result=$(curl -sS -L --max-redirs 5 --max-time 20 -o /dev/null -w '%{http_code} %{url_effective}' https://meterengine.com/usage)

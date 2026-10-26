@@ -161,11 +161,6 @@ main() {
 	"${compose[@]}" exec -T prometheus kill -HUP 1
 	log "Prometheus 설정 반영 완료"
 
-	# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
-	wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
-	reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. alerting.yml을 확인한다"
-	log "Grafana 경보 설정 반영 완료"
-
 	if ! wait_for_http "백엔드" http://127.0.0.1:8080/actuator/health '"status":"UP"'; then
 		"${compose[@]}" logs --tail 50 backend || true
 		die "백엔드가 90초 안에 준비되지 않았다"
@@ -177,6 +172,12 @@ main() {
 
 	# 지운 이미지도 ECR에 남아 있어 롤백할 수 있다.
 	docker image prune -af --filter "until=336h" >/dev/null 2>&1 || true
+
+	# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
+	# 앱이 쓰는 경로가 아니라서 앱 확인과 이미지 정리가 끝난 뒤에 한다.
+	wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
+	reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. 401이면 admin 비밀번호가 grafana-admin-password와 다르고, 아니면 alerting.yml을 확인한다"
+	log "Grafana 경보 설정 반영 완료"
 
 	log "배포 성공: $sha"
 }
