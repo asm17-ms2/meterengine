@@ -1,13 +1,18 @@
 package com.meterengine.customer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,11 +37,15 @@ class CustomerIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private JsonMapper jsonMapper;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   // --- 등록 ---
@@ -76,7 +85,7 @@ class CustomerIntegrationTest {
     assertThat(
             mvc.post()
                 .uri("/v1/events")
-                .header("X-Organization-Id", organizationId.toString())
+                .header(AUTHORIZATION, authorization(organizationId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -438,7 +447,7 @@ class CustomerIntegrationTest {
     assertThat(
             mvc.delete()
                 .uri("/v1/customers/not-a-uuid")
-                .header("X-Organization-Id", organizationId.toString())
+                .header(AUTHORIZATION, authorization(organizationId))
                 .exchange())
         .hasStatus(400)
         .bodyJson()
@@ -609,38 +618,48 @@ class CustomerIntegrationTest {
   // --- 공통 ---
 
   @Test
-  void 도입사_헤더가_없으면_네_메서드_모두_400이다() {
-    assertThat(mvc.get().uri("/v1/customers").exchange()).hasStatus(400);
-    assertThat(
-            mvc.post()
-                .uri("/v1/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"아크메\"}")
-                .exchange())
-        .hasStatus(400);
-    assertThat(
-            mvc.put()
-                .uri("/v1/customers/" + UUID.randomUUID())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"아크메\"}")
-                .exchange())
-        .hasStatus(400);
-    assertThat(mvc.delete().uri("/v1/customers/" + UUID.randomUUID()).exchange()).hasStatus(400);
+  void 인증이_없으면_네_메서드_모두_401_authentication_required다() {
+    for (MvcTestResult result :
+        new MvcTestResult[] {
+          mvc.get().uri("/v1/customers").exchange(),
+          mvc.post()
+              .uri("/v1/customers")
+              .contentType(MediaType.APPLICATION_JSON)
+              .content("{\"name\":\"아크메\"}")
+              .exchange(),
+          mvc.put()
+              .uri("/v1/customers/" + UUID.randomUUID())
+              .contentType(MediaType.APPLICATION_JSON)
+              .content("{\"name\":\"아크메\"}")
+              .exchange(),
+          mvc.delete().uri("/v1/customers/" + UUID.randomUUID()).exchange()
+        }) {
+      assertThat(result)
+          .hasStatus(401)
+          .bodyJson()
+          .extractingPath("$.code")
+          .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.getCode());
+    }
   }
 
   // --- 헬퍼 ---
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult list(UUID organizationId) {
     return mvc.get()
         .uri("/v1/customers")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/customers")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();
@@ -649,7 +668,7 @@ class CustomerIntegrationTest {
   private MvcTestResult put(UUID organizationId, UUID customerId, String jsonBody) {
     return mvc.put()
         .uri("/v1/customers/" + customerId)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();
@@ -658,7 +677,7 @@ class CustomerIntegrationTest {
   private MvcTestResult delete(UUID organizationId, UUID customerId) {
     return mvc.delete()
         .uri("/v1/customers/" + customerId)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

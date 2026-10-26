@@ -184,6 +184,8 @@ class SchemaConstraintTest {
     assertThat(collationOf("organization", "name")).isEqualTo("korean");
     assertThat(collationOf("billable_metric", "name")).isEqualTo("korean");
     assertThat(collationOf("invoice", "customer_name")).isEqualTo("korean");
+    assertThat(collationOf("user_account", "name")).isEqualTo("korean");
+    assertThat(collationOf("api_key", "label")).isEqualTo("korean");
   }
 
   @Test
@@ -191,6 +193,7 @@ class SchemaConstraintTest {
     assertThat(collationOf("billable_metric", "code")).isNull();
     assertThat(collationOf("event", "transaction_id")).isNull();
     assertThat(collationOf("event", "type")).isNull();
+    assertThat(collationOf("user_account", "email")).isNull();
   }
 
   @Test
@@ -213,7 +216,45 @@ class SchemaConstraintTest {
             "event_customer_same_organization_fk",
             "price_rate_billable_metric_same_organization_fk",
             "invoice_customer_same_organization_fk",
-            "invoice_line_invoice_same_organization_fk");
+            "invoice_line_invoice_same_organization_fk",
+            "user_account_pk",
+            "organization_member_pk",
+            "user_session_pk",
+            "consent_pk",
+            "api_key_pk",
+            "organization_member_organization_fk",
+            "organization_member_user_account_fk",
+            "user_session_user_account_fk",
+            "user_session_organization_member_fk",
+            "consent_user_account_fk",
+            "api_key_organization_fk");
+  }
+
+  @Test
+  void 계정과_API_키의_검사와_유일_제약은_마이그레이션이_정한_이름으로_있다() {
+    assertThat(
+            jdbcTemplate.queryForList(
+                """
+                SELECT conname FROM pg_constraint
+                WHERE connamespace = 'public'::regnamespace AND contype IN ('c', 'u')
+                """,
+                String.class))
+        .contains(
+            "organization_status_check",
+            "user_account_role_check",
+            "user_session_token_hash_unique",
+            "user_session_token_hash_check",
+            "consent_document_check",
+            "api_key_mode_check",
+            "api_key_key_hash_unique",
+            "api_key_key_hash_check",
+            "api_key_last_four_check",
+            "api_key_scopes_check",
+            "api_key_rate_limit_per_minute_check");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT indexname FROM pg_indexes WHERE tablename = 'user_account'", String.class))
+        .contains("user_account_email_unique");
   }
 
   @Test
@@ -648,6 +689,233 @@ class SchemaConstraintTest {
     assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE outbound_email"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("outbound_email is append-only");
+  }
+
+  // --- 계정과 API 키 ---
+
+  @Test
+  void 정한_상태가_아닌_도입사는_저장되지_않는다() {
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO organization (name, status) VALUES ('테스트 도입사', 'deleted')"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("organization_status_check");
+  }
+
+  @Test
+  void 상태를_생략한_도입사는_active로_저장되고_생성_시각이_찍힌다() {
+    UUID organizationId = insertOrganization();
+
+    var organization =
+        jdbcTemplate.queryForMap(
+            "SELECT status, created_at FROM organization WHERE id = ?", organizationId);
+
+    assertThat(organization.get("status")).isEqualTo("active");
+    assertThat(organization.get("created_at")).isNotNull();
+  }
+
+  @Test
+  void 대소문자만_다른_이메일의_계정은_두_번_저장되지_않는다() {
+    insertUserAccount("Member@Example.com");
+
+    assertThatThrownBy(() -> insertUserAccount("member@example.com"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("user_account_email_unique");
+  }
+
+  @Test
+  void 소속되지_않은_도입사로는_세션을_만들_수_없다() {
+    UUID organizationId = insertOrganization();
+    UUID userAccountId = insertUserAccount("member@example.com");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO user_session
+                      (id, user_account_id, token_hash, organization_id, created_at, expires_at)
+                    VALUES (gen_random_uuid(), ?, sha256('token'::bytea), ?, now(),
+                            now() + interval '12 hours')
+                    """,
+                    userAccountId,
+                    organizationId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("user_session_organization_member_fk");
+  }
+
+  @Test
+  void 저장된_동의는_UPDATE할_수_없다() {
+    UUID consentId = insertConsent(insertUserAccount("member@example.com"));
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE consent SET document_version = '2026-11-01' WHERE id = ?", consentId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("consent is append-only");
+  }
+
+  @Test
+  void 저장된_동의는_DELETE할_수_없다() {
+    UUID consentId = insertConsent(insertUserAccount("member@example.com"));
+
+    assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM consent WHERE id = ?", consentId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("consent is append-only");
+  }
+
+  @Test
+  void 동의_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE consent"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("consent is append-only");
+  }
+
+  @Test
+  void 스코프가_없는_API_키는_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    assertThatThrownBy(() -> insertApiKey(organizationId, "{}"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("api_key_scopes_check");
+  }
+
+  @Test
+  void 정한_스코프가_아닌_API_키는_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    assertThatThrownBy(() -> insertApiKey(organizationId, "{read,write}"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("api_key_scopes_check");
+  }
+
+  @Test
+  void 정한_스코프만_가진_API_키는_저장된다() {
+    UUID organizationId = insertOrganization();
+
+    insertApiKey(organizationId, "{ingest,read,admin}");
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM api_key WHERE organization_id = ?",
+                Integer.class,
+                organizationId))
+        .isEqualTo(1);
+  }
+
+  // --- 감사 ---
+
+  @Test
+  void 감사_테이블의_제약과_인덱스는_마이그레이션이_정한_이름으로_있다() {
+    assertThat(constraintNames()).contains("audit_log_pk", "audit_log_organization_fk");
+    assertThat(
+            jdbcTemplate.queryForList(
+                """
+                SELECT conname FROM pg_constraint
+                WHERE connamespace = 'public'::regnamespace AND contype = 'c'
+                """,
+                String.class))
+        .contains(
+            "audit_log_actor_type_check", "audit_log_action_check", "audit_log_actor_id_check");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT indexname FROM pg_indexes WHERE tablename = 'audit_log'", String.class))
+        .contains("audit_log_organization_id_occurred_at_index");
+  }
+
+  @Test
+  void 대문자가_섞인_감사_행위는_저장되지_않는다() {
+    assertThatThrownBy(() -> insertAuditLog("system", null, "PriceRateCreated"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("audit_log_action_check");
+  }
+
+  @Test
+  void 밑줄로_끝나는_감사_행위는_저장되지_않는다() {
+    assertThatThrownBy(() -> insertAuditLog("system", null, "price_rate_"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("audit_log_action_check");
+  }
+
+  @Test
+  void 정한_종류가_아닌_감사_행위자는_저장되지_않는다() {
+    assertThatThrownBy(() -> insertAuditLog("robot", UUID.randomUUID(), "price_rate_created"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("audit_log_actor_type_check");
+  }
+
+  @Test
+  void 시스템이_아닌_감사_행위자는_id_없이_저장되지_않는다() {
+    assertThatThrownBy(() -> insertAuditLog("api_key", null, "price_rate_created"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("audit_log_actor_id_check");
+  }
+
+  @Test
+  void 시스템_감사_행위자는_id를_가질_수_없다() {
+    assertThatThrownBy(() -> insertAuditLog("system", UUID.randomUUID(), "price_rate_created"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("audit_log_actor_id_check");
+  }
+
+  @Test
+  void 감사_detail은_생략하면_빈_객체로_저장된다() {
+    UUID auditLogId = insertAuditLog("system", null, "price_rate_created");
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT detail::text FROM audit_log WHERE id = ?", String.class, auditLogId))
+        .isEqualTo("{}");
+  }
+
+  private UUID insertAuditLog(String actorType, UUID actorId, String action) {
+    return jdbcTemplate.queryForObject(
+        """
+        INSERT INTO audit_log (id, occurred_at, actor_type, actor_id, action)
+        VALUES (gen_random_uuid(), now(), ?, ?, ?)
+        RETURNING id
+        """,
+        UUID.class,
+        actorType,
+        actorId,
+        action);
+  }
+
+  private UUID insertUserAccount(String email) {
+    UUID userAccountId = UUID.randomUUID();
+    jdbcTemplate.update(
+        """
+        INSERT INTO user_account (id, email, password_hash, name, role, created_at)
+        VALUES (?, ?, '{bcrypt}hash', '테스트 사용자', 'member', now())
+        """,
+        userAccountId,
+        email);
+    return userAccountId;
+  }
+
+  private UUID insertConsent(UUID userAccountId) {
+    UUID consentId = UUID.randomUUID();
+    jdbcTemplate.update(
+        """
+        INSERT INTO consent (id, user_account_id, document, document_version, agreed_at)
+        VALUES (?, ?, 'terms_of_service', '2026-10-01', now())
+        """,
+        consentId,
+        userAccountId);
+    return consentId;
+  }
+
+  private void insertApiKey(UUID organizationId, String scopes) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO api_key
+          (id, organization_id, mode, label, key_hash, last_four, scopes, created_at)
+        VALUES (gen_random_uuid(), ?, 'live', '테스트 키', sha256(gen_random_uuid()::text::bytea),
+                'abcd', ?::varchar[], now())
+        """,
+        organizationId,
+        scopes);
   }
 
   private UUID insertOutboundEmail(

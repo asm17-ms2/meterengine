@@ -2,7 +2,10 @@ package com.meterengine.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageCustomer;
 import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageDimensionUsage;
@@ -13,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -41,11 +45,15 @@ class BillableMetricUsageIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private JsonMapper jsonMapper;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   // ---------------------------------------------------------------------------
@@ -372,10 +380,7 @@ class BillableMetricUsageIntegrationTest {
         organizationId, "tx-1", acmeId, "chat_completion", "{\"token\":500}", withinThisMonth());
 
     MvcTestResult result =
-        mvc.get()
-            .uri("/v1/usage")
-            .header("X-Organization-Id", organizationId.toString())
-            .exchange();
+        mvc.get().uri("/v1/usage").header(AUTHORIZATION, authorization(organizationId)).exchange();
 
     assertThat(result)
         .hasStatusOk()
@@ -396,32 +401,30 @@ class BillableMetricUsageIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더가_없거나_형식이_틀리면_400이다() {
-    assertThat(mvc.get().uri("/v1/usage").exchange()).hasStatus(400);
-    assertThat(mvc.get().uri("/v1/usage").header("X-Organization-Id", "not-a-uuid").exchange())
-        .hasStatus(400);
-  }
-
-  @Test
-  void 등록되지_않은_도입사로_조회하면_빈_결과다() {
-    assertThat(usageOf(UUID.randomUUID(), AUGUST).billableMetricUsages()).isEmpty();
+  void 인증이_없으면_401이다() {
+    assertThat(mvc.get().uri("/v1/usage").exchange()).hasStatus(401);
   }
 
   // ---------------------------------------------------------------------------
   // 헬퍼
   // ---------------------------------------------------------------------------
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
         .uri("/v1/usage?month={month}", month)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
   private MvcTestResult getDraftInvoice(UUID organizationId, String month) {
     return mvc.get()
         .uri("/v1/invoices/draft?month={month}", month)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

@@ -1,17 +1,14 @@
 package com.meterengine.pricing.controller;
 
-import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.ReadAccess;
 import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
 import com.meterengine.pricing.service.BillableMetricPriceService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,6 +21,7 @@ public class BillableMetricPriceController {
   }
 
   @GetMapping("/v1/billable-metric-prices")
+  @ReadAccess
   @Operation(
       summary = "미터별 가격 목록 조회",
       description =
@@ -37,18 +35,10 @@ public class BillableMetricPriceController {
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "미터별 가격 목록. 미터가 없으면 billable_metric_prices가 빈 배열이다"),
-    @ApiResponse(
-        responseCode = "400",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: X-Organization-Id가 없거나 UUID가 아니다")
+        description = "미터별 가격 목록. 미터가 없으면 billable_metric_prices가 빈 배열이다")
   })
   public ListBillableMetricPricesResponse listBillableMetricPrices(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId) {
+      @CurrentOrganizationId UUID organizationId) {
     return billableMetricPriceService.list(organizationId);
   }
 }

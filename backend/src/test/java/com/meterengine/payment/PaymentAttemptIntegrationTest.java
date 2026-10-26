@@ -1,7 +1,10 @@
 package com.meterengine.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.invoice.entity.Invoice;
@@ -10,6 +13,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +36,15 @@ class PaymentAttemptIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private InvoiceRepository invoiceRepository;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -122,17 +130,24 @@ class PaymentAttemptIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더가_없거나_인보이스_id가_UUID가_아니면_400이다() {
-    assertThat(mvc.post().uri("/v1/invoices/" + UUID.randomUUID() + "/payment-attempts").exchange())
-        .hasStatus(400);
+  void 인증이_없으면_401이고_인보이스_id가_UUID가_아니면_400이다() {
+    assertError(
+        mvc.post().uri("/v1/invoices/" + UUID.randomUUID() + "/payment-attempts").exchange(),
+        401,
+        ErrorCode.AUTHENTICATION_REQUIRED);
     assertError(
         createPaymentAttempt(UUID.randomUUID(), "not-a-uuid"), 400, ErrorCode.VALIDATION_ERROR);
+  }
+
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
   }
 
   private MvcTestResult createPaymentAttempt(UUID organizationId, String invoiceId) {
     return mvc.post()
         .uri("/v1/invoices/" + invoiceId + "/payment-attempts")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

@@ -10,7 +10,9 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from core.model import loads_decimal
+from core.model import API_KEY_ENV, loads_decimal, mask_api_key
+
+AUTH_FAILURE_STATUSES = (401, 403)
 
 
 class TransportError(Exception):
@@ -53,11 +55,57 @@ def parse_problem(status: int, body: Optional[dict]) -> Problem:
     )
 
 
+def is_auth_failure(status: Optional[int]) -> bool:
+    return status in AUTH_FAILURE_STATUSES
+
+
+def auth_failure_text(problem: Problem, api_key: Optional[str]) -> str:
+    return "API 키 %s가 거부됐습니다: HTTP %d %s. --api-key나 %s를 확인하세요" % (
+        mask_api_key(api_key),
+        problem.status,
+        problem.summary(),
+        API_KEY_ENV,
+    )
+
+
+@dataclass
+class Organization:
+    id: str
+    name: str
+
+
+class ApiRequestError(Exception):
+    def __init__(self, message: str, problem: Problem):
+        super().__init__(message)
+        self.problem = problem
+
+    @property
+    def is_auth_failure(self) -> bool:
+        return is_auth_failure(self.problem.status)
+
+
+def require_organization(client) -> Organization:
+    result = client.get_organization()
+    problem = parse_problem(result.status, result.body)
+    if is_auth_failure(result.status):
+        raise ApiRequestError(auth_failure_text(problem, client.api_key), problem)
+    body = result.body if isinstance(result.body, dict) else {}
+    organization_id = body.get("id")
+    if result.status != 200 or not isinstance(organization_id, str) or not organization_id:
+        raise ApiRequestError(
+            "/v1/organization 응답으로 도입사를 확인하지 못했습니다: %s" % problem.summary(), problem
+        )
+    return Organization(id=organization_id, name=str(body.get("name") or ""))
+
+
 class ApiClient:
-    def __init__(self, base_url: str, org_id: str, timeout_seconds: float = 10.0):
+    def __init__(self, base_url: str, api_key: str, timeout_seconds: float = 10.0):
         self.base_url = base_url.rstrip("/")
-        self.org_id = org_id
+        self.api_key = api_key
         self.timeout_seconds = timeout_seconds
+
+    def get_organization(self) -> ApiResult:
+        return self._request("GET", "/v1/organization")
 
     def post_event(self, body_text: str) -> ApiResult:
         return self._request(
@@ -93,7 +141,7 @@ class ApiClient:
         if query:
             url += "?" + urllib.parse.urlencode(query)
         request = urllib.request.Request(url, data=body, method=method)
-        request.add_header("X-Organization-Id", self.org_id)
+        request.add_header("Authorization", "Bearer " + self.api_key)
         request.add_header("Accept", "application/json")
         if content_type:
             request.add_header("Content-Type", content_type)

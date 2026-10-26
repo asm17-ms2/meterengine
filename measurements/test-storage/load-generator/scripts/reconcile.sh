@@ -38,13 +38,16 @@ main() {
 	[ -f "$console" ] || die "콘솔 출력 파일이 없다: $console"
 	[ "$(json "$file" '.k6.metrics.iterations.values.count')" = "$(json "$file" '.k6.metrics.events_started.values.count')" ] ||
 		die "중간에 끊긴 실행이라 대조하지 않는다"
+	local organization_id
+	organization_id=$(json "$file" '.metadata.organization_id // empty')
+	[ -n "$organization_id" ] || die "결과 파일에 metadata.organization_id 가 없다: $file"
 	[ -n "${PGHOST:-}" ] || use_sut_db
 
 	local failed_ids counts
 	failed_ids=$(mktemp)
 	trap "rm -f '$failed_ids'" EXIT
 	{ grep -o 'FAILED_ID [^ "]*' "$console" || true; } | cut -d' ' -f2 | sort -u >"$failed_ids"
-	counts=$(count_ids "$(json "$file" .metadata.organization_id)" \
+	counts=$(count_ids "$organization_id" \
 		"$(json "$file" .run_id)-$(json "$file" .metadata.step)-" \
 		"$(json "$file" .k6.metrics.iterations.values.count)" "$(json "$file" .metadata.duplicate_period)" \
 		"$failed_ids" "$(json "$file" .metadata.started_at)") || die "대조 쿼리 실패"

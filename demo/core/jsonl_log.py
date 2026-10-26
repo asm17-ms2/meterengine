@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from core.model import loads_decimal
+from core.model import loads_decimal, redact_api_keys
 
 FORMAT_VERSION = 1
 
@@ -24,7 +24,7 @@ def classify_outcome(status: Optional[int], body) -> str:
 class RunHeader:
     started_at: str
     base_url: str
-    org_id: str
+    organization_id: Optional[str]
     csv_path: Optional[str]
     argv: List[str]
 
@@ -73,7 +73,7 @@ class JsonlLogWriter:
     def close(self):
         self._file.close()
 
-    def write_run_header(self, started_at_text, base_url, org_id, csv_path, argv):
+    def write_run_header(self, started_at_text, base_url, organization_id, csv_path, argv):
         self._write_line(
             json.dumps(
                 {
@@ -81,9 +81,9 @@ class JsonlLogWriter:
                     "type": "run",
                     "started_at": started_at_text,
                     "base_url": base_url,
-                    "org_id": org_id,
+                    "organization_id": organization_id,
                     "csv": csv_path,
-                    "argv": list(argv),
+                    "argv": [redact_api_keys(str(argument)) for argument in argv],
                 },
                 ensure_ascii=False,
             )
@@ -175,7 +175,7 @@ def read_log(path: str) -> LogReadResult:
             header = RunHeader(
                 started_at=data.get("started_at"),
                 base_url=data.get("base_url"),
-                org_id=data.get("org_id"),
+                organization_id=data.get("organization_id"),
                 csv_path=data.get("csv"),
                 argv=data.get("argv") or [],
             )

@@ -2,6 +2,7 @@ package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.StorableJsonValidator;
@@ -9,6 +10,8 @@ import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.StorableTimestamp;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -30,6 +33,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.RegexPatternTypeFilter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.ClassUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -65,7 +69,77 @@ class RequestValidationCoverageTest {
             "CreateBillableMetricRequest",
             "UpdateBillableMetricRequest",
             "CreatePriceRateRequest",
-            "IngestEventRequest");
+            "IngestEventRequest",
+            "CreateSignupRequest",
+            "CreateSignupConsentRequest",
+            "CreateApiKeyRequest");
+  }
+
+  @Test
+  void 요청_레코드_목록의_원소_레코드도_요청_DTO로_검사된다() {
+    List<Class<?>> requestRecords = requestRecords();
+    List<String> uncheckedElements =
+        requestRecords.stream()
+            .flatMap(record -> Stream.of(record.getRecordComponents()))
+            .filter(RequestValidationCoverageTest::isListOfRequestRecord)
+            .filter(component -> !requestRecords.contains(listElementType(component)))
+            .map(RequestValidationCoverageTest::describe)
+            .toList();
+
+    assertThat(uncheckedElements).isEmpty();
+  }
+
+  @Test
+  void 요청_레코드_목록에는_NotEmpty와_Valid와_원소_NotNull이_붙어_있다() {
+    List<String> unguardedComponents =
+        requestRecords().stream()
+            .flatMap(record -> Stream.of(record.getRecordComponents()))
+            .filter(RequestValidationCoverageTest::isListOfRequestRecord)
+            .filter(
+                component ->
+                    !backingField(component).isAnnotationPresent(NotEmpty.class)
+                        || !validatesElements(component)
+                        || !forbidsNullElements(component))
+            .map(RequestValidationCoverageTest::describe)
+            .toList();
+
+    assertThat(unguardedComponents).isEmpty();
+  }
+
+  @Test
+  void 가입_신청의_동의_목록은_검사되는_요청_레코드_목록이다() {
+    RecordComponent consents =
+        Stream.of(requestRecord("CreateSignupRequest").getRecordComponents())
+            .filter(component -> component.getName().equals("consents"))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(isListOfRequestRecord(consents)).isTrue();
+    assertThat(listElementType(consents).getSimpleName()).isEqualTo("CreateSignupConsentRequest");
+    assertThat(backingField(consents).isAnnotationPresent(NotEmpty.class)).isTrue();
+    assertThat(validatesElements(consents)).isTrue();
+    assertThat(forbidsNullElements(consents)).isTrue();
+  }
+
+  @Test
+  void 스코프_목록은_비어_있지_않고_원소가_null이_아닌_ingest_read_admin_가운데_하나다() {
+    List<String> problems =
+        requestRecords().stream()
+            .flatMap(record -> Stream.of(record.getRecordComponents()))
+            .filter(component -> component.getName().equals("scopes"))
+            .<String>mapMulti(
+                (component, problem) -> {
+                  if (!isListOfString(component)
+                      || !backingField(component).isAnnotationPresent(NotEmpty.class)
+                      || !guardsText(component)
+                      || !forbidsNullElements(component)
+                      || !restrictsToScopes(component)) {
+                    problem.accept(describe(component));
+                  }
+                })
+            .toList();
+
+    assertThat(problems).isEmpty();
   }
 
   @Test
@@ -255,12 +329,67 @@ class RequestValidationCoverageTest {
 
   private static boolean isKnownType(RecordComponent component) {
     if (component.getType() == List.class) {
-      return isListOfString(component);
+      return isListOfString(component) || isListOfRequestRecord(component);
     }
     return KNOWN_SCALAR_TYPES.contains(component.getType());
   }
 
+  private static boolean isListOfRequestRecord(RecordComponent component) {
+    if (component.getType() != List.class
+        || !(component.getGenericType() instanceof ParameterizedType parameterized)
+        || !(parameterized.getActualTypeArguments()[0] instanceof Class<?> element)) {
+      return false;
+    }
+    return element.isRecord()
+        && element.getSimpleName().endsWith("Request")
+        && element.getPackageName().equals(component.getDeclaringRecord().getPackageName());
+  }
+
+  private static Class<?> listElementType(RecordComponent component) {
+    return (Class<?>) ((ParameterizedType) component.getGenericType()).getActualTypeArguments()[0];
+  }
+
+  private static boolean validatesElements(RecordComponent component) {
+    Field field = backingField(component);
+    return field.isAnnotationPresent(Valid.class)
+        || (field.getAnnotatedType() instanceof AnnotatedParameterizedType parameterized
+            && parameterized.getAnnotatedActualTypeArguments()[0].isAnnotationPresent(Valid.class));
+  }
+
+  private static boolean forbidsNullElements(RecordComponent component) {
+    return backingField(component).getAnnotatedType()
+            instanceof AnnotatedParameterizedType parameterized
+        && parameterized.getAnnotatedActualTypeArguments()[0].isAnnotationPresent(NotNull.class);
+  }
+
+  private static boolean restrictsToScopes(RecordComponent component) {
+    if (!(backingField(component).getAnnotatedType()
+        instanceof AnnotatedParameterizedType parameterized)) {
+      return false;
+    }
+    jakarta.validation.constraints.Pattern pattern =
+        parameterized.getAnnotatedActualTypeArguments()[0].getAnnotation(
+            jakarta.validation.constraints.Pattern.class);
+    if (pattern == null) {
+      return false;
+    }
+    Pattern compiled = Pattern.compile(pattern.regexp());
+    return Stream.of("ingest", "read", "admin").allMatch(scope -> compiled.matcher(scope).matches())
+        && Stream.of("", "write", "readx", "admin,read")
+            .noneMatch(scope -> compiled.matcher(scope).matches());
+  }
+
+  private static Class<?> requestRecord(String simpleName) {
+    return requestRecords().stream()
+        .filter(record -> record.getSimpleName().equals(simpleName))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError(simpleName + "를 찾지 못했다"));
+  }
+
   private static boolean isKnownType(Parameter parameter) {
+    if (parameter.getType() == AuthenticatedPrincipal.class) {
+      return parameter.isAnnotationPresent(AuthenticationPrincipal.class);
+    }
     if (parameter.getType() == List.class) {
       return carriesText(parameter);
     }

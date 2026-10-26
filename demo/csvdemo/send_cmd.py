@@ -7,11 +7,21 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from core.api_client import ApiClient, TransportError, parse_problem, roster_from_usage
+from core.api_client import (
+    ApiClient,
+    Organization,
+    Problem,
+    TransportError,
+    auth_failure_text,
+    is_auth_failure,
+    parse_problem,
+    require_organization,
+    roster_from_usage,
+)
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import Prediction, predict_send
 from core.jsonl_log import JsonlLogWriter, classify_outcome
-from core.model import DEFAULT_BASE_URL, DEFAULT_ORG_ID, KST, Event, build_body_text, kst_month, parse_rfc3339
+from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
 LOGS_DIR = os.path.join(
@@ -33,12 +43,12 @@ def run_send(args, console: Console) -> int:
         print("CSV에 보낼 이벤트가 없습니다: " + args.csv, file=sys.stderr)
         return 2
     base_url = args.base_url or DEFAULT_BASE_URL
-    org_id = args.org_id or DEFAULT_ORG_ID
-    client = ApiClient(base_url, org_id, timeout_seconds=args.timeout)
-    return send_events(events, client, console, args)
+    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout)
+    organization = require_organization(client)
+    return send_events(events, client, organization, console, args)
 
 
-def send_events(events: List[Event], client: ApiClient, console: Console, args) -> int:
+def send_events(events: List[Event], client: ApiClient, organization: Organization, console: Console, args) -> int:
     month_counts = _month_counts(events)
     server_totals = _server_totals(client, month_counts)
     prediction = _predict(client, events)
@@ -49,7 +59,7 @@ def send_events(events: List[Event], client: ApiClient, console: Console, args) 
         predicted_outcomes[predicted.index] = predicted.outcome
     notes: Dict[int, str] = {index: event.note for index, event in enumerate(events) if event.note}
     for line in format_gate(
-        client.base_url, client.org_id, len(events), month_counts, server_totals, predicted_counts
+        client.base_url, client.api_key, organization, len(events), month_counts, server_totals, predicted_counts
     ):
         print(line)
     print()
@@ -65,11 +75,12 @@ def send_events(events: List[Event], client: ApiClient, console: Console, args) 
     log_path = os.path.join(LOGS_DIR, datetime.now(KST).strftime("send-%Y%m%d-%H%M%S.jsonl"))
     counts = {"new": 0, "duplicate": 0, "rejected": 0, "error": 0}
     sent = 0
+    auth_problem: Optional[Problem] = None
     with JsonlLogWriter(log_path) as writer:
         writer.write_run_header(
             started_at_text=datetime.now(KST).isoformat(),
             base_url=client.base_url,
-            org_id=client.org_id,
+            organization_id=organization.id,
             csv_path=args.csv,
             argv=sys.argv[1:],
         )
@@ -77,13 +88,19 @@ def send_events(events: List[Event], client: ApiClient, console: Console, args) 
             for index, event in enumerate(events):
                 if index > 0:
                     _pause(args.interval, args.jitter)
-                outcome, summary = _send_one(client, writer, index + 1, event, args.verbose)
+                outcome, summary, auth_problem = _send_one(client, writer, index + 1, event, args.verbose)
                 sent += 1
                 counts[outcome] += 1
                 for line in format_send_pair(
                     console, index + 1, len(events), event, outcome, summary, notes.get(index, "")
                 ):
                     print(line)
+                if auth_problem is not None:
+                    print(
+                        "%s. 중단합니다. 이후 이벤트는 보내지 않았습니다." % auth_failure_text(auth_problem, client.api_key),
+                        file=sys.stderr,
+                    )
+                    break
                 if outcome == "error":
                     print("전송 오류가 나서 중단합니다. 이후 이벤트는 보내지 않았습니다.", file=sys.stderr)
                     break
@@ -93,7 +110,7 @@ def send_events(events: List[Event], client: ApiClient, console: Console, args) 
     print()
     for line in format_summary(sent, counts["new"], counts["duplicate"], counts["rejected"], counts["error"], log_path):
         print(line)
-    return 2 if counts["error"] else 0
+    return 2 if counts["error"] or auth_problem is not None else 0
 
 
 def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event, verbose: bool):
@@ -106,7 +123,7 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
             seq=seq, sent_at_text=sent_at, request_body_text=body_text,
             status=None, response_text=None, outcome="error", error=str(error), elapsed_ms=None,
         )
-        return "error", str(error)
+        return "error", str(error), None
     outcome = classify_outcome(result.status, result.body)
     writer.write_send(
         seq=seq, sent_at_text=sent_at, request_body_text=body_text,
@@ -122,7 +139,8 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
         summary = "%d %s" % (result.status, parse_problem(result.status, result.body).summary())
     else:
         summary = "HTTP %d %s" % (result.status, parse_problem(result.status, result.body).summary())
-    return outcome, summary
+    auth_problem = parse_problem(result.status, result.body) if is_auth_failure(result.status) else None
+    return outcome, summary, auth_problem
 
 
 def _predict(client: ApiClient, events: List[Event]) -> Prediction:

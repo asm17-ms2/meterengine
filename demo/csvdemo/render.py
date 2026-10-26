@@ -7,7 +7,8 @@ import sys
 import unicodedata
 from typing import Dict, List, Optional
 
-from core.model import Event, parse_properties, parse_rfc3339
+from core.api_client import Organization
+from core.model import Event, mask_api_key, parse_properties, parse_rfc3339
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -170,7 +171,8 @@ def render_table(headers: List[str], rows: List[List[str]], aligns: Optional[Lis
 
 def format_gate(
     base_url: str,
-    org_id: str,
+    api_key: str,
+    organization: Organization,
     event_count: int,
     month_counts: Dict[str, int],
     server_totals: Dict[str, Optional[int]],
@@ -179,7 +181,7 @@ def format_gate(
     lines = [
         "전송 전 확인",
         "  대상 서버: " + base_url,
-        "  도입사(X-Organization-Id): " + org_id,
+        "  도입사: %s (%s), API 키 %s" % (organization.name, organization.id, mask_api_key(api_key)),
         "  전송 건수: %d건" % event_count,
     ]
     for month in sorted(month_counts):

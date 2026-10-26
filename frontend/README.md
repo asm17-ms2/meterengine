@@ -58,16 +58,18 @@ pnpm build
 ## 설정
 
 - 값은 `frontend/.env.local`에 둔다 (커밋 대상 아님).
-- 세 변수 모두 `src/lib/config.ts`에 기본값이 있어서 로컬 개발은 `.env.local` 없이 돌아간다.
+- 모든 변수에 `src/lib/config.ts`의 기본값이 있어서 로컬 개발은 `.env.local` 없이 돌아간다.
 - 전부 서버 사이드에서만 읽는다. `NEXT_PUBLIC_` 접두사를 붙이지 않는다 (붙이면 클라이언트 번들에 들어간다).
 
 | 환경변수 | 용도 | 기본값 |
 | --- | --- | --- |
 | `METERENGINE_API_BASE_URL` | 백엔드 API 주소 | `http://localhost:8080` |
-| `METERENGINE_ORGANIZATION_ID` | 조회할 도입사. `X-Organization-Id` 헤더로 나간다 | `backend/src/main/resources/db/migration/R__seed.sql`의 데모 도입사 |
-| `METERENGINE_ORGANIZATION_NAME` | 상단 바에 표시할 도입사 이름 | `데모 도입사` |
+| `METERENGINE_API_KEY` | 백엔드 호출에 쓰는 API 키. `Authorization: Bearer` 헤더로 나가고, 이 키의 도입사 데이터를 본다 | `backend/src/main/resources/db/local/R__local_credentials.sql`의 live 키 `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` (데모 도입사, admin 스코프) |
+| `METERENGINE_ORGANIZATION_ID` | 셸 표시용 도입사 식별자. 백엔드 호출에는 쓰지 않는다 | `backend/src/main/resources/db/migration/R__seed.sql`의 데모 도입사 |
+| `METERENGINE_ORGANIZATION_NAME` | 셸 표시용 도입사 이름. 상단 바에 나온다 | `데모 도입사` |
 
-- 배포할 때는 `deploy/compose.prod.yml`이 세 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
+- 셸 표시용 변수는 API 키가 속한 도입사와 같은 값으로 맞춘다. 다르면 상단 바와 화면의 데이터가 어긋난다.
+- 배포할 때는 `deploy/compose.prod.yml`이 API 키와 셸 표시용 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
 - 배포 환경의 백엔드 주소는 공개 도메인이 아니라 컨테이너 네트워크 안의 `http://backend:8080`이다
 
 ## 컨테이너 이미지
@@ -83,7 +85,7 @@ docker run -p 3000:3000 \
 ```
 
 - standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
-- 백엔드 주소와 도입사 식별자는 이미지에 굽지 않고 런타임 환경변수로 받는다.
+- 백엔드 주소, API 키, 셸 표시용 도입사 값은 이미지에 굽지 않고 런타임 환경변수로 받는다.
   - 주지 않으면 `src/lib/config.ts`의 기본값으로 떨어지고 오류가 나지 않는다.
 
 ## 백엔드 연동
@@ -94,7 +96,7 @@ docker run -p 3000:3000 \
 
 - 브라우저는 백엔드(:8080)를 직접 호출하지 않는다. 쓰기 화면도 같다 (각 라우트의 `actions.ts`가 Server Action).
 - 모든 백엔드 호출은 Server Component에서 서버 사이드 fetch로 나간다 (`src/lib/api/client.ts`).
-  - `X-Organization-Id` 헤더도 여기서 붙어서 클라이언트에 가지 않는다.
+  - API 키를 담은 `Authorization: Bearer` 헤더도 여기서 붙어서 클라이언트에 가지 않는다.
 - `next.config.ts`의 `rewrites()`로 프록시하지 않는다.
 - `src/lib/config.ts`는 `server-only`를 임포트한다. Client Component에서 쓰면 빌드가 깨진다.
 

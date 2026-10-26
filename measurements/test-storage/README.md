@@ -214,6 +214,12 @@ aws ssm start-session --region ap-northeast-2 \
 measurements/test-storage/load-generator/scripts/lg-stop.sh
 ```
 
+## API 키
+
+- `run-ingest-steps.sh`와 `run-fault.sh`는 `API_KEY` 환경변수가 없으면 시작하지 않는다. 대조(`reconcile.sh`)는 키를 쓰지 않는다.
+- test-storage 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
+- 셸 기록에 남지 않게 아래 실험 명령의 `read`로 입력받는다. 세션을 새로 열면 다시 입력한다.
+
 ## 부하 실험
 
 이벤트를 보내는 속도를 올려 가며 초당 몇 건에서 어디가 먼저 무너지는지 본다.
@@ -225,6 +231,8 @@ sudo -i
 cloud-init status --wait
 git -C /opt/meterengine pull --ff-only
 cd /opt/meterengine/measurements/test-storage/load-generator
+read -rsp 'API_KEY: ' API_KEY
+export API_KEY
 scripts/run-ingest-steps.sh
 ```
 
@@ -279,6 +287,8 @@ cloud-init status --wait
 git -C /opt/meterengine pull --ff-only
 cd /opt/meterengine/measurements/test-storage/load-generator
 export RUN_ID=<날짜>-fault
+read -rsp 'API_KEY: ' API_KEY
+export API_KEY
 setsid nohup scripts/run-fault.sh > /root/$RUN_ID.log 2>&1 < /dev/null &
 tail -f /root/$RUN_ID.log
 ```

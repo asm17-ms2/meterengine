@@ -1,10 +1,16 @@
-const DEMO_ORGANIZATION_ID = 'd7cee55d-8c82-4afc-b996-6749d8b26a4e';
 const DEFAULT_BASE_URL = 'https://test-storage.meterengine.com';
 const RUN_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const STEP_PATTERN = /^[A-Za-z0-9_]{1,32}$/;
 
 function invalid(name, value) {
   throw new Error(`${name} 값이 잘못됐다: ${value}`);
+}
+
+function requiredSecretEnv(name) {
+  if (!__ENV[name]) {
+    throw new Error(`${name} 환경변수가 없다. export ${name} 뒤 실행한다`);
+  }
+  return __ENV[name];
 }
 
 export function intEnv(name) {
@@ -22,9 +28,10 @@ export function stepEnv(name) {
   return STEP_PATTERN.test(value || '') ? value : invalid(name, value);
 }
 
+const API_KEY = requiredSecretEnv('API_KEY');
+
 export const config = {
   baseUrl: (__ENV.BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, ''),
-  organizationId: DEMO_ORGANIZATION_ID,
   resultDir: __ENV.RESULT_DIR || 'results',
-  headers: { 'Content-Type': 'application/json', 'X-Organization-Id': DEMO_ORGANIZATION_ID },
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
 };

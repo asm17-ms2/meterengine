@@ -71,5 +71,55 @@ class ApplyClaudeSettingsTest(unittest.TestCase):
         self.assertFalse(plan.needed)
 
 
+KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+
+
+class SavedApiKeyTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.config_path = os.path.join(self.directory.name, "bridge.json")
+        self.plist_path = os.path.join(self.directory.name, "agent.plist")
+        self.calls = []
+        self.patch("CONFIG_PATH", self.config_path)
+        self.patch("PLIST_PATH", self.plist_path)
+        self.patch("BRIDGE_LOG", os.path.join(self.directory.name, "bridge.log"))
+        self.patch("worktree_root", lambda: None)
+        self.patch("launchctl", lambda arguments: self.calls.append(arguments[0]) or (0, ""))
+
+    def patch(self, name, value):
+        original = getattr(admin, name)
+        self.addCleanup(setattr, admin, name, original)
+        setattr(admin, name, value)
+
+    def save_key(self):
+        with open(self.config_path, "w", encoding="utf-8") as f:
+            json.dump({"api_key": KEY}, f)
+
+    def test_설정에_키가_없으면_등록과_시작이_launchd를_부르지_않는다(self):
+        with open(self.plist_path, "w", encoding="utf-8") as f:
+            f.write("old")
+        for action in (admin.install, admin.start):
+            with self.assertRaises(admin.AdminError) as raised:
+                action()
+            self.assertIn("config --api-key", str(raised.exception))
+        self.assertEqual(self.calls, [])
+        with open(self.plist_path, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "old")
+
+    def test_설정_파일이_깨졌으면_AdminError로_알린다(self):
+        with open(self.config_path, "w", encoding="utf-8") as f:
+            f.write("{")
+        with self.assertRaises(admin.AdminError):
+            admin.start()
+        self.assertEqual(self.calls, [])
+
+    def test_설정에_키가_있으면_등록하고_시작한다(self):
+        self.save_key()
+        self.assertEqual(admin.install(), self.plist_path)
+        admin.start()
+        self.assertEqual(self.calls, ["bootout", "bootstrap", "bootstrap"])
+
+
 if __name__ == "__main__":
     unittest.main()

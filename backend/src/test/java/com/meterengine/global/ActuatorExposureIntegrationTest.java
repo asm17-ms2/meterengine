@@ -58,7 +58,12 @@ class ActuatorExposureIntegrationTest {
   }
 
   @Test
-  void 노출하지_않기로_한_엔드포인트는_닿지_않는다() {
-    restTestClient.get().uri("/actuator/env").exchange().expectStatus().isNotFound();
+  void 헬스는_인증_없이_연다() {
+    restTestClient.get().uri("/actuator/health").exchange().expectStatus().isOk();
+  }
+
+  @Test
+  void 노출하지_않기로_한_엔드포인트는_인증_없이_닿지_않는다() {
+    restTestClient.get().uri("/actuator/env").exchange().expectStatus().isUnauthorized();
   }
 }

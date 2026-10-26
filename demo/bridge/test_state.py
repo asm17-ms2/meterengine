@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 import subprocess
 import tempfile
 import time
@@ -18,6 +19,7 @@ from bridge.state import (
 
 DEMO_CUSTOMER = "35bc8d12-9d38-57ab-bc9b-bbd35d779a26"
 OTHER_CUSTOMER = "008cd6a7-6ff9-505d-9421-747e7d2d62aa"
+LIVE_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
 
 
 class FakeResult:
@@ -64,13 +66,55 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.allow, ["meterengine"])
         self.assertEqual(config.deny, ["비밀"])
 
-    def test_org_id가_UUID가_아니면_거부한다(self):
+    def test_옛_설정의_org_id는_무시한다(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "bridge.json")
             with open(path, "w", encoding="utf-8") as f:
-                json.dump({"org_id": "아무거나"}, f)
-            with self.assertRaises(ValueError):
+                json.dump({"owner": "박성종", "org_id": "d7cee55d-8c82-4afc-b996-6749d8b26a4e"}, f)
+            config = BridgeConfig.load(path)
+            self.assertEqual(config.owner, "박성종")
+            self.assertEqual(config.api_key, "")
+            self.assertFalse(hasattr(config, "org_id"))
+            config.save(path)
+            with open(path, encoding="utf-8") as f:
+                self.assertNotIn("org_id", json.load(f))
+
+    def test_형식이_틀린_키는_읽지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"api_key": "아무거나"}, f)
+            with self.assertRaises(ValueError) as caught:
                 BridgeConfig.load(path)
+            self.assertNotIn("아무거나", str(caught.exception))
+
+    def test_키는_기본값이_없다(self):
+        self.assertEqual(BridgeConfig().api_key, "")
+
+    def test_키를_저장하고_다시_읽는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            BridgeConfig(api_key=LIVE_KEY).save(path)
+            self.assertEqual(BridgeConfig.load(path).api_key, LIVE_KEY)
+
+    def test_설정_파일은_나만_읽는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            previous = os.umask(0o022)
+            try:
+                BridgeConfig(api_key=LIVE_KEY).save(path)
+            finally:
+                os.umask(previous)
+            self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600)
+
+    def test_보여줄_때는_키를_가린다(self):
+        shown = BridgeConfig(owner="박성종", api_key=LIVE_KEY).display()
+        self.assertEqual(shown["api_key"], "me_live_****2LtA")
+        self.assertEqual(shown["owner"], "박성종")
+        self.assertNotIn(LIVE_KEY, json.dumps(shown))
+
+    def test_키가_없으면_없다고_보여준다(self):
+        self.assertEqual(BridgeConfig().display()["api_key"], "(없음)")
 
     def test_고객_이름에_주인이_들어간다(self):
         config = BridgeConfig(owner="박성종")
@@ -423,16 +467,74 @@ class CustomerCacheScopeTest(unittest.TestCase):
             self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
 
     def test_scope는_전송_대상과_도입사로_만든다(self):
-        config = BridgeConfig(base_url="http://localhost:8080/")
-        self.assertEqual(config.scope(), self.LOCAL)
+        config = BridgeConfig(base_url="http://localhost:8080/", api_key=LIVE_KEY)
+        self.assertEqual(config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e"), self.LOCAL)
+
+    def test_scope에는_키가_들어가지_않는다(self):
+        config = BridgeConfig(api_key=LIVE_KEY)
+        scope = config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e")
+        self.assertNotIn(LIVE_KEY, scope)
+        self.assertNotIn("2LtA", scope)
+
+    def test_scope_도입사가_UUID가_아니면_거부한다(self):
+        with self.assertRaises(ValueError):
+            BridgeConfig().scope("이건-UUID가-아님")
+
+
+class UndecidedScopeTest(unittest.TestCase):
+    LOCAL = CustomerCacheScopeTest.LOCAL
+    PROD = CustomerCacheScopeTest.PROD
+
+    def saved(self, path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_정해지기_전에는_어느_캐시도_읽지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            self.assertIsNone(BridgeState(path, None).cached_customer("고객"))
+
+    def test_정해지기_전에_세션을_저장해도_캐시를_잃지_않는다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            undecided = BridgeState(path, None)
+            undecided.remember_session("sess-1", "meterengine")
+            undecided.deny_session("sess-2")
+            saved = self.saved(path)
+            self.assertEqual(saved["scope"], self.LOCAL)
+            self.assertEqual(saved["customers"], {"고객": DEMO_CUSTOMER})
+            self.assertEqual(saved["sessions"], {"sess-1": "meterengine"})
+
+    def test_같은_scope로_정하면_캐시를_되살린다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            state = BridgeState(path, None)
+            state.remember_session("sess-1", "meterengine")
+            state.set_scope(self.LOCAL)
+            self.assertEqual(state.cached_customer("고객"), DEMO_CUSTOMER)
+
+    def test_다른_scope로_정하면_캐시를_비운다(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "state.json")
+            BridgeState(path, self.LOCAL).remember_customer("고객", DEMO_CUSTOMER)
+            state = BridgeState(path, None)
+            state.set_scope(self.PROD)
+            self.assertIsNone(state.cached_customer("고객"))
+            state.remember_customer("새고객", OTHER_CUSTOMER)
+            saved = self.saved(path)
+            self.assertEqual(saved["scope"], self.PROD)
+            self.assertEqual(saved["customers"], {"새고객": OTHER_CUSTOMER})
 
 
 class ConfigValidateTest(unittest.TestCase):
-    def test_UUID가_아닌_org_id는_저장하지_않는다(self):
+    def test_형식이_틀린_키는_저장하지_않는다(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "bridge.json")
             with self.assertRaises(ValueError):
-                BridgeConfig(org_id="이건-UUID가-아님").save(path)
+                BridgeConfig(api_key="me_live_짧음").save(path)
             self.assertFalse(os.path.exists(path))
 
     def test_스킴_없는_base_url은_저장하지_않는다(self):

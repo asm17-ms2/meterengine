@@ -2,12 +2,17 @@ package com.meterengine.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -33,16 +38,25 @@ class BillableMetricCreateConcurrencyTest {
   @Autowired private DataSource dataSource;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @AfterEach
   void cleanUp() {
     jdbcTemplate.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 미터'");
+    jdbcTemplate.update(
+        """
+        DELETE FROM api_key
+        WHERE organization_id IN (SELECT id FROM organization WHERE name = '미터 동시성 테스트 도입사')
+        """);
     jdbcTemplate.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
   }
 
@@ -79,10 +93,15 @@ class BillableMetricCreateConcurrencyTest {
     assertThat(storedName(organizationId)).isEqualTo("먼저 등록한 미터");
   }
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult post(UUID organizationId) {
     return mvc.post()
         .uri("/v1/billable-metrics")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(
             """

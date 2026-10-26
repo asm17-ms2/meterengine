@@ -126,8 +126,13 @@ class ConsoleApp(App):
         counts = self.health.get("counts", {})
         projects = self.health.get("projects", {})
         lines = [
-            "● 실행 중   %s   주인 %s"
-            % (self.health.get("base_url", "?"), self.health.get("owner") or "(없음)"),
+            "● 실행 중   %s   API 키 %s   주인 %s"
+            % (
+                self.health.get("base_url", "?"),
+                self.health.get("api_key") or "(없음)",
+                self.health.get("owner") or "(없음)",
+            ),
+            "도입사  " + self._organization_text(),
             "전송  new %s / 중복 %s / 거절 %s / 실패 %s / 건너뜀 %s"
             % tuple(counts.get(k, 0) for k in ("new", "duplicate", "rejected", "error", "skipped")),
         ]
@@ -140,12 +145,21 @@ class ConsoleApp(App):
             lines.append("고객  " + ", ".join(customers))
         return "\n".join(lines)
 
+    def _organization_text(self) -> str:
+        organization = self.health.get("organization")
+        if isinstance(organization, dict):
+            return "%s (%s)" % (organization.get("name") or "?", organization.get("id") or "?")
+        error = self.health.get("organization_error")
+        if error:
+            return "확인 실패 %s, 잠시 뒤 다시 확인합니다" % error
+        return "첫 전송 때 확인합니다"
+
     # ------------------------------------------------------------ 프로젝트 목록
 
     def _known_projects(self) -> list:
         names = set(self.config.allow) | set(self.config.deny)
         try:
-            names |= set(BridgeState(self.state_path, self.config.scope()).sessions.values())
+            names |= set(BridgeState(self.state_path).sessions.values())
         except OSError:
             pass
         names.discard(self.config.fallback_project)

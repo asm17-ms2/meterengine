@@ -1,9 +1,14 @@
 package com.meterengine.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,11 +32,15 @@ class BillableMetricIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -194,23 +203,23 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더가_없으면_400이다() {
+  void 인증이_없으면_네_메서드_모두_401이다() {
     assertThat(
             mvc.post()
                 .uri("/v1/billable-metrics")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(sumBody("token-usage"))
                 .exchange())
-        .hasStatus(400);
-    assertThat(mvc.get().uri("/v1/billable-metrics").exchange()).hasStatus(400);
+        .hasStatus(401);
+    assertThat(mvc.get().uri("/v1/billable-metrics").exchange()).hasStatus(401);
     assertThat(
             mvc.put()
                 .uri("/v1/billable-metrics/token-usage")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updateBody("chat_completion", "token"))
                 .exchange())
-        .hasStatus(400);
-    assertThat(mvc.delete().uri("/v1/billable-metrics/token-usage").exchange()).hasStatus(400);
+        .hasStatus(401);
+    assertThat(mvc.delete().uri("/v1/billable-metrics/token-usage").exchange()).hasStatus(401);
   }
 
   @Test
@@ -372,9 +381,8 @@ class BillableMetricIntegrationTest {
     assertThat(result)
         .hasStatus(400)
         .bodyJson()
-        .extractingPath("$.errors[*].field")
-        .asArray()
-        .containsExactly("code");
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
   }
 
   @Test
@@ -428,17 +436,22 @@ class BillableMetricIntegrationTest {
     assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
   }
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult delete(UUID organizationId, String code) {
     return mvc.delete()
         .uri("/v1/billable-metrics/" + code)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/billable-metrics")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();
@@ -447,7 +460,7 @@ class BillableMetricIntegrationTest {
   private MvcTestResult getList(UUID organizationId) {
     return mvc.get()
         .uri("/v1/billable-metrics")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
@@ -477,7 +490,7 @@ class BillableMetricIntegrationTest {
   private MvcTestResult put(UUID organizationId, String code, String jsonBody) {
     return mvc.put()
         .uri("/v1/billable-metrics/{code}", code)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();

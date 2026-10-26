@@ -1,5 +1,6 @@
 package com.meterengine.pricing.service;
 
+import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
@@ -12,7 +13,9 @@ import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.entity.PriceRate;
 import com.meterengine.pricing.entity.PriceRateId;
 import com.meterengine.pricing.repository.PriceRateRepository;
+import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,17 +32,28 @@ public class PriceRateService {
   private static final TypeReference<Map<String, Object>> DIMENSION_VALUES_TYPE =
       new TypeReference<>() {};
 
+  private static final String PRICE_RATE_TARGET_TYPE = "price_rate";
+
+  private static final String DIMENSION_VALUES_DETAIL = "dimension_values";
+
+  private static final String UNIT_PRICE_DETAIL = "unit_price";
+
+  private static final String PREVIOUS_UNIT_PRICE_DETAIL = "previous_unit_price";
+
   private final PriceRateRepository priceRateRepository;
   private final BillableMetricRepository billableMetricRepository;
   private final JsonMapper jsonMapper;
+  private final AuditLogService auditLogService;
 
   PriceRateService(
       PriceRateRepository priceRateRepository,
       BillableMetricRepository billableMetricRepository,
-      JsonMapper jsonMapper) {
+      JsonMapper jsonMapper,
+      AuditLogService auditLogService) {
     this.priceRateRepository = priceRateRepository;
     this.billableMetricRepository = billableMetricRepository;
     this.jsonMapper = jsonMapper;
+    this.auditLogService = auditLogService;
   }
 
   @Transactional(readOnly = true)
@@ -61,6 +75,7 @@ public class PriceRateService {
     String dimensionValues = jsonMapper.writeValueAsString(request.dimensionValues());
     PriceRateId priceRateId = new PriceRateId(organizationId, billableMetricCode, dimensionValues);
     Optional<PriceRate> found = priceRateRepository.findById(priceRateId);
+    Optional<BigDecimal> previousUnitPrice = found.map(PriceRate::getUnitPrice);
     PriceRate priceRate;
     if (found.isPresent()) {
       priceRate = found.get();
@@ -70,19 +85,32 @@ public class PriceRateService {
           new PriceRate(organizationId, billableMetricCode, dimensionValues, request.unitPrice());
     }
     priceRateRepository.saveAndFlush(priceRate);
+    Map<String, Object> detail = new LinkedHashMap<>();
+    detail.put(DIMENSION_VALUES_DETAIL, request.dimensionValues());
+    detail.put(UNIT_PRICE_DETAIL, request.unitPrice());
+    previousUnitPrice.ifPresent(unitPrice -> detail.put(PREVIOUS_UNIT_PRICE_DETAIL, unitPrice));
+    auditLogService.record(
+        organizationId, "price_rate_created", PRICE_RATE_TARGET_TYPE, billableMetricCode, detail);
 
     return PriceRateResponse.from(priceRate);
   }
 
   @Transactional
   public void delete(UUID organizationId, String billableMetricCode, String dimensionValuesJson) {
-    String dimensionValues = jsonMapper.writeValueAsString(parse(dimensionValuesJson));
+    Map<String, Object> parsedDimensionValues = parse(dimensionValuesJson);
+    String dimensionValues = jsonMapper.writeValueAsString(parsedDimensionValues);
     PriceRate priceRate =
         priceRateRepository
             .findById(new PriceRateId(organizationId, billableMetricCode, dimensionValues))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
     priceRateRepository.delete(priceRate);
     priceRateRepository.flush();
+    auditLogService.record(
+        organizationId,
+        "price_rate_deleted",
+        PRICE_RATE_TARGET_TYPE,
+        billableMetricCode,
+        Map.of(DIMENSION_VALUES_DETAIL, parsedDimensionValues));
   }
 
   private Map<String, Object> parse(String dimensionValuesJson) {

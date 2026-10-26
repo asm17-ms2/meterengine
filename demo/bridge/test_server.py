@@ -12,8 +12,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bridge import server
 from bridge.state import BridgeConfig, BridgeState
+from core.api_client import Organization
 
 DEMO_CUSTOMER = "35bc8d12-9d38-57ab-bc9b-bbd35d779a26"
+LIVE_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+ORGANIZATION = Organization(id="d7cee55d-8c82-4afc-b996-6749d8b26a4e", name="데모 도입사")
 
 API_REQUEST = {
     "attributes": [
@@ -48,9 +51,9 @@ class SenderTestCase(unittest.TestCase):
         self.addCleanup(setattr, server, "_today", original)
         server._today = lambda: day
 
-    def sender(self, config=None, resolver=None, client=None):
-        state = BridgeState(os.path.join(self.path, "state.json"), "scope")
-        made = server.Sender(config or BridgeConfig(), state, self.path)
+    def sender(self, config=None, resolver=None, client=None, organization=ORGANIZATION, scope="scope"):
+        state = BridgeState(os.path.join(self.path, "state.json"), scope)
+        made = server.Sender(config or BridgeConfig(), state, self.path, organization)
         self.addCleanup(made.close)
         made.resolver = resolver
         if client is not None:
@@ -199,6 +202,184 @@ class DenyTest(SenderTestCase):
         self.assertEqual(sender.counts["skipped"], 1)
 
 
+class RunHeaderTest(SenderTestCase):
+    def test_머리말에는_도입사_id만_남고_키는_없다(self):
+        sender = self.sender(BridgeConfig(api_key=LIVE_KEY), organization=ORGANIZATION)
+        with open(sender.writer.path, encoding="utf-8") as f:
+            text = f.read()
+        header = json.loads(text.splitlines()[0])
+        self.assertEqual(header["type"], "run")
+        self.assertEqual(header["organization_id"], ORGANIZATION.id)
+        self.assertNotIn(LIVE_KEY, text)
+
+    def test_보내는_요청에_설정의_키를_쓴다(self):
+        sender = self.sender(BridgeConfig(api_key=LIVE_KEY), organization=ORGANIZATION)
+        self.assertEqual(sender.client.api_key, LIVE_KEY)
+
+
+class StartupLinesTest(unittest.TestCase):
+    def test_시작_로그에는_가린_키만_나오고_도입사는_나중에_확인한다(self):
+        config = BridgeConfig(owner="박성종", api_key=LIVE_KEY)
+        text = "\n".join(server.startup_lines(config, "127.0.0.1", 4318))
+        self.assertNotIn(LIVE_KEY, text)
+        self.assertIn("me_live_****2LtA", text)
+        self.assertIn("도입사: 첫 전송 때 확인", text)
+
+
+class OrganizationClient:
+    def __init__(self, replies, post_replies=None):
+        self.api_key = LIVE_KEY
+        self.replies = list(replies)
+        self.post_replies = list(post_replies or [])
+        self.organization_calls = 0
+        self.posted = []
+
+    def get_organization(self):
+        self.organization_calls += 1
+        status, body = self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
+        return FakeResult(status, body)
+
+    def post_event(self, body_text):
+        self.posted.append(body_text)
+        if self.post_replies:
+            return FakeResult(*self.post_replies.pop(0))
+        return FakeResult(200, {"duplicate": False})
+
+
+ORGANIZATION_REPLY = (200, {"id": ORGANIZATION.id, "name": ORGANIZATION.name, "status": "active"})
+REJECTED_REPLY = (401, {"code": "invalid_credentials", "message": "m"})
+
+
+class LazyOrganizationTest(SenderTestCase):
+    def setUp(self):
+        super().setUp()
+        self.logged = []
+        original_log = server._log
+        server._log = self.logged.append
+        self.addCleanup(setattr, server, "_log", original_log)
+        self.now = 1000.0
+        self.freeze_today("20260824")
+
+    def lazy_sender(self, replies, post_replies=None):
+        client = OrganizationClient(replies, post_replies)
+        sender = self.sender(
+            BridgeConfig(api_key=LIVE_KEY), resolver=FakeResolver(), client=client, organization=None, scope=None
+        )
+        sender._clock = lambda: self.now
+        sender.state.remember_session("sess-1", "meterengine")
+        return sender, client
+
+    def header_lines(self):
+        path = os.path.join(self.path, "bridge-20260824.jsonl")
+        if not os.path.exists(path):
+            return []
+        with open(path, encoding="utf-8") as f:
+            return [json.loads(line) for line in f if line.strip() and json.loads(line)["type"] == "run"]
+
+    def test_도입사를_알기_전에는_기록_파일을_열지_않는다(self):
+        sender, client = self.lazy_sender([ORGANIZATION_REPLY])
+        self.assertIsNone(sender.writer)
+        self.assertEqual(self.header_lines(), [])
+        self.assertEqual(client.organization_calls, 0)
+
+    def test_첫_이벤트에서_한_번만_확인하고_머리말에_도입사_id를_남긴다(self):
+        sender, client = self.lazy_sender([ORGANIZATION_REPLY])
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(client.organization_calls, 1)
+        self.assertEqual(len(client.posted), 2)
+        headers = self.header_lines()
+        self.assertEqual(len(headers), 1)
+        self.assertEqual(headers[0]["organization_id"], ORGANIZATION.id)
+        self.assertEqual(sender.organization, ORGANIZATION)
+
+    def test_확인하면_고객_캐시_scope를_정한다(self):
+        sender, client = self.lazy_sender([ORGANIZATION_REPLY])
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(sender.state.scope, "http://localhost:8080|" + ORGANIZATION.id)
+
+    def test_거부되면_보내지_않고_같은_오류는_한_번만_남긴다(self):
+        sender, client = self.lazy_sender([REJECTED_REPLY])
+        for _ in range(3):
+            sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(client.posted, [])
+        self.assertEqual(sender.counts["error"], 3)
+        self.assertEqual(len([line for line in self.logged if "invalid_credentials" in line]), 1)
+        self.assertEqual(sender.organization_error, "invalid_credentials")
+        self.assertIsNone(sender.state.scope)
+
+    def test_60초가_지나기_전에는_다시_묻지_않는다(self):
+        sender, client = self.lazy_sender([REJECTED_REPLY])
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.now += 59
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(client.organization_calls, 1)
+        self.now += 2
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(client.organization_calls, 2)
+        self.assertEqual(len([line for line in self.logged if "invalid_credentials" in line]), 1)
+
+    def test_승인되면_다음_확인에서_보내기_시작한다(self):
+        sender, client = self.lazy_sender(
+            [(403, {"code": "organization_not_active", "message": "m"}), ORGANIZATION_REPLY]
+        )
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.now += 61
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(len(client.posted), 1)
+        self.assertIsNone(sender.organization_error)
+
+    def test_확인한_뒤에_키가_거부되면_도입사를_내려놓고_한_번만_남긴다(self):
+        sender, client = self.lazy_sender([ORGANIZATION_REPLY], post_replies=[REJECTED_REPLY])
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(sender.counts["rejected"], 1)
+        self.assertIsNone(sender.organization)
+        self.assertEqual(sender.organization_error, "invalid_credentials")
+        for _ in range(2):
+            sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(len(client.posted), 1)
+        self.assertEqual(client.organization_calls, 1)
+        self.assertEqual(sender.counts["error"], 2)
+        self.assertEqual(len([line for line in self.logged if "invalid_credentials" in line]), 1)
+        self.assertNotIn(LIVE_KEY, "\n".join(self.logged))
+
+    def test_키가_거부된_뒤_60초가_지나면_다시_확인하고_보낸다(self):
+        sender, client = self.lazy_sender(
+            [ORGANIZATION_REPLY], post_replies=[(403, {"code": "organization_not_active", "message": "m"})]
+        )
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(sender.organization_error, "organization_not_active")
+        self.now += 61
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(client.organization_calls, 2)
+        self.assertEqual(len(client.posted), 2)
+        self.assertEqual(sender.organization, ORGANIZATION)
+        self.assertIsNone(sender.organization_error)
+
+    def test_본문이_없는_401은_상태_번호로_남긴다(self):
+        sender, client = self.lazy_sender([ORGANIZATION_REPLY], post_replies=[(401, None)])
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(sender.organization_error, "http_401")
+
+    def test_연결이_안_돼도_멈추지_않는다(self):
+        class Unreachable(OrganizationClient):
+            def get_organization(self):
+                self.organization_calls += 1
+                raise server.TransportError("http://localhost:8080에 연결할 수 없습니다")
+
+        sender = self.sender(
+            BridgeConfig(api_key=LIVE_KEY), resolver=FakeResolver(), client=Unreachable([]),
+            organization=None, scope=None,
+        )
+        sender._clock = lambda: self.now
+        sender.state.remember_session("sess-1", "meterengine")
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+        self.assertEqual(sender.counts["error"], 2)
+        self.assertEqual(sender.organization_error, "connection_failed")
+        self.assertEqual(len([line for line in self.logged if "연결할 수 없습니다" in line]), 1)
+
+
 class AllowedHostTest(unittest.TestCase):
     def test_이_기계를_가리키는_값은_통과한다(self):
         for host in ("127.0.0.1", "127.0.0.1:4318", "localhost:4318", "[::1]:4318", None, ""):
@@ -218,6 +399,8 @@ class RequestOriginTest(unittest.TestCase):
         def __init__(self):
             self.submitted = []
             self.counts = {}
+            self.organization = None
+            self.organization_error = None
 
         def submit(self, record, name, session_id):
             self.submitted.append((record, name, session_id))
@@ -227,7 +410,7 @@ class RequestOriginTest(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.sender = self.RecordingSender()
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), server.BridgeHandler)
-        self.server.config = BridgeConfig()
+        self.server.config = BridgeConfig(api_key=LIVE_KEY)
         self.server.state = BridgeState(os.path.join(self.directory.name, "state.json"), "scope")
         self.server.sender = self.sender
         self.server.daemon_threads = True
@@ -259,6 +442,32 @@ class RequestOriginTest(unittest.TestCase):
             return connection.getresponse().status
         finally:
             connection.close()
+
+    def health_body(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("GET", "/meterengine/health")
+            response = connection.getresponse()
+            return response.status, response.read().decode("utf-8")
+        finally:
+            connection.close()
+
+    def test_health에는_확인한_도입사와_가린_키만_나온다(self):
+        self.sender.organization = ORGANIZATION
+        status, text = self.health_body()
+        self.assertEqual(status, 200)
+        body = json.loads(text)
+        self.assertEqual(body["organization"], {"id": ORGANIZATION.id, "name": ORGANIZATION.name})
+        self.assertIsNone(body["organization_error"])
+        self.assertEqual(body["api_key"], "me_live_****2LtA")
+        self.assertNotIn(LIVE_KEY, text)
+        self.assertNotIn("org_id", body)
+
+    def test_확인_전이나_실패하면_health에_오류_code가_나온다(self):
+        self.sender.organization_error = "invalid_credentials"
+        body = json.loads(self.health_body()[1])
+        self.assertIsNone(body["organization"])
+        self.assertEqual(body["organization_error"], "invalid_credentials")
 
     def test_도구가_보낸_hook은_받는다(self):
         body = json.dumps({"session_id": "sess-1", "cwd": self.directory.name})

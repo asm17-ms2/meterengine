@@ -1,8 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
-
-const BASE_URL = __ENV.BASE_URL || 'https://test-slo.meterengine.com';
-const ORGANIZATION_ID = __ENV.ORGANIZATION_ID || 'd7cee55d-8c82-4afc-b996-6749d8b26a4e';
+import { config } from './lib/config.js';
 
 export const options = {
   discardResponseBodies: true,
@@ -22,8 +20,6 @@ export const options = {
 };
 
 export default function () {
-  const res = http.get(`${BASE_URL}/v1/billable-metrics`, {
-    headers: { 'X-Organization-Id': ORGANIZATION_ID },
-  });
+  const res = http.get(`${config.baseUrl}/v1/billable-metrics`, { headers: config.headers });
   check(res, { 'status 200': (r) => r.status === 200 });
 }

@@ -87,7 +87,7 @@ async function call(
     response = await fetch(url, {
       method: init.method,
       headers: {
-        "X-Organization-Id": config.organizationId,
+        Authorization: `Bearer ${config.apiKey}`,
         Accept: "application/json",
         ...(init.body === undefined
           ? {}

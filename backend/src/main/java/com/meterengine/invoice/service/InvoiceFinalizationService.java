@@ -1,5 +1,6 @@
 package com.meterengine.invoice.service;
 
+import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
@@ -33,6 +34,7 @@ public class InvoiceFinalizationService {
   private final OrganizationRepository organizationRepository;
   private final InvoiceEmailService invoiceEmailService;
   private final JsonMapper jsonMapper;
+  private final AuditLogService auditLogService;
 
   InvoiceFinalizationService(
       DraftInvoiceService draftInvoiceService,
@@ -41,7 +43,8 @@ public class InvoiceFinalizationService {
       CustomerRepository customerRepository,
       OrganizationRepository organizationRepository,
       InvoiceEmailService invoiceEmailService,
-      JsonMapper jsonMapper) {
+      JsonMapper jsonMapper,
+      AuditLogService auditLogService) {
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
@@ -49,6 +52,7 @@ public class InvoiceFinalizationService {
     this.organizationRepository = organizationRepository;
     this.invoiceEmailService = invoiceEmailService;
     this.jsonMapper = jsonMapper;
+    this.auditLogService = auditLogService;
   }
 
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
@@ -78,6 +82,12 @@ public class InvoiceFinalizationService {
                   invoice,
                   draftInvoiceCustomer.lines(),
                   customerById.get(draftInvoiceCustomer.customerId()).getBillingEmail());
+              auditLogService.record(
+                  invoice.getOrganizationId(),
+                  "invoice_finalized",
+                  "invoice",
+                  invoice.getId().toString(),
+                  Map.of("month", month.toString()));
               return invoice;
             })
         .toList();

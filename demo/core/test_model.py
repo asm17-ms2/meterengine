@@ -3,13 +3,104 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from core.model import (
+    API_KEY_ENV,
+    DEFAULT_API_KEY,
     KST,
     Event,
     build_body_text,
+    is_api_key,
     kst_month,
+    mask_api_key,
     parse_properties,
     parse_rfc3339,
+    redact_api_keys,
+    resolve_api_key,
 )
+
+LIVE_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+TEST_KEY = "me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC"
+OTHER_KEY = "me_live_" + "A1" * 16
+
+
+class ApiKeyFormatTest(unittest.TestCase):
+    def test_live와_test_키를_알아본다(self):
+        self.assertTrue(is_api_key(LIVE_KEY))
+        self.assertTrue(is_api_key(TEST_KEY))
+
+    def test_형식이_다르면_키가_아니다(self):
+        for value in (
+            "",
+            None,
+            "d7cee55d-8c82-4afc-b996-6749d8b26a4e",
+            "me_session_" + "a" * 32,
+            "me_prod_" + "a" * 32,
+            "me_live_" + "a" * 31,
+            "me_live_" + "a" * 33,
+            "me_live_" + "a" * 31 + "-",
+            " " + LIVE_KEY,
+            LIVE_KEY + "\n",
+        ):
+            self.assertFalse(is_api_key(value), value)
+
+    def test_기본_키는_로컬_live_키다(self):
+        self.assertEqual(DEFAULT_API_KEY, LIVE_KEY)
+        self.assertTrue(is_api_key(DEFAULT_API_KEY))
+
+    def test_환경변수_이름(self):
+        self.assertEqual(API_KEY_ENV, "METERENGINE_API_KEY")
+
+
+class MaskApiKeyTest(unittest.TestCase):
+    def test_모드_접두사와_끝_네_글자만_남긴다(self):
+        self.assertEqual(mask_api_key(LIVE_KEY), "me_live_****2LtA")
+        self.assertEqual(mask_api_key(TEST_KEY), "me_test_****CeVC")
+
+    def test_키가_아니면_아무것도_드러내지_않는다(self):
+        self.assertEqual(mask_api_key("비밀-값-1234"), "****")
+        self.assertEqual(mask_api_key(""), "****")
+        self.assertEqual(mask_api_key(None), "****")
+
+    def test_글_안의_키를_가린다(self):
+        text = "send --api-key %s --api-key=%s" % (LIVE_KEY, TEST_KEY)
+        redacted = redact_api_keys(text)
+        self.assertNotIn(LIVE_KEY, redacted)
+        self.assertNotIn(TEST_KEY, redacted)
+        self.assertIn("me_live_****2LtA", redacted)
+        self.assertIn("--api-key=me_test_****CeVC", redacted)
+
+
+class ResolveApiKeyTest(unittest.TestCase):
+    def test_옵션이_가장_먼저다(self):
+        self.assertEqual(resolve_api_key(TEST_KEY, {API_KEY_ENV: OTHER_KEY}), TEST_KEY)
+
+    def test_옵션이_없으면_환경변수다(self):
+        self.assertEqual(resolve_api_key(None, {API_KEY_ENV: OTHER_KEY}), OTHER_KEY)
+
+    def test_둘_다_없으면_로컬_키다(self):
+        self.assertEqual(resolve_api_key(None, {}), LIVE_KEY)
+        self.assertEqual(resolve_api_key("", {API_KEY_ENV: ""}), LIVE_KEY)
+
+    def test_대체값을_바꿀_수_있다(self):
+        self.assertEqual(resolve_api_key(None, {}, fallback=TEST_KEY), TEST_KEY)
+        self.assertIsNone(resolve_api_key(None, {}, fallback=None))
+
+    def test_앞뒤_공백은_버린다(self):
+        self.assertEqual(resolve_api_key(None, {API_KEY_ENV: OTHER_KEY + "\n"}), OTHER_KEY)
+
+    def test_형식이_틀리면_원문_없이_멈춘다(self):
+        wrong = "me_live_" + "x" * 10
+        for option, environ in ((wrong, {}), (None, {API_KEY_ENV: wrong})):
+            with self.assertRaises(ValueError) as caught:
+                resolve_api_key(option, environ)
+            self.assertNotIn(wrong, str(caught.exception))
+
+    def test_오류는_어디서_온_값인지_알린다(self):
+        with self.assertRaises(ValueError) as caught:
+            resolve_api_key(None, {API_KEY_ENV: "틀림"})
+        self.assertIn(API_KEY_ENV, str(caught.exception))
+        with self.assertRaises(ValueError) as caught:
+            resolve_api_key("틀림", {})
+        self.assertIn("--api-key", str(caught.exception))
 
 
 class ParseRfc3339Test(unittest.TestCase):

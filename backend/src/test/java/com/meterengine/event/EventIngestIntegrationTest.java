@@ -1,13 +1,17 @@
 package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -36,11 +40,15 @@ class EventIngestIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -312,27 +320,20 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더가_없거나_형식이_틀리면_400이고_저장은_0건이다() {
+  void 인증이_없으면_401_authentication_required이고_저장은_0건이다() {
     UUID organizationId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(organizationId, "acme");
-    String payload = body("tx-1", customerId.toString());
 
     assertThat(
             mvc.post()
                 .uri("/v1/events")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(payload)
+                .content(body("tx-1", customerId.toString()))
                 .exchange())
-        .hasStatus(400);
-
-    assertThat(
-            mvc.post()
-                .uri("/v1/events")
-                .header("X-Organization-Id", "not-a-uuid")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload)
-                .exchange())
-        .hasStatus(400);
+        .hasStatus(401)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.getCode());
 
     assertThat(totalCount(organizationId)).isZero();
   }
@@ -541,12 +542,11 @@ class EventIngestIntegrationTest {
   }
 
   @Test
-  void 도입사를_잘못_보내면_404이고_보낸_값은_본문에_없다() {
+  void 없는_고객이면_404이고_보낸_customer_id는_본문에_없다() {
     UUID organizationId = insertOrganization("도입사 A");
-    UUID customerId = insertCustomer(organizationId, "acme");
-    UUID wrongOrganizationId = UUID.randomUUID();
+    UUID unknownCustomerId = UUID.randomUUID();
 
-    MvcTestResult result = post(wrongOrganizationId, body("tx-1", customerId.toString()));
+    MvcTestResult result = post(organizationId, body("tx-1", unknownCustomerId.toString()));
 
     assertThat(result)
         .hasStatus(404)
@@ -554,7 +554,8 @@ class EventIngestIntegrationTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
-    assertThat(result).bodyText().doesNotContain(wrongOrganizationId.toString());
+    assertThat(result).bodyText().doesNotContain(unknownCustomerId.toString());
+    assertThat(totalCount(organizationId)).isZero();
   }
 
   @Test
@@ -570,6 +571,11 @@ class EventIngestIntegrationTest {
         .extractingPath("$.errors[0].field")
         .asString()
         .isEqualTo("transaction_id");
+  }
+
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
   }
 
   private OffsetDateTime daysAgoUtc(int days) {
@@ -590,7 +596,7 @@ class EventIngestIntegrationTest {
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/events")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();

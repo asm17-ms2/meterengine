@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -11,7 +12,7 @@ def _write_sample(path):
         writer.write_run_header(
             started_at_text="2026-08-14T10:00:00+09:00",
             base_url="http://localhost:8080",
-            org_id="d7cee55d-8c82-4afc-b996-6749d8b26a4e",
+            organization_id="d7cee55d-8c82-4afc-b996-6749d8b26a4e",
             csv_path="events.csv",
             argv=["send", "--csv", "events.csv"],
         )
@@ -63,7 +64,7 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         _write_sample(self.path)
         result = read_log(self.path)
         self.assertEqual(result.header.base_url, "http://localhost:8080")
-        self.assertEqual(result.header.org_id, "d7cee55d-8c82-4afc-b996-6749d8b26a4e")
+        self.assertEqual(result.header.organization_id, "d7cee55d-8c82-4afc-b996-6749d8b26a4e")
         self.assertEqual(len(result.records), 3)
         self.assertEqual(result.warnings, [])
         outcomes = [r.outcome for r in result.records]
@@ -169,6 +170,46 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertIn("2행", result.warnings[0])
 
 
+class RunHeaderSecretTest(unittest.TestCase):
+    KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "send-test.jsonl")
+
+    def test_머리말에는_도입사_id가_남고_키는_남지_않는다(self):
+        with JsonlLogWriter(self.path) as writer:
+            writer.write_run_header(
+                started_at_text="2026-08-14T10:00:00+09:00",
+                base_url="http://localhost:8080",
+                organization_id="d7cee55d-8c82-4afc-b996-6749d8b26a4e",
+                csv_path="events.csv",
+                argv=["send", "--api-key", self.KEY, "--api-key=" + self.KEY],
+            )
+        with open(self.path, encoding="utf-8") as f:
+            raw = f.read()
+        self.assertNotIn(self.KEY, raw)
+        header = json.loads(raw)
+        self.assertEqual(header["organization_id"], "d7cee55d-8c82-4afc-b996-6749d8b26a4e")
+        self.assertEqual(header["argv"], ["send", "--api-key", "me_live_****2LtA", "--api-key=me_live_****2LtA"])
+
+    def test_옛_머리말의_org_id는_무시하고_읽는다(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            f.write('{"v": 1, "type": "run", "started_at": "2026-08-14T10:00:00+09:00",'
+                    ' "base_url": "http://localhost:8080",'
+                    ' "org_id": "d7cee55d-8c82-4afc-b996-6749d8b26a4e", "csv": "events.csv",'
+                    ' "argv": ["send"]}\n')
+            f.write('{"v": 1, "type": "send", "seq": 1, "sent_at": "t", "request": {},'
+                    ' "status": 200, "response": {"duplicate": false}, "outcome": "new",'
+                    ' "error": null, "elapsed_ms": 1}\n')
+        result = read_log(self.path)
+        self.assertEqual(result.header.base_url, "http://localhost:8080")
+        self.assertIsNone(result.header.organization_id)
+        self.assertEqual(len(result.records), 1)
+        self.assertEqual(result.warnings, [])
+
+
 class ClassifyOutcomeTest(unittest.TestCase):
     def test_200은_duplicate_여부로_갈린다(self):
         self.assertEqual(classify_outcome(200, {"duplicate": False}), "new")
@@ -206,7 +247,7 @@ class AppendTest(unittest.TestCase):
             writer.write_run_header(
                 started_at_text="2026-08-24T11:00:00+09:00",
                 base_url="https://meterengine.com",
-                org_id="d7cee55d-8c82-4afc-b996-6749d8b26a4e",
+                organization_id="d7cee55d-8c82-4afc-b996-6749d8b26a4e",
                 csv_path=None,
                 argv=["otel_bridge.py", "serve"],
             )

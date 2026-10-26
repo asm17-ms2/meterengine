@@ -1,12 +1,16 @@
 package com.meterengine.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,11 +36,15 @@ class DraftInvoiceIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -274,7 +282,7 @@ class DraftInvoiceIntegrationTest {
     MvcTestResult result =
         mvc.get()
             .uri("/v1/invoices/draft")
-            .header("X-Organization-Id", organizationId.toString())
+            .header(AUTHORIZATION, authorization(organizationId))
             .exchange();
 
     assertThat(result)
@@ -336,22 +344,21 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
-  void 도입사_헤더가_없거나_형식이_틀리면_400이다() {
-    assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(400);
-    assertThat(
-            mvc.get()
-                .uri("/v1/invoices/draft")
-                .header("X-Organization-Id", "not-a-uuid")
-                .exchange())
-        .hasStatus(400);
+  void 인증이_없으면_401이다() {
+    assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(401);
   }
 
   // --- 헬퍼 ---
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
         .uri("/v1/invoices/draft?month={month}", month)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

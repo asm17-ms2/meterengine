@@ -1,6 +1,9 @@
 package com.meterengine.invoice.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.FinalizeInvoicesResponse;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
@@ -17,7 +20,6 @@ import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +38,7 @@ public class InvoiceController {
   }
 
   @GetMapping
+  @ReadAccess
   @Operation(
       summary = "인보이스 목록 조회",
       description =
@@ -56,7 +59,7 @@ public class InvoiceController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"),
+            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -66,8 +69,7 @@ public class InvoiceController {
         description = "code=customer_not_found: customer_id가 가리키는 고객이 없다")
   })
   public ListInvoicesResponse listInvoices(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "고객을 좁힌다. 생략하면 모든 고객이 대상이다.")
           @RequestParam(name = "customer_id", required = false)
           UUID customerId,
@@ -80,6 +82,7 @@ public class InvoiceController {
   }
 
   @PostMapping
+  @AdminAccess
   @Operation(
       summary = "인보이스 일괄 확정",
       description =
@@ -99,12 +102,10 @@ public class InvoiceController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, month가 없거나 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다")
+        description = "code=validation_error: month가 없거나 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다")
   })
   public FinalizeInvoicesResponse finalizeInvoices(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "확정할 달(yyyy-MM, KST).", example = "2026-08")
           @RequestParam
           @DateTimeFormat(pattern = "yyyy-MM")

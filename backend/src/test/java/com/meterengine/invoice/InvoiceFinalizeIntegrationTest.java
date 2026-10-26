@@ -2,7 +2,10 @@ package com.meterengine.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -21,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,11 +57,15 @@ class InvoiceFinalizeIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private WebApplicationContext webApplicationContext;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -283,7 +291,7 @@ class InvoiceFinalizeIntegrationTest {
     assertThat(
             mvc.get()
                 .uri("/v1/invoices?month=2026-08")
-                .header("X-Organization-Id", organizationId.toString())
+                .header(AUTHORIZATION, authorization(organizationId))
                 .exchange())
         .bodyJson()
         .extractingPath("$.invoices[*].total_amount")
@@ -336,11 +344,11 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   @Test
-  void month_형식이_틀리거나_도입사_헤더가_없으면_400이다() {
+  void month_형식이_틀리면_400이고_인증이_없으면_401이다() {
     UUID organizationId = organizationWithTokenBillableMetric();
 
     assertThat(finalizeInvoices(organizationId, "?month=2026-8")).hasStatus(400);
-    assertThat(mvc.post().uri("/v1/invoices?month=2026-08").exchange()).hasStatus(400);
+    assertThat(mvc.post().uri("/v1/invoices?month=2026-08").exchange()).hasStatus(401);
   }
 
   @Test
@@ -430,6 +438,11 @@ class InvoiceFinalizeIntegrationTest {
 
   // --- 헬퍼 ---
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private List<OutboundEmail> outboundEmails(UUID organizationId) {
     return outboundEmailRepository.findAll().stream()
         .filter(outboundEmail -> outboundEmail.getOrganizationId().equals(organizationId))
@@ -439,7 +452,7 @@ class InvoiceFinalizeIntegrationTest {
   private MvcTestResult finalizeInvoices(UUID organizationId, String query) {
     return mvc.post()
         .uri("/v1/invoices" + query)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 

@@ -1,6 +1,8 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.payment.dto.PaymentAttemptResponse;
 import com.meterengine.payment.service.PaymentAttemptService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,7 +15,6 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,6 +29,7 @@ public class PaymentAttemptController {
 
   @PostMapping("/v1/invoices/{id}/payment-attempts")
   @ResponseStatus(HttpStatus.CREATED)
+  @AdminAccess
   @Operation(
       summary = "인보이스 결제 요청",
       description =
@@ -45,8 +47,7 @@ public class PaymentAttemptController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            "code=validation_error: X-Organization-Id가 없거나 UUID가 아니거나, 경로의 id가 UUID가 아니다"),
+        description = "code=validation_error: 경로의 id가 UUID가 아니다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -67,8 +68,7 @@ public class PaymentAttemptController {
             """)
   })
   public PaymentAttemptResponse createPaymentAttempt(
-      @Parameter(description = "도입사 ID. 인증이 붙기 전까지 쓰는 임시 헤더다.") @RequestHeader("X-Organization-Id")
-          UUID organizationId,
+      @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "결제할 인보이스의 id.") @PathVariable UUID id) {
     return paymentAttemptService.create(organizationId, id);
   }

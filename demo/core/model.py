@@ -5,11 +5,15 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Mapping, Optional
 
 KST = timezone(timedelta(hours=9))
 
-DEFAULT_ORG_ID = "d7cee55d-8c82-4afc-b996-6749d8b26a4e"
+DEFAULT_API_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
 DEFAULT_BASE_URL = "http://localhost:8080"
+API_KEY_ENV = "METERENGINE_API_KEY"
+
+_API_KEY = re.compile(r"me_(?:live|test)_[A-Za-z0-9]{32}")
 
 MAX_TRANSACTION_ID = 255
 
@@ -75,6 +79,39 @@ def kst_month(dt: datetime) -> str:
 
 def is_uuid(text: str) -> bool:
     return bool(_UUID.match(text))
+
+
+def is_api_key(value: Optional[str]) -> bool:
+    return isinstance(value, str) and bool(_API_KEY.fullmatch(value))
+
+
+def mask_api_key(key: Optional[str]) -> str:
+    if not is_api_key(key):
+        return "****"
+    return key[: len("me_live_")] + "****" + key[-4:]
+
+
+def redact_api_keys(text: str) -> str:
+    return _API_KEY.sub(lambda match: mask_api_key(match.group(0)), text)
+
+
+def resolve_api_key(
+    option: Optional[str],
+    environ: Mapping[str, str],
+    fallback: Optional[str] = DEFAULT_API_KEY,
+    fallback_label: str = "기본 로컬 키",
+) -> Optional[str]:
+    candidates = (("--api-key", option), (API_KEY_ENV, environ.get(API_KEY_ENV)), (fallback_label, fallback))
+    for label, value in candidates:
+        value = (value or "").strip()
+        if not value:
+            continue
+        if not is_api_key(value):
+            raise ValueError(
+                "%s 값이 API 키 형식이 아닙니다 (me_live_ 또는 me_test_ 뒤에 영문과 숫자 32자)" % label
+            )
+        return value
+    return None
 
 
 def build_body_text(event: Event) -> str:

@@ -2,7 +2,10 @@ package com.meterengine.pricing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
@@ -12,6 +15,7 @@ import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.service.PriceRateService;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -38,11 +42,15 @@ class PriceRateIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private WebApplicationContext webApplicationContext;
 
+  private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+
   private MockMvcTester mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcTester.from(webApplicationContext);
+    mvc =
+        MockMvcTester.from(
+            webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   @Test
@@ -160,18 +168,23 @@ class PriceRateIntegrationTest {
 
   // --- 헬퍼 ---
 
+  private String authorization(UUID organizationId) {
+    return authorizationsByOrganizationId.computeIfAbsent(
+        organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));
+  }
+
   private MvcTestResult delete(UUID organizationId, String dimensionValues) {
     return mvc.delete()
         .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
         .queryParam("dimension_values", dimensionValues)
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
 
   private MvcTestResult post(UUID organizationId, String jsonBody) {
     return mvc.post()
         .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
-        .header("X-Organization-Id", organizationId.toString())
+        .header(AUTHORIZATION, authorization(organizationId))
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();
