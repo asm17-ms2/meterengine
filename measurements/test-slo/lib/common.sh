@@ -23,6 +23,7 @@ readonly SSM_COMMENT_MAX_LENGTH=100
 readonly SSM_ONLINE_WAIT_LIMIT_SECONDS=600
 readonly REMOTE_SCRIPT_DELIMITER=MEASUREMENTS_REMOTE_SCRIPT_EOF
 readonly USAGE_REQUEST_TIMEOUT_SECONDS=10
+readonly USAGE_MAX_REDIRECTS=5
 readonly USAGE_RETRY_LIMIT=60
 readonly USAGE_RETRY_INTERVAL_SECONDS=5
 readonly HTTP_OK=200
@@ -217,23 +218,24 @@ wait_db_usable() {
 	done
 }
 
-# 연결하지 못하면 curl이 찍는 000을 그대로 돌려준다.
-usage_status_code() {
+# 로그인 화면 리다이렉트를 따라간 마지막 응답을 "코드 URL"로 돌려준다. 연결하지 못하면 코드는 000이다.
+usage_final_response() {
 	local domain="$1"
-	curl -s -o /dev/null -w '%{http_code}' --max-time "$USAGE_REQUEST_TIMEOUT_SECONDS" "https://$domain/usage" || true
+	curl -s -L --max-redirs "$USAGE_MAX_REDIRECTS" -o /dev/null -w '%{http_code} %{url_effective}' --max-time "$USAGE_REQUEST_TIMEOUT_SECONDS" "https://$domain/usage" || true
 }
 
 wait_for_usage_ok() {
-	local domain="$1" failure_hint="$2" attempt code=""
+	local domain="$1" failure_hint="$2" attempt response="" code=""
 	for attempt in $(seq 1 "$USAGE_RETRY_LIMIT"); do
-		code=$(usage_status_code "$domain")
+		response=$(usage_final_response "$domain")
+		code=${response%% *}
 		if [ "$code" = "$HTTP_OK" ]; then
-			log "https://$domain/usage 가 $HTTP_OK 을 돌려줬다(${attempt}회 시도)"
+			log "https://$domain/usage -> ${response#* } 가 $HTTP_OK 을 돌려줬다(${attempt}회 시도)"
 			return 0
 		fi
 		sleep "$USAGE_RETRY_INTERVAL_SECONDS"
 	done
-	die "https://$domain/usage 가 $((USAGE_RETRY_LIMIT * USAGE_RETRY_INTERVAL_SECONDS))초 안에 $HTTP_OK 이 되지 않았다(마지막 코드: $code). $failure_hint"
+	die "https://$domain/usage 가 리다이렉트를 따라가도 $((USAGE_RETRY_LIMIT * USAGE_RETRY_INTERVAL_SECONDS))초 안에 $HTTP_OK 이 되지 않았다(마지막 응답: $response). $failure_hint"
 }
 
 wait_ssm_online() {

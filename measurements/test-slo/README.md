@@ -55,7 +55,7 @@ measurements/test-slo/sut/scripts/sut-deploy.sh
 
 ```
 [sut-deploy] DB 확인: meterengine-test-slo-db.<...>.rds.amazonaws.com
-[sut-deploy] https://test-slo.meterengine.com/usage 가 200 을 돌려줬다
+[sut-deploy] https://test-slo.meterengine.com/usage -> https://test-slo.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
 ```
 
 ### 3. exporter 사용자 만들기
@@ -94,7 +94,7 @@ measurements/test-slo/sut/scripts/sut-start.sh
 measurements/test-slo/sut/scripts/sut-stop.sh
 ```
 
-- 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 EC2를 켜고, `/usage`가 200이 될 때까지 기다린다.
+- 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 EC2를 켜고, `/usage`가 리다이렉트를 따라가 200이 될 때까지 기다린다.
 - 끌 때는 EC2를 멈춘 뒤 RDS를 멈춘다. 지우지는 않는다.
 - 꺼졌는지 확인한다. 둘 다 `stopped`면 꺼진 것이다.
 
