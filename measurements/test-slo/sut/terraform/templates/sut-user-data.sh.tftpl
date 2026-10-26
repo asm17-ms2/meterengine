@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
+
+# 빠진 값은 deploy.sh가 개발 서버 값으로 채운다. 아래 단계가 실패해도 남도록 먼저 쓴다.
+cat >/etc/meterengine/deploy.conf <<'CONF'
+PARAM_PATH=${param_path}
+SITE_DOMAIN=${domain}
+SITE_ALIASES=
+CONF
+
+dnf install -y docker git
+systemctl enable --now docker
+
+docker compose version 2>/dev/null || {
+	mkdir -p /usr/libexec/docker/cli-plugins
+	curl -fsSL https://github.com/docker/compose/releases/download/v5.5.0/docker-compose-linux-aarch64 \
+		-o /usr/libexec/docker/cli-plugins/docker-compose
+	chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+}
+
+git clone https://github.com/asm17-ms2/meterengine.git /opt/meterengine
