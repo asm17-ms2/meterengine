@@ -79,6 +79,39 @@ class BillableMetricUsageServiceTest {
   }
 
   @Test
+  void 지난_달의_집계_끝은_다음_달_1일_자정이다() {
+    OffsetDateTime now = OffsetDateTime.parse("2026-10-26T10:00:00+09:00");
+
+    assertThat(BillableMetricUsageService.aggregationEnd(AUGUST, now))
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T00:00:00+09:00"));
+  }
+
+  @Test
+  void 지금이_다음_달_1일_자정이면_집계_끝은_그_자정이다() {
+    OffsetDateTime now = OffsetDateTime.parse("2026-09-01T00:00:00+09:00");
+
+    assertThat(BillableMetricUsageService.aggregationEnd(AUGUST, now)).isEqualTo(now);
+  }
+
+  @Test
+  void 이번_달의_집계_끝은_지금이다() {
+    OffsetDateTime now = OffsetDateTime.parse("2026-10-26T10:00:00+09:00");
+
+    assertThat(BillableMetricUsageService.aggregationEnd(YearMonth.of(2026, 10), now))
+        .isEqualTo(now);
+  }
+
+  @Test
+  void 다음_달의_집계_끝은_지금이라_그_달_시작보다_이르다() {
+    OffsetDateTime now = OffsetDateTime.parse("2026-10-26T10:00:00+09:00");
+
+    OffsetDateTime end = BillableMetricUsageService.aggregationEnd(YearMonth.of(2026, 11), now);
+
+    assertThat(end).isEqualTo(now);
+    assertThat(end).isBefore(OffsetDateTime.parse("2026-11-01T00:00:00+09:00"));
+  }
+
+  @Test
   void 이벤트가_없는_고객도_0으로_결과에_들어간다() {
     UUID withEvents = UUID.randomUUID();
     UUID withoutEvents = UUID.randomUUID();

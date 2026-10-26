@@ -124,6 +124,7 @@ docker build -t meterengine-backend .
 | `payment` | 인보이스 결제 요청과 결제 시도 기록. PG는 항상 승인하는 Mock이다 | `/v1/invoices/{id}/payment-attempts` |
 | `mail` | 보낼 메일 기록. 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
 | `organization` | 도입사 조회 | 없음 |
+| `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI 설정 | 없음 |
 

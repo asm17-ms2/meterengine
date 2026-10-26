@@ -37,6 +37,7 @@ public class BillableMetricUsageController {
           미터마다 type이 그 미터의 event_type과 같은 이벤트를 고객별로 합산해 돌려준다.
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
+          지금 이후 시각의 이벤트는 집계에 들지 않는다.
           모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열이다.
           dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값의 조합별로 수량을 나눈 것이고,
           고객의 quantity는 그 합이다. 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 요소 하나다.
