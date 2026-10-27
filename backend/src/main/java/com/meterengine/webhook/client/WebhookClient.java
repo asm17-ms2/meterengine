@@ -29,6 +29,7 @@ public class WebhookClient implements AutoCloseable {
   private static final int READ_TIMEOUT_MS = 10000;
   private final WebhookAddressPolicy webhookAddressPolicy;
   private final Duration requestTimeout;
+  private final SSLSocketFactory sslSocketFactory;
   private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
   @Autowired
@@ -37,8 +38,16 @@ public class WebhookClient implements AutoCloseable {
   }
 
   WebhookClient(WebhookAddressPolicy webhookAddressPolicy, Duration requestTimeout) {
+    this(webhookAddressPolicy, requestTimeout, (SSLSocketFactory) SSLSocketFactory.getDefault());
+  }
+
+  WebhookClient(
+      WebhookAddressPolicy webhookAddressPolicy,
+      Duration requestTimeout,
+      SSLSocketFactory sslSocketFactory) {
     this.webhookAddressPolicy = webhookAddressPolicy;
     this.requestTimeout = requestTimeout;
+    this.sslSocketFactory = sslSocketFactory;
   }
 
   public WebhookOutcome send(
@@ -84,9 +93,7 @@ public class WebhookClient implements AutoCloseable {
         Socket socket = transport;
         if ("https".equalsIgnoreCase(uri.getScheme())) {
           SSLSocket tls =
-              (SSLSocket)
-                  ((SSLSocketFactory) SSLSocketFactory.getDefault())
-                      .createSocket(transport, uri.getHost(), port, true);
+              (SSLSocket) sslSocketFactory.createSocket(transport, uri.getHost(), port, true);
           SSLParameters parameters = tls.getSSLParameters();
           parameters.setEndpointIdentificationAlgorithm("HTTPS");
           tls.setSSLParameters(parameters);
