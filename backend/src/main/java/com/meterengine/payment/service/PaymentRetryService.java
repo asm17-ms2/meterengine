@@ -102,6 +102,13 @@ public class PaymentRetryService {
   }
 
   private boolean retryCandidate(PaymentRetryCandidateProjection candidate) {
+    // 키를 보관하면 새 결제를 멈춘다. 실패한 시도가 고정한 옛 키로도 다시 승인하지 않는다.
+    if (tossPaymentsCredentialService
+        .active(candidate.getOrganizationId(), candidate.getMode())
+        .isEmpty()) {
+      logSkipped(candidate, "toss_payments_credential_missing");
+      return false;
+    }
     PaymentAttempt original = paymentAttemptRepository.findById(candidate.getId()).orElseThrow();
     Optional<TossPaymentsCredential> credential =
         original.getCredentialUpdatedAt() != null
