@@ -44,6 +44,9 @@ public class UserAccount implements Persistable<UUID> {
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
 
+  @Column(name = "consent_required", nullable = false)
+  private boolean consentRequired;
+
   @Transient private boolean isNew = true;
 
   protected UserAccount() {}
@@ -97,6 +100,18 @@ public class UserAccount implements Persistable<UUID> {
 
   public OffsetDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  public boolean isConsentRequired() {
+    return consentRequired;
+  }
+
+  public void requireConsent() {
+    consentRequired = true;
+  }
+
+  public void acceptConsent() {
+    consentRequired = false;
   }
 
   public void changeRole(String role) {

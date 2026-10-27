@@ -1,7 +1,5 @@
 package com.meterengine.global.security;
 
-import com.meterengine.account.service.SessionService;
-import com.meterengine.apikey.service.ApiKeyService;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -34,8 +32,8 @@ public class SecurityConfig {
   @Bean
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
-      ApiKeyService apiKeyService,
-      SessionService sessionService,
+      ApiKeyCredentials apiKeyCredentials,
+      SessionCredentials sessionCredentials,
       ErrorResponseWriter errorResponseWriter,
       Clock clock)
       throws Exception {
@@ -58,6 +56,10 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/v1/sessions", "/v1/signups")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/organization-invitations/*")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/organization-invitations/*/accept")
+                    .permitAll()
                     .requestMatchers(
                         "/actuator/health",
                         "/actuator/health/**",
@@ -73,7 +75,7 @@ public class SecurityConfig {
         .addFilterBefore(new RequestLogFilter(), DisableEncodeUrlFilter.class)
         .addFilterBefore(
             new ApiCredentialAuthenticationFilter(
-                apiKeyService, sessionService, errorResponseWriter),
+                apiKeyCredentials, sessionCredentials, errorResponseWriter),
             AnonymousAuthenticationFilter.class)
         .addFilterAfter(
             new RateLimitFilter(clock, errorResponseWriter),

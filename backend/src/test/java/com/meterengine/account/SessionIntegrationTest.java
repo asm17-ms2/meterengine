@@ -226,7 +226,7 @@ class SessionIntegrationTest {
     assertThat(principal.userSessionId()).isEqualTo(sessionIdOf(authorization));
     assertThat(principal.organizationId()).isEqualTo(organizationId);
     assertThat(principal.role()).isEqualTo("member");
-    assertThat(principal.scopes()).containsExactlyInAnyOrder("ingest", "read", "admin");
+    assertThat(principal.scopes()).containsExactly("admin");
     assertThat(principal.authorities())
         .extracting(GrantedAuthority::getAuthority)
         .containsExactlyInAnyOrder("SCOPE_ingest", "SCOPE_read", "SCOPE_admin", "ROLE_member");
@@ -465,7 +465,7 @@ class SessionIntegrationTest {
             """
             SELECT action, actor_type, actor_id, organization_id, target_type, target_id,
                    detail::text AS detail
-            FROM audit_log WHERE actor_id = ? ORDER BY occurred_at, action
+            FROM audit_log WHERE actor_id = ? AND action <> 'api_request_completed' ORDER BY occurred_at, action
             """,
             userAccountId);
     assertThat(rows)

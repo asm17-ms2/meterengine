@@ -262,9 +262,12 @@ class OrganizationIntegrationTest {
     assertThat(result).hasStatus(201);
     String body = body(result);
     assertThat((Map<String, Object>) JsonPath.read(body, "$"))
-        .containsOnlyKeys("organization_id", "user_account_id", "created_at")
+        .containsOnlyKeys(
+            "organization_id", "user_account_id", "created_at", "organization_role", "scopes")
         .containsEntry("organization_id", second.toString())
-        .containsEntry("user_account_id", userAccountId.toString());
+        .containsEntry("user_account_id", userAccountId.toString())
+        .containsEntry("organization_role", "owner")
+        .containsEntry("scopes", List.of("admin"));
     assertThat(OffsetDateTime.parse(JsonPath.read(body, "$.created_at")))
         .isBetween(OffsetDateTime.now().minusMinutes(1), OffsetDateTime.now().plusMinutes(1));
 

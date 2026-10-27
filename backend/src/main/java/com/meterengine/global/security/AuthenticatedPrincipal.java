@@ -44,6 +44,6 @@ public record AuthenticatedPrincipal(
   }
 
   private boolean grants(String scope) {
-    return kind == PrincipalKind.SESSION || scopes.contains(ADMIN_SCOPE) || scopes.contains(scope);
+    return AccessScopes.grants(scopes, scope);
   }
 }

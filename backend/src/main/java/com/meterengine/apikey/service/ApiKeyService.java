@@ -4,8 +4,12 @@ import com.meterengine.apikey.config.ApiKeyProperties;
 import com.meterengine.apikey.entity.ApiKey;
 import com.meterengine.apikey.repository.ApiKeyRepository;
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ErrorResponse.FieldError;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.AccessScopes;
 import com.meterengine.global.security.AuthenticatedCredential;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.PrincipalKind;
@@ -18,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,22 +58,73 @@ public class ApiKeyService {
         .map(ApiKeyService::credentialOf);
   }
 
-  // 도입사의 키를 만든 순서로 돌려주며 폐기했거나 만료된 키도 담는다.
   @Transactional(readOnly = true)
   public List<ApiKey> list(UUID organizationId) {
-    return apiKeyRepository.findByOrganizationIdOrderByCreatedAtAscIdAsc(organizationId);
+    return list(organizationId, "all");
+  }
+
+  @Transactional(readOnly = true)
+  public List<ApiKey> list(UUID organizationId, String status) {
+    OffsetDateTime now = OffsetDateTime.now();
+    Predicate<ApiKey> filter =
+        switch (status == null ? "all" : status) {
+          case "active", "revoked", "expired" -> key -> key.statusAt(now).equals(status);
+          case "all" -> key -> true;
+          default ->
+              throw new InvalidRequestException(
+                  ErrorCode.VALIDATION_ERROR,
+                  List.of(new FieldError("status", "active, revoked, expired, all 중 하나여야 합니다")));
+        };
+    return apiKeyRepository.findByOrganizationIdOrderByCreatedAtAscIdAsc(organizationId).stream()
+        .filter(filter)
+        .toList();
+  }
+
+  @Transactional
+  public ApiKey update(UUID organizationId, UUID apiKeyId, List<String> scopes) {
+    ApiKey apiKey =
+        apiKeyRepository
+            .findForUpdateByIdAndOrganizationId(apiKeyId, organizationId)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.API_KEY_NOT_FOUND));
+    if (!apiKey.isUsableAt(OffsetDateTime.now())) {
+      throw new ConflictException(ErrorCode.API_KEY_UNAVAILABLE);
+    }
+    List<String> previous = List.copyOf(apiKey.getScopes());
+    List<String> updated = AccessScopes.normalize(scopes);
+    if (Set.copyOf(previous).equals(Set.copyOf(updated))) {
+      return apiKey;
+    }
+    apiKey.changeScopes(updated);
+    auditLogService.record(
+        organizationId,
+        "api_key_scopes_updated",
+        TARGET_TYPE,
+        apiKey.getId().toString(),
+        Map.of("from", previous, "to", updated));
+    return apiKey;
   }
 
   // 키를 발급하고, 교체할 옛 키가 있으면 그 키를 유예 시간 뒤에 끝나게 한다.
   @Transactional
   public IssuedApiKey create(
       UUID organizationId, String label, String mode, List<String> scopes, UUID replacedApiKeyId) {
+    return create(organizationId, label, mode, scopes, replacedApiKeyId, null);
+  }
+
+  @Transactional
+  public IssuedApiKey create(
+      UUID organizationId,
+      String label,
+      String mode,
+      List<String> scopes,
+      UUID replacedApiKeyId,
+      Integer rateLimitPerMinute) {
     OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     if (replacedApiKeyId != null) {
       ApiKey replaced = usableApiKeyForUpdate(organizationId, replacedApiKeyId);
       replaced.expireNoLaterThan(now.plus(apiKeyProperties.replacementGrace()));
     }
-    List<String> distinctScopes = scopes.stream().distinct().toList();
+    List<String> distinctScopes = AccessScopes.normalize(scopes);
     String secret = SecureTokens.generate("me_" + mode + "_");
     ApiKey apiKey =
         apiKeyRepository.save(
@@ -80,7 +136,7 @@ public class ApiKeyService {
                 SecureTokens.hash(secret),
                 SecureTokens.lastFour(secret),
                 distinctScopes,
-                null,
+                rateLimitPerMinute,
                 now,
                 null));
     auditLogService.record(
@@ -98,6 +154,8 @@ public class ApiKeyService {
     detail.put("label", apiKey.getLabel());
     detail.put("mode", apiKey.getMode());
     detail.put("scopes", apiKey.getScopes());
+    if (apiKey.getRateLimitPerMinute() != null)
+      detail.put("rate_limit_per_minute", apiKey.getRateLimitPerMinute());
     detail.put(
         "replaced_api_key_id", replacedApiKeyId == null ? null : replacedApiKeyId.toString());
     return detail;

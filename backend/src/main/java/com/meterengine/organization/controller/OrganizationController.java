@@ -171,6 +171,6 @@ public class OrganizationController {
       @Parameter(description = "사용자를 소속시킬 도입사의 ID.") @PathVariable UUID id,
       @Valid @RequestBody CreateOrganizationMemberRequest request) {
     return OrganizationMemberResponse.from(
-        organizationMemberService.create(principal, id, request.userAccountId()));
+        organizationMemberService.create(principal, id, request.userAccountId(), request.scopes()));
   }
 }

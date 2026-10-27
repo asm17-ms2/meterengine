@@ -8,10 +8,13 @@ import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.StorableJsonValidator;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.StorableTimestamp;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -19,6 +22,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -39,18 +43,29 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
 
 class RequestValidationCoverageTest {
 
   private static final String BASE_PACKAGE = "com.meterengine";
 
   private static final Set<Class<?>> KNOWN_SCALAR_TYPES =
-      Set.of(String.class, Map.class, OffsetDateTime.class, UUID.class, BigDecimal.class);
+      Set.of(
+          String.class,
+          Map.class,
+          OffsetDateTime.class,
+          UUID.class,
+          BigDecimal.class,
+          Long.class,
+          Integer.class,
+          Boolean.class,
+          YearMonth.class);
 
   private static final Set<Class<?>> KNOWN_PARAMETER_SCALAR_TYPES =
       Set.of(
           String.class,
           YearMonth.class,
+          LocalDate.class,
           UUID.class,
           int.class,
           Integer.class,
@@ -97,7 +112,8 @@ class RequestValidationCoverageTest {
             .filter(RequestValidationCoverageTest::isListOfRequestRecord)
             .filter(
                 component ->
-                    !backingField(component).isAnnotationPresent(NotEmpty.class)
+                    !(backingField(component).isAnnotationPresent(NotEmpty.class)
+                            || isPricingTiers(component))
                         || !validatesElements(component)
                         || !forbidsNullElements(component))
             .map(RequestValidationCoverageTest::describe)
@@ -205,6 +221,22 @@ class RequestValidationCoverageTest {
   }
 
   @Test
+  void 요청_DTO의_Long에는_양수나_최솟값_제약이_붙어_있다() {
+    List<String> unguardedComponents =
+        requestRecords().stream()
+            .flatMap(record -> Stream.of(record.getRecordComponents()))
+            .filter(
+                component ->
+                    (component.getType() == Long.class || component.getType() == Integer.class)
+                        && !backingField(component).isAnnotationPresent(Positive.class)
+                        && !backingField(component).isAnnotationPresent(Min.class))
+            .map(RequestValidationCoverageTest::describe)
+            .toList();
+
+    assertThat(unguardedComponents).isEmpty();
+  }
+
+  @Test
   void 요청_DTO의_필드는_이_가드가_검사할_줄_아는_타입뿐이다() {
     List<String> unknownTypeComponents =
         requestRecords().stream()
@@ -217,7 +249,7 @@ class RequestValidationCoverageTest {
   }
 
   @Test
-  void 컨트롤러의_파라미터는_이_가드가_검사할_줄_아는_타입뿐이고_YearMonth에는_FourDigitYear가_붙어_있다() {
+  void 컨트롤러의_파라미터는_이_가드가_검사할_줄_아는_타입뿐이고_YearMonth와_LocalDate에는_FourDigitYear가_붙어_있다() {
     List<String> problems =
         controllers().stream()
             .flatMap(controller -> Stream.of(controller.getDeclaredMethods()))
@@ -233,7 +265,8 @@ class RequestValidationCoverageTest {
                                     describe(method, parameter)
                                         + ": "
                                         + parameter.getParameterizedType());
-                              } else if (parameter.getType() == YearMonth.class
+                              } else if ((parameter.getType() == YearMonth.class
+                                      || parameter.getType() == LocalDate.class)
                                   && !parameter.isAnnotationPresent(FourDigitYear.class)) {
                                 problem.accept(describe(method, parameter));
                               }
@@ -268,7 +301,16 @@ class RequestValidationCoverageTest {
         new ClassPathScanningCandidateComponentProvider(false);
     scanner.addIncludeFilter(
         new RegexPatternTypeFilter(Pattern.compile(".*\\.dto\\.[A-Za-z]+Request")));
-    return classes(scanner).stream().filter(Class::isRecord).toList();
+    Set<Class<?>> records =
+        new java.util.HashSet<>(classes(scanner).stream().filter(Class::isRecord).toList());
+    List<Class<?>> nested =
+        records.stream()
+            .flatMap(record -> Stream.of(record.getRecordComponents()))
+            .filter(RequestValidationCoverageTest::isListOfRequestRecord)
+            .map(RequestValidationCoverageTest::listElementType)
+            .toList();
+    records.addAll(nested);
+    return records.stream().toList();
   }
 
   static List<Class<?>> controllers() {
@@ -329,7 +371,9 @@ class RequestValidationCoverageTest {
 
   private static boolean isKnownType(RecordComponent component) {
     if (component.getType() == List.class) {
-      return isListOfString(component) || isListOfRequestRecord(component);
+      return isListOfString(component)
+          || isListOfRequestRecord(component)
+          || isBatchEvents(component);
     }
     return KNOWN_SCALAR_TYPES.contains(component.getType());
   }
@@ -341,8 +385,38 @@ class RequestValidationCoverageTest {
       return false;
     }
     return element.isRecord()
-        && element.getSimpleName().endsWith("Request")
         && element.getPackageName().equals(component.getDeclaringRecord().getPackageName());
+  }
+
+  private static boolean isBatchEvents(RecordComponent component) {
+    return component.getDeclaringRecord().getSimpleName().equals("IngestEventBatchRequest")
+        && component.getName().equals("events")
+        && component.getType() == List.class
+        && listElementType(component) == JsonNode.class;
+  }
+
+  private static boolean isPricingTiers(RecordComponent component) {
+    return component.getDeclaringRecord().getSimpleName().equals("CreatePriceRateRequest")
+        && component.getName().equals("tiers");
+  }
+
+  @Test
+  void 요청_DTO의_월과_참거짓과_금액_타입의_제약을_검사한다() {
+    for (Class<?> record : requestRecords()) {
+      for (RecordComponent component : record.getRecordComponents()) {
+        Field field = backingField(component);
+        if (component.getType() == YearMonth.class)
+          assertThat(field.isAnnotationPresent(FourDigitYear.class))
+              .as(describe(component))
+              .isTrue();
+        if (component.getType() == Boolean.class)
+          assertThat(field.isAnnotationPresent(NotNull.class)).as(describe(component)).isTrue();
+        if (component.getType() == Long.class && field.isAnnotationPresent(Min.class))
+          assertThat(field.getAnnotation(Min.class).value())
+              .as(describe(component))
+              .isGreaterThanOrEqualTo(0L);
+      }
+    }
   }
 
   private static Class<?> listElementType(RecordComponent component) {
@@ -387,6 +461,9 @@ class RequestValidationCoverageTest {
   }
 
   private static boolean isKnownType(Parameter parameter) {
+    if (parameter.getType() == HttpServletResponse.class) {
+      return true;
+    }
     if (parameter.getType() == AuthenticatedPrincipal.class) {
       return parameter.isAnnotationPresent(AuthenticationPrincipal.class);
     }
