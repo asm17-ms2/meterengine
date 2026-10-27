@@ -168,7 +168,7 @@ class WebhookIntegrationTest {
     long[] retrySeconds = {60, 300, 1800, 7200, 28800};
     for (int attempt = 0; attempt < 6; attempt++) {
       pullNextAttempt(eventId);
-      webhookDeliveryService.deliver();
+      assertThat(webhookDeliveryService.deliver().failedCount()).isZero();
       assertThat(received).hasSize(attempt + 1);
       if (attempt < retrySeconds.length) {
         assertThat(
@@ -287,9 +287,9 @@ class WebhookIntegrationTest {
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE id = ?", old.id());
     WebhookClaim replacement = webhookDeliveryRepository.claim().orElseThrow();
     assertThat(replacement.id()).isEqualTo(old.id());
-    assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isFalse();
+    assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isEmpty();
     assertThat(webhookDeliveryRepository.complete(replacement, new WebhookOutcome(200, null, 1)))
-        .isTrue();
+        .contains("done");
     for (WebhookClaim claim : claims.subList(1, claims.size())) {
       webhookDeliveryRepository.complete(claim, new WebhookOutcome(200, null, 1));
     }
