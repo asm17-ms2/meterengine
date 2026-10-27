@@ -444,6 +444,47 @@ class PaymentRetryServiceTest {
   }
 
   @Test
+  void 키_버전을_고정한_실패_시도는_그_키로_다시_승인한다() {
+    Organization organization = organization(true);
+    UUID invoiceId = invoice(organization);
+    failedAttempt(
+        organization,
+        invoiceId,
+        RETRYABLE_FAILURE_CODE,
+        Duration.ofHours(25),
+        OffsetDateTime.parse("2026-10-01T00:00:00Z"));
+    when(tossPaymentsClient.approveBilling(
+            eq(organization.secretKey()), anyString(), any(), anyString(), isNull()))
+        .thenReturn(new TossPaymentsResult.Rejected<>(400, RETRYABLE_FAILURE_CODE, "카드사에서 거절했습니다"));
+
+    paymentRetryService.retry();
+
+    assertThat(attemptRows(invoiceId)).hasSize(2);
+    verify(tossPaymentsClient)
+        .approveBilling(eq(organization.secretKey()), anyString(), any(), anyString(), isNull());
+  }
+
+  @Test
+  void 키를_보관했으면_키_버전을_고정한_실패_시도도_다시_하지_않고_skipped로_센다() {
+    Organization organization = organization(true);
+    UUID invoiceId = invoice(organization);
+    failedAttempt(
+        organization,
+        invoiceId,
+        RETRYABLE_FAILURE_CODE,
+        Duration.ofHours(25),
+        OffsetDateTime.parse("2026-10-01T00:00:00Z"));
+    jdbcTemplate.update(
+        "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
+        organization.organizationId());
+
+    PaymentJobResult result = paymentRetryService.retry();
+
+    assertNotRetried(organization, invoiceId, 1);
+    assertThat(result.skippedCount()).isPositive();
+  }
+
+  @Test
   void 세_번째_시도가_실패하면_retry_exhausted가_오른다() {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
@@ -495,14 +536,23 @@ class PaymentRetryServiceTest {
 
   private UUID failedAttempt(
       Organization organization, UUID invoiceId, String failureCode, Duration age) {
+    return failedAttempt(organization, invoiceId, failureCode, age, null);
+  }
+
+  private UUID failedAttempt(
+      Organization organization,
+      UUID invoiceId,
+      String failureCode,
+      Duration age,
+      OffsetDateTime credentialUpdatedAt) {
     UUID attemptId = UUID.randomUUID();
     jdbcTemplate.update(
         """
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status,
-           failure_code, failure_message, requested_at, completed_at)
+           failure_code, failure_message, requested_at, completed_at, credential_updated_at)
         VALUES (?, ?, ?, ?, 'test', 13200, '2026-08 사용료', 'failed', ?, '거절',
-                now() - make_interval(secs => ?), now() - make_interval(secs => ?))
+                now() - make_interval(secs => ?), now() - make_interval(secs => ?), ?)
         """,
         attemptId,
         organization.organizationId(),
@@ -510,7 +560,8 @@ class PaymentRetryServiceTest {
         invoiceId,
         failureCode,
         age.toSeconds() + 1,
-        age.toSeconds());
+        age.toSeconds(),
+        credentialUpdatedAt);
     return attemptId;
   }
 
