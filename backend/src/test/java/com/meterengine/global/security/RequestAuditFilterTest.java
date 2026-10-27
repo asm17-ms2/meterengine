@@ -51,6 +51,16 @@ class RequestAuditFilterTest {
   }
 
   @Test
+  void 단건_수집_요청은_감사기록을_남기지_않고_요청식별자만_돌려준다() throws Exception {
+    assertIngestionSkipsAudit("/v1/events");
+  }
+
+  @Test
+  void 배치_수집_요청은_감사기록을_남기지_않고_요청식별자만_돌려준다() throws Exception {
+    assertIngestionSkipsAudit("/v1/event-batches");
+  }
+
+  @Test
   void UUID_대상만_명시허용하고_토큰과_코드와_본문은_보존하지_않는다() throws Exception {
     String endpointId = UUID.randomUUID().toString();
     String deliveryId = UUID.randomUUID().toString();
@@ -123,5 +133,16 @@ class RequestAuditFilterTest {
     verify(recorder)
         .record(isNull(), eq("PUT"), eq(route), eq(status), anyLong(), any(), target.capture());
     return target.getValue();
+  }
+
+  private static void assertIngestionSkipsAudit(String path) throws Exception {
+    RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, path);
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    new RequestAuditFilter(recorder)
+        .doFilter(request, response, (incoming, outgoing) -> response.setStatus(200));
+    verifyNoInteractions(recorder);
+    assertThat(response.getHeader("X-Request-ID")).isNotBlank();
   }
 }

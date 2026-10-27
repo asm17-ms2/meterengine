@@ -268,7 +268,7 @@ class OrganizationEnvironmentIntegrationTest {
         .isEqualTo(test.toString());
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM audit_log WHERE organization_id=? AND environment_id=? AND action='api_request_completed' AND detail->>'route'='/v1/events'",
+                "SELECT count(*) FROM audit_log WHERE organization_id=? AND environment_id=? AND action='api_request_completed' AND detail->>'route'='/v1/customers' AND detail->>'method'='POST'",
                 Integer.class,
                 organizationId,
                 environment("test")))

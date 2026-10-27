@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,18 +57,27 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
-  void 다른_인스턴스의_성공도_DB를_다시_읽어_지표에_반영한다() {
+  void 게이지를_읽을_때는_DB를_조회하지_않는다() {
+    scheduledJobRunService.register(JOB_NAME);
+
+    lastSuccessGauge().gauge().value();
+    lastSuccessGauge().gauge().value();
+
+    verify(scheduledJobRunRepository, times(1)).findLastSucceededFinishedAt(JOB_NAME);
+  }
+
+  @Test
+  void 다른_인스턴스가_슬롯을_잡았으면_DB의_마지막_성공_시각을_지표에_반영한다() {
     scheduledJobRunService.register(JOB_NAME);
     OffsetDateTime otherSuccess = OffsetDateTime.parse("2026-10-26T12:00:00Z");
+    when(scheduledJobRunRepository.insertIfAbsent(any(), eq(JOB_NAME), eq(SCHEDULED_AT), any()))
+        .thenReturn(0);
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.of(otherSuccess));
-    assertThat(
-            meterRegistry
-                .get(ScheduledJobRunService.LAST_SUCCESS_GAUGE_NAME)
-                .tag("job_name", JOB_NAME)
-                .gauge()
-                .value())
-        .isEqualTo(otherSuccess.toEpochSecond());
+
+    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+
+    assertThat(lastSuccessGauge().gauge().value()).isEqualTo(otherSuccess.toEpochSecond());
   }
 
   @Test

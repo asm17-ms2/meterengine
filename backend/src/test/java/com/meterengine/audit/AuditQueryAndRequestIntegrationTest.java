@@ -217,7 +217,7 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
-  void 수집의_성공과_수집권한의_읽기거절도_본문속성_없이_기록한다() {
+  void 수집_성공은_감사하지_않고_수집권한의_읽기거절은_기록한다() {
     UUID organizationId = UUID.randomUUID();
     String key = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "ingest");
     UUID customerId = UUID.randomUUID();
@@ -241,17 +241,12 @@ class AuditQueryAndRequestIntegrationTest {
             .content(content)
             .exchange();
     assertThat(result).hasStatusOk();
-    assertThat(requestAudit(result))
-        .containsEntry("method", "POST")
-        .containsEntry("route", "/v1/events")
-        .containsEntry("status", "200");
-    String detail =
-        jdbcTemplate.queryForObject(
-            "SELECT detail::text FROM audit_log WHERE detail->>'request_id'=?",
-            String.class,
-            result.getResponse().getHeader("X-Request-ID"));
-    assertThat(detail)
-        .doesNotContain("never-store-this-value", "properties", TestCredentials.rawKeyOf(key));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE detail->>'request_id'=?",
+                Integer.class,
+                result.getResponse().getHeader("X-Request-ID")))
+        .isZero();
     MvcTestResult denied = mvc.get().uri("/v1/events").header(AUTHORIZATION, key).exchange();
     assertThat(denied).hasStatus(403);
     assertThat(requestAudit(denied))
