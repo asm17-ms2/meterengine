@@ -1,7 +1,9 @@
 "use client";
 
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+
 import { Flex, Typography } from "antd";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { LinkButton } from "@/components/screen/LinkButton";
 import {
@@ -13,7 +15,7 @@ import {
 
 export function DevStateSwitch() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useWorkspaceSearch();
   const currentState = readDevState(searchParams.get("state") ?? undefined);
 
   if (!isDevStateEnabled) return null;
