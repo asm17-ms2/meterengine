@@ -17,7 +17,8 @@ public record PaymentMethodResponse(
             allowableValues = {"test", "live"})
         String mode,
     @Schema(description = "토스페이먼츠가 카드를 인증한 시각") @JsonProperty("authenticated_at")
-        OffsetDateTime authenticatedAt) {
+        OffsetDateTime authenticatedAt,
+    @JsonProperty("archived_at") OffsetDateTime archivedAt) {
 
   public static PaymentMethodResponse from(BillingKey billingKey) {
     return new PaymentMethodResponse(
@@ -28,6 +29,7 @@ public record PaymentMethodResponse(
         billingKey
             .getAuthenticatedAt()
             .atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE)
-            .toOffsetDateTime());
+            .toOffsetDateTime(),
+        billingKey.getArchivedAt());
   }
 }

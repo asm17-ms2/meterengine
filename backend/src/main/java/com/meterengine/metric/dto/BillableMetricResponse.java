@@ -15,6 +15,9 @@ public record BillableMetricResponse(
     @Schema(description = "단가를 가르는 이벤트 속성 키. 속성에 따라 단가가 갈리지 않으면 빈 배열")
         @JsonProperty("dimension_properties")
         List<String> dimensionProperties,
+    @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
+    @JsonProperty("active_from") String activeFrom,
+    @JsonProperty("inactive_from") String inactiveFrom,
     @JsonProperty("unit_size") BigDecimal unitSize,
     @JsonProperty("rounding_mode") String roundingMode,
     @JsonProperty("rounding_precision") int roundingPrecision,
@@ -28,6 +31,9 @@ public record BillableMetricResponse(
         billableMetric.getAggregation(),
         billableMetric.getTargetProperty(),
         billableMetric.getDimensionProperties(),
+        billableMetric.getArchivedAt(),
+        billableMetric.getActiveFrom(),
+        billableMetric.getInactiveFrom(),
         billableMetric.getUnitSize(),
         billableMetric.getRoundingMode(),
         billableMetric.getRoundingPrecision(),

@@ -58,6 +58,9 @@ class PriceRateServiceTest {
 
   @BeforeEach
   void setUp() {
+    org.mockito.Mockito.lenient()
+        .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
+        .thenReturn(Optional.of(mock(Organization.class)));
     priceRateService =
         new PriceRateService(
             priceRateRepository,

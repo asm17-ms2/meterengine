@@ -55,6 +55,7 @@ public class PaymentMethodRegistrationService {
         customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+    if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     String mode = paymentSettingService.findMode(organizationId);
     TossPaymentsCredential credential = findCredential(organizationId, mode);
     String token = generateToken();
@@ -85,6 +86,7 @@ public class PaymentMethodRegistrationService {
             .findByOrganizationIdAndId(
                 registration.getOrganizationId(), registration.getCustomerId())
             .orElseThrow();
+    if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     TossPaymentsCredential credential =
         findCredential(registration.getOrganizationId(), registration.getMode());
     return PaymentMethodRegistrationResponse.from(
@@ -96,14 +98,33 @@ public class PaymentMethodRegistrationService {
   }
 
   PaymentMethodRegistration findUsable(String token) {
-    return paymentMethodRegistrationRepository
-        .findByTokenHashAndUsedAtIsNullAndExpiresAtAfter(hash(token), OffsetDateTime.now())
-        .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND));
+    PaymentMethodRegistration registration =
+        paymentMethodRegistrationRepository
+            .findByTokenHashAndUsedAtIsNullAndExpiresAtAfter(hash(token), OffsetDateTime.now())
+            .orElseThrow(
+                () -> new NotFoundException(ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND));
+    if (customerRepository
+            .findByOrganizationIdAndId(
+                registration.getOrganizationId(), registration.getCustomerId())
+            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND))
+            .getArchivedAt()
+        != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
+    return registration;
+  }
+
+  boolean available(PaymentMethodRegistration registration) {
+    return customerRepository
+            .lock(registration.getOrganizationId(), java.util.List.of(registration.getCustomerId()))
+            .stream()
+            .anyMatch(customer -> customer.getArchivedAt() == null)
+        && tossPaymentsCredentialService
+            .active(registration.getOrganizationId(), registration.getMode())
+            .isPresent();
   }
 
   TossPaymentsCredential findCredential(UUID organizationId, String mode) {
     return tossPaymentsCredentialService
-        .find(organizationId, mode)
+        .active(organizationId, mode)
         .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
   }
 

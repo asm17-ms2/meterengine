@@ -42,8 +42,10 @@ public class PaymentSettingService {
   @Transactional
   public PaymentSettingResponse update(UUID organizationId, String mode) {
     if (PaymentSetting.LIVE.equals(mode)
-        && !tossPaymentsCredentialRepository.existsById(
-            new TossPaymentsCredentialId(organizationId, PaymentSetting.LIVE))) {
+        && tossPaymentsCredentialRepository
+            .findById(new TossPaymentsCredentialId(organizationId, PaymentSetting.LIVE))
+            .filter(credential -> credential.getArchivedAt() == null)
+            .isEmpty()) {
       throw new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
     }
     OffsetDateTime updatedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);

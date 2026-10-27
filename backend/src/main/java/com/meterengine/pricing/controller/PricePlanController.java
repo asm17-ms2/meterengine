@@ -4,6 +4,7 @@ import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
+import com.meterengine.global.validation.StorableText;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
 import com.meterengine.pricing.dto.ListPricePlansResponse;
 import com.meterengine.pricing.dto.PricePlanResponse;
@@ -52,15 +53,26 @@ public class PricePlanController {
       @CurrentOrganizationId UUID organizationId,
       @RequestParam(required = false) @FourDigitYear @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month,
-      @RequestParam(name = "customer_id", required = false) UUID customerId) {
-    return pricePlanService.list(organizationId, month, customerId);
+      @RequestParam(name = "customer_id", required = false) UUID customerId,
+      @RequestParam(defaultValue = "active") @StorableText String status) {
+    return pricePlanService.list(organizationId, month, customerId, status);
   }
 
   @DeleteMapping("/{id}")
   @AdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "요금제 버전 삭제")
+  @Operation(summary = "요금제 버전 보관", description = "현재 월 효력은 유지하고 다음 달부터 중단한다. 버전 이력은 유지한다.")
   public void deletePricePlan(@CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     pricePlanService.delete(organizationId, id);
+  }
+
+  @PostMapping("/{id}/restorations")
+  @AdminAccess
+  @Operation(
+      summary = "요금제 버전 복원",
+      description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
+  public PricePlanResponse restorePricePlan(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    return pricePlanService.restore(organizationId, id);
   }
 }

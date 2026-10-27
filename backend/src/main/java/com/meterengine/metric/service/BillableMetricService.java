@@ -1,25 +1,30 @@
 package com.meterengine.metric.service;
 
-import com.meterengine.event.service.EventService;
+import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.event.api.EventPresence;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.entity.BillableMetricPeriod;
 import com.meterengine.metric.entity.MetricAggregation;
+import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.service.PriceRateService;
+import com.meterengine.organization.repository.OrganizationRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -30,20 +35,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class BillableMetricService {
 
   private final BillableMetricRepository billableMetricRepository;
-  private final EventService eventService;
-  private final PriceRateService priceRateService;
+  private final EventPresence eventPresence;
+  private final BillableMetricPeriodRepository billableMetricPeriodRepository;
+  private final OrganizationRepository organizationRepository;
+  private final AuditLogService auditLogService;
 
   BillableMetricService(
       BillableMetricRepository billableMetricRepository,
-      EventService eventService,
-      PriceRateService priceRateService) {
+      EventPresence eventPresence,
+      BillableMetricPeriodRepository billableMetricPeriodRepository,
+      OrganizationRepository organizationRepository,
+      AuditLogService auditLogService) {
     this.billableMetricRepository = billableMetricRepository;
-    this.eventService = eventService;
-    this.priceRateService = priceRateService;
+    this.eventPresence = eventPresence;
+    this.billableMetricPeriodRepository = billableMetricPeriodRepository;
+    this.organizationRepository = organizationRepository;
+    this.auditLogService = auditLogService;
   }
 
   @Transactional
   public BillableMetricResponse create(UUID organizationId, CreateBillableMetricRequest request) {
+    lock(organizationId);
     Calculation calculation =
         validate(
             request.aggregation(),
@@ -74,6 +86,24 @@ public class BillableMetricService {
             calculation.roundingPrecision(),
             calculation.percentile());
     billableMetricRepository.saveAndFlush(billableMetric);
+    auditLogService.record(
+        organizationId,
+        "billable_metric_created",
+        "billable_metric",
+        request.code(),
+        Map.of(
+            "changed_fields",
+            List.of(
+                "code",
+                "name",
+                "event_type",
+                "aggregation",
+                "target_property",
+                "dimension_properties",
+                "unit_size",
+                "rounding_mode",
+                "rounding_precision",
+                "percentile")));
 
     return BillableMetricResponse.from(billableMetric);
   }
@@ -81,6 +111,7 @@ public class BillableMetricService {
   @Transactional
   public BillableMetricResponse update(
       UUID organizationId, String code, UpdateBillableMetricRequest request) {
+    lock(organizationId);
     Calculation calculation =
         validate(
             request.aggregation(),
@@ -96,6 +127,9 @@ public class BillableMetricService {
         billableMetricRepository
             .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
+
+    if (billableMetric.getArchivedAt() != null)
+      throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
 
     var fields = new ArrayList<String>();
     if (!Objects.equals(billableMetric.getName(), request.name())) fields.add("name");
@@ -116,7 +150,7 @@ public class BillableMetricService {
     if (!decimalEquals(billableMetric.getPercentile(), calculation.percentile()))
       fields.add("percentile");
     if (fields.stream().anyMatch(field -> !"name".equals(field))
-        && eventService.exists(organizationId, billableMetric.getEventType()))
+        && eventPresence.exists(organizationId, billableMetric.getEventType()))
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
     billableMetric.update(
         request.name(),
@@ -129,41 +163,85 @@ public class BillableMetricService {
         calculation.roundingPrecision(),
         calculation.percentile());
     billableMetricRepository.flush();
+    if (!fields.isEmpty())
+      auditLogService.record(
+          organizationId,
+          "billable_metric_updated",
+          "billable_metric",
+          code,
+          Map.of("changed_fields", fields));
 
     return BillableMetricResponse.from(billableMetric);
   }
 
   @Transactional
   public void delete(UUID organizationId, String code) {
+    lock(organizationId);
     BillableMetric billableMetric =
         billableMetricRepository
             .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
-    if (eventService.existsWithNumericProperty(
-        organizationId, billableMetric.getEventType(), billableMetric.getTargetProperty())) {
-      throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
-    }
-    if (priceRateService.existsForBillableMetric(organizationId, code)) {
-      throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE);
-    }
-
-    billableMetricRepository.delete(billableMetric);
-    billableMetricRepository.flush();
+    if (billableMetric.getArchivedAt() != null) return;
+    String cutoff = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
+    if (billableMetric.getActiveFrom().compareTo(cutoff) < 0)
+      billableMetricPeriodRepository.save(
+          new BillableMetricPeriod(organizationId, code, billableMetric.getActiveFrom(), cutoff));
+    billableMetric.archive(cutoff);
+    auditLogService.record(
+        organizationId,
+        "billable_metric_archived",
+        "billable_metric",
+        code,
+        Map.of("inactive_from", cutoff));
   }
 
-  @Transactional(readOnly = true)
-  public ListBillableMetricsResponse list(UUID organizationId) {
-    return ListBillableMetricsResponse.from(
-        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId));
+  @Transactional
+  public BillableMetricResponse restore(UUID organizationId, String code) {
+    lock(organizationId);
+    BillableMetric metric = metric(organizationId, code);
+    if (metric.getArchivedAt() != null) {
+      String start = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
+      metric.restore(start);
+      auditLogService.record(
+          organizationId,
+          "billable_metric_restored",
+          "billable_metric",
+          code,
+          Map.of("active_from", start));
+    }
+    return BillableMetricResponse.from(metric);
   }
 
   @Transactional(readOnly = true)
   public BillableMetricResponse get(UUID organizationId, String code) {
-    return BillableMetricResponse.from(
-        billableMetricRepository
-            .findById(new BillableMetricId(organizationId, code))
-            .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND)));
+    return BillableMetricResponse.from(metric(organizationId, code));
+  }
+
+  @Transactional(readOnly = true)
+  public ListBillableMetricsResponse list(UUID organizationId) {
+    return list(organizationId, "active");
+  }
+
+  @Transactional(readOnly = true)
+  public ListBillableMetricsResponse list(UUID organizationId, String status) {
+    ArchiveStatus filter = ArchiveStatus.parse(status);
+    return ListBillableMetricsResponse.from(
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .filter(metric -> filter.includes(metric.getArchivedAt()))
+            .toList());
+  }
+
+  private BillableMetric metric(UUID organizationId, String code) {
+    return billableMetricRepository
+        .findById(new BillableMetricId(organizationId, code))
+        .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
+  }
+
+  private void lock(UUID organizationId) {
+    organizationRepository
+        .findForUpdateById(organizationId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
   }
 
   private record Calculation(

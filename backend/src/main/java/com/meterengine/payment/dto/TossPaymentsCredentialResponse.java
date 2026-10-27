@@ -16,7 +16,8 @@ public record TossPaymentsCredentialResponse(
         String secretKeyLastFour,
     @Schema(description = "토스페이먼츠에 키를 확인한 시각") @JsonProperty("verified_at")
         OffsetDateTime verifiedAt,
-    @JsonProperty("updated_at") OffsetDateTime updatedAt) {
+    @JsonProperty("updated_at") OffsetDateTime updatedAt,
+    @JsonProperty("archived_at") OffsetDateTime archivedAt) {
 
   public static TossPaymentsCredentialResponse from(TossPaymentsCredential credential) {
     return new TossPaymentsCredentialResponse(
@@ -24,7 +25,8 @@ public record TossPaymentsCredentialResponse(
         credential.getClientKey(),
         credential.getSecretKeyLastFour(),
         inBillingZone(credential.getVerifiedAt()),
-        inBillingZone(credential.getUpdatedAt()));
+        inBillingZone(credential.getUpdatedAt()),
+        credential.getArchivedAt());
   }
 
   private static OffsetDateTime inBillingZone(OffsetDateTime time) {

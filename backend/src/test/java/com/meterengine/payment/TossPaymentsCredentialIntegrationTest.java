@@ -79,7 +79,7 @@ class TossPaymentsCredentialIntegrationTest {
         """
         {
           "mode": "test", "client_key": "%s", "secret_key_last_four": "YG5R",
-          "verified_at": "%s", "updated_at": "%s"
+          "verified_at": "%s", "updated_at": "%s", "archived_at": null
         }
         """
             .formatted(TEST_CLIENT_KEY, kst(row.get("verified_at")), kst(row.get("updated_at")));

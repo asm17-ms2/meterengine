@@ -373,54 +373,25 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 삭제하면_204이고_다시_삭제하면_404다() {
-    UUID organizationId = insertOrganization();
-    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
-
-    assertThat(delete(organizationId, "token-usage")).hasStatus(204);
-
-    assertThat(billableMetricCount(organizationId, "token-usage")).isZero();
-    assertThat(delete(organizationId, "token-usage"))
-        .hasStatus(404)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_NOT_FOUND.getCode());
-  }
-
-  @Test
-  void 이벤트가_집계된_미터를_삭제하면_409이고_미터는_남는다() {
+  void 보관은_이벤트와_단가가_있어도_행을_유지하고_반복할_수_있다() {
     UUID organizationId = insertOrganization();
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
     insertEvent(organizationId, insertCustomer(organizationId));
-
-    assertThat(delete(organizationId, "token-usage"))
-        .hasStatus(409)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS.getCode());
-    assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
-  }
-
-  @Test
-  void 단가가_붙은_미터를_삭제하면_409이고_미터는_남는다() {
-    UUID organizationId = insertOrganization();
-    assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
     jdbcTemplate.update(
-        """
-        INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price)
-        VALUES (?, 'token-usage', '{}', 0.5)
-        """,
+        "INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES (?, 'token-usage', '{}', 0.5)",
         organizationId);
-
-    assertThat(delete(organizationId, "token-usage"))
-        .hasStatus(409)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE.getCode());
+    assertThat(delete(organizationId, "token-usage")).hasStatus(204);
+    assertThat(delete(organizationId, "token-usage")).hasStatus(204);
     assertThat(billableMetricCount(organizationId, "token-usage")).isEqualTo(1);
+    assertThat(
+            mvc.get()
+                .uri("/v1/billable-metrics/token-usage")
+                .header(AUTHORIZATION, authorization(organizationId))
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.archived_at")
+        .isNotNull();
   }
 
   private String authorization(UUID organizationId) {

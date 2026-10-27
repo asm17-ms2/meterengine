@@ -16,6 +16,7 @@ import com.meterengine.payment.entity.BillingKey;
 import com.meterengine.payment.entity.BillingKeyId;
 import com.meterengine.payment.entity.PaymentMethodRegistration;
 import com.meterengine.payment.repository.BillingKeyRepository;
+import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.PaymentMethodRegistrationRepository;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -36,6 +37,7 @@ public class BillingKeyService {
   private final PaymentMethodRegistrationService paymentMethodRegistrationService;
   private final PaymentMethodRegistrationRepository paymentMethodRegistrationRepository;
   private final BillingKeyRepository billingKeyRepository;
+  private final PaymentArchiveRepository paymentArchiveRepository;
   private final TossPaymentsClient tossPaymentsClient;
   private final TransactionTemplate transactionTemplate;
 
@@ -43,11 +45,13 @@ public class BillingKeyService {
       PaymentMethodRegistrationService paymentMethodRegistrationService,
       PaymentMethodRegistrationRepository paymentMethodRegistrationRepository,
       BillingKeyRepository billingKeyRepository,
+      PaymentArchiveRepository paymentArchiveRepository,
       TossPaymentsClient tossPaymentsClient,
       PlatformTransactionManager platformTransactionManager) {
     this.paymentMethodRegistrationService = paymentMethodRegistrationService;
     this.paymentMethodRegistrationRepository = paymentMethodRegistrationRepository;
     this.billingKeyRepository = billingKeyRepository;
+    this.paymentArchiveRepository = paymentArchiveRepository;
     this.tossPaymentsClient = tossPaymentsClient;
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
@@ -113,7 +117,9 @@ public class BillingKeyService {
       TossPaymentsBilling billing,
       String consentDocumentVersion,
       OffsetDateTime consentedAt) {
-    if (paymentMethodRegistrationRepository.markUsed(registration.getId(), now()) == 0) {
+    paymentArchiveRepository.lock(registration.getOrganizationId());
+    if (!paymentMethodRegistrationService.available(registration)
+        || paymentMethodRegistrationRepository.markUsed(registration.getId(), now()) == 0) {
       return Optional.empty();
     }
     OffsetDateTime authenticatedAt = billing.authenticatedAt().truncatedTo(ChronoUnit.MICROS);
@@ -128,6 +134,10 @@ public class BillingKeyService {
         existing
             .map(
                 found -> {
+                  paymentArchiveRepository.method(
+                      registration.getOrganizationId(),
+                      registration.getCustomerId(),
+                      registration.getMode());
                   found.update(
                       billing.billingKey(),
                       billing.card().issuerCode(),

@@ -54,7 +54,7 @@ public class ChargeService {
     for (PriceRate rate :
         priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
             organizationId)) {
-      if (!active(rate.getEffectiveFrom(), rate.getEffectiveUntil(), period)) continue;
+      if (!rate.applies(period) && !rate.stops(period)) continue;
       PriceRateKey key =
           new PriceRateKey(
               rate.getCustomerId(),
@@ -67,12 +67,14 @@ public class ChargeService {
           (left, right) ->
               left.getEffectiveFrom().compareTo(right.getEffectiveFrom()) >= 0 ? left : right);
     }
+    priceRateByPriceRateKey.values().removeIf(rate -> !rate.applies(period));
     Map<UUID, PricePlan> pricePlanByCustomerId = new LinkedHashMap<>();
     for (PricePlan plan :
         pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)) {
-      if (active(plan.getEffectiveFrom(), plan.getEffectiveUntil(), period))
+      if (plan.applies(period) || plan.stops(period))
         pricePlanByCustomerId.putIfAbsent(plan.getCustomerId(), plan);
     }
+    pricePlanByCustomerId.values().removeIf(plan -> !plan.applies(period));
     Map<UUID, CustomerCharges> customerChargesByCustomerId = new LinkedHashMap<>();
     Set<UUID> usedCustomerIds = new HashSet<>();
     for (BillableMetricUsage usage : usages)

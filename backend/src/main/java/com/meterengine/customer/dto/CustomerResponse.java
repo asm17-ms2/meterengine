@@ -11,10 +11,17 @@ public record CustomerResponse(
     String name,
     @Schema(description = "청구 메일을 받을 주소. 등록하지 않았으면 null") @JsonProperty("billing_email")
         String billingEmail,
-    @JsonProperty("created_at") OffsetDateTime createdAt) {
+    @JsonProperty("created_at") OffsetDateTime createdAt,
+    @JsonProperty("external_id") String externalId,
+    @JsonProperty("archived_at") OffsetDateTime archivedAt) {
 
   public static CustomerResponse from(Customer customer) {
     return new CustomerResponse(
-        customer.getId(), customer.getName(), customer.getBillingEmail(), customer.getCreatedAt());
+        customer.getId(),
+        customer.getName(),
+        customer.getBillingEmail(),
+        customer.getCreatedAt(),
+        customer.getExternalId(),
+        customer.getArchivedAt());
   }
 }

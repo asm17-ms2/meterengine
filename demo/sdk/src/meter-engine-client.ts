@@ -1,7 +1,7 @@
 
 import { MeterEngineApiError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
+import type { ArchiveStatus, ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -97,8 +97,8 @@ export class MeterEngineClient {
     return this.request("GET", `/v1/customers/${encodeURIComponent(id)}/payment-method`);
   }
 
-  listPaymentMethods(): Promise<ListPaymentMethodsResponse> {
-    return this.request("GET", "/v1/payment-methods");
+  listPaymentMethods(params: { status?: ArchiveStatus } = {}): Promise<ListPaymentMethodsResponse> {
+    return this.request("GET", queryPath("/v1/payment-methods", params));
   }
 
   getOrganization(): Promise<OrganizationResponse> {
@@ -109,7 +109,7 @@ export class MeterEngineClient {
     return this.request("GET", queryPath("/v1/billable-metric-prices", params));
   }
 
-  listPricePlans(params: { month?: string; customer_id?: string } = {}): Promise<ListPricePlansResponse> {
+  listPricePlans(params: { month?: string; customer_id?: string; status?: ArchiveStatus } = {}): Promise<ListPricePlansResponse> {
     return this.request("GET", queryPath("/v1/price-plans", params));
   }
 

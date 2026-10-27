@@ -9,6 +9,8 @@ export interface ErrorResponse {
   errors?: FieldError[];
 }
 
+export type ArchiveStatus = "active" | "archived" | "all";
+
 export type BillableMetricRoundingMode = "none" | "ceil" | "floor" | "round";
 
 export interface BillableMetricCalculation {
@@ -106,7 +108,7 @@ export interface PaymentMethodResponse {
   card_number: string;
   mode: "test" | "live";
   authenticated_at: string;
-  
+  archived_at?: string | null;
 }
 
 export interface ListPaymentMethodsResponse {
@@ -138,8 +140,8 @@ export interface ListBillableMetricPricesResponse {
       effective_until: string | null;
       model: "per_unit" | "graduated" | "volume";
       tiers: PriceRateTier[] | null;
-      
-      
+      archived_at?: string | null;
+      archived_from?: string | null;
     }>;
   }>;
 }
@@ -152,8 +154,8 @@ export interface ListPricePlansResponse {
     effective_until: string | null;
     base_fee: number;
     minimum_amount: number;
-    
-    
+    archived_at?: string | null;
+    archived_from?: string | null;
   }>;
 }
 
