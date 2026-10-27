@@ -465,6 +465,8 @@ class ApiKeyIntegrationTest {
 
     List<Map<String, Object>> semanticRows =
         rows.stream().filter(row -> !"api_request_completed".equals(row.get("action"))).toList();
+    List<Map<String, Object>> requestRows =
+        rows.stream().filter(row -> "api_request_completed".equals(row.get("action"))).toList();
     assertThat(semanticRows)
         .extracting(row -> row.get("action") + " " + row.get("target_id"))
         .containsExactlyInAnyOrder(
@@ -511,6 +513,39 @@ class ApiKeyIntegrationTest {
     assertThat(createdDetail).containsEntry("replaced_api_key_id", null);
     assertThat(createdDetail.keySet())
         .containsExactlyInAnyOrder("label", "mode", "scopes", "replaced_api_key_id");
+    assertThat(requestRows).hasSize(3);
+    for (MvcTestResult request : List.of(old, replacement, deleted)) {
+      String requestId = request.getResponse().getHeader("X-Request-ID");
+      Map<String, Object> requestRow =
+          requestRows.stream()
+              .filter(
+                  row ->
+                      requestId.equals(JsonPath.read((String) row.get("detail"), "$.request_id")))
+              .findFirst()
+              .orElseThrow();
+      Map<String, Object> requestDetail = JsonPath.read((String) requestRow.get("detail"), "$");
+      assertThat(requestDetail)
+          .containsEntry("method", request == deleted ? "DELETE" : "POST")
+          .containsEntry("route", request == deleted ? API_KEYS + "/{id}" : API_KEYS)
+          .containsEntry("status", request == deleted ? 204 : 201);
+      if (request == deleted) {
+        assertThat(requestRow.get("target_id")).isEqualTo(oldId.toString());
+        assertThat(requestDetail)
+            .containsOnlyKeys("method", "route", "status", "duration_ms", "request_id", "path_ids")
+            .containsEntry("path_ids", Map.of("id", oldId.toString()));
+      } else {
+        assertThat(requestRow.get("target_id")).isNull();
+        assertThat(requestDetail)
+            .containsOnlyKeys("method", "route", "status", "duration_ms", "request_id");
+      }
+    }
+    assertThat(requestRows)
+        .allSatisfy(
+            row -> {
+              assertThat(row.get("actor_type")).isEqualTo("user_account");
+              assertThat(row.get("actor_id")).isEqualTo(userAccountId);
+              assertThat(row.get("target_type")).isEqualTo("http_request");
+            });
     for (MvcTestResult created : List.of(old, replacement)) {
       String secret = secretOf(created);
       String hashHex = HexFormat.of().formatHex(SecureTokens.hash(secret));

@@ -25,8 +25,9 @@ public class SecurityConfig {
   }
 
   @Bean
-  RequestRejectedHandler requestRejectedHandler(ErrorResponseWriter errorResponseWriter) {
-    return new JsonRequestRejectedHandler(errorResponseWriter);
+  RequestRejectedHandler requestRejectedHandler(
+      ErrorResponseWriter errorResponseWriter, RequestAuditRecorder requestAuditRecorder) {
+    return new JsonRequestRejectedHandler(errorResponseWriter, requestAuditRecorder);
   }
 
   @Bean
@@ -35,6 +36,7 @@ public class SecurityConfig {
       ApiKeyCredentials apiKeyCredentials,
       SessionCredentials sessionCredentials,
       ErrorResponseWriter errorResponseWriter,
+      RequestAuditRecorder requestAuditRecorder,
       Clock clock)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
@@ -80,6 +82,7 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(new RequestLogFilter(), DisableEncodeUrlFilter.class)
+        .addFilterBefore(new RequestAuditFilter(requestAuditRecorder), RequestLogFilter.class)
         .addFilterBefore(
             new ApiCredentialAuthenticationFilter(
                 apiKeyCredentials, sessionCredentials, errorResponseWriter),

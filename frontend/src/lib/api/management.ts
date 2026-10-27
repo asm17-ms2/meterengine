@@ -1,7 +1,7 @@
 import "server-only";
 
 import { workspaceFetch } from "@/lib/api/workspace";
-type ArchiveStatus = "active" | "archived" | "all";
+import type { ArchiveStatus } from "@/lib/list-query";
 
 export type OrganizationMember = {
   user_account_id: string;
