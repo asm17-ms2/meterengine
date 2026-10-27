@@ -93,12 +93,12 @@ class SignupIntegrationTest {
     assertThat(passwordHash).startsWith("{bcrypt}").doesNotContain(PASSWORD);
     assertThat(passwordEncoder.matches(PASSWORD, passwordHash)).isTrue();
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM organization_member WHERE organization_id = ? AND user_account_id = ?",
-                Integer.class,
+            jdbcTemplate.queryForMap(
+                "SELECT role, array_to_string(scopes, ',') AS scopes FROM organization_member WHERE organization_id = ? AND user_account_id = ?",
                 organizationId,
                 userAccountId))
-        .isOne();
+        .containsEntry("role", "owner")
+        .containsEntry("scopes", "admin");
     assertThat(
             jdbcTemplate.queryForList(
                 "SELECT document, document_version FROM consent WHERE user_account_id = ? ORDER BY document",
