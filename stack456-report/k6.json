@@ -1,0 +1,79 @@
+{
+ "task": "k6",
+ "base_heads": {
+  "feat/account-permissions": "0245c15fda1cef9b2c3f73beb023a8cd23e94fd1",
+  "feat/product-design": "55356386b05933dd4506019980243378312db76d",
+  "feat/webhook-jobs": "58004768db67b70ab2cca01d59e70487d8c4a9f4",
+  "feat/billing-payments": "2e981431068c14c10ccaf4c5f0895f4f38fb71cf",
+  "feat/pricing-aggregation": "5efe449846ec216876ee9df4fe83f78348fbe2db",
+  "feat/resource-archive": "afdf8f122c1f3dc912f0751e46f39deab99f5d64",
+  "feat/request-audit": "4f8e59f8d680a0bb7bff6d69ca92e749bbd930ed",
+  "feat/customer-invoices": "7ce9d36394916f5a75c0623ce06f648d2807358d",
+  "feat/event-ingestion": "457a0d8e09f2f1ac4df5156322f7f40cf3e4441a",
+  "feat/billing-queries": "53ec3d9b47373a1481405fadcd604d8a2e957667",
+  "feat/llm-service-demo": "8b0a9d282a845fd064c425e27c5259585bc7198d",
+  "feat/environment-isolation": "f040e9676d58dfa7b91b197f6332837767e32932",
+  "feat/auth-rate-limit": "ecf459b2f63691e448758f45cf6eff26783ac2e8",
+  "feat/rds-auto-stop": "854e293c2f1e1f5e071544c3605ac6b43c6fcdd1",
+  "main": "f088399454e0ea2d9798100f92e1dfe7f6a7c40f"
+ },
+ "env": {
+  "java": "openjdk 21.0.12 (JDK 25 설치 시도 중, k6는 frontend 범위라 백엔드 검사는 하지 않는다)",
+  "docker": false,
+  "node": "v22.22.0 (.node-version은 24)",
+  "pnpm": "11.18.0 (corepack)",
+  "playwright": "@playwright/test 1.64.1, chromium 1248을 따로 받아 PLAYWRIGHT_BROWSERS_PATH로 지정",
+  "notes": "docker CLI는 있으나 데몬이 없어 실제 스택 E2E(*.real.spec.ts)는 돌릴 수 없다. 대역 서버 계약 테스트(playwright.config.ts contract, playwright.workspace.config.ts, playwright.payment.config.ts)는 최상단에서 모두 통과했다."
+ },
+ "results": [],
+ "new_findings": [],
+ "out_of_scope": [],
+ "not_done": [],
+ "checks": [
+  {
+   "command": "cd frontend && corepack pnpm install --frozen-lockfile",
+   "result": "pass",
+   "detail": "feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "corepack pnpm lint",
+   "result": "pass",
+   "detail": "feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "corepack pnpm typecheck",
+   "result": "pass",
+   "detail": "feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "node --test e2e/*.test.mjs",
+   "result": "pass",
+   "detail": "46건 통과, feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "corepack pnpm build",
+   "result": "pass",
+   "detail": "feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "corepack pnpm test:e2e:contract",
+   "result": "pass",
+   "detail": "9건 통과, feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "playwright test -c playwright.workspace.config.ts",
+   "result": "pass",
+   "detail": "9건 통과, feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "playwright test -c playwright.payment.config.ts",
+   "result": "pass",
+   "detail": "6건 통과, feat/rds-auto-stop @ 854e293"
+  },
+  {
+   "command": "corepack pnpm test:e2e:real 외 *.real.spec.ts",
+   "result": "not-run",
+   "detail": "docker 데몬이 없어 PostgreSQL과 백엔드를 띄울 수 없다"
+  }
+ ]
+}
