@@ -49,6 +49,22 @@ class EventRepositoryTest {
         .isFalse();
   }
 
+  @Test
+  void 마이그레이션이_끝나면_event의_FK와_검사_제약은_검증된_상태다() {
+    assertThat(
+            jdbcTemplate.queryForList(
+                """
+                SELECT conname FROM pg_constraint
+                WHERE conrelid = 'event'::regclass AND convalidated
+                """,
+                String.class))
+        .contains(
+            "event_environment_fk",
+            "event_customer_same_environment_fk",
+            "event_actor_type_check",
+            "event_actor_identity_check");
+  }
+
   private UUID insertOrganization() {
     return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('도입사') RETURNING id", UUID.class);
