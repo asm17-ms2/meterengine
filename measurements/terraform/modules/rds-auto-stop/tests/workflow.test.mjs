@@ -12,8 +12,6 @@ const now = '2026-10-26T12:00:00.000Z';
 const config = {
   account_id: account, region, db_identifier: db, db_arn: arn,
   claim_table: 'meterengine-test-slo-rds-auto-stop-claims',
-  legacy_schedule_name: 'meterengine-test-slo-stop-rds', legacy_schedule_group: 'default',
-  legacy_scheduler_role_arn: `arn:aws:iam::${account}:role/meterengine-test-slo-scheduler-role`,
 };
 const event = {
   version: '0', id: '11111111-2222-3333-4444-555555555555',
@@ -27,25 +25,10 @@ const nativeEvent = {
   EventCategories: ['notification'], Date: now,
   Message: 'DB instance is being started due to it exceeding the maximum allowed time being stopped.',
 };
-const schedule = {
-  Arn: `arn:aws:scheduler:${region}:${account}:schedule/default/${config.legacy_schedule_name}`,
-  Name: config.legacy_schedule_name, GroupName: 'default', State: 'ENABLED',
-  ScheduleExpression: 'cron(0 4 * * ? *)', ScheduleExpressionTimezone: 'Asia/Seoul',
-  FlexibleTimeWindow: { Mode: 'OFF' }, ActionAfterCompletion: 'NONE',
-  Target: {
-    Arn: 'arn:aws:scheduler:::aws-sdk:rds:stopDBInstance',
-    RoleArn: config.legacy_scheduler_role_arn,
-    Input: JSON.stringify({ DbInstanceIdentifier: db }),
-    RetryPolicy: { MaximumEventAgeInSeconds: 86400, MaximumRetryAttempts: 0 },
-  },
-  CreationDate: '2026-10-01T00:00:00Z', LastModificationDate: '2026-10-02T00:00:00Z',
-};
 
 async function evaluate(value, bindings) {
   if (typeof value === 'string' && value.startsWith('{%') && value.endsWith('%}')) {
-    const expression = jsonata(value.slice(2, -2));
-    expression.registerFunction('parse', JSON.parse, '<s:o>');
-    return expression.evaluate({}, bindings);
+    return jsonata(value.slice(2, -2)).evaluate({}, bindings);
   }
   if (Array.isArray(value)) return Promise.all(value.map(v => evaluate(v, bindings)));
   if (value && typeof value === 'object') {
@@ -68,7 +51,6 @@ async function run(options = {}) {
   const trace = [];
   const nativeEvents = options.nativeEvents ?? [structuredClone(nativeEvent)];
   const statusPlan = options.statuses ?? ['starting', 'available', 'stopping', 'stopped'];
-  let legacy = structuredClone(options.schedule ?? schedule);
   let statusIndex = 0;
   let elapsed = 0;
   let stateName = definition.StartAt;
@@ -99,11 +81,6 @@ async function run(options = {}) {
     if (resource.endsWith('rds:stopDBInstance')) {
       if (options.stopFailure) throw failure('Rds.InvalidDBInstanceStateException');
       return { DbInstance: { DbInstanceStatus: 'stopping' } };
-    }
-    if (resource.endsWith('scheduler:getSchedule')) return legacy;
-    if (resource.endsWith('scheduler:updateSchedule')) {
-      legacy = { ...legacy, ...args, State: options.keepEnabled ? 'ENABLED' : args.State };
-      return { ScheduleArn: legacy.Arn };
     }
     throw new Error(`Unexpected resource ${resource}`);
   }
@@ -148,29 +125,22 @@ async function run(options = {}) {
   } catch (error) { outcome = error.name; }
   assert.ok(outcome, 'workflow must finish within the transition bound');
   return {
-    outcome, trace, claims, legacy, elapsed,
+    outcome, trace, claims, elapsed,
     stops: trace.filter(c => c.resource.endsWith('rds:stopDBInstance')),
-    updates: trace.filter(c => c.resource.endsWith('scheduler:updateSchedule')),
+    scheduleCalls: trace.filter(c => c.resource.includes(':scheduler:')),
   };
 }
 
 function withoutSideEffects(result) {
   assert.equal(result.stops.length, 0);
-  assert.equal(result.updates.length, 0);
+  assert.equal(result.scheduleCalls.length, 0);
 }
 
-test('automatic restart waits for available and confirms stopped before retiring only RDS protection', async () => {
+test('automatic restart waits for available and confirms stopped without touching any schedule', async () => {
   const result = await run();
   assert.equal(result.outcome, 'AutomaticStopConfirmed');
   assert.equal(result.stops.length, 1);
-  assert.equal(result.updates.length, 1);
-  assert.deepEqual(result.updates[0].args, {
-    Name: schedule.Name, GroupName: 'default', State: 'DISABLED',
-    ScheduleExpression: schedule.ScheduleExpression, ScheduleExpressionTimezone: schedule.ScheduleExpressionTimezone,
-    FlexibleTimeWindow: schedule.FlexibleTimeWindow, Target: schedule.Target,
-    ActionAfterCompletion: 'NONE',
-  });
-  assert.equal(result.trace.findIndex(c => c.resource.endsWith('scheduler:getSchedule')) > result.trace.findIndex(c => c.resource.endsWith('rds:stopDBInstance')), true);
+  assert.equal(result.scheduleCalls.length, 0);
   assert.equal(result.elapsed, 90);
 });
 
@@ -189,7 +159,7 @@ for (const [name, mutate] of [
   ['event older than 15 minutes', e => { e.time = e.detail.Date = '2026-10-26T11:44:59Z'; }],
   ['event more than one minute in future', e => { e.time = e.detail.Date = '2026-10-26T12:01:01Z'; }],
 ]) {
-  test(`${name} cannot stop or change a schedule`, async () => {
+  test(`${name} cannot stop the database`, async () => {
     const input = structuredClone(event);
     mutate(input);
     const result = await run({ event: input });
@@ -214,7 +184,7 @@ test('concurrent duplicate executions claim atomically', async () => {
   assert.equal(results.flatMap(r => r.stops).length, 1);
 });
 
-test('already stopped does not falsely prove the new flow or disable legacy protection', async () => {
+test('already stopped database is not stopped again', async () => {
   const result = await run({ statuses: ['stopped'] });
   assert.equal(result.outcome, 'AlreadyStopped');
   withoutSideEffects(result);
@@ -239,63 +209,35 @@ test('native event schema needs no EventID and accepts numeric AWS timestamps', 
   assert.equal(result.outcome, 'AutomaticStopConfirmed');
 });
 
-test('never available times out with no stop and keeps protection', async () => {
+test('never available times out with no stop', async () => {
   const result = await run({ statuses: ['starting'] });
   assert.equal(result.outcome, 'States.Timeout');
   withoutSideEffects(result);
 });
 
-test('stop rejection is propagated without retrying or disabling protection', async () => {
+test('stop rejection is propagated without retrying', async () => {
   const result = await run({ stopFailure: true });
   assert.equal(result.outcome, 'Rds.InvalidDBInstanceStateException');
   assert.equal(result.stops.length, 1);
-  assert.equal(result.updates.length, 0);
 });
 
-test('accepted stop without stopped confirmation keeps protection until timeout', async () => {
+test('accepted stop without stopped confirmation times out', async () => {
   const result = await run({ statuses: ['available', 'stopping'] });
   assert.equal(result.outcome, 'States.Timeout');
   assert.equal(result.stops.length, 1);
-  assert.equal(result.updates.length, 0);
 });
 
 test('a new start during stopped polling is not stopped again', async () => {
   const result = await run({ statuses: ['available', 'starting'] });
   assert.equal(result.outcome, 'UnexpectedDatabaseStatus');
   assert.equal(result.stops.length, 1);
-  assert.equal(result.updates.length, 0);
 });
 
-test('database API errors are bounded and visible without schedule cutover', async () => {
+test('database API errors are bounded and visible', async () => {
   const result = await run({ sdkFailure: 'rds:describeDBInstances' });
   assert.equal(result.outcome, 'Service.UnavailableException');
   assert.equal(result.trace.length, 4);
   withoutSideEffects(result);
-});
-
-test('changed legacy target is retained', async () => {
-  const changed = structuredClone(schedule);
-  changed.Target.Input = JSON.stringify({ DbInstanceIdentifier: 'other-database' });
-  const result = await run({ schedule: changed });
-  assert.equal(result.outcome, 'LegacyScheduleChanged');
-  assert.equal(result.updates.length, 0);
-});
-
-test('all writable optional schedule fields and exact target are preserved', async () => {
-  const original = {
-    ...schedule, Description: 'Keep this description',
-    StartDate: '2026-10-01T00:00:00Z', EndDate: '2027-10-01T00:00:00Z',
-    KmsKeyArn: `arn:aws:kms:${region}:${account}:key/test`,
-  };
-  const result = await run({ schedule: original });
-  const expected = { ...original, State: 'DISABLED' };
-  for (const key of ['Arn', 'CreationDate', 'LastModificationDate']) delete expected[key];
-  assert.deepEqual(result.updates[0].args, expected);
-});
-
-test('schedule disable needs readback confirmation', async () => {
-  const result = await run({ keepEnabled: true });
-  assert.equal(result.outcome, 'LegacyScheduleNotDisabled');
 });
 
 test('failed claimed execution cannot be replayed against a later manual start', async () => {

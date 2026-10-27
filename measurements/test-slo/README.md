@@ -1,6 +1,6 @@
 # test-slo
 
-박성종이 측정에 쓰는 SUT(테스트 대상 시스템)다. 개발 서버와 같은 스택을 따로 띄워 개발 서버의 DB와 파라미터를 건드리지 않고 잰다. 측정할 때만 켜고, EC2는 매일 04:00(서울)에 자동으로 꺼진다.
+박성종이 측정에 쓰는 SUT(테스트 대상 시스템)다. 개발 서버와 같은 스택을 따로 띄워 개발 서버의 DB와 파라미터를 건드리지 않고 잰다. 측정할 때만 켜고, 매일 04:00(서울)에 자동으로 꺼진다.
 
 - **측정 중일 수 있으니 배포하거나 끄기 전에 박성종에게 묻는다.**
 - 명령은 레포 루트에서 실행한다. Terraform 상태는 S3 `meterengine-tfstate-928618307647`에 있어 어느 컴퓨터에서든 같다. 새 컴퓨터에서는 `terraform -chdir=measurements/test-slo/sut/terraform init`을 먼저 한 번 해야 스크립트와 아래 명령이 `terraform output`을 읽는다.
@@ -106,8 +106,8 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 
-- RDS는 7일 뒤 자동 기동하는 `RDS-EVENT-0154`를 감지해 다시 끈다. 적용과 실제 검증은 [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)를 따른다. 새 흐름이 직접 중지를 확인할 때까지 기존 04:00 RDS 보호를 유지한다.
-- 04:00를 넘겨 측정하는 날에는 아래 명령으로 EC2 자동 중지만 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. 전환 전 RDS는 기존 04:00 스케줄도 적용되므로 위 문서의 복구 절차를 참고해 별도로 제어한다.
+- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
+- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
 
 ```bash
 terraform -chdir=measurements/test-slo/sut/terraform apply -var auto_stop_state=DISABLED

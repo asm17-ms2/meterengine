@@ -20,7 +20,7 @@
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
 - SUT에는 [`deploy/compose.prod.yml`](../../deploy/compose.prod.yml) 스택을 개발 서버와 똑같이 올린다. 경보는 아무도 받지 않는 Slack 주소로 간다.
-- EC2는 매일 04:00(서울)에 자동으로 꺼진다. RDS는 아래 자동 재기동 감지 절차를 따른다.
+- 매일 04:00(서울)에 EC2와 RDS가 자동으로 꺼진다.
 - VPC, 서브넷, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓰고 읽기만 한다. 역할은 `/meterengine/prod`를 읽지 못한다.
 
 ## 사전 준비
@@ -106,8 +106,8 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 
-- RDS는 7일 뒤 자동 기동하는 `RDS-EVENT-0154`를 감지해 다시 끈다. 적용과 실제 검증은 [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)를 따른다. 새 흐름이 직접 중지를 확인할 때까지 기존 04:00 RDS 보호를 유지한다.
-- 04:00를 넘겨 측정하는 날에는 아래 명령으로 EC2 자동 중지만 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. 전환 전 RDS는 기존 04:00 스케줄도 적용되므로 위 문서의 복구 절차를 참고해 별도로 제어한다.
+- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
+- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
 
 ```bash
 terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_state=DISABLED

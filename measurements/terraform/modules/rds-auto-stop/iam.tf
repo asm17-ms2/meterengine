@@ -24,21 +24,6 @@ locals {
         Resource = aws_dynamodb_table.claims.arn
       },
       {
-        Sid      = "DisableOnlyOwnLegacyRdsSchedule"
-        Effect   = "Allow"
-        Action   = ["scheduler:GetSchedule", "scheduler:UpdateSchedule"]
-        Resource = local.legacy_schedule_arn
-      },
-      {
-        Sid      = "PreserveLegacySchedulerRole"
-        Effect   = "Allow"
-        Action   = ["iam:PassRole"]
-        Resource = var.legacy_scheduler_role_arn
-        Condition = {
-          StringEquals = { "iam:PassedToService" = "scheduler.amazonaws.com" }
-        }
-      },
-      {
         Sid    = "DeliverExecutionLogs"
         Effect = "Allow"
         Action = [

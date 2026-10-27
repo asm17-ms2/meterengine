@@ -1,22 +1,18 @@
 locals {
-  name                = "${var.name_prefix}-rds-auto-stop"
-  state_machine_arn   = "arn:aws:states:${var.region}:${var.account_id}:stateMachine:${local.name}"
-  legacy_schedule_arn = "arn:aws:scheduler:${var.region}:${var.account_id}:schedule/${var.legacy_schedule_group}/${var.legacy_schedule_name}"
-  workflow            = jsondecode(file("${path.module}/workflow.asl.json"))
+  name              = "${var.name_prefix}-rds-auto-stop"
+  state_machine_arn = "arn:aws:states:${var.region}:${var.account_id}:stateMachine:${local.name}"
+  workflow          = jsondecode(file("${path.module}/workflow.asl.json"))
   definition = jsonencode(merge(local.workflow, {
     States = merge(local.workflow.States, {
       Configure = merge(local.workflow.States.Configure, {
         Assign = {
           event = "{% $states.input %}"
           config = {
-            account_id                = var.account_id
-            region                    = var.region
-            db_identifier             = var.db_identifier
-            db_arn                    = var.db_arn
-            claim_table               = aws_dynamodb_table.claims.name
-            legacy_schedule_name      = var.legacy_schedule_name
-            legacy_schedule_group     = var.legacy_schedule_group
-            legacy_scheduler_role_arn = var.legacy_scheduler_role_arn
+            account_id    = var.account_id
+            region        = var.region
+            db_identifier = var.db_identifier
+            db_arn        = var.db_arn
+            claim_table   = aws_dynamodb_table.claims.name
           }
         }
       })
