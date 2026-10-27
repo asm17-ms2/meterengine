@@ -8,6 +8,7 @@ import { BillingSection } from "@/components/billing/BillingSection";
 import { BillingStatusTag } from "@/components/billing/BillingStatusTag";
 import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButton";
 import { InvoiceFinalizeSection } from "@/components/billing/InvoiceFinalizeSection";
+import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ListControls } from "@/components/screen/ListControls";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
@@ -85,6 +86,7 @@ export default async function BillingPage({
                 <Suspense fallback={null}>
                   <BillingFinalizedLink invoices={monthInvoices} month={month} />
                 </Suspense>
+                <CutoffStamp month={month} now={new Date()} />
                 <Suspense fallback={null}>
                   <BillingCalculatedStamp draftInvoice={draftInvoice} />
                 </Suspense>

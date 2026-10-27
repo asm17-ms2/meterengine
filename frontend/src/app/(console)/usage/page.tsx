@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ListControls } from "@/components/screen/ListControls";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
@@ -30,6 +31,7 @@ export default async function UsagePage({
   const params = await searchParams;
   const query = readListQuery(params, USAGE_CAPABILITIES, { hasMonth: true });
   const { month, devState } = query;
+  const now = new Date();
 
   const usage =
     devState === "loading" ? null : aggregateBillableMetricUsages(query, devState);
@@ -48,7 +50,8 @@ export default async function UsagePage({
         <FilterBar
           end={
             <>
-              <QueryStamp text={formatKstStamp(new Date())} />
+              <CutoffStamp month={month} now={now} />
+              <QueryStamp text={formatKstStamp(now)} />
               <ExpandControls />
             </>
           }
