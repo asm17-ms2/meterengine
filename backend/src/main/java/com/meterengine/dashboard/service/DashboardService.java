@@ -95,9 +95,12 @@ public class DashboardService {
         month.toString(),
         OffsetDateTime.now(clock),
         count(
-            "select count(*) from customer where organization_id = ? and environment_id is null",
+            "select count(*) from customer where organization_id = ? and environment_id is null"
+                + " and archived_at is null",
             organizationId),
-        count("select count(*) from billable_metric where organization_id = ?", organizationId),
+        count(
+            "select count(*) from billable_metric where organization_id = ? and archived_at is null",
+            organizationId),
         count(
             "select count(*) from api_key where organization_id = ? and environment_id is null and revoked_at is null and"
                 + " (expires_at is null or expires_at > ?)",
@@ -121,7 +124,7 @@ public class DashboardService {
             > 0,
         count(
                 "select count(*) from toss_payments_credential where organization_id = ? and mode ="
-                    + " ?",
+                    + " ? and archived_at is null",
                 organizationId,
                 mode)
             > 0,
