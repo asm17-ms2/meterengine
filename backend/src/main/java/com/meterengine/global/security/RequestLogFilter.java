@@ -32,7 +32,9 @@ public class RequestLogFilter extends OncePerRequestFilter {
   private static final int MAX_DECODE_ROUNDS = 4;
 
   private static final Pattern PAYMENT_METHOD_REGISTRATION_TOKEN =
-      Pattern.compile("(/payment-method-registrations).+", Pattern.CASE_INSENSITIVE);
+      Pattern.compile(
+          "(/(?:payment-method-registrations|organization-invitations)).+",
+          Pattern.CASE_INSENSITIVE);
 
   private static final Pattern UNSAFE_ADDRESS_CHARACTERS =
       Pattern.compile("[^A-Za-z0-9.:%\\[\\]-]");

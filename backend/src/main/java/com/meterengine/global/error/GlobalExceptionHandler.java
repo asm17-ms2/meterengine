@@ -59,6 +59,12 @@ class GlobalExceptionHandler {
   // 도메인 예외
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
+    if (exception instanceof TooManyRequestsException limited
+        && limited.getRetryAfterSeconds() != null) {
+      return statusOf(exception.getErrorCode())
+          .header(HttpHeaders.RETRY_AFTER, Long.toString(limited.getRetryAfterSeconds()))
+          .body(ErrorResponse.from(exception.getErrorCode()));
+    }
     return respond(exception.getErrorCode(), exception.getErrors());
   }
 
