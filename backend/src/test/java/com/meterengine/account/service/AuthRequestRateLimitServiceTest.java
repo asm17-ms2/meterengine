@@ -114,6 +114,20 @@ class AuthRequestRateLimitServiceTest {
   }
 
   @Test
+  void 가입은_가입_한도와_창으로_센다() {
+    var service = service(List.of());
+    service.signup("  User@Example.COM  ", request("203.0.113.10"));
+    verify(repository)
+        .consume(
+            "signup",
+            SecureTokens.hash("203.0.113.10"),
+            SecureTokens.hash("user@example.com"),
+            20,
+            3,
+            1800);
+  }
+
+  @Test
   void 비활성_설정은_데이터베이스를_부르지_않는다() {
     var properties =
         new AuthRateLimitProperties(
