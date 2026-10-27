@@ -47,7 +47,7 @@ variable "db_multi_az" {
 }
 
 variable "auto_stop_state" {
-  description = "매일 04:00(Asia/Seoul) RDS와 EC2 자동 중지 스케줄 상태. 밤새 측정할 때 DISABLED"
+  description = "매일 04:00(Asia/Seoul) EC2 자동 중지 스케줄 상태. 밤새 측정할 때 DISABLED"
   type        = string
   default     = "ENABLED"
 
