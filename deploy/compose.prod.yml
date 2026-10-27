@@ -18,7 +18,7 @@ x-backend: &backend
     # 값을 바꾸면 이미 저장한 암호문을 풀지 못한다.
     CRYPTO_ENCRYPTION_KEY: ${CRYPTO_ENCRYPTION_KEY:?CRYPTO_ENCRYPTION_KEY가 없다}
     METERENGINE_AUTH_RATE_LIMIT_ENABLED: ${METERENGINE_AUTH_RATE_LIMIT_ENABLED:-true}
-    METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES: ${METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES:-}
+    METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES: ${METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES:-172.30.0.8/29}
     OPERATOR_EMAIL: ${OPERATOR_EMAIL:?OPERATOR_EMAIL이 없다}
     OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?OPERATOR_PASSWORD가 없다}
     # 프론트가 쓰는 키와 그 키가 속할 도입사. 백엔드가 기동할 때 없으면 넣는다.
@@ -29,7 +29,18 @@ x-backend: &backend
   mem_limit: ${BACKEND_MEM_LIMIT:?BACKEND_MEM_LIMIT가 없다}
   # Spring의 종료 단계 한도(30s)보다 길어야 처리 중 요청을 마치기 전에 SIGKILL되지 않는다.
   stop_grace_period: 35s
+  # default에도 붙으면 Caddy가 어느 쪽 주소로 붙을지 정해지지 않아 proxy에만 둔다.
+  networks:
+    - proxy
   logging: *default-logging
+
+# Caddy와 프론트만 고정 주소 대역(172.30.0.8/29)을 받아 백엔드가 그 대역만 신뢰한다. 나머지는 ip_range에서 받는다.
+networks:
+  proxy:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.128/25
 
 services:
   caddy:
@@ -47,6 +58,11 @@ services:
       # 지우면 인증서를 새로 발급받아 발급 횟수 제한에 걸릴 수 있다.
       - caddy-data:/data
       - caddy-config:/config
+    # default는 proxy가 없던 때 뜬 색에 닿도록 남긴다.
+    networks:
+      default:
+      proxy:
+        ipv4_address: 172.30.0.10
     # 백엔드를 넣으면 caddy를 올릴 때 두 색이 함께 뜬다.
     depends_on:
       - frontend
@@ -72,6 +88,9 @@ services:
       METERENGINE_API_KEY: ${FRONTEND_API_KEY:?FRONTEND_API_KEY가 없다}
     ports:
       - "127.0.0.1:3000:3000"
+    networks:
+      proxy:
+        ipv4_address: 172.30.0.11
     logging: *default-logging
 
   prometheus:
@@ -86,6 +105,9 @@ services:
     volumes:
       - ./prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
+    networks:
+      - default
+      - proxy
     logging: *default-logging
 
   node-exporter:
