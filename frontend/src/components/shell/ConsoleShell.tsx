@@ -18,6 +18,7 @@ import { hasScope, scopeSummary, type OrganizationRole } from "@/lib/auth/permis
 const WORKFLOW = [
   { href: "/usage", label: "사용량 확인", detail: "고객별 수량과 정정 이벤트를 확인하세요." },
   { href: "/billing", label: "청구 검토", detail: "예정액과 과금에서 빠진 사용량을 검토한 뒤 확정하세요." },
+  { href: "/payments", label: "수납과 취소", detail: "결제 결과와 취소 내역을 확인하고 통보 수신까지 점검하세요." },
 ];
 
 type Props = { organizationId: string; organizationLabel: string; userLabel: string; isOperator: boolean; organizationRole?: OrganizationRole | null; scopes: string[]; children: React.ReactNode };

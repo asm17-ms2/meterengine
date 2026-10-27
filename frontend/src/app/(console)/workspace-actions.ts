@@ -43,6 +43,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "archivePaymentMethod": path = `/v1/customers/${identifier(data)}/payment-method`; method = "DELETE"; break;
       case "createApiKey":
         path = "/v1/api-keys";
         body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute") : null };
@@ -57,13 +58,18 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true" }; break;
       case "testWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/test-events`; break;
       case "retryWebhookDelivery": path = `/v1/webhook-endpoints/${identifier(data)}/deliveries/${identifier(data, "delivery_id")}/retries`; break;
+      case "updatePaymentSetting": path = "/v1/payment-setting"; method = "PUT"; body = { mode: text(data, "mode") }; break;
+      case "updateTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "PUT"; body = { client_key: text(data, "client_key"), secret_key: text(data, "secret_key") }; break;
+      case "createPaymentMethodRegistration": path = `/v1/customers/${identifier(data)}/payment-method-registrations`; break;
+      case "createPaymentAttempt": path = `/v1/invoices/${identifier(data)}/payment-attempts`; break;
+      case "createPaymentCancellation": path = `/v1/payment-attempts/${identifier(data)}/cancellations`; body = { reason: text(data, "reason"), amount: text(data, "amount") ? amount(data, "amount") : undefined }; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
   } catch {
     return { message: "입력 형식을 확인하세요. 금액은 0 이상의 정수, 조합과 구간은 올바른 JSON이어야 합니다." };
   }
   if (false && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
-  const isPaymentRequest = false;
+  const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {
     method, body,
     timeoutMs: isPaymentRequest ? 75_000 : undefined,

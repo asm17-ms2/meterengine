@@ -13,10 +13,10 @@ import jakarta.validation.Payload;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-// 연도가 0001부터 9999까지인 달만 통과시킨다.
+// 연도가 0001부터 9999까지인 달과 날짜만 통과시킨다.
 @Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
 @Retention(RUNTIME)
-@Constraint(validatedBy = FourDigitYearValidator.class)
+@Constraint(validatedBy = {FourDigitYearValidator.class, FourDigitYearLocalDateValidator.class})
 public @interface FourDigitYear {
 
   String message() default "yyyy-MM 형식의 0001-01부터 9999-12까지만 받습니다";

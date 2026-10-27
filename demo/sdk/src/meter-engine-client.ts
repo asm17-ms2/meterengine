@@ -1,7 +1,7 @@
 
 import { MeterEngineApiError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ErrorResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, OrganizationResponse } from "./types.ts";
+import type { ErrorResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -73,8 +73,24 @@ export class MeterEngineClient {
     this.random = options.random ?? Math.random;
   }
 
+  listInvoicePayments(params: { month?: string; customer_id?: string } = {}): Promise<ListInvoicePaymentsResponse> {
+    return this.request("GET", queryPath("/v1/invoice-payments", params));
+  }
+
+  getPaymentMethod(id: string): Promise<PaymentMethodResponse> {
+    return this.request("GET", `/v1/customers/${encodeURIComponent(id)}/payment-method`);
+  }
+
+  listPaymentMethods(): Promise<ListPaymentMethodsResponse> {
+    return this.request("GET", "/v1/payment-methods");
+  }
+
   getOrganization(): Promise<OrganizationResponse> {
     return this.request("GET", "/v1/organization");
+  }
+
+  createPaymentMethodRegistration(id: string): Promise<PaymentMethodRegistrationResponse> {
+    return this.request("POST", `/v1/customers/${encodeURIComponent(id)}/payment-method-registrations`, undefined, undefined, false);
   }
 
   listWebhookEndpoints(): Promise<ListWebhookEndpointsResponse> {

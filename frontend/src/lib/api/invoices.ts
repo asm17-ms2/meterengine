@@ -17,6 +17,7 @@ export type ListInvoicesResponse = PaginationFields & {
 };
 
 export type InvoiceResponse = {
+  invoice_number?: string;
   id: string;
   customer_id: string;
   customer_name: string;
