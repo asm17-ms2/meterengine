@@ -21,6 +21,8 @@ public class RequestAuditFilter extends OncePerRequestFilter {
   private static final Pattern UUID_VALUE =
       Pattern.compile(
           "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+  private static final String INGEST_METHOD = "POST";
+  private static final Set<String> INGEST_PATHS = Set.of("/v1/events", "/v1/event-batches");
   private final RequestAuditRecorder requestAuditRecorder;
 
   public RequestAuditFilter(RequestAuditRecorder requestAuditRecorder) {
@@ -40,6 +42,10 @@ public class RequestAuditFilter extends OncePerRequestFilter {
     boolean failed = true;
     UUID requestId = UUID.randomUUID();
     response.setHeader("X-Request-ID", requestId.toString());
+    if (isIngestion(request)) {
+      filterChain.doFilter(request, response);
+      return;
+    }
     try {
       filterChain.doFilter(request, response);
       failed = false;
@@ -62,6 +68,12 @@ public class RequestAuditFilter extends OncePerRequestFilter {
         throw exception;
       }
     }
+  }
+
+  // 수집은 요청이 많아 요청마다 감사 행을 동기로 쓰면 지연과 DB 쓰기가 크게 늘어 감사에서 뺀다.
+  private static boolean isIngestion(HttpServletRequest request) {
+    return INGEST_METHOD.equals(request.getMethod())
+        && INGEST_PATHS.contains(request.getRequestURI());
   }
 
   private static RequestAuditTarget target(HttpServletRequest request) {
