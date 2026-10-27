@@ -18,12 +18,15 @@ ON CONFLICT (id) DO UPDATE SET
   name          = EXCLUDED.name,
   role          = EXCLUDED.role;
 
-INSERT INTO organization_member (organization_id, user_account_id, created_at) VALUES
+INSERT INTO organization_member (organization_id, user_account_id, role, scopes, created_at) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', '663fce9b-dec7-41b6-9330-e6fe2eeffb7e',
-   '2026-01-01T00:00:00Z'),
+   'owner', '{admin}', '2026-01-01T00:00:00Z'),
   ('69cb6c64-14ed-49a0-a397-5f90b468f510', '663fce9b-dec7-41b6-9330-e6fe2eeffb7e',
-   '2026-01-02T00:00:00Z')
-ON CONFLICT DO NOTHING;
+   'owner', '{admin}', '2026-01-02T00:00:00Z')
+ON CONFLICT (organization_id, user_account_id) DO UPDATE SET
+  role       = EXCLUDED.role,
+  scopes     = EXCLUDED.scopes,
+  revoked_at = NULL;
 
 INSERT INTO api_key
   (id, organization_id, mode, label, key_hash, last_four, scopes, created_at) VALUES
