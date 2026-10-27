@@ -104,7 +104,7 @@ class OperatorAccountIntegrationTest {
     assertThat((Object) JsonPath.read(body(login), "$.organization")).isNull();
     String authorization = TestCredentials.BEARER_PREFIX + JsonPath.read(body(login), "$.token");
     assertThat(get("/v1/sessions/current", authorization)).hasStatusOk();
-    assertThat(get(USER_ACCOUNTS, authorization))
+    assertThat(get("/v1/operations", authorization))
         .hasStatus(403)
         .bodyJson()
         .extractingPath("$.code")
@@ -120,7 +120,7 @@ class OperatorAccountIntegrationTest {
         .bodyJson()
         .extractingPath("$.consent_required")
         .isEqualTo(false);
-    assertThat(get(USER_ACCOUNTS, authorization)).hasStatusOk();
+    assertThat(get("/v1/operations", authorization)).hasStatusOk();
     assertThat(get(USER_ACCOUNTS, authorization)).hasStatusOk();
     entityManager.flush();
     assertThat(

@@ -1,0 +1,165 @@
+package com.meterengine.webhook.repository;
+
+import com.meterengine.webhook.dto.WebhookClaim;
+import com.meterengine.webhook.dto.WebhookDeliveryResponse;
+import com.meterengine.webhook.dto.WebhookDeliveryResponse.Attempt;
+import com.meterengine.webhook.dto.WebhookOutcome;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+public class WebhookDeliveryRepository {
+  private static final int MAX_ATTEMPTS = 6;
+  private static final long[] RETRY_SECONDS = {60, 300, 1800, 7200, 28800};
+  private final JdbcTemplate jdbcTemplate;
+
+  WebhookDeliveryRepository(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public Optional<WebhookClaim> claim() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET status = 'failed', failure_reason = 'lease_expired', next_attempt_at = NULL WHERE status = 'pending' AND attempt_count >= ? AND next_attempt_at <= clock_timestamp()",
+        MAX_ATTEMPTS);
+    return jdbcTemplate
+        .query(
+            """
+        WITH picked AS (
+          SELECT id FROM webhook_delivery WHERE status = 'pending'
+            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()
+          ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+        ), claimed AS (
+          UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
+            last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() + interval '2 minutes',
+            claim_token = gen_random_uuid()
+          FROM picked WHERE d.id = picked.id RETURNING d.*
+        )
+        SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload
+        FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.id = c.webhook_endpoint_id
+        JOIN webhook_event v ON v.organization_id = c.organization_id AND v.id = c.webhook_event_id
+        """,
+            (rs, rowNum) ->
+                new WebhookClaim(
+                    rs.getObject("id", UUID.class),
+                    rs.getObject("organization_id", UUID.class),
+                    rs.getObject("webhook_event_id", UUID.class),
+                    rs.getObject("claim_token", UUID.class),
+                    rs.getString("url"),
+                    rs.getString("secret"),
+                    rs.getString("payload"),
+                    rs.getBoolean("enabled"),
+                    rs.getObject("deleted_at") != null,
+                    rs.getInt("attempt_count"),
+                    rs.getObject("last_attempted_at", OffsetDateTime.class)),
+            MAX_ATTEMPTS)
+        .stream()
+        .findFirst();
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public boolean complete(WebhookClaim claim, WebhookOutcome outcome) {
+    boolean terminal =
+        outcome.isSuccessful()
+            || claim.attemptCount() >= MAX_ATTEMPTS
+            || "blocked_address".equals(outcome.failureReason())
+            || "endpoint_disabled".equals(outcome.failureReason());
+    String status = outcome.isSuccessful() ? "done" : terminal ? "failed" : "pending";
+    OffsetDateTime nextAttemptAt =
+        terminal
+            ? null
+            : OffsetDateTime.now()
+                .plusSeconds(
+                    RETRY_SECONDS[Math.min(claim.attemptCount() - 1, RETRY_SECONDS.length - 1)]);
+    int changed =
+        jdbcTemplate.update(
+            "UPDATE webhook_delivery SET status = ?, response_status = ?, failure_reason = ?, next_attempt_at = ?, claim_token = NULL WHERE id = ? AND organization_id = ? AND claim_token = ? AND status = 'pending'",
+            status,
+            outcome.responseStatus(),
+            outcome.failureReason(),
+            nextAttemptAt,
+            claim.id(),
+            claim.organizationId(),
+            claim.claimToken());
+    if (changed == 0) {
+      return false;
+    }
+    jdbcTemplate.update(
+        "INSERT INTO webhook_delivery_attempt (id, organization_id, webhook_delivery_id, attempted_at, response_status, failure_reason, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        UUID.randomUUID(),
+        claim.organizationId(),
+        claim.id(),
+        claim.lastAttemptedAt(),
+        outcome.responseStatus(),
+        outcome.failureReason(),
+        outcome.durationMs());
+    return true;
+  }
+
+  public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM webhook_delivery WHERE organization_id = ? AND webhook_endpoint_id = ? AND (?::varchar IS NULL OR status = ?)",
+        Long.class,
+        organizationId,
+        endpointId,
+        status,
+        status);
+  }
+
+  public List<WebhookDeliveryResponse> findByEndpoint(
+      UUID organizationId, UUID endpointId, String status, int page, int size) {
+    return jdbcTemplate.query(
+        """
+        SELECT d.*, e.type FROM webhook_delivery d
+        JOIN webhook_event e ON e.organization_id = d.organization_id AND e.id = d.webhook_event_id
+        WHERE d.organization_id = ? AND d.webhook_endpoint_id = ? AND (?::varchar IS NULL OR d.status = ?)
+        ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?
+        """,
+        (rs, rowNum) ->
+            new WebhookDeliveryResponse(
+                rs.getObject("id", UUID.class),
+                rs.getObject("webhook_event_id", UUID.class),
+                rs.getString("type"),
+                rs.getString("status"),
+                rs.getInt("attempt_count"),
+                rs.getObject("next_attempt_at", OffsetDateTime.class),
+                rs.getObject("last_attempted_at", OffsetDateTime.class),
+                (Integer) rs.getObject("response_status"),
+                rs.getString("failure_reason"),
+                rs.getObject("created_at", OffsetDateTime.class),
+                attempts(organizationId, rs.getObject("id", UUID.class))),
+        organizationId,
+        endpointId,
+        status,
+        status,
+        size,
+        (long) page * size);
+  }
+
+  public int retry(UUID organizationId, UUID endpointId, UUID id) {
+    return jdbcTemplate.update(
+        "UPDATE webhook_delivery d SET status = 'pending', attempt_count = 0, next_attempt_at = clock_timestamp(), claim_token = NULL WHERE d.organization_id = ? AND d.webhook_endpoint_id = ? AND d.id = ? AND d.status = 'failed' AND EXISTS (SELECT 1 FROM webhook_endpoint e WHERE e.organization_id = d.organization_id AND e.id = d.webhook_endpoint_id AND e.enabled AND e.deleted_at IS NULL)",
+        organizationId,
+        endpointId,
+        id);
+  }
+
+  private List<Attempt> attempts(UUID organizationId, UUID id) {
+    return jdbcTemplate.query(
+        "SELECT * FROM webhook_delivery_attempt WHERE organization_id = ? AND webhook_delivery_id = ? ORDER BY attempted_at, id",
+        (rs, rowNum) ->
+            new Attempt(
+                rs.getObject("attempted_at", OffsetDateTime.class),
+                (Integer) rs.getObject("response_status"),
+                rs.getString("failure_reason"),
+                rs.getLong("duration_ms")),
+        organizationId,
+        id);
+  }
+}

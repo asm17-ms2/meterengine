@@ -49,6 +49,14 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
         break;
       case "deleteApiKey": path = `/v1/api-keys/${identifier(data)}`; method = "DELETE"; break;
       case "updateApiKeyScopes": path = `/v1/api-keys/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
+      case "createWebhookEndpoint":
+        path = "/v1/webhook-endpoints";
+        body = { url: text(data, "url"), event_types: data.getAll("event_types") };
+        break;
+      case "deleteWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "DELETE"; break;
+      case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true" }; break;
+      case "testWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/test-events`; break;
+      case "retryWebhookDelivery": path = `/v1/webhook-endpoints/${identifier(data)}/deliveries/${identifier(data, "delivery_id")}/retries`; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
   } catch {
@@ -61,7 +69,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
     ifMatch: false ? `"${text(data, "version")}"` : undefined,
     idempotencyKey: ["createPaymentCancellation", "createCustomer"].includes(operation) ? text(data, "request_id") : undefined,
-    isEmptyResponse: false,
+    isEmptyResponse: operation === "retryWebhookDelivery",
   });
   if (!result.ok) {
     if (isPaymentRequest && (result.error.status === 0 || result.error.code === "malformed_response" || result.error.code === "payment_result_unconfirmed" || result.error.code === "payment_cancellation_in_progress"))
@@ -72,12 +80,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const redirectScope = new URLSearchParams({ organization_id: session.organization!.id });
   if (false) redirect(workspaceHref("/customers?status=archived", redirectScope));
   if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
-  if (false) redirect(workspaceHref("/integrations?status=archived", redirectScope));
+  if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));
   const response = result.data;
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
   return {
-    isSuccess: true, message: false ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : "처리했습니다.",
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : "처리했습니다.",
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,

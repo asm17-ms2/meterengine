@@ -41,6 +41,7 @@ public class ScheduledJobRunService {
   }
 
   public void register(String jobName) {
+    lastSuccessOf(jobName);
     scheduledJobRunRepository
         .findLastSucceededFinishedAt(jobName)
         .ifPresent(finishedAt -> recordSuccess(jobName, finishedAt));
@@ -115,7 +116,17 @@ public class ScheduledJobRunService {
         jobName,
         name -> {
           AtomicLong epochSeconds = new AtomicLong();
-          Gauge.builder(LAST_SUCCESS_GAUGE_NAME, epochSeconds, AtomicLong::get)
+          Gauge.builder(
+                  LAST_SUCCESS_GAUGE_NAME,
+                  epochSeconds,
+                  value -> {
+                    scheduledJobRunRepository
+                        .findLastSucceededFinishedAt(name)
+                        .ifPresent(
+                            finishedAt ->
+                                value.accumulateAndGet(finishedAt.toEpochSecond(), Math::max));
+                    return value.get();
+                  })
               .description("예약 작업이 마지막으로 성공한 시각")
               .baseUnit("seconds")
               .tag(JOB_TAG, name)
