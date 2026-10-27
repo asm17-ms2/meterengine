@@ -1,8 +1,9 @@
+import { CsvDownload } from "@/components/screen/CsvDownload";
+import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
 
 import { InvoicesSection } from "@/components/invoices/InvoicesSection";
 import { FilterBar } from "@/components/screen/FilterBar";
-import { ListControls } from "@/components/screen/ListControls";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
@@ -10,9 +11,7 @@ import { StatusTag } from "@/components/screen/StatusTag";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
-import { BILLABLE_METRICS_CACHE_TAG, listBillableMetrics } from "@/lib/api/billable-metrics";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { CUSTOMERS_CACHE_TAG, listCustomers } from "@/lib/api/customers";
 import { listInvoices } from "@/lib/api/invoices";
 import { formatKoreanMonth } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
@@ -37,41 +36,25 @@ export default async function InvoicesPage({
   return (
     <CollapseProvider>
       <ScreenHeader
-        title={isAllMonths ? "인보이스 - 전체 기간" : `인보이스 - ${formatKoreanMonth(month)}`}
+        title={query.from || query.to ? "인보이스 - 직접 지정 기간" : isAllMonths ? "인보이스 - 전체 기간" : `인보이스 - ${formatKoreanMonth(month)}`}
         tags={<StatusTag color="success">확정 (finalized)</StatusTag>}
       />
 
       <ScreenCard>
         <FilterBar end={<ExpandControls />}>
           <Suspense
-            fallback={
-              <ListControls
-                query={query}
-                capabilities={capabilities}
-                month={monthControl}
-                customers={[]}
-                eventTypes={[]}
-                isLoadingOptions
-              />
-            }
+            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
           >
             <ListControlsLoader
+              resource="invoices"
               query={query}
               capabilities={capabilities}
               month={monthControl}
-              customers={
-                capabilities.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
-                  : undefined
-              }
-              metrics={
-                capabilities.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
-                  : undefined
-              }
             />
           </Suspense>
         </FilterBar>
+        <CsvDownload resource="invoices" />
+        <Suspense fallback={null}><DataMonths filterForm="resource-search-invoices" resource="invoices" pathname="/invoices" query={query} /></Suspense>
 
         {invoices ? (
           <Suspense fallback={<TableSkeleton />}>

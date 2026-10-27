@@ -1,5 +1,7 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { App, Badge, Button, Flex, Popconfirm, Table, Tag, theme, Typography } from "antd";
 import {
   startTransition,
@@ -171,6 +173,7 @@ export function BillableMetricPricesTable({
   clientSortSelection?: ClientSortSelectionState;
 }) {
   const { token } = theme.useToken();
+  const canManage = useTenantScope("admin");
   const [failureByRateKey, setFailureByRateKey] = useState<Record<string, string>>({});
 
   const settleDelete = useCallback((rateKey: string, failureMessage: string | undefined) => {
@@ -296,7 +299,7 @@ export function BillableMetricPricesTable({
     },
   ];
 
-  const { columns, onChange, sortState } = useTableSort(query, capabilities, sortableColumns, {
+  const { columns, onChange, sortState } = useTableSort(query, capabilities, sortableColumns.filter(column => column.key !== "actions" || canManage), {
     isClientSortManual: true,
     clientSortSelection,
   });

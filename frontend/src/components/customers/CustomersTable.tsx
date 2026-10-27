@@ -15,6 +15,7 @@ import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
 
 export type CustomerRowView = {
+  version?: number;
   id: string;
   name: string;
   billingEmail: string | null;

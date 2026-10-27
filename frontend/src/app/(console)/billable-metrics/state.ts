@@ -2,6 +2,7 @@ import type { MetricRoundingMode } from "@/lib/billable-metric-calculation";
 
 export type BillableMetricRowView = {
   code: string;
+  version?: number;
   name: string;
   eventType: string;
   aggregation: string;

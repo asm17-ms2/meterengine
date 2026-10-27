@@ -5,9 +5,10 @@ import { workspaceFetch } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
 import { formatKstDateTime } from "@/lib/format";
-import { serverFetch } from "@/lib/api/client";
-import { config } from "@/lib/config";
-async function customerOptions(_selected?: string) { void _selected; const result = await serverFetch<{ customers: { id: string; name: string; archived_at?: string | null }[] }>(config.apiBaseUrl, "/v1/customers"); return result.ok ? { ok: true as const, data: result.data.customers.map(customer => ({ value: customer.id, label: customer.name, archived: Boolean(customer.archived_at) })) } : result; }
+import { CustomerFilterField } from "@/components/screen/CustomerFilterField";
+import { customerOptions } from "@/lib/api/search";
+import { readListQuery } from "@/lib/list-query";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 
 type IssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
 const REASONS: Record<IssueReason, string> = { unknown_event_type: "연결할 미터 없음", invalid_target_property: "집계할 수량 확인 필요", unpriced_usage: "적용 단가 없음" };
@@ -34,7 +35,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
         <input type="hidden" name="organization_id" value={params.organization_id ?? ""} />
         <label className="workspace-field"><span>대상 월</span><input type="month" name="month" defaultValue={month} required /></label>
         <label className="workspace-field"><span>문제 종류</span><select name="reason" defaultValue={reason ?? ""}><option value="">전체</option>{Object.entries(REASONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-        <label className="workspace-field"><span>고객</span><select name="customer_id" defaultValue={params.customer_id ?? ""}><option value="">모든 고객</option>{customers.ok && customers.data.map(customer => <option key={customer.value} value={customer.value}>{customer.label}</option>)}</select></label>
+        <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />
         <label className="workspace-field"><span>전송 ID, 고객과 유형 검색</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
         <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={size}>{[20, 50, 100].map(value => <option value={value} key={value}>{value}개</option>)}</select></label>
         <button className="month-apply" type="submit">진단 조회</button>

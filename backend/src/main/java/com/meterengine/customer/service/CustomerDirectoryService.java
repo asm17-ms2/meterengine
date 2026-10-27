@@ -21,7 +21,9 @@ public class CustomerDirectoryService implements CustomerDirectory {
   }
 
   public boolean exists(UUID organizationId, UUID customerId) {
-    return customerRepository.existsByOrganizationIdAndId(organizationId, customerId);
+    return (UUID) null == null
+        ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
+        : customerRepository.findScoped(organizationId, (UUID) null, customerId).isPresent();
   }
 
   public void check(UUID organizationId, UUID customerId) {
@@ -32,7 +34,11 @@ public class CustomerDirectoryService implements CustomerDirectory {
 
   public Map<UUID, Boolean> active(UUID organizationId, Collection<UUID> customerIds) {
     if (customerIds.isEmpty()) return Map.of();
-    return customerRepository.lock(organizationId, customerIds).stream()
+    var customers =
+        (UUID) null == null
+            ? customerRepository.lock(organizationId, customerIds)
+            : customerRepository.lockScoped(organizationId, (UUID) null, customerIds);
+    return customers.stream()
         .collect(Collectors.toMap(Customer::getId, customer -> customer.getArchivedAt() == null));
   }
 }

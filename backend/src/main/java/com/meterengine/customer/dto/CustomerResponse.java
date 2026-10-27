@@ -13,7 +13,18 @@ public record CustomerResponse(
         String billingEmail,
     @JsonProperty("created_at") OffsetDateTime createdAt,
     @JsonProperty("external_id") String externalId,
-    @JsonProperty("archived_at") OffsetDateTime archivedAt) {
+    @JsonProperty("archived_at") OffsetDateTime archivedAt,
+    long version) {
+
+  public CustomerResponse(
+      UUID id,
+      String name,
+      String billingEmail,
+      OffsetDateTime createdAt,
+      String externalId,
+      OffsetDateTime archivedAt) {
+    this(id, name, billingEmail, createdAt, externalId, archivedAt, 0);
+  }
 
   public static CustomerResponse from(Customer customer) {
     return new CustomerResponse(
@@ -22,6 +33,7 @@ public record CustomerResponse(
         customer.getBillingEmail(),
         customer.getCreatedAt(),
         customer.getExternalId(),
-        customer.getArchivedAt());
+        customer.getArchivedAt(),
+        customer.getVersion());
   }
 }

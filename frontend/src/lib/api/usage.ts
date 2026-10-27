@@ -1,4 +1,5 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, type Result } from "@/lib/api/client";
@@ -10,6 +11,7 @@ import { toServerParams, type MonthlyListQuery, type PaginationFields } from "@/
 
 export type ListBillableMetricUsagesResponse = PaginationFields & {
   month: string;
+  summary?: { month: string; customer_count: number; metric_count: number; line_count: number; nonzero_customer_count: number };
   billable_metric_usages: BillableMetricUsageResponse[];
 };
 
@@ -125,9 +127,16 @@ export async function aggregateBillableMetricUsages(
       },
     };
   }
-  return serverFetch<ListBillableMetricUsagesResponse>(
-    config.apiBaseUrl,
-    "/v1/usage",
-    toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages),
+  const result = await serverFetch<SearchPage<{ customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] }, NonNullable<ListBillableMetricUsagesResponse["summary"]>>>(
+    config.apiBaseUrl, "/v1/usage/search", toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages),
   );
+  if (!result.ok) return result;
+  const metrics = new Map<string, BillableMetricUsageResponse>();
+  for (const customer of result.data.items) for (const metric of customer.metrics) {
+    const existing = metrics.get(metric.code);
+    if (existing) existing.customers.push(...metric.customers);
+    else metrics.set(metric.code, { ...metric, customers: [...metric.customers] });
+  }
+  return { ok: true, data: { ...result.data, page: result.data.page - 1, month: result.data.summary.month, billable_metric_usages: [...metrics.values()] } };
+
 }

@@ -83,7 +83,7 @@ public class BillableMetricUsageRepository {
                  properties -> ?::text AS value,
                  COALESCE((SELECT jsonb_object_agg(dimension_property, properties -> dimension_property)
                            FROM unnest(?::text[]) AS dimension_property), '{}'::jsonb) AS dimension_values
-          FROM event WHERE organization_id = ? AND type = ? AND occurred_at >= ? AND occurred_at < ?
+          FROM event WHERE organization_id = ? AND environment_id IS NULL AND type = ? AND occurred_at >= ? AND occurred_at < ?
         ), eligible AS (
           SELECT *, CASE WHEN jsonb_typeof(value) = 'number' THEN value::text::numeric END AS numeric_value
           FROM candidates WHERE %s

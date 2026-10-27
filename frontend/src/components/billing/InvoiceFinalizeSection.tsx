@@ -22,10 +22,10 @@ export async function InvoiceFinalizeSection({
     <InvoiceFinalizeDialog
       month={month}
       monthLabel={formatKoreanMonth(month)}
-      targetCount={targets.length}
-      supplyAmount={formatKrw(targets.reduce((sum, customer) => sum + customer.amount, 0))}
+      targetCount={result.ok && result.data.summary ? result.data.summary.month_billable_customer_count : targets.length}
+      supplyAmount={formatKrw(result.ok && result.data.summary ? result.data.summary.month_amount : targets.reduce((sum, customer) => sum + customer.amount, 0))}
       isUnfinishedMonth={month >= formatKstMonth()}
-      hasUnpricedUsages={hasUnpricedUsages(targets)}
+      hasUnpricedUsages={result.ok && result.data.summary ? result.data.summary.month_unpriced_count > 0 : hasUnpricedUsages(targets)}
     />
   );
 }

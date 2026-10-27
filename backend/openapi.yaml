@@ -382,6 +382,235 @@ paths:
       summary: 미터별 가격 목록 조회
       tags:
       - billable-metric-price-controller
+  /v1/billable-metric-prices/export:
+    get:
+      operationId: exportPrices
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터별 가격 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/billable-metric-prices/months:
+    get:
+      operationId: listPriceMonths
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 단가 버전이 시작된 월 목록
+      tags:
+      - workspace-query-controller
+  /v1/billable-metric-prices/search:
+    get:
+      description: "month, customer_id, billable_metric_code, q, status(미터 보관 상태),\
+        \ sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단\
+        가 수, 조건 전체 no_rate_count를 포함한다."
+      operationId: searchBillableMetricPrices
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponsePriceSearchResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 월별 가격 검색과 서버 페이지 조회
+      tags:
+      - workspace-query-controller
   /v1/billable-metrics:
     get:
       operationId: listBillableMetrics
@@ -442,6 +671,12 @@ paths:
         round는 사사오입이며 none은 유한소수를 그대로 보존하고 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 보존한다. code는 도입사 안에서 유일하고 등록 뒤 바꿀 수 없다.
         같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
       operationId: createBillableMetric
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -503,6 +738,250 @@ paths:
       summary: 집계 미터 등록
       tags:
       - billable-metric-controller
+  /v1/billable-metrics/export:
+    get:
+      operationId: exportMetrics
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/billable-metrics/options:
+    get:
+      operationId: suggestBillableMetrics
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseOptionResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터 선택지 검색
+      tags:
+      - workspace-query-controller
+  /v1/billable-metrics/search:
+    get:
+      description: "q, billable_metric_code, status(active/archived/all), sort(code/name/event_type/aggregation/archived_at),\
+        \ order, page, size를 받는다."
+      operationId: searchBillableMetrics
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseBillableMetricResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터 검색과 서버 페이지 조회
+      tags:
+      - workspace-query-controller
   /v1/billable-metrics/{code}:
     delete:
       description: 현재 월까지 집계를 유지하고 다음 달부터 중단한다. 이벤트와 단가는 유지한다. 반복 요청은 204다.
@@ -597,6 +1076,67 @@ paths:
       summary: 미터 상세 조회
       tags:
       - billable-metric-controller
+    patch:
+      description: 조회한 version을 큰따옴표로 감싼 If-Match 헤더가 필수다. 다른 요청이 먼저 수정했으면 409다. PUT과
+        같은 전체 필드를 보낸다.
+      operationId: updateConditionalBillableMetric
+      parameters:
+      - in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: If-Match
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBillableMetricRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BillableMetricResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 버전을 확인한 미터 수정
+      tags:
+      - billable-metric-controller
     put:
       description: |
         미터를 요청 값으로 덮어쓰고 바뀐 미터를 돌려준다. code는 바꿀 수 없다.
@@ -607,6 +1147,11 @@ paths:
         in: path
         name: code
         required: true
+        schema:
+          type: string
+      - in: header
+        name: If-Match
+        required: false
         schema:
           type: string
       requestBody:
@@ -1100,9 +1645,15 @@ paths:
     post:
       description: |
         고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
-        external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다.
+        external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다. Idempotency-Key 헤더를 사용하면 같은 조직/환경/작업의 같은 요청을 재전송해도 최초 생성 응답을 돌려준다. 같은 키와 다른 본문은 409다.
         billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
       operationId: createCustomer
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -1162,6 +1713,270 @@ paths:
       summary: 고객 등록
       tags:
       - customer-controller
+  /v1/customers/export:
+    get:
+      description: 현재 페이지가 아니라 같은 검색 조건의 전체 결과를 내보낸다. 최대 10000행이며 초과하면 범위를 좁히도록 400을
+        반환한다.
+      operationId: exportCustomers
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: external_id
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/customers/options:
+    get:
+      description: 고객 검색과 같은 조건을 받으며 value/label/archived와 페이지 정보를 반환한다. 보관 고객 선택에는
+        status=all을 사용한다.
+      operationId: suggestCustomers
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: external_id
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseOptionResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 선택지 검색
+      tags:
+      - workspace-query-controller
+  /v1/customers/search:
+    get:
+      description: "q, external_id, customer_id, status(active/archived/all), sort(name/external_id/created_at/archived_at/id/billing_email),\
+        \ order, page, size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수\
+        다. 페이지는 1부터, size 기본 25/최대 200이다."
+      operationId: searchCustomers
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: external_id
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseCustomerResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 검색과 서버 페이지 조회
+      tags:
+      - workspace-query-controller
   /v1/customers/{id}:
     delete:
       description: "새 수집과 신규 등록을 중단한다. 기존 이벤트, 청구, 결제 이력은 유지한다. 반복 요청은 204다."
@@ -1258,6 +2073,68 @@ paths:
       summary: 고객 조회
       tags:
       - customer-controller
+    patch:
+      description: 조회한 version을 If-Match 헤더에 큰따옴표로 감싸 보낸다. 바뀐 버전이면 409이며 원래 데이터는 유지한다.
+        이름/이메일을 모두 보내는 조건부 수정이다.
+      operationId: updateConditionalCustomer
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: If-Match
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 버전을 확인한 고객 수정
+      tags:
+      - customer-controller
     put:
       description: |
         고객 이름과 청구 이메일을 바꾸고 바뀐 고객을 돌려준다.
@@ -1271,6 +2148,11 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: header
+        name: If-Match
+        required: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -1570,6 +2452,57 @@ paths:
       summary: 고객 복원
       tags:
       - customer-controller
+  /v1/dashboard:
+    get:
+      description: "로그인 세션 또는 read API 키의 도입사 현황을 조회한다. 예정액은 공급가액이고, 확정액과 수납액은 세금\
+        \ 포함 금액이다. 취소는 결제 대기액으로 다시 잡지 않는다."
+      operationId: getDashboard
+      parameters:
+      - in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 월별 과금과 수납 현황 조회
+      tags:
+      - dashboard-controller
   /v1/event-batches:
     post:
       description: "1건부터 100건까지 받아 입력 순서대로 stored, duplicate, rejected 결과를 돌려준다. 원\
@@ -2018,6 +2951,137 @@ paths:
       summary: 사용량 이벤트 수집
       tags:
       - event-controller
+  /v1/events/export:
+    get:
+      description: "이벤트 목록과 같은 월 또는 자유 기간, 고객, 유형, 검색, 속성 조건과 정렬을 적용한다. page와 size는\
+        \ 목록 링크 호환을 위해 받지만 내보내기에는 적용하지 않는다. 조건 전체가 10000행을 넘으면 400 validation_error로\
+        \ 거절한다. UTF-8 BOM과 CRLF를 사용하며 문자열의 스프레드시트 수식을 이스케이프한다. include_properties=true를\
+        \ 선택한 경우에만 원본 properties JSON 열을 추가하며 숫자 자릿수를 보존한다."
+      operationId: exportEvents
+      parameters:
+      - description: 목록 호환용이며 CSV 행 범위에는 적용하지 않는다.
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - description: 목록 호환용이며 CSV 행 범위에는 적용하지 않는다.
+        in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      - in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: type
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - in: query
+        name: to
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - in: query
+        name: q
+        required: false
+        schema:
+          type: string
+          maxLength: 512
+          minLength: 0
+      - in: query
+        name: sort
+        required: false
+        schema:
+          type: string
+          maxLength: 40
+          minLength: 0
+      - in: query
+        name: order
+        required: false
+        schema:
+          type: string
+          maxLength: 4
+          minLength: 0
+      - in: query
+        name: properties
+        required: false
+        schema:
+          type: string
+          maxLength: 4096
+          minLength: 0
+      - in: query
+        name: include_properties
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: 선택한 조건 전체의 이벤트 CSV. 빈 결과도 같은 열 제목을 반환한다.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 사용량 이벤트 CSV 내보내기
+      tags:
+      - event-export-controller
   /v1/events/lookup:
     get:
       description: transaction_id 원문으로 조회한다. 목록의 페이지나 기간에 포함되지 않아도 상세 정보를 열 수 있다.
@@ -2493,6 +3557,491 @@ paths:
       summary: 청구 예정액 조회
       tags:
       - draft-invoice-controller
+  /v1/invoices/draft/export:
+    get:
+      operationId: exportDrafts
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: min_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - in: query
+        name: max_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 청구 예정액 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/invoices/draft/search:
+    get:
+      description: "month, customer_id, billable_metric_code, q, min_amount, max_amount,\
+        \ sort(customer_name/customer_id/amount/line_count), order, page, size를 받는\
+        다. amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를\
+        \ 확정하므로 finalization_scope는 month다."
+      operationId: searchDraftInvoices
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: min_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - in: query
+        name: max_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseDraftInvoiceCustomer"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 청구 예정액 검색과 페이지 독립 요약
+      tags:
+      - workspace-query-controller
+  /v1/invoices/export:
+    get:
+      operationId: exportInvoices
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: from
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: to
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: mode
+        schema:
+          type: string
+          enum:
+          - test
+          - live
+      - in: query
+        name: min_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - in: query
+        name: max_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 인보이스 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/invoices/months:
+    get:
+      operationId: listInvoiceMonths
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 확정 인보이스가 있는 월 목록
+      tags:
+      - workspace-query-controller
+  /v1/invoices/search:
+    get:
+      description: "customer_id, month, from/to(확정 시각, 날짜 종료일 포함/KST), status, mode,\
+        \ min_amount, max_amount, billable_metric_code, q, sort(month/customer_name/total_amount/finalized_at/invoice_number/status),\
+        \ order, page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립\
+        이며 pending이 있으면 outstanding_amount는 null이다."
+      operationId: searchInvoices
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: from
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: to
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: mode
+        schema:
+          type: string
+          enum:
+          - test
+          - live
+      - in: query
+        name: min_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - in: query
+        name: max_amount
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseInvoiceSearchResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 인보이스와 결제 상태 검색
+      tags:
+      - workspace-query-controller
   /v1/invoices/{id}:
     get:
       description: |
@@ -4992,6 +6541,236 @@ paths:
       summary: 고객별 월 사용량 조회
       tags:
       - billable-metric-usage-controller
+  /v1/usage/export:
+    get:
+      operationId: exportUsage
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객별 사용량 검색 결과 CSV
+      tags:
+      - workspace-query-controller
+  /v1/usage/months:
+    get:
+      description: KST 발생 시각 기준의 월을 중복 없이 내림차순으로 반환한다.
+      operationId: listUsageMonths
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 이벤트가 있는 월 목록
+      tags:
+      - workspace-query-controller
+  /v1/usage/search:
+    get:
+      description: "month, customer_id, billable_metric_code, q, status(고객 보관 상태,\
+        \ 기본 all), sort(customer_name/customer_id/line_count), order, page, size를\
+        \ 받는다. 한 고객의 모든 미터를 같은 페이지에 둔다."
+      operationId: searchUsage
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: sort
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          maximum: 2147483647
+          minimum: 1
+      - in: query
+        name: size
+        schema:
+          type: integer
+          default: 25
+          maximum: 200
+          minimum: 1
+      - in: query
+        name: status
+        schema:
+          type: string
+          maxLength: 2000
+      - in: query
+        name: month
+        schema:
+          type: string
+          example: 2026-08
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      - in: query
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: billable_metric_code
+        schema:
+          type: string
+          maxLength: 2000
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseUsageCustomerResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 단위 사용량 검색과 서버 페이지 조회
+      tags:
+      - workspace-query-controller
   /v1/user-accounts:
     get:
       description: |
@@ -5858,6 +7637,9 @@ components:
           type: string
         unit_size:
           type: number
+        version:
+          type: integer
+          format: int64
     BillableMetricUsageCustomer:
       type: object
       properties:
@@ -6338,6 +8120,99 @@ components:
           format: uuid
         name:
           type: string
+        version:
+          type: integer
+          format: int64
+    DashboardInvoice:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        attempt_count:
+          type: integer
+          format: int64
+        canceled_amount:
+          type: integer
+          format: int64
+        completed_at:
+          type: string
+          format: date-time
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        invoice_id:
+          type: string
+          format: uuid
+        last_failure_code:
+          type: string
+        mode:
+          type: string
+        month:
+          type: string
+        next_retry_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+    DashboardResponse:
+      type: object
+      properties:
+        active_api_key_count:
+          type: integer
+          format: int64
+        billable_metric_count:
+          type: integer
+          format: int64
+        calculated_at:
+          type: string
+          format: date-time
+        canceled_amount:
+          type: integer
+          format: int64
+        collected_amount:
+          type: integer
+          format: int64
+        customer_count:
+          type: integer
+          format: int64
+        draft_invoice:
+          $ref: "#/components/schemas/DraftInvoiceResponse"
+        draft_supply_amount:
+          type: integer
+          format: int64
+        event_count:
+          type: integer
+          format: int64
+        failed_payment_count:
+          type: integer
+          format: int64
+        finalized_total_amount:
+          type: integer
+          format: int64
+        invoice_payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardInvoice"
+        month:
+          type: string
+        negative_usage_count:
+          type: integer
+          format: int64
+        outstanding_amount:
+          type: integer
+          format: int64
+        payment_configured:
+          type: boolean
+        payment_mode:
+          type: string
+        supplier_configured:
+          type: boolean
+        unpriced_usage_count:
+          type: integer
+          format: int64
     DraftInvoiceCustomer:
       type: object
       properties:
@@ -6912,6 +8787,13 @@ components:
         total_amount:
           type: integer
           format: int64
+    InvoiceSearchResponse:
+      type: object
+      properties:
+        invoice:
+          $ref: "#/components/schemas/InvoiceResponse"
+        payment:
+          $ref: "#/components/schemas/InvoicePaymentResponse"
     InvoiceViewLinkResponse:
       type: object
       properties:
@@ -7241,6 +9123,15 @@ components:
         user_account_count:
           type: integer
           format: int64
+    OptionResponse:
+      type: object
+      properties:
+        archived:
+          type: boolean
+        label:
+          type: string
+        value:
+          type: string
     OrganizationInvitationResponse:
       type: object
       properties:
@@ -7573,6 +9464,27 @@ components:
           type: number
       required:
       - unit_price
+    PriceSearchResponse:
+      type: object
+      properties:
+        archived_at:
+          type: string
+          format: date-time
+        billable_metric_code:
+          type: string
+        billable_metric_name:
+          type: string
+        dimension_properties:
+          type: array
+          items:
+            type: string
+        price_rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricPricePriceRate"
+        rate_count:
+          type: integer
+          format: int32
     PublicInvoicePayment:
       type: object
       properties:
@@ -7645,6 +9557,160 @@ components:
           type: integer
           format: int64
         total_amount:
+          type: integer
+          format: int64
+    SearchPageResponseBillableMetricResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponseCustomerResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponseDraftInvoiceCustomer:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DraftInvoiceCustomer"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponseInvoiceSearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceSearchResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponseOptionResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponsePriceSearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceSearchResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
+          type: integer
+          format: int64
+    SearchPageResponseUsageCustomerResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageCustomerResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        summary:
+          type: object
+          additionalProperties: {}
+        total:
+          type: integer
+          format: int64
+        total_unfiltered:
           type: integer
           format: int64
     SessionOrganization:
@@ -8045,6 +10111,18 @@ components:
       - enabled
       - event_types
       - url
+    UsageCustomerResponse:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillableMetricUsageResponse"
     UserAccountOrganization:
       type: object
       properties:

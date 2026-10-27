@@ -7,7 +7,9 @@ import type { DevState } from "@/lib/dev-state";
 import { toServerParams, type MonthlyListQuery } from "@/lib/list-query";
 
 export type ListEventsResponse = {
-  month: string;
+  month: string | null;
+  from?: string;
+  to?: string;
   page: number;
   size: number;
   total: number;
@@ -22,11 +24,28 @@ export type EventResponse = {
   properties: Record<string, unknown>;
   occurred_at: string;
   received_at: string;
+  request_id?: string;
+  actor_type?: string;
+  actor_id?: string;
 };
 
 export function countPages(listEventsResponse: ListEventsResponse): number {
   if (listEventsResponse.total <= 0) return 1;
   return Math.ceil(listEventsResponse.total / Math.max(listEventsResponse.size, 1));
+}
+
+export function listEventTypes(query: MonthlyListQuery) {
+  const params = toServerParams(query, CAPABILITIES.listEvents);
+  delete params.page;
+  delete params.size;
+  delete params.sort;
+  delete params.order;
+  delete params.type;
+  return serverFetch<{ types: string[] }>(config.apiBaseUrl, "/v1/events/types", params);
+}
+
+export function lookupEvent(transactionId: string) {
+  return serverFetch<EventResponse>(config.apiBaseUrl, "/v1/events/lookup", { transaction_id: transactionId });
 }
 
 export function summarizeProperties(properties: Record<string, unknown>): string {
@@ -46,6 +65,9 @@ export function toRawJson(event: EventResponse): string {
       occurred_at: event.occurred_at,
       received_at: event.received_at,
       properties: event.properties,
+      request_id: event.request_id,
+      actor_type: event.actor_type,
+      actor_id: event.actor_id,
     },
     null,
     2,
