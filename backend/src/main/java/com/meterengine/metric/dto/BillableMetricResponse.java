@@ -21,7 +21,39 @@ public record BillableMetricResponse(
     @JsonProperty("unit_size") BigDecimal unitSize,
     @JsonProperty("rounding_mode") String roundingMode,
     @JsonProperty("rounding_precision") int roundingPrecision,
-    BigDecimal percentile) {
+    BigDecimal percentile,
+    long version) {
+
+  public BillableMetricResponse(
+      String code,
+      String name,
+      String eventType,
+      String aggregation,
+      String targetProperty,
+      List<String> dimensionProperties,
+      java.time.OffsetDateTime archivedAt,
+      String activeFrom,
+      String inactiveFrom,
+      BigDecimal unitSize,
+      String roundingMode,
+      int roundingPrecision,
+      BigDecimal percentile) {
+    this(
+        code,
+        name,
+        eventType,
+        aggregation,
+        targetProperty,
+        dimensionProperties,
+        archivedAt,
+        activeFrom,
+        inactiveFrom,
+        unitSize,
+        roundingMode,
+        roundingPrecision,
+        percentile,
+        0);
+  }
 
   public static BillableMetricResponse from(BillableMetric billableMetric) {
     return new BillableMetricResponse(
@@ -37,6 +69,7 @@ public record BillableMetricResponse(
         billableMetric.getUnitSize(),
         billableMetric.getRoundingMode(),
         billableMetric.getRoundingPrecision(),
-        billableMetric.getPercentile());
+        billableMetric.getPercentile(),
+        billableMetric.getVersion());
   }
 }

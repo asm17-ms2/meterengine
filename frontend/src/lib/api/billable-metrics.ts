@@ -1,4 +1,5 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
@@ -9,6 +10,7 @@ import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/lis
 
 export type BillableMetricResponse = MetricCalculation & {
   code: string;
+  version: number;
   name: string;
   event_type: string;
   target_property: string | null;
@@ -19,12 +21,13 @@ export type BillableMetricResponse = MetricCalculation & {
 };
 
 export type ListBillableMetricsResponse = PaginationFields & {
+  summary?: Record<string, unknown>;
   billable_metrics: BillableMetricResponse[];
 };
 
 export type CreateBillableMetricRequest = Omit<
   BillableMetricResponse,
-  "dimension_properties"
+  "dimension_properties" | "version" | "archived_at" | "active_from" | "inactive_from"
 > & {
   dimension_properties?: string[];
 };
@@ -33,9 +36,8 @@ export type UpdateBillableMetricRequest = Omit<CreateBillableMetricRequest, "cod
 
 export async function listBillableMetrics(
   query: ListQuery,
-  devState: DevState, _cacheTag?: string,
+  devState: DevState,
 ): Promise<Result<ListBillableMetricsResponse>> {
-  void _cacheTag;
   if (devState === "empty") {
     return { ok: true, data: { billable_metrics: [] } };
   }
@@ -51,31 +53,32 @@ export async function listBillableMetrics(
     };
   }
 
-  return serverFetch<ListBillableMetricsResponse>(
-    config.apiBaseUrl,
-    "/v1/billable-metrics",
-    toServerParams(query, CAPABILITIES.listBillableMetrics),
+  const result = await serverFetch<SearchPage<BillableMetricResponse>>(
+    config.apiBaseUrl, "/v1/billable-metrics/search", toServerParams(query, CAPABILITIES.listBillableMetrics),
   );
+  return result.ok ? { ok: true, data: { ...result.data, billable_metrics: result.data.items, page: result.data.page - 1 } } : result;
 }
 
 export async function createBillableMetric(
   request: CreateBillableMetricRequest,
+  idempotencyKey?: string,
 ): Promise<Result<BillableMetricResponse>> {
   return serverSend<BillableMetricResponse>(
     config.apiBaseUrl,
     "/v1/billable-metrics",
-    { method: "POST", body: request },
+    { method: "POST", body: request, idempotencyKey },
   );
 }
 
 export async function updateBillableMetric(
   code: string,
   request: UpdateBillableMetricRequest,
+  version?: number,
 ): Promise<Result<BillableMetricResponse>> {
   return serverSend<BillableMetricResponse>(
     config.apiBaseUrl,
     `/v1/billable-metrics/${encodeURIComponent(code)}`,
-    { method: "PUT", body: request },
+    { method: "PATCH", body: request, ifMatch: version === undefined ? undefined : `"${version}"` },
   );
 }
 
@@ -86,5 +89,3 @@ export async function deleteBillableMetric(code: string): Promise<Result<void>> 
     { method: "DELETE" },
   );
 }
-
-export const BILLABLE_METRICS_CACHE_TAG = "billable-metrics";

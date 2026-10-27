@@ -44,10 +44,7 @@ public class CustomerRegistrationService {
     Customer customer =
         created
             ? customerRepository.findById(id).orElseThrow()
-            : customerRepository
-                .findByOrganizationIdAndExternalIdOrderByNameAscIdAsc(
-                    organizationId, request.externalId())
-                .getFirst();
+            : externalCustomers(organizationId, request.externalId()).getFirst();
     if (customer.getArchivedAt() != null)
       throw new com.meterengine.global.error.ConflictException(
           com.meterengine.global.error.ErrorCode.CUSTOMER_ARCHIVED);
@@ -74,10 +71,15 @@ public class CustomerRegistrationService {
     var filter = com.meterengine.global.validation.ArchiveStatus.parse(status);
     return externalId == null
         ? customerService.list(organizationId, status)
-        : customerRepository
-            .findByOrganizationIdAndExternalIdOrderByNameAscIdAsc(organizationId, externalId)
-            .stream()
+        : externalCustomers(organizationId, externalId).stream()
             .filter(customer -> filter.includes(customer.getArchivedAt()))
             .toList();
+  }
+
+  private List<Customer> externalCustomers(UUID organizationId, String externalId) {
+    return (UUID) null == null
+        ? customerRepository.findByOrganizationIdAndExternalIdOrderByNameAscIdAsc(
+            organizationId, externalId)
+        : customerRepository.listExternalScoped(organizationId, (UUID) null, externalId);
   }
 }

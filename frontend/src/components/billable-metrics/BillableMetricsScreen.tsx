@@ -1,5 +1,8 @@
 "use client";
 
+import { ResourceSearchControls } from "@/components/screen/ResourceSearchControls";
+import { CsvDownload } from "@/components/screen/CsvDownload";
+
 import { useTenantScope } from "@/components/auth/TenantAccess";
 
 import { Button } from "antd";
@@ -10,13 +13,10 @@ import { BillableMetricDeleteDialog } from "@/components/billable-metrics/Billab
 import { BillableMetricFormDialog } from "@/components/billable-metrics/BillableMetricFormDialog";
 import { BillableMetricsTable } from "@/components/billable-metrics/BillableMetricsTable";
 import { EmptyState } from "@/components/screen/EmptyState";
-import { FilterBar } from "@/components/screen/FilterBar";
-import { ListControls } from "@/components/screen/ListControls";
 import { ListPagination } from "@/components/screen/ListPagination";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { ScreenNote } from "@/components/screen/ScreenNote";
-import { SearchInput } from "@/components/screen/SearchInput";
 import { useSearchText } from "@/components/screen/use-search-text";
 import type { ClientSortSelection } from "@/components/table/table-sort";
 import type { ListCapabilities } from "@/lib/api/capabilities";
@@ -67,24 +67,12 @@ export function BillableMetricsScreen({
           </Button> : undefined
         }
       >
-        총 <b>{visibleRows.length}</b>개
+        조건 전체 <b>{total ?? visibleRows.length}</b>개
       </ScreenHeader>
 
       <ScreenCard>
-        <FilterBar>
-          <ListControls
-            query={query}
-            capabilities={capabilities}
-            search={
-              <SearchInput
-                label="미터 이름 검색"
-                value={searchText}
-                onChange={search.setText}
-                onBlur={search.flush}
-              />
-            }
-          />
-        </FilterBar>
+        <ResourceSearchControls query={query} capabilities={capabilities} resource="billable-metrics" />
+        <CsvDownload resource="billable-metrics" />
 
         {hasNoBillableMetrics ? (
           <EmptyState

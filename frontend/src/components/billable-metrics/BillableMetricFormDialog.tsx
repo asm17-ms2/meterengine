@@ -32,6 +32,7 @@ import { alertIcon } from "@/components/screen/alert-icon";
 import { EnterSubmitButton } from "@/components/screen/EnterSubmitButton";
 import { clearFieldErrors } from "@/components/screen/form-errors";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { useMutationScope } from "@/components/auth/use-mutation-scope";
 import {
   METRIC_AGGREGATIONS,
   METRIC_ROUNDING_OPTIONS,
@@ -95,6 +96,8 @@ export function BillableMetricFormDialog({
   onClose: () => void;
 }) {
   const isEdit = billableMetric !== null;
+  const bindScope = useMutationScope();
+  const requestIdentity = useRef<{ payload: string; key: string } | null>(null);
   const [state, formAction, isPending] = useActionState(
     isEdit ? updateBillableMetricAction : createBillableMetricAction,
     BILLABLE_METRIC_FORM_IDLE,
@@ -135,7 +138,12 @@ export function BillableMetricFormDialog({
 
   const submit = (values: BillableMetricFormValues) => {
     clearFieldErrors(form);
-    startTransition(() => formAction(toFormData(values, billableMetric?.code)));
+    const data = bindScope(toFormData(values, billableMetric?.code));
+    if (isEdit) data.set("version", String(billableMetric?.version ?? ""));
+    const payload = JSON.stringify([...data.entries()]);
+    if (!requestIdentity.current || requestIdentity.current.payload !== payload) requestIdentity.current = { payload, key: crypto.randomUUID() };
+    data.set("request_id", requestIdentity.current.key);
+    startTransition(() => formAction(data));
   };
 
   const submitForm = () => form.submit();

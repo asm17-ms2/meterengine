@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireTenantSession } from "@/lib/auth/session";
+import { hasScope } from "@/lib/auth/permissions";
 
 import type { PriceRateDeleteState, PriceRateFormState } from "@/app/(console)/billable-metric-prices/state";
 import { createPriceRate, deletePriceRate, type DimensionValues } from "@/lib/api/billable-metric-prices";
@@ -24,6 +26,8 @@ export async function createPriceRateAction(
   _prev: PriceRateFormState,
   formData: FormData,
 ): Promise<PriceRateFormState> {
+  const session = await requireTenantSession();
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const code = readText(formData, "code");
   const dimensionValues = readDimensionValues(formData);
   const unitPriceText = readText(formData, "unit_price");
@@ -47,6 +51,8 @@ export async function deletePriceRateAction(
   _prev: PriceRateDeleteState,
   formData: FormData,
 ): Promise<PriceRateDeleteState> {
+  const session = await requireTenantSession();
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const code = readText(formData, "code");
   const dimensionValues = readText(formData, "dimension_values");
   if (code === "" || dimensionValues === "") {

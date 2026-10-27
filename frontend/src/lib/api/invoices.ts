@@ -1,12 +1,14 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
+import type { InvoicePaymentResponse } from "@/lib/api/workspace";
 
 import type { DimensionValues } from "@/lib/api/billable-metric-prices";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import { ALL_MONTHS } from "@/lib/month";
 import {
-  MAX_PAGE_SIZE,
   toServerParams,
   type ListQuery,
   type PaginationFields,
@@ -14,6 +16,8 @@ import {
 
 export type ListInvoicesResponse = PaginationFields & {
   invoices: InvoiceResponse[];
+  payments?: Record<string, InvoicePaymentResponse>;
+  summary?: { mode: string; invoice_count: number; supply_amount: number; tax_amount: number; total_amount: number; canceled_amount: number; has_pending: boolean; outstanding_amount: number | null; status_counts: Record<string, number> };
 };
 
 export type InvoiceResponse = {
@@ -45,6 +49,10 @@ export type InvoiceLineResponse = {
 export type FinalizeInvoicesResponse = {
   month: string;
   finalized_count: number;
+  invoices: InvoiceResponse[];
+  supply_amount: number;
+  tax_amount: number;
+  total_amount: number;
 };
 
 export async function finalizeInvoices(month: string): Promise<Result<FinalizeInvoicesResponse>> {
@@ -71,30 +79,20 @@ export async function listInvoices(
       },
     };
   }
-  return serverFetch<ListInvoicesResponse>(
-    config.apiBaseUrl,
-    "/v1/invoices",
-    toServerParams(query, CAPABILITIES.listInvoices),
+  const result = await serverFetch<SearchPage<{ invoice: InvoiceResponse; payment: InvoicePaymentResponse }, NonNullable<ListInvoicesResponse["summary"]>>>(
+    config.apiBaseUrl, "/v1/invoices/search", toServerParams(query, CAPABILITIES.listInvoices),
   );
+  return result.ok ? { ok: true, data: { ...result.data, page: result.data.page - 1, invoices: result.data.items.map(item => item.invoice), payments: Object.fromEntries(result.data.items.map(item => [item.invoice.id, item.payment])) } } : result;
 }
 
 export async function listAllInvoices(
   query: ListQuery,
   devState: DevState,
 ): Promise<Result<ListInvoicesResponse>> {
-  if (!CAPABILITIES.listInvoices.page) {
-    return listInvoices(query, devState);
-  }
-  const invoices: InvoiceResponse[] = [];
-  for (let page = 0; ; page += 1) {
-    const result = await listInvoices({ ...query, page, size: MAX_PAGE_SIZE }, devState);
-    if (!result.ok) {
-      return result;
-    }
-    invoices.push(...result.data.invoices);
-    const { total } = result.data;
-    if (total === undefined || invoices.length >= total || result.data.invoices.length === 0) {
-      return { ok: true, data: { invoices, total: invoices.length } };
-    }
-  }
+  if (devState === "empty" || devState === "error") return listInvoices(query, devState);
+  const params: Record<string, string> = {};
+  if (query.month && query.month !== ALL_MONTHS) params.month = query.month;
+  if (query.customerId) params.customer_id = query.customerId;
+  const result = await serverFetch<ListInvoicesResponse>(config.apiBaseUrl, "/v1/invoices", params);
+  return result.ok ? { ok: true, data: { ...result.data, total: result.data.invoices.length } } : result;
 }

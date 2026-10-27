@@ -43,6 +43,8 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "createCustomer": path = "/v1/customers"; body = { name: text(data, "name"), billing_email: optional(data, "billing_email"), external_id: optional(data, "external_id") }; break;
+      case "updateCustomer": path = `/v1/customers/${identifier(data)}`; method = "PATCH"; body = { name: text(data, "name"), billing_email: optional(data, "billing_email") ?? null }; break;
       case "archivePaymentMethod": path = `/v1/customers/${identifier(data)}/payment-method`; method = "DELETE"; break;
       case "archiveTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "DELETE"; break;
       case "restoreCustomer": path = `/v1/customers/${identifier(data)}/restorations`; break;
@@ -87,12 +89,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   } catch {
     return { message: "입력 형식을 확인하세요. 금액은 0 이상의 정수, 조합과 구간은 올바른 JSON이어야 합니다." };
   }
-  if (false && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
+  if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {
     method, body,
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
-    ifMatch: false ? `"${text(data, "version")}"` : undefined,
+    ifMatch: operation === "updateCustomer" ? `"${text(data, "version")}"` : undefined,
     idempotencyKey: ["createPaymentCancellation", "createCustomer"].includes(operation) ? text(data, "request_id") : undefined,
     isEmptyResponse: operation === "retryWebhookDelivery",
   });

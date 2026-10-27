@@ -3,6 +3,7 @@ package com.meterengine.customer.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Version;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
@@ -21,6 +22,17 @@ public class Customer {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
+  @Version
+  @Column(nullable = false)
+  private long version;
+
+  public long getVersion() {
+    return version;
+  }
 
   @Column(nullable = false)
   private String name;
@@ -53,8 +65,14 @@ public class Customer {
   protected Customer() {}
 
   public Customer(UUID id, UUID organizationId, String name, String billingEmail) {
+    this(id, organizationId, name, billingEmail, null);
+  }
+
+  public Customer(
+      UUID id, UUID organizationId, String name, String billingEmail, UUID environmentId) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = environmentId;
     this.name = name;
     this.billingEmail = billingEmail;
   }
@@ -70,6 +88,10 @@ public class Customer {
 
   public UUID getOrganizationId() {
     return organizationId;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public String getName() {

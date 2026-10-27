@@ -1,6 +1,9 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { requireTenantSession } from "@/lib/auth/session";
+import { mutationScopeError } from "@/lib/auth/mutation-scope";
+import { hasScope } from "@/lib/auth/permissions";
 
 import type {
   CustomerDeleteState,
@@ -8,7 +11,6 @@ import type {
 } from "@/app/(console)/customers/state";
 import { toDisplayMessage, type ApiError } from "@/lib/api/client";
 import {
-  CUSTOMERS_CACHE_TAG,
   createCustomer,
   deleteCustomer,
   updateCustomer,
@@ -71,16 +73,19 @@ export async function createCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
 ): Promise<CustomerFormState> {
+  const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
+  if (!hasScope(session.scopes, "ingest")) return { status: "failed", message: "고객 등록에 필요한 수집 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const name = readName(formData);
   const billingEmail = readBillingEmail(formData);
   const invalidState = validateForm(name, billingEmail);
   if (invalidState) return invalidState;
 
-  const result = await createCustomer(name, billingEmail);
+  const result = await createCustomer(name, billingEmail, String(formData.get("request_id") ?? ""));
   if (!result.ok) return toFailedState(result.error);
 
   revalidatePath("/customers");
-  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -88,6 +93,10 @@ export async function updateCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
 ): Promise<CustomerFormState> {
+  const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const id = formData.get("id");
   if (typeof id !== "string" || id === "") {
     return { status: "failed", message: "고객을 특정하지 못했습니다." };
@@ -98,11 +107,12 @@ export async function updateCustomerAction(
   const invalidState = validateForm(name, billingEmail);
   if (invalidState) return invalidState;
 
-  const result = await updateCustomer(id, name, billingEmail);
+  const version = formData.get("version");
+  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "최신 고객 정보를 다시 조회한 뒤 수정하세요." };
+  const result = await updateCustomer(id, name, billingEmail, Number(version));
   if (!result.ok) return toFailedState(result.error);
 
   revalidatePath("/customers");
-  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }
 
@@ -110,6 +120,10 @@ export async function deleteCustomerAction(
   _prev: CustomerDeleteState,
   formData: FormData,
 ): Promise<CustomerDeleteState> {
+  const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const id = formData.get("id");
   const name = formData.get("name");
   const customerName = typeof name === "string" ? name : "";
@@ -124,13 +138,11 @@ export async function deleteCustomerAction(
     }
     if (result.error.code === "customer_not_found") {
       revalidatePath("/customers");
-      updateTag(CUSTOMERS_CACHE_TAG);
       return { status: "gone", name: customerName };
     }
     return { status: "failed", message: toDisplayMessage(result.error) };
   }
 
   revalidatePath("/customers");
-  updateTag(CUSTOMERS_CACHE_TAG);
   return { status: "done" };
 }

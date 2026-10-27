@@ -13,6 +13,8 @@ import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.IngestAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
+import com.meterengine.global.validation.VersionPrecondition;
+import com.meterengine.idempotency.service.IdempotencyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,10 +28,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -41,11 +45,15 @@ public class CustomerController {
 
   private final CustomerService customerService;
   private final CustomerRegistrationService customerRegistrationService;
+  private final IdempotencyService idempotencyService;
 
   CustomerController(
-      CustomerService customerService, CustomerRegistrationService customerRegistrationService) {
+      CustomerService customerService,
+      CustomerRegistrationService customerRegistrationService,
+      IdempotencyService idempotencyService) {
     this.customerService = customerService;
     this.customerRegistrationService = customerRegistrationService;
+    this.idempotencyService = idempotencyService;
   }
 
   @GetMapping
@@ -77,7 +85,7 @@ public class CustomerController {
       description =
           """
           고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
-          external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다.
+          external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다. Idempotency-Key 헤더를 사용하면 같은 조직/환경/작업의 같은 요청을 재전송해도 최초 생성 응답을 돌려준다. 같은 키와 다른 본문은 409다.
           billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
           """)
   @ApiResponses({
@@ -96,18 +104,30 @@ public class CustomerController {
   })
   public ResponseEntity<CustomerResponse> createCustomer(
       @CurrentOrganizationId UUID organizationId,
-      @Valid @RequestBody CreateCustomerRequest request) {
-    CustomerRegistration registration = customerRegistrationService.create(organizationId, request);
-    return ResponseEntity.status(registration.created() ? HttpStatus.CREATED : HttpStatus.OK)
-        .body(CustomerResponse.from(registration.customer()));
+      @Valid @RequestBody CreateCustomerRequest request,
+      @RequestHeader(name = "Idempotency-Key", required = false) @StorableText
+          String idempotencyKey) {
+    return idempotencyService.execute(
+        organizationId,
+        "customer.create",
+        idempotencyKey,
+        request,
+        CustomerResponse.class,
+        () -> {
+          CustomerRegistration registration =
+              customerRegistrationService.create(organizationId, request);
+          return ResponseEntity.status(registration.created() ? HttpStatus.CREATED : HttpStatus.OK)
+              .body(CustomerResponse.from(registration.customer()));
+        });
   }
 
   @GetMapping("/{id}")
   @ReadAccess
   @Operation(summary = "고객 조회")
-  public CustomerResponse getCustomer(
+  public ResponseEntity<CustomerResponse> getCustomer(
       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
-    return CustomerResponse.from(customerService.get(organizationId, id));
+    CustomerResponse customer = CustomerResponse.from(customerService.get(organizationId, id));
+    return ResponseEntity.ok().eTag(Long.toString(customer.version())).body(customer);
   }
 
   @PutMapping("/{id}")
@@ -140,9 +160,35 @@ public class CustomerController {
   public CustomerResponse updateCustomer(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "고칠 고객의 ID.") @PathVariable UUID id,
-      @Valid @RequestBody UpdateCustomerRequest request) {
+      @Valid @RequestBody UpdateCustomerRequest request,
+      @RequestHeader(name = "If-Match", required = false) @StorableText String ifMatch) {
     return CustomerResponse.from(
-        customerService.update(organizationId, id, request.name(), request.billingEmail()));
+        customerService.update(
+            organizationId,
+            id,
+            request.name(),
+            request.billingEmail(),
+            VersionPrecondition.parse(ifMatch)));
+  }
+
+  @PatchMapping("/{id}")
+  @AdminAccess
+  @Operation(
+      summary = "버전을 확인한 고객 수정",
+      description =
+          "조회한 version을 If-Match 헤더에 큰따옴표로 감싸 보낸다. 바뀐 버전이면 409이며 원래 데이터는 유지한다. 이름/이메일을 모두 보내는 조건부 수정이다.")
+  public CustomerResponse updateConditionalCustomer(
+      @CurrentOrganizationId UUID organizationId,
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateCustomerRequest request,
+      @RequestHeader("If-Match") @StorableText String ifMatch) {
+    return CustomerResponse.from(
+        customerService.update(
+            organizationId,
+            id,
+            request.name(),
+            request.billingEmail(),
+            VersionPrecondition.parse(ifMatch)));
   }
 
   @PostMapping("/{id}/restorations")

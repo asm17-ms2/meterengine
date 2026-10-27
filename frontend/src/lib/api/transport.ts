@@ -82,16 +82,17 @@ async function readJson<T>(response: Response, isEmptyResponse: boolean): Promis
 
 export async function requestApi<T>(
   path: string,
-  options: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; token?: string; timeoutMs?: number; idempotencyKey?: string; isEmptyResponse?: boolean; clientIp?: string; ifMatch?: string; organizationId?: string } = {},
+  options: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; token?: string; timeoutMs?: number; idempotencyKey?: string; isEmptyResponse?: boolean; clientIp?: string; environment?: "test" | "live"; ifMatch?: string; responseType?: "text"; organizationId?: string } = {},
 ): Promise<Result<T>> {
   let response: Response;
   try {
     response = await fetch(new URL(path, config.apiBaseUrl), {
       method: options.method ?? "GET",
       headers: {
-        Accept: "application/json",
+        Accept: options.responseType === "text" ? "text/csv" : "application/json",
         ...(options.organizationId ? { "X-MeterEngine-Organization-Id": options.organizationId } : {}),
-            ...(options.ifMatch ? { "If-Match": options.ifMatch } : {}),
+        ...(options.environment ? { "X-MeterEngine-Environment": options.environment } : {}),
+        ...(options.ifMatch ? { "If-Match": options.ifMatch } : {}),
         ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
         ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -105,6 +106,11 @@ export async function requestApi<T>(
     return { ok: false, error: { status: 0, code: "network_error", message: "서버에 연결하지 못했습니다. 잠시 후 다시 시도하세요." } };
   }
   if (!response.ok) return { ok: false, error: await toApiError(response) };
+  if (options.responseType === "text") {
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const match = /filename="([^"\r\n]+)"/.exec(disposition);
+    return { ok: true, data: { body: await response.text(), contentType: response.headers.get("Content-Type") ?? "text/csv; charset=utf-8", filename: match?.[1] } as T };
+  }
   if (response.status === 204) return { ok: true, data: undefined as T };
   return readJson<T>(response, options.isEmptyResponse ?? false);
 }

@@ -7,6 +7,7 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.validation.ArchiveStatus;
+import com.meterengine.global.validation.VersionPrecondition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +35,20 @@ public class CustomerService {
   @Transactional(readOnly = true)
   public List<Customer> list(UUID organizationId, String status) {
     ArchiveStatus filter = ArchiveStatus.parse(status);
-    return customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId).stream()
+    var customers =
+        (UUID) null == null
+            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+            : customerRepository.listScoped(organizationId, (UUID) null);
+    return customers.stream()
         .filter(customer -> filter.includes(customer.getArchivedAt()))
         .toList();
   }
 
   @Transactional(readOnly = true)
   public Customer get(UUID organizationId, UUID id) {
-    return customerRepository
-        .findByOrganizationIdAndId(organizationId, id)
+    return ((UUID) null == null
+            ? customerRepository.findByOrganizationIdAndId(organizationId, id)
+            : customerRepository.findScoped(organizationId, (UUID) null, id))
         .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
   }
 
@@ -50,7 +56,7 @@ public class CustomerService {
   public Customer create(UUID organizationId, String name, String billingEmail) {
     Customer customer =
         customerRepository.saveAndFlush(
-            new Customer(UUID.randomUUID(), organizationId, name, billingEmail));
+            new Customer(UUID.randomUUID(), organizationId, name, billingEmail, (UUID) null));
     var fields = new ArrayList<>(List.of("name"));
     if (billingEmail != null) fields.add("billing_email");
     auditLogService.record(
@@ -64,10 +70,18 @@ public class CustomerService {
 
   @Transactional
   public Customer update(UUID organizationId, UUID customerId, String name, String billingEmail) {
-    Customer customer =
-        customerRepository
-            .lock(organizationId, customerId)
-            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+    return update(organizationId, customerId, name, billingEmail, null);
+  }
+
+  @Transactional
+  public Customer update(
+      UUID organizationId,
+      UUID customerId,
+      String name,
+      String billingEmail,
+      Long expectedVersion) {
+    Customer customer = lock(organizationId, customerId);
+    VersionPrecondition.requireMatch(expectedVersion, customer.getVersion());
     if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     var fields = new ArrayList<String>();
     if (!Objects.equals(customer.getName(), name)) fields.add("name");
@@ -80,15 +94,13 @@ public class CustomerService {
           "customer",
           customerId.toString(),
           Map.of("changed_fields", fields));
+    customerRepository.flush();
     return customer;
   }
 
   @Transactional
   public void delete(UUID organizationId, UUID customerId) {
-    Customer customer =
-        customerRepository
-            .lock(organizationId, customerId)
-            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+    Customer customer = lock(organizationId, customerId);
 
     if (customer.getArchivedAt() != null) return;
     customer.archive();
@@ -98,15 +110,19 @@ public class CustomerService {
 
   @Transactional
   public Customer restore(UUID organizationId, UUID customerId) {
-    Customer customer =
-        customerRepository
-            .lock(organizationId, customerId)
-            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+    Customer customer = lock(organizationId, customerId);
     if (customer.getArchivedAt() != null) {
       customer.restore();
       auditLogService.record(
           organizationId, "customer_restored", "customer", customerId.toString(), Map.of());
     }
     return customer;
+  }
+
+  private Customer lock(UUID organizationId, UUID customerId) {
+    return ((UUID) null == null
+            ? customerRepository.lock(organizationId, customerId)
+            : customerRepository.lockScoped(organizationId, (UUID) null, customerId))
+        .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
   }
 }

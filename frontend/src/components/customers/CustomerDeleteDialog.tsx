@@ -9,6 +9,7 @@ import { CUSTOMER_DELETE_IDLE } from "@/app/(console)/customers/state";
 import type { CustomerRowView } from "@/components/customers/CustomersTable";
 import { alertIcon } from "@/components/screen/alert-icon";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { useMutationScope } from "@/components/auth/use-mutation-scope";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
 function toDeleteFormData(id: string, name: string): FormData {
@@ -25,6 +26,7 @@ export function CustomerDeleteDialog({
   customer: CustomerRowView;
   onClose: () => void;
 }) {
+  const bindScope = useMutationScope();
   const [state, formAction, isPending] = useActionState(
     deleteCustomerAction,
     CUSTOMER_DELETE_IDLE,
@@ -67,7 +69,7 @@ export function CustomerDeleteDialog({
   }
 
   const confirmDelete = () =>
-    startTransition(() => formAction(toDeleteFormData(customer.id, customer.name)));
+    startTransition(() => formAction(bindScope(toDeleteFormData(customer.id, customer.name))));
 
   return (
     <Modal

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireTenantSession } from "@/lib/auth/session";
 import { hasScope } from "@/lib/auth/permissions";
+import { mutationScopeError } from "@/lib/auth/mutation-scope";
 
 import {
   type BillableMetricDeleteState,
@@ -140,6 +141,8 @@ export async function createBillableMetricAction(
   formData: FormData,
 ): Promise<BillableMetricFormState> {
   const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
   if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const { values, fieldErrors } = readRequiredFields(formData, CREATE_REQUIRED_FIELDS);
   const calculation = readCalculation(formData);
@@ -154,7 +157,7 @@ export async function createBillableMetricAction(
     event_type: values.event_type,
     ...calculation.values,
     dimension_properties: readDimensionProperties(formData),
-  });
+  }, String(formData.get("request_id") ?? ""));
   if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
@@ -166,6 +169,8 @@ export async function updateBillableMetricAction(
   formData: FormData,
 ): Promise<BillableMetricFormState> {
   const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
   if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const code = formData.get("code");
   if (typeof code !== "string" || code === "") {
@@ -179,12 +184,15 @@ export async function updateBillableMetricAction(
     return { status: "invalid", fieldErrors };
   }
 
+  const version = formData.get("version");
+  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "최신 미터를 다시 조회한 뒤 수정하세요." };
+
   const result = await updateBillableMetric(code, {
     name: values.name,
     event_type: values.event_type,
     ...calculation.values,
     dimension_properties: readDimensionProperties(formData),
-  });
+  }, Number(version));
   if (!result.ok) return toFailureState(result.error);
 
   revalidatePath("/billable-metrics");
@@ -196,6 +204,8 @@ export async function deleteBillableMetricAction(
   formData: FormData,
 ): Promise<BillableMetricDeleteState> {
   const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(formData, session.organization?.id);
+  if (scopeError) return { status: "failed", message: scopeError };
   if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   const code = formData.get("code");
   const name = formData.get("name");

@@ -30,6 +30,7 @@ export async function CustomersSection({
 
   const rows: CustomerRowView[] = result.data.customers.map((customer) => ({
     id: customer.id,
+    version: customer.version,
     name: customer.name,
     billingEmail: customer.billing_email,
     createdAt: formatKstDate(customer.created_at),

@@ -58,5 +58,5 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   const selected = await requestApi("/v1/sessions/current/organization", { method: "PUT", token: activeToken, body: { organization_id: accepted.data.organization_id } });
   if (!selected.ok) return { isAccepted: true, message: "초대 수락을 마쳤습니다. 도입사 선택 화면에서 참여한 도입사를 선택하세요." };
   revalidatePath("/", "layout");
-  redirect(workspaceHref("/customers", new URLSearchParams({ organization_id: accepted.data.organization_id })));
+  redirect(workspaceHref("/overview", new URLSearchParams({ organization_id: accepted.data.organization_id })));
 }

@@ -32,5 +32,5 @@ export async function switchOrganizationAction(_prev: ActionState, data: FormDat
     return { message: toDisplayMessage(result.error) };
   }
   revalidatePath("/", "layout");
-  redirect(result.data.organization?.status === "active" ? workspaceHref("/customers", new URLSearchParams({ organization_id: result.data.organization.id })) : "/organizations");
+  redirect(result.data.organization?.status === "active" ? workspaceHref("/overview", new URLSearchParams({ organization_id: result.data.organization.id })) : "/organizations");
 }

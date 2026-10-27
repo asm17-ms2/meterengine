@@ -1,16 +1,15 @@
 import { ExpandControls } from "@/components/table/ExpandControls";
-import { resolveIsFinalizedMonth, type DraftInvoiceResponse } from "@/lib/api/billing";
+import type { DraftInvoiceResponse } from "@/lib/api/billing";
 import type { Result } from "@/lib/api/client";
-import type { ListInvoicesResponse } from "@/lib/api/invoices";
 
 export async function BillingExpandControls({
   draftInvoice,
-  invoices,
+  isMonthFinalized,
 }: {
   draftInvoice: Promise<Result<DraftInvoiceResponse>>;
-  invoices: Promise<Result<ListInvoicesResponse>>;
+  isMonthFinalized: Promise<boolean>;
 }) {
-  const isFinalized = await resolveIsFinalizedMonth(draftInvoice, invoices);
-
-  return isFinalized ? null : <ExpandControls />;
+  const [draft, isFinalized] = await Promise.all([draftInvoice, isMonthFinalized]);
+  const hasVisibleRows = draft.ok && draft.data.customers.some(customer => customer.lines.length > 0 || customer.unpriced_usages.length > 0 || (customer.negative_usages?.length ?? 0) > 0);
+  return isFinalized || !hasVisibleRows ? null : <ExpandControls />;
 }

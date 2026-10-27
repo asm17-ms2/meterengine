@@ -10,7 +10,7 @@ import {
   type ListBillableMetricUsagesResponse,
 } from "@/lib/api/usage";
 import { formatDecimal } from "@/lib/format";
-import type { MonthlyListQuery } from "@/lib/list-query";
+import { buildListHref, type MonthlyListQuery } from "@/lib/list-query";
 import { toMeterItems } from "@/lib/meter-items";
 import { shiftMonth } from "@/lib/month";
 
@@ -35,12 +35,16 @@ export async function UsageSection({
     );
   }
 
-  const groups = toCustomerGroups(result.data).filter(group => !query.customerId || group.customerId === query.customerId);
+  const groups = toCustomerGroups(result.data);
+
+  if (result.data.billable_metric_usages.length === 0 && (result.data.total ?? 0) > 0 && query.page > 0) return <><EmptyState title="이 페이지에 사용량이 없습니다" body={`현재 조건에 맞는 고객은 ${result.data.total}곳입니다. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/usage", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={capabilities} total={result.data.total} /></>;
+
+  if (result.data.summary && result.data.summary.customer_count === 0) return <EmptyState title="조건에 맞는 고객이 없습니다" body="고객과 검색 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/usage", query, { page: 0, q: "", customerId: undefined, metricCode: undefined })} />;
 
   if (result.data.billable_metric_usages.length === 0) {
     return (
       <EmptyState
-        title="등록된 미터가 없습니다"
+        title={query.metricCode ? "조건에 맞는 미터가 없습니다" : "등록된 미터가 없습니다"}
         body={`이 도입사에 등록된 미터가 없어 ${month} 집계 라인이 만들어지지 않았습니다. 미터 설정을 확인하세요.`}
         resetHref={`/usage?month=${month}`}
       />

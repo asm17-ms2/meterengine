@@ -7,6 +7,7 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,6 +28,14 @@ public class BillableMetric implements Persistable<BillableMetricId> {
   private UUID organizationId;
 
   @Id private String code;
+
+  @Version
+  @Column(nullable = false)
+  private long version;
+
+  public long getVersion() {
+    return version;
+  }
 
   @Column(nullable = false)
   private String name;
