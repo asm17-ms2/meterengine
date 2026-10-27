@@ -1,0 +1,24 @@
+{
+  "task": "k4",
+  "base_heads": {
+    "feat/llm-service-demo": "8b0a9d282a845fd064c425e27c5259585bc7198d",
+    "feat/environment-isolation": "f040e9676d58dfa7b91b197f6332837767e32932",
+    "feat/rds-auto-stop": "854e293c2f1e1f5e071544c3605ac6b43c6fcdd1"
+  },
+  "env": {
+    "java": "OpenJDK 25.0.4.1 (apt openjdk-25-jdk-headless). 기본 21도 있음",
+    "docker": true,
+    "node": "24.22.1 (.node-version 24에 맞춰 설치)",
+    "pnpm": "11.18.0 (corepack)",
+    "terraform": "1.17.0",
+    "notes": "dockerd를 세션에서 직접 띄웠다. Maven Central이 429를 돌려줘 Gradle 의존성 받기를 재시도 중이다."
+  },
+  "results": [],
+  "new_findings": [],
+  "out_of_scope": [],
+  "not_done": [
+    "기존 지적 45건 검증 진행 중",
+    "추가 검토 #452, #453, #455 진행 중"
+  ],
+  "checks": []
+}
