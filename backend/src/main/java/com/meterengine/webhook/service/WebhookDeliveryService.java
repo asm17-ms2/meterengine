@@ -17,12 +17,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.LongSupplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WebhookDeliveryService {
+  private static final Logger logger = LoggerFactory.getLogger(WebhookDeliveryService.class);
   private static final long RUN_BUDGET_NANOS = Duration.ofSeconds(15).toNanos();
   private final WebhookDeliveryRepository webhookDeliveryRepository;
   private final WebhookEndpointService webhookEndpointService;
@@ -83,40 +86,73 @@ public class WebhookDeliveryService {
         break;
       }
       WebhookClaim claim = candidate.get();
-      WebhookOutcome outcome;
-      if (!claim.enabled() || claim.deleted()) {
-        outcome = new WebhookOutcome(null, "endpoint_disabled", 0);
-      } else {
-        String secret = encryptedStringConverter.convertToEntityAttribute(claim.secret());
-        String timestamp = Long.toString(Instant.now().getEpochSecond());
-        String signature =
-            webhookSignatureService.sign(
-                secret, claim.webhookEventId().toString(), timestamp, claim.payload());
-        outcome =
-            webhookClient.send(
-                claim.url(),
-                claim.webhookEventId().toString(),
-                timestamp,
-                signature,
-                claim.payload());
+      Tally tally;
+      try {
+        tally = attempt(claim);
+      } catch (RuntimeException exception) {
+        logger.warn(
+            "Webhook delivery {} of organization {} could not be attempted",
+            claim.id(),
+            claim.organizationId(),
+            exception);
+        tally = Tally.FAILED;
       }
-      if (!webhookDeliveryRepository.complete(claim, outcome)) {
-        skipped++;
-        continue;
-      }
-      boolean terminal =
-          claim.attemptCount() >= 6
-              || "blocked_address".equals(outcome.failureReason())
-              || "endpoint_disabled".equals(outcome.failureReason());
-      String result = outcome.isSuccessful() ? "done" : terminal ? "failed" : "retry";
-      meterRegistry.counter("meterengine.webhook.delivery", "result", result).increment();
-      if (outcome.isSuccessful()) {
-        processed++;
-      } else {
-        failed++;
+      switch (tally) {
+        case PROCESSED -> processed++;
+        case SKIPPED -> skipped++;
+        case FAILED -> failed++;
       }
     }
     return new ScheduledJobResult(processed, skipped, failed);
+  }
+
+  private Tally attempt(WebhookClaim claim) {
+    if (!claim.enabled() || claim.deleted()) {
+      return record(claim, new WebhookOutcome(null, "endpoint_disabled", 0), Tally.PROCESSED);
+    }
+    String timestamp = Long.toString(Instant.now().getEpochSecond());
+    String signature;
+    try {
+      signature =
+          webhookSignatureService.sign(
+              encryptedStringConverter.convertToEntityAttribute(claim.secret()),
+              claim.webhookEventId().toString(),
+              timestamp,
+              claim.payload());
+    } catch (RuntimeException exception) {
+      logger.warn(
+          "Webhook delivery {} of organization {} could not be signed",
+          claim.id(),
+          claim.organizationId(),
+          exception);
+      return record(claim, new WebhookOutcome(null, "secret_unavailable", 0), Tally.FAILED);
+    }
+    return record(
+        claim,
+        webhookClient.send(
+            claim.url(), claim.webhookEventId().toString(), timestamp, signature, claim.payload()),
+        Tally.PROCESSED);
+  }
+
+  private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {
+    Optional<String> status = webhookDeliveryRepository.complete(claim, outcome);
+    if (status.isEmpty()) {
+      return Tally.SKIPPED;
+    }
+    String reason = outcome.failureReason() == null ? "none" : outcome.failureReason();
+    String result = "pending".equals(status.get()) ? "retry" : status.get();
+    meterRegistry
+        .counter("meterengine.webhook.delivery", "result", result, "reason", reason)
+        .increment();
+    if ("failed".equals(result)) {
+      logger.warn(
+          "Webhook delivery {} of organization {} failed: {} (status {})",
+          claim.id(),
+          claim.organizationId(),
+          reason,
+          outcome.responseStatus());
+    }
+    return recorded;
   }
 
   @Transactional(readOnly = true)
@@ -138,5 +174,11 @@ public class WebhookDeliveryService {
     }
     auditLogService.record(
         organizationId, "webhook_delivery_retried", "webhook_delivery", id.toString(), Map.of());
+  }
+
+  private enum Tally {
+    PROCESSED,
+    SKIPPED,
+    FAILED
   }
 }

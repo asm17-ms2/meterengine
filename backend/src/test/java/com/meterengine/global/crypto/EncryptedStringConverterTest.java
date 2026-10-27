@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.validation.BindValidationException;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -144,8 +145,20 @@ class EncryptedStringConverterTest {
 
   @Test
   void 암호화_키_설정이_없으면_기동하지_않는다() {
-    new ApplicationContextRunner()
-        .withUserConfiguration(CryptoTestConfig.class)
+    contextRunner()
+        .run(
+            context ->
+                assertThat(context)
+                    .getFailure()
+                    .rootCause()
+                    .isInstanceOf(BindValidationException.class));
+  }
+
+  @Test
+  void JVM_속성에_키와_local_프로파일이_있어도_설정이_없으면_기동하지_않는다() {
+    contextRunner()
+        .withSystemProperties(
+            "crypto.encryption-key=" + randomKey(), "spring.profiles.active=local")
         .run(
             context ->
                 assertThat(context)
@@ -156,8 +169,7 @@ class EncryptedStringConverterTest {
 
   @Test
   void 프로파일_없이_개발용_고정_키를_설정하면_기동하지_않는다() {
-    new ApplicationContextRunner()
-        .withUserConfiguration(CryptoTestConfig.class)
+    contextRunner()
         .withPropertyValues("crypto.encryption-key=" + CryptoProperties.LOCAL_KEY)
         .run(
             context ->
@@ -169,10 +181,19 @@ class EncryptedStringConverterTest {
 
   @Test
   void 암호화_키_설정이_있으면_변환기가_만들어진다() {
-    new ApplicationContextRunner()
-        .withUserConfiguration(CryptoTestConfig.class)
+    contextRunner()
         .withPropertyValues("crypto.encryption-key=" + randomKey())
         .run(context -> assertThat(context).hasSingleBean(EncryptedStringConverter.class));
+  }
+
+  private static ApplicationContextRunner contextRunner() {
+    return new ApplicationContextRunner(
+            () -> {
+              AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+              context.setEnvironment(new MockEnvironment());
+              return context;
+            })
+        .withUserConfiguration(CryptoTestConfig.class);
   }
 
   private static EncryptedStringConverter converter(String key, String... activeProfiles) {
