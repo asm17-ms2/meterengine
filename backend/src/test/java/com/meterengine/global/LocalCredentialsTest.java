@@ -86,6 +86,21 @@ class LocalCredentialsTest {
     assertThat(membershipsOf(OPERATOR_EMAIL)).isZero();
   }
 
+  @Test
+  void 로컬_member는_두_도입사의_대표관리자이고_이미_있는_소속도_다시_실행하면_대표관리자가_된다() {
+    assertThat(memberRolesOf(MEMBER_EMAIL)).containsExactly("owner:admin", "owner:admin");
+
+    jdbcTemplate.update(
+        """
+        UPDATE organization_member SET role = 'admin', revoked_at = now()
+        WHERE user_account_id = (SELECT id FROM user_account WHERE email = ?)
+        """,
+        MEMBER_EMAIL);
+    jdbcTemplate.execute(readLocalCredentialsScript());
+
+    assertThat(memberRolesOf(MEMBER_EMAIL)).containsExactly("owner:admin", "owner:admin");
+  }
+
   private static void assertAdminKeyOfDemoOrganization(
       AuthenticatedPrincipal principal, String mode) {
     assertThat(principal.kind()).isEqualTo(PrincipalKind.API_KEY);
@@ -107,6 +122,18 @@ class LocalCredentialsTest {
         WHERE u.email = ?
         """,
         Long.class,
+        email);
+  }
+
+  private List<String> memberRolesOf(String email) {
+    return jdbcTemplate.queryForList(
+        """
+        SELECT m.role || ':' || array_to_string(m.scopes, ',') FROM organization_member m
+        JOIN user_account u ON u.id = m.user_account_id
+        WHERE u.email = ? AND m.revoked_at IS NULL
+        ORDER BY m.created_at
+        """,
+        String.class,
         email);
   }
 
