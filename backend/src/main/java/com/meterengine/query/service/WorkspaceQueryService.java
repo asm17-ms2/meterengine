@@ -2,6 +2,9 @@ package com.meterengine.query.service;
 
 import com.meterengine.customer.dto.CustomerResponse;
 import com.meterengine.customer.service.CustomerService;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.ForbiddenException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.InvoiceResponse;
@@ -297,8 +300,15 @@ public class WorkspaceQueryService {
       UUID organizationId, SearchParameters search) {
     if (search.status() != null && !PAYMENT_STATUSES.contains(search.status()))
       throw SearchParameters.invalid("status", "지원하지 않는 결제 상태입니다");
+    String environmentMode = BusinessEnvironmentContext.mode();
+    if (environmentMode != null && search.mode() != null && !environmentMode.equals(search.mode()))
+      throw new ForbiddenException(ErrorCode.ENVIRONMENT_MISMATCH);
     String mode =
-        search.mode() == null ? paymentSettingService.get(organizationId).mode() : search.mode();
+        environmentMode != null
+            ? environmentMode
+            : search.mode() == null
+                ? paymentSettingService.get(organizationId).mode()
+                : search.mode();
     List<InvoiceResponse> invoices = invoiceService.list(organizationId, null, null).invoices();
     Map<UUID, InvoicePaymentResponse> payments =
         invoicePaymentService.list(organizationId, null, null, mode).invoicePayments().stream()

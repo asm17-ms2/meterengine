@@ -2,6 +2,7 @@ package com.meterengine.pricing.controller;
 
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableText;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/price-plans")
 public class PricePlanController {
   private final PricePlanService pricePlanService;

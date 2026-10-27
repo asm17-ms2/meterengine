@@ -1,4 +1,5 @@
 import { ScopedLink } from "@/components/workspace/ScopedLink";
+import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError } from "@/components/workspace/WorkspaceView";
 import { type AuditLogsResponse, listOrganizationMembers } from "@/lib/api/management";
@@ -53,7 +54,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
   return <>
     <WorkspaceHeader title="감사 기록" kicker={isOperator ? "MeterEngine 플랫폼 운영" : "도입사 설정"} description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
     <section className="workspace-panel"><h2>기록 찾기</h2><form method="get" className="workspace-form">
-      <input type="hidden" name="organization_id" value={value(query, "organization_id")} />
+      <EnvironmentInput />
       <div className="settings-grid">
         <label className="workspace-field"><span>행동 또는 대상 검색</span><input name="q" defaultValue={value(query, "q")} placeholder="행동 코드, 대상 ID 또는 API 경로" maxLength={255} /></label>
         <div className="workspace-field"><label htmlFor="audit-actor">실행 주체</label><select id="audit-actor" name="actor_type" defaultValue={value(query, "actor_type")}><option value="">모든 주체</option>{Object.entries(ACTORS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>

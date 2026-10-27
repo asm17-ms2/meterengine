@@ -1,6 +1,7 @@
 package com.meterengine.organization.controller;
 
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.organization.dto.AcceptOrganizationInvitationRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/organization-invitations/{token}")
 public class OrganizationInvitationController {
   private final OrganizationPeopleService organizationPeopleService;

@@ -1,11 +1,13 @@
 package com.meterengine.payment.service;
 
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.error.ServiceUnavailableException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
@@ -81,7 +83,8 @@ public class TossPaymentsCredentialService {
 
   Optional<TossPaymentsCredential> find(UUID organizationId, String mode) {
     return tossPaymentsCredentialRepository.findById(
-        new TossPaymentsCredentialId(organizationId, mode));
+        new TossPaymentsCredentialId(
+            organizationId, mode, BusinessEnvironmentContext.environmentId()));
   }
 
   Optional<TossPaymentsCredential> historical(
@@ -97,6 +100,7 @@ public class TossPaymentsCredentialService {
 
   @Transactional
   public void delete(UUID organizationId, String mode) {
+    requireMode(mode);
     paymentArchiveRepository.lock(organizationId);
     TossPaymentsCredential credential =
         find(organizationId, mode)
@@ -113,6 +117,7 @@ public class TossPaymentsCredentialService {
 
   public TossPaymentsCredentialResponse update(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    requireMode(mode);
     checkPrefixes(mode, request);
     verify(request.secretKey());
     return transactionTemplate.execute(status -> save(organizationId, mode, request));
@@ -120,6 +125,7 @@ public class TossPaymentsCredentialService {
 
   private TossPaymentsCredentialResponse save(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    requireMode(mode);
     paymentArchiveRepository.lock(organizationId);
     OffsetDateTime verifiedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     TossPaymentsCredential credential =
@@ -146,6 +152,13 @@ public class TossPaymentsCredentialService {
         mode,
         Map.of("mode", mode));
     return TossPaymentsCredentialResponse.from(credential);
+  }
+
+  private static void requireMode(String mode) {
+    if (BusinessEnvironmentContext.mode() != null
+        && !BusinessEnvironmentContext.mode().equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
   }
 
   private static void checkPrefixes(String mode, UpdateTossPaymentsCredentialRequest request) {

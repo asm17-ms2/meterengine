@@ -1,5 +1,6 @@
 package com.meterengine.payment.entity;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -19,6 +20,9 @@ public class PaymentCancellation implements Persistable<UUID> {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id")
+  private UUID environmentId;
 
   @Column(name = "payment_attempt_id", nullable = false)
   private UUID paymentAttemptId;
@@ -66,6 +70,7 @@ public class PaymentCancellation implements Persistable<UUID> {
       String idempotencyFingerprint) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.paymentAttemptId = paymentAttemptId;
     this.mode = mode;
     this.amount = amount;
@@ -112,6 +117,10 @@ public class PaymentCancellation implements Persistable<UUID> {
   @Override
   public boolean isNew() {
     return true;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public UUID getOrganizationId() {

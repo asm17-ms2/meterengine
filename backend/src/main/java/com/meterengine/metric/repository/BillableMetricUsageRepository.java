@@ -41,9 +41,32 @@ public class BillableMetricUsageRepository {
       List<String> dimensionProperties,
       OffsetDateTime start,
       OffsetDateTime end) {
+    return sumQuantityByCustomerIdAndDimensionValues(
+        organizationId, null, eventType, targetProperty, dimensionProperties, start, end);
+  }
+
+  public Map<UUID, List<DimensionUsage>> sumQuantityByCustomerIdAndDimensionValues(
+      UUID organizationId,
+      UUID environmentId,
+      String eventType,
+      String targetProperty,
+      List<String> dimensionProperties,
+      OffsetDateTime start,
+      OffsetDateTime end) {
     return aggregate(
             new BillableMetric(
-                organizationId, "", "", eventType, "sum", targetProperty, dimensionProperties),
+                organizationId,
+                "",
+                "",
+                eventType,
+                "sum",
+                targetProperty,
+                dimensionProperties,
+                BigDecimal.ONE,
+                "none",
+                0,
+                null,
+                environmentId),
             start,
             end)
         .dimensionUsagesByCustomerId();
@@ -72,7 +95,8 @@ public class BillableMetricUsageRepository {
           case "first" ->
               "(array_agg(numeric_value ORDER BY occurred_at, transaction_id COLLATE \"C\"))[1]";
           case "last" ->
-              "(array_agg(numeric_value ORDER BY occurred_at DESC, transaction_id COLLATE \"C\" DESC))[1]";
+              "(array_agg(numeric_value ORDER BY occurred_at DESC, transaction_id COLLATE \"C\""
+                  + " DESC))[1]";
           case "median", "percentile" -> "array_agg(numeric_value ORDER BY numeric_value)";
           default -> throw new IllegalStateException("Unsupported metric aggregation");
         };
@@ -83,7 +107,7 @@ public class BillableMetricUsageRepository {
                  properties -> ?::text AS value,
                  COALESCE((SELECT jsonb_object_agg(dimension_property, properties -> dimension_property)
                            FROM unnest(?::text[]) AS dimension_property), '{}'::jsonb) AS dimension_values
-          FROM event WHERE organization_id = ? AND environment_id IS NULL AND type = ? AND occurred_at >= ? AND occurred_at < ?
+          FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND type = ? AND occurred_at >= ? AND occurred_at < ?
         ), eligible AS (
           SELECT *, CASE WHEN jsonb_typeof(value) = 'number' THEN value::text::numeric END AS numeric_value
           FROM candidates WHERE %s
@@ -104,19 +128,21 @@ public class BillableMetricUsageRepository {
                     : "",
                 percentile
                     ? """
-                SELECT computed.*, quantity AS numerator, 1::numeric AS denominator FROM (
-                SELECT customer_id, dimension_values, is_total,
-                  ordered_values[floor(position)::int + 1]
-                    + (ordered_values[ceil(position)::int + 1] - ordered_values[floor(position)::int + 1])
-                      * (position - floor(position)) AS quantity
-                FROM groups CROSS JOIN LATERAL (
-                  SELECT (cardinality(ordered_values) - 1) * ?::numeric * 0.01 AS position
-                ) percentile_position
-                ) computed
-                """
+                    SELECT computed.*, quantity AS numerator, 1::numeric AS denominator FROM (
+                    SELECT customer_id, dimension_values, is_total,
+                      ordered_values[floor(position)::int + 1]
+                        + (ordered_values[ceil(position)::int + 1] - ordered_values[floor(position)::int + 1])
+                          * (position - floor(position)) AS quantity
+                    FROM groups CROSS JOIN LATERAL (
+                      SELECT (cardinality(ordered_values) - 1) * ?::numeric * 0.01 AS position
+                    ) percentile_position
+                    ) computed
+                    """
                     : average
-                        ? "SELECT customer_id, dimension_values, is_total, quantity, numerator, denominator FROM groups"
-                        : "SELECT customer_id, dimension_values, is_total, quantity, quantity AS numerator, 1::numeric AS denominator FROM groups");
+                        ? "SELECT customer_id, dimension_values, is_total, quantity, numerator,"
+                            + " denominator FROM groups"
+                        : "SELECT customer_id, dimension_values, is_total, quantity, quantity AS"
+                            + " numerator, 1::numeric AS denominator FROM groups");
     Map<UUID, DimensionUsage> totals = new HashMap<>();
     Map<UUID, List<DimensionUsage>> dimensions = new HashMap<>();
     jdbcTemplate.query(
@@ -129,12 +155,13 @@ public class BillableMetricUsageRepository {
                   .getConnection()
                   .createArrayOf("text", metric.getDimensionProperties().toArray(String[]::new)));
           statement.setObject(3, metric.getOrganizationId());
-          statement.setString(4, metric.getEventType());
-          statement.setObject(5, start);
-          statement.setObject(6, end);
+          statement.setObject(4, metric.getEnvironmentId());
+          statement.setString(5, metric.getEventType());
+          statement.setObject(6, start);
+          statement.setObject(7, end);
           if (percentile)
             statement.setBigDecimal(
-                7,
+                8,
                 "median".equals(metric.getAggregation())
                     ? new BigDecimal("50")
                     : metric.getPercentile());

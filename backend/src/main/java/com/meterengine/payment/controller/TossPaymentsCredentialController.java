@@ -3,6 +3,7 @@ package com.meterengine.payment.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.payment.dto.ListTossPaymentsCredentialsResponse;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/toss-payments-credentials")
 public class TossPaymentsCredentialController {
 
@@ -41,7 +43,7 @@ public class TossPaymentsCredentialController {
       summary = "토스페이먼츠 키 목록 조회",
       description =
           """
-          저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
+          선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
           시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
           verified_at과 updated_at은 KST(+09:00)로 나온다.
           """)
@@ -70,7 +72,8 @@ public class TossPaymentsCredentialController {
       summary = "토스페이먼츠 키 저장",
       description =
           """
-          경로의 mode에 쓸 토스페이먼츠 클라이언트 키와 시크릿 키를 저장한다. 그 모드에 키가 있으면 덮어쓴다.
+          선택한 환경의 토스페이먼츠 클라이언트 키와 시크릿 키를 저장한다.
+          test/live 환경은 경로의 mode가 선택한 환경과 같아야 한다. 그 모드에 키가 있으면 덮어쓴다.
           test 모드는 test_ck_와 test_sk_로, live 모드는 live_ck_와 live_sk_로 시작하는 키만 받는다.
           결제위젯 키(test_gck_, test_gsk_ 등)는 받지 않는다.
           저장 전에 시크릿 키로 토스페이먼츠 결제 조회를 한 번 불러 키가 유효한지 확인한다.

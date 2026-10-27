@@ -28,6 +28,9 @@ public class ApiKey implements Persistable<UUID> {
   @Column(name = "organization_id", nullable = false, updatable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(nullable = false, updatable = false)
   private String mode;
 
@@ -71,8 +74,35 @@ public class ApiKey implements Persistable<UUID> {
       Integer rateLimitPerMinute,
       OffsetDateTime createdAt,
       OffsetDateTime expiresAt) {
+    this(
+        id,
+        organizationId,
+        mode,
+        label,
+        keyHash,
+        lastFour,
+        scopes,
+        rateLimitPerMinute,
+        createdAt,
+        expiresAt,
+        null);
+  }
+
+  public ApiKey(
+      UUID id,
+      UUID organizationId,
+      String mode,
+      String label,
+      byte[] keyHash,
+      String lastFour,
+      List<String> scopes,
+      Integer rateLimitPerMinute,
+      OffsetDateTime createdAt,
+      OffsetDateTime expiresAt,
+      UUID environmentId) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = environmentId;
     this.mode = mode;
     this.label = label;
     this.keyHash = keyHash.clone();
@@ -105,6 +135,10 @@ public class ApiKey implements Persistable<UUID> {
 
   public String getMode() {
     return mode;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public String getLabel() {

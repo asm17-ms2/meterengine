@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
+import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
 import { formatKstDateTime } from "@/lib/format";
@@ -22,7 +24,7 @@ export default async function EventRejectionsPage({ searchParams }: { searchPara
     <WorkspaceHeader title="수집 거절" description="고객 연결이나 수집 조건 때문에 저장하지 못한 요청을 확인하세요. 원본 이벤트로 저장한 뒤의 미터와 단가 문제는 이벤트 매핑 진단에서 확인합니다." />
     <section className="workspace-panel">
       <form method="get" className="workspace-actions">
-        <input type="hidden" name="organization_id" value={params.organization_id ?? ""} />
+        <Suspense><EnvironmentInput /></Suspense>
         <label className="workspace-field"><span>거절 기록 월</span><input type="month" name="month" defaultValue={month} required /></label>
         <label className="workspace-field"><span>거절 사유</span><select name="error_code" defaultValue={params.error_code ?? ""}><option value="">전체</option>{Object.entries(ERRORS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="workspace-field"><span>요청의 고객 ID (선택)</span><input name="customer_id" defaultValue={params.customer_id ?? ""} maxLength={36} placeholder="존재하지 않는 고객 ID도 조회할 수 있습니다" /></label>

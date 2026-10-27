@@ -1,6 +1,7 @@
 package com.meterengine.pricing.controller;
 
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class BillableMetricPriceController {
 
   private final BillableMetricPriceService billableMetricPriceService;

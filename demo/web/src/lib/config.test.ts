@@ -60,3 +60,18 @@ test("빈 이름, http(s) 아닌 base_url, 빈 api_key, 배열 아닌 값은 Err
 test("브리지 기본 주소", () => {
   assert.equal(DEFAULT_BRIDGE_URL, "http://127.0.0.1:4318");
 });
+
+test("각 대상의 업무 환경을 보존하고 생략하면 키의 환경을 사용한다", () => {
+  const testTarget = { name: "test", base_url: "http://localhost:8080", api_key: SECRET_KEY, environment: "test" };
+  const liveTarget = { ...testTarget, name: "live", environment: "live" };
+  assert.deepEqual(parseTargets(envOf(JSON.stringify([testTarget, liveTarget]))), [testTarget, liveTarget]);
+  assert.equal(parseTargets(Object.fromEntries([["METERENGINE_API_KEY", SECRET_KEY], ["METERENGINE_ENVIRONMENT", "test"]]))[0].environment, "test");
+  assertErrorWithoutKey(JSON.stringify([{ ...testTarget, environment: "legacy" }]));
+  assert.throws(() => parseTargets(Object.fromEntries([["METERENGINE_ENVIRONMENT", "other"]])));
+});
+
+test("대상별 웹훅 비밀값을 서버 설정으로 보존하고 잘못된 타입은 거절한다", () => {
+  const target = { name: "test", base_url: "http://localhost:8080", api_key: SECRET_KEY, environment: "test", webhook_secret: "whsec_private-test-value" };
+  assert.deepEqual(parseTargets(envOf(JSON.stringify([target]))), [target]);
+  assertErrorWithoutKey(JSON.stringify([{ ...target, webhook_secret: { secret: target.webhook_secret } }]));
+});

@@ -8,6 +8,7 @@ import com.meterengine.apikey.dto.UpdateApiKeyScopesRequest;
 import com.meterengine.apikey.service.ApiKeyService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.MemberReadAccess;
 import com.meterengine.global.validation.StorableText;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/api-keys")
 public class ApiKeyController {
 

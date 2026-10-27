@@ -2,6 +2,7 @@ package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.payment.dto.ListPaymentMethodsResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class PaymentMethodController {
 
   private final PaymentMethodService paymentMethodService;

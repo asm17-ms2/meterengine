@@ -122,6 +122,39 @@ class EventProvenanceIntegrationTest {
   }
 
   @Test
+  void 세션의_행위자와_환경을_원본_저장과_같은_트랜잭션으로_남긴다() {
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organization);
+    UUID userId =
+        jdbcTemplate.queryForObject(
+            "SELECT user_account_id FROM user_session WHERE organization_id=?",
+            UUID.class,
+            organization);
+    for (String mode : List.of("test", "live")) {
+      UUID environment =
+          jdbcTemplate.queryForObject(
+              "SELECT id FROM organization_environment WHERE organization_id=? AND mode=?",
+              UUID.class,
+              organization,
+              mode);
+      UUID scoped = UUID.randomUUID();
+      jdbcTemplate.update(
+          "INSERT INTO customer(id,organization_id,environment_id,name) VALUES (?,?,?,'환경 고객')",
+          scoped,
+          organization,
+          environment);
+      MvcTestResult accepted = post(session, mode, "/v1/events", event("scoped", scoped));
+      assertThat(accepted).hasStatusOk();
+      String json = body(lookup(session, mode, "scoped"));
+      assertThat((String) JsonPath.read(json, "$.actor_type")).isEqualTo("user_account");
+      assertThat((String) JsonPath.read(json, "$.actor_id")).isEqualTo(userId.toString());
+      assertThat((String) JsonPath.read(json, "$.request_id"))
+          .isEqualTo(accepted.getResponse().getHeader("X-Request-ID"));
+      assertThat(snapshot("scoped", environment))
+          .contains(environment.toString(), userId.toString());
+    }
+  }
+
+  @Test
   void 이전_원본의_주체를_추정하거나_없는_메타데이터를_꾸미지_않는다() {
     jdbcTemplate.update(
         "INSERT INTO event(organization_id,transaction_id,customer_id,type,occurred_at) VALUES (?,'legacy',?,'usage',now())",

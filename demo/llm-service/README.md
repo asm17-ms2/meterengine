@@ -33,12 +33,15 @@ JSON 설정 파일은 다음 환경변수의 문자열 맵이다. `.env.example`
 | `LUMEN_DATABASE_PATH` | 자체 SQLite의 절대 경로. 서버 재기동에도 보존하는 볼륨을 쓴다. |
 | `LUMEN_ACCOUNTS` | `{id,name,email,customerId}` 객체의 JSON 배열. 시연 계정과 MeterEngine 고객을 연결한다. |
 | `METERENGINE_API_BASE_URL` | 서버에서 접근하는 MeterEngine API 주소. |
+| `METERENGINE_ENVIRONMENT` | `test` 또는 `live`. 생략하면 API 키의 환경을 사용하며 초기화 스크립트의 기본값은 `test`다. |
 | `METERENGINE_API_KEY` | 수집과 조회용 `read`, `ingest` 키. 브라우저에 전달하지 않는다. |
 | `METERENGINE_BILLING_API_KEY` | 카드 등록 링크 발급용 선택 키. 현재 API 계약의 `admin` 권한이 필요하며 본인 고객의 링크에만 사용한다. |
 | `METERENGINE_CONSOLE_URL` | 카드 등록을 진행할 MeterEngine 화면 주소. |
 | `LUMEN_AUTO_FLUSH_INTERVAL_MS` | 주기 재전송 간격. 기본 3000ms, 0이면 주기 작업만 끈다. 생성 직후와 직접 재전송은 실행한다. |
 
-카드 등록은 test 모드만 허용하며 별도 테스트 PG 설정이 필요하다. PG가 준비되지 않았거나 링크를 발급하지 못하면 성공으로 표시하지 않는다. 이 앱에서 결제 실행이나 인보이스 확정은 하지 않는다.
+카드 등록은 지정한 업무 환경의 PG 설정을 사용한다. 환경을 생략한 시연 연결은 테스트 카드 등록만 허용한다. 이 앱에서 결제 실행이나 인보이스 확정은 하지 않는다.
+
+SQLite는 API 주소, 업무 환경과 서버 키에 고정된다. 연결 설정을 바꿀 때는 기존 파일을 보존하고 별도 `LUMEN_DATABASE_PATH`를 지정한다. 연결 범위가 없는 기존 요청 파일도 자동 이행하지 않는다.
 
 ## 별도 서버로 옮기기
 

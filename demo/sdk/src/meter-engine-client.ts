@@ -1,7 +1,44 @@
-import type { SearchParams, SearchPage, UsageSearchSummary, SearchResource, BillableMetricResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
+import type { WorkspaceEnvironment, SearchParams, SearchPage, UsageSearchSummary, SearchResource, BillableMetricResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
 import { MeterEngineApiError, MeterEngineBatchError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ArchiveStatus, ErrorResponse, IngestEventBatchRequest, IngestEventBatchResponse, IngestEventBatchResult, IngestEventInput, IngestEventRequest, IngestEventResponse, ListCustomersResponse, ListEventsParams, EventExportParams, CsvResource, ListEventsResponse, ListEventTypesParams, ListEventTypesResponse, EventResponse, CreateCustomerRequest, CustomerResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, UnbilledEventsResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
+import type {
+  ArchiveStatus,
+  ErrorResponse,
+  IngestEventBatchRequest,
+  IngestEventBatchResponse,
+  IngestEventBatchResult,
+  IngestEventInput,
+  IngestEventRequest,
+  IngestEventResponse,
+  ListCustomersResponse,
+  ListEventsParams,
+  EventExportParams,
+  CsvResource,
+  ListEventsResponse,
+  ListEventTypesParams,
+  ListEventTypesResponse,
+  EventResponse,
+  CreateCustomerRequest,
+  CustomerResponse,
+  ListBillableMetricUsagesResponse,
+  ListInvoicesResponse,
+  InvoiceResponse,
+  CreateInvoiceViewLinkRequest,
+  InvoiceViewLinkResponse,
+  InvoiceViewLinkSecretResponse,
+  ListInvoiceViewLinksResponse,
+  DraftInvoiceResponse,
+  ListInvoicePaymentsResponse,
+  ListPaymentMethodsResponse,
+  PaymentMethodRegistrationResponse,
+  ListWebhookEndpointsResponse,
+  ListWebhookDeliveriesResponse,
+  UnbilledEventsResponse,
+  PaymentMethodResponse,
+  OrganizationResponse,
+  ListBillableMetricPricesResponse,
+  ListPricePlansResponse,
+} from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -13,6 +50,7 @@ const LIST_EVENT_TYPES_PARAM_KEYS = ["customer_id", "month", "from", "to", "q", 
 export interface MeterEngineClientOptions {
   baseUrl: string;
   apiKey: string;
+  environment?: WorkspaceEnvironment;
   organizationId?: string;
   timeoutMs?: number;
   maxRetries?: number;
@@ -60,6 +98,7 @@ function toErrorResponse(text: string, status: number): ErrorResponse {
 export class MeterEngineClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly environment?: WorkspaceEnvironment;
   private readonly organizationId?: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -73,7 +112,9 @@ export class MeterEngineClient {
     }
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.apiKey = options.apiKey;
+    if (options.environment !== undefined && !["test", "live"].includes(options.environment)) throw new Error("environment는 test 또는 live여야 합니다");
     if (options.organizationId && /[\r\n\0]/.test(options.organizationId)) throw new Error("organizationId 형식이 올바르지 않습니다");
+    this.environment = options.environment;
     this.organizationId = options.organizationId;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
@@ -196,6 +237,10 @@ export class MeterEngineClient {
     return this.request("GET", "/v1/unbilled-events");
   }
 
+  listEnvironments(): Promise<{ environments: { id: string; mode: WorkspaceEnvironment }[] }> {
+    return this.request("GET", "/v1/organization/environments");
+  }
+
   searchCustomers(params: SearchParams = {}): Promise<SearchPage<CustomerSearchItem>> {
     return this.request("GET", queryPath("/v1/customers/search", params));
   }
@@ -280,6 +325,7 @@ export class MeterEngineClient {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       Accept: responseType === "text" ? "text/csv" : "application/json",
+      ...(this.environment ? { "X-MeterEngine-Environment": this.environment } : {}),
       ...(this.organizationId ? { "X-MeterEngine-Organization-Id": this.organizationId } : {}),
     };
     if (body !== undefined) {

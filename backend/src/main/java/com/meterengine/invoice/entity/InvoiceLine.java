@@ -16,6 +16,9 @@ public class InvoiceLine {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(name = "invoice_id", nullable = false)
   private UUID invoiceId;
 
@@ -153,6 +156,10 @@ public class InvoiceLine {
     return id;
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -183,5 +190,37 @@ public class InvoiceLine {
 
   public long getAmount() {
     return amount;
+  }
+
+  public InvoiceLine(
+      UUID id,
+      UUID organizationId,
+      UUID invoiceId,
+      String billableMetricCode,
+      String targetProperty,
+      String dimensionValues,
+      BigDecimal quantity,
+      BigDecimal unitPrice,
+      long amount,
+      String lineType,
+      int tierIndex,
+      BigDecimal quantityNumerator,
+      BigDecimal quantityDenominator,
+      UUID environmentId) {
+    this(
+        id,
+        organizationId,
+        invoiceId,
+        billableMetricCode,
+        targetProperty,
+        dimensionValues,
+        quantity,
+        unitPrice,
+        amount,
+        lineType,
+        tierIndex,
+        quantityNumerator,
+        quantityDenominator);
+    this.environmentId = environmentId;
   }
 }

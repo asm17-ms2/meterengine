@@ -165,6 +165,31 @@ class EventExportIntegrationTest {
   }
 
   @Test
+  void 같은_조직의_legacy와_test와_live를_각각_격리한다() {
+    UUID testEnvironment = environment("test");
+    UUID liveEnvironment = environment("live");
+    UUID testCustomer = customer(organizationId, testEnvironment, "테스트 고객");
+    UUID liveCustomer = customer(organizationId, liveEnvironment, "실제 고객");
+    insert("shared", customerId, null, "legacy", "{}", "2026-10-02T00:00:00+09:00");
+    insert("shared", testCustomer, testEnvironment, "test", "{}", "2026-10-02T00:00:00+09:00");
+    insert("shared", liveCustomer, liveEnvironment, "live", "{}", "2026-10-02T00:00:00+09:00");
+    String testKey = key("test", "read");
+    String liveKey = key("live", "read");
+    assertThat(body(get(authorization, null, "")))
+        .contains("\"legacy\"")
+        .doesNotContain("테스트 고객", testCustomer.toString(), liveCustomer.toString());
+    assertThat(body(get(testKey, null, "")))
+        .contains(testCustomer.toString())
+        .doesNotContain(customerId.toString(), liveCustomer.toString());
+    assertThat(body(get(liveKey, "live", "")))
+        .contains(liveCustomer.toString())
+        .doesNotContain(customerId.toString(), testCustomer.toString());
+    assertThat(get(testKey, "live", "")).hasStatus(403);
+    assertThat(get(authorization, "test", "")).hasStatus(403);
+    assertThat(get(testKey, "test", "&customer_id=" + customerId)).hasStatus(404);
+  }
+
+  @Test
   void 다른_조직의_행과_고객은_내보내지_않는다() {
     UUID otherOrganization = UUID.randomUUID();
     TestCredentials.issueApiKey(jdbcTemplate, otherOrganization, "read");
@@ -176,6 +201,13 @@ class EventExportIntegrationTest {
     assertThat(body(get(authorization, null, "")))
         .doesNotContain("foreign", otherCustomer.toString());
     assertThat(get(authorization, null, "&customer_id=" + otherCustomer)).hasStatus(404);
+    assertThat(
+            mvc.get()
+                .uri("/v1/events/export?month=2026-10")
+                .header(AUTHORIZATION, authorization)
+                .header("X-MeterEngine-Organization-Id", otherOrganization.toString())
+                .exchange())
+        .hasStatus(403);
   }
 
   @Test

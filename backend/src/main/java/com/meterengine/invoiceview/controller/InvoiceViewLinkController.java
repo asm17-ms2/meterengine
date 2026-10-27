@@ -2,6 +2,7 @@ package com.meterengine.invoiceview.controller;
 
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.invoiceview.dto.CreateInvoicePaymentRetryRequest;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class InvoiceViewLinkController {
   private final InvoiceViewLinkService invoiceViewLinkService;
   private final InvoicePaymentRetryService invoicePaymentRetryService;

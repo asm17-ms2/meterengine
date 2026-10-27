@@ -3,6 +3,7 @@ package com.meterengine.audit.controller;
 import com.meterengine.audit.dto.ListAuditLogsResponse;
 import com.meterengine.audit.service.AuditLogQueryService;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
@@ -25,6 +26,7 @@ public class AuditLogController {
   }
 
   @GetMapping("/v1/audit-logs")
+  @EnvironmentReady
   @ReadAccess
   @Operation(summary = "현재 도입사 감사 기록 조회")
   public ListAuditLogsResponse listOrganizationAuditLogs(

@@ -8,6 +8,7 @@ import com.meterengine.account.service.OperatorAccountService;
 import com.meterengine.account.service.UserAccountService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/user-accounts")
 public class UserAccountController {
 

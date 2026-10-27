@@ -481,6 +481,8 @@ class PaymentMethodRegistrationIntegrationTest {
       assertThat(countBillingKeys(customerId)).isEqualTo(1);
       assertThat(billingKeyRow(customerId)).containsEntry("card_issuer_code", "41");
     } finally {
+      jdbcTemplate.update(
+          "DELETE FROM billing_key_history WHERE organization_id = ?", organizationId);
       jdbcTemplate.update("DELETE FROM billing_key WHERE organization_id = ?", organizationId);
       jdbcTemplate.update(
           "DELETE FROM payment_method_registration WHERE organization_id = ?", organizationId);

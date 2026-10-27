@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="API 키. Authorization: Bearer로 보낸다 (기본: 환경변수 %s, 없으면 로컬 live 키)" % API_KEY_ENV,
     )
     common.add_argument("--no-color", action="store_true", help="ANSI 색 비활성화")
+    common.add_argument("--environment", choices=("test", "live"), default=os.environ.get("METERENGINE_ENVIRONMENT") or None, help="업무 환경. 생략하면 API 키의 환경을 사용한다")
     common.add_argument("--timeout", type=float, default=10.0, help="HTTP 타임아웃 초 (기본 10)")
 
     subparsers = parser.add_subparsers(dest="command", required=True)

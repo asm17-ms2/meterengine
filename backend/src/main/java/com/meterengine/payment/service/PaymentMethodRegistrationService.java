@@ -5,6 +5,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.payment.dto.PaymentMethodRegistrationResponse;
 import com.meterengine.payment.entity.PaymentMethodRegistration;
@@ -53,7 +54,7 @@ public class PaymentMethodRegistrationService {
   public PaymentMethodRegistrationResponse create(UUID organizationId, UUID customerId) {
     Customer customer =
         customerRepository
-            .findByOrganizationIdAndId(organizationId, customerId)
+            .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
     if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     String mode = paymentSettingService.findMode(organizationId);
@@ -63,13 +64,14 @@ public class PaymentMethodRegistrationService {
     PaymentMethodRegistration registration =
         paymentMethodRegistrationRepository.saveAndFlush(
             new PaymentMethodRegistration(
-                UUID.randomUUID(),
-                organizationId,
-                customerId,
-                hash(token),
-                mode,
-                createdAt,
-                createdAt.plus(REGISTRATION_LIFETIME)));
+                    UUID.randomUUID(),
+                    organizationId,
+                    customerId,
+                    hash(token),
+                    mode,
+                    createdAt,
+                    createdAt.plus(REGISTRATION_LIFETIME))
+                .pinCredential(credential.getUpdatedAt()));
     return PaymentMethodRegistrationResponse.from(
         token,
         registration,
@@ -83,12 +85,13 @@ public class PaymentMethodRegistrationService {
     PaymentMethodRegistration registration = findUsable(token);
     Customer customer =
         customerRepository
-            .findByOrganizationIdAndId(
-                registration.getOrganizationId(), registration.getCustomerId())
+            .findScoped(
+                registration.getOrganizationId(),
+                registration.getEnvironmentId(),
+                registration.getCustomerId())
             .orElseThrow();
     if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
-    TossPaymentsCredential credential =
-        findCredential(registration.getOrganizationId(), registration.getMode());
+    TossPaymentsCredential credential = findCredential(registration);
     return PaymentMethodRegistrationResponse.from(
         null,
         registration,
@@ -104,8 +107,10 @@ public class PaymentMethodRegistrationService {
             .orElseThrow(
                 () -> new NotFoundException(ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND));
     if (customerRepository
-            .findByOrganizationIdAndId(
-                registration.getOrganizationId(), registration.getCustomerId())
+            .findScoped(
+                registration.getOrganizationId(),
+                registration.getEnvironmentId(),
+                registration.getCustomerId())
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND))
             .getArchivedAt()
         != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
@@ -114,12 +119,48 @@ public class PaymentMethodRegistrationService {
 
   boolean available(PaymentMethodRegistration registration) {
     return customerRepository
-            .lock(registration.getOrganizationId(), java.util.List.of(registration.getCustomerId()))
+            .lockScoped(
+                registration.getOrganizationId(),
+                registration.getEnvironmentId(),
+                java.util.List.of(registration.getCustomerId()))
             .stream()
             .anyMatch(customer -> customer.getArchivedAt() == null)
-        && tossPaymentsCredentialService
-            .active(registration.getOrganizationId(), registration.getMode())
+        && (registration.getEnvironmentId() == null
+                ? tossPaymentsCredentialService.active(
+                    registration.getOrganizationId(), registration.getMode())
+                : historicalCredential(registration))
             .isPresent();
+  }
+
+  TossPaymentsCredential findCredential(PaymentMethodRegistration registration) {
+    return historicalCredential(registration)
+        .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
+  }
+
+  private java.util.Optional<TossPaymentsCredential> historicalCredential(
+      PaymentMethodRegistration registration) {
+    return PaymentEnvironments.call(
+        registration.getOrganizationId(),
+        registration.getEnvironmentId(),
+        registration.getMode(),
+        () ->
+            tossPaymentsCredentialService.historical(
+                registration.getOrganizationId(),
+                registration.getMode(),
+                registration.getCredentialUpdatedAt() == null
+                    ? registration.getCreatedAt()
+                    : registration.getCredentialUpdatedAt()));
+  }
+
+  java.util.Optional<TossPaymentsCredential> credentialVersion(
+      PaymentMethodRegistration registration, OffsetDateTime updatedAt) {
+    return PaymentEnvironments.call(
+        registration.getOrganizationId(),
+        registration.getEnvironmentId(),
+        registration.getMode(),
+        () ->
+            tossPaymentsCredentialService.historical(
+                registration.getOrganizationId(), registration.getMode(), updatedAt));
   }
 
   TossPaymentsCredential findCredential(UUID organizationId, String mode) {

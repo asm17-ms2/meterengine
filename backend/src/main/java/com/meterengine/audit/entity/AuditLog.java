@@ -20,6 +20,9 @@ public class AuditLog implements Persistable<UUID> {
   @Column(name = "organization_id", updatable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(name = "actor_type", nullable = false, updatable = false)
   private String actorType;
 
@@ -51,9 +54,34 @@ public class AuditLog implements Persistable<UUID> {
       String targetType,
       String targetId,
       String detail) {
+    this(
+        id,
+        occurredAt,
+        organizationId,
+        actorType,
+        actorId,
+        action,
+        targetType,
+        targetId,
+        detail,
+        null);
+  }
+
+  public AuditLog(
+      UUID id,
+      OffsetDateTime occurredAt,
+      UUID organizationId,
+      String actorType,
+      UUID actorId,
+      String action,
+      String targetType,
+      String targetId,
+      String detail,
+      UUID environmentId) {
     this.id = id;
     this.occurredAt = occurredAt;
     this.organizationId = organizationId;
+    this.environmentId = environmentId;
     this.actorType = actorType;
     this.actorId = actorId;
     this.action = action;
@@ -78,6 +106,10 @@ public class AuditLog implements Persistable<UUID> {
 
   public UUID getOrganizationId() {
     return organizationId;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public String getActorType() {

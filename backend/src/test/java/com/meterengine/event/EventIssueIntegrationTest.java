@@ -174,6 +174,36 @@ class EventIssueIntegrationTest {
     String otherRead = TestCredentials.issueApiKey(jdbcTemplate, other, "read");
     assertThat(number(body(get(otherRead, "")), "$.total")).isZero();
     assertThat(get(otherRead, "&customer_id=" + customer)).hasStatus(404);
+    UUID environment =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM organization_environment WHERE organization_id=? AND mode='test'",
+            UUID.class,
+            organization);
+    UUID explicitCustomer = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO customer(id,organization_id,environment_id,name) VALUES (?,?,?,'새 환경 고객')",
+        explicitCustomer,
+        organization,
+        environment);
+    jdbcTemplate.update(
+        "INSERT INTO"
+            + " event(organization_id,environment_id,transaction_id,customer_id,type,occurred_at)"
+            + " VALUES (?,?,'explicit-event',?,'mystery','2026-10-10T00:00:00Z')",
+        organization,
+        environment,
+        explicitCustomer);
+    assertThat(number(body(get(read, "")), "$.total")).isEqualTo(3);
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organization);
+    var scoped =
+        mvc.get()
+            .uri("/v1/event-issues/search?month=2026-10")
+            .header(AUTHORIZATION, session)
+            .header("X-MeterEngine-Environment", "test")
+            .exchange();
+    assertThat(scoped).hasStatusOk();
+    assertThat(number(body(scoped), "$.total")).isEqualTo(1);
+    assertThat((String) JsonPath.read(body(scoped), "$.issues[0].transaction_id"))
+        .isEqualTo("explicit-event");
   }
 
   @Test

@@ -44,7 +44,7 @@ def run_send(args, console: Console) -> int:
         print("CSV에 보낼 이벤트가 없습니다: " + args.csv, file=sys.stderr)
         return 2
     base_url = args.base_url or DEFAULT_BASE_URL
-    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout)
+    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout, environment=getattr(args, "environment", None))
     organization = require_organization(client)
     return send_events(events, client, organization, console, args)
 
@@ -83,6 +83,8 @@ def send_events(events: List[Event], client: ApiClient, organization: Organizati
             base_url=client.base_url,
             organization_id=organization.id,
             csv_path=args.csv,
+            environment=getattr(client, "environment", None),
+            source_fingerprint=getattr(client, "source_fingerprint", None),
             argv=sys.argv[1:],
         )
         try:

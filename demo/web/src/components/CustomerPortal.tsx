@@ -56,6 +56,12 @@ export function CustomerPortal({ names, target, customers, month, data, isOperat
       <label>청구 월<input type="month" name="month" defaultValue={month} required /></label>
       <Button htmlType="submit">내역 보기</Button>
     </form></section>}
+    {!isOperatorView && data && <form key={`${target}/${data.customer.id}/${month}`} action="/customers" method="get" className="portal-filters" aria-label="조회할 청구 월">
+      <input type="hidden" name="target" value={target} />
+      <input type="hidden" name="customer_id" value={data.customer.id} />
+      <label>청구 월<input type="month" name="month" defaultValue={month} required /></label>
+      <Button htmlType="submit">내역 보기</Button>
+    </form>}
     {data === null ? <Card><Empty description="아직 고객이 없습니다. 도입사 콘솔에서 고객을 등록한 뒤 다시 불러오세요." /></Card> : <>
       {data.errors.map((error, index) => <Alert key={index} type="warning" title={error} showIcon />)}
       <div className="portal-statement" aria-label="청구 요약">

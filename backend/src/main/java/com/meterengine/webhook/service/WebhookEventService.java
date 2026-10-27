@@ -1,5 +1,6 @@
 package com.meterengine.webhook.service;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.webhook.entity.WebhookEventType;
 import com.meterengine.webhook.repository.WebhookEventRepository;
 import java.time.OffsetDateTime;
@@ -32,6 +33,10 @@ public class WebhookEventService {
     String payload =
         jsonMapper.writeValueAsString(
             Map.of(
+                "environment",
+                BusinessEnvironmentContext.mode() == null
+                    ? "legacy"
+                    : BusinessEnvironmentContext.mode(),
                 "type",
                 type.getValue(),
                 "timestamp",

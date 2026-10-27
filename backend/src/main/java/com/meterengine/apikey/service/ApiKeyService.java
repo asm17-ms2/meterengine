@@ -12,6 +12,7 @@ import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AccessScopes;
 import com.meterengine.global.security.AuthenticatedCredential;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.PrincipalKind;
 import com.meterengine.global.security.SecureTokens;
 import java.time.OffsetDateTime;
@@ -76,6 +77,7 @@ public class ApiKeyService {
                   List.of(new FieldError("status", "active, revoked, expired, all 중 하나여야 합니다")));
         };
     return apiKeyRepository.findByOrganizationIdOrderByCreatedAtAscIdAsc(organizationId).stream()
+        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(filter)
         .toList();
   }
@@ -85,6 +87,7 @@ public class ApiKeyService {
     ApiKey apiKey =
         apiKeyRepository
             .findForUpdateByIdAndOrganizationId(apiKeyId, organizationId)
+            .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.API_KEY_NOT_FOUND));
     if (!apiKey.isUsableAt(OffsetDateTime.now())) {
       throw new ConflictException(ErrorCode.API_KEY_UNAVAILABLE);
@@ -120,6 +123,9 @@ public class ApiKeyService {
       UUID replacedApiKeyId,
       Integer rateLimitPerMinute) {
     OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+    if (BusinessEnvironmentContext.mode() != null
+        && !BusinessEnvironmentContext.mode().equals(mode))
+      throw new com.meterengine.global.error.ForbiddenException(ErrorCode.ENVIRONMENT_MISMATCH);
     if (replacedApiKeyId != null) {
       ApiKey replaced = usableApiKeyForUpdate(organizationId, replacedApiKeyId);
       replaced.expireNoLaterThan(now.plus(apiKeyProperties.replacementGrace()));
@@ -138,7 +144,8 @@ public class ApiKeyService {
                 distinctScopes,
                 rateLimitPerMinute,
                 now,
-                null));
+                null,
+                BusinessEnvironmentContext.environmentId()));
     auditLogService.record(
         organizationId,
         CREATED_ACTION,
@@ -154,6 +161,8 @@ public class ApiKeyService {
     detail.put("label", apiKey.getLabel());
     detail.put("mode", apiKey.getMode());
     detail.put("scopes", apiKey.getScopes());
+    if (apiKey.getEnvironmentId() != null)
+      detail.put("environment_id", apiKey.getEnvironmentId().toString());
     if (apiKey.getRateLimitPerMinute() != null)
       detail.put("rate_limit_per_minute", apiKey.getRateLimitPerMinute());
     detail.put(
@@ -167,6 +176,7 @@ public class ApiKeyService {
     ApiKey apiKey =
         apiKeyRepository
             .findForUpdateByIdAndOrganizationId(apiKeyId, organizationId)
+            .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.API_KEY_NOT_FOUND));
     if (apiKey.getRevokedAt() != null) {
       return;
@@ -179,6 +189,7 @@ public class ApiKeyService {
   private ApiKey usableApiKeyForUpdate(UUID organizationId, UUID apiKeyId) {
     return apiKeyRepository
         .findForUpdateByIdAndOrganizationId(apiKeyId, organizationId)
+        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(apiKey -> apiKey.getRevokedAt() == null)
         .orElseThrow(() -> new NotFoundException(ErrorCode.API_KEY_NOT_FOUND));
   }
@@ -193,7 +204,8 @@ public class ApiKeyService {
             null,
             apiKey.getMode(),
             null,
-            Set.copyOf(apiKey.getScopes()));
+            Set.copyOf(apiKey.getScopes()),
+            apiKey.getEnvironmentId());
     return new AuthenticatedCredential(principal, apiKey.getRateLimitPerMinute());
   }
 }

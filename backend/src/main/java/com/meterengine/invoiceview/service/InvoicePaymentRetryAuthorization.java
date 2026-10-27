@@ -10,4 +10,24 @@ public record InvoicePaymentRetryAuthorization(
     UUID failedAttemptId,
     long attemptCount,
     AuditActor actor,
-    String organizationName) {}
+    String organizationName,
+    UUID environmentId) {
+  public InvoicePaymentRetryAuthorization(
+      UUID organizationId,
+      UUID invoiceId,
+      String mode,
+      UUID failedAttemptId,
+      long attemptCount,
+      AuditActor actor,
+      String organizationName) {
+    this(
+        organizationId,
+        invoiceId,
+        mode,
+        failedAttemptId,
+        attemptCount,
+        actor,
+        organizationName,
+        null);
+  }
+}

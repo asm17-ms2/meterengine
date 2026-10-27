@@ -116,8 +116,9 @@ export class LumenService {
   constructor(dependencies: ServiceDependencies) {
     this.config = dependencies.config;
     this.store = dependencies.store;
-    this.client = dependencies.client ?? new MeterEngineClient({ baseUrl: this.config.meterEngineBaseUrl, apiKey: this.config.meterEngineApiKey, maxRetries: 0, timeoutMs: 2500 });
-    this.registrationClient = dependencies.registrationClient ?? (this.config.billingApiKey ? new MeterEngineClient({ baseUrl: this.config.meterEngineBaseUrl, apiKey: this.config.billingApiKey, maxRetries: 0, timeoutMs: 3000 }) : null);
+    this.store.bindSource(JSON.stringify([this.config.meterEngineBaseUrl, this.config.meterEngineEnvironment ?? "api-key", this.config.meterEngineApiKey, this.config.billingApiKey]));
+    this.client = dependencies.client ?? new MeterEngineClient({ baseUrl: this.config.meterEngineBaseUrl, apiKey: this.config.meterEngineApiKey, environment: this.config.meterEngineEnvironment, maxRetries: 0, timeoutMs: 2500 });
+    this.registrationClient = dependencies.registrationClient ?? (this.config.billingApiKey ? new MeterEngineClient({ baseUrl: this.config.meterEngineBaseUrl, apiKey: this.config.billingApiKey, environment: this.config.meterEngineEnvironment, maxRetries: 0, timeoutMs: 3000 }) : null);
     this.provider = dependencies.provider ?? new LocalDemoProvider();
     this.now = dependencies.now ?? Date.now;
   }
@@ -263,10 +264,10 @@ export class LumenService {
     if (!this.registrationClient) throw new ServiceError(503, "billing_unavailable", "카드 등록 연결이 준비되지 않았습니다. 서비스 운영자에게 문의하세요.");
     try {
       const registration = await this.registrationClient.createPaymentMethodRegistration(account.customerId);
-      if (!registration.token || registration.customer_id !== account.customerId || registration.mode !== "test") throw new Error("Invalid registration");
+      if (!registration.token || registration.customer_id !== account.customerId || registration.mode !== (this.config.meterEngineEnvironment ?? "test")) throw new Error("Invalid registration");
       return { url: new URL(`/payment-method-registrations/${encodeURIComponent(registration.token)}`, this.config.meterEngineConsoleUrl).href, expiresAt: registration.expires_at, mode: registration.mode };
     } catch {
-      throw new ServiceError(503, "billing_unavailable", "카드 등록을 시작하지 못했습니다. 테스트 결제 설정을 확인한 뒤 다시 시도하세요.", true);
+      throw new ServiceError(503, "billing_unavailable", "카드 등록을 시작하지 못했습니다. 현재 환경의 결제 설정을 확인한 뒤 다시 시도하세요.", true);
     }
   }
 }

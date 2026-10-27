@@ -1,5 +1,6 @@
 package com.meterengine.apikey.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.apikey.entity.ApiKey;
 import com.meterengine.apikey.service.IssuedApiKey;
@@ -28,7 +29,11 @@ public record ApiKeySecretResponse(
         OffsetDateTime revokedAt,
     @Schema(description = "키 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다") String secret,
     @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다") @JsonProperty("rate_limit_per_minute")
-        Integer rateLimitPerMinute) {
+        Integer rateLimitPerMinute,
+    @JsonProperty("environment_id")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+        UUID environmentId) {
   public ApiKeySecretResponse(
       UUID id,
       String label,
@@ -39,7 +44,7 @@ public record ApiKeySecretResponse(
       OffsetDateTime expiresAt,
       OffsetDateTime revokedAt,
       String secret) {
-    this(id, label, mode, scopes, lastFour, createdAt, expiresAt, revokedAt, secret, null);
+    this(id, label, mode, scopes, lastFour, createdAt, expiresAt, revokedAt, secret, null, null);
   }
 
   public static ApiKeySecretResponse from(IssuedApiKey issued) {
@@ -54,7 +59,8 @@ public record ApiKeySecretResponse(
         apiKey.getExpiresAt(),
         apiKey.getRevokedAt(),
         issued.secret(),
-        apiKey.getRateLimitPerMinute());
+        apiKey.getRateLimitPerMinute(),
+        apiKey.getEnvironmentId());
   }
 
   @Override

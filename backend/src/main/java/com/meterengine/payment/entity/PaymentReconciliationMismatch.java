@@ -1,5 +1,6 @@
 package com.meterengine.payment.entity;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -19,6 +20,9 @@ public class PaymentReconciliationMismatch implements Persistable<UUID> {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id")
+  private UUID environmentId;
 
   @Column(nullable = false)
   private String mode;
@@ -63,6 +67,7 @@ public class PaymentReconciliationMismatch implements Persistable<UUID> {
       OffsetDateTime detectedAt) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.mode = mode;
     this.kind = kind;
     this.orderId = orderId;
@@ -82,6 +87,10 @@ public class PaymentReconciliationMismatch implements Persistable<UUID> {
   @Override
   public boolean isNew() {
     return true;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public UUID getOrganizationId() {

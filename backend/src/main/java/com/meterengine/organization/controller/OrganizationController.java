@@ -2,6 +2,7 @@ package com.meterengine.organization.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.organization.dto.CreateOrganizationMemberRequest;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/organizations")
 public class OrganizationController {
 

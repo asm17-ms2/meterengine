@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import os
 import subprocess
@@ -131,7 +132,7 @@ class BridgeConfig:
     def scope(self, organization_id: str) -> str:
         if not is_uuid(organization_id):
             raise ValueError("도입사 id가 UUID가 아닙니다: " + organization_id)
-        return "%s|%s" % (self.base_url.rstrip("/"), organization_id)
+        return "%s|%s|%s" % (self.base_url.rstrip("/"), organization_id, hashlib.sha256(self.api_key.encode("utf-8")).hexdigest())
 
     def project_state(self, project: str) -> str:
         """이 프로젝트가 지금 어떤 상태인지."""

@@ -5,6 +5,32 @@ import { MeterEngineClient } from "./index.ts";
 const API_KEY = "me_test_0123456789abcdefghijABCDEFGHIJKL";
 const CUSTOMER_ID = "4a853fc7-e36b-44b1-abd5-7b6991df2f32";
 
+test("교차 실행하는 test와 live 클라이언트가 수집부터 청구와 카드 조회까지 자신의 환경을 유지한다", async () => {
+  const calls: { key: string | null; environment: string | null; pathname: string }[] = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const headers = new Headers(init?.headers);
+    calls.push({ key: headers.get("Authorization"), environment: headers.get("X-MeterEngine-Environment"), pathname: new URL(String(input)).pathname });
+    return Response.json({});
+  };
+  const clients = (["test", "live"] as const).map(environment => new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: `key-${environment}`, environment, fetch: fetchImpl }));
+  await Promise.all(clients.map(async client => {
+    await client.createCustomer({ name: "환경별 고객", external_id: "same-external" });
+    await client.ingestEvent({ customer_id: CUSTOMER_ID, transaction_id: "same-transaction", type: "usage", timestamp: "2026-10-01T00:00:00Z", properties: {} });
+    await client.aggregateBillableMetricUsages({ month: "2026-10" });
+    await client.listBillableMetricPrices({ month: "2026-10" });
+    await client.previewDraftInvoice({ month: "2026-10" });
+    await client.listInvoices({ month: "2026-10" });
+    await client.listInvoicePayments({ month: "2026-10" });
+    await client.getPaymentMethod(CUSTOMER_ID);
+    await client.createPaymentMethodRegistration(CUSTOMER_ID);
+    await client.listWebhookEndpoints();
+  }));
+  assert.equal(calls.length, 20);
+  for (const call of calls) assert.equal(call.key, `Bearer key-${call.environment}`);
+  await new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, fetch: fetchImpl }).listCustomers();
+  assert.equal(calls.at(-1)!.environment, null);
+});
+
 test("고객과 청구 조회는 같은 Bearer 키를 헤더에만 보내고 고객과 월 필터를 보존한다", async () => {
   const calls: Array<{ url: URL; headers: Headers }> = [];
   const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, fetch: async (input, init) => {
@@ -130,6 +156,21 @@ test("보관 상태 조회는 지원 API에만 보내고 보관 시각과 효력
   assert.equal(prices.billable_metric_prices[0]?.price_rates[0]?.archived_from, "2026-11");
 });
 
+test("고객 검색은 외부 ID와 환경을 보내고 반환 버전을 유지한다", async () => {
+  const calls: Array<{ url: URL; headers: Headers }> = [];
+  const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, environment: "test", organizationId: CUSTOMER_ID, fetch: async (input, init) => {
+    calls.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+    return Response.json({ items: [{ id: CUSTOMER_ID, name: "서울", billing_email: null, created_at: "2026-10-01T00:00:00Z", version: 2 }], total: 1, total_unfiltered: 1, page: 1, size: 25, summary: {} });
+  } });
+  const result = await client.searchCustomers({ external_id: "고객/서울 +1", page: 1 });
+  const version: number = result.items[0]!.version;
+  assert.equal(version, 2);
+  assert.equal(calls[0]?.url.pathname, "/v1/customers/search");
+  assert.equal(calls[0]?.url.searchParams.get("external_id"), "고객/서울 +1");
+  assert.equal(calls[0]?.headers.get("X-MeterEngine-Environment"), "test");
+  assert.equal(calls[0]?.headers.get("X-MeterEngine-Organization-Id"), CUSTOMER_ID);
+});
+
 test("CSV 내보내기는 검색 조건과 텍스트 응답을 유지한다", async () => {
   let headers: Headers | undefined;
   let url: URL | undefined;
@@ -162,6 +203,23 @@ test("이벤트 진단과 수집 거절은 영부터 시작하는 페이지와 �
   assert.equal(urls[1]?.searchParams.get("reason"), null);
 });
 
+test("이벤트 CSV는 목록의 기간과 속성과 원문 선택을 환경 헤더와 함께 보낸다", async () => {
+  const calls: Array<{ url: URL; headers: Headers }> = [];
+  const csv = '"transaction_id","properties"\r\n"서울/1","{}"\r\n';
+  const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, environment: "test", organizationId: CUSTOMER_ID, fetch: async (input, init) => {
+    calls.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+    return new Response(csv, { headers: { "Content-Type": "text/csv;charset=UTF-8" } });
+  } });
+  const params = { from: "2026-10-01T09:00:00+09:00", to: "2026-10-02T09:00:00+09:00", customer_id: CUSTOMER_ID, type: "사용/입력", q: "서울 +1", properties: { model: "한국/모델" }, sort: "transaction_id" as const, order: "asc" as const, page: 1, size: 1, include_properties: true };
+  assert.equal(await client.exportCsv("events", params), csv);
+  assert.equal(calls[0]?.url.pathname, "/v1/events/export");
+  assert.deepEqual(Object.fromEntries(calls[0]!.url.searchParams), { ...params, page: "1", size: "1", include_properties: "true", properties: JSON.stringify(params.properties) });
+  assert.equal(calls[0]?.headers.get("Accept"), "text/csv");
+  assert.equal(calls[0]?.headers.get("X-MeterEngine-Environment"), "test");
+  assert.equal(calls[0]?.headers.get("X-MeterEngine-Organization-Id"), CUSTOMER_ID);
+  assert.equal(calls[0]?.url.href.includes(API_KEY), false);
+});
+
 test("이벤트 CSV의 JSON 문자열 필터를 다시 직렬화하거나 숫자를 변환하지 않는다", async () => {
   let url: URL | undefined;
   const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, fetch: async input => { url = new URL(String(input)); return new Response('"transaction_id"\r\n'); } });
@@ -169,6 +227,20 @@ test("이벤트 CSV의 JSON 문자열 필터를 다시 직렬화하거나 숫자
   await client.exportCsv("events", { month: "2026-10", properties, include_properties: false });
   assert.equal(url?.searchParams.get("properties"), properties);
   assert.equal(url?.searchParams.get("include_properties"), "false");
+});
+
+test("이벤트가_있는_월도_기존_월_조회와_같은_환경_계약으로_반환한다", async () => {
+  const calls: Array<{ url: URL; headers: Headers }> = [];
+  const months = ["2026-11", "2026-10"];
+  const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, environment: "test", fetch: async (input, init) => {
+    calls.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+    return Response.json({ months });
+  } });
+  for (const resource of ["events", "usage", "invoices", "billable-metric-prices"] as const) {
+    assert.deepEqual((await client.getAvailableMonths(resource)).months, months);
+    assert.equal(calls.at(-1)?.url.pathname, `/v1/${resource}/months`);
+    assert.equal(calls.at(-1)?.headers.get("X-MeterEngine-Environment"), "test");
+  }
 });
 
 

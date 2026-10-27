@@ -3,6 +3,7 @@ package com.meterengine.payment.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.CreatePaymentCancellationRequest;
 import com.meterengine.payment.dto.ListPaymentCancellationsResponse;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class PaymentCancellationController {
 
   private final PaymentCancellationService paymentCancellationService;
@@ -46,7 +48,7 @@ public class PaymentCancellationController {
           취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
           토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려준다.
           시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다.
-          Idempotency-Key를 주면 같은 도입사의 같은 요청을 다시 보내도 기존 결과를 돌려준다. 같은 키로 다른 요청을 보내면 409다.
+          Idempotency-Key를 주면 같은 도입사와 환경의 같은 요청을 다시 보내도 기존 결과를 돌려준다. 같은 키로 다른 요청을 보내면 409다.
           requested_at과 completed_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
