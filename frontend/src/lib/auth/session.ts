@@ -28,7 +28,7 @@ export const requireSession = cache(async (): Promise<SessionResponse> => {
 export async function requireOperator(): Promise<SessionResponse> {
   const session = await requireSession();
   if (session.user_account.role !== "operator") redirect(workspaceHref("/customers", session.organization ? new URLSearchParams({ organization_id: session.organization.id }) : ""));
-  if (session.consent_required) redirect("/account/consents?returnTo=%2Fadmin%2Forganizations");
+  if (session.consent_required) redirect("/account/consents?returnTo=%2Fadmin");
   return session;
 }
 

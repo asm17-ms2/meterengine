@@ -43,6 +43,34 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
+  void 실행_이력이_없어도_기동할_때_마지막_성공_시리즈를_등록한다() {
+    scheduledJobRunService.register(JOB_NAME);
+
+    assertThat(
+            meterRegistry
+                .get(ScheduledJobRunService.LAST_SUCCESS_GAUGE_NAME)
+                .tag("job_name", JOB_NAME)
+                .gauge()
+                .value())
+        .isZero();
+  }
+
+  @Test
+  void 다른_인스턴스의_성공도_DB를_다시_읽어_지표에_반영한다() {
+    scheduledJobRunService.register(JOB_NAME);
+    OffsetDateTime otherSuccess = OffsetDateTime.parse("2026-10-26T12:00:00Z");
+    when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
+        .thenReturn(Optional.of(otherSuccess));
+    assertThat(
+            meterRegistry
+                .get(ScheduledJobRunService.LAST_SUCCESS_GAUGE_NAME)
+                .tag("job_name", JOB_NAME)
+                .gauge()
+                .value())
+        .isEqualTo(otherSuccess.toEpochSecond());
+  }
+
+  @Test
   void 성공하면_succeeded와_세_카운트와_끝난_시각을_남긴다() {
     claimSlot();
 
@@ -173,13 +201,13 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
-  void 성공한_적이_없는_작업은_등록해도_게이지를_내지_않는다() {
+  void 성공한_적이_없는_작업도_0으로_게이지를_등록한다() {
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.empty());
 
     scheduledJobRunService.register(JOB_NAME);
 
-    assertThat(lastSuccessGauge().gauge()).isNull();
+    assertThat(lastSuccessGauge().gauge().value()).isZero();
   }
 
   @Test
