@@ -112,6 +112,23 @@
    "pr": 444
   },
   {
+   "id": "C445-014",
+   "merged_ids": [
+    "G-191"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 이 설정은 package.json 스크립트, CI, README 어디에서도 부르지 않고 #445 본문도 E2E 통과를 주장하지 않는다. mvp, workspace 설정은 a44ed9a가 시나리오 존재 가드를 넣어 #442~#452에서 '해당 기능과 검증 파일이 포함된 브랜치에서 실행하세요'로 명시 실패하게 했으므로 의도된 동작이다. 하지만 playwright.payment.config.ts에는 그 가드가 없다. 5행 testMatch의 e2e/payment-registration.contract.spec.ts와 14행 webServer의 e2e/payment-registration-server.mjs는 #445(2e98143)부터 #452(8b0a9d2)까지 없고 #453 커밋 23b1844에서 처음 생긴다. #445 head 사본에서 playwright test -c playwright.payment.config.ts를 돌리자 webServer가 MODULE_NOT_FOUND로 죽어 'Process from config.webServer was not able to start'로 테스트 0건에서 끝났다. 카드 등록 화면(src/app/payment-method-registrations, src/components/payment-registration)은 #445부터 최상단까지 바뀌지 않았고, 이 화면이 쓰는 transport.ts, proxy.ts의 이후 변경도 등록 경로에 영향이 없다. #453의 spec과 대역 서버를 #445 head 빌드(next build --webpack)에 그대로 넣고 포트만 바꿔 돌리자 6건이 모두 통과했고, 같은 사본에서 tsc --noEmit과 eslint도 통과했다. 즉 #445가 화면과 설정을 들이면서 그 계약 검증 파일만 #453에 남아, #445부터 #452까지 머지된 main에서는 결제 등록 계약 E2E를 실행할 수 없다. G-191은 같은 payment 설정 14행을 짚고 원인이 같아 합쳤다. G-191의 workspace, mvp 부분은 가드로 의도된 명시 실패라 고칠 대상에서 뺀다. 실행 경로가 수동 -c 지정뿐이라 low.",
+   "evidence": "frontend/playwright.payment.config.ts:5 @ 2e98143, frontend/playwright.payment.config.ts:14 @ 2e98143, frontend/e2e/payment-registration-server.mjs:1 @ f040e96, frontend/e2e/payment-registration.contract.spec.ts:1 @ f040e96",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "pw-hardcoded-paths의 G-190이 이 spec의 /tmp 스크린샷 경로와 payment 설정 outputDir를 짚지만 해가 없어 필수 수정이 아니다. workspace.contract.spec.ts와 workspace-contract-server.mjs를 #442로 내리는 것은 검토하지 않았다. 가드로 원인이 드러나는 의도된 실패이고, 환경 전환 등 #453 화면에 기댈 수 있다. mvp 설정의 실제 spec들은 PG 대역 toss-server.mjs(#453)와 오케스트레이션 환경 파일에 묶여 있어 설계상 스택 최상단에서만 돈다(real-e2e-bound-env, e2e-spec-later-screen 참고). 재현 사본과 로그: S/scripts/pw-missing-specs/(fe445, build445.log, tsc445.log).",
+   "pr": 445
+  },
+  {
    "id": "C446-002",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -157,6 +174,38 @@
    "pr": 446
   },
   {
+   "id": "C447-012",
+   "merged_ids": [],
+   "verdict": "already-fixed",
+   "severity": "low",
+   "reason": "전제는 맞다. archive-filters.real.spec.ts(#447 2ec5d85에서 추가, 최상단까지 같은 blob ecfc65e)의 selectedFilter는 /customers, /billable-metrics의 '관리 상태'와 /pricing의 세 필터를 combobox와 '조건 적용' 버튼으로 다루고(30~37행, 206행), 250~265행과 277행은 /customers/{id}의 '현재 결제 환경의 카드 관리', '카드 관리 상태', '카드 보관'을 찾는다. 이 문구, card_status, customers/[id] 경로는 #451(53ec3d9)에서 처음 생기고 #447~#450의 필터는 ArchiveFilter 링크 nav다. 그러나 지적의 실패 경로는 지금 없다. 검토 시점 뒤 커밋인 a44ed9a(#442)가 playwright.mvp.config.ts 9~11행에 시나리오 존재 가드를 넣어, #447~#452 head에서는 설정 로드 단계에서 'MVP E2E 시나리오가 없습니다: mvp.real.spec.ts, ...'로 throw한다. #447 head 사본에서 MVP_EXTERNAL_PG_FIXTURE=1을 줘도 같은 메시지로 끝나 보관 spec이 실행되지 않았다. 기본 playwright.config.ts는 auth spec만 testMatch하므로 다른 실행 경로도 없다. 가드 전(d4f1714)에는 MVP_EXTERNAL_PG_FIXTURE=1로 이 spec이 돌아 고객 단계(158행)에서 실패할 수 있었다. 지금은 #447~#452에서 실패 원인이 누락 시나리오 목록으로 드러나 보관 필터 회귀와 혼동되지 않고, spec이 실행 가능한 #453 이후에는 #451 화면이 모두 있다. 그래서 already-fixed로 둔다.",
+   "evidence": "frontend/e2e/archive-filters.real.spec.ts:37 @ afdf8f1, frontend/e2e/archive-filters.real.spec.ts:251 @ afdf8f1, frontend/playwright.mvp.config.ts:11 @ afdf8f1, frontend/src/components/workspace/ArchiveFilter.tsx:11 @ afdf8f1",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "남은 것은 슬라이스 관점의 개선뿐이다(p4 이하): #451의 필터 UI 변경(링크 nav에서 combobox와 '조건 적용')과 고객 상세 카드 구역 단계는 #451이 spec을 고치는 diff로 들어가는 편이 리뷰하기 쉽다. 다만 #447~#452에서는 가드 때문에 어느 버전도 실행으로 검증할 수 없고, 보관 spec은 카드 등록 단계에 PG 대역(38447, toss-server.mjs는 #453)도 필요해 설계상 스택 최상단에서만 돈다. 실행으로 검증할 수 없는 spec 수정은 실익이 없어 고치지 않는다. pw-missing-specs(G-191)와 같은 '설정, spec이 뒤 PR 파일이나 화면을 가리킴' 계열이다. 확인 사본: S/scripts/e2e-spec-later-screen/fe447.",
+   "pr": 447
+  },
+  {
+   "id": "C449-005",
+   "merged_ids": [
+    "G-188"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: 환경변수로 바꿀 길이 있거나 저장소 스크립트가 이 JSON과 컨테이너를 만드는지 찾았으나 없다. customer-payment-retry.real.spec.ts:37은 beforeAll에서 '/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json'을 상수 문자열로 readFileSync하고, 같은 파일 58행과 invoice-links.real.spec.ts:54의 sql()은 docker exec -i meterengine-0696-e2e psql로 고정 컨테이너를 쓴다. 최상단(854e293)에서 git grep으로 'backend-e2e-environment', '0696'을 찾으면 이 spec들과 playwright 설정에만 나오고, 만드는 스크립트나 README 안내가 없다. backend/README.md:340이 안내하는 로컬 DB 컨테이너 이름은 meterengine-postgres라 팀원 환경과도 다르다. 두 spec은 #449(c9a86c4)가 처음 들였고 #449 head(7ce9d36)부터 최상단까지 내용이 같다(파일 해시 동일). 실행 확인: 최상단 작업 트리에서 웹 서버 없는 임시 설정(S/scripts/real-e2e-bound-env/pw.config.ts)으로 customer-payment-retry와 permissions를 돌리자 beforeAll이 'ENOENT: no such file or directory, open /private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json'으로 실패해 2 failed, 9 did not run이 됐다. invoice-links는 beforeAll에 파일 읽기가 없지만 sql()을 11번 부르며(162행부터 341행) 컨테이너 이름이 다르면 첫 sql()에서 실패한다. 결과적으로 고객 결제 재시도의 중복 결제 차단, 조회 전용 링크의 버튼 비노출 같은 회귀 검증이 작성자 기계에서만 돈다. 제품 동작 문제는 아니고 검증 수단 문제라 medium으로 둔다. C449-005의 'mvp 설정이 없는 시나리오에서 throw, toss-server.mjs가 #453에서 생김' 부분과 G-188의 playwright.mvp.config.ts:25 toss-state.json 경로는 원인이 다른 묶음(pw-missing-specs, pw-hardcoded-paths) 몫이다. G-188이 함께 짚은 permissions.real.spec.ts는 #453이 들였으므로 C453-012 결과에서 #453으로 고친다.",
+   "evidence": "frontend/e2e/customer-payment-retry.real.spec.ts:37 @ 7ce9d36, frontend/e2e/customer-payment-retry.real.spec.ts:58 @ 7ce9d36, frontend/e2e/invoice-links.real.spec.ts:54 @ 7ce9d36, frontend/e2e/customer-payment-retry.real.spec.ts:37 @ 854e293, frontend/e2e/invoice-links.real.spec.ts:54 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 원인이 #453의 permissions.real.spec.ts:37, 59에도 있어 C453-012 결과로 나눴다(고칠 PR이 달라 한 결과로 합치지 않았다). 두 결과는 E2E_BACKEND_TOSSPAYMENTS_BASE_URL, E2E_DB_CONTAINER 이름을 같게 쓴다. pw-missing-specs(C445-014, G-191): #449 head의 playwright.mvp.config.ts가 없는 시나리오로 throw하고 toss-server.mjs가 #453에서야 생기는 문제는 그 묶음 몫이다. pw-hardcoded-paths(C442-014, G-023, G-037, G-190): playwright.mvp.config.ts:25의 toss-state.json 경로와 spec 증적 폴더 기본값(/private/tmp/...-2026-10-27)은 그 묶음 몫이다. readme-test-commands(G-189): 그 결과의 reason이 '고정 backend-e2e-environment.json'을 사전 준비로 적었는데, 이 수정 뒤에는 두 환경변수로 적어야 한다. 가드는 원래 JSON 파일과 마찬가지로 실행자의 선언에 기대는 확인이다. 백엔드가 실제로 대역을 부르는지는 approval_calls 단언(customer-payment-retry 204행)이 따로 본다. Docker 데몬이 없는 검증 기계라 docker exec 실패는 코드로만 확인했다.",
+   "pr": 449
+  },
+  {
    "id": "C451-002",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -169,6 +218,36 @@
    "tests": [],
    "behavior_change": false,
    "notes": "API 계약은 바꾸지 않고 451, 452에서 깨지던 성공 화면을 막기만 하므로 behavior_change는 false다. 최상단 화면은 그대로다. k5 G-184(lib/api/invoices.ts:59 확정 요청 5초 타임아웃)도 확정 성공을 실패로 보이게 하지만 원인이 달라 합치지 않았다. D-125(finalize-result-unbounded)와 같은 91-92행을 451에서 고치므로 한 커밋으로 처리하는 것이 좋다. 새 .test.mjs는 CI가 node --test를 돌리지 않으면 수동 실행만 된다(k6 unit-tests-unrun 묶음과 겹침).",
+   "pr": 451
+  },
+  {
+   "id": "C453-012",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: 경로나 컨테이너를 바꿀 환경변수, 저장소의 준비 스크립트, README 안내를 찾았으나 없다. permissions.real.spec.ts는 #453(23b1844)이 처음 들였고 #453 head(f040e96)와 최상단(854e293)의 내용이 같다. 37행은 beforeAll에서 '/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json'을 상수 경로로 readFileSync하고, 59행 sql()은 docker exec -i meterengine-0696-e2e psql을 쓴다. sql()은 224, 248, 253, 306, 314행의 키 지문 비교, 만료 키 조작, 감사 로그 확인에 쓰인다. 이 파일은 playwright.mvp.config.ts:9 testMatch에 들어 있다. 실행 확인: 최상단 작업 트리에서 웹 서버 없는 임시 설정으로 돌리자 beforeAll이 ENOENT로 실패해 이 파일의 테스트가 하나도 돌지 않았다(customer-payment-retry와 합쳐 2 failed, 9 did not run). 부차 지적 두 개는 판정에 넣지 않는다. 1) afterAll(40-47행)이 private-values.json에 이전 값과 합쳐 쌓는 것은 증적 폴더에 남는 이전 실행 파일까지 비밀값 유출을 검사하려는 설계로 보이고, 값은 로컬 테스트 DB의 비밀번호 상수, 세션, 키, 초대 토큰이며 0600 파일, 0700 폴더에 둔다. 저장소에 이 파일을 읽는 도구가 없어 실해가 없다. 2) result()가 쓰는 passed:true 증적 파일이 다음 실패 실행 뒤에도 남는 것은 사실이나 저장소 안에서 이 파일을 판정에 쓰는 곳이 없고 판정의 정본은 Playwright 결과다. 증적 폴더 기본값(9행)을 실행마다 비워지는 outputDir로 옮기는 일은 pw-hardcoded-paths(G-190) 몫이다. 제품 동작이 아니라 검증 수단 문제라 medium으로 둔다.",
+   "evidence": "frontend/e2e/permissions.real.spec.ts:37 @ f040e96, frontend/e2e/permissions.real.spec.ts:59 @ f040e96, frontend/playwright.mvp.config.ts:9 @ f040e96, frontend/e2e/permissions.real.spec.ts:37 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "C449-005, G-188과 원인이 같지만 이 파일은 #453이 들였고 #449 수정 브랜치에는 없어 결과를 나눴다. #453 수정 브랜치는 #449 수정 커밋을 담지 않으므로 이 브랜치만 보면 customer-payment-retry와 invoice-links는 아직 고정값이다. 스택을 다시 쌓으면 맞춰진다. 그 두 파일을 #453에서 다시 고치지 않는다(충돌 방지). readme-test-commands(G-189)와 같은 README 절을 같은 #453 수정 에이전트가 고치므로 한 커밋 안에서 맞춘다. pw-hardcoded-paths(G-190)가 증적 폴더 기본값을 outputDir 아래로 옮기면 남는 passed 증적 문제도 함께 사라진다.",
+   "pr": 453
+  },
+  {
+   "id": "D-057",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "overview/page.tsx:17은 완료 여부를 'data.supplier_configured && data.payment_configured'로 정하지만 detail은 '현재 결제 모드: 테스트'만 쓴다. :23은 미완료 단계를 '청구 전 준비'에 title, detail, '설정하기'(/settings) 링크로만 보여 주므로 둘 중 무엇이 빠졌는지 화면 어디에도 나오지 않는다. 백엔드 DashboardService.java:135-154에서 supplier_configured는 사업자등록번호, 대표자명, 사업장 주소가 모두 있어야 참이고, payment_configured는 현재 모드의 toss_payments_credential이 있어야 참이라 두 조건은 독립적이다. 반박 시도: 설정 화면이 상태를 충분히 보여 주는지 봤다. settings/page.tsx는 공급자 정보 입력 폼(관리 권한)과 토스페이먼츠 연동 표를 보여 주지만, 개요의 '현재 결제 모드: 테스트'는 결제 설정이 된 것처럼 읽혀 신규 관리자가 무엇을 채울지 알 수 없다. 사용자가 설정 화면을 다 훑어야 하는 안내 누락으로 confirmed, 영향은 작아 low. 문제의 줄은 #451(53ec3d9)에서 처음 들어왔고 #455까지 파일이 같다.",
+   "evidence": "frontend/src/app/(console)/overview/page.tsx:17 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:23 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:17 @ 854e293, backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:135 @ 854e293, frontend/src/app/(console)/settings/page.tsx:28 @ 854e293, frontend/src/app/(console)/settings/page.tsx:31 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "payment_configured가 보관한 토스 키도 설정됨으로 세는 백엔드 문제는 k3 C451-001, G-108에서 다룬다. 그 수정이 들어가면 '토스페이먼츠 ... 키 미등록'이 보관 뒤에도 정확해진다. 고객 수, 미터 수가 보관 자원을 포함하는 문제(k3 G-125)도 같은 단계 목록에 영향을 주지만 원인이 백엔드라 여기서 다루지 않는다.",
    "pr": 451
   },
   {
@@ -200,6 +279,24 @@
    "behavior_change": false,
    "notes": "globals.css의 .workspace-panel 규칙은 k5 범위지만 고칠 곳은 모듈 쪽 900px 규칙이라 k6 범위다. 재현 스크립트와 스크린샷: S/scripts/pricing-mobile-chips/probe.js, S/shots/pricing-mobile-chips/rail-375.png, rail-fixed-375.png.",
    "pr": 446
+  },
+  {
+   "id": "D-103",
+   "merged_ids": [
+    "D-224",
+    "X-068"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 안내는 사실과 맞다. 백엔드 SignupService.validatePassword가 UTF-8 72바이트를 검사하고(bcrypt 한도), 영문, 숫자, 기호만 쓰는 사용자는 72바이트가 72자와 같아 거절되지 않는다. 그러나 문구가 사용자가 셀 수 있는 단위가 아니다. 가입(AuthForm.tsx:21), 초대 수락(InvitationForm.tsx:17), 운영자 생성(CreateOperatorButton.tsx:75), 사용자 계정 직접 생성(members/page.tsx:32, 최상단 36행)이 모두 '8자 이상, UTF-8 기준 72바이트 이하'로 안내하고, 거절 문구도 세 서버 액션((public)/actions.ts:39, admin/actions.ts:28, organization-invitations/[token]/actions.ts:44)에서 'UTF-8 기준 72바이트 이하'로 같다. 입력칸 maxLength=72는 UTF-16 글자 수라 한글 25자(75바이트)도 입력되고, 제출하면 같은 바이트 문구로만 거절되어 몇 자를 줄여야 하는지 알 수 없다. 세 지적은 같은 문구 줄을 가리켜 하나로 합쳤다.",
+   "evidence": "frontend/src/components/auth/AuthForm.tsx:21 @ 0245c15, frontend/src/components/auth/InvitationForm.tsx:17 @ 0245c15, frontend/src/components/auth/CreateOperatorButton.tsx:75 @ 0245c15, frontend/src/app/(console)/members/page.tsx:32 @ 0245c15, frontend/src/app/(public)/actions.ts:39 @ 0245c15, frontend/src/app/admin/actions.ts:28 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:44 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "문구 기준: 사용자가 직접 셀 수 있는 글자 수로 쓰고 한글만 예외로 알린다. 이모지 같은 4바이트 문자는 드물어 문구에 넣지 않았다. 같은 파일을 consent-block-unstyled(D-232, InvitationForm 구조 변경), signup-name-empty-msg(X-101, (public)/actions.ts 이름 검사), validation-rules-dup(G-050, 공용 규칙 모듈)이 함께 고치므로 한 커밋 묶음으로 맞추는 편이 충돌이 적다. 공용 모듈 자리는 frontend/src/lib/auth/가 더 자연스럽지만 k5 범위라 k6 안의 components/auth에 둔다(components/auth/use-mutation-scope.ts 선례).",
+   "pr": 442
   },
   {
    "id": "D-111",
@@ -366,6 +463,39 @@
    "pr": 451
   },
   {
+   "id": "D-190",
+   "merged_ids": [
+    "D-004",
+    "X-065"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "현재 head 854e293의 overview/page.tsx:21은 데이터가 있으면 제목을 문자열 리터럴 '이번 달 과금 운영'으로 고정하고 month를 쓰지 않는다. :9의 readMonth가 ?month=2026-09를 그대로 받아 getDashboard(month)로 9월 수치(금액 흐름, 결제 실패, 고객별 수납)를 그리지만 h1은 '이번 달'이다. 오류 분기 :11 설명도 '이번 달의 진행 상태'로 고정이다. 반박 시도: (1) 운영자가 직접 월을 바꿀 때만 생기는지 봤다. 사이드바 NavMenu.tsx:24가 workspaceHref(item.href, search)를 inheritFilters 없이 불러 lib/workspace-href.ts:19-21이 지금 URL의 month를 /overview로 넘긴다. 그래서 /invoices?month=2026-09에서 '개요'를 누르면 고르지 않은 9월 개요가 '이번 달 과금 운영'으로 열린다. (2) 같은 머리의 MonthFilter가 '청구 월 2026-09'를 보여 주지만, 다른 월 화면(billing/page.tsx:55, invoices/page.tsx:39, usage/page.tsx:41)은 제목에 formatKoreanMonth(month)를 넣는데 개요만 사실과 다른 '이번 달'을 단언한다. 반박되지 않아 confirmed. 금액과 결제 실패 수를 잘못된 달로 읽을 수 있어 medium. 문제의 줄은 #451(53ec3d9)에서 overview/page.tsx를 새로 만들 때 들어왔고 #455까지 파일이 같다. 세 지적 모두 같은 :21 고정 문구가 원인이라 하나로 합쳤다. X-065의 나머지 두 부분은 따로 판정했다: 요금 설계 제목은 pricing/page.tsx:47이 kicker='요금 설계'를 h1 바로 위에 보여 메뉴 이름과 이어지고, 확정 인보이스 화면은 invoices/page.tsx:39-40이 '인보이스 - 2026년 10월'과 '확정 (finalized)' 태그를 보여 메뉴와 어긋나 길을 잃을 근거가 약하므로 이 부분은 고치지 않는다(반박). 하단 기준 시각 toLocaleString(:26)은 date-format-mixed 묶음(D-102)이 같은 줄을 다루므로 여기서 고치지 않는다.",
+   "evidence": "frontend/src/app/(console)/overview/page.tsx:21 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:11 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:9 @ 854e293, frontend/src/app/(console)/overview/page.tsx:21 @ 854e293, frontend/src/components/shell/NavMenu.tsx:24 @ 854e293, frontend/src/lib/workspace-href.ts:19 @ 53ec3d9, frontend/src/app/(console)/billing/page.tsx:55 @ 854e293, frontend/src/app/(console)/pricing/page.tsx:47 @ 854e293, frontend/src/app/(console)/invoices/page.tsx:39 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "default-month-current 묶음(D-247, 개요 기본 월이 진행 중인 달)과 같은 화면이고 D-247도 제목 '이번 달'을 언급한다. 기본 월 정책은 D-247 판정 몫이고 이 묶음은 제목과 오류 설명 문구만 고친다. 둘이 같은 :9 근처를 고치면 restack 때 합친다. X-065의 기준 시각 형식 부분은 date-format-mixed(D-102)와 겹친다. 메뉴와 제목 불일치 부분은 kicker와 태그로 메뉴 이름이 이미 보여 반박했다. 메뉴 이름 정리를 원하면 별도 지적으로 다룬다.",
+   "pr": 451
+  },
+  {
+   "id": "D-196",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "overview/page.tsx:25 '고객별 수납 현황' 표는 행이 인보이스별 수납(rowKey invoice_id)이고 고객 열이 hrefPrefix '/payments/'로 그 행의 수납 상세로 간다(WorkspaceView.tsx:26). 반박 시도로 목적지와 다른 화면의 관례를 봤다. 목적지 payments/[id]/page.tsx:97-99는 제목이 '{고객}의 수납'이고 머리에 '고객으로 이동'(/customers/{customer_id}?month=) 링크가 있어 고객 상세는 한 번에 간다. 같은 표 구성인 수납과 취소 목록(payments/page.tsx:17, #445)도 고객 열이 같은 방식으로 수납 상세로 가고, 고객 상세의 청구와 수납 표(customers/[id]/page.tsx:43)도 /payments/로 간다. 즉 수납 맥락의 표에서 행의 첫 열이 그 행의 수납 상세로 가는 것은 제품 전체의 일관된 관례이고, 구역 제목 '고객별 수납 현황'과 목적지 제목 '{고객}의 수납'이 맞는다. 제안대로 링크를 금액이나 상태 열로 옮기면 수납 목록과 개요가 서로 달라진다. 실패 시나리오의 비용은 한 번 더 누르는 정도이고 잘못된 정보나 막다른 길이 없어 refuted.",
+   "evidence": "frontend/src/app/(console)/overview/page.tsx:25 @ 854e293, frontend/src/components/workspace/WorkspaceView.tsx:26 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:97 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:99 @ 854e293, frontend/src/app/(console)/payments/page.tsx:17 @ 854e293, frontend/src/app/(console)/customers/[id]/page.tsx:43 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "확인 중에 따로 본 것: 수납과 취소 목록 안내 payments/page.tsx:18 '고객을 선택하면 결제 시도, 취소 내역과 등록 카드 관리로 이어집니다'는 목적지 수납 상세에 카드 관리 구역이 없어(카드 관리는 customers/[id]/page.tsx '현재 결제 환경의 카드 관리') 문구가 사실과 다르다. 이 묶음 지적과 원인이 달라 판정에 넣지 않았고 다른 묶음 지적 목록에서도 찾지 못했다. 필요하면 #445 문구 지적으로 따로 올린다.",
+   "pr": 451
+  },
+  {
    "id": "D-206",
    "merged_ids": [],
    "verdict": "refuted",
@@ -500,6 +630,21 @@
    "pr": 442
   },
   {
+   "id": "D-248",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "payments/page.tsx:9가 readMonth로 month가 없으면 KST 현재 월(lib/month.ts:34-36)을 쓰고, :10이 그 달의 확정 인보이스(/v1/invoices, 페이지 없음)와 수납을 불러 :13에서 인보이스 기준으로 행을 만든다. 인보이스는 보통 달이 끝난 뒤 확정하므로 진행 중인 달은 대개 빈 표이고, 그때 :17 empty가 '확정 인보이스가 없습니다. 청구 검토에서 금액을 확인한 뒤 확정하세요.'로 진행 중인 달의 확정을 권한다. 반박 시도: (1) 진행 중인 달 확정이 정상 경로인지 봤다. 확정 자체는 막혀 있지 않지만 InvoiceFinalizeDialog.tsx:148이 '아직 끝나지 않았습니다. 지금 확정하면 남은 기간 사용량은 청구되지 않습니다'로 경고하는 비권장 행동이다. 빈 상태 문구가 제품이 경고하는 행동을 권하므로 문구 문제는 성립한다. (2) 사이드바로 오면 다른 달을 볼 수 있는지 봤다. NavMenu.tsx:24와 workspace-href.ts:19-21은 지금 URL의 month만 넘기므로 month 없는 개요에서 오면 현재 월 빈 화면이 먼저 나온다. 결제 실패 처리는 지난달 인보이스에서 일어나 담당자가 매번 월을 바꿔야 한다. 다만 확정 대화상자 경고가 있고 데이터 손상은 없어 low로 낮춘다. 문제의 :9, :17은 #445(2e98143)에서 처음 들어왔고 #455까지 파일이 같다.",
+   "evidence": "frontend/src/app/(console)/payments/page.tsx:9 @ 2e98143, frontend/src/app/(console)/payments/page.tsx:17 @ 2e98143, frontend/src/lib/month.ts:34 @ 2e98143, frontend/src/components/billing/InvoiceFinalizeDialog.tsx:148 @ 854e293, frontend/src/lib/workspace-href.ts:19 @ 854e293, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:55 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "기본 월을 직전 달로 바꾸는 제안은 채택하지 않았다. 기본 월은 k5 lib/month.ts readMonth를 모든 월 화면이 공유하고 사이드바가 month를 이어 넘기는 정책이라 수납 화면만 바꾸면 화면 사이 월이 어긋난다. 같은 정책을 개요에서 다루는 default-month-current(D-247) 판정과 함께 정할 일이다. 또 #453 environment-cycle e2e는 month 없는 /payments가 현재 월을 보여 준다고 전제한다. 빈 상태에서 지난달로 한 번에 가는 링크로 실패 시나리오(빈 화면에서 포기, 진행 중인 달 확정 시도)는 해소된다.",
+   "pr": 445
+  },
+  {
    "id": "G-020",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -527,6 +672,21 @@
    "tests": [],
    "behavior_change": false,
    "notes": "k5 G-047, G-058과 내용이 겹친다. k6 cancel-pending-copy(D-213)는 같은 117~118행의 결제 문구가 취소 pending에 맞지 않는 문구 문제로 별도 판정 대상이다. workspace-actions-false-branches(G-020) 수정이 77~78행을 #445로 옮기면 status 처리는 결제 PR에서만 들어온다. finalizeInvoices case는 화면이 workspaceAction으로 부르지 않아(billing/actions.ts의 별도 액션 사용) 도달하지 않는 case로 보이나 피해는 없다.",
+   "pr": 442
+  },
+  {
+   "id": "G-050",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도 결과 일부는 틀렸다. (1) '초대 쪽은 72자 검사가 빠져 다르다': UTF-8 바이트가 72 이하이면 UTF-16 길이도 72 이하이므로 password.length > 72 검사는 중복이고 동작 차이가 없다. (2) '동의 문서를 하나 추가하면 새 항목 없이 요청해 거부된다': 세 서버 액션((public)/actions.ts:40, account/consents/actions.ts:14, organization-invitations/[token]/actions.ts:45)이 모두 lib/auth/consents.ts의 CONSENT_DOCUMENTS로 검증과 payload를 만들어 문서 추가가 자동으로 퍼진다. (3) 이메일 정규식은 백엔드 패턴보다 엄격할 뿐이고 백엔드 @Email도 공백을 거절해 실사용 차이가 없다. 남는 문제는 실제로 갈라진 복사다. 비밀번호 8자와 72바이트 검사가 세 서버 액션에 따로 있고(admin/actions.ts:28, (public)/actions.ts:39, 초대 actions.ts:44) 같은 규칙의 사용자 계정 직접 생성(workspace-actions.ts:40 createMember)에는 사전 검사가 없다. ActionPanel 필드 설정(members/page.tsx:32)에는 minLength도 없어 7자 비밀번호가 그대로 백엔드로 가고, 백엔드 Bean Validation 기본 문구나 'UTF-8로 72바이트 이하여야 합니다'가 필드 오류로 그대로 보인다. 안내 문구도 네 곳, 이름 검사도 세 곳에 복사되어 있고, 동의 UI는 세 벌이 이미 클래스와 문구가 갈렸다(consent-block-unstyled D-232에서 확인).",
+   "evidence": "frontend/src/app/admin/actions.ts:28 @ 0245c15, frontend/src/app/(public)/actions.ts:39 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:44 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:40 @ 0245c15, frontend/src/app/(console)/members/page.tsx:32 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "behavior_change: 사용자 계정 직접 생성이 잘못된 입력을 백엔드에 보내지 않고 프론트에서 필드 오류로 돌려준다(API 계약은 그대로). consent-block-unstyled(D-232), password-utf8-hint(D-103), signup-name-empty-msg(X-101)과 같은 파일, 같은 PR이라 한 수정 담당이 순서대로 적용하는 편이 낫다. k1의 G-011(백엔드 DTO가 UserAccount 규칙을 리터럴로 베낌)과 G-010(백엔드 동의 검증 세 곳)이 백엔드 쪽 같은 문제다. k5 G-051(ActionState 모양)과도 겹친다.",
    "pr": 442
   },
   {
@@ -592,6 +752,21 @@
    "pr": 453
   },
   {
+   "id": "X-017",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: antd App이 링크 밑줄을 지우는지 소스와 렌더로 확인했다. antd 6.6.7 genStyleUtils.getResetStyles가 genLinkStyle을 공용 리셋으로 등록하고(linkDecoration 기본값 none), SSR로 뽑은 CSS에 ':where(.css-...) a{color:var(--ant-color-link);text-decoration:var(--ant-link-decoration)}'가 있다. AppProviders.tsx:22가 모든 화면을 <App>으로 감싸고 globals.css는 일반 a에 text-decoration을 주지 않아(38행은 text-underline-offset만) 문장 속 링크도 밑줄이 없다. 최상단 CSS로 /login의 '.auth-switch' 링크를 렌더하면 text-decoration none, 링크 rgb(87,70,173) 또는 rgb(81,64,156)(CSS 순서에 따라), 주변 글자 rgb(90,101,120)이고 대비는 1.24:1 또는 1.39:1로 WCAG 1.4.1이 요구하는 3:1에 못 미친다. 같은 구조가 event-issues/page.tsx:53 '.field-hint' 안 '감사 기록', InvoiceViewLinks.tsx:83 role=alert 안 '목록 새로 조회', EventFilters.tsx:185 '후보 다시 불러오기'에 있다. #442 시점에는 링크 #1677ff와 본문 약 #1f1f1f의 대비가 4.0:1이라 통과했고, #443이 테마 colorPrimary/colorInfo #5746ad, a 색 #0958d9와 #51409c, .auth-switch의 --muted 색을 넣으면서 처음 실패한다.",
+   "evidence": "frontend/src/components/shell/AppProviders.tsx:22 @ 5535638, frontend/src/app/globals.css:38 @ 5535638, frontend/src/app/globals.css:73 @ 5535638, frontend/src/app/globals.css:155 @ 5535638, frontend/src/components/auth/AuthForm.tsx:24 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "렌더 근거: S/scripts/consent-block-unstyled/ssr.cjs, measure.cjs(최상단 빌드 CSS와 antd SSR 추출 CSS를 두 순서로 넣어 측정). event-issues, InvoiceViewLinks, EventFilters의 링크는 #442보다 위 PR에서 들어오지만 원인은 같은 #443 전역 스타일이고 위 규칙 하나로 모두 해소되므로 한 결과로 둔다. k5의 D-009, D-036, D-053(링크와 가입 화면이 antd 기본 파랑을 씀)이 링크 색을 바꾸면 대비 수치가 달라지므로 같이 본다. 색을 바꿔도 주변 글자와 3:1을 만들기 어려워 밑줄이 더 확실한 방법이다.",
+   "pr": 443
+  },
+  {
    "id": "X-018",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -605,6 +780,21 @@
    "behavior_change": false,
    "notes": "k5 X-022(테마가 일부 파생 토큰을 덮지 않음)가 AppProviders에서 colorTextDisabled나 colorTextQuaternary를 덮으면 이 대비도 달라지지만, 비활성 컨트롤 색 전체가 바뀌므로 k6 수정은 그와 무관하게 이 두 표만 고친다.",
    "pr": 446
+  },
+  {
+   "id": "X-027",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "overview/page.tsx:24의 '결제 실패 N건' 항목은 '수납 확인' 링크로 /payments?month={month}만 보낸다. payments/page.tsx는 searchParams에서 month만 읽고(:9), 그 달 확정 인보이스 전부(/v1/invoices는 페이지를 나누지 않고 고객 이름 오름차순, InvoiceController.java:52, :55)에 수납 상태를 붙여 :17 WorkspaceTable로 20행씩 클라이언트 페이지로 보여 준다. 상태 필터나 정렬이 없어 실패 행이 이름 순으로 섞인다. 반박 시도: (1) 개요 수와 목록 기준이 같은지 봤다. 대시보드 failed_payment_count는 invoicePaymentService.list(..., mode)의 status='failed' 수(DashboardService.java:161)이고 수납 목록도 같은 /v1/invoice-payments라 기준은 같다. (2) 우회 수단을 봤다. 확정 인보이스 화면은 수납 상태 필터(ResourceSearchControls.tsx:112, capabilities listInvoices.paymentStatus)가 있어 우회할 수는 있지만 개요 링크는 그쪽을 쓰지 않고, 이 링크가 들어간 #451이 그 필터도 함께 들였다. 실패 N건을 눌러 실패 건만 볼 수 없는 연결 누락은 성립해 confirmed. 고객이 많을 때 페이지를 넘겨 찾는 비용이고 우회 경로가 있어 low. 고칠 PR은 이 링크를 들인 #451(53ec3d9)이고 수납 목록 파일은 #445 뒤로 바뀌지 않아 #451 head에서 같은 수정이 그대로 통한다.",
+   "evidence": "frontend/src/app/(console)/overview/page.tsx:24 @ 53ec3d9, frontend/src/app/(console)/payments/page.tsx:9 @ 53ec3d9, frontend/src/app/(console)/payments/page.tsx:17 @ 53ec3d9, frontend/src/components/workspace/WorkspaceView.tsx:52 @ 854e293, frontend/src/components/screen/ResourceSearchControls.tsx:112 @ 854e293, backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:161 @ 854e293, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:52 @ 854e293, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:55 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "수납 상태 이름이 화면마다 다른 문제(k5 D-005, D-131, X-009 등: 수납 목록 '실패', 확정 인보이스 '결제 실패')와 화면은 겹치지만 원인이 다르다. 대안으로 개요 링크를 /invoices?month={month}&payment_status=failed로만 바꾸는 방법도 있으나 목적지 행 링크가 조회 링크 구역으로 떨어져 택하지 않았다.",
+   "pr": 451
   },
   {
    "id": "X-029",
@@ -843,6 +1033,21 @@
    "behavior_change": false,
    "notes": "D-232, D-010, D-096, D-200도 같은 간격 문제를 부수적으로 지적했지만 각 id의 주 지적이 동의 블록 모양이라 D-232 결과에 두었다. invite-anon-org-link(D-061)가 같은 page.tsx:32 링크를 로그인 세션이 있을 때만 보이게 바꾸자고 하고, invite-logout-breaks(C442-013)가 초대 화면 로그아웃 흐름을 바꾸자고 하므로 같은 줄을 고칠 때 함께 맞춘다(감싸는 div 안에서 조건부 렌더).",
    "pr": 442
+  },
+  {
+   "id": "X-101",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: required가 걸려 있어 빈 칸은 브라우저가 막는다. 그러나 공백만 넣으면 required를 통과하고, signupAction이 trim 뒤 빈 값과 255자 초과를 한 조건으로 묶어 '도입사 이름과 담당자 이름을 255자 이내로 입력하세요.'를 돌려준다((public)/actions.ts:37 @ 0245c15, 최상단 39행). 입력칸 maxLength={255}(AuthForm.tsx:19)가 UTF-16 글자 수로 JS length와 같은 단위라 화면에서는 255자 초과가 나올 수 없으므로, 화면에서 이 문구가 나오는 경우는 사실상 공백뿐이다. 문구가 길이 제한만 말하고 어느 칸인지도 말하지 않아 사용자가 이름이 길다고 오해할 수 있다. 백엔드(CreateSignupRequest @NotBlank)까지 가지 않고 프론트에서 끝나는 경로라 이 줄이 원인이다. 같은 묶음 문구가 초대 수락 액션(organization-invitations/[token]/actions.ts:43, '이름을 255자 이내로 입력하세요.')과 운영자 생성 액션(admin/actions.ts:26)에도 있다.",
+   "evidence": "frontend/src/app/(public)/actions.ts:37 @ 0245c15, frontend/src/app/(public)/actions.ts:39 @ 854e293, frontend/src/components/auth/AuthForm.tsx:19 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:43 @ 0245c15, frontend/src/app/admin/actions.ts:26 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "이메일과 비밀번호 오류도 상단 Alert 하나로만 나온다는 부분은 문구가 칸 이름을 말하고 Alert에 포커스가 가므로 결함으로 보지 않았다. password-utf8-hint(D-103)와 validation-rules-dup(G-050)이 같은 서버 액션 파일을 고치므로 충돌에 주의한다. 라이브 재현은 공유 스택이 없어 하지 못했고 코드 경로로 판정했다.",
+   "pr": 442
   }
  ],
  "new_findings": [],
@@ -876,6 +1081,11 @@
    "id": "C451-002",
    "file": "frontend/src/app/(console)/billing/state.ts, frontend/src/app/(console)/billing/actions.ts, frontend/src/components/billing/InvoiceFinalizeDialog.tsx, frontend/e2e/finalize-state.test.mjs",
    "why": "일부만 범위 밖: frontend/src/lib/api/invoices.ts(k5) 52-55행 FinalizeInvoicesResponse의 invoices, supply_amount, tax_amount, total_amount를 451 백엔드 계약에 맞게 선택 필드로 바꾸는 것은 k5 범위다. 바꾸지 않아도 위 수정은 타입 검사를 통과한다. 근본 대안인 백엔드 확장(backend/src/main/java/com/meterengine/invoice/dto/FinalizeInvoicesResponse.java, InvoiceController.finalizeInvoices의 from(...) 사용, backend/openapi.yaml)을 453에서 451로 내리는 것은 frontend 밖이다."
+  },
+  {
+   "id": "D-103",
+   "file": "frontend/src/components/auth/credential-rules.ts, frontend/src/components/auth/AuthForm.tsx, frontend/src/components/auth/InvitationForm.tsx, frontend/src/components/auth/CreateOperatorButton.tsx, frontend/src/app/(console)/members/page.tsx, frontend/src/app/(public)/actions.ts, frontend/src/app/admin/actions.ts, frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "일부만 범위 밖: 백엔드 SignupService.PASSWORD_BYTES_MESSAGE('UTF-8로 72바이트 이하여야 합니다')도 같은 개발 용어이고, 프론트 사전 검사가 없는 사용자 계정 직접 생성(workspace-actions createMember)에서는 이 백엔드 문구가 필드 오류로 그대로 보인다. 백엔드 문구는 k6 범위 밖(backend/src/main/java/com/meterengine/account/service/SignupService.java)이고, 프론트 사전 검사는 G-050 결과에서 다룬다."
   },
   {
    "id": "D-113",
@@ -918,6 +1128,11 @@
    "why": "일부만 범위 밖: k5 범위: frontend/src/lib/api/transport.ts:93과 frontend/src/lib/api/client.ts:16의 X-MeterEngine-Organization-Id 전송(organizationId)은 #453으로 옮길 대상이다. frontend/src/lib/auth/permissions.ts:15~23의 ADMIN_OPERATIONS가 #442에 없는 고객, 결제, 웹훅, 가격 operation까지 담은 것도 같은 성격이다. 둘 다 k5에서 다룬다."
   },
   {
+   "id": "G-050",
+   "file": "frontend/src/components/auth/credential-rules.ts, frontend/src/app/(public)/actions.ts, frontend/src/app/admin/actions.ts, frontend/src/app/organization-invitations/[token]/actions.ts, frontend/src/app/(console)/workspace-actions.ts, frontend/e2e/credential-rules.test.mjs",
+   "why": "일부만 범위 밖: 규칙 모듈의 이상적인 자리는 finding이 제안한 frontend/src/lib/auth/credentials.ts지만 k5 범위다. k5가 lib에 같은 모듈을 만들면 k6 호출부를 그쪽 import로 옮긴다. 백엔드 UserAccount 상수와의 자동 동기화(OpenAPI 스키마에서 읽기 등)는 frontend 밖이다."
+  },
+  {
    "id": "G-056",
    "file": "frontend/src/app/organization-invitations/invitation-flow.ts, frontend/src/app/organization-invitations/[token]/actions.ts, frontend/src/app/organization-invitations/[token]/page.tsx, frontend/src/app/organization-invitations/continue/page.tsx",
    "why": "일부만 범위 밖: k5 G-070(proxy.ts의 'me_session' 문자열 직접 사용, 쿠키 이름과 옵션 공용 모듈 제안)은 lib/와 proxy.ts라 k5에서 다룬다. k5가 lib/auth/cookies.ts 같은 공용 모듈을 만들면 이 파일의 쿠키 옵션은 그쪽으로 옮겨도 된다."
@@ -931,6 +1146,11 @@
    "id": "G-189",
    "file": "frontend/package.json, frontend/README.md",
    "why": "일부만 범위 밖: MVP 실제 스택의 사전 준비 중 고정 경로(/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json, toss-state.json, workspace 결과 기본 경로)는 pw-hardcoded-paths 묶음(C442-014, G-023, G-037, G-190)이 바꿀 수 있다. 그 수정이 환경변수를 들이면 README에는 그 변수 이름을 적고, 아직 고정 경로이면 'macOS 경로가 고정돼 있다'는 사실만 적고 경로를 고치지 않는다. CI에서 단위 검사를 돌리는 단계는 C442-005의 out_of_scope_parts(.github/workflows/ci.yml)다."
+  },
+  {
+   "id": "X-017",
+   "file": "frontend/src/app/globals.css",
+   "why": "고칠 곳은 k5 범위인 frontend/src/app/globals.css(#443)다. 문장 속 링크에만 밑줄을 되살리는 규칙을 더한다: :is(p, .field-hint, [role=alert]) a:not(.ant-btn) { text-decoration: underline; }. 특이도가 (0,2,1)이라 antd의 ':where(.css-...) a'(0,0,1)와 'a:hover, a:focus'(0,1,1)를 CSS 순서와 상관없이 이기므로 hover와 focus에서도 밑줄이 남는다. 사이드바, 탭, 표 셀의 독립 링크는 p 안이 아니거나 자기 클래스로 text-decoration: none을 주므로 영향이 없는지 #443 이상 화면에서 확인한다. antd 테마 토큰 linkDecoration을 underline으로 바꾸는 방법(AppProviders.tsx, k5)은 클래스가 없는 독립 링크까지 모두 밑줄이 생겨 범위가 넓다. k6 파일(AuthForm.tsx:24 등)은 고칠 필요가 없다."
   },
   {
    "id": "X-029",
@@ -961,6 +1181,11 @@
    "id": "X-066",
    "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/workspace-action-feedback.ts, frontend/e2e/workspace-action-feedback.test.mjs",
    "why": "일부만 범위 밖: ActionPanel.tsx:50의 기본값 '저장했습니다.'(k5, 442)는 workspaceAction이 항상 message를 채워 지금은 쓰이지 않는다. 바꿀 필요 없음."
+  },
+  {
+   "id": "X-101",
+   "file": "frontend/src/app/(public)/actions.ts, frontend/src/app/organization-invitations/[token]/actions.ts, frontend/src/app/admin/actions.ts, frontend/e2e/auth.contract.spec.ts",
+   "why": "일부만 범위 밖: 입력칸에 aria-invalid와 오류 연결을 하려면 ActionState에 필드 정보를 더해야 하는데 이 타입은 frontend/src/lib/auth/types.ts(k5, G-051과 겹침)에 있다. 다만 오류 Alert가 포커스를 받고 문구가 칸 이름을 말하면 WCAG 3.3.1은 충족되므로 필수는 아니다."
   }
  ],
  "not_done": [],
