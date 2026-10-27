@@ -10,10 +10,11 @@
 | 경로 | 내용 |
 | --- | --- |
 | `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
-| `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기 |
+| `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 부하 실험 중 CPU 기록 켜기 |
 | `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
 | `load-generator/scripts/` | 켜고 끄기, 실험 실행, 보낸 것과 저장된 것 대조 |
+| [`scripts/sut-cpu-report.sh`](scripts/sut-cpu-report.sh) | 단계별, 컨테이너별 SUT CPU 표. 쓰는 법은 "부하 실험" |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
@@ -224,6 +225,17 @@ measurements/test-storage/load-generator/scripts/lg-stop.sh
 
 이벤트를 보내는 속도를 올려 가며 초당 몇 건에서 어디가 먼저 무너지는지 본다.
 
+부하를 걸기 전에 apply한 컴퓨터에서 SUT CPU 기록을 켠다. 여기서 정한 RUN_ID를 부하 발생기에서도 그대로 쓴다. 비우면 날짜로 정해져 SUT 기록과 이어지지 않는다.
+
+```bash
+export RUN_ID=<날짜>-ingest
+measurements/test-storage/sut/scripts/start-cpu-recording.sh "$RUN_ID"
+```
+
+- 컨테이너마다, 그리고 SUT 전체의 CPU 누적값이 10초마다 SUT의 `/var/tmp/results/<RUN_ID>-sut-cpu.tsv`에 쌓인다. 90분 뒤 스스로 멈추고, 길이는 `RECORD_SECONDS`(초)로 바꾼다.
+- 출력에 cgroup 드라이버와 커널의 IRQ 시간 계산 설정(`irq_time_accounting`)이 찍힌다. 같은 내용이 `<RUN_ID>-sut-cpu-info.txt`에 남는다.
+- 일찍 멈추거나 다른 기록을 켜려면 SUT에서 `sudo systemctl stop meterengine-cpu-record-<RUN_ID>`로 끈다.
+
 실험은 부하 발생기에서 root로 실행한다.
 
 ```bash
@@ -231,6 +243,7 @@ sudo -i
 cloud-init status --wait
 git -C /opt/meterengine pull --ff-only
 cd /opt/meterengine/measurements/test-storage/load-generator
+export RUN_ID=<RUN_ID>
 read -rsp 'API_KEY: ' API_KEY
 export API_KEY
 scripts/run-ingest-steps.sh
@@ -262,15 +275,23 @@ aws ssm start-session --region ap-northeast-2 \
   --target "$(terraform -chdir=measurements/test-storage/load-generator/terraform output -raw load_generator_instance_id)" \
   --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["8000"],"localPortNumber":["8000"]}'
 curl -fo work/<RUN_ID>.tgz http://localhost:8000/<RUN_ID>.tgz
+tar xzf work/<RUN_ID>.tgz -C work
 ```
 
-SUT CPU를 나눠 볼 때는 Grafana Explore에 넣는다. 위부터 백엔드, Prometheus, EC2 전체이고, 나머지는 대부분 Caddy다.
+SUT CPU 기록 `<RUN_ID>-sut-cpu.tsv`와 `<RUN_ID>-sut-cpu-info.txt`는 "RDS 장애 주입 실험" 5의 백엔드 로그와 같은 방법으로 `work/<RUN_ID>/`에 받는다.
 
+단계별 SUT CPU는 보고서로 나눠 본다.
+
+```bash
+measurements/test-storage/scripts/sut-cpu-report.sh work/<RUN_ID> work/<RUN_ID>/<RUN_ID>-sut-cpu.tsv
 ```
-rate(process_cpu_time_ns_total{job="backend"}[1m]) / 1e9 / 2
-rate(process_cpu_seconds_total{job="prometheus"}[1m]) / 2
-1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m]))
-```
+
+- 값은 SUT 전체 CPU 대비 %이고, 단계 시작 1분을 뺀 구간에서 잰다. 표는 `<RUN_ID>-sut-cpu-report.tsv`로도 남는다.
+- `ec2_cpu`는 Grafana의 EC2 CPU처럼 idle만 뺀 값이고, `containers`, `outside`, `iowait`, `steal`을 더한 값과 같다.
+- `backend`는 블루와 그린을 더한 값이다. 컨테이너 안 모든 프로세스를 세므로 Grafana의 JVM CPU와 조금 다를 수 있다.
+- `outside`는 컨테이너 밖에서 쓴 CPU다. 커널 네트워크 처리, dockerd, SSM 에이전트, 기록 자신이 들어가고, `docker.service`, `sampler` 같은 시스템 단위 열은 그 일부다.
+- `softirq`, `irq`는 SUT 전체 값이다. info 파일의 `irq_time_accounting`이 `CONFIG_IRQ_TIME_ACCOUNTING=y`일 때만 컨테이너 값에 섞이지 않고 `outside`에 들어간다.
+- `note`가 `없음`이 아닌 단계는 그 사유를 보고 읽는다. `멈춤`이 있는 단계는 멈춘 컨테이너가 마지막 표본 뒤 최대 10초 동안 쓴 CPU가 `outside`에 들어간다.
 
 ## RDS 장애 주입 실험
 
