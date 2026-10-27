@@ -10,6 +10,7 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -246,6 +247,25 @@ class AuditQueryAndRequestIntegrationTest {
     assertThat(requestAuditCount()).isEqualTo(before + 1);
     assertThat(requestAudit(rejected))
         .containsEntry("status", "400")
+        .containsEntry("actor_type", "anonymous");
+  }
+
+  @Test
+  void 체인_앞에서_방화벽이_거절한_요청도_400_감사행_하나를_남긴다() {
+    long before = requestAuditCount();
+    MvcTestResult rejected =
+        mvc.get()
+            .uri(URI.create("/v1/payment-method-registrations/tok3nSecretValue;x=1"))
+            .exchange();
+    assertThat(rejected).hasStatus(400);
+    assertThat(requestAuditCount()).isEqualTo(before + 1);
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT actor_type,detail->>'route' AS route,detail->>'status' AS status FROM"
+                    + " audit_log WHERE action='api_request_completed' ORDER BY occurred_at DESC"
+                    + " LIMIT 1"))
+        .containsEntry("status", "400")
+        .containsEntry("route", "/v1/{unmatched}")
         .containsEntry("actor_type", "anonymous");
   }
 
