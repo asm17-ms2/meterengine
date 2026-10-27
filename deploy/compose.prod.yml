@@ -68,6 +68,8 @@ services:
       METERENGINE_ORGANIZATION_ID: ${ORGANIZATION_ID:?ORGANIZATION_ID가 없다}
       METERENGINE_ORGANIZATION_NAME: ${ORGANIZATION_NAME:?ORGANIZATION_NAME이 없다}
       METERENGINE_API_KEY: ${FRONTEND_API_KEY:?FRONTEND_API_KEY가 없다}
+      # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 Caddy가 SITE_DOMAIN으로 리다이렉트한다.
+      METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
     ports:
       - "127.0.0.1:3000:3000"
     logging: *default-logging
