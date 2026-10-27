@@ -1,0 +1,28 @@
+{
+  "task": "k2",
+  "base_heads": {
+    "feat/webhook-jobs": "58004768db67b70ab2cca01d59e70487d8c4a9f4",
+    "feat/billing-payments": "2e981431068c14c10ccaf4c5f0895f4f38fb71cf",
+    "feat/customer-invoices": "7ce9d36394916f5a75c0623ce06f648d2807358d",
+    "feat/rds-auto-stop": "854e293c2f1e1f5e071544c3605ac6b43c6fcdd1"
+  },
+  "env": {
+    "java": "OpenJDK 25.0.4.1 (apt openjdk-25-jdk-headless, Gradle toolchain), Gradle 9.5.1",
+    "docker": true,
+    "notes": "dockerd를 세션에서 직접 띄웠다. Docker Hub가 429를 돌려 postgres:18은 mirror.gcr.io에서 받아 태그했다. Maven Central 429 때문에 ~/.gradle/init.d에 Google Maven Central 미러를 더했다(저장소에는 넣지 않음). Testcontainers ryuk는 끄고(TESTCONTAINERS_RYUK_DISABLED=true) 돌렸다. node v22.22.0, corepack pnpm 사용 가능."
+  },
+  "results": [],
+  "new_findings": [],
+  "out_of_scope": [],
+  "not_done": [
+    "지적 58건 검증 진행 중",
+    "#444, #445, #449 추가 검토 진행 중"
+  ],
+  "checks": [
+    {
+      "command": "cd backend && ./gradlew build (feat/webhook-jobs 5800476, 수정 전 기준)",
+      "result": "pass",
+      "detail": "테스트 762개 통과, openapi.yaml 변화 없음"
+    }
+  ]
+}
