@@ -380,8 +380,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum (meterengine_webhook_delivery_total{result="failed"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
-                or (sum (increase(meterengine_webhook_delivery_total{result="failed"}[15m])) > 0)
+                (sum (meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
+                or (sum (increase(meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled"}[15m])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
