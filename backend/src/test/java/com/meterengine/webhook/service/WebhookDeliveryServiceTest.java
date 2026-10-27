@@ -100,22 +100,26 @@ class WebhookDeliveryServiceTest {
   }
 
   @Test
-  void 비밀값을_풀지_못한_전송은_실패로_세고_같은_실행의_다음_전송을_보낸다() {
+  void 비밀값을_풀지_못한_전송은_secret_unavailable로_기록하고_실패로_센_뒤_다음_전송을_보낸다() {
     WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
     WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     WebhookClaim broken = claim("v1:broken", true, 1);
     WebhookClaim next = claim("v1:cipher", true, 1);
     when(repository.claim()).thenReturn(Optional.of(broken), Optional.of(next), Optional.empty());
-    when(repository.complete(any(), any())).thenReturn(Optional.of("done"));
+    when(repository.complete(eq(broken), any())).thenReturn(Optional.of("pending"));
+    when(repository.complete(eq(next), any())).thenReturn(Optional.of("done"));
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(200, null, 10));
 
-    ScheduledJobResult result = service(repository, client, new SimpleMeterRegistry()).deliver();
+    ScheduledJobResult result = service(repository, client, meterRegistry).deliver();
 
     assertThat(result.failedCount()).isEqualTo(1);
     assertThat(result.processedCount()).isEqualTo(1);
-    verify(repository, never()).complete(eq(broken), any());
+    verify(repository).complete(broken, new WebhookOutcome(null, "secret_unavailable", 0));
     verify(repository).complete(eq(next), any());
+    verify(client, times(1)).send(anyString(), anyString(), anyString(), anyString(), anyString());
+    assertThat(deliveryCount(meterRegistry, "retry", "secret_unavailable")).isEqualTo(1);
   }
 
   private static WebhookDeliveryService service(

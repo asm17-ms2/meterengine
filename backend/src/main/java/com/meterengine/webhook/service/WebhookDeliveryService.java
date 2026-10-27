@@ -86,48 +86,58 @@ public class WebhookDeliveryService {
         break;
       }
       WebhookClaim claim = candidate.get();
-      Optional<String> status;
+      Tally tally;
       try {
-        status = attempt(claim);
+        tally = attempt(claim);
       } catch (RuntimeException exception) {
         logger.warn(
             "Webhook delivery {} of organization {} could not be attempted",
             claim.id(),
             claim.organizationId(),
             exception);
-        failed++;
-        continue;
+        tally = Tally.FAILED;
       }
-      if (status.isEmpty()) {
-        skipped++;
-      } else {
-        processed++;
+      switch (tally) {
+        case PROCESSED -> processed++;
+        case SKIPPED -> skipped++;
+        case FAILED -> failed++;
       }
     }
     return new ScheduledJobResult(processed, skipped, failed);
   }
 
-  private Optional<String> attempt(WebhookClaim claim) {
-    WebhookOutcome outcome;
+  private Tally attempt(WebhookClaim claim) {
     if (!claim.enabled() || claim.deleted()) {
-      outcome = new WebhookOutcome(null, "endpoint_disabled", 0);
-    } else {
-      String secret = encryptedStringConverter.convertToEntityAttribute(claim.secret());
-      String timestamp = Long.toString(Instant.now().getEpochSecond());
-      String signature =
+      return record(claim, new WebhookOutcome(null, "endpoint_disabled", 0), Tally.PROCESSED);
+    }
+    String timestamp = Long.toString(Instant.now().getEpochSecond());
+    String signature;
+    try {
+      signature =
           webhookSignatureService.sign(
-              secret, claim.webhookEventId().toString(), timestamp, claim.payload());
-      outcome =
-          webhookClient.send(
-              claim.url(),
+              encryptedStringConverter.convertToEntityAttribute(claim.secret()),
               claim.webhookEventId().toString(),
               timestamp,
-              signature,
               claim.payload());
+    } catch (RuntimeException exception) {
+      logger.warn(
+          "Webhook delivery {} of organization {} could not be signed",
+          claim.id(),
+          claim.organizationId(),
+          exception);
+      return record(claim, new WebhookOutcome(null, "secret_unavailable", 0), Tally.FAILED);
     }
+    return record(
+        claim,
+        webhookClient.send(
+            claim.url(), claim.webhookEventId().toString(), timestamp, signature, claim.payload()),
+        Tally.PROCESSED);
+  }
+
+  private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {
     Optional<String> status = webhookDeliveryRepository.complete(claim, outcome);
     if (status.isEmpty()) {
-      return status;
+      return Tally.SKIPPED;
     }
     String reason = outcome.failureReason() == null ? "none" : outcome.failureReason();
     String result = "pending".equals(status.get()) ? "retry" : status.get();
@@ -142,7 +152,7 @@ public class WebhookDeliveryService {
           reason,
           outcome.responseStatus());
     }
-    return status;
+    return recorded;
   }
 
   @Transactional(readOnly = true)
@@ -164,5 +174,11 @@ public class WebhookDeliveryService {
     }
     auditLogService.record(
         organizationId, "webhook_delivery_retried", "webhook_delivery", id.toString(), Map.of());
+  }
+
+  private enum Tally {
+    PROCESSED,
+    SKIPPED,
+    FAILED
   }
 }

@@ -381,6 +381,42 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 비밀값을_풀지_못한_전송은_secret_unavailable_시도로_남기고_재시도_간격을_따른다() {
+    String stored =
+        jdbcTemplate.queryForObject(
+            "SELECT secret FROM webhook_endpoint WHERE id = ?", String.class, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_endpoint SET secret = ? WHERE id = ?",
+        "v1:" + Base64.getEncoder().encodeToString(new byte[40]),
+        endpoint.id());
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+
+    assertThat(webhookDeliveryService.deliver().failedCount()).isEqualTo(1);
+
+    assertThat(received).isEmpty();
+    var delivery =
+        webhookDeliveryService
+            .list(organizationId, endpoint.id(), "pending", 0, 20)
+            .deliveries()
+            .getFirst();
+    assertThat(delivery.webhookEventId()).isEqualTo(eventId);
+    assertThat(delivery.attemptCount()).isEqualTo(1);
+    assertThat(delivery.failureReason()).isEqualTo("secret_unavailable");
+    assertThat(delivery.attempts())
+        .extracting(attempt -> attempt.failureReason())
+        .containsExactly("secret_unavailable");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT extract(epoch FROM next_attempt_at - clock_timestamp()) FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+                Double.class,
+                organizationId,
+                eventId))
+        .isCloseTo(60, within(5.0));
+    jdbcTemplate.update(
+        "UPDATE webhook_endpoint SET secret = ? WHERE id = ?", stored, endpoint.id());
+  }
+
+  @Test
   void 전송기록은_test와_live_read_키로_읽고_다른_도입사는_거절한다() {
     MockMvcTester mvc =
         MockMvcTester.from(
