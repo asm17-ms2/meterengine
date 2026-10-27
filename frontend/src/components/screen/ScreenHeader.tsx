@@ -17,7 +17,7 @@ export function ScreenHeader({
     <Flex justify="space-between" align="start" gap="medium" wrap>
       <Flex vertical gap={4} style={{ minWidth: 0 }}>
         <Flex align="center" gap="small" wrap>
-          <Typography.Title level={3} style={{ margin: 0 }}>
+          <Typography.Title level={1} style={{ margin: 0, fontSize: 28, letterSpacing: "-.035em" }}>
             {title}
           </Typography.Title>
           {tags}
