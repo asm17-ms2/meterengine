@@ -76,6 +76,23 @@
    "pr": 442
   },
   {
+   "id": "C444-008",
+   "merged_ids": [
+    "G-177"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "두 지적은 같은 줄이 원인이라 합쳤다. #444 head의 workspace-actions.ts:57(최상단 72행) updateWebhookEndpoint 본문은 url, event_types, enabled만 보낸다. 백엔드 UpdateWebhookEndpointRequest.java:16의 description은 @Size만 붙은 선택값이라 빠지면 null이 되고, WebhookEndpointService.update(최상단 116행)는 request.description()을 그대로 넘기며 WebhookEndpointRepository.update(최상단 75행)는 'description = ?'로 null을 쓴다. 생략 시 기존 값을 유지하는 분기는 #444와 최상단 모두 없다. 생성 API(CreateWebhookEndpointRequest.java:14)는 description을 받으므로 API로 넣은 설명이 콘솔의 '수신 주소와 통보 수정' 저장 한 번에 지워진다. 반박 시도: 콘솔 상세(integrations/[id]/page.tsx:14)는 description을 조회하지만 22행 폼 필드에도 액션에도 싣지 않아 전달 경로가 없고, PR 본문과 @Operation 설명에 PUT이 설명을 지운다는 안내도 없어 의도된 동작으로 볼 근거가 없다. 콘솔 화면이 description을 보여 주지 않아 피해는 API 응답의 메타데이터 손실에 그치므로 low로 둔다(G-177의 medium에서 낮춤).",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:57 @ 5800476, frontend/src/app/(console)/integrations/[id]/page.tsx:22 @ 5800476, frontend/src/app/(console)/workspace-actions.ts:72 @ 854e293, frontend/src/app/(console)/integrations/[id]/page.tsx:22 @ 854e293, backend/src/main/java/com/meterengine/webhook/dto/UpdateWebhookEndpointRequest.java:16 @ 854e293, backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:116 @ 854e293, backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:75 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "C444-008과 G-177은 같은 원인이라 합쳤다. 백엔드에서 description 생략 시 유지로 바꾸는 대안은 backend 범위이고 명시적 삭제 방법을 따로 정해야 해서 택하지 않았다. 여러 줄 설명은 multipart 전송에서 줄바꿈이 CRLF로 바뀔 수 있어, 그대로 보존하려면 액션에서 replace(/\\r\\n/g, \"\\n\")로 정규화할지 수정 담당이 판단한다. k2 C444-001(발송 일시 중지가 대기 전송을 끝냄)은 같은 수정 대화상자의 다른 백엔드 문제로 겹치지 않는다. 같은 파일을 바꾸는 k6 묶음(workspace-actions-false-branches 등)과 #444 restack 충돌에 유의한다.",
+   "pr": 444
+  },
+  {
    "id": "C446-002",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -121,6 +138,21 @@
    "pr": 446
   },
   {
+   "id": "C451-002",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "451 head(53ec3d9)의 백엔드 InvoiceController.finalizeInvoices(148행)는 new FinalizeInvoicesResponse(month, finalizedCount)만 돌려주고 DTO도 month, finalized_count 두 필드뿐이다. 그런데 같은 PR이 actions.ts:33에서 result.data.supply_amount, tax_amount, total_amount, invoices를 그대로 상태에 넣고(state.ts 타입은 필수 필드), InvoiceFinalizeDialog.tsx:91이 formatKrw(state.supplyAmount)를 부른다. formatDecimal(undefined)는 undefined.toLocaleString에서 TypeError를 던지므로(node로 재현) 91행에서 이미 렌더링이 깨지고, 92행 state.invoices.map도 같은 이유로 깨진다. 오류는 (console)/error.tsx로 올라가 '화면을 그리지 못했습니다'가 뜬다. 확정은 서버에서 끝났고 되돌릴 수 없는데 화면은 실패처럼 보인다. 다시 눌러도 백엔드가 이미 확정한 고객을 건너뛰어 이중 확정은 없지만, 응답 형식이 같아 같은 오류가 반복된다. 452 head(8b0a9d2)도 같다. 453(f040e96)에서 DTO가 invoices와 금액 합계로 확장되고 컨트롤러가 from(...)을 써서 455까지는 해소되지만, 문제의 줄을 들인 451과 452 head에는 그대로라 already-fixed가 아니다. 반박 시도: 451의 contract-server.mjs는 POST /v1/invoices를 흉내 내지 않고, invoice-links.real.spec.ts:101은 API로만 확정해 상태 코드만 보며, 확정 버튼을 누르는 화면 검사는 453에서야 생긴다. 응답이 필드를 준다는 근거는 찾지 못했다.",
+   "evidence": "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:91 @ 53ec3d9, frontend/src/components/billing/InvoiceFinalizeDialog.tsx:92 @ 53ec3d9, frontend/src/app/(console)/billing/actions.ts:33 @ 53ec3d9, frontend/src/lib/format.ts:44 @ 53ec3d9, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:148 @ 53ec3d9, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:152 @ f040e96",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "API 계약은 바꾸지 않고 451, 452에서 깨지던 성공 화면을 막기만 하므로 behavior_change는 false다. 최상단 화면은 그대로다. k5 G-184(lib/api/invoices.ts:59 확정 요청 5초 타임아웃)도 확정 성공을 실패로 보이게 하지만 원인이 달라 합치지 않았다. D-125(finalize-result-unbounded)와 같은 91-92행을 451에서 고치므로 한 커밋으로 처리하는 것이 좋다. 새 .test.mjs는 CI가 node --test를 돌리지 않으면 수동 실행만 된다(k6 unit-tests-unrun 묶음과 겹침).",
+   "pr": 451
+  },
+  {
    "id": "D-061",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -149,6 +181,21 @@
    "behavior_change": false,
    "notes": "globals.css의 .workspace-panel 규칙은 k5 범위지만 고칠 곳은 모듈 쪽 900px 규칙이라 k6 범위다. 재현 스크립트와 스크린샷: S/scripts/pricing-mobile-chips/probe.js, S/shots/pricing-mobile-chips/rail-375.png, rail-fixed-375.png.",
    "pr": 446
+  },
+  {
+   "id": "D-111",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 공개 청구서 어딘가에 절사 규칙이 있는지 찾았다. PublicInvoiceView.tsx:123 스크롤 안내, 124 caption('확정 시점의 수량과 단가, 항목별 공급가액'), 126 안내('수량과 금액은 확정 시점의 기록입니다...세금계산서나 결제 영수증이 아닙니다'), 135 footer 어디에도 없다. 백엔드는 사용량 줄마다 10원 미만을 버린다(ChargeService.trim 'amount - amount % 10', DraftInvoiceController 설명 '10원이 안 되는 라인은 0원'). 콘솔은 BillingSection.tsx:123과 PricingWorkspace.tsx:72에서 이 규칙을 설명하지만 최종 고객 화면은 설명하지 않아, 단가가 1원 미만인 토큰 과금처럼 수량 x 단가가 10원 단위가 아닌 줄은 표의 수량 x 단가와 공급가액이 맞지 않고 사용량이 있는 줄이 0원으로 보인다. 기본료와 최소 조정 줄은 수량 1, 단가 = 절사된 금액이라 맞는다. 합계는 줄 금액의 합이고 고객에게 불리한 방향(올림)이 아니라 금전 오류는 없어 severity는 low로 낮춘다.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:126 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:126 @ 854e293, frontend/src/components/billing/BillingSection.tsx:123 @ 854e293, backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:235 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "public-invoice-meter-codes의 D-052와 X-030도 같은 안내 누락을 함께 지적했으나 그 묶음의 주 원인(미터 코드)으로 D-216 결과에 넣었고, 절사 안내 수정은 이 결과가 맡는다고 D-216 notes에 적었다. k3 G-107(ChargeService:234 기본료와 최소 사용료 등록값 절사)은 백엔드 규칙 자체 문제로 별개다. 그 수정이 기본료도 절사하지 않게 바꾸면 안내 문장의 '사용량 항목' 한정이 그대로 맞다.",
+   "pr": 449
   },
   {
    "id": "D-113",
@@ -193,6 +240,21 @@
    "tests": [],
    "behavior_change": false,
    "notes": "D-230(같은 묶음 아님) 수정과 오른쪽 패널 계산식 줄이 겹치므로 같은 줄을 두 번 넣지 않게 조정한다. 446에서는 모든 미터가 전체 응답이라 문제가 없어 446이 아닌 451에서 고친다.",
+   "pr": 451
+  },
+  {
+   "id": "D-125",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "451에서 들어온 성공 모달 92행이 state.invoices 전체를 ul로 그리고 Modal에는 body 높이 제한(styles.body maxHeight)이 없다. globals.css(k5)에도 ant-modal-body 높이 제한이 없다. 453 이후 백엔드 InvoiceController.finalizeInvoices가 이번 호출로 확정한 인보이스 전부를 invoiceService.get으로 채워 FinalizeInvoicesResponse.from으로 돌려주므로 확정한 고객 수만큼 항목이 생긴다. 항목마다 기본형 antd Button(LinkButton)이 있어 한 줄이 32px 이상이라 300건이면 모달 본문이 약 1만 px가 된다. 게다가 67행 useInitialFocus(closeButtonRef, isSucceeded)가 preventScroll 없이 맨 아래 '닫기'에 focus하므로 모달 래퍼가 끝까지 스크롤되어 확정 건수 제목과 금액 문단이 화면 밖으로 밀린다. 반박 시도: antd 모달 래퍼가 스크롤되고 Esc와 닫기 아이콘이 있어 닫을 수는 있고, 1건만 확정하는 e2e에서는 드러나지 않는다. 기능 실패는 아니라 low로 둔다. 같은 저장소 AttachOrganizationButton.tsx:43은 body maxHeight와 overflowY로 긴 모달을 막는 관례를 이미 쓴다. 451, 452 head에서는 백엔드가 invoices를 주지 않아 이 목록이 아니라 C451-002의 렌더링 오류가 먼저 난다. 문제의 줄은 451이 처음 들였고 Dialog는 451부터 455까지 같은 내용이다.",
+   "evidence": "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:92 @ 53ec3d9, frontend/src/components/billing/InvoiceFinalizeDialog.tsx:92 @ 854e293, frontend/src/components/billing/InvoiceFinalizeDialog.tsx:67 @ 854e293, backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:152 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "behavior_change는 결과 모달에 보이는 인보이스가 최대 5건으로 줄어드는 화면 동작 변화라 true로 두었다. API 계약은 그대로다. C451-002(finalize-dialog-crash)와 같은 줄이지만 원인(응답 필드 없음과 개수 제한 없음)이 달라 합치지 않았다. 목록 항목이 기본형 버튼이라 무거운 점은 LinkButton type=\"link\"로 줄일 수 있으나 이 지적 범위 밖이라 계획에 넣지 않았다. 백엔드가 확정 응답에 인보이스 전체(라인 포함)를 싣는 크기 문제는 frontend 밖이라 적기만 한다.",
    "pr": 451
   },
   {
@@ -285,6 +347,74 @@
    "pr": 451
   },
   {
+   "id": "D-206",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "제목(page.tsx:55)은 main부터 '청구 예정액 - <월>'로 확정 여부와 무관하다는 점은 맞다. 반박: 확정된 달에 이 화면이 보여 주는 금액은 확정 금액이 아니라 아직 확정되지 않은 고객의 청구 예정액이다. BillingSection.tsx:125-126이 '이미 확정된 고객은 이 표에 나오지 않습니다'라고 하고, resolveIsFinalizedMonth(lib/api/billing.ts:74)는 month_billable_customer_count가 0이고 확정 인보이스가 있을 때만 확정됨이라, 이때 표에 남는 것은 0원 고객뿐이다(BillingFinalizedNotice.tsx:29 '청구 예정액이 0원인 고객 N곳은 인보이스가 만들어지지 않았습니다'). 확정 금액은 이 화면에 나오지 않고 '인보이스 보기'와 '이 달에 확정된 인보이스 N건 보기' 링크로 확정 인보이스 화면에서만 본다. 제품 용어도 같다: 개요 화면은 '청구 예정액(미확정 고객, 공급가액)'과 '확정 청구액(세금 포함)'을 나누고(overview/page.tsx:22), 인보이스 화면은 '확정 전 금액은 청구 예정액에서 봅니다'라고 안내한다(InvoicesSection.tsx:73). 그래서 제안대로 '청구 확정액'으로 바꾸면 0원 예정 표를 확정 금액처럼 보이게 해 오히려 틀린 이름이 된다. 확정된 달에는 제목 바로 옆 배지 '확정됨 (finalized)'(BillingStatusTag.tsx:17)와 본문 첫머리 성공 알림 '<월> 인보이스 N건이 <시각>에 확정됐습니다'(BillingSection.tsx:135)가 함께 보여, 운영자가 확정 전으로 읽을 경로도 없다.",
+   "evidence": "frontend/src/app/(console)/billing/page.tsx:55 @ 854e293, frontend/src/components/billing/BillingSection.tsx:125 @ 854e293, frontend/src/components/billing/BillingSection.tsx:135 @ 854e293, frontend/src/components/billing/BillingFinalizedNotice.tsx:29 @ 854e293, frontend/src/components/billing/BillingStatusTag.tsx:17 @ 854e293, frontend/src/app/(console)/overview/page.tsx:22 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "제목 줄은 main(f088399)부터 있었고 451이 page.tsx를 바꿨지만 제목은 그대로라 pr은 null로 두었다. 메뉴 이름은 '청구 검토'(NavMenu.tsx:13, ConsoleShell.tsx:23, k5)인데 화면 제목은 '청구 예정액'이라 이름이 다르다. 이것은 확정 여부와 무관한 별개 문구 문제이고, 고친다면 상태와 무관한 '청구 검토 - <월>' 쪽이지 '청구 확정액'이 아니다. 판정에는 넣지 않았다.",
+   "pr": null
+  },
+  {
+   "id": "D-209",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "반박 성공. PublicInvoiceView.tsx:129의 결제 금액 요약은 '취소 제외 납부액', '취소 완료액', '결제 대기액'을 나란히 보인다. 지적이 제안한 '취소 금액은 별도 줄'은 이미 '취소 완료액' 줄로 있고, 실패 경로로 든 '청구 금액과의 차이를 추가 청구로 오해'는 같은 목록의 '결제 대기액'이 0원으로 나와 막힌다(백엔드 PublicInvoicePayment.outstandingAmount 설명: 취소액은 포함하지 않는다). 부분 취소 상태 설명(16행)도 '확정 청구액과 취소액을 별도로 표시합니다'라고 적는다. 예: 청구 1,100원, 400원 취소면 납부액 700원, 취소 완료액 400원, 결제 대기액 0원으로 읽혀 추가로 낼 돈이 없다는 것이 화면에 있다(invoice-links.real.spec.ts:265가 이 순서 700, 400, 0을 검사). '취소 제외 납부액'은 백엔드 설명 '취소액을 제외한 납부액'을 줄인 말로 회계 전문 용어가 아니고, 제안 문구 '실제 납부한 금액 (취소분 제외)'과 뜻이 같다. 남는 것은 어순 취향이라 confirmed가 아니다.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:129 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:16 @ 854e293, backend/src/main/java/com/meterengine/invoiceview/dto/PublicInvoiceResponse.java:35 @ 854e293, frontend/e2e/invoice-links.real.spec.ts:265 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "다듬는다면 p4 수준으로 dt를 '납부액 (취소분 제외)'로 바꾸는 정도이고 dd 순서는 유지해야 한다. payment-status-names 묶음은 상태 이름(결제 전, 납부 완료 등) 불일치라 이 금액 라벨과 원인이 다르다.",
+   "pr": 449
+  },
+  {
+   "id": "D-216",
+   "merged_ids": [
+    "D-008",
+    "D-033",
+    "D-052",
+    "D-171",
+    "X-030"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: 미터 코드가 고객에게 보이도록 의도한 근거를 찾았으나 PR 449 본문과 README에 없고, 콘솔은 미터 코드와 미터명을 별도 개념으로 둔다(ResourceSearchControls 검색 키 '미터 코드', '미터명'). 미터 생성 요청은 code와 name을 따로 받고 code에는 형식 제약이 없어 운영자가 api 식별자로 쓰는 값이다. 현재 head(449부터 455까지 파일 동일)의 PublicInvoiceView.tsx:124 항목 셀은 LINE_NAMES[line_type] ?? line.billable_metric_code라 기본료와 최소 조정 말고 모든 사용량 줄에 코드가 그대로 나오고, 조합은 formatDimensionValues(lib/format.ts:57)의 'model=claude-haiku-4-5' 형식으로 나온다. 공개 응답 PublicInvoiceResponse.lines는 InvoiceLineResponse를 그대로 쓰며 미터 이름 필드가 없다(backend InvoiceResponse.java:25-41, lib/invoice-view-links.ts:21-32). 미터 이름은 UpdateBillableMetricRequest로 바뀔 수 있어 조회 시점 조인이 아니라 확정 시점 스냅숏이 필요하고, 이는 백엔드 컬럼과 응답 추가가 필요해 프론트만으로 고칠 수 없다. 여섯 지적의 원인은 같다(공개 청구서 항목 셀이 고객용 이름 대신 내부 식별자를 보임). 조합 표기는 같은 셀의 보조 표기라 함께 둔다.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:124 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:124 @ 854e293, frontend/src/lib/invoice-view-links.ts:21 @ 854e293, frontend/src/lib/format.ts:57 @ 854e293, backend/src/main/java/com/meterengine/invoice/dto/InvoiceResponse.java:25 @ 854e293, backend/src/main/java/com/meterengine/invoiceview/dto/PublicInvoiceResponse.java:18 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-008과 X-030의 '최소 과금 조정' 부분은 min-fee-line-name(D-225), D-052와 X-030의 10원 절사 안내 부분은 public-invoice-rounding-note(D-111)와 같은 원인이라 그쪽 결과로 고친다. 콘솔 InvoicesSection.tsx:137, BillingSection.tsx:193과 백엔드 청구 안내 메일도 미터 코드를 항목명으로 쓴다. 콘솔은 운영자용이라 이 지적의 대상은 아니지만 메일은 같은 최종 고객이 받으므로 백엔드 수정 때 함께 본다. k5 묶음과 직접 겹치는 지적은 index에서 찾지 못했다. behavior_change는 k6 단계(표기만)를 기준으로 false이고, 백엔드 단계는 API 계약 추가다.",
+   "pr": 449
+  },
+  {
+   "id": "D-225",
+   "merged_ids": [
+    "D-122"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: 두 이름이 의도적으로 고객용과 운영자용으로 나뉘었는지 찾았으나 고객이 받는 청구 안내 메일(InvoiceEmailService.label:74)도 '최소 사용료 조정'이라 고객 채널 안에서도 갈린다. 공개 청구서만 PublicInvoiceView.tsx:20 LINE_NAMES.minimum_adjustment='최소 과금 조정'이고 콘솔 InvoicesSection.tsx:137, BillingSection.tsx:193, PricingWorkspace의 '최소 사용료'와 다르다. D-122의 총량 단가 부분은 확인 결과 더 나쁘다: 백엔드는 volume 줄을 tierIndex 0으로 저장하므로(ChargeService.java:162 add(..., \"volume\", 0, ...), 449 head에서는 155행) PublicInvoiceView.tsx:124의 ['graduated_tier','volume'].includes(...) && tier_index != null 조건이 volume 줄마다 실제 적용 구간과 상관없이 '구간 1'을 붙인다. 고객은 상위 구간 단가로 계산된 줄을 '구간 1'로 보게 되고 누진 구간 줄과도 구분하지 못한다. 콘솔과 메일은 '{code} / 총량 단가'로 맞게 표시한다. 두 지적 모두 공개 청구서가 콘솔과 메일의 줄 라벨 규칙과 다른 자체 규칙을 쓰는 같은 원인이라 합친다. 외부 청구서에 틀린 구간을 적는 부분 때문에 severity를 medium으로 올린다.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:20 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:124 @ 7ce9d36, frontend/src/components/invoices/InvoicesSection.tsx:137 @ 854e293, frontend/src/components/billing/BillingSection.tsx:193 @ 854e293, backend/src/main/java/com/meterengine/invoice/service/InvoiceEmailService.java:74 @ 854e293, backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:155 @ 7ce9d36",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "public-invoice-meter-codes의 D-008도 '최소 과금 조정' 불일치를 함께 적었으나 그 지적은 D-216 결과에 넣었고 이 수정이 그 부분을 해소한다. volume 줄 tier_index가 항상 0인 백엔드 동작은 k3 쪽에 지적이 있는지 index에서 찾지 못했다. 콘솔 InvoicesSection.tsx:125의 그룹 키는 graduated_tier만 tier를 쓰므로 영향 없다.",
+   "pr": 449
+  },
+  {
    "id": "D-230",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -298,6 +428,36 @@
    "behavior_change": false,
    "notes": "D-121 수정(451)이 같은 오른쪽 패널에 계산식 줄을 두므로 한 번만 넣는다. X-052 수정이 같은 93, 95, 86행의 금액 포맷을 바꾸므로 함께 적용한다.",
    "pr": 446
+  },
+  {
+   "id": "G-020",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "#442 head(0245c15)의 workspace-actions.ts에 위층 기능의 분기가 false 상수로 들어 있다: 57행 if (false && version 검사)(#451 고객 버전), 58행 isPaymentRequest = false와 61, 67~68행 결제 미확인 분기(#445), 62행 ifMatch: false ?(#451), 63행 createPaymentCancellation, createCustomer 멱등 키(이 PR에 없는 case), 64행 isEmptyResponse: false(#444), 73행 if (false) 고객 보관 redirect(#447), 75행 if (false) 연동 보관 redirect(#444), 77~78행 결제 status 문구(#445), 80행 false ? 시험 통보 문구(#444), 82행 /payment-method-registrations/ 경로(#445), 55행 '조합과 구간은 올바른 JSON'(#446). 각 위층 PR의 diff가 바로 이 false를 실제 조건으로 바꾸는 것을 브랜치 비교로 확인했다. 사용자에게 보이는 결과도 있다: integrations/page.tsx:21 API 키 발급 대화상자가 '기존 키 구분' 라벨과 '격리된 키는 위의 업무 환경을 전환해 발급하세요' 안내를 보이는데, 업무 환경 전환(EnvironmentSwitch)은 #453에서야 ConsoleShell에 생기므로 #442부터 #452까지 없는 기능을 안내한다. transport.ts:93은 #453부터 백엔드가 읽는 X-MeterEngine-Organization-Id를 보낸다(#442 백엔드에는 읽는 곳이 없음). 반박 시도: false 분기는 실행되지 않아 런타임 피해는 없고 최상단에서는 모두 실제 조건이다. 그러나 #442가 먼저 머지되면 main에 도달 불가 분기와 없는 기능 안내가 남고, 이 PR만 보는 리뷰어는 어느 분기가 살아 있는지 알 수 없다는 지적의 전제는 코드로 맞다. 피해가 안내 문구와 리뷰 가능성에 그쳐 low로 둔다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:55 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:57 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:58 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:62 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:73 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:75 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:80 @ 0245c15, frontend/src/app/(console)/integrations/page.tsx:21 @ 0245c15, frontend/src/lib/api/transport.ts:93 @ 0245c15, frontend/src/components/shell/ConsoleShell.tsx:53 @ f040e96",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "최상단 최종 동작은 바뀌지 않고 #442 단독 화면의 안내 문구와 도달 불가 코드만 바뀐다. 같은 파일 #442 줄을 건드리는 k6 묶음과 순서를 맞춘다: owner-only-dup(G-016), workspace-actions-central(G-021), json-error-copy(X-055, 55행 문구), cancel-pending-copy(D-213, 78행 문구), success-msg-generic(80행 문구), archive-redirect-month(X-093, redirect). k5 G-058(응답 status로 결제 결과 추정)은 77~78행을 공유한다. 같은 성격의 위층 참조가 #444의 integrations/[id]/page.tsx:20(restoreWebhookEndpoint, archived_at, #447 기능)에도 있으나 이 지적의 범위 밖이라 적기만 한다.",
+   "pr": 442
+  },
+  {
+   "id": "G-021",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "사실 관찰은 맞지만 현재 head에 실패 경로가 없다. (a) operation이 string이고 이름이 ActionPanel 호출부, workspace-actions.ts switch, permissions.ts의 OWNER_OPERATIONS와 ADMIN_OPERATIONS에 따로 있는 것은 맞다. #442 head와 최상단에서 화면이 쓰는 operation 문자열, switch case, 권한 Set을 모두 대조했고 어긋난 이름이 없다. 틀리면 canPerformWorkspaceOperation이 false로 닫혀 버튼이 숨으므로 잘못된 요청이 나가지 않는다. (b) workspace-actions.ts:117~118(최상단)이 모든 operation의 최상위 status를 보는 것은 맞으나, 이 액션이 부르는 응답 중 최상위 status가 있는 것은 PaymentAttemptResponse, PaymentCancellationResponse(결제, 의도된 대상), ApiKeyResponse(active, revoked, expired), ManagedMemberResponse(active, archived)뿐이고 초대 발급 응답은 status를 invitation 안에 둔다. 결제 아닌 작업에 결제 문구가 뜨는 경로가 없다. (c) serverFetch, serverSend가 _baseUrl을 무시하는 것은 맞지만 transport의 requestApi가 같은 config.apiBaseUrl을 쓰므로 59행이 넘기는 값과 실제 호출 주소가 같다. (d) #442에서 #450까지 customers, billable-metrics actions.ts의 updateTag는 태그 붙은 요청이 없어 무동작이지만, 모든 요청이 cache: no-store(transport.ts)이고 같은 자리에서 revalidatePath를 부르므로 낡은 화면이 남지 않는다. updateTag와 _cacheTag는 #451에서 지워져 최상단에는 없다. 남는 것은 유지보수 성격의 정리 거리이고 사용자 피해나 재현 경로가 없어 refuted로 둔다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:59 @ 0245c15, frontend/src/lib/api/client.ts:22 @ 0245c15, frontend/src/lib/api/transport.ts:100 @ 0245c15, frontend/src/app/(console)/customers/actions.ts:83 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:117 @ 854e293, frontend/src/lib/api/client.ts:25 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 G-047, G-058과 내용이 겹친다. k6 cancel-pending-copy(D-213)는 같은 117~118행의 결제 문구가 취소 pending에 맞지 않는 문구 문제로 별도 판정 대상이다. workspace-actions-false-branches(G-020) 수정이 77~78행을 #445로 옮기면 status 처리는 결제 PR에서만 들어온다. finalizeInvoices case는 화면이 workspaceAction으로 부르지 않아(billing/actions.ts의 별도 액션 사용) 도달하지 않는 case로 보이나 피해는 없다.",
+   "pr": 442
   },
   {
    "id": "G-056",
@@ -330,6 +490,21 @@
    "behavior_change": true,
    "notes": "k1 C454-011(RequestLogFilter 초대 토큰 가림 테스트)과 파일은 다르다. 초대 수락 화면 묶음 중 이것만 #454를 고친다. actions.ts는 #442 수정(C442-011 등)과 같은 파일이라 #454로 올라오면서 5행 import가 겹칠 수 있다.",
    "pr": 454
+  },
+  {
+   "id": "G-180",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "최상단 workspace-actions.ts:107은 status 0, malformed_response, payment_result_unconfirmed, payment_cancellation_in_progress만 확인 필요로 다루고, 그 밖의 409는 109행에서 백엔드 문구만 돌려준다. 이때 폼은 잠기지 않고 revalidatePath도 부르지 않는다. PaymentCancellationService.insertPending(최상단 207, 226, 230행)은 전액 취소 뒤 payment_attempt_fully_canceled, 남은 금액 초과 시 payment_cancellation_amount_exceeded, 같은 키의 다른 요청에 payment_cancellation_idempotency_conflict를 409로 준다. payments/[id]/page.tsx는 남은 금액을 렌더 시점에 계산하고(45행) '잔액 전액 취소'는 그 값을 hidden amount로 보낸다(64행, #451부터). 다른 운영자가 먼저 일부 취소하면 이 대화상자는 '현재 잔액 X원 전부를 취소합니다'라고 보이면서 '취소 금액이 남은 결제 금액보다 큽니다'를 받고, 금액 칸이 숨겨져 고칠 수 없으니 다시 눌러도 같은 409만 난다. 전액 취소된 경우에도 페이지는 이전 잔액과 취소 버튼을 그대로 둔다. 반박 시도: 백엔드가 중복 취소를 막아 돈이 잘못 나가지는 않고, 헤더에 '내역 새로 조회' 링크가 있으며 전액 취소 문구 자체는 정확하다. 그래도 화면과 오류가 서로 어긋나고 대화상자 안에서 막다른 길이 생기는 것은 코드로 짚을 수 있어 confirmed, 영향이 안내와 재시도 혼란에 그쳐 low로 둔다. #445에서도 같은 오류 처리(81~83행)와 렌더 시점 max(payments 54행)로 같은 경로가 생긴다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:81 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:83 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:54 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:107 @ 854e293, frontend/src/app/(console)/workspace-actions.ts:109 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:64 @ 854e293, backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:226 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "k5 D-043(대화상자를 다시 열어 금액을 바꾸면 같은 멱등 키로 409)은 멱등 충돌의 원인인 ActionPanel 요청 ID 재사용을 다루고, 이 결과는 그 409를 받았을 때의 액션 처리만 다룬다. k6 cancel-pending-copy(D-213)가 같은 파일 117~118행 문구를 바꾸므로 #445 수정 순서를 맞춘다. hidden amount 방식은 #451에서 들어와 amount_exceeded 경로를 더 쉽게 만들지만 고칠 줄(오류 처리)은 #445에서 들어왔고 이후 바뀌지 않아 #445로 정했다.",
+   "pr": 445
   },
   {
    "id": "G-189",
@@ -457,6 +632,23 @@
    "pr": 446
   },
   {
+   "id": "X-067",
+   "merged_ids": [
+    "D-205"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "InvoiceFinalizeDialog.tsx:45가 비활성 사유를 title 속성으로만 넘기고 InvoiceFinalizeButton.tsx:18이 이를 disabled Button의 title로만 그린다. 비활성 button은 Tab 순서에서 빠지고 터치에는 hover가 없어 키보드와 태블릿 사용자는 버튼에 붙은 사유를 볼 수 없고, 사유와 버튼을 잇는 aria-describedby도 없다. 반박 시도: 비활성이 되는 경우마다 화면 다른 곳에 단서는 있다(확정된 달은 제목 옆 배지 '확정됨 (finalized)'와 BillingFinalizedNotice 성공 알림, 대상 0곳이면 BillingSection.tsx:107 상태 문단이나 빈 상태). 그래서 원인을 추론할 수는 있어 영향은 low로 두지만, 버튼 단위 사유는 여전히 마우스 호버로만 보인다. 같은 저장소의 ReviewAction.tsx:12와 AttachOrganizationButton.tsx:42는 비활성 사유를 field-hint 글자로 보여 주는 관례를 이미 쓴다. 또 초안 조회가 실패하면(InvoiceFinalizeSection.tsx:19, result.ok=false) targetCount가 0이 되어 '청구할 금액이 있는 고객이 없습니다'라는 틀린 사유가 붙으므로, 사유를 보이게 할 때 이 경우도 같이 고쳐야 한다. 두 지적(X-067, D-205)은 같은 title 속성이 원인이라 합쳤다. 문제의 title 줄은 main(f088399)부터 있었고, 스택에서 두 파일을 처음 바꾼 PR은 446(라벨 '월 전체 확정', 관리 권한 검사)이다. 그 뒤 455까지 InvoiceFinalizeButton.tsx는 그대로이고 Dialog의 버튼 부분(446 기준 33-50행)도 451이 건드리지 않는다.",
+   "evidence": "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:45 @ 854e293, frontend/src/components/billing/InvoiceFinalizeButton.tsx:18 @ 854e293, frontend/src/components/billing/InvoiceFinalizeDialog.tsx:43 @ 5efe449, frontend/src/components/billing/InvoiceFinalizeButton.tsx:18 @ 5efe449, frontend/src/components/billing/InvoiceFinalizeSection.tsx:19 @ 5efe449, frontend/src/components/auth/ReviewAction.tsx:12 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "문제 줄이 main부터라 고칠 PR은 스택에서 두 파일을 처음 바꾼 446으로 정했다. 451에서 고쳐도 같은 수정이 통한다. 같은 k6의 attach-org-disabled-reason(D-104)은 같은 field-hint 사유 관례의 정렬 문제라, 버튼 아래 사유 글자를 둘 때 같은 정렬 기준을 쓰면 좋다. k5 X-040(ActionPanel 위험 동작 위계)과는 파일과 원인이 다르다. ScreenHeader(k5)는 고치지 않는다.",
+   "pr": 446
+  },
+  {
    "id": "X-074",
    "merged_ids": [],
    "verdict": "refuted",
@@ -543,6 +735,11 @@
    "why": "일부만 범위 밖: 백엔드 PriceRateService.list가 조직 단가 전체를 읽고 메모리에서 거르는 것은 backend 범위다. 화면 호출 수를 줄이면 이 묶음 문제는 풀린다."
   },
   {
+   "id": "C451-002",
+   "file": "frontend/src/app/(console)/billing/state.ts, frontend/src/app/(console)/billing/actions.ts, frontend/src/components/billing/InvoiceFinalizeDialog.tsx, frontend/e2e/finalize-state.test.mjs",
+   "why": "일부만 범위 밖: frontend/src/lib/api/invoices.ts(k5) 52-55행 FinalizeInvoicesResponse의 invoices, supply_amount, tax_amount, total_amount를 451 백엔드 계약에 맞게 선택 필드로 바꾸는 것은 k5 범위다. 바꾸지 않아도 위 수정은 타입 검사를 통과한다. 근본 대안인 백엔드 확장(backend/src/main/java/com/meterengine/invoice/dto/FinalizeInvoicesResponse.java, InvoiceController.finalizeInvoices의 from(...) 사용, backend/openapi.yaml)을 453에서 451로 내리는 것은 frontend 밖이다."
+  },
+  {
    "id": "D-113",
    "file": "frontend/src/components/invoices/invoice-payment-status.ts, frontend/src/components/invoices/InvoicesSection.tsx, frontend/src/app/(console)/customers/[id]/page.tsx, frontend/src/app/(console)/overview/page.tsx, frontend/src/app/(console)/payments/page.tsx, frontend/src/app/(console)/payments/[id]/page.tsx, frontend/e2e/invoice-payment-status.test.mjs",
    "why": "일부만 범위 밖: frontend/src/components/screen/ResourceSearchControls.tsx:112 수납 상태 필터 옵션 이름('미납', '납부 완료' 등)은 k5 범위다. 같은 한 벌(결제 전, 결과 확인 중, 수납 완료, 결제 실패, 부분 취소, 전액 취소)로 바꾸고 option value는 그대로 둬야 한다(k5 X-009, D-005, D-131). 백엔드 필터가 not_required를 받으므로(WorkspaceQueryService PAYMENT_STATUSES) 그 옵션을 더할지도 k5가 정한다."
@@ -556,6 +753,21 @@
    "id": "D-166",
    "file": "frontend/src/app/(console)/customers/[id]/page.tsx",
    "why": "일부만 범위 밖: D-018의 '.workspace-actions { align-items: center }' 기본값 제안은 globals.css(k5 범위) 공통 규칙 변경이라 k6에서 하지 않는다. k5 X-076이 같은 내용이다. D-018의 수납 상세 헤더 링크 흩어짐은 header-links-scattered 결과 X-075(#445, payments/[id]/page.tsx)에서 고친다."
+  },
+  {
+   "id": "D-216",
+   "file": "frontend/src/components/invoice-links/PublicInvoiceView.tsx",
+   "why": "일부만 범위 밖: backend: 확정 시점 미터 이름 스냅숏. invoice_line에 billable_metric_name 컬럼을 더하는 새 V__ 마이그레이션(지침상 피해야 하므로 백엔드 담당과 협의), ChargeService.add의 DimensionCharge와 인보이스 확정 저장 경로에 metric.getName() 전달, InvoiceResponse.InvoiceLineResponse에 billable_metric_name 추가(공개 응답과 콘솔 응답 모두에 노출되는 API 계약 추가), backend/openapi.yaml 갱신, InvoiceEmailService.label과 mail/invoice.html도 같은 이름 사용. k5(frontend/src/lib/): lib/invoice-view-links.ts PublicInvoice.lines와 lib/api/invoices.ts InvoiceLineResponse에 billable_metric_name?: string | null 추가. 이 둘이 들어와야 PublicInvoiceView의 항목명 수정이 가능하다."
+  },
+  {
+   "id": "D-225",
+   "file": "frontend/src/components/invoice-links/PublicInvoiceView.tsx",
+   "why": "일부만 범위 밖: 세 화면(공개 청구서, InvoicesSection, BillingSection)이 하나의 라벨 상수를 쓰게 frontend/src/lib/로 빼는 방식은 k5 범위다. volume 줄의 실제 적용 구간을 보여 주려면 ChargeService.add가 volume에 실제 tier index를 넣어야 하고 이는 backend 범위이며 V38 유니크 인덱스(tier_index 포함)에도 닿으므로 여기서는 구간 번호를 숨기는 쪽으로 고친다."
+  },
+  {
+   "id": "G-020",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/integrations/page.tsx",
+   "why": "일부만 범위 밖: k5 범위: frontend/src/lib/api/transport.ts:93과 frontend/src/lib/api/client.ts:16의 X-MeterEngine-Organization-Id 전송(organizationId)은 #453으로 옮길 대상이다. frontend/src/lib/auth/permissions.ts:15~23의 ADMIN_OPERATIONS가 #442에 없는 고객, 결제, 웹훅, 가격 operation까지 담은 것도 같은 성격이다. 둘 다 k5에서 다룬다."
   },
   {
    "id": "G-056",
