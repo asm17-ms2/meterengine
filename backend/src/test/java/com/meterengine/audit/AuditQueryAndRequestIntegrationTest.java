@@ -217,6 +217,21 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
+  void 체인_안에서_방화벽이_거절한_요청은_400_감사행_하나만_남긴다() {
+    long before = requestAuditCount();
+    MvcTestResult rejected =
+        mvc.get()
+            .uri("/v1/customers")
+            .header(AUTHORIZATION, "Bearer me_live_" + "R".repeat(32) + "\u0007")
+            .exchange();
+    assertThat(rejected).hasStatus(400);
+    assertThat(requestAuditCount()).isEqualTo(before + 1);
+    assertThat(requestAudit(rejected))
+        .containsEntry("status", "400")
+        .containsEntry("actor_type", "anonymous");
+  }
+
+  @Test
   void 수집_성공은_감사하지_않고_수집권한의_읽기거절은_기록한다() {
     UUID organizationId = UUID.randomUUID();
     String key = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "ingest");
@@ -307,6 +322,11 @@ class AuditQueryAndRequestIntegrationTest {
         "SELECT actor_type,organization_id,detail->>'method' AS method,detail->>'route' AS"
             + " route,detail->>'status' AS status FROM audit_log WHERE detail->>'request_id'=?",
         result.getResponse().getHeader("X-Request-ID"));
+  }
+
+  private long requestAuditCount() {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM audit_log WHERE action='api_request_completed'", Long.class);
   }
 
   private static String body(MvcTestResult result) {
