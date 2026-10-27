@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import ROUND_DOWN, Decimal, localcontext
 from typing import Dict, List, Optional, Set, Tuple
 
 from core.jsonl_log import SendRecord
 from core.model import (
+    KST,
     MAX_TRANSACTION_ID,
     Event,
     StoredEvent,
@@ -17,6 +19,7 @@ from core.model import (
 )
 
 CALC_PRECISION = 50
+CUTOFF_HOUR = 13
 
 
 DimensionValuesKey = Tuple[Tuple[str, tuple], ...]
@@ -89,6 +92,7 @@ def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
                     event_type=request["type"],
                     occurred_at=parse_rfc3339(request["timestamp"]),
                     properties=request.get("properties") or {},
+                    received_at=datetime.fromisoformat(record.sent_at) if record.sent_at else None,
                 )
             )
         except (KeyError, TypeError) as error:
@@ -170,16 +174,29 @@ def _typed_value(value) -> tuple:
     return ("json", json.dumps(value, sort_keys=True, default=str))
 
 
+def cutoff_at(month: str) -> datetime:
+    """서버가 그 달 사용량을 집계하는 마감 시각. 다음 달 1일 13:00 KST다."""
+    year, month_number = (int(part) for part in month.split("-"))
+    if month_number == 12:
+        year, month_number = year + 1, 1
+    else:
+        month_number += 1
+    return datetime(year, month_number, 1, CUTOFF_HOUR, tzinfo=KST)
+
+
 def sum_quantities_by_dimension_values(
     stored: List[StoredEvent], month: str, billable_metric: BillableMetricMeta
 ) -> Dict[str, Dict[DimensionValuesKey, DimensionUsage]]:
     sums: Dict[str, Dict[DimensionValuesKey, DimensionUsage]] = {}
+    cutoff = cutoff_at(month)
     with localcontext() as context:
         context.prec = CALC_PRECISION
         for event in stored:
             if event.event_type != billable_metric.event_type:
                 continue
             if kst_month(event.occurred_at) != month:
+                continue
+            if event.received_at is not None and event.received_at >= cutoff:
                 continue
             value = event.properties.get(billable_metric.target_property)
             if not _is_number(value):

@@ -32,6 +32,7 @@ public class BillableMetricUsageRepository {
         AND type = ?
         AND occurred_at >= ?
         AND occurred_at < ?
+        AND received_at < ?
         AND jsonb_typeof(properties -> ?::text) = 'number'
       GROUP BY 1, 2
       ORDER BY 1, 2
@@ -51,7 +52,8 @@ public class BillableMetricUsageRepository {
       String targetProperty,
       List<String> dimensionProperties,
       OffsetDateTime start,
-      OffsetDateTime end) {
+      OffsetDateTime end,
+      OffsetDateTime receivedBefore) {
     Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId = new HashMap<>();
     jdbcTemplate.query(
         SUM_QUANTITY_BY_CUSTOMER_ID_AND_DIMENSION_VALUES,
@@ -66,7 +68,8 @@ public class BillableMetricUsageRepository {
           preparedStatement.setString(4, eventType);
           preparedStatement.setObject(5, start);
           preparedStatement.setObject(6, end);
-          preparedStatement.setString(7, targetProperty);
+          preparedStatement.setObject(7, receivedBefore);
+          preparedStatement.setString(8, targetProperty);
         },
         resultSet -> {
           dimensionUsagesByCustomerId

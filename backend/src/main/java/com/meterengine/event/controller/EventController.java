@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -35,9 +36,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class EventController {
 
   private final EventService eventService;
+  private final Clock clock;
 
-  EventController(EventService eventService) {
+  EventController(EventService eventService, Clock clock) {
     this.eventService = eventService;
+    this.clock = clock;
   }
 
   @PostMapping
@@ -135,7 +138,7 @@ public class EventController {
           @RequestParam(required = false)
           @StorableText
           String type) {
-    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth(clock) : month;
     return eventService.list(organizationId, customerId, targetMonth, type, page, size);
   }
 }

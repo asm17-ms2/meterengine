@@ -105,6 +105,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - 독립 계산 규칙.
   - 중복 `transaction_id` 제거. 로그 소스는 서버 판정 그대로 `outcome=new`만 집계한다.
   - `occurred_at`의 KST 자정 경계로 월 귀속.
+  - 그 달의 집계 마감 시각(다음 달 1일 13:00 KST) 이후에 받은 이벤트 제외. 로그 소스는 `sent_at`을 받은 시각으로 보고, CSV 소스는 받은 시각을 몰라 제외하지 않는다.
   - 4xx 거절분 제외.
   - `target_property` 값이 JSON number가 아닌 이벤트 제외. 저장은 되지만 합산에서 빠진다.
   - 청구 예정액은 미터의 차원 키 값 조합마다 수량 x 그 조합의 단가를 10원 미만에서 절사한 뒤 더한 정수.

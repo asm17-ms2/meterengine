@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,9 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class BillableMetricUsageController {
 
   private final BillableMetricUsageService billableMetricUsageService;
+  private final Clock clock;
 
-  BillableMetricUsageController(BillableMetricUsageService billableMetricUsageService) {
+  BillableMetricUsageController(
+      BillableMetricUsageService billableMetricUsageService, Clock clock) {
     this.billableMetricUsageService = billableMetricUsageService;
+    this.clock = clock;
   }
 
   @GetMapping
@@ -40,6 +44,7 @@ public class BillableMetricUsageController {
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
           지금 이후 시각의 이벤트는 집계에 들지 않는다.
+          그 달 이벤트 중 집계 마감 시각(다음 달 1일 13:00 KST) 전에 서버가 받은(received_at) 것만 집계한다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않는다.
           모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열이다.
           dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값의 조합별로 수량을 나눈 것이고,
           고객의 quantity는 그 합이다. 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 요소 하나다.
@@ -65,7 +70,7 @@ public class BillableMetricUsageController {
           @DateTimeFormat(pattern = "yyyy-MM")
           @FourDigitYear
           YearMonth month) {
-    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth(clock) : month;
     return ListBillableMetricUsagesResponse.of(
         targetMonth, billableMetricUsageService.aggregate(organizationId, targetMonth));
   }
