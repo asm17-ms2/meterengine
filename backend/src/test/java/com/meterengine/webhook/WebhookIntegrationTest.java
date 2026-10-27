@@ -192,6 +192,47 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 전송기록은_페이지의_전송마다_자기_시도_이력만_시각순으로_돌려준다() {
+    responseStatus.set(500);
+    UUID failingEventId = webhookEndpointService.test(organizationId, endpoint.id());
+    for (int attempt = 0; attempt < 2; attempt++) {
+      jdbcTemplate.update(
+          "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE organization_id = ? AND webhook_event_id = ?",
+          organizationId,
+          failingEventId);
+      webhookDeliveryService.deliver();
+    }
+    responseStatus.set(200);
+    UUID firstEventId = webhookEndpointService.test(organizationId, endpoint.id());
+    UUID secondEventId = webhookEndpointService.test(organizationId, endpoint.id());
+    webhookDeliveryService.deliver();
+
+    var deliveries =
+        webhookDeliveryService.list(organizationId, endpoint.id(), null, 0, 20).deliveries();
+
+    assertThat(deliveries)
+        .extracting(delivery -> delivery.webhookEventId())
+        .containsExactlyInAnyOrder(failingEventId, firstEventId, secondEventId);
+    for (var delivery : deliveries) {
+      assertThat(delivery.attempts()).hasSize(delivery.attemptCount());
+      assertThat(delivery.attempts()).extracting(attempt -> attempt.attemptedAt()).isSorted();
+    }
+    var failing =
+        deliveries.stream()
+            .filter(delivery -> delivery.webhookEventId().equals(failingEventId))
+            .findFirst()
+            .orElseThrow();
+    assertThat(failing.attempts())
+        .extracting(attempt -> attempt.responseStatus())
+        .containsExactly(500, 500);
+    assertThat(
+            webhookDeliveryService
+                .list(organizationId, endpoint.id(), "failed", 0, 20)
+                .deliveries())
+        .isEmpty();
+  }
+
+  @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
     for (int i = 0; i < 20; i++) {
       webhookEndpointService.test(organizationId, endpoint.id());
