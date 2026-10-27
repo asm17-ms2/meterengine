@@ -132,6 +132,29 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 지난_월_요금제_등록은_거절하고_삭제해도_지난달_요금제를_보존한다() {
+    legacyRate();
+    UUID id =
+        jdbcTemplate.queryForObject(
+            "INSERT INTO price_plan(organization_id,effective_from,base_fee,minimum_amount)"
+                + " VALUES (?,?,100,0) RETURNING id",
+            UUID.class,
+            organizationId,
+            month.minusMonths(1).toString());
+    assertThatThrownBy(
+            () ->
+                pricePlanService.create(
+                    organizationId,
+                    new CreatePricePlanRequest(null, month.minusMonths(1), null, 500L, 12000L)))
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            error ->
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
+    pricePlanService.delete(organizationId, id);
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+  }
+
+  @Test
   void 기존_조합_삭제는_이전_금액과_고객_단가와_미래_버전을_보존한다() {
     legacyRate();
     rate(null, month, null, "per_unit", new BigDecimal("20"), null);
