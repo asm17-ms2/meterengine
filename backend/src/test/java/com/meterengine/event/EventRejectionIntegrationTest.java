@@ -126,7 +126,7 @@ class EventRejectionIntegrationTest {
   }
 
   @Test
-  void 최상위_JSON과_입력_거절은_요청_감사만_남기고_업무_거절로_꾸미지_않는다() {
+  void 최상위_JSON과_입력_거절은_수집_감사와_업무_거절에서_제외한다() {
     assertThat(
             mvc.post()
                 .uri("/v1/events")
@@ -142,7 +142,7 @@ class EventRejectionIntegrationTest {
                 "SELECT count(*) FROM audit_log WHERE organization_id=? AND action='api_request_completed' AND detail->>'route'='/v1/events'",
                 Integer.class,
                 organization))
-        .isEqualTo(2);
+        .isZero();
   }
 
   @Test

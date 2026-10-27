@@ -131,6 +131,30 @@ class EventIngestionServiceTest {
   }
 
   @Test
+  void 고객이_없어_거절하면_rejected_건수를_기록한다() {
+    org.mockito.Mockito.doThrow(new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND))
+        .when(customerDirectory)
+        .check(ORGANIZATION_ID, CUSTOMER_ID);
+
+    assertThatThrownBy(() -> eventService.ingest(ORGANIZATION_ID, request("tx-1")))
+        .isInstanceOf(NotFoundException.class);
+
+    assertThat(ingestCount("rejected")).isEqualTo(1.0);
+  }
+
+  @Test
+  void 받는_기간_밖이라_거절하면_rejected_건수를_기록한다() {
+    IngestEventRequest oldRequest =
+        new IngestEventRequest(
+            "tx-1", CUSTOMER_ID, "chat_completion", Map.of(), OCCURRED_AT.minusDays(36));
+
+    assertThatThrownBy(() -> eventService.ingest(ORGANIZATION_ID, oldRequest))
+        .isInstanceOf(BusinessException.class);
+
+    assertThat(ingestCount("rejected")).isEqualTo(1.0);
+  }
+
+  @Test
   void properties는_판정_없이_그대로_직렬화해_넘긴다() {
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
