@@ -108,6 +108,7 @@ EOF
   - `BACKEND_MAX_RAM_PERCENTAGE`: 그 한도 중 JVM 힙의 최대 비율(%). 기본 `50`.
 - 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
   - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
+  - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
 
 ## 배포
 
@@ -380,6 +381,10 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["3000"],"localPortNumber":["3000"]}'
 ```
+
+## 공개 인증의 실제 IP
+
+공개 Caddy는 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓰며, 내부 8081 사이트는 프론트 서버가 전달한 값을 유지한다. 백엔드의 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에는 실제 Caddy와 프론트의 직접 연결 IP/CIDR만 지정한다. 기본값은 비어 있어 헤더를 신뢰하지 않는다. 배포 네트워크에 맞게 이 값을 정하지 않으면 프록시 뒤 사용자들이 IP 한도를 공유한다. 전체 사설망을 일괄 신뢰하지 않는다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
 
 ## 설정값
 

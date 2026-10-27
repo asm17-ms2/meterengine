@@ -2,6 +2,7 @@ package com.meterengine.account.controller;
 
 import com.meterengine.account.dto.CreateSignupRequest;
 import com.meterengine.account.dto.SignupResponse;
+import com.meterengine.account.service.AuthRequestRateLimitService;
 import com.meterengine.account.service.SignupConsent;
 import com.meterengine.account.service.SignupService;
 import com.meterengine.global.error.ErrorResponse;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,9 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class SignupController {
 
   private final SignupService signupService;
+  private final AuthRequestRateLimitService authRequestRateLimitService;
 
-  SignupController(SignupService signupService) {
+  SignupController(
+      SignupService signupService, AuthRequestRateLimitService authRequestRateLimitService) {
     this.signupService = signupService;
+    this.authRequestRateLimitService = authRequestRateLimitService;
   }
 
   @PostMapping
@@ -67,9 +72,18 @@ public class SignupController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=email_already_exists: 대소문자를 가리지 않고 같은 이메일로 가입한 사용자가 있다")
+        description = "code=email_already_exists: 대소문자를 가리지 않고 같은 이메일로 가입한 사용자가 있다"),
+    @ApiResponse(
+        responseCode = "429",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=rate_limit_exceeded: 가입 시도 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다")
   })
-  public SignupResponse createSignup(@Valid @RequestBody CreateSignupRequest request) {
+  public SignupResponse createSignup(
+      @Valid @RequestBody CreateSignupRequest request, HttpServletRequest servletRequest) {
+    authRequestRateLimitService.signup(request.email(), servletRequest);
     return SignupResponse.from(
         signupService.create(
             request.organizationName(),
