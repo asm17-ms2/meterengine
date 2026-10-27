@@ -76,6 +76,25 @@
    "pr": 442
   },
   {
+   "id": "C442-014",
+   "merged_ids": [
+    "G-023",
+    "G-037",
+    "G-190"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: /private/tmp는 macOS에서는 쓸 수 있고, workspace는 WORKSPACE_CONTRACT_OUTPUT_DIR, mvp는 MVP_EXTERNAL_PG_FIXTURE=1로 피할 수 있으며, #442~#452에서는 a44ed9a의 시나리오 존재 가드(playwright.mvp.config.ts 9~11행, playwright.workspace.config.ts 5행)가 먼저 throw해 이 경로에 닿지 않는다. 그래도 문제는 남는다. playwright.mvp.config.ts:25가 toss-server webServer env에 MVP_PG_STATE_FILE을 세션 경로 /private/tmp/meterengine-orchestration-0696/toss-state.json으로 박는데, Playwright 1.64.1 webServer는 env를 {...process.env, ...options.env} 순서로 합쳐 설정 값이 셸 환경변수를 덮으므로 실행하는 사람이 경로를 바꿀 길이 없다. toss-server.mjs:24 save()는 /health 응답에서도 mkdirSync를 부르고, async 요청 핸들러의 예외로 프로세스가 끝난다. 최상단 toss-server.mjs 사본을 비루트 사용자(nobody)로 같은 경로를 주고 띄우자 첫 /health에서 EACCES mkdir '/private/tmp/meterengine-orchestration-0696'로 종료했다. playwright.workspace.config.ts:10의 기본 outputDir도 같은 세션 폴더다. 같은 기본값을 쓴 최소 Playwright 설정을 nobody로 돌리자 WorkerHost.start에서 EACCES mkdir '/private'로 테스트 전에 실패했다. 두 줄은 #442(d4f1714)에서 들어와 최상단(854e293)까지 그대로다. spec과 toss-server.mjs가 모두 있는 #453 이후 head에서 Linux 비루트 환경(팀원 기기, 컨테이너)은 두 설정을 기동 단계에서 실행하지 못한다. G-023, G-037, G-190은 같은 원인(커밋된 세션 전용 절대 경로)이라 합쳤다. 좁힌 부분: C442-014의 '이전 실행 상태가 섞인다'는 근거가 없다(mvp.real.spec.ts, customer-payment-retry.real.spec.ts는 /__state를 실행 전후 차이로만 비교한다). G-190의 /tmp 고정 경로 부분도 실패가 없다. /tmp는 Linux에도 있다. Playwright가 webServer 기동 전에 outputDir를 지우므로 같은 설정을 동시에 두 번 돌리면 뒤 실행이 앞 실행의 outputDir를 지우는 것은 맞다. 하지만 payment 설정은 포트 38149, 33149를 reuseExistingServer:false로 고정해 뒤 실행이 곧바로 실패하고, trace, screenshot, video가 꺼져 있어 지워지는 산출물은 .last-run.json 정도다. /tmp 스크린샷 덮어쓰기는 단언에 쓰지 않는 증거 파일이다. 그래서 /tmp 경로는 고칠 대상에서 뺀다. package.json 스크립트, CI, README 어디에서도 이 설정을 부르지 않아 영향이 수동 로컬 E2E 실행으로 한정되므로 low.",
+   "evidence": "frontend/playwright.mvp.config.ts:25 @ 0245c15, frontend/playwright.workspace.config.ts:10 @ 0245c15, frontend/e2e/toss-server.mjs:24 @ f040e96, frontend/playwright.mvp.config.ts:25 @ 854e293, frontend/playwright.workspace.config.ts:10 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 세션 경로와 /private/tmp 날짜 경로가 #449, #453 spec에도 있다: customer-payment-retry.real.spec.ts:10, 37과 invoice-links.real.spec.ts:9(#449), permissions.real.spec.ts:9, 37, environment-cycle.real.spec.ts:11, mvp.real.spec.ts:299(#453). backend-e2e-environment.json 고정 경로와 docker 컨테이너 이름은 real-e2e-bound-env 묶음(C449-005, G-188, C453-012)이 다루므로, 증거 폴더 기본값도 그 수정에서 os.tmpdir() 기반으로 같이 바꾸는 편이 맞다. mvp.real.spec.ts:299 MVP_EVIDENCE_DIR 기본값은 그 묶음 지적에 직접 나오지 않아 #453 수정 때 함께 보게 한다. G-023, G-037의 '이 PR에 spec과 서버가 없다' 부분은 pw-missing-specs에서 판정했다(mvp, workspace는 a44ed9a 가드로 의도된 명시 실패). payment-registration.contract.spec.ts:90, 94와 mvp.real.spec.ts 163~278행의 /tmp 스크린샷 경로는 해가 없어 필수 수정이 아니다. pw-missing-specs 수정으로 payment spec을 #445로 옮길 때 testInfo.outputPath()로 바꾸는 것은 선택이다. 재현 스크립트와 로그: S/scripts/pw-hardcoded-paths/(toss-nobody.log, min/run.log).",
+   "pr": 442
+  },
+  {
    "id": "C444-008",
    "merged_ids": [
     "G-177"
@@ -377,6 +396,21 @@
    "pr": 449
   },
   {
+   "id": "D-213",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "문구 자체는 취소에도 '다시 청구하지 말고'를 쓰도록 되어 있다(445 head 92행, 최상단 118행). 그러나 사용자가 이 문구를 볼 경로가 없다. workspaceAction은 pending 반환 전에 revalidatePath('/', 'layout')를 부르고(최상단 111행), 다시 그린 수납 화면에서 pending 취소가 있으면 hasPending이 참이라 canCancel이 거짓이 되어 취소 ActionPanel 자체가 빠진다(payments/[id]/page.tsx 46-47, 52행. 445 head 44-45, 50행도 같음). 모달이 함께 사라져 Alert가 그려지지 않는다. 실행 확인: 최상단 빌드를 계약 서버 사본(pending 취소 시나리오 추가)에 붙여 일부 금액 취소를 요청하니 모달이 사라지고, 50ms 간격 4초 관찰에서 '다시 청구하지 말고'는 한 번도 보이지 않았으며, 화면에는 '취소 결과 확인 중 / 진행 중인 취소가 확정될 때까지 추가로 취소할 수 없습니다'와 결과 '결과 확인 중' 행이 보이고 취소 버튼은 0개였다(shots/cancel-pending-copy/pending-cancel.png). 지적의 위험(중복 취소)도 화면이 버튼을 숨기고, 같은 요청 ID 재사용과 백엔드의 pending 취소 409로 막힌다. 결제 시도 pending도 canCollect가 거짓이 되어 같은 방식으로 문구가 보이지 않는다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:92 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:118 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:47 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:45 @ 2e98143",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "118행 문구는 지금은 보이지 않는 잠복 문구다. 나중에 pending을 돌려주면서 패널이 남는 작업이 생기면 결제와 취소 모두에 맞지 않는 표현이 되므로, success-msg-generic 수정 때 같은 모듈에 pendingMessage(operation)를 두는 정도는 선택 사항이다. k5 G-058(범용 ActionPanel과 workspaceAction이 응답 status로 결제 결과를 추정)과 같은 줄을 본다. k6 cancel-409-stale(G-180)도 같은 취소 흐름이다. 실행 확인은 계약 서버 사본이라 실제 토스 pending 응답이 아니다. 판정은 응답 형식(PaymentCancellationResponse status pending, 201)과 화면 분기 코드에 기댄다.",
+   "pr": 445
+  },
+  {
    "id": "D-216",
    "merged_ids": [
     "D-008",
@@ -396,6 +430,21 @@
    "behavior_change": false,
    "notes": "D-008과 X-030의 '최소 과금 조정' 부분은 min-fee-line-name(D-225), D-052와 X-030의 10원 절사 안내 부분은 public-invoice-rounding-note(D-111)와 같은 원인이라 그쪽 결과로 고친다. 콘솔 InvoicesSection.tsx:137, BillingSection.tsx:193과 백엔드 청구 안내 메일도 미터 코드를 항목명으로 쓴다. 콘솔은 운영자용이라 이 지적의 대상은 아니지만 메일은 같은 최종 고객이 받으므로 백엔드 수정 때 함께 본다. k5 묶음과 직접 겹치는 지적은 index에서 찾지 못했다. behavior_change는 k6 단계(표기만)를 기준으로 false이고, 백엔드 단계는 API 계약 추가다.",
    "pr": 449
+  },
+  {
+   "id": "D-217",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "isPaymentRequest에 updateTossPaymentsCredential이 들어 있어(445 head 72행, 최상단 98행) 토스 키 저장이 시간 초과(status 0)나 malformed_response로 끝나면 '처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.'를 돌려준다(445 head 82행, 최상단 108행). 토스 키 저장은 백엔드가 토스 검증 호출 뒤 저장하는 PUT이라(TossPaymentsCredentialService.update) 75초 대기와 결과 불명은 실제로 생길 수 있다. 반박 시도: 링크(ActionPanel.tsx:124, href='')는 지금 화면인 도입사 설정을 다시 불러오므로 기능은 맞다. 그러나 문구는 결제와 취소 내역을 보라고 해 확인할 대상(토스페이먼츠 연동 목록의 저장 시각과 확인 시각, settings/page.tsx 445 head 21행)을 가리키지 않고, PUT이라 다시 저장해도 중복 청구 위험이 없는데 '중복 요청을 피하려면'이라고 한다. 운영자는 키가 저장됐는지 무엇을 보고 판단할지 안내받지 못한다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:72 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:82 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:108 @ 854e293, frontend/src/app/(console)/settings/page.tsx:21 @ 2e98143, frontend/src/components/workspace/ActionPanel.tsx:124 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 G-058(isUnconfirmed이면 작업과 관계없이 결제와 취소 링크를 보임)과 같은 원인의 k5 쪽 절반이다. 같은 줄 근처를 toss-key-missing-raw(X-051) 수정도 바꾸므로 445에서 한 번에 고치면 충돌이 없다.",
+   "pr": 445
   },
   {
    "id": "D-225",
@@ -428,6 +477,27 @@
    "behavior_change": false,
    "notes": "D-121 수정(451)이 같은 오른쪽 패널에 계산식 줄을 두므로 한 번만 넣는다. X-052 수정이 같은 93, 95, 86행의 금액 포맷을 바꾸므로 함께 적용한다.",
    "pr": 446
+  },
+  {
+   "id": "D-232",
+   "merged_ids": [
+    "D-010",
+    "D-096",
+    "D-261",
+    "D-054",
+    "D-200"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 세 화면이 같은 CONSENT_DOCUMENTS를 쓰고 체크박스가 label 안에 있어 라벨 글자를 눌러도 체크되므로 기능은 같다. 그러나 모양과 문구는 실제로 갈라져 있다. AccountConsentForm.tsx:15와 InvitationForm.tsx:18은 클래스 없는 fieldset, CSS 규칙이 어디에도 없는 div.consent-item, 클래스 없는 label을 쓰고, AuthForm.tsx:22만 fieldset.consent-fields와 label.consent-check를 쓴다(globals.css:66-72, #443에서 추가). 최상단 CSS와 antd SSR로 정적 렌더해 재 보니 계정 동의와 초대 수락 화면은 체크박스 13x13, fieldset 테두리 0, 패딩 0, summary 색 #202b40, legend 400이고 가입 화면은 17x17, 1px 테두리, 16px 패딩, summary #0958d9였다. 문구도 '{title}를 읽고 동의합니다 (필수)'와 '{title}에 동의합니다 (필수)', 안내 문장도 두 가지로 갈렸다. 원인은 같은 동의 마크업을 세 벌로 복사한 것이다. 주의: 두 폼에 className만 붙이면 고쳐지지 않는다. 두 폼은 form.workspace-form 안에 있고 '.workspace-form fieldset'(globals.css:145, 특이도 0,1,1)이 '.consent-fields'(0,1,0)의 테두리와 패딩을 다시 0으로 덮는 것을 렌더로 확인했다(체크박스와 summary 색만 바뀜). form을 auth-form으로 바꾸면 1px 테두리, 16px 패딩, 17px 체크박스가 그대로 나온다. 초대 화면 이름과 비밀번호가 네이티브 input이라 가입 화면의 비밀번호 표시 전환이 없는 점(D-010, D-200)도 같은 복사의 결과라 함께 고친다.",
+   "evidence": "frontend/src/components/auth/AccountConsentForm.tsx:15 @ 0245c15, frontend/src/components/auth/InvitationForm.tsx:16 @ 0245c15, frontend/src/components/auth/InvitationForm.tsx:18 @ 0245c15, frontend/src/components/auth/AuthForm.tsx:22 @ 0245c15, frontend/src/app/globals.css:66 @ 5535638, frontend/src/app/globals.css:145 @ 5535638",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "렌더 근거: S/scripts/consent-block-unstyled/ssr.cjs, measure.cjs, variant.cjs, proposed.cjs, 캡처 /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/consent-block-unstyled/accountConsent.mobile.png, invitation.mobile.png, invitationFixed.mobile.png. 공유 실제 스택(live-stack.md)이 없어 계약 서버 대신 최상단 빌드 CSS와 antd SSR로 정적 렌더했다. 화면의 시각 차이는 #443이 globals.css에 .consent-fields를 넣으면서 처음 보이지만 #443은 k5 파일만 바꾸고 문제의 마크업과 세 벌 복사는 #442에서 들어왔으므로 #442에서 고친다. 제출 버튼 아래 '로그아웃'과 '도입사 선택으로'가 붙는 지적(D-232, D-010, D-096, D-200 일부)은 원인이 다른 줄이라 X-084 결과로 나눴다. D-200의 파일 경로 components/invitations/InvitationForm.tsx는 실제로 components/auth/InvitationForm.tsx다. D-054의 page.tsx:29-30 month-apply 버튼 재사용은 기존 계정 분기의 별개 문제라 이 수정에 넣지 않았다(동작은 정상, 44px 테두리 버튼). validation-rules-dup의 G-050이 같은 동의 UI 세 벌을 지적하므로 그쪽은 이 수정으로 동의 UI 부분이 해소된다. 비밀번호 안내 문구는 password-utf8-hint(D-103)와 같은 줄이라 함께 고칠 때 충돌에 주의.",
+   "pr": 442
   },
   {
    "id": "G-020",
@@ -602,6 +672,21 @@
    "pr": null
   },
   {
+   "id": "X-051",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "백엔드 TOSS_PAYMENTS_CREDENTIAL_MISSING은 409 '결제 모드에 맞는 토스페이먼츠 키가 없습니다'다(ErrorCode.java:73). 결제 요청은 키가 없으면 시도를 만들기 전에 이 409를 던지고(PaymentAttemptService 475행), 카드 등록 링크 생성(PaymentMethodRegistrationService 137행)과 레거시 결제 모드 live 전환(PaymentSettingService 59행)도 같다. workspaceAction은 필드 오류가 없으면 toDisplayMessage로 이 문장을 그대로 내보낸다(445 head 83행, 최상단 109행). 반박 시도: 문장이 빠진 것(토스 키)은 말해 주지만, 어디서 무엇을 하면 되는지(도입사 설정의 토스페이먼츠 연동에서 현재 결제 환경의 키 저장)는 없다. 수납 상세의 '등록 카드로 결제'와 고객 상세의 '카드 등록 링크 만들기'는 키 유무와 관계없이 버튼을 보이고 사전 안내가 없어 이 오류가 유일한 안내다. 453 이후 키가 업무 환경마다 따로인데 문구는 '결제 모드'라고만 해 다른 환경에 키를 넣어 둔 운영자가 원인을 짐작하기 어렵다. 흐름이 막히지만 메뉴에서 도입사 설정을 찾으면 풀리므로 low로 낮췄다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:83 @ 2e98143, frontend/src/app/(console)/workspace-actions.ts:109 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:93 @ 2e98143, frontend/src/app/(console)/customers/[id]/page.tsx:40 @ 854e293, backend/src/main/java/com/meterengine/global/error/ErrorCode.java:73 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "취소 요청에서 과거 키가 없을 때는 409가 아니라 status failed와 failure_message로 돌아와 117행이 원문을 보인다. 이 경우는 키를 다시 저장해도 과거 키 조회가 풀리지 않을 수 있어 같은 안내를 쓰면 안 되므로 고치지 않는다. 카드 등록 링크 버튼(customers/[id])은 451에서 들어오지만 같은 workspaceAction 분기를 타므로 445 수정이 위로 올라가면 함께 풀린다. toss-key-fail-copy(D-217)와 같은 445의 같은 분기 근처를 고친다.",
+   "pr": 445
+  },
+  {
    "id": "X-052",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -617,6 +702,21 @@
    "pr": 446
   },
   {
+   "id": "X-055",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "amount()는 안전 정수를 넘으면 '금액은 0 이상의 정수로 입력하세요.'를 던지지만 catch가 이를 버리고 필드 지정 없이 '입력 형식을 확인하세요. 금액은 0 이상의 정수, 조합과 구간은 올바른 JSON이어야 합니다.'를 돌려준다(442 head 20-24, 54-56행, 최상단 22-26, 94-96행). 요금제 버전 등록(PricingWorkspace.tsx:79-80, number 입력에 max 없음)에 99999999999999999999를 넣으면 JSON 필드가 없는 폼에서 JSON 안내가 나오고 어느 필드인지 표시되지 않는다. 442에서는 API 키 발급의 분당 요청 한도가 이 catch로 가는 유일한 입력이라 'API 키 폼에서 금액과 JSON 안내'가 나온다. 분당 요청 한도에 99999999999를 넣으면 안전 정수라 통과해 백엔드로 가고, CreateApiKeyRequest의 Integer에 넘쳐 HttpMessageNotReadableException이 MALFORMED_REQUEST_BODY '요청 본문을 JSON으로 읽을 수 없습니다'(400, 필드 오류 없음)가 되며 109행이 그대로 보인다. 입력 필드(integrations/page.tsx 442 head 23행)에는 min: 1만 있고 max가 없다. 반박 시도: 일반 숫자 입력은 min과 step으로 브라우저가 막아 이 경로는 매우 큰 값에서만 열리고, 요청이 거부될 뿐 데이터 피해는 없다. 그래서 low로 낮췄지만, 운영자가 원인 필드를 알 수 없고 운영자가 입력하지 않는 JSON을 말하는 문구는 코드로 짚을 수 있는 문제다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:22 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:55 @ 0245c15, frontend/src/app/(console)/integrations/page.tsx:23 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:95 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:79 @ 854e293, backend/src/main/java/com/meterengine/apikey/dto/CreateApiKeyRequest.java:36 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "behavior_change: 2147483647을 넘는 한도는 이제 브라우저와 서버 액션에서 막혀 백엔드로 가지 않는다. 같은 파일의 k6 묶음 workspace-actions-false-branches(G-020), workspace-actions-central(G-021)과 겹친다. success-msg-generic(X-066)과 같은 새 모듈과 테스트 파일을 쓰므로 442에서 같이 고친다. 결제 취소 금액(445, amount 필드)은 화면이 max: 잔액-1을 주므로 이 경로가 거의 열리지 않지만 같은 amount()를 타므로 함께 필드 오류로 바뀐다.",
+   "pr": 442
+  },
+  {
    "id": "X-056",
    "merged_ids": [],
    "verdict": "refuted",
@@ -630,6 +730,24 @@
    "behavior_change": false,
    "notes": "청구, 인보이스, 사용량 표의 모바일 카드는 #446, 수집 로그 표(EventsTable)는 #451이 들였다. k5 C442-017(WorkspaceView 표와 카드 이중 렌더)과 같은 패턴이다. 큰 페이지 크기에서 펼치기가 느리다면 원인은 antd Table 쪽이라 따로 재야 한다. 원한다면 모바일 카드 목록을 groups와 totalAmount만 받는 memo 컴포넌트로 빼 펼침 상태 변경 때 재조정을 건너뛰는 작은 최적화는 가능하나 필요를 보인 측정이 없다. 판정을 바꾸려면 size=100 데이터에서 모바일 카드가 있을 때와 없을 때의 INP 비교가 필요하다.",
    "pr": 446
+  },
+  {
+   "id": "X-066",
+   "merged_ids": [
+    "D-094",
+    "D-210"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "workspaceAction의 성공 반환(442 head 80행, 최상단 120행)은 testWebhookEndpoint만 따로 두고 나머지 모든 operation에 '처리했습니다.'를 준다. ActionPanel.tsx:50은 비밀값과 링크가 없는 모달 작업이면 이 값을 message.success로 띄우고 모달을 닫는다. 반박 시도: (1) D-094, D-210의 결제 시나리오는 대부분 성립하지 않는다. pending과 failed는 성공 토스트가 아니라 경고와 오류 Alert로 갈라지고(최상단 117-118행), 결제 pending이면 재검증 뒤 canCollect가 거짓이 되어 화면에 '결제 결과 확인 중'이 보인다. done이면 화면 상태가 '수납 완료'로 바뀐다. (2) 그래도 토스트 자체가 작업을 말하지 않는 문제는 남는다. 계약 서버와 최상단 빌드로 통보 발송 내역에서 '다시 보내기'를 실행하니 백엔드는 202로 발송 대기만 만들었는데(WebhookEndpointController retryWebhookDelivery) 토스트는 '처리했습니다.'였다(shots/cancel-pending-copy/retry-toast.png). 같은 성격의 시험 통보는 '발송 대기에 추가했습니다'로 따로 안내해 같은 화면에서 문구가 갈린다. 모달이 닫힌 뒤 포커스가 body로 가는 상태(k5 X-000)에서는 이 토스트가 유일한 결과 안내인데, 권한 변경, 키 권한 변경, 초대 취소, 키 폐기처럼 화면 변화가 작은 작업에서 무엇이 바뀌었는지 알려 주지 않는다. 전용 대화상자(CustomerFormDialog '저장했습니다', PricingWorkspace '단가 버전을 저장했습니다.')와도 용어가 다르다. 원인은 한 줄의 기본 문구라 세 지적을 합쳤다. 실제 피해는 오인 가능성 수준이라 low로 낮췄다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:80 @ 0245c15, frontend/src/app/(console)/workspace-actions.ts:120 @ 854e293, frontend/src/components/workspace/ActionPanel.tsx:50 @ 854e293, frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 파일을 다루는 k6 묶음: archive-redirect-month(X-093, 보관 뒤 리다이렉트라 토스트 없음), customer-dup-success(X-050, 고객 중복 등록의 성공 안내), workspace-actions-false-branches(G-020), workspace-actions-central(G-021). k5 겹침: X-000, D-172(닫은 뒤 포커스 유실), X-020(status 영역 안내), G-058(응답 필드로 결과 추정). 위층 항목을 442 맵에 한꺼번에 넣으면 442에 위층 기능 이름이 들어가 G-020과 같은 지적을 다시 부르므로 PR별로 나눠 넣는 쪽을 권한다. json-error-copy(X-055)도 442에서 같은 새 모듈을 쓰도록 계획했으니 한 커밋 묶음으로 고치면 충돌이 없다. 확인 스크립트: scripts/cancel-pending-copy/run.js(최상단 빌드와 계약 서버 사본, 포트 33961과 38961, 끝난 뒤 종료함).",
+   "pr": 442
   },
   {
    "id": "X-067",
@@ -710,6 +828,21 @@
    "behavior_change": false,
    "notes": "가독성 지적 자체는 일리가 있다(WCAG 1.4.8 AAA는 CJK 한 줄 40자 이하를 권한다). 다만 main부터 있던 공통 컴포넌트 문제라 스택 PR이 아니라 main 기준 별도 변경이나 k5에서 다룰 일이다. k5 지적 목록에 ScreenNote 폭 지적은 없다.",
    "pr": null
+  },
+  {
+   "id": "X-084",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: '로그아웃'과 '도입사 선택으로'는 주 버튼과 모양이 달라 구분은 된다. 그러나 간격이 없다. account/consents/page.tsx:15는 <AccountConsentForm/><LogoutButton/>을 auth-panel에 바로 이어 붙이고, organization-invitations/[token]/page.tsx:32는 <Link href=\"/organizations\">를 InvitationForm 바로 뒤에 둔다. auth-panel과 workspace-form에는 뒤 형제와의 여백이 없다. 정적 렌더(390px)에서 '동의하고 업무 시작' 아래 로그아웃 폼까지 0px, '초대 수락하고 도입사로 이동' 아래 '도입사 선택으로' 링크(약 102x17px)까지 2px였다. 링크 높이가 24px보다 작고 24px 원이 주 버튼과 겹쳐 WCAG 2.5.8 간격 예외도 충족하지 못한다. 휴대폰에서 주 버튼 아래쪽을 누르면 링크가 눌려 입력한 이름과 비밀번호를 잃고 다른 화면으로 간다. 체크박스 13px 지적 부분은 D-232와 원인이 같아 그 결과로 고친다.",
+   "evidence": "frontend/src/app/account/consents/page.tsx:15 @ 0245c15, frontend/src/app/organization-invitations/[token]/page.tsx:32 @ 0245c15, frontend/src/app/globals.css:81 @ 5535638",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-232, D-010, D-096, D-200도 같은 간격 문제를 부수적으로 지적했지만 각 id의 주 지적이 동의 블록 모양이라 D-232 결과에 두었다. invite-anon-org-link(D-061)가 같은 page.tsx:32 링크를 로그인 세션이 있을 때만 보이게 바꾸자고 하고, invite-logout-breaks(C442-013)가 초대 화면 로그아웃 흐름을 바꾸자고 하므로 같은 줄을 고칠 때 함께 맞춘다(감싸는 div 안에서 조건부 렌더).",
+   "pr": 442
   }
  ],
  "new_findings": [],
@@ -718,6 +851,11 @@
    "id": "C442-005",
    "file": "frontend/package.json",
    "why": "일부만 범위 밖: .github/workflows/ci.yml frontend 잡(#442 head 79-81행)에 pnpm install 다음 - run: pnpm test:unit 단계를 더해야 CI가 실제로 막는다. 같이 .github/workflows/README.md 7행의 ci.yml 설명 'frontend lint/빌드'를 'frontend lint/단위 검사/빌드'로 고친다. 둘 다 frontend 밖이라 k6에서 고치지 않는다. setup-node가 .node-version(24)을 쓰므로 .ts import를 그대로 실행하고 추가 의존성은 없다. #442에 넣으면 스택 전체가 같은 단계를 받는다."
+  },
+  {
+   "id": "C442-014",
+   "file": "frontend/playwright.mvp.config.ts, frontend/playwright.workspace.config.ts",
+   "why": "일부만 범위 밖: G-190이 함께 짚은 demo/llm-service/playwright.config.ts:12 outputDir와 demo/llm-service/e2e/helpers.ts:8 ARTIFACT_DIR의 /private/tmp 날짜 고정 경로(#452)는 frontend 밖이다. k4 C452-014와 같은 내용이다."
   },
   {
    "id": "C446-002",
@@ -760,9 +898,19 @@
    "why": "일부만 범위 밖: backend: 확정 시점 미터 이름 스냅숏. invoice_line에 billable_metric_name 컬럼을 더하는 새 V__ 마이그레이션(지침상 피해야 하므로 백엔드 담당과 협의), ChargeService.add의 DimensionCharge와 인보이스 확정 저장 경로에 metric.getName() 전달, InvoiceResponse.InvoiceLineResponse에 billable_metric_name 추가(공개 응답과 콘솔 응답 모두에 노출되는 API 계약 추가), backend/openapi.yaml 갱신, InvoiceEmailService.label과 mail/invoice.html도 같은 이름 사용. k5(frontend/src/lib/): lib/invoice-view-links.ts PublicInvoice.lines와 lib/api/invoices.ts InvoiceLineResponse에 billable_metric_name?: string | null 추가. 이 둘이 들어와야 PublicInvoiceView의 항목명 수정이 가능하다."
   },
   {
+   "id": "D-217",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/workspace-action-feedback.ts, frontend/e2e/workspace-action-feedback.test.mjs",
+   "why": "일부만 범위 밖: frontend/src/components/workspace/ActionPanel.tsx:124(k5, 442에서 들어옴)의 링크 이름 '결제와 취소 내역 새로 조회'가 operation과 관계없이 고정이다. 토스 키 저장에서는 '토스 키 상태 새로 조회'처럼 바뀌어야 하며, WorkspaceActionState에 링크 이름을 담아 ActionPanel이 그것을 쓰게 하는 변경이 k5 쪽에 필요하다."
+  },
+  {
    "id": "D-225",
    "file": "frontend/src/components/invoice-links/PublicInvoiceView.tsx",
    "why": "일부만 범위 밖: 세 화면(공개 청구서, InvoicesSection, BillingSection)이 하나의 라벨 상수를 쓰게 frontend/src/lib/로 빼는 방식은 k5 범위다. volume 줄의 실제 적용 구간을 보여 주려면 ChargeService.add가 volume에 실제 tier index를 넣어야 하고 이는 backend 범위이며 V38 유니크 인덱스(tier_index 포함)에도 닿으므로 여기서는 구간 번호를 숨기는 쪽으로 고친다."
+  },
+  {
+   "id": "D-232",
+   "file": "frontend/src/components/auth/ConsentFields.tsx, frontend/src/components/auth/AuthForm.tsx, frontend/src/components/auth/AccountConsentForm.tsx, frontend/src/components/auth/InvitationForm.tsx, frontend/e2e/contract-server.mjs, frontend/e2e/auth.contract.spec.ts",
+   "why": "일부만 범위 밖: CONSENT_DOCUMENTS의 이용 안내 본문('가입 신청으로 도입사와 사용자 계정을 만듭니다...')이 초대 수락과 계정 동의 화면에도 그대로 나오는 문제는 frontend/src/lib/auth/consents.ts(k5) 몫이다."
   },
   {
    "id": "G-020",
@@ -795,9 +943,24 @@
    "why": "일부만 범위 밖: 원 지적의 대안인 발급 모달의 '초대 링크 열기' 제거나 문구 변경은 frontend/src/components/workspace/ActionPanel.tsx(k5 범위, 줄은 #442 이후 화면 공통 컴포넌트)라 여기서 다루지 않는다. 이 수정만으로도 혼동은 막힌다."
   },
   {
+   "id": "X-051",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/workspace-action-feedback.ts, frontend/e2e/workspace-action-feedback.test.mjs",
+   "why": "일부만 범위 밖: 제안의 '도입사 설정으로 이동' 링크는 WorkspaceActionState에 경로를 담고 ActionPanel(k5, frontend/src/components/workspace/ActionPanel.tsx)이 그 링크를 그려야 해서 k5 범위다. 기존 registrationPath는 카드 등록 링크 안내와 복사 버튼, 폼 잠금이 붙어 재사용할 수 없다. 백엔드 ErrorCode 문구를 행동 안내까지 담게 바꾸는 방법은 backend 범위다."
+  },
+  {
    "id": "X-052",
    "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
    "why": "일부만 범위 밖: 백엔드 단가 응답이 JSON number라 유효 숫자 15자리를 넘으면 프론트에서 정밀도가 사라진다(문자열 직렬화나 @Digits 상한은 backend 범위). WorkspaceView.tsx NUMBER(12자리)와 lib/format formatDecimal(10자리)의 포맷 통일은 k5 범위(frontend/src/components/workspace, frontend/src/lib)."
+  },
+  {
+   "id": "X-055",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/workspace-action-feedback.ts, frontend/e2e/workspace-action-feedback.test.mjs, frontend/src/app/(console)/integrations/page.tsx",
+   "why": "일부만 범위 밖: 백엔드 GlobalExceptionHandler가 숫자 범위 초과(InputCoercionException)를 필드 오류로 돌려주게 하는 개선은 backend 범위다. 프론트 상한만으로도 이 경로는 막힌다."
+  },
+  {
+   "id": "X-066",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/workspace-action-feedback.ts, frontend/e2e/workspace-action-feedback.test.mjs",
+   "why": "일부만 범위 밖: ActionPanel.tsx:50의 기본값 '저장했습니다.'(k5, 442)는 workspaceAction이 항상 message를 채워 지금은 쓰이지 않는다. 바꿀 필요 없음."
   }
  ],
  "not_done": [],
