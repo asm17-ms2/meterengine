@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from decimal import Decimal
+from fractions import Fraction
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -12,7 +13,8 @@ from core.jsonl_log import JsonlLogWriter
 from csvdemo.render import Console
 from core.api_client import ApiRequestError, ApiResult
 from csvdemo import verify_cmd
-from csvdemo.expected import dimension_values_key
+from csvdemo.expected import BillableMetricMeta, build_expected, dimension_values_key
+from core.model import StoredEvent, parse_rfc3339
 from csvdemo.verify_cmd import _derive_billable_metrics, _load_log_source
 
 
@@ -140,8 +142,11 @@ class FakeVerifyClient:
         self.asked.append("organization")
         return FakeVerifyClient.organization_reply
 
-    def get_billable_metric_prices(self):
+    def get_billable_metric_prices(self, month=None, customer_id=None):
         return _result({"billable_metric_prices": []})
+
+    def get_price_plans(self, month=None, customer_id=None):
+        return _result({"price_plans": []})
 
     def get_usage(self, month):
         return _result({"billable_metric_usages": []})
@@ -196,6 +201,16 @@ class RunVerifyAuthTest(unittest.TestCase):
 
 
 class DeriveBillableMetricsTest(unittest.TestCase):
+    def test_count의_빈속성과_집계_변환_메타데이터를_보존한다(self):
+        usage = _result({"billable_metric_usages": [
+            {"code": "requests", "event_type": "request", "aggregation": "COUNT", "target_property": None, "unit_size": Decimal("1024"), "rounding_mode": "ceil", "rounding_precision": 2},
+            {"code": "p95", "event_type": "request", "aggregation": "percentile", "target_property": "bytes", "percentile": Decimal("95.5")},
+        ]})
+        count, percentile = _derive_billable_metrics(usage, _result({"billable_metric_prices": []}))
+        self.assertEqual((count.aggregation, count.target_property, count.unit_size, count.rounding_mode, count.rounding_precision), ("count", None, 1024, "ceil", 2))
+        self.assertEqual(percentile.percentile, Decimal("95.5"))
+        self.assertEqual((percentile.unit_size, percentile.rounding_mode, percentile.rounding_precision), (1, "none", 0))
+
     def test_가격_목록에서_차원_키와_조합별_단가를_가져온다(self):
         usage = _result({
             "billable_metric_usages": [
@@ -228,6 +243,74 @@ class DeriveBillableMetricsTest(unittest.TestCase):
         )
         self.assertEqual(api_calls.dimension_properties, [])
         self.assertEqual(api_calls.unit_prices, {})
+
+
+class AggregationVerificationTest(unittest.TestCase):
+    def test_구간_표시량의_합이_달라도_정확한_분수_수량을_검증한다(self):
+        tiers = [{"up_to": "0.333333333333333333", "unit_price": 300}, {"up_to": None, "unit_price": "3E20"}]
+        metric = BillableMetricMeta("metric", "request", "sum", "quantity", unit_size=Decimal("3"), price_rates={dimension_values_key({}): {"model": "graduated", "tiers": tiers}})
+        stored = [StoredEvent("tx", "customer", "request", parse_rfc3339("2026-08-10T00:00:00Z"), {"quantity": 1})]
+        expected = build_expected(stored, [metric], "2026-08", ["customer"])
+        usage = _result({"billable_metric_usages": [{"code": "metric", "customers": [{"customer_id": "customer", "quantity": Decimal("0.333333333333333333")}]}]})
+        lines = [
+            {"billable_metric_code": "metric", "quantity": Decimal("0.333333333333333333"), "quantity_numerator": Decimal("0.333333333333333333"), "quantity_denominator": 1},
+            {"billable_metric_code": "metric", "quantity": Decimal("0.000000000000000000333333333333333333"), "quantity_numerator": Decimal("0.000000000000000001"), "quantity_denominator": 3},
+        ]
+        invoice = _result({"customers": [{"customer_id": "customer", "lines": lines}]})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(verify_cmd._print_quantity_table(Console(color=False), metric, expected, usage, invoice, {"customer": "고객"}, ["customer"]))
+            lines[1]["quantity_denominator"] = 1
+            self.assertFalse(verify_cmd._print_quantity_table(Console(color=False), metric, expected, usage, invoice, {"customer": "고객"}, ["customer"]))
+
+    def test_원본_평균_분자분모를_정확히_비교한다(self):
+        self.assertTrue(verify_cmd._raw_fraction_matches(Fraction(1, 3), {"raw_quantity_numerator": 1, "raw_quantity_denominator": 3}))
+        self.assertTrue(verify_cmd._raw_fraction_matches(Fraction(1, 3), {"raw_quantity_numerator": Decimal("0.1"), "raw_quantity_denominator": Decimal("0.3")}))
+        self.assertFalse(verify_cmd._raw_fraction_matches(Fraction(1, 3), {"raw_quantity_numerator": Decimal("0.333333333333333333"), "raw_quantity_denominator": 1}))
+        self.assertFalse(verify_cmd._raw_fraction_matches(Fraction(1, 3), {"raw_quantity_numerator": 1, "raw_quantity_denominator": 0}))
+        self.assertFalse(verify_cmd._raw_fraction_matches(Fraction(1, 3), {"raw_quantity_numerator": 1}))
+
+    def test_반복소수_평균도_정의된_표시량과_정확히_비교한다(self):
+        metric = BillableMetricMeta("avg", "request", "avg", "quantity")
+        expected = Decimal("0.333333333333333333")
+        self.assertTrue(verify_cmd._quantity_matches(expected, Decimal("0.333333333333333333"), metric))
+        self.assertFalse(verify_cmd._quantity_matches(expected, Decimal("0.3"), metric))
+        self.assertFalse(verify_cmd._quantity_matches(expected, Decimal("0.33333333333333333334"), metric))
+        metric.rounding_mode = "ceil"
+        self.assertFalse(verify_cmd._quantity_matches(expected, Decimal("0.33333333333333333333"), metric))
+        metric.aggregation = "sum"
+        self.assertFalse(verify_cmd._quantity_matches(expected, Decimal("0.33333333333333333333"), metric, raw=True))
+
+    def test_평균의_전체집계와_차원별_청구수량을_분리해_검증한다(self):
+        prices = _result({"billable_metric_prices": [{"billable_metric_code": "avg", "dimension_properties": ["model"], "price_rates": [{"dimension_values": {"model": model}, "unit_price": 10} for model in ["a", "b"]]}]})
+        usage_body = {"billable_metric_usages": [{"code": "avg", "event_type": "request", "aggregation": "avg", "target_property": "quantity", "unit_size": 1, "rounding_mode": "none", "rounding_precision": 0, "customers": [{"customer_id": "customer", "customer_name": "고객", "quantity": Decimal("23.25"), "raw_quantity": Decimal("23.25"), "dimension_usages": [
+            {"dimension_values": {"model": "a"}, "quantity": Decimal("3.5"), "raw_quantity": Decimal("3.5")},
+            {"dimension_values": {"model": "b"}, "quantity": 43, "raw_quantity": 43},
+        ]}]}]}
+        class Client:
+            base_url = "http://localhost:8080"
+            def get_usage(self, month): return _result(usage_body)
+            def get_invoice(self, month): return _result({"calculated_at": "2026-08-11T00:00:00Z", "total_amount": 460, "customers": [{"customer_id": "customer", "amount": 460, "lines": [{"billable_metric_code": "avg", "quantity": Decimal("3.5")}, {"billable_metric_code": "avg", "quantity": 43}]}]})
+            def get_price_plans(self, month, customer_id=None): return _result({"price_plans": []})
+            def get_billable_metric_prices(self, month, customer_id=None): return prices
+            def get_events_page(self, month): return _result({"total": 4})
+        stored = [StoredEvent(str(index), "customer", "request", parse_rfc3339("2026-08-10T00:00:00Z"), {"quantity": value, "model": model}) for index, (value, model) in enumerate([(0, "a"), (7, "a"), (20, "b"), (66, "b")])]
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertTrue(verify_cmd._verify_month(Client(), Console(color=False), stored, "2026-08", prices))
+        self.assertIn("전체 기대값", output.getvalue())
+        self.assertIn("46.5", output.getvalue())
+        usage_body["billable_metric_usages"][0]["customers"][0]["dimension_usages"][0]["quantity"] = Decimal("4.5")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertFalse(verify_cmd._verify_month(Client(), Console(color=False), stored, "2026-08", prices))
+
+    def test_원본집계값_오류도_최종수량이_같다고_통과하지_않는다(self):
+        metric = BillableMetricMeta("count", "request", "count", None, unit_size=Decimal("3"), rounding_mode="ceil")
+        stored = [StoredEvent("tx", "customer", "request", parse_rfc3339("2026-08-10T00:00:00Z"), {})]
+        line = build_expected(stored, [metric], "2026-08", ["customer"]).customers["customer"].lines[0]
+        actual = [{"dimension_values": {}, "quantity": 1, "raw_quantity": 2}]
+        self.assertFalse(verify_cmd._dimensions_match(line, actual, metric))
+        actual[0]["raw_quantity"] = 1
+        self.assertTrue(verify_cmd._dimensions_match(line, actual, metric))
 
 
 def _result(body):

@@ -120,19 +120,11 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 같은_event_type과_target_property를_다른_코드로_등록하면_409이고_기존_미터만_남는다() {
+  void 같은_이벤트와_속성에_다른_코드의_미터를_등록할_수_있다() {
     UUID organizationId = insertOrganization();
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
-
-    assertThat(post(organizationId, sumBody("token-usage-copy")))
-        .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS.getCode());
-
-    assertThat(billableMetricCount(organizationId, "token-usage-copy")).isZero();
+    assertThat(post(organizationId, sumBody("token-usage-copy"))).hasStatus(201);
+    assertThat(billableMetricCount(organizationId, "token-usage-copy")).isEqualTo(1);
   }
 
   @Test
@@ -153,7 +145,7 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void SUM이_아닌_집계_함수는_400이고_저장은_0건이다() {
+  void 지원하지_않는_집계_함수는_400이고_저장은_0건이다() {
     UUID organizationId = insertOrganization();
 
     assertThat(
@@ -161,7 +153,7 @@ class BillableMetricIntegrationTest {
                 organizationId,
                 """
                 {"code": "call-count", "name": "호출 수", "event_type": "chat_completion",
-                 "aggregation": "COUNT", "target_property": "calls"}
+                 "aggregation": "unsupported", "target_property": "calls"}
                 """))
         .hasStatus(400)
         .bodyJson()
@@ -346,17 +338,12 @@ class BillableMetricIntegrationTest {
   }
 
   @Test
-  void 바꾸려는_event_type과_target_property가_다른_미터에_있으면_409다() {
+  void 이벤트가_없으면_다른_미터와_같은_이벤트와_속성으로_변경할_수_있다() {
     UUID organizationId = insertOrganization();
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
     assertThat(post(organizationId, sumBody("character-usage", "chars"))).hasStatus(201);
-
     assertThat(put(organizationId, "character-usage", updateBody("chat_completion", "token")))
-        .hasStatus(409)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS.getCode());
+        .hasStatusOk();
   }
 
   @Test

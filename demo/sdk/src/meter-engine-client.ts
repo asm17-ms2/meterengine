@@ -1,7 +1,7 @@
 
 import { MeterEngineApiError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ErrorResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse } from "./types.ts";
+import type { ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -73,6 +73,22 @@ export class MeterEngineClient {
     this.random = options.random ?? Math.random;
   }
 
+  aggregateBillableMetricUsages(params: { month?: string } = {}): Promise<ListBillableMetricUsagesResponse> {
+    return this.request("GET", queryPath("/v1/usage", params));
+  }
+
+  listInvoices(params: { month?: string; customer_id?: string } = {}): Promise<ListInvoicesResponse> {
+    return this.request("GET", queryPath("/v1/invoices", params));
+  }
+
+  getInvoice(id: string): Promise<InvoiceResponse> {
+    return this.request("GET", `/v1/invoices/${encodeURIComponent(id)}`);
+  }
+
+  previewDraftInvoice(params: { month?: string } = {}): Promise<DraftInvoiceResponse> {
+    return this.request("GET", queryPath("/v1/invoices/draft", params));
+  }
+
   listInvoicePayments(params: { month?: string; customer_id?: string } = {}): Promise<ListInvoicePaymentsResponse> {
     return this.request("GET", queryPath("/v1/invoice-payments", params));
   }
@@ -87,6 +103,14 @@ export class MeterEngineClient {
 
   getOrganization(): Promise<OrganizationResponse> {
     return this.request("GET", "/v1/organization");
+  }
+
+  listBillableMetricPrices(params: { month?: string; customer_id?: string } = {}): Promise<ListBillableMetricPricesResponse> {
+    return this.request("GET", queryPath("/v1/billable-metric-prices", params));
+  }
+
+  listPricePlans(params: { month?: string; customer_id?: string } = {}): Promise<ListPricePlansResponse> {
+    return this.request("GET", queryPath("/v1/price-plans", params));
   }
 
   createPaymentMethodRegistration(id: string): Promise<PaymentMethodRegistrationResponse> {

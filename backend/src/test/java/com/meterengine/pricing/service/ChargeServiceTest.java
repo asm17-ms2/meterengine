@@ -11,6 +11,7 @@ import com.meterengine.pricing.dto.CustomerCharge;
 import com.meterengine.pricing.dto.DimensionCharge;
 import com.meterengine.pricing.dto.UnpricedUsage;
 import com.meterengine.pricing.entity.PriceRate;
+import com.meterengine.pricing.repository.PricePlanRepository;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -33,12 +34,14 @@ class ChargeServiceTest {
   private static final UUID BETA_ID = UUID.randomUUID();
 
   @Mock private PriceRateRepository priceRateRepository;
+  @Mock private PricePlanRepository pricePlanRepository;
 
   private ChargeService chargeService;
 
   @BeforeEach
   void setUp() {
-    chargeService = new ChargeService(priceRateRepository, JsonMapper.builder().build());
+    chargeService =
+        new ChargeService(priceRateRepository, pricePlanRepository, JsonMapper.builder().build());
   }
 
   @Test
@@ -214,6 +217,30 @@ class ChargeServiceTest {
   }
 
   @Test
+  void 음수_집계가_올림으로_0이_되어도_원본_음수를_경고하고_청구하지_않는다() {
+    stubPriceRates(priceRate("token-usage", "{}", "100"));
+
+    CustomerCharge customerCharge =
+        calculate(
+                new BillableMetricUsage(
+                    billableMetric("token-usage", "token"),
+                    List.of(
+                        customerUsage(
+                            ACME_ID,
+                            new DimensionUsage(
+                                Map.of(), BigDecimal.ZERO, new BigDecimal("-0.4"))))))
+            .get(ACME_ID);
+
+    assertThat(customerCharge.amount()).isZero();
+    assertThat(customerCharge.dimensionCharges()).isEmpty();
+    assertThat(customerCharge.unpricedUsages()).isEmpty();
+    assertThat(customerCharge.negativeUsages())
+        .singleElement()
+        .satisfies(
+            negativeUsage -> assertThat(negativeUsage.quantity()).isEqualByComparingTo("-0.4"));
+  }
+
+  @Test
   void 음수_조합이_있어도_다른_양수_조합은_그대로_라인이_된다() {
     stubPriceRates(
         priceRate("token-usage", "{\"model\": \"a\"}", "0.5"),
@@ -262,6 +289,140 @@ class ChargeServiceTest {
     CustomerCharge betaCustomerCharge = customerChargeByCustomerId.get(BETA_ID);
     assertThat(betaCustomerCharge.amount()).isZero();
     assertThat(betaCustomerCharge.dimensionCharges()).isEmpty();
+  }
+
+  @Test
+  void 합계를_3으로_나눈_수량에_300원을_곱하면_정확히_100원이다() {
+    stubPriceRates(priceRate("fraction", "{}", "300"));
+    BillableMetric metric =
+        new BillableMetric(
+            ORGANIZATION_ID,
+            "fraction",
+            "분수",
+            "event",
+            "sum",
+            "value",
+            List.of(),
+            new BigDecimal("3"),
+            "none",
+            0,
+            null);
+    CustomerCharge charged =
+        calculate(fractionalUsage(metric, "0.333333333333333333", "1", "1", "1")).get(ACME_ID);
+    assertThat(charged.amount()).isEqualTo(100);
+    assertThat(charged.dimensionCharges().getFirst().quantityNumerator()).isEqualByComparingTo("1");
+    assertThat(charged.dimensionCharges().getFirst().quantityDenominator())
+        .isEqualByComparingTo("3");
+  }
+
+  @Test
+  void 평균의_반복소수에_단가를_곱할_때도_정확한_분수로_계산한다() {
+    stubPriceRates(priceRate("fraction", "{}", "300"));
+    BillableMetric metric =
+        new BillableMetric(ORGANIZATION_ID, "fraction", "평균", "event", "avg", "value", List.of());
+    CustomerCharge charged =
+        calculate(fractionalUsage(metric, "0.333333333333333333", "0.333333333333333333", "1", "3"))
+            .get(ACME_ID);
+    assertThat(charged.amount()).isEqualTo(100);
+  }
+
+  @Test
+  void 전체_구간_요금은_표시량이_아닌_정확한_분수로_경계를_판정한다() {
+    stubPriceRates(tierRate("volume", "1", "300", "600"));
+    BillableMetric metric =
+        new BillableMetric(ORGANIZATION_ID, "fraction", "평균", "event", "avg", "value", List.of());
+    CustomerCharge charged =
+        calculate(fractionalUsage(metric, "1", "1", "3.000000000000000000000000000001", "3"))
+            .get(ACME_ID);
+    assertThat(charged.amount()).isEqualTo(600);
+    assertThat(charged.dimensionCharges().getFirst().unitPrice()).isEqualByComparingTo("600");
+  }
+
+  @Test
+  void 누진_구간의_나머지_분수도_단가를_곱한_뒤_10원을_절사한다() {
+    stubPriceRates(tierRate("graduated", "0.3", "300", "300"));
+    BillableMetric metric =
+        new BillableMetric(
+            ORGANIZATION_ID,
+            "fraction",
+            "분수",
+            "event",
+            "sum",
+            "value",
+            List.of(),
+            new BigDecimal("3"),
+            "none",
+            0,
+            null);
+    CustomerCharge charged =
+        calculate(fractionalUsage(metric, "0.333333333333333333", "1", "1", "1")).get(ACME_ID);
+    assertThat(charged.amount()).isEqualTo(100);
+    assertThat(charged.dimensionCharges())
+        .extracting(DimensionCharge::amount)
+        .containsExactly(90L, 10L);
+    assertThat(charged.dimensionCharges().get(1).quantityNumerator()).isEqualByComparingTo("0.1");
+    assertThat(charged.dimensionCharges().get(1).quantityDenominator()).isEqualByComparingTo("3");
+  }
+
+  @Test
+  void 명시적으로_올린_수량은_원본_분수_대신_올림_결과로_청구한다() {
+    stubPriceRates(priceRate("fraction", "{}", "300"));
+    BillableMetric metric =
+        new BillableMetric(
+            ORGANIZATION_ID,
+            "fraction",
+            "평균",
+            "event",
+            "avg",
+            "value",
+            List.of(),
+            BigDecimal.ONE,
+            "ceil",
+            0,
+            null);
+    CustomerCharge charged =
+        calculate(fractionalUsage(metric, "2", "1", "3.000000000000000000000000000001", "3"))
+            .get(ACME_ID);
+    assertThat(charged.amount()).isEqualTo(600);
+    assertThat(charged.dimensionCharges().getFirst().quantityNumerator()).isEqualByComparingTo("2");
+    assertThat(charged.dimensionCharges().getFirst().quantityDenominator())
+        .isEqualByComparingTo("1");
+  }
+
+  private static BillableMetricUsage fractionalUsage(
+      BillableMetric metric, String quantity, String raw, String numerator, String denominator) {
+    return new BillableMetricUsage(
+        metric,
+        List.of(
+            customerUsage(
+                ACME_ID,
+                new DimensionUsage(
+                    Map.of(),
+                    new BigDecimal(quantity),
+                    new BigDecimal(raw),
+                    new BigDecimal(numerator),
+                    new BigDecimal(denominator)))));
+  }
+
+  private static PriceRate tierRate(
+      String model, String upTo, String firstPrice, String lastPrice) {
+    return new PriceRate(
+        UUID.randomUUID(),
+        ORGANIZATION_ID,
+        "fraction",
+        "{}",
+        null,
+        null,
+        "2000-01",
+        null,
+        model,
+        "[{\"up_to\":"
+            + upTo
+            + ",\"unit_price\":"
+            + firstPrice
+            + "},{\"up_to\":null,\"unit_price\":"
+            + lastPrice
+            + "}]");
   }
 
   private Map<UUID, CustomerCharge> calculate(BillableMetricUsage... billableMetricUsages) {

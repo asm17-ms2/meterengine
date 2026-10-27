@@ -53,8 +53,8 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void SUM이_아닌_집계_함수는_Invalid다() {
-    assertThatThrownBy(() -> create("COUNT", "token"))
+  void 지원하지_않는_집계_함수는_Invalid다() {
+    assertThatThrownBy(() -> create("unsupported", "token"))
         .isInstanceOf(InvalidRequestException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
@@ -62,8 +62,8 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void SUM이_아닌_집계_함수는_aggregation을_errors에_담는다() {
-    assertThatThrownBy(() -> create("COUNT", "token"))
+  void 지원하지_않는_집계_함수는_aggregation을_errors에_담는다() {
+    assertThatThrownBy(() -> create("unsupported", "token"))
         .isInstanceOfSatisfying(
             InvalidRequestException.class,
             exception ->
@@ -141,16 +141,9 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 같은_event_type과_target_property의_미터가_이미_있으면_AlreadyExists다() {
-    when(billableMetricRepository.existsByOrganizationIdAndEventTypeAndTargetProperty(
-            ORGANIZATION_ID, "chat_completion", "token"))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> create("sum", "token"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
-    verify(billableMetricRepository, never()).saveAndFlush(any());
+  void 같은_이벤트와_속성에도_다른_미터를_등록할_수_있다() {
+    assertThat(create("sum", "token").aggregation()).isEqualTo("sum");
+    verify(billableMetricRepository).saveAndFlush(any());
   }
 
   @Test
@@ -208,14 +201,14 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 수정도_SUM이_아니면_조회_전에_Invalid다() {
+  void 수정도_지원하지_않는_집계면_조회_전에_Invalid다() {
     assertThatThrownBy(
             () ->
                 billableMetricService.update(
                     ORGANIZATION_ID,
                     BILLABLE_METRIC_CODE,
                     new UpdateBillableMetricRequest(
-                        "이름", "chat_completion", "COUNT", "token", List.of())))
+                        "이름", "chat_completion", "unsupported", "token", List.of())))
         .isInstanceOf(InvalidRequestException.class);
     verify(billableMetricRepository, never()).findById(any());
   }
@@ -250,8 +243,7 @@ class BillableMetricServiceTest {
   void 이벤트가_있는_미터의_event_type과_target_property는_바꿀_수_없다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(eventService.existsWithNumericProperty(ORGANIZATION_ID, "chat_completion", "token"))
-        .thenReturn(true);
+    when(eventService.exists(ORGANIZATION_ID, "chat_completion")).thenReturn(true);
 
     assertThatThrownBy(() -> update("embedding", "chars"))
         .isInstanceOf(ConflictException.class)
@@ -261,17 +253,10 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 바꾸려는_event_type과_target_property가_다른_미터에_있으면_AlreadyExists다() {
+  void 이벤트가_없으면_다른_미터와_같은_이벤트와_속성으로_변경할_수_있다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(billableMetricRepository.existsByOrganizationIdAndEventTypeAndTargetProperty(
-            ORGANIZATION_ID, "embedding", "chars"))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> update("embedding", "chars"))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS);
+    assertThat(update("embedding", "chars").targetProperty()).isEqualTo("chars");
   }
 
   @Test

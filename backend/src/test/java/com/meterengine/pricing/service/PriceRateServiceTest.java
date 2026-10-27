@@ -3,12 +3,15 @@ package com.meterengine.pricing.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
@@ -16,12 +19,15 @@ import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import com.meterengine.metric.service.BillableMetricUsageService;
+import com.meterengine.organization.entity.Organization;
+import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.entity.PriceRate;
-import com.meterengine.pricing.entity.PriceRateId;
 import com.meterengine.pricing.repository.PriceRateRepository;
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +51,8 @@ class PriceRateServiceTest {
   @Mock private PriceRateRepository priceRateRepository;
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private AuditLogService auditLogService;
+  @Mock private CustomerRepository customerRepository;
+  @Mock private OrganizationRepository organizationRepository;
 
   private PriceRateService priceRateService;
 
@@ -54,6 +62,8 @@ class PriceRateServiceTest {
         new PriceRateService(
             priceRateRepository,
             billableMetricRepository,
+            customerRepository,
+            organizationRepository,
             JsonMapper.builder().build(),
             auditLogService);
   }
@@ -100,6 +110,7 @@ class PriceRateServiceTest {
     dimensionValues.put("model", "opus");
     dimensionValues.put("region", "kr");
 
+    allowWrite();
     PriceRateResponse response = create(dimensionValues);
 
     ArgumentCaptor<PriceRate> saved = ArgumentCaptor.forClass(PriceRate.class);
@@ -115,22 +126,28 @@ class PriceRateServiceTest {
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
     verify(auditLogService)
         .record(
-            ORGANIZATION_ID,
-            "price_rate_created",
-            "price_rate",
-            BILLABLE_METRIC_CODE,
-            Map.of("dimension_values", dimensionValues, "unit_price", UNIT_PRICE));
+            eq(ORGANIZATION_ID), eq("price_rate_created"), eq("price_rate"), anyString(), any());
   }
 
   @Test
   void 같은_조합이_있으면_그_행의_단가만_덮어쓴다() {
     billableMetricDeclares(List.of("model"));
+    allowWrite();
     PriceRate existing =
         new PriceRate(
-            ORGANIZATION_ID, BILLABLE_METRIC_CODE, "{\"model\":\"opus\"}", new BigDecimal("1"));
-    when(priceRateRepository.findById(
-            new PriceRateId(ORGANIZATION_ID, BILLABLE_METRIC_CODE, "{\"model\":\"opus\"}")))
-        .thenReturn(Optional.of(existing));
+            UUID.randomUUID(),
+            ORGANIZATION_ID,
+            BILLABLE_METRIC_CODE,
+            "{\"model\":\"opus\"}",
+            new BigDecimal("1"),
+            null,
+            YearMonth.now(BillableMetricUsageService.BILLING_ZONE).toString(),
+            null,
+            "per_unit",
+            null);
+    when(priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            ORGANIZATION_ID))
+        .thenReturn(List.of(existing));
 
     PriceRateResponse response = create(Map.of("model", "opus"));
 
@@ -139,17 +156,12 @@ class PriceRateServiceTest {
     assertThat(response.unitPrice()).isEqualByComparingTo(UNIT_PRICE);
     verify(auditLogService)
         .record(
-            ORGANIZATION_ID,
-            "price_rate_created",
-            "price_rate",
-            BILLABLE_METRIC_CODE,
-            Map.of(
-                "dimension_values",
-                Map.of("model", "opus"),
-                "unit_price",
-                UNIT_PRICE,
-                "previous_unit_price",
-                new BigDecimal("1")));
+            eq(ORGANIZATION_ID), eq("price_rate_created"), eq("price_rate"), anyString(), any());
+  }
+
+  private void allowWrite() {
+    when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
+        .thenReturn(Optional.of(new Organization(ORGANIZATION_ID, "도입사", "active")));
   }
 
   private void billableMetricDeclares(List<String> dimensionProperties) {

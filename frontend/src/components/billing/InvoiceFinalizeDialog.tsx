@@ -6,6 +6,7 @@ import { startTransition, useActionState, useRef, useState } from "react";
 
 import { finalizeInvoicesAction } from "@/app/(console)/billing/actions";
 import { FINALIZE_INVOICES_IDLE } from "@/app/(console)/billing/state";
+import { useTenantScope } from "@/components/auth/TenantAccess";
 import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButton";
 import { alertIcon } from "@/components/screen/alert-icon";
 import { LinkButton } from "@/components/screen/LinkButton";
@@ -32,6 +33,8 @@ function toFinalizeFormData(month: string): FormData {
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
   const isEmpty = target.targetCount === 0;
+  const canManage = useTenantScope("admin");
+  if (!canManage) return null;
 
   return (
     <>

@@ -84,6 +84,10 @@ public class InvoiceService {
   private InvoiceResponse toInvoiceResponse(Invoice invoice, List<InvoiceLine> invoiceLines) {
     return new InvoiceResponse(
         invoice.getId(),
+        "ME-"
+            + invoice.getPeriod().replace("-", "")
+            + "-"
+            + String.format(java.util.Locale.ROOT, "%08d", invoice.getDisplayNumber()),
         invoice.getCustomerId(),
         invoice.getCustomerName(),
         invoice.getPeriod(),
@@ -104,6 +108,10 @@ public class InvoiceService {
         jsonMapper.readValue(invoiceLine.getDimensionValues(), DIMENSION_VALUES_TYPE),
         invoiceLine.getQuantity(),
         invoiceLine.getUnitPrice(),
-        invoiceLine.getAmount());
+        invoiceLine.getAmount(),
+        invoiceLine.getLineType(),
+        invoiceLine.getTierIndex(),
+        invoiceLine.getQuantityNumerator(),
+        invoiceLine.getQuantityDenominator());
   }
 }

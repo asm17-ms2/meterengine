@@ -6,6 +6,7 @@ import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
+import com.meterengine.metric.entity.MetricAggregation;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
 import java.math.BigDecimal;
@@ -13,7 +14,6 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,47 +72,70 @@ public class BillableMetricUsageService {
       OffsetDateTime end) {
     requireSupported(billableMetric);
 
-    Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId =
-        billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            billableMetric.getOrganizationId(),
-            billableMetric.getEventType(),
-            billableMetric.getTargetProperty(),
-            billableMetric.getDimensionProperties(),
-            start,
-            end);
-
+    var quantities = quantities(billableMetric, start, end);
     List<CustomerUsage> customerUsages =
         customers.stream()
             .map(
-                customer ->
-                    toCustomerUsage(
-                        customer,
-                        dimensionUsagesByCustomerId.getOrDefault(customer.getId(), List.of())))
+                customer -> {
+                  DimensionUsage total =
+                      quantities
+                          .totalByCustomerId()
+                          .getOrDefault(
+                              customer.getId(),
+                              new DimensionUsage(java.util.Map.of(), BigDecimal.ZERO));
+                  return new CustomerUsage(
+                      customer.getId(),
+                      customer.getName(),
+                      total.quantity(),
+                      quantities
+                          .dimensionUsagesByCustomerId()
+                          .getOrDefault(customer.getId(), List.of()),
+                      total.rawQuantity(),
+                      total.rawQuantityNumerator(),
+                      total.rawQuantityDenominator());
+                })
             .toList();
 
     return new BillableMetricUsage(billableMetric, customerUsages);
   }
 
-  private static CustomerUsage toCustomerUsage(
-      Customer customer, List<DimensionUsage> dimensionUsages) {
-    BigDecimal quantity =
-        dimensionUsages.stream()
-            .map(DimensionUsage::quantity)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    return new CustomerUsage(customer.getId(), customer.getName(), quantity, dimensionUsages);
+  private BillableMetricUsageRepository.AggregatedQuantities quantities(
+      BillableMetric metric, OffsetDateTime start, OffsetDateTime end) {
+    if (metric.isSum()
+        && metric.getUnitSize().compareTo(BigDecimal.ONE) == 0
+        && "none".equals(metric.getRoundingMode())) {
+      var dimensions =
+          billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+              metric.getOrganizationId(),
+              metric.getEventType(),
+              metric.getTargetProperty(),
+              metric.getDimensionProperties(),
+              start,
+              end);
+      var totals = new java.util.HashMap<UUID, DimensionUsage>();
+      dimensions.forEach(
+          (customer, values) ->
+              totals.put(
+                  customer,
+                  new DimensionUsage(
+                      java.util.Map.of(),
+                      values.stream()
+                          .map(DimensionUsage::quantity)
+                          .reduce(BigDecimal.ZERO, BigDecimal::add))));
+      return new BillableMetricUsageRepository.AggregatedQuantities(totals, dimensions);
+    }
+    return billableMetricUsageRepository.aggregate(metric, start, end);
   }
 
   private void requireSupported(BillableMetric billableMetric) {
-    if (!billableMetric.isSum()) {
+    if (!MetricAggregation.SUPPORTED.contains(billableMetric.getAggregation()))
       throw new IllegalStateException(
-          "metric %s uses aggregation %s, which is not implemented yet (only sum)"
+          "metric %s uses unsupported aggregation %s"
               .formatted(billableMetric.getCode(), billableMetric.getAggregation()));
-    }
-    if (billableMetric.getTargetProperty() == null
-        || billableMetric.getTargetProperty().isBlank()) {
+    if (!"count".equals(billableMetric.getAggregation())
+        && (billableMetric.getTargetProperty() == null
+            || billableMetric.getTargetProperty().isBlank()))
       throw new IllegalStateException(
-          "metric %s aggregates with sum but has no target_property to sum"
-              .formatted(billableMetric.getCode()));
-    }
+          "metric %s has no target_property".formatted(billableMetric.getCode()));
   }
 }

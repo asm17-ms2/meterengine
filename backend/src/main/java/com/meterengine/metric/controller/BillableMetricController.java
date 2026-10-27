@@ -47,10 +47,12 @@ public class BillableMetricController {
       description =
           """
           미터를 등록한다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상이다.
-          aggregation은 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
-          target_property가 필수다.
-          code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
-          event_type과 target_property의 조합도 도입사 안에서 유일해야 한다.
+          aggregation은 sum, count, count_distinct, min, max, avg, first, last, median, percentile을 받으며 대소문자를 구분하지 않는다.
+          count는 전체 이벤트 수이며 target_property를 지정하지 않는다. count_distinct는 대상 속성의 숫자, 문자열, 불리언 고유값 수다.
+          나머지는 숫자 속성만 집계한다. first와 last는 occurred_at, transaction_id 순서다. median은 50백분위, percentile은 0~100의 percentile이 필수다.
+          집계량을 unit_size(기본 1)로 나눈 뒤 rounding_mode(none, ceil, floor, round)를 rounding_precision(0~12, 기본 0)에 적용한다.
+          round는 사사오입이며 none은 유한소수를 그대로 보존하고 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 보존한다. code는 도입사 안에서 유일하고 등록 뒤 바꿀 수 없다.
+          같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "등록된 미터"),
@@ -63,7 +65,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "409",
@@ -74,7 +76,6 @@ public class BillableMetricController {
         description =
             """
             code=billable_metric_already_exists: 같은 code의 미터가 이미 있다.
-            code=billable_metric_event_type_target_property_already_exists: event_type과 target_property가 같은 미터가 이미 있다.
             """)
   })
   public BillableMetricResponse createBillableMetric(
@@ -90,8 +91,7 @@ public class BillableMetricController {
       description =
           """
           미터를 요청 값으로 덮어쓰고 바뀐 미터를 돌려준다. code는 바꿀 수 없다.
-          event_type이나 target_property를 바꾸면 사용량은 새 기준으로 다시 집계된다.
-          옛 기준으로 집계된 이벤트가 한 건이라도 있으면 event_type과 target_property는 바꿀 수 없고 409다.
+          현재 event_type의 이벤트가 한 건이라도 있으면 이름만 바꿀 수 있다. 집계, 대상 속성, 차원, 단위, 반올림, 백분위 변경은 409다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 미터"),
@@ -104,7 +104,7 @@ public class BillableMetricController {
         description =
             """
             code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -121,8 +121,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=billable_metric_has_events: 집계된 이벤트가 있어 event_type과 target_property를 바꿀 수 없다.
-            code=billable_metric_event_type_target_property_already_exists: 바꾸려는 event_type과 target_property의 미터가 이미 있다.
+            code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
             """)
   })
   public BillableMetricResponse updateBillableMetric(
@@ -130,6 +129,14 @@ public class BillableMetricController {
       @Parameter(description = "고칠 미터의 code.") @PathVariable @StorableText String code,
       @Valid @RequestBody UpdateBillableMetricRequest request) {
     return billableMetricService.update(organizationId, code, request);
+  }
+
+  @GetMapping("/{code}")
+  @ReadAccess
+  @Operation(summary = "미터 상세 조회")
+  public BillableMetricResponse getBillableMetric(
+      @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
+    return billableMetricService.get(organizationId, code);
   }
 
   @DeleteMapping("/{code}")

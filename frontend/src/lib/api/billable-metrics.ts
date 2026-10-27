@@ -4,15 +4,18 @@ import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
+import type { MetricCalculation } from "@/lib/billable-metric-calculation";
 import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/list-query";
 
-export type BillableMetricResponse = {
+export type BillableMetricResponse = MetricCalculation & {
   code: string;
   name: string;
   event_type: string;
-  aggregation: string;
-  target_property: string;
+  target_property: string | null;
   dimension_properties: string[];
+  archived_at?: string | null;
+  active_from?: string | null;
+  inactive_from?: string | null;
 };
 
 export type ListBillableMetricsResponse = PaginationFields & {
@@ -28,13 +31,11 @@ export type CreateBillableMetricRequest = Omit<
 
 export type UpdateBillableMetricRequest = Omit<CreateBillableMetricRequest, "code">;
 
-export const BILLABLE_METRICS_CACHE_TAG = "billable-metrics";
-
 export async function listBillableMetrics(
   query: ListQuery,
-  devState: DevState,
-  cacheTag?: string,
+  devState: DevState, _cacheTag?: string,
 ): Promise<Result<ListBillableMetricsResponse>> {
+  void _cacheTag;
   if (devState === "empty") {
     return { ok: true, data: { billable_metrics: [] } };
   }
@@ -54,7 +55,6 @@ export async function listBillableMetrics(
     config.apiBaseUrl,
     "/v1/billable-metrics",
     toServerParams(query, CAPABILITIES.listBillableMetrics),
-    cacheTag,
   );
 }
 
@@ -86,3 +86,5 @@ export async function deleteBillableMetric(code: string): Promise<Result<void>> 
     { method: "DELETE" },
   );
 }
+
+export const BILLABLE_METRICS_CACHE_TAG = "billable-metrics";

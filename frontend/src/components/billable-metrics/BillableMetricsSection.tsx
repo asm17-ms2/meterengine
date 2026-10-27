@@ -27,13 +27,22 @@ export async function BillableMetricsSection({
     );
   }
 
+  const currentMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
   const rows: BillableMetricRowView[] = result.data.billable_metrics.map((billableMetric) => ({
     code: billableMetric.code,
     name: billableMetric.name,
     eventType: billableMetric.event_type,
     aggregation: billableMetric.aggregation,
     targetProperty: billableMetric.target_property,
+    percentile: billableMetric.percentile,
+    unitSize: billableMetric.unit_size,
+    roundingMode: billableMetric.rounding_mode,
+    roundingPrecision: billableMetric.rounding_precision,
     dimensionProperties: billableMetric.dimension_properties,
+    archivedAt: billableMetric.archived_at,
+    activeFrom: billableMetric.active_from,
+    inactiveFrom: billableMetric.inactive_from,
+    isReactivationScheduled: Boolean(billableMetric.active_from && billableMetric.active_from > currentMonth),
   }));
 
   return (

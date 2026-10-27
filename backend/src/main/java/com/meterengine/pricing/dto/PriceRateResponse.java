@@ -1,22 +1,33 @@
 package com.meterengine.pricing.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.annotation.*;
 import com.meterengine.pricing.entity.PriceRate;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 
 public record PriceRateResponse(
+    UUID id,
     @JsonProperty("billable_metric_code") String billableMetricCode,
     @JsonRawValue @Schema(implementation = Map.class) @JsonProperty("dimension_values")
         String dimensionValues,
-    @JsonProperty("unit_price") BigDecimal unitPrice) {
-
-  public static PriceRateResponse from(PriceRate priceRate) {
+    @JsonProperty("unit_price") BigDecimal unitPrice,
+    @JsonProperty("customer_id") UUID customerId,
+    @JsonProperty("effective_from") String effectiveFrom,
+    @JsonProperty("effective_until") String effectiveUntil,
+    String model,
+    @JsonRawValue @Schema(type = "array", implementation = PriceRateTier.class) String tiers) {
+  public static PriceRateResponse from(PriceRate rate) {
     return new PriceRateResponse(
-        priceRate.getBillableMetricCode(),
-        priceRate.getDimensionValues(),
-        priceRate.getUnitPrice());
+        rate.getId(),
+        rate.getBillableMetricCode(),
+        rate.getDimensionValues(),
+        rate.getUnitPrice(),
+        rate.getCustomerId(),
+        rate.getEffectiveFrom(),
+        rate.getEffectiveUntil(),
+        rate.getModel(),
+        rate.getTiers());
   }
 }

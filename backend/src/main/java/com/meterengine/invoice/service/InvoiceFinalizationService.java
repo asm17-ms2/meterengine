@@ -139,6 +139,10 @@ public class InvoiceFinalizationService {
         jsonMapper.writeValueAsString(draftInvoiceLine.dimensionValues()),
         draftInvoiceLine.quantity(),
         draftInvoiceLine.unitPrice(),
-        draftInvoiceLine.amount());
+        draftInvoiceLine.amount(),
+        draftInvoiceLine.lineType(),
+        draftInvoiceLine.tierIndex(),
+        draftInvoiceLine.quantityNumerator(),
+        draftInvoiceLine.quantityDenominator());
   }
 }

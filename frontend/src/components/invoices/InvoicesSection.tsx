@@ -19,6 +19,7 @@ import {
   formatKrw,
   formatKstDateTime,
   formatTargetPropertyTooltip,
+  formatQuantityBasis,
 } from "@/lib/format";
 import { buildListHref, type MonthlyListQuery } from "@/lib/list-query";
 import { sumOf, toMeterItems } from "@/lib/meter-items";
@@ -91,6 +92,7 @@ export async function InvoicesSection({
       <ScreenNote>
         금액과 미터 라인은 확정할 때 저장한 값이라 뒤에 단가나 고객 이름을 고쳐도 바뀌지
         않습니다. 합계는 공급가액에 세액을 더한 값입니다.
+        반복소수는 줄여 표시하며, 금액은 정확한 분자와 분모로 계산합니다.
       </ScreenNote>
     </>
   );
@@ -99,6 +101,7 @@ export async function InvoicesSection({
 function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
   return {
     id: invoice.id,
+    invoiceNumber: invoice.invoice_number,
     customerId: invoice.customer_id,
     customerName: invoice.customer_name,
     month: invoice.month,
@@ -111,7 +114,7 @@ function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
     items: toMeterItems(
       invoice.id,
       invoice.lines,
-      (line) => line.billable_metric_code,
+      (line) => line.line_type === "graduated_tier" ? `${line.billable_metric_code}/tier/${line.tier_index ?? 0}` : line.billable_metric_code ?? line.line_type ?? "usage",
       toInvoiceLineView,
       (lines) => ({
         quantity: formatDecimal(sumOf(lines.map((line) => line.quantity))),
@@ -123,10 +126,11 @@ function toInvoiceGroupView(invoice: InvoiceResponse): InvoiceGroupView {
 
 function toInvoiceLineView(line: InvoiceLineResponse): InvoiceLineView {
   return {
-    label: line.billable_metric_code,
+    label: line.line_type === "base_fee" ? "기본료" : line.line_type === "minimum_adjustment" ? "최소 사용료 조정" : line.line_type === "graduated_tier" ? `${line.billable_metric_code} / 구간 ${(line.tier_index ?? 0) + 1}` : line.line_type === "volume" ? `${line.billable_metric_code} / 총량 단가` : line.billable_metric_code ?? "사용료",
     labelTooltip: formatTargetPropertyTooltip(line.target_property),
     dimensionValues: line.dimension_values,
     quantity: formatDecimal(line.quantity),
+    quantityBasis: formatQuantityBasis(line.quantity_numerator, line.quantity_denominator),
     unitPrice: formatKrw(line.unit_price),
     amount: formatKrw(line.amount),
   };

@@ -1,19 +1,32 @@
-export const BILLABLE_METRIC_AGGREGATION = "sum";
+import type { MetricRoundingMode } from "@/lib/billable-metric-calculation";
 
 export type BillableMetricRowView = {
   code: string;
   name: string;
   eventType: string;
   aggregation: string;
-  targetProperty: string;
+  targetProperty: string | null;
+  percentile?: number | null;
+  unitSize?: number;
+  roundingMode?: MetricRoundingMode;
+  roundingPrecision?: number;
   dimensionProperties: string[];
+  archivedAt?: string | null;
+  activeFrom?: string | null;
+  inactiveFrom?: string | null;
+  isReactivationScheduled?: boolean;
 };
 
 export type BillableMetricField =
   | "code"
   | "name"
   | "event_type"
+  | "aggregation"
   | "target_property"
+  | "percentile"
+  | "unit_size"
+  | "rounding_mode"
+  | "rounding_precision"
   | "dimension_properties";
 
 export type BillableMetricFormState =

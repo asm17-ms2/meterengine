@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, localcontext
+from fractions import Fraction
 from typing import Dict, List, Optional
 
 from core.api_client import (
@@ -16,6 +17,8 @@ from core.api_client import (
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import (
     BillableMetricMeta,
+    CALC_PRECISION,
+    SUPPORTED_AGGREGATIONS,
     DimensionValuesKey,
     ExpectedLine,
     ExpectedMonth,
@@ -25,7 +28,7 @@ from csvdemo.expected import (
     stored_events_from_log,
 )
 from core.jsonl_log import read_log
-from core.model import DEFAULT_BASE_URL, StoredEvent, kst_month
+from core.model import DEFAULT_BASE_URL, StoredEvent, kst_month, parse_rfc3339
 from csvdemo.render import MISMATCH_GUIDANCE, Console, render_table
 
 EXIT_MATCH = 0
@@ -76,14 +79,13 @@ def run_verify(args, console: Console) -> int:
     if source.error_count:
         print(console.warn("주의: 전송 오류 %d건은 저장 여부를 알 수 없어 결과가 어긋날 수 있습니다." % source.error_count))
 
-    prices = client.get_billable_metric_prices()
-    if prices.status != 200 or prices.body is None:
-        print("/v1/billable-metric-prices 응답으로 단가를 얻지 못했습니다: %s" % parse_problem(prices.status, prices.body).summary(), file=sys.stderr)
-        return EXIT_ERROR
-
     stored = source.stored
     all_match = True
     for month in months:
+        prices = client.get_billable_metric_prices(month)
+        if prices.status != 200 or prices.body is None:
+            print("단가를 얻지 못했습니다: %s" % parse_problem(prices.status, prices.body).summary(), file=sys.stderr)
+            return EXIT_ERROR
         month_match = _verify_month(client, console, stored, month, prices)
         if month_match is None:
             return EXIT_ERROR
@@ -178,19 +180,41 @@ def _verify_month(
             return None
 
     billable_metrics = _derive_billable_metrics(usage, prices)
-    unsupported = [m.code for m in billable_metrics if m.aggregation != "sum"]
+    unsupported = [m.code for m in billable_metrics if m.aggregation not in SUPPORTED_AGGREGATIONS]
     if unsupported:
-        print("sum 외 집계는 아직 지원하지 않습니다: %s" % ", ".join(unsupported), file=sys.stderr)
+        print("지원하지 않는 집계 함수의 미터입니다: %s" % ", ".join(unsupported), file=sys.stderr)
         return None
     roster = roster_from_usage(usage.body)
     customer_ids = sorted(roster, key=lambda cid: roster[cid])
-    expected = build_expected(stored, billable_metrics, month, customer_ids)
+    common_plans = client.get_price_plans(month)
+    if common_plans.status != 200 or common_plans.body is None:
+        print("공통 요금제를 얻지 못했습니다", file=sys.stderr)
+        return None
+    common_plan = next(iter(common_plans.body.get("price_plans") or []), None)
+    price_plans = {}
+    for customer_id in customer_ids:
+        customer_prices = client.get_billable_metric_prices(month, customer_id)
+        customer_plans = client.get_price_plans(month, customer_id)
+        if customer_prices.status != 200 or customer_prices.body is None or customer_plans.status != 200 or customer_plans.body is None:
+            print("고객 단가와 요금제를 얻지 못했습니다", file=sys.stderr)
+            return None
+        for metric in _derive_billable_metrics(usage, customer_prices):
+            for common_metric in billable_metrics:
+                if common_metric.code == metric.code:
+                    common_metric.customer_price_rates[customer_id] = metric.price_rates
+        plan = next(iter(customer_plans.body.get("price_plans") or []), common_plan)
+        if plan:
+            price_plans[customer_id] = plan
+    cutoff = parse_rfc3339(invoice.body["calculated_at"]) if invoice.body.get("calculated_at") else None
+    expected = build_expected(stored, billable_metrics, month, customer_ids, price_plans, cutoff)
 
     print()
     print("== %s 검증 (서버: %s) ==" % (month, client.base_url))
     print("사용한 미터 정의 (서버 설정에서 유도, 시드와 눈으로 대조 가능):")
     for billable_metric in billable_metrics:
-        print("  %s: event_type=%s, target_property=%s, %s, %s" % (billable_metric.code, billable_metric.event_type, billable_metric.target_property, billable_metric.aggregation, _price_summary(billable_metric)))
+        print("  %s: event_type=%s, target_property=%s, %s, unit_size=%s, rounding=%s(%s), %s" % (billable_metric.code, billable_metric.event_type, billable_metric.target_property, billable_metric.aggregation, billable_metric.unit_size, billable_metric.rounding_mode, billable_metric.rounding_precision, _price_summary(billable_metric)))
+        if billable_metric.percentile is not None:
+            print("    percentile=%s" % billable_metric.percentile)
         if billable_metric.dimension_properties:
             for key, unit_price in sorted(billable_metric.unit_prices.items()):
                 print("    %s: %s" % (_format_dimension_values_key(key), unit_price))
@@ -221,12 +245,21 @@ def _derive_billable_metrics(usage: ApiResult, prices: ApiResult) -> List[Billab
             BillableMetricMeta(
                 code=billable_metric["code"],
                 event_type=billable_metric["event_type"],
-                aggregation=billable_metric["aggregation"],
-                target_property=billable_metric["target_property"],
+                aggregation=billable_metric["aggregation"].lower(),
+                target_property=billable_metric.get("target_property"),
+                unit_size=Decimal(str(billable_metric.get("unit_size", 1))),
+                rounding_mode=billable_metric.get("rounding_mode") or "none",
+                rounding_precision=billable_metric.get("rounding_precision") or 0,
+                percentile=Decimal(str(billable_metric["percentile"])) if billable_metric.get("percentile") is not None else None,
                 dimension_properties=list(billable_metric_price.get("dimension_properties") or []),
                 unit_prices={
                     dimension_values_key(price_rate["dimension_values"]): Decimal(price_rate["unit_price"])
                     for price_rate in billable_metric_price.get("price_rates") or []
+                    if price_rate.get("unit_price") is not None
+                },
+                price_rates={
+                    dimension_values_key(rate["dimension_values"]): rate
+                    for rate in billable_metric_price.get("price_rates") or []
                 },
             )
         )
@@ -234,6 +267,8 @@ def _derive_billable_metrics(usage: ApiResult, prices: ApiResult) -> List[Billab
 
 
 def _price_summary(billable_metric: BillableMetricMeta) -> str:
+    if billable_metric.price_rates and any((rate.get("model") or "per_unit") != "per_unit" for rate in billable_metric.price_rates.values()):
+        return "구간 요금, 조합별 계산"
     if not billable_metric.unit_prices:
         return "단가 없음(인보이스에 라인 없음, 금액 0)"
     if not billable_metric.dimension_properties and len(billable_metric.unit_prices) == 1:
@@ -246,25 +281,45 @@ def _format_dimension_values_key(key: DimensionValuesKey) -> str:
 
 
 def _print_quantity_table(console, billable_metric, expected: ExpectedMonth, usage, invoice, roster, customer_ids) -> bool:
-    usage_quantities = {}
+    usage_customers = {}
     for usage_billable_metric in usage.body.get("billable_metric_usages") or []:
         if usage_billable_metric["code"] == billable_metric.code:
-            usage_quantities = {c["customer_id"]: Decimal(c["quantity"]) for c in usage_billable_metric.get("customers") or []}
+            usage_customers = {c["customer_id"]: c for c in usage_billable_metric.get("customers") or []}
     invoice_quantities: Dict[str, Decimal] = {}
+    invoice_fractions: Dict[str, Fraction] = {}
+    legacy_customers = set()
+    invalid_customers = set()
     for customer in invoice.body.get("customers") or []:
         for line in customer.get("lines") or []:
             if line["billable_metric_code"] == billable_metric.code:
                 customer_id = customer["customer_id"]
-                invoice_quantities[customer_id] = invoice_quantities.get(customer_id, Decimal("0")) + Decimal(line["quantity"])
+                with localcontext() as context:
+                    context.prec = CALC_PRECISION
+                    invoice_quantities[customer_id] = invoice_quantities.get(customer_id, Decimal("0")) + Decimal(str(line["quantity"]))
+                numerator, denominator = line.get("quantity_numerator"), line.get("quantity_denominator")
+                if numerator is None and denominator is None:
+                    legacy_customers.add(customer_id)
+                elif numerator is None or denominator is None or Decimal(str(denominator)) <= 0:
+                    invalid_customers.add(customer_id)
+                else:
+                    invoice_fractions[customer_id] = invoice_fractions.get(customer_id, Fraction(0)) + Fraction(Decimal(str(numerator))) / Fraction(Decimal(str(denominator)))
 
     rows = []
     unpriced_rows = []
     all_match = True
     for customer_id in customer_ids:
         expected_line = _find_expected_line(expected, customer_id, billable_metric.code)
-        usage_quantity = usage_quantities.get(customer_id, Decimal("0"))
+        usage_customer = usage_customers.get(customer_id) or {}
+        usage_quantity = Decimal(str(usage_customer.get("quantity", 0)))
         invoice_quantity = invoice_quantities.get(customer_id, Decimal("0"))
-        matched = expected_line.quantity == usage_quantity and expected_line.priced_quantity == invoice_quantity
+        invoice_matched = _quantity_matches(expected_line.priced_quantity, invoice_quantity, billable_metric) if customer_id in legacy_customers else expected_line.priced_fraction == invoice_fractions.get(customer_id, Fraction(0))
+        invoice_matched = invoice_matched and customer_id not in invalid_customers
+        matched = _quantity_matches(expected_line.quantity, usage_quantity, billable_metric) and invoice_matched
+        if "raw_quantity" in usage_customer:
+            matched = matched and _quantity_matches(expected_line.raw_quantity, Decimal(str(usage_customer["raw_quantity"])), billable_metric, raw=True)
+        matched = matched and _raw_fraction_matches(expected_line.raw_fraction, usage_customer)
+        if "dimension_usages" in usage_customer:
+            matched = matched and _dimensions_match(expected_line, usage_customer["dimension_usages"], billable_metric)
         all_match = all_match and matched
         rows.append([
             roster[customer_id],
@@ -279,7 +334,7 @@ def _print_quantity_table(console, billable_metric, expected: ExpectedMonth, usa
     print()
     print("[%s] 고객별 사용량" % billable_metric.code)
     for line in render_table(
-        ["고객", "기대값", "/v1/usage", "청구 기대값", "/v1/invoices/draft", "판정"],
+        ["고객", "전체 기대값", "/usage 전체", "청구 수량 기대값", "/draft 수량", "판정"],
         rows,
         ["left", "right", "right", "right", "right", "left"],
     ):
@@ -289,6 +344,40 @@ def _print_quantity_table(console, billable_metric, expected: ExpectedMonth, usa
         for line in render_table(["고객", "조합", "수량"], unpriced_rows, ["left", "left", "right"]):
             print(line)
     return all_match
+
+
+def _quantity_matches(expected: Decimal, actual: Decimal, metric: BillableMetricMeta, raw=False) -> bool:
+    return expected == actual
+
+
+def _dimensions_match(line: ExpectedLine, actual: list, metric: BillableMetricMeta) -> bool:
+    expected_by_key = {dimension_values_key(item.dimension_values): item for item in line.dimension_usages}
+    actual_by_key = {dimension_values_key(item["dimension_values"]): item for item in actual}
+    if expected_by_key.keys() != actual_by_key.keys() or len(actual_by_key) != len(actual):
+        return False
+    for key, expected in expected_by_key.items():
+        actual_usage = actual_by_key[key]
+        if not _quantity_matches(expected.quantity, Decimal(str(actual_usage["quantity"])), metric):
+            return False
+        if "raw_quantity" in actual_usage and not _quantity_matches(expected.raw_quantity, Decimal(str(actual_usage["raw_quantity"])), metric, raw=True):
+            return False
+        if not _raw_fraction_matches(expected.raw_fraction, actual_usage):
+            return False
+    return True
+
+
+def _raw_fraction_matches(expected: Optional[Fraction], actual: dict) -> bool:
+    numerator = actual.get("raw_quantity_numerator")
+    denominator = actual.get("raw_quantity_denominator")
+    if numerator is None and denominator is None:
+        return True
+    if numerator is None or denominator is None or expected is None:
+        return False
+    try:
+        denominator_value = Fraction(Decimal(str(denominator)))
+        return denominator_value > 0 and expected == Fraction(Decimal(str(numerator))) / denominator_value
+    except (ValueError, ArithmeticError):
+        return False
 
 
 def _find_expected_line(expected: ExpectedMonth, customer_id: str, billable_metric_code: str) -> ExpectedLine:
