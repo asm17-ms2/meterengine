@@ -1,5 +1,6 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
@@ -60,6 +61,7 @@ public class PaymentAttemptService {
   private final TransactionTemplate transactionTemplate;
   private final AuditLogService auditLogService;
   private final WebhookEventService webhookEventService;
+  private final PaymentRetryEligibilityService paymentRetryEligibilityService;
 
   PaymentAttemptService(
       PaymentAttemptRepository paymentAttemptRepository,
@@ -72,7 +74,8 @@ public class PaymentAttemptService {
       PaymentProperties paymentProperties,
       PlatformTransactionManager platformTransactionManager,
       AuditLogService auditLogService,
-      WebhookEventService webhookEventService) {
+      WebhookEventService webhookEventService,
+      PaymentRetryEligibilityService paymentRetryEligibilityService) {
     this.paymentAttemptRepository = paymentAttemptRepository;
     this.invoiceRepository = invoiceRepository;
     this.paymentSettingService = paymentSettingService;
@@ -84,25 +87,74 @@ public class PaymentAttemptService {
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
     this.auditLogService = auditLogService;
     this.webhookEventService = webhookEventService;
+    this.paymentRetryEligibilityService = paymentRetryEligibilityService;
   }
 
   public PaymentAttemptResponse create(
       UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
+    return create(organizationId, invoiceId, principalMode, testCode, null, 0, null, () -> {});
+  }
+
+  public PaymentAttemptResponse retry(
+      UUID organizationId,
+      UUID invoiceId,
+      String mode,
+      UUID failedAttemptId,
+      long attemptCount,
+      AuditActor actor,
+      Runnable authorizationCheck) {
+    return create(
+        organizationId,
+        invoiceId,
+        mode,
+        null,
+        failedAttemptId,
+        attemptCount,
+        actor,
+        authorizationCheck);
+  }
+
+  private PaymentAttemptResponse create(
+      UUID organizationId,
+      UUID invoiceId,
+      String principalMode,
+      String testCode,
+      UUID failedAttemptId,
+      long attemptCount,
+      AuditActor actor,
+      Runnable authorizationCheck) {
     PaymentCreation creation =
         transactionTemplate.execute(
-            status -> prepare(organizationId, invoiceId, principalMode, testCode));
+            status -> {
+              invoiceRepository
+                  .findForUpdate(organizationId, invoiceId)
+                  .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
+              authorizationCheck.run();
+              PaymentCreation checked = prepare(organizationId, invoiceId, principalMode, testCode);
+              if (failedAttemptId != null)
+                requireRetry(
+                    organizationId, invoiceId, checked.mode(), failedAttemptId, attemptCount);
+              return checked;
+            });
     for (PaymentAttempt attempt : creation.uncertainAttempts()) {
-      if (!creation.credential().getUpdatedAt().isBefore(attempt.getRequestedAt())
-          || attempt
-              .getCompletedAt()
-              .isBefore(now().minus(PaymentAttemptConfirmationService.CONFIRMATION_WINDOW))
+      if (PaymentRetryPolicy.isUnconfirmable(attempt, creation.credential().getUpdatedAt(), now())
           || !isUncharged(
               attempt.getId(), attempt.getRequestedAt().toInstant(), creation.credential())) {
         throw new ConflictException(ErrorCode.PAYMENT_RESULT_UNCONFIRMED);
       }
     }
     PaymentAttempt pendingAttempt =
-        transactionTemplate.execute(status -> insertPending(creation, principalMode, testCode));
+        transactionTemplate.execute(
+            status -> {
+              return insertPending(
+                  creation,
+                  principalMode,
+                  testCode,
+                  failedAttemptId,
+                  attemptCount,
+                  actor,
+                  authorizationCheck);
+            });
     return approve(pendingAttempt, testCode);
   }
 
@@ -239,16 +291,40 @@ public class PaymentAttemptService {
       String mode,
       long amount,
       String orderName) {
+    return savePending(organizationId, customerId, invoiceId, mode, amount, orderName, null);
+  }
+
+  private PaymentAttempt savePending(
+      UUID organizationId,
+      UUID customerId,
+      UUID invoiceId,
+      String mode,
+      long amount,
+      String orderName,
+      AuditActor actor) {
     PaymentAttempt attempt =
         paymentAttemptRepository.saveAndFlush(
             PaymentAttempt.pending(
                 UUID.randomUUID(), organizationId, customerId, invoiceId, mode, amount, orderName));
-    auditLogService.record(
-        organizationId,
-        "payment_attempt_created",
-        "payment_attempt",
-        attempt.getId().toString(),
-        Map.of("invoice_id", invoiceId, "customer_id", customerId, "mode", mode, "amount", amount));
+    Map<String, Object> detail =
+        Map.of("invoice_id", invoiceId, "customer_id", customerId, "mode", mode, "amount", amount);
+    if (actor == null) {
+      auditLogService.record(
+          organizationId,
+          "payment_attempt_created",
+          "payment_attempt",
+          attempt.getId().toString(),
+          detail);
+    } else {
+      auditLogService.record(
+          actor, "payment_attempt_created", "payment_attempt", attempt.getId().toString(), detail);
+      auditLogService.record(
+          actor,
+          "payment_retry_requested",
+          "invoice",
+          invoiceId.toString(),
+          Map.of("mode", mode, "amount", amount));
+    }
     return attempt;
   }
 
@@ -343,7 +419,10 @@ public class PaymentAttemptService {
 
   private PaymentCreation prepare(
       UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
-    Invoice invoice = findInvoice(organizationId, invoiceId);
+    Invoice invoice =
+        invoiceRepository
+            .findForUpdate(organizationId, invoiceId)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
     if (invoice.getTotalAmount() <= 0) {
       throw new ConflictException(ErrorCode.INVOICE_AMOUNT_ZERO);
     }
@@ -374,16 +453,30 @@ public class PaymentAttemptService {
                 attempt ->
                     TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(attempt.getFailureCode()))
             .toList();
-    return new PaymentCreation(invoice, mode, credential, uncertainAttempts);
+    return new PaymentCreation(
+        invoice,
+        mode,
+        credential,
+        uncertainAttempts,
+        paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
+            organizationId, invoiceId, mode));
   }
 
   private PaymentAttempt insertPending(
-      PaymentCreation checked, String principalMode, String testCode) {
+      PaymentCreation checked,
+      String principalMode,
+      String testCode,
+      UUID failedAttemptId,
+      long attemptCount,
+      AuditActor actor,
+      Runnable authorizationCheck) {
     UUID organizationId = checked.invoice().getOrganizationId();
     UUID invoiceId = checked.invoice().getId();
+    invoiceRepository.findForUpdate(organizationId, invoiceId).orElseThrow();
     for (UUID attemptId : checked.uncertainAttemptIds().stream().sorted().toList()) {
       paymentAttemptRepository.findForUpdate(organizationId, attemptId).orElseThrow();
     }
+    authorizationCheck.run();
     PaymentCreation current = prepare(organizationId, invoiceId, principalMode, testCode);
     if (!current.mode().equals(checked.mode())) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
@@ -397,6 +490,12 @@ public class PaymentAttemptService {
                 .equals(checked.credential().getUpdatedAt().toInstant()))) {
       throw new ConflictException(ErrorCode.PAYMENT_RESULT_UNCONFIRMED);
     }
+    if (current.attemptCount() != checked.attemptCount()) {
+      throw new ConflictException(ErrorCode.PAYMENT_RETRY_STALE);
+    }
+    if (failedAttemptId != null)
+      requireRetry(organizationId, invoiceId, current.mode(), failedAttemptId, attemptCount);
+    authorizationCheck.run();
     Invoice invoice = current.invoice();
     return savePending(
         organizationId,
@@ -404,18 +503,30 @@ public class PaymentAttemptService {
         invoiceId,
         current.mode(),
         invoice.getTotalAmount(),
-        invoice.getPeriod() + ORDER_NAME_SUFFIX);
+        invoice.getPeriod() + ORDER_NAME_SUFFIX,
+        actor);
   }
 
   private record PaymentCreation(
       Invoice invoice,
       String mode,
       TossPaymentsCredential credential,
-      List<PaymentAttempt> uncertainAttempts) {
+      List<PaymentAttempt> uncertainAttempts,
+      long attemptCount) {
 
     private Set<UUID> uncertainAttemptIds() {
       return Set.copyOf(uncertainAttempts.stream().map(PaymentAttempt::getId).toList());
     }
+  }
+
+  private void requireRetry(
+      UUID organizationId, UUID invoiceId, String mode, UUID failedAttemptId, long attemptCount) {
+    PaymentRetryEligibility eligibility =
+        paymentRetryEligibilityService.get(organizationId, invoiceId, mode);
+    if (!eligibility.allowed()) throw new ConflictException(ErrorCode.PAYMENT_RETRY_UNAVAILABLE);
+    if (!failedAttemptId.equals(eligibility.failedAttemptId())
+        || attemptCount != eligibility.attemptCount())
+      throw new ConflictException(ErrorCode.PAYMENT_RETRY_STALE);
   }
 
   private Invoice findInvoice(UUID organizationId, UUID invoiceId) {

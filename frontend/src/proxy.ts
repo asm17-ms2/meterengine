@@ -7,7 +7,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.delete("x-meterengine-organization-id");
   const organizationId = request.nextUrl.searchParams.get("organization_id");
   if (organizationId) requestHeaders.set("x-meterengine-organization-id", organizationId);
-  if (["/", "/login", "/signup", "/pending", "/health", "/favicon.ico"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/")) return NextResponse.next();
+  if (["/", "/login", "/signup", "/pending", "/health", "/favicon.ico", "/invoice-links", "/invoice-links/lookup", "/invoice-links/payment-retries"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/")) return NextResponse.next();
   if (!request.cookies.get("me_session")?.value) {
     const url = new URL("/login", request.url);
     url.searchParams.set("returnTo", path + request.nextUrl.search);
