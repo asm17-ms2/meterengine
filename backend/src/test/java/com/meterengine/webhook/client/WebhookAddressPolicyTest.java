@@ -34,4 +34,12 @@ class WebhookAddressPolicyTest {
                 .isLoopbackAddress())
         .isTrue();
   }
+
+  @Test
+  void 대역_192_0_0_0_16에서는_특수_용도_대역_두_개만_차단한다() throws Exception {
+    assertThat(WebhookAddressPolicy.isBlocked(InetAddress.getByName("192.0.78.9"))).isFalse();
+    assertThat(WebhookAddressPolicy.isBlocked(InetAddress.getByName("192.0.1.1"))).isFalse();
+    assertThat(WebhookAddressPolicy.isBlocked(InetAddress.getByName("192.0.0.8"))).isTrue();
+    assertThat(WebhookAddressPolicy.isBlocked(InetAddress.getByName("192.0.2.1"))).isTrue();
+  }
 }
