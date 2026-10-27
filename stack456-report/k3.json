@@ -69,12 +69,18 @@
       "summary": "요금제 지난 월 등록 거절(PRICE_PLAN_HISTORY_IMMUTABLE)을 검증하는 테스트가 #446과 스택 최상단 어디에도 없다.",
       "reason": "#446 head의 PricePlanService.create는 62~65행에서 시작 월이 이번 달보다 이전이면 PRICE_PLAN_HISTORY_IMMUTABLE로 거절하고, delete도 111~113행에서 같은 코드로 거절한다. VersionedPricingIntegrationTest의 지난 월 거절 테스트(121~133행)는 단가(PriceRateService)만 부르고, PricePlanAuditIntegrationTest와 VersionedPricingIntegrationTest의 요금제 호출은 모두 effective_from=이번 달이다. git grep으로 #446, #447, #449, #451, #455 브랜치의 backend/src/test, demo, frontend/e2e 전부를 찾아도 PRICE_PLAN_HISTORY_IMMUTABLE 단언이 없다. 최상단에서도 create의 같은 검사(PricePlanService.java 83행)가 남아 있으므로 조건이 빠지면 지난달 요금제가 같은 월 행을 덮어써 지난달 예정액이 바뀌어도 테스트가 통과한다.",
       "evidence": "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:62-65 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:111-113 @ 5efe449; backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:121-133 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:83 @ 854e293",
-      "fixed": false,
-      "fix_branch": null,
-      "fix_commits": [],
-      "tests": [],
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-446",
+      "fix_commits": [
+        "0cab3a4"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.pricing.VersionedPricingIntegrationTest': 12/12 pass (넘기기 때 다시 돌림)",
+        "등록과 삭제의 지난 월 조건을 지우는 변이에서 새 테스트 실패(작성 에이전트 보고)",
+        "spotlessCheck, checkstyleTest, *TestNamingConventionTest: pass"
+      ],
       "behavior_change": false,
-      "notes": ""
+      "notes": "작성 에이전트가 커밋 뒤 보고 전에 중단돼, 넘기기 때 검사를 다시 돌려 통과를 확인하고 push했다. 커밋 리뷰는 하지 않았다."
     },
     {
       "id": "C446-005",
@@ -361,12 +367,36 @@
       "summary": "#445가 지운 MockPaymentGateway 등 네 클래스와 검사를 #447이 main 내용 그대로 되살렸고, #453이 다시 지운다. 그래서 주입처 없이 항상 승인하는 @Component가 #447부터 #452까지 남는다.",
       "reason": "MockPaymentGateway, PaymentGateway, PaymentApproval, PaymentRequest, MockPaymentGatewayTest는 #445 커밋 4ace811에서 지워졌고 #446까지 없다. #447 커밋 2ec5d85가 다섯 파일을 다시 더했고, 내용은 origin/main과 같다(git diff origin/main origin/feat/resource-archive 결과 없음). #447 diff에서 #445 이전 내용으로 되돌아간 파일은 이 다섯 개뿐이다. #447부터 #452까지 운영 코드에서 PaymentGateway를 주입하거나 부르는 곳은 없다(payment/client 밖 git grep 0건). 그런데 MockPaymentGateway는 @Component라 컴포넌트 스캔으로 빈이 등록된다. #453 커밋 23b1844가 다시 지워서 스택 끝에는 없다. 보관 기능과 무관한 리베이스 잔여물이다.",
       "evidence": "backend/src/main/java/com/meterengine/payment/client/MockPaymentGateway.java:5 @ afdf8f1; backend/src/test/java/com/meterengine/payment/client/MockPaymentGatewayTest.java:8 @ afdf8f1; 삭제 4ace811 (#445); 재추가 2ec5d85 (#447); 재삭제 23b1844 (#453)",
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-447",
+      "fix_commits": [
+        "02bb1af"
+      ],
+      "tests": [
+        "./gradlew compileJava compileTestJava spotlessCheck checkstyleMain checkstyleTest: pass",
+        "./gradlew test --tests 'com.meterengine.payment.client.*' --tests 'com.meterengine.MeterEngineApplicationTest' --tests '*NamingConventionTest' --tests '*OpenApiDocumentTest': pass",
+        "git grep -w PaymentGateway: 0건"
+      ],
+      "behavior_change": false,
+      "notes": "다른 묶음과 겹침: k4가 맡은 #453 diff에 같은 다섯 파일의 삭제가 들어 있다. 다른 묶음에 따로 나온 지적은 없다. 커밋 리뷰 통과."
+    },
+    {
+      "id": "C450-000",
+      "merged_ids": [
+        "G-129",
+        "G-168"
+      ],
+      "verdict": "confirmed",
+      "severity": "medium",
+      "summary": "V45가 event_pk를 (organization_id, environment_scope_id, transaction_id)로 바꿔서, 옛 코드의 ON CONFLICT (organization_id, transaction_id)가 42P10으로 실패한다. 그래서 블루그린 전환 전과 롤백 뒤에 단건 수집이 모두 500이 된다.",
+      "reason": "현재 head V45 46-47행이 event_pk를 지우고 (organization_id, environment_scope_id, transaction_id)로 다시 만든다. #449(7ce9d36)와 main의 EventRepository.insertIfAbsent는 32행에서 ON CONFLICT (organization_id, transaction_id)를 쓴다. postgres:18에 V44 스키마를 만들고 V45, V46, V46_1을 적용한 뒤 옛 INSERT를 실행하니 'there is no unique or exclusion constraint matching the ON CONFLICT specification'이 났다. 1M건 DB에서는 V45가 도는 약 10초 동안 잠금을 기다린 뒤 같은 오류로 끝났다. 이 예외는 GlobalExceptionHandler의 Exception 처리(208행)에서 500이 된다. Flyway는 기동 중에 마이그레이션마다 커밋한다. deploy.sh는 전환(529-533행) 전까지 Caddy upstream을 옛 색만으로 둔다(470행). 따라서 V45가 커밋된 때부터 전환까지 옛 색의 POST /v1/events가 모두 500이다. 90초 초과로 discard_target가 돌거나 이전 SHA로 롤백해도 Flyway는 future 마이그레이션을 무시하고 옛 이미지를 띄우므로 500이 이어진다. #453은 V45를 바꾸지 않는다. 오히려 environment_id를 실제로 쓰고, 같은 transaction_id 3건 저장을 테스트로 기대해 새 PK에 기댄다.",
+      "evidence": "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:46-47 @ 457a0d8; backend/src/main/java/com/meterengine/event/repository/EventRepository.java:32 @ 7ce9d36; backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:208-212 @ 7ce9d36; deploy/deploy.sh:470,513-515,529-533 @ 457a0d8; deploy/deploy.sh:246-266 @ 457a0d8; backend/src/test/java/com/meterengine/organization/OrganizationEnvironmentIntegrationTest.java:158-163 @ f040e96",
       "fixed": false,
       "fix_branch": null,
       "fix_commits": [],
       "tests": [],
       "behavior_change": false,
-      "notes": "다른 묶음과 겹침: k4가 맡은 #453 diff에 같은 다섯 파일의 삭제가 들어 있다. 다른 묶음에 따로 나온 지적은 없다."
+      "notes": "두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none (V45는 origin/feat/event-ingestion부터 origin/feat/rds-auto-stop까지 내용이 같고, #453 V48은 같은 PK 교체 방식을 다른 표로 넓힐 뿐 이 문제를 막지 않는다). 제안 심각도 medium. 동작 확인: postgres:18에서 V45의 event DDL을 커밋하자 #449 EventRepository.java:32의 ON CONFLICT (organization_id, transaction_id) DO NOTHING은 42P10(no unique or exclusion constraint matching)으로 실패했다. 충돌 대상을 적지 않은 ON CONFLICT DO NOTHING은 성공했다. 배포 경로: deploy.sh는 새 색이 Flyway와 기동을 마치고 /actuator/health가 UP이 될 때까지 옛 색만 Caddy 목록에 둔다(deploy.sh 191-199행 serving_upstreams, 513-515행). 그래서 V45 커밋 뒤 V46, V46_1, 스프링 기동, 전환 확인까지 수십 초 동안 옛 색의 POST /v1/events가 500이다. V45가 커밋된 뒤 새 색이 다른 이유로 90초를 넘기거나 #450 이전 SHA로 롤백하면(deploy/README.md 200-205행) 다음 배포가 성공할 때까지 단건 수집이 계속 500이다. 피해 규모: 서버는 개발 서버 하나이고 운영 서버와 실제 도입사는 없다(deploy/README.md 7행). 수집 클라이언트인 데모 SDK는 5xx를 3번까지 다시 보내고(demo/README.md 372행), Lumen 데모는 로컬 대기열과 재전송을 둔다. transaction_id로 멱등이라 배포 중 짧은 오류는 대부분 재전송으로 메워진다. 팀의 무중단 배포 측정도 마이그레이션이 있는 SHA는 빼고 잰다(measurements/test-slo/k6/README.md 준비 2단계). 그래도 롤백 경로는 블루그린 설계의 목적을 깨고, 이 비호환은 문서 어디에도 적혀 있지 않다. 판단: 실재하지만 개발 서버에서만 생기므로 high가 아니라 medium이다. G-168, G-129와 원인이 같다. 첫 관점 심각도는 high였고 두 번째 관점을 따라 medium로 적었다. 수정 제안: expand-contract로 나눈다. expand: V45 46-47행 대신 event_pk (organization_id, transaction_id)를 남기고 CREATE UNIQUE INDEX event_environment_transaction_unique ON event (organization_id, environment_scope_id, transaction_id)를 더한다. #450 코드는 environment_id를 늘 NULL로 쓰므로 두 키의 뜻이 같다. 새 코드의 ON CONFLICT (organization_id, environment_scope_id, transaction_id)는 이 인덱스를 arbiter로 쓴다(postgres:18에서 옛 INSERT와 새 INSERT 모두 동작 확인). contract: environment_id를 실제로 쓰는 #453의 V48 앞에 ALTER TABLE event DROP CONSTRAINT event_pk; ALTER TABLE event ADD CONSTRAINT event_pk PRIMARY KEY USING INDEX event_environment_transaction_unique;를 둔다. 인덱스는 다시 만들지 않고 이름만 바뀌므로 SchemaConstraintTest의 event_pk도 그대로다. contract는 #450이 배포되어 전환된 뒤에야 안전하다. CD concurrency 대기열은 중간 실행을 건너뛸 수 있으니, 이 순서와 롤백 하한을 deploy/README.md 롤백 절에 한 줄 적는다. V45와 V48은 미머지라 로컬 볼륨만 다시 만든다. 검사: PricingMigrationIntegrationTest처럼 V44까지만 옮긴 위치로 migrate하고 이벤트 한 건을 넣는다. 전체 migrate 뒤 옛 SQL INSERT ... ON CONFLICT (organization_id, transaction_id) DO NOTHING을 새 tx와 중복 tx로 실행해 각각 1행, 0행이 나오는지 본다. 지금은 42P10으로 실패하고, 고치면 통과한다. 새 conflict target INSERT가 중복에 0행을 돌려주는지도 같이 본다. #453에서는 이 옛 SQL 검사를 Flyway target 47로 한정하고, OrganizationEnvironmentIntegrationTest의 shared-id 3건 기대가 contract 뒤에도 통과하는지 본다."
     },
     {
       "id": "C450-001",
@@ -376,6 +406,81 @@
       "summary": "C446-000에 묶음. #450은 V45, V46, V46_1로 base 최고 V44보다 크고 #451 V47보다 작다",
       "reason": "C446-000과 같은 원인이다. event_rejection 마이그레이션은 V46__create_event_rejections가 됐고 #451의 V47보다 앞선다.",
       "evidence": "backend/src/main/resources/db/migration/V46__create_event_rejections.sql @ 457a0d8",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C450-002",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "ingest 스코프만 가진 키로 기존 external_id를 다시 등록하면 read 없이 그 고객의 이름과 billing_email이 200 응답으로 나온다.",
+      "reason": "POST /v1/customers는 @IngestAccess(hasAuthority('SCOPE_ingest'))만 검사하고, AuthenticatedPrincipal.authorities는 AccessScopes.grants로 펼치므로 scopes=[ingest] 키에는 SCOPE_ingest만 생긴다. 이미 있는 external_id면 insertIfAbsent가 ON CONFLICT DO NOTHING으로 false를 돌려주고, CustomerRegistrationService.create가 기존 고객을 조회해 보관되지 않았으면 (customer, false)를 반환한다. 컨트롤러는 이 고객을 CustomerResponse.from으로 감싸 200으로 돌려주며 name, billing_email, created_at, archived_at이 모두 담긴다. 같은 고객을 GET /v1/customers/{id}나 ?external_id=로 읽으면 @ReadAccess라 ingest 전용 키는 403이고, CustomerExternalIdIntegrationTest 112-114행과 frontend/e2e/permissions.real.spec.ts 160행이 이 경계를 고정한다. 보관 고객이면 409 customer_archived로 보관 여부도 드러난다. 스택 최상단(#455)까지 AccessScopes, IngestAccess는 그대로이고 createCustomer는 Idempotency-Key 래핑만 더해 같은 CustomerResponse(version 추가)를 돌려주므로 재현 경로가 남아 있다.",
+      "evidence": "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:74,97-103 @ 457a0d8; backend/src/main/java/com/meterengine/customer/service/CustomerRegistrationService.java:40-53,64 @ 457a0d8; backend/src/main/java/com/meterengine/global/security/AuthenticatedPrincipal.java:33-47 @ 457a0d8; backend/src/main/java/com/meterengine/global/security/AccessScopes.java:24-28 @ 457a0d8; backend/src/test/java/com/meterengine/customer/CustomerExternalIdIntegrationTest.java:112-114 @ 457a0d8; backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:84,107-123 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none. 스택 최상단(origin/feat/rds-auto-stop)의 CustomerController.createCustomer는 IdempotencyService 래핑과 @EnvironmentReady만 더했고 같은 CustomerResponse(name, billing_email 포함)를 돌려준다. #453의 CustomerRegistrationService.externalCustomers는 조회 범위를 같은 환경으로 좁힐 뿐이고, #454는 로그인과 가입 요청만 제한한다. RateLimitFilter의 키별 한도는 rate_limit_per_minute를 지정한 키에만 걸리고 기본은 무제한이다.. 제안 심각도 low. 경로는 실제로 있다. #450에서 새로 생긴 CustomerRegistrationService.create 44-50행이 기존 고객을 찾고 CustomerController 100-102행이 CustomerResponse 전체를 200으로 준다. POST /v1/customers는 @IngestAccess뿐이고 AccessScopes.grants는 admin이 아니면 ingest에 read를 주지 않으며, 세션 멤버도 scopes를 ingest만으로 둘 수 있다(OrganizationMember.scopes). 제품은 이 경계를 의도한 것으로 문서화했다. frontend/README.md 99행은 ingest를 '고객 등록과 이벤트 수집, 조회에는 read도 필요'로, permissions.ts는 '고객 등록과 사용량 이벤트 전송'으로 적고, ConsoleShell은 ingest 전용 사용자에게 고객을 보려면 조회 권한을 요청하라고 안내한다. CustomerExternalIdIntegrationTest 112-114행과 EventRejection, EventExport 등 여러 테스트도 ingest 전용 키의 조회를 403으로 고정한다. 그러니 id와 external_id를 돌려주는 것은 이벤트의 customer_id를 얻는 정상 흐름이지만 name과 billing_email은 경계 밖 노출이다. 다만 실제 피해는 작다. 같은 도입사 안의 권한 상승이고 다른 도입사는 볼 수 없다. ingest 전용 키나 멤버는 같은 도입사 admin이 직접 발급한다. 현재 쓰는 키는 demo, Lumen(seed-demo.ts runtimeKey), test-slo, test-storage 모두 ingest와 read를 함께 가져 이 경로로 새로 얻는 정보가 없다. ingest 키가 새면 이미 임의 사용량 이벤트로 청구를 부풀릴 수 있어 이메일 노출은 그보다 작은 추가 피해다. 수집하려면 external_id를 맞혀야 하고, 빗나간 시도마다 고객이 새로 생기고 customer_created 감사 기록이 남아 조용히 훑기 어렵다. 배포는 단일 호스트 blue/green이라 인스턴스 수는 이 문제와 관계없다. 문서화된 권한 경계를 PII로 깨므로 confirmed로 두되, 도입사 내부 한정이고 ingest 전용 사용처가 아직 없어 low를 제안한다. 다른 묶음(k1, k2, k4, k5, k6) findings에는 같은 문제가 없다. 첫 관점 심각도는 medium였고 두 번째 관점을 따라 low로 적었다. 수정 제안: createCustomer에 @AuthenticationPrincipal AuthenticatedPrincipal principal을 받고(다른 컨트롤러와 같은 방식), registration.created()가 false이고 AccessScopes.grants(principal.scopes(), \"read\")가 false면 id와 external_id만 남기고 name, billing_email(필요하면 created_at, archived_at도)을 null로 채운 CustomerResponse를 돌려준다. 200 응답 @ApiResponse 설명에 read 스코프가 없으면 name과 billing_email을 비운다고 적고 openapi.yaml을 다시 만든다. #453 이후 Idempotency-Key 래핑은 조직/환경/작업 단위로 응답을 재생하므로, 축소는 supplier 안이 아니라 idempotencyService.execute 결과에 적용해 재생 응답도 같은 규칙을 따르게 한다. 검사: CustomerExternalIdIntegrationTest에 테스트를 더한다. ingest+read 키로 {name:\"원래 이름\", billing_email:\"bill@example.com\", external_id:\"ext-1\"}을 201로 만든 뒤, issueApiKey(organizationId, \"ingest\")로 만든 ingest 전용 키로 같은 external_id를 POST한다. 200, id 일치, name과 billing_email이 null인지 단언한다. 같은 요청을 ingest+read 키로 보내면 name과 billing_email이 그대로 나오는지도 단언한다. 수정 전에는 billing_email이 응답에 있어 실패한다."
+    },
+    {
+      "id": "C450-003",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "보관된 고객의 external_id로 재등록하면 409 customer_archived인데 createCustomer 문서, openapi.yaml, 테스트 어디에도 없다.",
+      "reason": "CustomerRegistrationService.create는 기존 고객이 보관 상태면 ConflictException(CUSTOMER_ARCHIVED)을 던진다(#450 49-53행, 최상단 49-51행). createCustomer의 @ApiResponses는 201, 200, 400뿐이고 설명은 같은 external_id면 기존 고객을 200으로 돌려준다고만 한다. openapi.yaml의 createCustomer 응답은 #450과 최상단 모두 200, 201, 400, 401, 403, 429뿐이며, customer_archived는 오류 코드 enum과 이벤트 거절 조회 패턴에만 나온다. 최상단 backend/src/test, demo, frontend/e2e를 모두 찾아도 POST /v1/customers의 보관 고객 재등록 409를 단언하는 테스트는 없고, BusinessArchiveIntegrationTest의 CUSTOMER_ARCHIVED 단언은 이벤트 수집 경로다. PR #450 본문도 이 분기를 언급하지 않는다.",
+      "evidence": "backend/src/main/java/com/meterengine/customer/service/CustomerRegistrationService.java:51-53 @ 457a0d8; backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:80-96 @ 457a0d8; backend/openapi.yaml /v1/customers post responses @ 457a0d8; backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:93-106 @ 854e293; backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java:93,102 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "수정 제안: createCustomer의 @ApiResponses에 409(ErrorResponse 스키마, code=customer_archived: 같은 external_id의 고객이 보관됐다. POST /v1/customers/{id}/restorations로 복원한 뒤 다시 보낸다)를 더하고, 설명 문단에도 한 문장 덧붙인 뒤 ./gradlew build로 openapi.yaml을 다시 만든다. 동작 코드는 바꾸지 않는다. 검사: CustomerExternalIdIntegrationTest에 테스트를 더한다. external_id \"archived-1\"로 201 생성, admin 키로 DELETE /v1/customers/{id}(또는 CustomerService.delete), 같은 external_id로 POST하면 409와 code=customer_archived인지, customer 표에서 그 external_id 행이 1건 그대로인지 단언한다. 이 분기를 지우거나 200으로 바꾸면 실패한다."
+    },
+    {
+      "id": "C450-004",
+      "merged_ids": [],
+      "verdict": "already-fixed",
+      "severity": "low",
+      "summary": "PR #460(a2e18ab)이 배치 INSERT를 transaction_id 순으로 정렬해, 순서가 엇갈린 배치끼리 서로 기다리는 교착 경로를 없앴다.",
+      "reason": "a2e18ab가 EventBatchService.java:164에 insertions.sort(Comparator.comparing(EventInsertion::transactionId))를 넣었고, 49b571e로 #450에 병합됐다. insertAllIfAbsent(EventRepository.java:50-78)는 받은 순서 그대로 VALUES를 나열하고 PostgreSQL도 그 순서로 삽입한다. 그래서 키가 겹치는 두 배치가 같은 순서로 잠금을 잡고, 순환 대기가 생기지 않는다. 배치 안의 중복은 accepted 집합이 걸러 내고, event의 유일 제약은 event_pk 하나뿐이라 다른 인덱스에서 역순으로 기다릴 여지도 없다. EventBatchServiceTest:39가 정렬 순서를 단언하며, 정렬은 꼭대기 rds-auto-stop까지 그대로 남아 있다.",
+      "evidence": "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:164 @ 457a0d8; backend/src/main/java/com/meterengine/event/repository/EventRepository.java:72-77 @ 457a0d8; backend/src/test/java/com/meterengine/event/service/EventBatchServiceTest.java:39 @ 457a0d8; backend/src/main/resources/db/migration/V45__create_organization_environments.sql:47 @ 457a0d8; fix a2e18ab (merge 49b571e)",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C450-005",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "단건 수집은 콜론 없는 오프셋과 숫자 epoch를 받지만, 배치는 사전 OffsetDateTime.parse 검사 때문에 같은 값을 validation_error로 거절한다.",
+      "reason": "단건 POST /v1/events는 Boot 기본 JsonMapper(Jackson 3.1.4)로 OffsetDateTime을 읽는다. 로컬에서 확인해 보니 \"+0900\", 숫자 1761526800, 숫자 문자열 \"1761526800\"을 모두 저장한다. 배치는 EventBatchService.java:73-75에서 treeToValue보다 먼저 OffsetDateTime.parse로 검사하므로, 같은 값을 rejected validation_error(events[i].timestamp)로 돌려준다. 사전 검사를 빼고 같은 매퍼로 treeToValue만 돌리면 단건과 결과가 같아지는 것도 확인했다. 이 차이는 #450의 8bb17c3에서 들어왔고 꼭대기 rds-auto-stop까지 남아 있다. 숫자를 받는 단건 경로는 밀리초 epoch를 초로 읽어 G-127의 먼 미래 시각을 만드는 입구이기도 하다.",
+      "evidence": "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:73-76 @ 457a0d8; backend/src/main/java/com/meterengine/event/service/EventBatchService.java:202-209 @ 457a0d8; backend/src/main/java/com/meterengine/event/dto/IngestEventRequest.java:19 @ 457a0d8; demo/core/model.py:20-24 @ origin/feat/llm-service-demo; introduced 8bb17c3",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "수정 제안: 권장안은 두 경로를 문서의 format: date-time(RFC 3339)과 데모 예측(demo/core/model.py의 _RFC3339)에 맞춰 엄격하게 통일하는 것이다. JSON 문자열만 받아 OffsetDateTime.parse로 읽는 작은 역직렬화기를 만들고, IngestEventRequest.occurredAt에 @JsonDeserialize로 붙인다. 그다음 배치의 사전 parse(73-75행)를 지우고, validTimestamp도 같은 규칙으로 판정하게 한다. DTO가 바뀌므로 openapi.yaml을 다시 생성해 함께 커밋한다. 단건이 숫자를 받던 동작이 바뀌므로 팀 합의가 필요하다. 단건 동작을 그대로 두는 대안은 배치의 73-75행만 지우고 validTimestamp를 jsonMapper.treeToValue(node, OffsetDateTime.class) 기준으로 바꾸는 것이다. 다만 이 경우 demo/csvdemo/expected.py의 예측도 고쳐야 하고, G-127의 숫자 밀리초 경로가 배치에도 열린다. 검사: 같은 timestamp 값(\"2026-10-27T10:00:00+0900\", 숫자 1761526800, \"2026-10-27T10:00:00+09:00\")을 POST /v1/events와 POST /v1/event-batches에 보내고, 두 결과의 분류(저장 또는 validation_error, 필드 timestamp)가 같은지 단언하는 통합 테스트를 EventIngestIntegrationTest와 EventBatchIntegrationTest에 추가한다. 지금 코드에서는 단건이 저장하고 배치가 거절해서 실패한다."
+    },
+    {
+      "id": "C450-008",
+      "merged_ids": [],
+      "verdict": "already-fixed",
+      "severity": "low",
+      "summary": "PR #460(a2e18ab)이 단건 거절도 rejected로 세게 했고, 중복 응답 비율 패널의 분모를 stored와 duplicate로 좁혔다.",
+      "reason": "a2e18ab(49b571e로 병합)는 EventIngestionService.ingest(41-48행)에서 BusinessException을 잡아 recordRejected를 부른 뒤 다시 던지게 했다. customer_not_found(NotFoundException), customer_archived(ConflictException), event_too_old(InvalidRequestException)는 모두 BusinessException 하위라 셈에 들어간다. 대시보드 232행의 분모도 result=~\"stored|duplicate\"로 바뀌었다. EventIngestionServiceTest 134행과 146행이 단건 거절 집계를 단언한다. 지적 범위 밖에 작은 비대칭이 하나 남아 있다. 단건의 @Valid나 JSON 형식 오류로 나는 400은 서비스에 닿기 전에 끝나서 rejected에 잡히지 않지만, 배치는 원소별 validation_error를 센다.",
+      "evidence": "backend/src/main/java/com/meterengine/event/service/EventIngestionService.java:41-48 @ 457a0d8; deploy/grafana/dashboards/meterengine-storage.json:232 @ 457a0d8; backend/src/test/java/com/meterengine/event/service/EventIngestionServiceTest.java:134,146 @ 457a0d8; fix a2e18ab (merge 49b571e)",
       "fixed": false,
       "fix_branch": null,
       "fix_commits": [],
@@ -424,12 +529,17 @@
       "summary": "현재 head의 DashboardService 세 count 쿼리에 archived_at 조건이 없어 보관한 고객, 미터, 토스 키를 설정 완료로 센다.",
       "reason": "DashboardService.get의 customer_count(98행)와 billable_metric_count(100행)는 organization_id(와 environment_id)로만 세고, payment_configured(122-127행)는 organization_id와 payment_setting.mode로만 toss_payments_credential을 센다. DELETE는 행을 지우지 않고 archived_at만 채운다(CustomerService.delete, BillableMetricService.delete, TossPaymentsCredentialService.delete). 반면 결제 승인과 재시도는 active()로 archived_at IS NULL인 키만 쓰고, PaymentSettingService.update도 보관 키를 거르며, 고객과 미터 목록 기본값은 ArchiveStatus.parse(null)=ACTIVE다. 그래서 키를 보관해도 payment_configured=true, 고객과 미터를 모두 보관해도 overview/page.tsx 14-17행의 시작 단계가 완료로 표시된다. 스택 꼭대기(rds-auto-stop)에서도 environment 조건만 바뀌었고 archived_at 조건은 없다.",
       "evidence": "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:97-100,122-127 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:94-112 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:172-176 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/PaymentSettingService.java:44-48 @ 53ec3d9; backend/src/main/java/com/meterengine/customer/service/CustomerService.java:102-108 @ 53ec3d9; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:186-198 @ 53ec3d9; backend/src/main/java/com/meterengine/global/validation/ArchiveStatus.java:14-16 @ 53ec3d9; frontend/src/app/(console)/overview/page.tsx:14-17 @ 53ec3d9; backend/src/main/resources/db/migration/V43__archive_business_resources.sql:1-2,35 @ 53ec3d9; DashboardService.java:107-153 @ origin/feat/rds-auto-stop",
-      "fixed": false,
-      "fix_branch": null,
-      "fix_commits": [],
-      "tests": [],
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-451",
+      "fix_commits": [
+        "96875c6"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.dashboard.DashboardIntegrationTest': 수정 전 새 테스트 실패(1, 1, true), 수정 뒤 5/5 통과",
+        "*NamingConventionTest, OpenApiDocumentTest, checkstyleMain, checkstyleTest: pass"
+      ],
       "behavior_change": true,
-      "notes": "다른 묶음과 겹침: k6 D-057(같은 개요 시작 단계 '공급자와 결제 설정'의 안내 문구 지적)과 화면이 겹치지만 원인과 수정은 다르다."
+      "notes": "다른 묶음과 겹침: k6 D-057(같은 개요 시작 단계 '공급자와 결제 설정'의 안내 문구 지적)과 화면이 겹치지만 원인과 수정은 다르다. 커밋 리뷰는 넘기기 지시로 중단돼 끝나지 않았다."
     },
     {
       "id": "C451-003",
@@ -546,10 +656,14 @@
       "summary": "payment_configured가 보관한 토스 키도 설정됨으로 세는 것은 맞고, C451-001과 같은 원인이다.",
       "reason": "DashboardService.java 122-127행의 쿼리는 toss_payments_credential을 organization_id와 mode로만 세고 archived_at을 거르지 않는다. TossPaymentsCredentialService.delete는 archived_at만 채우고, PaymentAttemptService.approve는 active()가 비면 TOSS_PAYMENTS_CREDENTIAL_MISSING(409 코드)으로 결제를 실패 처리하며 PaymentSettingService.update도 보관 키를 거른다. 같은 '결제 준비' 판단이 대시보드와 결제 경로에서 갈린다. 수정은 C451-001의 쿼리 수정에 포함된다.",
       "evidence": "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:122-127 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:94-105 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:172-176 @ 53ec3d9; backend/src/main/java/com/meterengine/payment/service/PaymentSettingService.java:44-48 @ 53ec3d9",
-      "fixed": false,
-      "fix_branch": null,
-      "fix_commits": [],
-      "tests": [],
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-451",
+      "fix_commits": [
+        "96875c6"
+      ],
+      "tests": [
+        "C451-001과 같은 커밋"
+      ],
       "behavior_change": true,
       "notes": "C451-001와 같은 원인이라 그쪽에 묶었다."
     },
@@ -625,10 +739,14 @@
       "summary": "C447-013과 원인이 같다. #447의 되살림과 #453의 재삭제가 한 쌍이다.",
       "reason": "G-115가 말한 다섯 파일의 재추가(2ec5d85, #447)와 재삭제(23b1844, #453)는 C447-013과 같은 리베이스 잔여물이다. #447 diff의 모든 파일을 #445 전후 내용과 비교했다. #445 이전 내용으로 돌아간 파일은 이 다섯 개뿐이어서, 같은 리베이스에서 다른 #445 변경까지 되돌아가지는 않았다. #447에서 다섯 파일을 빼면 #453의 삭제도 리베이스에서 저절로 사라지므로 수정은 하나다.",
       "evidence": "backend/src/main/java/com/meterengine/payment/client/MockPaymentGateway.java:5 @ afdf8f1; 재추가 2ec5d85 (#447); 재삭제 23b1844 (#453); 삭제 4ace811 (#445)",
-      "fixed": false,
-      "fix_branch": null,
-      "fix_commits": [],
-      "tests": [],
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-447",
+      "fix_commits": [
+        "02bb1af"
+      ],
+      "tests": [
+        "C447-013과 같은 커밋"
+      ],
       "behavior_change": false,
       "notes": "C447-013와 같은 원인이라 그쪽에 묶었다. 다른 묶음과 겹침: k4가 맡은 #453 diff에 같은 다섯 파일의 삭제가 들어 있다."
     },
@@ -715,10 +833,14 @@
       "summary": "customer_count와 billable_metric_count가 보관 자원을 포함하는 것은 맞고, C451-001과 같은 원인이다.",
       "reason": "DashboardService.java 97-100행의 customer, billable_metric count 쿼리에 archived_at 조건이 없다. 고객과 미터 목록은 ArchiveStatus.parse(null)=ACTIVE로 보관분을 빼므로, 모두 보관한 도입사는 목록이 비었는데 overview/page.tsx 14-15행이 'N명의 고객', 'N개 미터'로 두 단계를 완료 처리한다. 수정은 C451-001의 쿼리 수정에 포함된다.",
       "evidence": "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:97-100 @ 53ec3d9; backend/src/main/java/com/meterengine/customer/service/CustomerService.java:36-45 @ 53ec3d9; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:236-242 @ 53ec3d9; frontend/src/app/(console)/overview/page.tsx:14-15 @ 53ec3d9",
-      "fixed": false,
-      "fix_branch": null,
-      "fix_commits": [],
-      "tests": [],
+      "fixed": true,
+      "fix_branch": "claude/s456-k3-451",
+      "fix_commits": [
+        "96875c6"
+      ],
+      "tests": [
+        "C451-001과 같은 커밋"
+      ],
       "behavior_change": true,
       "notes": "C451-001와 같은 원인이라 그쪽에 묶었다."
     },
@@ -738,6 +860,36 @@
       "notes": ""
     },
     {
+      "id": "G-127",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "먼 미래 timestamp가 저장되면 월 목록이 5자리 연도 달을 맨 위에 돌려주지만, 그 달을 조회하면 @FourDigitYear에 걸려 400이다.",
+      "reason": "수집에는 미래 상한이 없다. StorableTimestampValidator.java:18은 294276년까지 받으며, 이 범위는 main부터 의도된 것이고 테스트로 고정되어 있다. 단건 경로는 숫자 timestamp를 epoch 초로 읽기 때문에 밀리초 1761526800000을 보내면 +57790-07-24로 저장된다(Jackson 3.1.4 로컬 확인). EventRepository.findMonths(184-189행)와 #451의 WorkspaceQueryRepository.java:307은 to_char(..., 'YYYY-MM')을 쓴다. Postgres 18에서 이 식은 '55835-03'을 돌려주고, 문자열 내림차순이라 그 값이 맨 위에 온다. 반면 GET /v1/events의 month는 @FourDigitYear(EventController.java:155)로 9999년까지만 받아 400이 되고, UnbilledEventRepository.java:61의 미래 시각 집계도 조회한 달 범위 안만 센다.",
+      "evidence": "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:184-189 @ 457a0d8; backend/src/main/java/com/meterengine/event/controller/EventController.java:155 @ 457a0d8; backend/src/main/java/com/meterengine/global/validation/StorableTimestampValidator.java:18 @ 457a0d8; backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:61 @ 457a0d8; backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:307 @ 53ec3d9",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "수정 제안: findMonths(#450)와 WorkspaceQueryRepository의 usage months 쿼리(#451, 307행)에 AND occurred_at < TIMESTAMPTZ '10000-01-01 00:00:00+09'를 더해, 열 수 있는 달만 돌려주게 한다. 마이그레이션과 API 형식은 바뀌지 않는다. 수집 단계에 미래 상한을 두는 방안은 294276년까지 받는다는 기존 계약(StorableTimestampValidatorTest)을 바꾸므로 팀 결정으로 남긴다. C450-005를 엄격한 쪽으로 고치면 숫자 밀리초 실수로 들어오는 경로가 닫혀 노출이 줄어든다. #453이 같은 쿼리의 환경 조건을 바꾸므로 위층으로 전파할 때 함께 맞춘다. 검사: 이벤트 조회 통합 테스트에서 occurred_at이 +55835-03-10T00:00:00Z인 이벤트와 2026-10 이벤트를 넣고, GET /v1/events/months가 [\"2026-10\"]만 돌려주는지 단언한다. #451의 WorkspaceQueryIntegrationTest에도 /v1/usage/months에 대해 같은 단언을 추가한다. 지금 코드에서는 '55835-03'이 첫 원소로 나와 실패한다."
+    },
+    {
+      "id": "G-129",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "medium",
+      "summary": "주된 주장(V45의 event PK 교체로 옛 색과 롤백 코드의 ON CONFLICT가 실패)은 C450-000과 같은 원인이고 현재 head에서도 재현된다. 부가 주장 중 FK를 NOT VALID 없이 검증한다는 부분은 이미 고쳐졌다.",
+      "reason": "V45 46-47행의 PK 교체와 #449 EventRepository.java:32의 ON CONFLICT (organization_id, transaction_id)가 어긋나 postgres:18에서 42P10이 난다. deploy.sh는 전환 전까지 옛 색에만 보내므로 그동안 POST /v1/events가 500이다. 이전 SHA로 롤백해도 같다. 생성 열 추가(44-45행)와 PK 재생성이 ACCESS EXCLUSIVE를 잡는다는 지적도 맞다. 1M건에서 옛 INSERT가 약 10초 기다렸다. 반면 event_customer_same_environment_fk를 NOT VALID 없이 검증한다는 부분은 a2e18ab에서 고쳐졌다. 지금은 NOT VALID로 추가하고 V46_1에서 따로 VALIDATE한다. #453 diff에 V45가 없다는 리뷰 범위 지적은 코드 결함이 아니라 판정 대상에서 뺐다.",
+      "evidence": "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:44-50 @ 457a0d8; backend/src/main/resources/db/migration/V46_1__validate_event_constraints.sql:2-5 @ 457a0d8; backend/src/main/java/com/meterengine/event/repository/EventRepository.java:32 @ 7ce9d36; deploy/deploy.sh:470,529-533 @ 457a0d8",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "C450-000와 같은 원인이라 그쪽에 묶었다. 두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=FK 즉시 검증 부분만 a2e18ab에서 해소됐다(V45 48-50행 NOT VALID, V46_1__validate_event_constraints.sql로 검증 분리). PK 교체로 인한 수집 500은 none. 제안 심각도 medium. C450-000과 원인이 같다. 상세 중 'event_customer_same_environment_fk를 NOT VALID 없이 검증한다'는 지금은 틀리다. V45 48-50행에 NOT VALID가 붙었고, 검증은 PR #460의 a2e18ab에서 다른 트랜잭션인 V46_1로 옮겨졌다. 'V45를 #453으로 옮기라'는 리뷰 범위에 대한 제안이라 피해 판단과는 관계가 없다. 핵심인 옛 색과 롤백 코드의 단건 수집 500은 실재하고 42P10으로 재현했다. 피해 규모는 C450-000과 같다. 개발 서버 하나뿐이고 운영 도입사가 없으며 재시도와 멱등 키로 일부 메워지지만, #450 이전으로 롤백하면 수집이 계속 실패한다. 그래서 medium이다. 첫 관점 심각도는 high였고 두 번째 관점을 따라 medium로 적었다."
+    },
+    {
       "id": "G-147",
       "merged_ids": [],
       "verdict": "confirmed",
@@ -751,6 +903,51 @@
       "tests": [],
       "behavior_change": true,
       "notes": "다른 묶음과 겹침: k2 G-148(SDK와 데모 검사가 CI에 없음)이 근거로 같은 웹훅 보관 필드 차이를 든다."
+    },
+    {
+      "id": "G-161",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "medium",
+      "summary": "V45의 STORED 생성 열 추가와 PK 재생성이 기동 중 Flyway에서 event 전체를 ACCESS EXCLUSIVE로 다시 쓴다. 그동안 옛 색의 수집이 막히고, 테이블이 크면 deploy.sh의 90초 한도를 넘겨 새 색이 버려진다. FK 검증 부분만 이미 고쳐졌다.",
+      "reason": "V45 44-45행의 STORED 생성 열은 event 전체를 다시 쓰고, 46-47행은 PK 인덱스를 다시 만든다. postgres:18 로컬 측정 결과는 다음과 같다. 2M건(631MB)에서 생성 열 10.3초, PK 4.6초. 1M건에서 8.3초와 3.5초. 이 동안 옛 색의 INSERT는 잠금을 기다렸다. Flyway는 웹 서버가 뜨기 전에 돈다. 그래서 deploy.sh 513행의 backend_healthy가 45회 x 2초 뒤 die한다. on_exit와 discard_target(264-265행)이 새 색을 멈추고 지우면, 진행 중이던 V45 트랜잭션은 커밋되지 않고 다음 배포가 처음부터 다시 한다. V45가 커밋된 뒤 V46_1 검증(2M건 3.7초)이나 스프링 기동에서 한도를 넘기면 C450-000 상태로 남는다. 계단 실험 한 번은 RATES 합 18,350건/초 x 360초로 약 660만 건이다. FK를 바로 검증하던 부분은 a2e18ab에서 NOT VALID와 V46_1로 나뉘었다. SUT의 db.m7g.large와 gp3에서 걸리는 실제 시간은 재지 않았다.",
+      "evidence": "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:44-47 @ 457a0d8; deploy/deploy.sh:89-93,513-515 @ 457a0d8; deploy/deploy.sh:246-266,268-279 @ 457a0d8; measurements/test-storage/load-generator/scripts/run-ingest-steps.sh:9 @ 457a0d8; backend/src/main/resources/db/migration/V46_1__validate_event_constraints.sql:2-5 @ 457a0d8",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none. 제안 심각도 medium. 측정: postgres:18(공유 4코어)에서 event 200만 행(525MB)에 V45를 돌렸다. STORED 생성 열 추가가 17.1초, PK 재생성이 11.6초 걸렸고 V46_1의 두 검증은 합쳐 2.2초였다. 90초보다 먼저 걸리는 한도가 있다. application.properties 26행의 hikari socketTimeout=30이 Flyway가 쓰는 같은 DataSource에도 걸린다. 그래서 문장 하나가 30초를 넘으면 연결이 끊기고 V45가 롤백된다. 이어 컨테이너가 restart: unless-stopped(compose.prod.yml 13행)로 다시 떠 같은 재작성을 되풀이한다. 실측 비율로 보면 약 350만 행부터 생성 열 추가 한 문장이 30초를 넘는다. RDS 사양에 따라 이 값은 달라진다. 시도할 때마다 event에 ACCESS EXCLUSIVE 잠금이 걸려 옛 색의 수집이 막히고, 90초가 지나면 deploy.sh가 새 색을 지운다(513-515행, discard_target). 피해 대상: 개발 서버는 데모 규모라 해당할 가능성이 낮다. 실제 행 수는 코드와 문서로 확인할 수 없다. test-storage SUT는 해당할 가능성이 높다. event가 append-only이고 TRUNCATE가 막혀 있으며 실험 스크립트도 행을 지우지 않는다. 그래서 계단 실험(한 번에 최대 약 660만 건)과 장애 전환 실험(약 90만 건)이 계속 쌓인다. 다만 SUT 배포는 문인호와 맞춰 하고(measurements/test-storage/README.md 5행) 실사용자가 없다. 그래서 실제 피해는 수집 중단보다 '배포가 끝나지 않고, 원인인 소켓 시간 초과가 로그에 바로 드러나지 않는' 운영 문제다. C450-000과 원인도 고칠 방법도 달라 따로 둔다. 이를 막는 PR이나 문서는 없다. 수정 제안: V45의 event 쪽 생성 열을 environment_scope_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid로 바꾼다. 상수 기본값이라 재작성이 없다(2M건에서 4ms). V45에 BEFORE INSERT 트리거 함수를 새로 두어 NEW.environment_scope_id를 COALESCE(NEW.environment_id, 0 UUID)로 맞춘다. event는 UPDATE가 트리거로 막혀 있어 INSERT만 맞추면 된다. 일관성 CHECK (environment_scope_id = COALESCE(environment_id, 0 UUID))를 V45에 NOT VALID로 두고 V46_1에서 VALIDATE한다. PK는 C450-000 수정대로 지우지 않고 유일 인덱스만 만든다. 2M건에서 4.8초 걸리고, SHARE 잠금이라 읽기는 막지 않는다. CONCURRENTLY는 트랜잭션 밖에서만 돌아 새 마이그레이션 파일이 필요하므로 넣지 않는다. deploy/README.md에는 event가 큰 DB에서 V45 시간을 미리 재고, 90초를 넘으면 수집을 멈추고 배포한다는 한 줄을 둔다. 검사: 마이그레이션 통합 테스트에서 V44까지 migrate한 뒤 pg_class.relfilenode('event')를 읽어 둔다. 전체 migrate 뒤 같은 값인지 본다. 지금은 생성 열 추가로 값이 바뀌어 실패하고, 고치면 통과한다. environment_id가 NULL인 행과 값이 있는 행을 넣어 environment_scope_id가 COALESCE 값과 같은지도 본다."
+    },
+    {
+      "id": "G-165",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "저장단 대시보드의 수집 요청 수, 평균 처리 시간, p99, 5xx 패널이 uri=\"/v1/events\"로 고정되어 있어 /v1/event-batches 수집은 보이지 않는다.",
+      "reason": "meterengine-storage.json의 71, 110, 149, 154, 193행 expr은 모두 http_server_requests_seconds_*{uri=\"/v1/events\",method=\"POST\"}다. #450이 POST /v1/event-batches를 추가했고, #452의 SDK(demo/sdk/src/meter-engine-client.ts:95)가 묶음 전송에 이 경로를 쓴다. 스택에서 이 파일을 바꾼 커밋은 a2e18ab의 232행 분모 수정뿐이고, 꼭대기 rds-auto-stop에도 event-batches는 한 번도 나오지 않는다. 배치 경로는 meterengine_event_ingest_total만 올리므로 저장 건수 패널에는 보이지만, 지연과 5xx는 어느 패널에도 잡히지 않는다.",
+      "evidence": "deploy/grafana/dashboards/meterengine-storage.json:71,110,149,154,193 @ 457a0d8; backend/src/main/java/com/meterengine/event/controller/EventBatchController.java:27 @ 457a0d8; demo/sdk/src/meter-engine-client.ts:95 @ origin/feat/llm-service-demo",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "수정 제안: 수집 API 네 패널의 uri=\"/v1/events\"를 uri=~\"/v1/events|/v1/event-batches\"로 넓힌다. 배치 한 요청은 최대 100건이라 단건과 섞으면 평균과 p99가 흐려지므로, sum은 sum by (uri)로, histogram_quantile은 sum by (le, uri)로 바꿔 경로별 선을 따로 그린다. 5xx 비율도 분자와 분모를 uri별로 나눈다. 패널 제목의 \"(POST /v1/events)\"도 함께 고친다. 검사: 자동 테스트 대상이 아니다. python3로 json.load가 통과하는지, http_server_requests를 쓰는 expr 모두에 event-batches가 들어갔는지 확인한다. 로컬 compose의 Grafana에서 배치 요청을 보낸 뒤 네 패널에 /v1/event-batches 선이 나타나는지 본다."
+    },
+    {
+      "id": "G-168",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "medium",
+      "summary": "블루그린 중 옛 색의 이벤트 수집이 42P10으로 500이 된다는 주장은 C450-000과 같은 원인이고 재현된다. 부가 주장인 #445 payment_attempt.mode 건은 이 묶음 범위가 아니다.",
+      "reason": "V45 46-47행이 (organization_id, transaction_id) 유일 인덱스를 없앤다. 그래서 #449 EventRepository.java:32의 INSERT가 postgres:18에서 42P10으로 실패한다. Flyway는 마이그레이션마다 커밋하므로 V45 커밋부터 V46, V46_1, 스프링 기동, deploy.sh 513행 대기, 529-533행 전환까지 옛 색이 500을 낸다. 새 색이 90초 안에 준비되지 않으면 on_exit가 discard_target(246-266행)으로 새 색을 지우고, 이미 커밋된 V45 위에서 옛 코드가 계속 돈다. 그러면 다음에 배포가 성공할 때까지 500이 이어진다. FK 검증까지 한 트랜잭션에서 잡는다는 부분은 a2e18ab에서 NOT VALID와 V46_1로 나뉘어 고쳐졌다. V27 지적은 지금 #445의 V30__add_payment_attempt_mode.sql 5행 DROP DEFAULT에 해당하고, 여기서는 검증하지 않았다.",
+      "evidence": "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:46-47 @ 457a0d8; backend/src/main/java/com/meterengine/event/repository/EventRepository.java:32 @ 7ce9d36; deploy/deploy.sh:246-266,268-279,513-515 @ 457a0d8; backend/src/main/resources/db/migration/V30__add_payment_attempt_mode.sql:5 @ origin/feat/billing-payments",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "C450-000와 같은 원인이라 그쪽에 묶었다. 두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none. 제안 심각도 medium. C450-000과 원인이 같다. V45가 PK를 바꾸면서 옛 색의 ON CONFLICT 대상이 사라진다. 상세의 '90초 안에 준비되지 않으면 다음 성공 배포까지 이어진다'는 V45가 커밋된 뒤 V46_1이나 스프링 기동이 늦을 때만 맞다. V45 자체가 시간 초과로 실패하면 V45가 롤백되고 옛 색이 되살아난다(G-161 참고). 같은 유형으로 든 V27은 지금 #445 V30__add_payment_attempt_mode.sql 5행(DROP DEFAULT)이다. 고칠 PR도 방법도 달라 이 묶음 밖이고, 다른 묶음의 findings에도 따로 올라 있지 않다. 피해 판단은 C450-000과 같다. 서버는 개발 서버 하나이고 운영 도입사가 없다. SDK 재시도와 멱등 키 덕분에 배포 중 짧은 오류는 대부분 메워진다. 다만 #450 이전 SHA로 롤백하면 단건 수집이 계속 500이다. 이를 막는 PR이나 설정은 없다. high에서 medium으로 낮춘다. 첫 관점 심각도는 high였고 두 번째 관점을 따라 medium로 적었다."
     },
     {
       "id": "G-171",
@@ -813,7 +1010,212 @@
       "notes": ""
     }
   ],
-  "new_findings": [],
+  "new_findings": [
+    {
+      "id": "Nk3-001",
+      "pr": 446,
+      "file": "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java",
+      "line": 104,
+      "severity": "low",
+      "category": "complexity",
+      "title": "sum 미터 전용 분기는 같은 집계 SQL을 한 번 더 감싼 우회로라서, 미터 필드가 늘 때마다 두 경로를 함께 고쳐야 한다",
+      "detail": "quantities()는 sum이면서 unit_size가 1이고 rounding이 none이면 sumQuantityByCustomerIdAndDimensionValues를 부른다. 이 메서드(BillableMetricUsageRepository 37~50행)는 code와 name이 빈 문자열인 BillableMetric 엔티티를 새로 만든 뒤 결국 같은 aggregate()를 부른다. 그러고는 GROUPING SETS로 이미 계산한 고객 합계(totalByCustomerId)를 버린다. 서비스는 그 합계를 115~125행에서 조합별 수량을 더해 다시 만든다. 결과도 쿼리도 aggregate()를 바로 부를 때와 같아서 빨라지는 것은 없다. 남는 효과는 두 가지다. 첫째, BillableMetricUsageServiceTest는 이 래퍼만 목으로 막아 두어 sum 경로의 aggregate()를 단위 테스트에서 한 번도 지나지 않는다. 둘째, 미터에 필드가 생길 때마다 가짜 엔티티 생성과 서비스 분기를 같이 고쳐야 한다. 실제로 #453(feat/environment-isolation)은 래퍼에 environment_id 오버로드를 하나 더 두었고, 서비스 분기도 environment 유무에 따라 둘로 나눴다(top의 BillableMetricUsageService 133~167행, BillableMetricUsageRepository 37~73행).",
+      "failure_scenario": "다음 PR이 BillableMetric에 집계 조건 필드(예: 필터 속성)를 더하고 aggregate()가 그 필드를 읽도록 고친다. 그런데 가짜 엔티티는 7인자 생성자로 만들어져 그 필드가 기본값으로 남는다. 그러면 가장 흔한 sum 미터만 새 조건 없이 집계되고, 다른 집계 방식은 맞게 나온다. 서비스 단위 테스트는 래퍼를 목으로 막아 두어 그대로 통과한다.",
+      "suggested_fix": "quantities()의 sum 분기와 sumQuantityByCustomerIdAndDimensionValues를 지우고 항상 billableMetricUsageRepository.aggregate(metric, start, end)를 부른다. BillableMetricUsageServiceTest도 aggregate()를 목으로 막도록 바꾼다.",
+      "verdict": "confirmed",
+      "reason": "주장은 코드와 맞다. #446이 서비스에 sum 분기(BillableMetricUsageService.java 104~126행)를 새로 넣었고, 래퍼 sumQuantityByCustomerIdAndDimensionValues(BillableMetricUsageRepository.java 37~50행)는 code와 name이 빈 문자열인 7인자 BillableMetric을 만들어 같은 aggregate()로 넘긴다. 7인자 생성자의 기본값이 unit_size 1, rounding none이고 서비스 분기 조건도 같아서 변환 결과가 같다. DimensionUsage 2인자 생성자는 raw=quantity, 분자=quantity, 분모=1이라 서비스가 다시 더한 합계도 GROUPING SETS 합계와 같다. 그래서 지금 동작은 맞고, 쿼리 수와 결과도 aggregate()를 바로 부를 때와 같다. 이 분기는 #446에서 바뀌지 않은 BillableMetricUsageServiceTest가 래퍼를 목으로 막고 있어서 그 테스트를 살리는 일만 한다. 손해는 실제로 있다. 래퍼는 미터 필드 가운데 넷만 넘기므로, aggregate()가 읽는 필드가 늘면 sum 미터에서만 그 필드가 빠질 수 있다. #453이 바로 그 경우다. environment_id를 넣으려고 래퍼에 7인자 오버로드를 더했고, 서비스 분기도 환경 유무로 둘로 나눴다(top의 BillableMetricUsageService 133~167행, BillableMetricUsageRepository 37~73행). #453이 이것을 빠뜨렸다면 sum 미터만 test와 live 이벤트를 섞어 청구했을 것이다. 심각도는 low로 낮춘다. 지금은 결과가 틀리지 않고, MetricAggregationIntegrationTest가 실제 DB에서 sum 경로를 끝까지 확인하기 때문이다. k1~k6의 findings와 already_refuted에 같은 지적은 없다. G-124는 집계 조건 SQL이 여러 저장소에 중복된다는 지적이라 이것과 다르다. 수정 제안: 1. BillableMetricUsageService.quantities()에서 104~126행 sum 분기를 지우고 항상 billableMetricUsageRepository.aggregate(metric, start, end)를 부른다. quantities()는 한 줄짜리라 aggregate(...) 안으로 옮겨도 된다. 남는 java.util.HashMap FQN도 같이 정리된다.\n2. BillableMetricUsageRepository에서 sumQuantityByCustomerIdAndDimensionValues(37~50행)를 지운다. 다른 호출처는 없다(grep 결과 서비스와 서비스 테스트뿐이다).\n3. 후속 스택: #453은 래퍼의 environmentId 오버로드와 서비스의 환경별 분기를 더하는데, 리베이스할 때 둘 다 버린다. 실제 aggregate()가 metric.getEnvironmentId()를 바로 읽으므로 따로 고칠 것은 없다.\n컨트롤러와 DTO는 건드리지 않으므로 openapi.yaml은 바뀌지 않는다. 마이그레이션도 없다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-002",
+      "pr": 446,
+      "file": "backend/src/main/java/com/meterengine/pricing/dto/PriceRateResponse.java",
+      "line": 20,
+      "severity": "medium",
+      "category": "openapi-drift",
+      "title": "단가 응답의 tiers가 openapi.yaml에는 배열이 아니라 PriceRateTier 객체 하나로 적혀 있다",
+      "detail": "PriceRateResponse 20행과 BillableMetricPricePriceRate 17행은 @JsonRawValue 문자열에 @Schema(type = \"array\", implementation = PriceRateTier.class)를 붙였다. 그 결과 생성된 openapi.yaml 5905행(PriceRateResponse)과 4456행(BillableMetricPricePriceRate)에는 tiers가 $ref: PriceRateTier, 즉 단일 객체로 들어 있다. 실제 응답은 [{\"up_to\":..,\"unit_price\":..}] 배열이고, 배열로 적힌 것은 요청 스키마(CreatePriceRateRequest, 4806행)뿐이다. 같은 PR에서 BillableMetricPricePriceRate의 dimension_values와 unit_price 설명도 지웠고, graduated와 volume 모델에서 unit_price가 null이 된다는 내용은 문서 어디에도 없다. 프론트(lib/api/pricing.ts 5~9행)와 SDK(types.ts 140행)는 문서를 따르지 않고 배열과 null을 손으로 적었다. 저장소의 다른 배열 필드는 @ArraySchema를 쓴다(ApiKeySecretResponse 19행). top(feat/rds-auto-stop)의 openapi.yaml 7659행과 9557행도 그대로다.",
+      "failure_scenario": "naming.md대로 백엔드 스키마를 보고 타입을 만들거나 openapi 생성기로 클라이언트를 만들면 tiers가 PriceRateTier 하나로 잡힌다. 그 상태로 구간 단가 응답을 받으면 tiers.up_to가 undefined가 되거나 역직렬화가 실패한다. 생성된 문서만 보는 연동자는 unit_price를 항상 숫자로 다루다가 구간 단가에서 깨진다.",
+      "suggested_fix": "두 필드를 @ArraySchema(schema = @Schema(implementation = PriceRateTier.class))로 바꾼다. unit_price에는 per_unit일 때만 값이 있고 graduated와 volume에서는 null이라는 설명을 붙이고, 지운 dimension_values 설명도 되살린 뒤 openapi.yaml을 다시 만든다.",
+      "verdict": "confirmed",
+      "reason": "이 PR이 새로 더한 응답 필드 tiers가 openapi.yaml에 배열이 아니라 PriceRateTier 객체 하나로 실렸다. 실제 응답과 DB 제약은 배열이다. 저장소 안의 프론트와 SDK는 손으로 배열 타입을 적어서 지금 깨지지는 않는다. 하지만 공개 API 계약인 openapi.yaml을 보거나 생성기로 클라이언트를 만드는 연동자는 구간 단가 응답을 처리하지 못한다. 다른 묶음의 C446-002(옛 화면이 unit_price null에서 깨짐)는 프론트 렌더링 문제이고 스키마 문서 문제와는 별개라 중복이 아니다. 수정 제안: 1) 두 DTO의 tiers를 `@JsonRawValue @ArraySchema(arraySchema = @Schema(description = \"graduated, volume 모델의 구간. per_unit이면 null이다\"), schema = @Schema(implementation = PriceRateTier.class)) String tiers`로 바꾼다. 생성 결과가 type: array가 아니면 @JsonRawValue String 대신 List<PriceRateTier>로 역직렬화해 담는 방식으로 바꾼다.\n2) 두 DTO의 unit_price에 'per_unit 모델의 단가. graduated, volume 모델에서는 null이다' 설명을 붙인다. BillableMetricPricePriceRate의 dimension_values 설명('단가가 적용되는 속성 값 조합. 빈 객체는 속성 조건 없이 적용되는 기본 단가다')을 되살린다.\n3) ./gradlew build로 backend/openapi.yaml을 다시 만들어 같이 커밋한다. 4456행과 5905행이 type: array, items: $ref PriceRateTier로 바뀌었는지 확인한다.\n4) 스택 위 브랜치에도 같은 줄이 그대로 있으니 rebase한 뒤 각 브랜치에서 openapi.yaml을 다시 만든다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-003",
+      "pr": 446,
+      "file": "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java",
+      "line": 53,
+      "severity": "low",
+      "category": "duplication",
+      "title": "그 달에 유효한 버전을 고르는 판정이 #446 안에 네 벌 복사돼, #447의 규칙 변경이 요금제 목록에만 반영되지 않았다",
+      "detail": "effective_from <= 월 < effective_until 판정은 ChargeService.active(213~214행), BillableMetricPriceService.list(61~62행), PricePlanService.list(53~55행), PriceRateService.delete(String)(171~173행)에 각각 따로 있고, 엔티티에는 판정 메서드가 없다. 지난 월 불변 검사도 PricePlanService 64, 112행과 PriceRateService 90, 149행에 복사돼 있다. 다음 PR #447은 보관 기능을 넣으면서 이 규칙을 PricePlan.applies/stops와 PriceRate.applies/stops로 옮기고, ChargeService, BillableMetricPriceService, PriceRateService가 그 메서드를 부르도록 바꿨다. 그런데 PricePlanService.list의 월 필터는 #446의 복사본 그대로 남았고, ChargeService.active는 호출처 없이 남았다. top(feat/rds-auto-stop)의 PricePlanService 66~70행과 ChargeService 222행도 그대로다.",
+      "failure_scenario": "#447 이후 10월에 요금제를 보관하면 archived_from이 2026-11이 된다. 청구(ChargeService)는 11월부터 그 요금제를 적용하지 않지만, GET /v1/price-plans?month=2026-11&status=all은 같은 요금제를 그 달의 유효 버전으로 돌려준다. 이 목록으로 그 달 요금제를 보여 주는 클라이언트는 실제 청구와 다른 기본료와 최소 사용료를 표시한다.",
+      "suggested_fix": "#446 단계에서 PriceRate와 PricePlan에 appliesTo(String month) 같은 판정 메서드를 두고, 네 곳이 모두 그 메서드를 부르게 한다. 지난 월 불변 검사도 메서드 하나로 모은다.",
+      "verdict": "confirmed",
+      "reason": "지적한 사실은 모두 코드와 맞다. #446 head에서 그 달 유효 판정은 ChargeService.java 213~214행(active), BillableMetricPriceService.java 61~62행, PricePlanService.java 53~55행, PriceRateService.java 171~173행에 따로 있고, 네 파일 모두 #446이 처음 만들었다. #447(feat/resource-archive)은 이 규칙을 PricePlan.applies/stops(59~69행)와 PriceRate.applies/stops로 옮겨 ChargeService(57, 70, 74, 77행), BillableMetricPriceService(61, 73행), PriceRateService(120, 194행)를 바꿨지만 PricePlanService.list의 월 필터는 #446 복사본 그대로라 archived_from을 보지 않는다. ChargeService.active(#447 215행, top 222행)는 호출처가 없다. 그래서 10월에 보관한 요금제(archived_from=2026-11)는 청구에서 11월부터 빠지지만 GET /v1/price-plans?month=2026-11&status=all(또는 archived)은 그 요금제를 11월 범위에 든 버전으로 돌려준다. 청구와 목록이 실제로 갈렸으니 중복이 만든 불일치가 맞다. 다만 심각도는 낮춘다. 기본값 status=active에서는 보관 요금제가 상태 필터로 먼저 빠지므로 applies와 옛 범위 판정의 결과가 같다. 저장소 안의 호출처를 보면 프론트(lib/api/pricing.ts)는 month를 보내지 않고, 데모 verify는 기본 active로 부른다. 어긋남은 SDK listPricePlans처럼 month와 status=all|archived를 함께 넘기는 API 소비자에게만 나타난다. 지난 월 불변 검사의 복사본은 서로 갈린 흔적이 없어 결과를 바꾸지 않는다. 기존 지적과 겹치지 않는다. C447-002는 stops 조건의 오류이고, G-118은 #451 SQL이 미터 활성 기간을 무시하는 문제, G-124는 #450 진단 SQL 이야기다. 수정 제안: #446: PricePlan과 PriceRate에 #447과 같은 이름으로 public boolean applies(String month)를 둔다. 내용은 effectiveFrom <= month이고 effectiveUntil이 없거나 month보다 뒤인지 보는 것이다. 판정 네 곳을 이 메서드로 바꾼다. ChargeService 57, 73행은 rate.applies(period)와 plan.applies(period)를 부르고 active()는 지운다. BillableMetricPriceService 61~62행은 !rate.applies(period)로, PricePlanService.list 53~55행은 plan.applies(month.toString())로, PriceRateService.delete(String) 171~173행은 rate.applies(current)로 바꾼다. #446만 보면 동작이 같은 리팩터링이다. 지난 월 불변 검사는 결과 차이가 없으니 손대지 않는다. #447 리베이스: applies에 archivedFrom 조건을 더한 #447 버전을 남기고, 충돌 난 PricePlanService.list는 plan.applies(month.toString())를 유지한다. 남은 ChargeService.active는 지운다. 그러면 month와 status=all|archived로 조회할 때 archived_from 이후 달에는 보관 요금제가 빠져 청구와 같아진다. 주석은 필요할 때만 선언 위 한 줄로 쓴다. 컨트롤러, DTO, 마이그레이션은 바뀌지 않으므로 openapi.yaml을 다시 만들 필요가 없다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-004",
+      "pr": 447,
+      "file": "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java",
+      "line": 103,
+      "severity": "low",
+      "category": "api-design",
+      "title": "저장하지 않은 모드의 토스 키를 보관하면 404가 아니라 500이 난다",
+      "detail": "delete는 키가 없으면 new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING)을 던진다. 이 code는 ErrorCode에서 HttpStatus.CONFLICT다. 그래서 BusinessException 생성자가 상태가 맞지 않는다며 IllegalArgumentException을 던진다(BusinessExceptionTest가 이 동작을 고정한다). 이 예외는 GlobalExceptionHandler의 Exception 처리로 가서 500 internal_server_error와 'unhandled exception' error 로그가 된다. 같은 PR의 PaymentMethodService.delete는 404 코드인 PAYMENT_METHOD_NOT_FOUND를 쓴다. error-handling.md도 종류 클래스에는 같은 상태의 code만 넘기라고 정한다. DELETE /v1/toss-payments-credentials/{mode} 문서에는 404가 없고, TossPaymentsCredentialIntegrationTest에는 DELETE 검사가 없어서 이 문제가 잡히지 않는다. 스택 끝(feat/rds-auto-stop 107행)도 같다.",
+      "failure_scenario": "test 키만 저장한 도입사의 관리자가 DELETE /v1/toss-payments-credentials/live를 보낸다. 404 대신 500 internal_server_error를 받고, 서버에는 스택 트레이스가 error로 남아 5xx 지표에 잡힌다.",
+      "suggested_fix": "ErrorCode에 404 상수(예: TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND)를 더해 NotFoundException으로 던진다. 409를 의도했다면 ConflictException(TOSS_PAYMENTS_CREDENTIAL_MISSING)으로 바꾼다. 없는 모드를 보관하는 통합 테스트와 @ApiResponse 문서도 더한다.",
+      "verdict": "confirmed",
+      "reason": "반박해 보려 했지만 실패 경로가 코드에 그대로 있다. TossPaymentsCredentialService.delete(103행)는 저장된 키가 없으면 new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING)을 만든다. 그런데 이 code는 ErrorCode.java:69에서 HttpStatus.CONFLICT다. BusinessException 생성자(13-16행)는 상태가 다르면 IllegalArgumentException을 던지고, BusinessExceptionTest가 이 동작을 고정한다. GlobalExceptionHandler에는 IllegalArgumentException 처리가 없어서 208-212행 Exception 처리로 간다. 결과는 500 internal_server_error와 'unhandled exception' error 로그다. docs/contributing/error-handling.md 23행(상태별 종류 클래스에 맞는 ErrorCode를 넘긴다)도 어긴다. 같은 code를 쓰는 다른 곳(PaymentSettingService 49행, PaymentMethodRegistrationService 128행, PaymentAttemptService 360행)은 모두 ConflictException으로 던지고, 같은 PR의 PaymentMethodService.delete는 404 code인 PAYMENT_METHOD_NOT_FOUND를 쓴다. 이 줄은 #447에서 처음 생겼고 스택 끝(feat/rds-auto-stop 107행)까지 그대로다. 검사도 이 경로를 다루지 않는다. TossPaymentsCredentialIntegrationTest에는 DELETE 요청이 없고, BusinessArchiveIntegrationTest 178행은 저장된 test 키만 보관한다. openapi.yaml의 deleteTossPaymentsCredential 응답에도 204, 401, 403, 429뿐이고 404나 409는 없다. 심각도는 low로 낮춘다. 콘솔 settings/page.tsx는 보관하지 않은 행에만 보관 버튼을 보여 주므로 이 경로에는 API 키로 직접 호출할 때만 닿는다. 트랜잭션은 아무 것도 바꾸지 않은 채 롤백되므로 데이터 피해도 없다. 피해는 잘못된 상태 코드와, 5xx 지표와 error 로그에 남는 잡음이다. 같은 묶음의 비슷한 400 대신 500 지적들도 low로 매겼다. k1~k6 findings와 already_refuted 목록에서 겹치는 항목은 찾지 못했다. 수정 제안: 1. ErrorCode의 NOT_FOUND 묶음(40행 부근)에 TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, \"토스페이먼츠 키를 찾을 수 없습니다\")를 더한다. 2. TossPaymentsCredentialService.delete 103행에서 이 code로 NotFoundException을 던진다. PaymentMethodService.delete와 같은 방식이다. 409를 원한다면 ErrorCode는 그대로 두고 ConflictException(TOSS_PAYMENTS_CREDENTIAL_MISSING)으로 바꾸는 방법도 있다. 3. deleteTossPaymentsCredential에 @ApiResponses를 더한다. 400 validation_error와 404(또는 409) code 설명을 같은 컨트롤러의 다른 메서드와 같은 형식으로 쓴다. 4. ./gradlew build로 openapi.yaml을 다시 만든다. ErrorResponse code enum과 DELETE 응답이 바뀌므로 같이 커밋한다. 5. 새 V__ 마이그레이션은 필요 없다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-005",
+      "pr": 447,
+      "file": "backend/src/main/java/com/meterengine/event/service/EventService.java",
+      "line": 57,
+      "severity": "medium",
+      "category": "openapi-drift",
+      "title": "새 409 code 셋이 어느 엔드포인트 문서에도 없고, 수집 API는 문서에 없는 409를 낸다",
+      "detail": "PR이 더한 customer_archived, resource_archived, archive_restoration_conflict가 나오는 곳은 다음과 같다. POST /v1/events(EventService 55-57행), PUT /v1/customers/{id}, PUT /v1/billable-metrics/{code}, POST /v1/billable-metrics/{code}/price-rates, POST /v1/price-plans, 단가와 요금제 restorations, PUT /v1/webhook-endpoints/{id}, 카드 등록 링크 세 경로(PaymentMethodRegistrationService 58, 89, 111행). 그런데 openapi.yaml에서 세 code는 ErrorResponse enum에만 있고, 엔드포인트별 응답 설명에는 한 번도 나오지 않는다. 이 저장소의 컨트롤러는 상태마다 code=...를 적는다. 이 PR이 지운 고객, 미터 DELETE 설명이 그 예다. backend/README.md는 '오류 코드는 openapi.yaml을 본다'고 한다. PR은 DELETE /v1/customers/{id}와 DELETE /v1/billable-metrics/{code}의 404, 409 설명을 지웠고, 새 GET /v1/customers/{id}와 restorations에는 404도 적지 않았다. 남은 설명 가운데 틀린 것도 있다. PriceRateController 92행은 204를 '지웠다'로, WebhookEndpointController 88행은 '삭제'와 '목록에서 숨긴다'로 적는다. 하지만 이제 GET /{id}는 보관한 엔드포인트를 200으로 돌려준다. 스택 끝 EventController에도 409가 없다.",
+      "failure_scenario": "문서를 보고 수집 클라이언트를 만든 도입사는 보관 고객의 이벤트에 404 customer_not_found만 대비한다. 지운 DELETE 설명에도 '그 id로 보낸 이벤트는 404'라고 있었다. 실제로는 문서에 없는 409 customer_archived가 와서, 클라이언트는 이를 알 수 없는 오류로 보고 재전송하거나 버린다. 운영자는 openapi에서 이 code의 뜻을 찾지 못한다.",
+      "suggested_fix": "각 엔드포인트의 @ApiResponses에 409(code=customer_archived 등)와 404를 적는다. 보관 DELETE의 204 설명과 웹훅 삭제 설명을 보관 동작에 맞게 고친 뒤 openapi.yaml을 다시 만든다.",
+      "verdict": "confirmed",
+      "reason": "반박부터 시도했지만 무너지지 않았다. #447은 수집 API와 여러 수정, 등록 경로에 409 customer_archived, resource_archived, archive_restoration_conflict를 새로 던지게 했다. 그런데 컨트롤러 @ApiResponses에는 하나도 적지 않아, 생성된 openapi.yaml에서 세 code는 ErrorResponse enum에만 나온다. 핵심 수집 경로인 POST /v1/events는 문서상 응답이 200, 400, 404뿐이다. backend/README.md 201행은 오류 코드는 openapi.yaml을 보라고 하고, 이 컨트롤러들은 상태마다 code=를 나열한다. 그래서 문서를 보고 만든 클라이언트는 실제 응답과 어긋난다. error-handling.md 38행의 '생성 문서는 실제 응답과 다를 수 있다'는 오류 본문 모양에 관한 말이라 반박 근거가 되지 않는다. 저장소 안의 SDK와 데모는 409를 재시도하지 않는 거절로 처리하므로 문제는 외부 도입사 쪽에 생긴다. 웹훅 컨트롤러는 원래 @ApiResponses를 적지 않는 부분이 있어서, 저장소의 모든 컨트롤러가 code를 적는다는 일반화는 다소 과하다. 그래도 PR이 명시적인 409 목록을 둔 엔드포인트(PUT 고객, PUT 미터, 카드 등록 링크)에서 새 code가 빠진 것은 그대로 남는다. 같은 code를 다룬 C450-003은 #450의 POST /v1/customers 재등록 경로만 다루므로 중복이 아니다. 관련 지적으로 함께 고치면 된다. 수정 제안: 문서 주석만 고친다. 동작은 그대로 둔다.\n1) EventController ingestEvent에 409(ErrorResponse)를 더한다. 설명은 'code=customer_archived: 보관한 고객이다. 이미 저장된 transaction_id면 200 duplicate=true'로 한다.\n2) CustomerController: PUT에 409 customer_archived를 더한다. DELETE에 404 customer_not_found와 '반복 요청은 204'를 다시 적는다. GET /{id}와 restorations에 404를 적는다.\n3) BillableMetricController: PUT의 409 목록에 resource_archived를 더한다. DELETE와 restorations에 404 billable_metric_not_found를 적는다.\n4) PriceRateController: 단가 등록에 409(resource_archived, customer_archived, archive_restoration_conflict)를 더한다. 보관 DELETE의 204 설명을 '보관했다. 본문 없음'으로 고친다. restorations에 404와 409 archive_restoration_conflict를 적는다.\n5) PricePlanController: 등록과 restorations에 409(customer_archived, archive_restoration_conflict)를 적는다.\n6) WebhookEndpointController: PUT에 409 resource_archived를 적는다. DELETE의 summary와 description을 보관 동작(기본 목록에서 빠지고, GET /{id}와 status=archived로는 조회된다)에 맞춘다.\n7) PaymentMethodRegistrationController: 세 경로의 409 목록에 customer_archived를 더한다.\n8) ./gradlew build로 backend/openapi.yaml을 다시 만들어 같이 커밋한다.\nPOST /v1/customers의 409는 C450-003으로 #450에서 고친다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-006",
+      "pr": 447,
+      "file": "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java",
+      "line": 62,
+      "severity": "medium",
+      "category": "logic-divergence",
+      "title": "요금제 month 조회가 보관 버전의 가림 규칙을 몰라, 청구와 다른 요금제를 그 달 요금제로 보여 준다",
+      "detail": "ChargeService(71-77행)는 applies 또는 stops인 버전 중 effective_from이 가장 늦은 것을 고르고, applies가 아니면 뺀다. 그래서 보관한 최신 버전은 archived_from부터 이전 버전으로 돌아가지 않는다. 이 PR의 테스트 의도와 같다. 반면 이 PR이 status 필터를 더한 PricePlanService.list(50-67행)의 month 필터는 effective_from과 effective_until만 보고 archived_from과 stops는 보지 않는다. 기본값 status=active에서는 보관한 최신 버전이 빠지고 그 아래 버전이 그 달 요금제로 남는다. 단가는 BillableMetricPriceService가 같은 규칙으로 그 달 단가를 골라 주지만, 요금제에는 그렇게 골라 주는 API가 없다. 그래서 화면(frontend PricingWorkspace.tsx 25행 activePlan)도 status=all 목록에서 같은 단순 규칙을 다시 구현해 같은 결과를 낸다.",
+      "failure_scenario": "공통 요금제 V1(2026-01부터, 기본료 1만 원)과 V2(2026-03부터, 기본료 2만 원)가 있고, 2026-10에 V2를 보관해 archived_from이 2026-11이 됐다. 11월 청구 계산에서는 V2가 V1을 가려 기본료가 없다. 그런데 GET /v1/price-plans?month=2026-11은 V1을 돌려주고 콘솔 요금제 화면도 11월 기본료를 1만 원으로 보여 줘서, 인보이스와 화면이 다르다.",
+      "suggested_fix": "버전 선택을 ChargeService와 함께 쓰는 메서드로 빼서, month가 있으면 그 달에 실제로 적용되는 버전만 돌려준다. 아니면 적용 요금제를 골라 주는 조회(billable-metric-prices와 같은 꼴)를 두고 화면이 그것을 쓰게 한다.",
+      "verdict": "confirmed",
+      "reason": "#446에서는 month 목록이 effective_from 내림차순이라 첫 항목이 곧 청구에 쓰는 요금제였다. 이 PR이 보관(archived_from, stops)과 status 필터를 더하면서 그 대응이 깨졌다. ChargeService는 보관한 최신 버전이 그 달에도 적용되거나 아래 버전을 가리는 것으로 보는데, list의 month 필터는 effective_from과 effective_until만 본다. 그래서 기본값 status=active는 이번 달에 아직 적용 중인 보관 버전을 빼고, 다음 달에는 가려진 구 버전을 돌려준다. status=all이면 다음 달에도 적용되지 않는 보관 버전이 첫 항목으로 온다. 저장소 안에서 이 응답의 첫 항목을 그 달 요금제로 쓰는 곳은 demo verify(#450부터 동작)이고, 콘솔 activePlan은 같은 단순 규칙을 다시 구현했다. 이미 올라온 지적(C447-002는 stops의 종료월, G-118은 #451 미터 활성 기간, C446-009는 화면 절사 표시)과 겹치지 않는다. 수정 제안: ChargeService 71-77행의 선택 규칙을 PricePlan 쪽 정적 메서드 하나로 뺀다. 예를 들어 effective_from 내림차순 목록과 month를 받아 고객 ID별 적용 요금제 Map을 돌려주는 PricePlan.effective(plans, month)를 두고 ChargeService가 그것을 쓴다. PricePlanService.list는 month가 있으면 status와 상관없이 그 메서드로 고른 customerId의 버전 하나만 돌려준다(0개 또는 1개). month가 없으면 지금처럼 status로 거른 이력을 돌려준다. PricePlanController listPricePlans의 @Operation description에 month가 있으면 그 달 청구에 적용되는 버전만 돌려주고 status는 이력 조회에만 쓴다고 적는다. ./gradlew build로 backend/openapi.yaml을 다시 만들어 같이 커밋한다. 4인자 list에 빠진 @Transactional(readOnly = true)도 붙인다. 콘솔이 청구와 같은 요금제를 보여 주려면 PricingWorkspace의 activePlan을 고쳐야 한다. effective_from 내림차순에서 applies 또는 stops인 첫 버전을 고르고 applies가 아니면 없음으로 보거나, listPricePlans(customerId, month) 결과를 쓴다. 이 부분은 frontend 담당 묶음에 넘긴다. V__ 마이그레이션은 필요 없다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-007",
+      "pr": 451,
+      "file": "backend/src/main/java/com/meterengine/customer/service/CustomerService.java",
+      "line": 39,
+      "severity": "low",
+      "category": "dead-code",
+      "title": "(UUID) null == null 분기 때문에 고객 *Scoped 쿼리 다섯 개가 한 번도 실행되지 않는 채 들어오고, 환경 격리 SQL은 어느 PR에서도 실행되는 diff로 검토받지 못한다",
+      "detail": "이 PR은 CustomerService(39-41, 49-51, 123-125행), CustomerDirectoryService(24-26, 38-40행), CustomerRegistrationService(80-83행)를 `(UUID) null == null ? 기존 쿼리 : xxxScoped(organizationId, (UUID) null, ...)` 꼴로 바꿨다. 조건이 늘 true라서 CustomerRepository 54-84행의 listScoped, findScoped, listExternalScoped, lockScoped 두 개는 호출되지 않는다. backend/src/test에도 이 메서드를 부르는 곳이 없다. Customer.environmentId 필드와 5인자 생성자 역시 이 PR에서는 언제나 null이다. 다음 PR #453의 diff는 서비스 조건만 BusinessEnvironmentContext.environmentId() == null로 바꾸고 CustomerRepository는 건드리지 않는다. 그래서 test 고객과 live 고객을 가르는 SQL은 #451에서는 죽은 코드이고, #453에서는 diff 밖의 문맥으로만 존재한다. 게다가 environment_id IS NOT DISTINCT FROM CAST(null AS uuid)는 IS NULL과 결과가 같으므로 scoped 쿼리 하나로 두 경우를 모두 처리할 수 있다. 그런데도 같은 조회가 두 벌로 생겼다. 하나는 findByOrganizationIdAndId처럼 파생 쿼리 이름에 @Query로 environment_id IS NULL을 덧붙인 legacy용이고, 다른 하나가 scoped용이다. legacy용 이름은 '조직과 id로 찾는다'고 읽히지만 실제로는 legacy 환경만 본다.",
+      "failure_scenario": "lockScoped(UUID, UUID, Collection)에서 organization_id 조건이나 FOR SHARE를 빠뜨려도 #451의 CI와 리뷰는 그 코드를 실행하지 않으니 통과한다. #453 리뷰어는 CustomerRepository가 diff에 없어서 보지 않는다. 환경이 실제로 쓰이기 시작하면 이벤트 수집의 고객 활성 확인(CustomerDirectoryService.active)이 다른 환경의 고객을 잠그거나 통과시키는데, 이 문제는 운영에서 처음 드러난다. 또 고객 조회 조건을 고칠 때 legacy 쿼리와 scoped 쿼리 중 하나만 고치면 환경마다 결과가 달라진다.",
+      "suggested_fix": "#451에서는 삼항 분기, *Scoped 메서드, Customer.environmentId를 빼고, #453에서 실제 환경 값과 함께 넣는다. 두 벌을 유지할 이유가 없다면 IS NOT DISTINCT FROM을 쓰는 scoped 쿼리 하나로 합치고 legacy 전용 @Query는 지운다. 어느 쪽을 남기든 test 고객과 live 고객이 섞이지 않는지 확인하는 통합 테스트를 같은 PR에 넣는다.",
+      "verdict": "refuted",
+      "reason": "사실관계는 맞다. #451이 고객 서비스 세 곳에 (UUID) null == null 분기 6개를 넣었고, 그래서 *Scoped 쿼리 다섯 개는 #451 안에서 한 번도 실행되지 않는다. 다음 PR #453의 diff도 CustomerRepository를 건드리지 않는다. 하지만 이 지적의 핵심 결과인 \"환경 격리 SQL이 어느 PR의 CI와 리뷰에서도 실행되지 않아 운영에서 처음 드러난다\"는 사실이 아니다. #453은 OrganizationEnvironmentIntegrationTest(408줄)를 새로 넣는데, 이 테스트가 다섯 쿼리를 모두 test, live, legacy 환경에서 실제로 실행한다. 환경별 목록(listScoped), 다른 환경 고객 조회 404(findScoped), 같은 external_id 재등록이 환경마다 따로 동작하는지(listExternalScoped), 단건 수집에서 다른 환경 고객 404(exists에서 findScoped), 배치 수집에서 다른 환경 고객이 customer_not_found로 거절되는지(active에서 lockScoped(Collection))를 단언한다. 지적이 예로 든 CustomerDirectoryService.active의 환경 혼입도 #453 CI가 잡는다. 지금의 SQL에도 결함이 없다. organization_id 조건, ORDER BY id FOR SHARE, FOR UPDATE가 다 있다. 팀 규칙(CONTRIBUTING.md, docs/contributing/)에 다음 PR에서 쓸 코드를 미리 넣지 말라는 조항도 없다. 남는 주장, 곧 legacy 전용 @Query와 scoped 쿼리가 두 벌이고 서비스 삼항 분기로 고르니 IS NOT DISTINCT FROM 쿼리 하나로 합치자는 내용은 k4의 G-134와 같다. G-134는 \"legacy 전용 쿼리와 서비스의 삼항 분기 48곳\"을 짚고 \"scoped 쿼리 하나로 합쳐 legacy 전용 변형과 삼항 분기를 지우라\"고 제안한다. 다른 묶음 지적 G-134과 겹친다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-008",
+      "pr": 451,
+      "file": "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java",
+      "line": 28,
+      "severity": "low",
+      "category": "duplication",
+      "title": "outstanding_amount를 대시보드와 인보이스 검색이 서로 다르게 계산해서 같은 달의 미수금이 화면마다 다르게 나온다",
+      "detail": "결제 상태별 금액 분류는 #449의 InvoiceViewLinkService.publicPayment(274-283행)에 이미 있다. pending이면 outstanding을 null로 두고, unpaid와 failed면 amount를, paid, partially_canceled, canceled면 납부액(amount - canceled)을 쓴다. #451은 이 코드를 쓰지 않고 같은 분류를 두 번 새로 구현했다. WorkspaceQueryService.invoices(382-397행)는 publicPayment처럼 pending이 하나라도 있으면 outstanding_amount를 null로 둔다. 반면 DashboardService는 OUTSTANDING = {unpaid, pending, failed}(28행)로 pending까지 더한 값(89-93행)을 같은 이름 outstanding_amount로 낸다. COLLECTED 집합(27행)도 publicPayment 276-277행을 그대로 옮겨 적은 것이다. 결제 상태 문자열 목록은 InvoicePaymentService 상수, WorkspaceQueryService.PAYMENT_STATUSES(43-52행), DashboardService의 두 집합, InvoiceViewLinkService에 따로따로 있다. naming.md 원칙인 '같은 개념에 같은 낱말, 다른 개념에 다른 낱말'에도 어긋난다.",
+      "failure_scenario": "2026-10에 결제 확인 중(pending)인 11,000원 인보이스와 미결제(unpaid)인 22,000원 인보이스가 있다고 하자. 개요(/v1/dashboard)의 결제 대기액은 33,000원이다. 인보이스 화면(/v1/invoices/search?month=2026-10)은 outstanding_amount가 null이라 '미수금은 확정 전'으로 보인다. 공개 인보이스 링크는 결제 대기액을 '확인 중'으로 보인다. 운영자는 어느 숫자가 맞는지 알 수 없다. 나중에 refunded 같은 상태를 더하면 네 곳 중 빠뜨린 곳에서 금액이 0이나 미수로 잘못 잡힌다.",
+      "suggested_fix": "payment 패키지에 상태별 납부액, 취소액, 미수금을 계산하는 공용 값(InvoicePaymentResponse의 메서드나 별도 값 타입)을 두고 InvoiceViewLinkService, DashboardService, WorkspaceQueryService가 모두 이것을 쓰게 한다. 대시보드가 일부러 pending을 포함하는 것이라면 필드 이름을 따로 짓고(예: awaiting_amount) API 설명에 차이를 적는다.",
+      "verdict": "confirmed",
+      "reason": "핵심 사실은 맞다. 대시보드(#451 신규)는 OUTSTANDING = {unpaid, pending, failed}로 pending 금액까지 더한 값을 null이 될 수 없는 long outstanding_amount로 낸다. 같은 PR의 인보이스 검색은 pending이 하나라도 있으면 outstanding_amount를 null로 둔다. #449 공개 링크도 pending이면 null이다. 같은 JSON 키가 엔드포인트마다 다른 정의를 갖는 것이고, naming.md 14행의 '같은 개념에 같은 낱말, 다른 개념에 다른 낱말' 원칙에 어긋난다. /v1/dashboard는 @ReadAccess라 read API 키 사용자도 받는다. 그런데 openapi.yaml의 대시보드 outstanding_amount에는 설명이 없고, 검색 쪽 설명은 'pending이 있으면 null'이다. API 사용자가 두 값을 같은 미수금으로 보고 맞춰 보면 금액이 맞지 않는다. 상태별 분류도 publicPayment, WorkspaceQueryService, DashboardService 세 곳에 따로 있어서, 상태를 하나 더하면 서로 어긋날 수 있다. 다만 지적의 failure_scenario에 있는 '운영자는 어느 숫자가 맞는지 알 수 없다'는 과장이다. 개요 화면(overview/page.tsx 22행)이 그 값에 '결제 대기액, 미결제와 결과 확인 중'이라고 써 붙여 pending 포함을 밝히고 있고, 인보이스 화면은 '미수금'이라는 다른 이름을 쓴다. 돈이 잘못 청구되지도 않는다. 그래서 심각도를 low로 낮춘다. 기존 지적과도 겹치지 않는다. C451-004는 금액 집계 테스트가 없다는 지적이고, D-005와 X-009는 프론트의 상태 이름, G-112는 결제 모드 고정에 관한 지적이다. 수정 제안: 1. payment/dto에 서비스 사이 전달용 record InvoicePaymentAmount(Long paidAmount, Long outstandingAmount)를 둔다. from(InvoicePaymentResponse)로 만들고 publicPayment 274-284행의 규칙을 그대로 옮긴다: pending이면 둘 다 null, 성공 상태면 납부액, unpaid와 failed면 미수액. 응답 DTO에 메서드를 더하면 직렬화될 위험이 있어 별도 타입으로 둔다. 이름 규칙(Info, Data 같은 접미사 금지)에도 맞는다.\n2. InvoiceViewLinkService.publicPayment, WorkspaceQueryService 382-397행, DashboardService 27-28행과 79-93행이 모두 이 타입을 쓰게 바꾸고, 각 파일에 흩어진 상태 집합은 지운다.\n3. DashboardResponse의 outstanding_amount를 다른 엔드포인트와 같은 정의(unpaid와 failed 합계)로 맞추고, pending 합계는 pending_amount로 따로 낸다. 지금 값을 그대로 두고 싶으면 키 이름을 바꿔도 된다(예: awaiting_amount). 어느 쪽이든 DashboardController 설명에 정의를 적는다.\n4. ./gradlew build로 openapi.yaml을 다시 만들어 함께 커밋한다.\n5. 프론트 수정: overview/page.tsx 22행의 결제 대기액은 outstanding_amount + pending_amount로 보이거나 둘을 따로 보인다. lib/api/workspace.ts 17행 타입도 고친다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-009",
+      "pr": 451,
+      "file": "backend/src/main/java/com/meterengine/query/dto/SearchPageResponse.java",
+      "line": 13,
+      "severity": "medium",
+      "category": "type-design",
+      "title": "검색 응답의 summary가 Map<String, Object>라서 검색 API 7종의 요약 필드가 OpenAPI에 없고, 키를 바꿔도 컴파일과 CI가 잡지 못한다",
+      "detail": "SearchPageResponse의 summary는 Map<String, Object>이고, 각 서비스가 문자열 키로 값을 채운다(WorkspaceQueryService 198-212, 262-292, 373-405행, WorkspaceQueryRepository 130, 177, 290-296행). 그래서 openapi.yaml의 SearchPageResponse* 스키마 7개는 summary를 additionalProperties: {}로만 낸다(9562-9715행). no_rate_count, outstanding_amount(null 가능), has_pending, status_counts, month_amount, finalization_scope 같은 계약이 문서에 하나도 없다. 그 결과 프론트는 billing.ts 13행, invoices.ts 20행, pricing.ts 30행, PricingWorkspace.tsx 34행에서 요약 타입을 손으로 적었고, SDK에는 UsageSearchSummary 하나만 있다. naming.md는 '프론트 API 타입은 백엔드 스키마 이름 그대로'라고 하는데, 따를 스키마 자체가 없다. options 응답에는 고객 검색 요약(active_count 등)이 그대로 따라 나간다.",
+      "failure_scenario": "백엔드에서 no_rate_count를 missing_rate_count로 바꾸거나 키에 오타를 내도 Java 컴파일, openapi.yaml 재생성(diff가 생기지 않음), 프론트 타입 검사가 모두 통과한다. 그러면 가격 화면에는 '단가가 없는 미터 undefined개'가 나오고, 인보이스 화면은 outstanding_amount ?? 0 처리 때문에 '미수금 0원'을 보여 준다.",
+      "suggested_fix": "자원마다 요약 record(고객, 미터, 가격, 사용량, 청구 예정, 인보이스)를 두고 SearchPageResponse<T, S>로 바꿔서 OpenAPI가 요약 스키마를 내게 한다. 프론트와 SDK의 요약 타입은 그 스키마 이름을 따른다.",
+      "verdict": "confirmed",
+      "reason": "요약 필드가 타입 없는 Map이라 검색 API 7종의 summary가 openapi.yaml 스키마에서 빠졌다. 그런데 팀 규칙은 openapi.yaml을 API 계약의 정본으로 삼고, 프론트도 이 파일을 보고 타입을 쓴다. 이 구조 때문에 OpenApiDocumentTest의 JSON 키 snake_case 검사도 summary 키를 보지 못한다. 그래서 테스트가 확인하지 않는 키를 바꾸면 컴파일, openapi.yaml diff 검사, 프론트 타입 검사, 통합 테스트가 모두 통과한 채로 화면이 깨진다. 제보 내용 중 두 가지는 바로잡는다. 첫째, 예로 든 no_rate_count와 outstanding_amount는 WorkspaceQueryIntegrationTest 119, 138, 242행이 확인하므로 이 둘을 바꾸면 CI가 잡는다. 둘째, '문서에 하나도 없다'도 지나치다. no_rate_count, month_amount, finalization_scope, outstanding_amount가 null일 수 있다는 점은 @Operation 설명 글에 적혀 있다. 다만 스키마에는 없고, has_pending, status_counts, unpriced_count, month_billable_customer_count 같은 키는 설명 글에도 없다. 같은 스택의 #450 EventIssuesResponse는 summary를 record로 두어 스키마로 낸다. 같은 성격의 응답인데 #451만 계약을 내지 않는다. 수정 제안: 1) SearchPageResponse를 SearchPageResponse<T, S>로 바꾸고 summary 타입을 S로 둔다.\n2) query/dto에 요약 record를 최상위 클래스로 만든다. 중첩 record 'Summary'로 만들면 EventIssuesResponse.Summary와 스키마 이름이 겹친다(openapi.yaml 9837행).\n- ArchiveSearchSummary(active_count, archived_count): 고객 검색, 미터 검색, options에 쓴다.\n- PriceSearchSummary(month, metric_count, no_rate_count).\n- UsageSearchSummary(month, customer_count, metric_count, line_count, nonzero_customer_count).\n- DraftInvoiceSearchSummary: 지금 넣는 14개 키 그대로.\n- InvoiceSearchSummary(mode, invoice_count, supply_amount, tax_amount, total_amount, canceled_amount, has_pending, outstanding_amount, status_counts). outstanding_amount는 Long에 @Schema(nullable = true)를 달고, status_counts는 Map<String, Long>으로 둔다.\n@JsonProperty로 지금과 같은 JSON 키를 유지한다.\n3) WorkspaceQueryRepository의 customers, metrics, prices와 WorkspaceQueryService의 page(), options(), usage, drafts, invoices가 Map 대신 record를 만들게 하고, 컨트롤러 반환 타입도 바꾼다.\n4) ./gradlew build로 openapi.yaml을 다시 만들어 같이 커밋한다. JSON 모양은 그대로라 화면과 SDK 동작은 바뀌지 않는다. 프론트와 SDK의 손으로 쓴 요약 타입을 새 스키마 이름으로 바꾸는 일(naming.md 46행)은 후속으로 둔다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-010",
+      "pr": 451,
+      "file": "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java",
+      "line": 44,
+      "severity": "low",
+      "category": "openapi-drift",
+      "title": "새 검색, 내보내기, 조건부 수정, 멱등 생성 API의 OpenAPI에 400, 404, 409 응답이 없고, CSV 6종은 base64 바이트로 문서화된다",
+      "detail": "WorkspaceQueryController의 엔드포인트 15개는 200과 공통 401, 403, 429만 문서화한다. 실제로 나는 응답 중 문서에 없는 것은 세 가지다. SearchParameters가 던지는 400 validation_error(page, size, month, sort, status 등), customer_id에 해당하는 고객이 없을 때의 404 customer_not_found, 내보내기가 10000행을 넘을 때의 400이다(searchCustomers, searchInvoices, exportInvoices 등). 같은 PR의 PATCH(openapi.yaml 2079-2135행, updateConditionalCustomer)는 이 기능의 핵심인 409 resource_version_conflict와 If-Match 형식 오류 400을 싣지 않았고, PUT에도 409가 더해지지 않았다. createCustomer와 createBillableMetric은 Idempotency-Key를 받으면서도 409 idempotency_conflict와 Idempotency-Replayed 헤더를 문서화하지 않는다. 이 두 오류 코드는 ErrorResponse enum(8350-8351행)에만 있다. 내보내기 6종은 반환형이 ResponseEntity<byte[]>라서 text/csv 스키마가 type: string, format: byte(base64)로 나간다(430, 775, 1757, 3612, 3831, 6589행). 같은 PR의 EventExportController는 @ApiResponse로 format 없는 string을 명시했다(42-45행). error-handling.md는 openapi.yaml이 오류 코드 목록의 정본이라고 정한다.",
+      "failure_scenario": "문서를 보고 클라이언트를 만드는 도입사나 OpenAPI 생성기는 PATCH의 409를 처리하는 분기를 만들지 않는다. 그래서 동시 수정 충돌이 일반 오류로 보인다. 생성된 클라이언트는 CSV 본문을 base64로 해석하려다 데이터가 깨지거나 디코딩 오류를 낸다.",
+      "suggested_fix": "검색과 내보내기에 400(validation_error), 404(customer_not_found) @ApiResponse를 더한다. PUT과 PATCH에는 409 resource_version_conflict와 If-Match 형식 오류 400을, 생성 API에는 409 idempotency_conflict, Idempotency-Key 400, Idempotency-Replayed 헤더를 적는다. 내보내기 6종은 EventExportController처럼 text/csv string 스키마를 명시하고 openapi.yaml을 다시 만든다.",
+      "verdict": "confirmed",
+      "reason": "이 PR이 더한 오류 경로는 실제로 동작하고 테스트로도 확인된다. 그런데 생성된 openapi.yaml에는 하나도 실리지 않았다. OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 나머지는 각 메서드의 @ApiResponses로만 문서에 들어간다. 기존 PUT, POST는 이 방식으로 400, 404, 409 code를 적어 왔다. #451의 WorkspaceQueryController 15개, PATCH 2개, PUT의 If-Match 처리, 생성 API의 Idempotency-Key 처리만 이 관례에서 빠졌다. CSV 6종의 200 응답은 ResponseEntity<byte[]>에서 type: string, format: byte(base64)로 만들어졌다. 같은 PR의 EventExportController는 format 없는 string으로 따로 적었다. error-handling.md 8행은 오류 code 목록을 openapi.yaml이 낸다고 정한다. 스택 최상단(feat/rds-auto-stop)에도 그대로 남아 있다. 서버 동작은 맞고 PATCH, 고객 생성, 고객 내보내기의 설명 문장에는 409나 400이 일부 적혀 있어서, 심각도는 낮음(low)으로 낮췄다. 두 가지는 원래 지적과 다르다. 404 customer_not_found는 고객, 미터 검색에서는 나지 않고 가격, 사용량, 청구 예정액, 인보이스의 검색과 내보내기에서만 난다. openapi.yaml 행 번호도 3행씩 다르다(433, 778, 1760, 3615, 3834, 6592행, PATCH는 1079, 2076행). 비슷한 지적은 따로 있지만 중복은 아니다. C450-003은 #450의 409 customer_archived를, G-006은 #442의 다른 컨트롤러를, G-111과 G-171은 멱등 계약 형식이 갈린 문제를 다룬다. 수정 제안: 1) WorkspaceQueryController: 검색, options, export 메서드에 400 validation_error @ApiResponse(ErrorResponse 스키마)를 더한다. 400의 description에는 export의 10000행 초과도 적는다. customer_id로 고객을 확인하는 prices, usage, drafts, invoices의 search와 export에는 404 customer_not_found를 더한다. export 6종의 200에는 EventExportController처럼 @ApiResponse(responseCode=\"200\", content=@Content(mediaType=\"text/csv\", schema=@Schema(type=\"string\")))를 단다. 같은 annotation이 15번 되풀이되면 클래스 안의 상수 description 문자열로 묶는다.\n2) CustomerController와 BillableMetricController: PUT과 PATCH에 409 resource_version_conflict와 400(If-Match 형식)을 더한다. PATCH에는 PUT과 같은 400, 404도 적는다. createCustomer와 createBillableMetric에는 409 idempotency_conflict와 400(Idempotency-Key 길이)을 더하고, 200/201 응답에 @Header(name=\"Idempotency-Replayed\")를 적는다.\n3) ./gradlew build로 backend/openapi.yaml을 다시 만들어 같이 커밋한다. 주석은 더하지 않는다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-011",
+      "pr": 451,
+      "file": "backend/src/main/java/com/meterengine/dashboard/dto/DashboardResponse.java",
+      "line": 28,
+      "severity": "low",
+      "category": "performance",
+      "title": "대시보드 응답이 화면에서 쓰지 않는 draft_invoice 전체와 페이지 없는 invoice_payments를 조회할 때마다 싣고, invoice_payments 항목은 InvoicePaymentResponse를 필드 단위로 복사한다",
+      "detail": "DashboardResponse(27-28행)에는 그 달 청구 예정 전체(DraftInvoiceService.preview 결과: 모든 고객의 라인, 속성 조합, 단가 없는 사용량, 음수 사용량)와 그 달 모든 인보이스의 결제 목록이 들어 있고, DashboardService(137-138행)가 이를 그대로 채운다. 같은 응답에 draft_supply_amount, unpriced_usage_count, negative_usage_count 요약이 이미 있다. 프론트 overview/page.tsx는 물론 스택 최상단까지 draft_invoice를 읽는 곳이 없고, frontend/src/lib/api/workspace.ts 18행의 타입 선언이 전부다. /v1/dashboard는 콘솔에 들어올 때마다 부르는 첫 화면이라, 쓰지 않는 응답이 고객 수, 미터 수, 속성 조합 수에 비례해 매번 커진다. 또 DashboardInvoice(30-42행)는 InvoicePaymentResponse의 필드 9개를 다시 선언하고, DashboardService 63-77행에서 하나씩 옮겨 담는다. 프론트는 이 항목을 InvoicePaymentResponse & {...} 타입으로 다룬다.",
+      "failure_scenario": "고객 5,000곳, 미터 3개, 고객마다 속성 조합이 몇 개씩인 도입사는 개요 화면을 열 때마다 수만 줄의 draft 라인을 JSON으로 직렬화한 수 MB짜리 응답을 받는다. 백엔드와 Next 서버가 매번 이 응답을 만들고 파싱하느라 프론트 기본 제한 5초(transport.ts TIMEOUT_MS) 안에 개요가 뜨지 않거나 힙 사용이 튄다. 고객별 수납 현황 표도 5,000행을 한 번에 그린다. 이 필드는 read 키로 공개된 계약이라 나중에 빼면 호환성이 깨진다. InvoicePaymentResponse에 필드(예: paid_amount)를 더하면 대시보드 항목에는 빠지는데, 프론트 타입은 있다고 믿으므로 화면에 undefined가 나온다.",
+      "suggested_fix": "DashboardResponse에서 draft_invoice를 빼고 개요에 필요한 합계와 건수만 남긴다. invoice_payments는 실패, 대기처럼 확인이 필요한 몇 건만 싣거나 size 상한을 두고, 전체는 /v1/invoices/search 페이지로 넘긴다. DashboardInvoice는 payment 필드에 InvoicePaymentResponse를 담고 고객 이름과 월만 더하는 구조로 바꾸거나 InvoiceSearchResponse를 재사용한다. backend/openapi.yaml과 frontend workspace.ts의 타입도 같이 고친다.",
+      "verdict": "confirmed",
+      "reason": "draft_invoice 부분만 확인된다. DashboardResponse 28행이 그 달 청구 예정 전체(DraftInvoiceResponse: 모든 고객의 라인, dimension_values, 단가 없는 사용량, 음수 사용량)를 싣고, DashboardService 138행이 preview 결과를 그대로 넣는다. 개요 화면은 같은 응답의 요약 필드(draft_supply_amount, unpriced_usage_count, negative_usage_count)만 읽는다. PR head와 스택 꼭대기(rds-auto-stop)의 frontend, demo, backend 어디에도 대시보드의 draft_invoice를 읽는 코드가 없다. 같은 데이터는 이미 GET /v1/invoices/draft와 이 PR의 /v1/invoices/draft/search로 받을 수 있다. /overview는 navigation.ts 4행에서 도입사의 기본 진입 화면이라, 콘솔에 들어올 때마다 고객 수와 속성 조합 수에 비례하는 쓰지 않는 JSON을 백엔드가 직렬화하고 Next 서버가 받아 파싱한다. 이 엔드포인트는 @ReadAccess라 read API 키에도 공개되고 openapi.yaml에 계약으로 올라가므로, 머지 뒤에 빼면 API 호환성이 깨진다. preview 계산 자체는 요약 값에 필요해 어차피 돌기 때문에 낭비는 직렬화와 전송, 파싱에 한정되고, 5초 제한 초과는 규모에 따라 달라 코드로 단정할 수 없어 심각도는 low로 낮춘다. 나머지 두 주장은 확인하지 않는다. invoice_payments는 개요의 고객별 수납 현황 표가 실제로 쓰고, 기존 /v1/invoice-payments도 페이지 없이 전체를 준다. DashboardInvoice가 InvoicePaymentResponse 필드를 다시 선언하는 것은 맞지만 InvoicePaymentResponse는 스택 꼭대기까지 바뀌지 않아 지금 갈라진 곳이 없고, 미래 필드 추가 시나리오는 가정이다. 기존 k1-k6 findings와 already_refuted에 대시보드 응답 크기나 draft_invoice를 다룬 항목은 없다(C451-001, G-108, G-125는 archived_at, C451-004는 테스트 부족). 수정 제안: DashboardResponse에서 draft_invoice 컴포넌트와 DraftInvoiceResponse import를 뺀다. DashboardService.get의 생성자 호출 마지막 인자 draft(138행)를 지운다. preview 호출과 요약 계산(129, 135, 136행)은 그대로 둔다. ./gradlew build로 backend/openapi.yaml을 다시 만들어 같이 커밋한다(DashboardResponse 스키마에서 draft_invoice가 빠진다). frontend/src/lib/api/workspace.ts 18행 타입에서 draft_invoice와 5행 DraftInvoiceResponse import를 지우고, frontend/e2e/contract-server.mjs 71행 목에서 draft_invoice를 지운다. invoice_payments와 DashboardInvoice 구조는 이 수정 범위에 넣지 않는다. 스택 꼭대기까지 DashboardResponse 28행이 같아 후속 브랜치에 그대로 올라간다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    },
+    {
+      "id": "Nk3-012",
+      "pr": 451,
+      "file": "demo/sdk/src/meter-engine-client.ts",
+      "line": 238,
+      "severity": "low",
+      "category": "operations",
+      "title": "SDK exportCsv가 기본 10초 타임아웃과 재시도 3회를 그대로 써서, 오래 걸리는 내보내기 계산을 서버에서 여러 번 겹쳐 돌린다",
+      "detail": "이 PR이 더한 exportCsv(234-238행)는 canRetry=true로 request를 부르고, 호출마다 signal이나 타임아웃을 받지 않는다. 클라이언트 기본값은 timeoutMs 10000, maxRetries 3(6-7행)이고, retry.ts의 isRetryable은 MeterEngineTimeoutError를 재시도 대상으로 본다. /v1/usage/export, /v1/invoices/draft/export, /v1/invoices/export는 요청마다 그 달 집계 전체나 조직 전체 인보이스를 다시 계산한다(WorkspaceQueryService.usage 130행, drafts 224행, invoices 302행). Spring MVC 동기 처리라 클라이언트가 연결을 끊어도 서버 스레드와 DB 조회는 끝까지 돈다. 서버 쪽 상한은 application.properties의 JDBC socketTimeout 30초뿐이다. 10초를 넘기기 쉬운 호출인데도 SDK는 10초에 끊고 같은 요청을 다시 보낸다.",
+      "failure_scenario": "도입사가 SDK로 이벤트가 많은 달에 exportCsv('usage', { month })를 부르고, 서버 계산에 25초가 걸린다. SDK는 10초마다 끊고 0.8초 이내 백오프 뒤 다시 보내므로, 약 30초 동안 같은 집계가 4번 시작되고 그중 최대 3개가 동시에 돈다. 요청마다 커넥션 풀(기본 10개)의 연결 하나를 잡고 event 표를 반복 스캔해서, 같은 풀을 쓰는 이벤트 수집 응답이 느려진다. 호출자는 결국 MeterEngineTimeoutError만 받는다.",
+      "suggested_fix": "exportCsv와 무거운 검색 메서드(searchUsage, searchDraftInvoices, searchInvoices)는 타임아웃이 나도 재시도하지 않게 한다. canRetry를 false로 두거나 MeterEngineTimeoutError만 재시도 대상에서 뺀다. 호출마다 timeoutMs와 signal을 받는 옵션도 연다. 서버 쪽에는 내보내기 트랜잭션에 statement_timeout을 걸어, 클라이언트가 버린 계산이 끝까지 돌지 않게 한다.",
+      "verdict": "refuted",
+      "reason": "실패 시나리오의 전제인 도입사의 SDK exportCsv 호출이 일어날 수 없다. demo/README.md는 @meterengine/sdk를 배포하지 않고 이 workspace 안에서만 쓴다고 정하고, package.json도 private: true다. 스택 꼭대기(feat/rds-auto-stop)까지 demo/web, llm-service, core, csvdemo 어디에서도 exportCsv나 searchUsage, searchDraftInvoices, searchInvoices를 부르지 않는다. 타임아웃이 나도 GET을 재시도하는 정책은 이 PR이 만든 것이 아니다. 앞선 PR이 더한 aggregateBillableMetricUsages(/v1/usage)와 previewDraftInvoice(/v1/invoices/draft)가 같은 월 집계를 같은 기본값(10초, 3회)으로 이미 재시도한다. 이 PR은 그 기존 방식을 따랐을 뿐이다. 이 PR 코드로 서버에 겹친 계산이 생기는 실행 경로가 없으므로 결과가 실제로 나지 않는다.",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": []
+    }
+  ],
   "out_of_scope": [
     {
       "id": "C447-009",
@@ -822,8 +1224,11 @@
     }
   ],
   "not_done": [
-    "#450 지적 판정과 네 PR의 추가 검토는 진행 중이다.",
-    "확인된 지적의 수정은 #447부터 진행 중이다."
+    "#450 지적 12건 판정 전: C450-006, C450-007, C450-012, G-119, G-132, G-170, C450-009, G-146, G-116, G-117, G-124, G-176",
+    "추가 검토 새 지적 후보 42건 검증 전(#446 10건, #447 14건, #450 13건 중복 정리 전, #451 5건). 목록은 k3-handover.md",
+    "확인된 지적의 수정은 세 건(C446-004, C447-013, C451-001)만 끝냈고 나머지는 넘기기 문서의 순서대로 남았다.",
+    "C447-002 수정은 하다 멈췄고 커밋하지 않았다. 변경 내용은 k3-handover.md",
+    "G-111(Idempotency-Key 계약 통일)은 k2 G-181과 겹쳐 k2 판정을 본 뒤 하려고 미뤘다."
   ],
   "checks": [
     {
@@ -845,6 +1250,31 @@
       "command": "cd backend && ./gradlew build (origin/feat/billing-queries 53ec3d9)",
       "result": "pass",
       "detail": "기준선. 261초, openapi.yaml 변화 없음"
+    },
+    {
+      "command": "cd backend && ./gradlew test --tests 'com.meterengine.pricing.VersionedPricingIntegrationTest' --tests '*TestNamingConventionTest' spotlessCheck checkstyleTest (claude/s456-k3-446 0cab3a4)",
+      "result": "pass",
+      "detail": "VersionedPricingIntegrationTest 12/12, 이름 규칙 ArchUnit 통과"
+    },
+    {
+      "command": "cd backend && ./gradlew test --tests 'com.meterengine.dashboard.DashboardIntegrationTest' --tests '*NamingConventionTest' --tests '*OpenApiDocumentTest' checkstyleMain checkstyleTest (claude/s456-k3-451 96875c6)",
+      "result": "pass",
+      "detail": "수정 전 새 테스트 실패, 수정 뒤 5/5 통과(수정 에이전트 실행)"
+    },
+    {
+      "command": "cd backend && ./gradlew compileJava compileTestJava spotlessCheck checkstyleMain checkstyleTest; test --tests 'com.meterengine.payment.client.*' 'MeterEngineApplicationTest' '*NamingConventionTest' '*OpenApiDocumentTest' (claude/s456-k3-447 02bb1af)",
+      "result": "pass",
+      "detail": "수정 에이전트 실행, 리뷰 에이전트가 컴파일 재확인"
+    },
+    {
+      "command": "cd backend && ./gradlew build (세 수정 브랜치)",
+      "result": "not-run",
+      "detail": "넘기기 지시로 수정 브랜치의 전체 build를 돌리지 못했다. 세 커밋 모두 컨트롤러, DTO, API 설명을 바꾸지 않아 openapi.yaml 변화는 없어야 한다."
+    },
+    {
+      "command": "demo 검사(python, pnpm)",
+      "result": "not-run",
+      "detail": "demo 수정(C446-001, C446-008, G-147, C450-010, C451-010)을 시작하지 못했다."
     }
   ]
 }
