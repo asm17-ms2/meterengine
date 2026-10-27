@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,34 +21,54 @@ import org.springframework.web.servlet.HandlerMapping;
 @ExtendWith(OutputCaptureExtension.class)
 class RequestAuditFilterTest {
   @Test
-  void 이미_처리된_요청의_감사저장이_실패해도_예외와_요청식별자를_숨기지_않는다(CapturedOutput output) {
+  void 이미_처리된_요청의_감사저장이_실패해도_응답은_그대로_두고_요청식별자와_오류를_남긴다(CapturedOutput output) throws Exception {
     RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
-    IllegalStateException failure = new IllegalStateException("audit database unavailable");
-    doThrow(failure)
+    doThrow(new IllegalStateException("audit database unavailable"))
         .when(recorder)
         .record(isNull(), eq("POST"), eq("/v1/customers"), eq(201), anyLong(), any(), any());
-    RequestAuditFilter filter = new RequestAuditFilter(recorder);
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    RequestAuditFilter filter = new RequestAuditFilter(recorder, registry);
     MockHttpServletRequest request = new MockHttpServletRequest("POST", "/v1/customers");
     request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers");
     MockHttpServletResponse response = new MockHttpServletResponse();
     AtomicBoolean processed = new AtomicBoolean();
-    assertThatThrownBy(
-            () ->
-                filter.doFilter(
-                    request,
-                    response,
-                    (incoming, outgoing) -> {
-                      processed.set(true);
-                      response.setStatus(201);
-                      response.flushBuffer();
-                    }))
-        .isSameAs(failure);
+    filter.doFilter(
+        request,
+        response,
+        (incoming, outgoing) -> {
+          processed.set(true);
+          response.setStatus(201);
+        });
     assertThat(processed).isTrue();
-    assertThat(response.isCommitted()).isTrue();
+    assertThat(response.getStatus()).isEqualTo(201);
     String requestId = response.getHeader("X-Request-ID");
     assertThat(requestId).isNotBlank();
     assertThat(output.getOut() + output.getErr())
         .contains("Request audit failed request_id=" + requestId);
+    assertThat(registry.get("meterengine.request.audit.failures").counter().count()).isEqualTo(1.0);
+  }
+
+  @Test
+  void 처리중_예외가_난_요청은_감사저장이_실패해도_원래_예외를_던진다() {
+    RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
+    doThrow(new IllegalStateException("audit database unavailable"))
+        .when(recorder)
+        .record(isNull(), eq("POST"), eq("/v1/customers"), eq(500), anyLong(), any(), any());
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    RequestAuditFilter filter = new RequestAuditFilter(recorder, registry);
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/v1/customers");
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers");
+    IllegalArgumentException failure = new IllegalArgumentException("handler failed");
+    assertThatThrownBy(
+            () ->
+                filter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    (incoming, outgoing) -> {
+                      throw failure;
+                    }))
+        .isSameAs(failure);
+    assertThat(registry.get("meterengine.request.audit.failures").counter().count()).isEqualTo(1.0);
   }
 
   @Test
@@ -127,7 +148,7 @@ class RequestAuditFilterTest {
     request.addHeader("X-Private", "private-header");
     request.setContent("private-body".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     var response = new MockHttpServletResponse();
-    new RequestAuditFilter(recorder)
+    new RequestAuditFilter(recorder, new SimpleMeterRegistry())
         .doFilter(request, response, (incoming, outgoing) -> response.setStatus(status));
     ArgumentCaptor<RequestAuditTarget> target = ArgumentCaptor.forClass(RequestAuditTarget.class);
     verify(recorder)
@@ -140,7 +161,7 @@ class RequestAuditFilterTest {
     MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
     request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, path);
     MockHttpServletResponse response = new MockHttpServletResponse();
-    new RequestAuditFilter(recorder)
+    new RequestAuditFilter(recorder, new SimpleMeterRegistry())
         .doFilter(request, response, (incoming, outgoing) -> response.setStatus(200));
     verifyNoInteractions(recorder);
     assertThat(response.getHeader("X-Request-ID")).isNotBlank();
