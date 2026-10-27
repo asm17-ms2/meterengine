@@ -3,13 +3,11 @@ mock_provider "aws" {
 }
 
 variables {
-  name_prefix               = "meterengine-test-slo"
-  account_id                = "928618307647"
-  region                    = "ap-northeast-2"
-  db_identifier             = "meterengine-test-slo-db"
-  db_arn                    = "arn:aws:rds:ap-northeast-2:928618307647:db:meterengine-test-slo-db"
-  legacy_schedule_name      = "meterengine-test-slo-stop-rds"
-  legacy_scheduler_role_arn = "arn:aws:iam::928618307647:role/meterengine-test-slo-scheduler-role"
+  name_prefix   = "meterengine-test-slo"
+  account_id    = "928618307647"
+  region        = "ap-northeast-2"
+  db_identifier = "meterengine-test-slo-db"
+  db_arn        = "arn:aws:rds:ap-northeast-2:928618307647:db:meterengine-test-slo-db"
 }
 
 run "scoped_automatic_restart" {
@@ -36,8 +34,8 @@ run "scoped_automatic_restart" {
   }
 
   assert {
-    condition     = local.workflow_policy.Statement[3].Resource == "arn:aws:scheduler:ap-northeast-2:928618307647:schedule/default/meterengine-test-slo-stop-rds"
-    error_message = "Only the old RDS schedule may be changed."
+    condition     = alltrue(flatten([for statement in local.workflow_policy.Statement : [for action in statement.Action : !startswith(action, "scheduler:") && action != "iam:PassRole"]]))
+    error_message = "The workflow must not change any schedule or pass a role."
   }
 
   assert {

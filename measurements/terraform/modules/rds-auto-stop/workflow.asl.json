@@ -1,5 +1,5 @@
 {
-  "Comment": "Stop only a confirmed RDS seven-day automatic restart, then retire the legacy RDS schedule",
+  "Comment": "Stop only a confirmed RDS seven-day automatic restart",
   "QueryLanguage": "JSONata",
   "StartAt": "Configure",
   "TimeoutSeconds": 7200,
@@ -189,7 +189,7 @@
       "Choices": [
         {
           "Condition": "{% $dbStatus = \"stopped\" %}",
-          "Next": "ReadLegacySchedule"
+          "Next": "AutomaticStopConfirmed"
         },
         {
           "Condition": "{% $dbStatus in [\"stopping\", \"available\"] %}",
@@ -197,96 +197,6 @@
         }
       ],
       "Default": "UnexpectedDatabaseStatus"
-    },
-    "ReadLegacySchedule": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::aws-sdk:scheduler:getSchedule",
-      "Arguments": {
-        "Name": "{% $config.legacy_schedule_name %}",
-        "GroupName": "{% $config.legacy_schedule_group %}"
-      },
-      "TimeoutSeconds": 30,
-      "Output": {},
-      "Next": "ValidateLegacySchedule",
-      "Assign": {
-        "legacySchedule": "{% $states.result %}"
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ]
-    },
-    "ValidateLegacySchedule": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Condition": "{% $legacySchedule.State = \"DISABLED\" %}",
-          "Next": "AutomaticStopConfirmed"
-        },
-        {
-          "Condition": "{% $legacySchedule.State = \"ENABLED\" and $legacySchedule.Name = $config.legacy_schedule_name and $legacySchedule.GroupName = $config.legacy_schedule_group and $legacySchedule.Target.Arn = \"arn:aws:scheduler:::aws-sdk:rds:stopDBInstance\" and $legacySchedule.Target.RoleArn = $config.legacy_scheduler_role_arn and $parse($legacySchedule.Target.Input).DbInstanceIdentifier = $config.db_identifier %}",
-          "Next": "DisableLegacySchedule"
-        }
-      ],
-      "Default": "LegacyScheduleChanged"
-    },
-    "DisableLegacySchedule": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::aws-sdk:scheduler:updateSchedule",
-      "Arguments": "{% $merge([$sift($legacySchedule, function($value, $key) { $key in [\"Name\", \"GroupName\", \"ScheduleExpression\", \"ScheduleExpressionTimezone\", \"FlexibleTimeWindow\", \"Target\", \"Description\", \"StartDate\", \"EndDate\", \"KmsKeyArn\", \"ActionAfterCompletion\"] }), {\"State\": \"DISABLED\"}]) %}",
-      "TimeoutSeconds": 30,
-      "Output": {},
-      "Next": "ReadBackLegacySchedule",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ]
-    },
-    "ReadBackLegacySchedule": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::aws-sdk:scheduler:getSchedule",
-      "Arguments": {
-        "Name": "{% $config.legacy_schedule_name %}",
-        "GroupName": "{% $config.legacy_schedule_group %}"
-      },
-      "TimeoutSeconds": 30,
-      "Output": {},
-      "Next": "ConfirmLegacyDisabled",
-      "Assign": {
-        "legacyState": "{% $states.result.State %}"
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ]
-    },
-    "ConfirmLegacyDisabled": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Condition": "{% $legacyState = \"DISABLED\" %}",
-          "Next": "AutomaticStopConfirmed"
-        }
-      ],
-      "Default": "LegacyScheduleNotDisabled"
     },
     "IgnoredEvent": {
       "Type": "Succeed"
@@ -306,22 +216,12 @@
     "UnexpectedDatabaseStatus": {
       "Type": "Fail",
       "Error": "UnexpectedDatabaseStatus",
-      "Cause": "RDS is not in a supported state. This execution did not change the legacy schedule; check its current state."
+      "Cause": "RDS is not in a supported state; check its current state"
     },
     "NativeEventNotConfirmed": {
       "Type": "Fail",
       "Error": "NativeEventNotConfirmed",
-      "Cause": "Native RDS automatic-start event was not confirmed. This execution did not change the legacy schedule; check its current state."
-    },
-    "LegacyScheduleChanged": {
-      "Type": "Fail",
-      "Error": "LegacyScheduleChanged",
-      "Cause": "Legacy RDS schedule target changed; no update was made"
-    },
-    "LegacyScheduleNotDisabled": {
-      "Type": "Fail",
-      "Error": "LegacyScheduleNotDisabled",
-      "Cause": "Legacy RDS schedule disable could not be confirmed"
+      "Cause": "Native RDS automatic-start event was not confirmed; no stop was attempted"
     },
     "NativeEventQueryIncomplete": {
       "Type": "Fail",

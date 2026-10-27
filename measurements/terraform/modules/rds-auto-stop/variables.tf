@@ -23,19 +23,6 @@ variable "db_arn" {
   type = string
 }
 
-variable "legacy_schedule_name" {
-  type = string
-}
-
-variable "legacy_schedule_group" {
-  type    = string
-  default = "default"
-}
-
-variable "legacy_scheduler_role_arn" {
-  type = string
-}
-
 variable "enabled" {
   type    = bool
   default = true

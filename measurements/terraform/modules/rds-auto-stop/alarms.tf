@@ -1,6 +1,6 @@
 resource "aws_cloudwatch_metric_alarm" "execution_failed" {
   alarm_name          = "${local.name}-execution-failed"
-  alarm_description   = "Automatic RDS stop or legacy schedule cutover failed; inspect execution history"
+  alarm_description   = "Automatic RDS stop failed; inspect execution history"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
   threshold           = 1
