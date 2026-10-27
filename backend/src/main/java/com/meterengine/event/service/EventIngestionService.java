@@ -4,6 +4,7 @@ import com.meterengine.customer.api.CustomerDirectory;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
@@ -38,6 +39,15 @@ public class EventIngestionService {
 
   @Transactional
   public IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
+    try {
+      return store(organizationId, request);
+    } catch (BusinessException rejection) {
+      eventIngestMetrics.recordRejected();
+      throw rejection;
+    }
+  }
+
+  private IngestEventResponse store(UUID organizationId, IngestEventRequest request) {
     try {
       customerDirectory.check(organizationId, request.customerId());
     } catch (com.meterengine.global.error.ConflictException exception) {
