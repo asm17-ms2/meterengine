@@ -132,7 +132,7 @@ docker build -t meterengine-backend .
 | --- | --- | --- | --- |
 | live 키 | `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` | | 데모 도입사, admin 스코프. 프론트와 데모 CLI의 기본값 |
 | test 키 | `me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC` | | 데모 도입사, admin 스코프 |
-| member | `member@meterengine.local` | `local-member-password` | 데모 도입사와 `로컬 두 번째 도입사`에 소속 |
+| member | `member@meterengine.local` | `local-member-password` | 데모 도입사와 `로컬 두 번째 도입사`의 대표관리자 |
 | operator | `operator@meterengine.local` | `local-operator-password` | 소속이 없어 로그인하면 도입사가 없다 |
 
 - 정본은 `src/main/resources/db/local/R__local_credentials.sql`이다.
