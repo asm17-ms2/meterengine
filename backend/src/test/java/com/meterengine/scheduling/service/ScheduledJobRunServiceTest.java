@@ -44,20 +44,9 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
-  void 실행_이력이_없어도_기동할_때_마지막_성공_시리즈를_등록한다() {
-    scheduledJobRunService.register(JOB_NAME);
-
-    assertThat(
-            meterRegistry
-                .get(ScheduledJobRunService.LAST_SUCCESS_GAUGE_NAME)
-                .tag("job_name", JOB_NAME)
-                .gauge()
-                .value())
-        .isZero();
-  }
-
-  @Test
   void 게이지를_읽을_때는_DB를_조회하지_않는다() {
+    when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
+        .thenReturn(Optional.of(OffsetDateTime.parse("2026-10-26T12:00:00Z")));
     scheduledJobRunService.register(JOB_NAME);
 
     lastSuccessGauge().gauge().value();
@@ -211,13 +200,13 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
-  void 성공한_적이_없는_작업도_0으로_게이지를_등록한다() {
+  void 성공한_적이_없는_작업은_등록해도_게이지를_내지_않는다() {
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.empty());
 
     scheduledJobRunService.register(JOB_NAME);
 
-    assertThat(lastSuccessGauge().gauge().value()).isZero();
+    assertThat(lastSuccessGauge().gauge()).isNull();
   }
 
   @Test
