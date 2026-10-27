@@ -8,7 +8,7 @@
 | --- | --- |
 | `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
-| `demo/` | 데모와 검증 CLI, Claude Code 사용량 브리지(Python 3.9+, 표준 라이브러리), TypeScript SDK와 테스트 웹(Node 24, pnpm) |
+| `demo/` | 데모와 검증 CLI, Claude Code 사용량 브리지(Python 3.9+, 표준 라이브러리), TypeScript SDK와 테스트 웹, Lumen LLM 서비스 예제(Node 24, pnpm) |
 | `deploy/` | 배포 구성. compose, Caddy, 배포 스크립트 |
 | `measurements/` | 측정과 측정에 쓰는 SUT |
 
@@ -41,6 +41,7 @@ cd demo && corepack enable pnpm && pnpm install && pnpm --filter @meterengine/de
 docker compose up -d
 ```
 
+- Lumen LLM 서비스 예제는 [로컬 실행 안내](demo/llm-service/README.md#로컬-실행)를 따른다.
 - 위 키는 `bootRun`이 로컬 DB에만 넣는 키이고, 로컬 계정과 키 목록은 `backend/README.md`의 "인증"에 있다.
 - 자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조.
   - API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
