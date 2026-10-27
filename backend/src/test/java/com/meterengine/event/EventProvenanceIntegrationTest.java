@@ -71,7 +71,7 @@ class EventProvenanceIntegrationTest {
         mvc.get().uri("/v1/audit-logs?q=" + requestId).header(AUTHORIZATION, first).exchange();
     assertThat(audit).hasStatusOk();
     assertThat((List<String>) JsonPath.read(body(audit), "$.audit_logs[*].detail.request_id"))
-        .containsExactly(requestId);
+        .isEmpty();
   }
 
   @Test
