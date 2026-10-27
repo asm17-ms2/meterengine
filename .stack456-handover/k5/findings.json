@@ -3758,7 +3758,8 @@
    "still_in_top_at_review": true,
    "source": "addy-accessibility, addy-web-quality-audit, snagly-a11y-visual",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): axe scrollable-region-focusable(serious)이 1440px의 /event-rejections에서 나온다."
   },
   {
    "id": "X-022",
@@ -4046,7 +4047,8 @@
    "still_in_top_at_review": true,
    "source": "addy-accessibility, snagly-a11y-visual",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): axe heading-order(moderate)가 390px에서 /customers, /usage, /events, /event-rejections, /invoices, /payments, /integrations/[id]에 나온다."
   },
   {
    "id": "X-058",
@@ -4461,6 +4463,22 @@
    "source": "snagly-auth-security-perf",
    "review_status": "unverified",
    "prior_verdicts": []
+  },
+  {
+   "id": "L-001",
+   "pr": 443,
+   "branch": "feat/product-design",
+   "file": "frontend/src/components/shell",
+   "line": 0,
+   "severity": "low",
+   "category": "design",
+   "title": "390px 콘솔 머리글에서 도입사 전환 펼침 표시가 오른쪽 끝에서 잘린다",
+   "detail": "실화면 캡처에서 본 것이고 측정하지 않았다.",
+   "failure_scenario": "모바일 폭에서 도입사 전환을 누를 수 있는지 알아보기 어렵다.",
+   "suggested_fix": "머리글 오른쪽 영역의 줄임과 최소 폭을 확인한다.",
+   "review_status": "unverified",
+   "source": "local-live-baseline",
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): 390x844 캡처 관찰. 화면 확인은 로컬 조율 세션이 다시 한다."
   }
  ],
  "already_refuted": []

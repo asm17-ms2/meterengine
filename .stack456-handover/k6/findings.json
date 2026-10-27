@@ -242,7 +242,8 @@
    "still_in_top_at_review": false,
    "source": "general-c0",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): Playwright 계약 테스트 auth.contract.spec.ts:113이 #447, #448, #449, #450 head에서 재실행까지 실패하고 #451부터 통과한다. workspace-actions.ts의 switch에 createCustomer 분기가 #451(e5fca11)에서야 생긴다."
   },
   {
    "id": "C447-012",
@@ -296,7 +297,8 @@
    "still_in_top_at_review": true,
    "source": "test-c1",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): invoice-links, customer-payment-retry, permissions 실제 E2E는 psql을 고정 컨테이너 이름 meterengine-0696-e2e로 부른다. 그 이름을 다른 컨테이너로 돌리는 PATH shim을 두어야 통과했다."
   },
   {
    "id": "C449-007",
@@ -476,7 +478,8 @@
    "still_in_top_at_review": true,
    "source": "test-c3",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): 저장소 Playwright 설정의 real-stack은 auth.real.spec.ts만 고른다. 모든 *.real.spec.ts를 고르는 별도 설정으로 돌리면 12개 파일, 25개 테스트가 모두 통과한다."
   },
   {
    "id": "C453-012",
@@ -494,7 +497,8 @@
    "still_in_top_at_review": true,
    "source": "test-c3",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): C449-005와 같은 고정 컨테이너 이름 때문에 PATH shim을 두어야 통과했다."
   },
   {
    "id": "C453-013",
@@ -566,7 +570,8 @@
    "still_in_top_at_review": false,
    "source": "maint-c0",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): C447-001과 같은 원인이다. #447~#450에서 workspaceAction이 createCustomer를 처리하지 못해 고객 등록이 실패한다."
   },
   {
    "id": "G-021",
@@ -998,7 +1003,8 @@
    "still_in_top_at_review": true,
    "source": "git grep across top and per-PR heads",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): C449-005와 같은 고정 컨테이너 이름 때문에 PATH shim을 두어야 통과했다."
   },
   {
    "id": "G-189",
@@ -3565,7 +3571,8 @@
    "still_in_top_at_review": true,
    "source": "addy-accessibility, a11y-enforcer, addy-web-quality-audit, snagly-a11y-visual",
    "review_status": "unverified",
-   "prior_verdicts": []
+   "prior_verdicts": [],
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): axe link-in-text-block(serious)이 /login, /signup, /event-issues에서 나온다."
   },
   {
    "id": "X-018",
@@ -4412,6 +4419,22 @@
    "source": "snagly-auth-security-perf",
    "review_status": "unverified",
    "prior_verdicts": []
+  },
+  {
+   "id": "L-002",
+   "pr": 449,
+   "branch": "feat/customer-invoices",
+   "file": "frontend/e2e/mvp.real.spec.ts",
+   "line": 283,
+   "severity": "medium",
+   "category": "test",
+   "title": "mvp 실제 E2E가 백엔드 기본 설정에서는 항상 실패하고 필요한 설정이 프론트 E2E 안내에 없다",
+   "detail": "spec은 unbilled_usage_detected 웹훅을 100초 기다린다. 백엔드 기본 UNBILLED_USAGE_REPORT_CRON은 하루 한 번 09:00이라 기본 설정으로는 오지 않는다. 이 값은 backend application.properties와 backend README에만 있고 frontend README와 e2e에는 없다.",
+   "failure_scenario": "안내대로 실제 스택을 띄워 mvp.real.spec.ts를 돌리면 웹훅 대기에서 실패한다.",
+   "suggested_fix": "E2E 실행 안내나 Playwright 설정에 짧은 주기의 UNBILLED_USAGE_REPORT_CRON을 넣는다.",
+   "review_status": "unverified",
+   "source": "local-live-baseline",
+   "runtime_evidence": "로컬 실행 기준선(2026-10-28, 기준 head 854e293): 기본 cron에서는 웹훅 대기 단계에서 실패했고, 20초 주기로 바꾸자 통과했다."
   }
  ],
  "already_refuted": [
