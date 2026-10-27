@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test:e2e:contract": "E2E_MODE=contract playwright test --project=contract",
+    "test:e2e:real": "E2E_MODE=real playwright test --project=real-stack"
   },
   "dependencies": {
     "@ant-design/icons": "6.3.4",
@@ -20,6 +23,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -83,8 +83,10 @@ public class SignupService {
                 name,
                 UserAccount.MEMBER,
                 now));
-    organizationMemberRepository.save(
-        new OrganizationMember(organization.getId(), userAccount.getId(), now));
+    OrganizationMember member =
+        new OrganizationMember(organization.getId(), userAccount.getId(), now);
+    member.changeRole("owner");
+    organizationMemberRepository.save(member);
     consentRepository.saveAll(
         consents.stream()
             .map(
@@ -105,11 +107,15 @@ public class SignupService {
     return new Signup(organization, userAccount);
   }
 
-  private static void validate(String password, List<SignupConsent> consents) {
+  public static void validatePassword(String password) {
     if (password.getBytes(StandardCharsets.UTF_8).length > UserAccount.PASSWORD_MAX_BYTES) {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR, List.of(new FieldError("password", PASSWORD_BYTES_MESSAGE)));
     }
+  }
+
+  public static void validate(String password, List<SignupConsent> consents) {
+    validatePassword(password);
     List<String> documents = consents.stream().map(SignupConsent::document).sorted().toList();
     if (!documents.equals(REQUIRED_DOCUMENTS.stream().sorted().toList())) {
       throw new InvalidRequestException(

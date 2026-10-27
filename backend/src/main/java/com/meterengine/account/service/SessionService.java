@@ -17,6 +17,7 @@ import com.meterengine.global.security.SecureTokens;
 import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.entity.OrganizationMember;
 import com.meterengine.organization.entity.OrganizationMemberId;
+import com.meterengine.organization.repository.OrganizationInvitationRepository;
 import com.meterengine.organization.repository.OrganizationMemberRepository;
 import com.meterengine.organization.repository.OrganizationRepository;
 import java.time.OffsetDateTime;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,8 +46,6 @@ public class SessionService {
 
   private static final String OPERATOR_ROLE = "operator";
 
-  private static final Set<String> SESSION_SCOPES = Set.of("ingest", "read", "admin");
-
   private final UserAccountRepository userAccountRepository;
   private final UserSessionRepository userSessionRepository;
   private final OrganizationRepository organizationRepository;
@@ -55,6 +55,7 @@ public class SessionService {
   private final AuditLogService auditLogService;
   private final TransactionTemplate transactionTemplate;
   private final String unknownUserPasswordHash;
+  private final OrganizationInvitationRepository organizationInvitationRepository;
 
   SessionService(
       UserAccountRepository userAccountRepository,
@@ -65,6 +66,29 @@ public class SessionService {
       SessionProperties sessionProperties,
       AuditLogService auditLogService,
       TransactionTemplate transactionTemplate) {
+    this(
+        userAccountRepository,
+        userSessionRepository,
+        organizationRepository,
+        organizationMemberRepository,
+        passwordEncoder,
+        sessionProperties,
+        auditLogService,
+        transactionTemplate,
+        null);
+  }
+
+  @Autowired
+  SessionService(
+      UserAccountRepository userAccountRepository,
+      UserSessionRepository userSessionRepository,
+      OrganizationRepository organizationRepository,
+      OrganizationMemberRepository organizationMemberRepository,
+      PasswordEncoder passwordEncoder,
+      SessionProperties sessionProperties,
+      AuditLogService auditLogService,
+      TransactionTemplate transactionTemplate,
+      OrganizationInvitationRepository organizationInvitationRepository) {
     this.userAccountRepository = userAccountRepository;
     this.userSessionRepository = userSessionRepository;
     this.organizationRepository = organizationRepository;
@@ -74,6 +98,7 @@ public class SessionService {
     this.auditLogService = auditLogService;
     this.transactionTemplate = transactionTemplate;
     this.unknownUserPasswordHash = passwordEncoder.encode(SecureTokens.generate(""));
+    this.organizationInvitationRepository = organizationInvitationRepository;
   }
 
   // bcrypt 비교가 DB 커넥션을 잡지 않게 트랜잭션 밖에서 확인하고, 가장 먼저 소속된 활성 도입사로 세션을 만든다.
@@ -85,7 +110,11 @@ public class SessionService {
             .filter(candidate -> ACTIVE_STATUS.equals(candidate.getStatus()))
             .findFirst()
             .orElse(null);
-    if (organization == null && !OPERATOR_ROLE.equals(userAccount.getRole())) {
+    if (organization == null
+        && !OPERATOR_ROLE.equals(userAccount.getRole())
+        && (organizationInvitationRepository == null
+            || !organizationInvitationRepository.existsByEmail(
+                userAccount.getEmail(), OffsetDateTime.now()))) {
       throw new ForbiddenException(ErrorCode.ORGANIZATION_NOT_ACTIVE);
     }
     UUID organizationId = organization == null ? null : organization.getId();
@@ -112,7 +141,14 @@ public class SessionService {
               return saved;
             });
     return new IssuedSession(
-        token, new CurrentSession(session, userAccount, organization, organizations));
+        token,
+        new CurrentSession(
+            session,
+            userAccount,
+            organization,
+            organizations,
+            organizationRole(session),
+            scopesOf(session)));
   }
 
   @Transactional(readOnly = true)
@@ -134,8 +170,10 @@ public class SessionService {
     if (!session.isUsableAt(OffsetDateTime.now())) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS);
     }
-    if (!organizationMemberRepository.existsById(
-        new OrganizationMemberId(organizationId, session.getUserAccountId()))) {
+    if (organizationMemberRepository
+        .findById(new OrganizationMemberId(organizationId, session.getUserAccountId()))
+        .filter(member -> member.getRevokedAt() == null)
+        .isEmpty()) {
       throw new ForbiddenException(ErrorCode.PERMISSION_DENIED);
     }
     session.switchOrganization(organizationId);
@@ -197,7 +235,13 @@ public class SessionService {
             .filter(candidate -> candidate.getId().equals(session.getOrganizationId()))
             .findFirst()
             .orElse(null);
-    return new CurrentSession(session, userAccount, organization, organizations);
+    return new CurrentSession(
+        session,
+        userAccount,
+        organization,
+        organizations,
+        organizationRole(session),
+        scopesOf(session));
   }
 
   // 소속된 도입사를 소속된 순서대로 돌려준다.
@@ -214,8 +258,30 @@ public class SessionService {
     return organizationIds.stream().map(organizationsById::get).toList();
   }
 
-  private static AuthenticatedCredential credentialOf(
-      UserSession session, UserAccount userAccount) {
+  private String organizationRole(UserSession session) {
+    if (session.getOrganizationId() == null) return null;
+    return organizationMemberRepository
+        .findById(new OrganizationMemberId(session.getOrganizationId(), session.getUserAccountId()))
+        .filter(member -> member.getRevokedAt() == null)
+        .map(OrganizationMember::getRole)
+        .orElse(null);
+  }
+
+  private List<String> scopesOf(UserSession session) {
+    if (session.getOrganizationId() == null) return List.of();
+    return organizationMemberRepository
+        .findById(new OrganizationMemberId(session.getOrganizationId(), session.getUserAccountId()))
+        .filter(member -> member.getRevokedAt() == null)
+        .map(OrganizationMember::getScopes)
+        .orElse(List.of());
+  }
+
+  @Transactional(readOnly = true)
+  public boolean requiresConsent(UUID userId) {
+    return userAccountRepository.findById(userId).map(UserAccount::isConsentRequired).orElse(false);
+  }
+
+  private AuthenticatedCredential credentialOf(UserSession session, UserAccount userAccount) {
     AuthenticatedPrincipal principal =
         new AuthenticatedPrincipal(
             PrincipalKind.SESSION,
@@ -225,7 +291,7 @@ public class SessionService {
             session.getId(),
             null,
             userAccount.getRole(),
-            SESSION_SCOPES);
+            Set.copyOf(scopesOf(session)));
     return new AuthenticatedCredential(principal, null);
   }
 }

@@ -4,6 +4,7 @@ import com.meterengine.account.entity.UserAccount;
 import com.meterengine.account.repository.UserAccountRepository;
 import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AuthenticatedPrincipal;
@@ -67,11 +68,17 @@ public class UserAccountService {
   @Transactional
   public UserAccountMemberships update(
       AuthenticatedPrincipal principal, UUID userAccountId, String role) {
+    List<UserAccount> operators = userAccountRepository.findOperatorsForUpdate();
     UserAccount userAccount =
         userAccountRepository
-            .findById(userAccountId)
+            .findForUpdateById(userAccountId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
     String previousRole = userAccount.getRole();
+    if (UserAccount.OPERATOR.equals(previousRole)
+        && !UserAccount.OPERATOR.equals(role)
+        && operators.size() <= 1) {
+      throw new ConflictException(ErrorCode.LAST_OPERATOR_REQUIRED);
+    }
     userAccount.changeRole(role);
     auditLogService.record(
         AuditActor.from(principal).withOrganizationId(null),

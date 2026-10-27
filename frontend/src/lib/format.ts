@@ -40,7 +40,13 @@ export function formatKoreanMonth(month: string): string {
 }
 
 export function formatDecimal(value: number): string {
+  if (value !== 0 && Math.abs(value) < 0.00000000005) return value.toExponential(10);
   return value.toLocaleString("ko-KR", { maximumFractionDigits: 10 });
+}
+
+export function formatQuantityBasis(numerator?: number | null, denominator?: number | null): string | undefined {
+  if (numerator == null || denominator == null || denominator <= 0 || denominator === 1 || Number.isInteger(numerator / denominator)) return undefined;
+  return `계산 기준: ${numerator} / ${denominator}`;
 }
 
 export function formatKrw(value: number): string {
