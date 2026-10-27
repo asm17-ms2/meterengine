@@ -214,6 +214,22 @@ class RequestLogFilterTest {
   }
 
   @Test
+  void 도입사_초대_경로의_토큰_세그먼트는_가려서_남긴다(CapturedOutput output) {
+    String secret = "InvitationSecret0123456789abcdef";
+    String token = "me_invite_" + secret;
+
+    mvc.get().uri("/v1/organization-invitations/" + token).exchange();
+    mvc.post().uri("/v1/organization-invitations/" + token + "/accept").exchange();
+    mvc.get().uri(URI.create("/v1/%6Frganization-invitations/" + token)).exchange();
+
+    assertThat(requestLogLines(output))
+        .hasSize(3)
+        .allSatisfy(
+            line -> assertThat(line).contains("path=/v1/organization-invitations/{token} "));
+    assertThat(output.getOut()).doesNotContain(secret);
+  }
+
+  @Test
   void 체인_안에서_방화벽이_거절한_요청은_400으로_한_줄만_남긴다(CapturedOutput output) {
     String rejectedValue = "Bearer me_live_" + "R".repeat(32) + "\u0007";
 
