@@ -1,4 +1,8 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
+
+if (!existsSync(join(__dirname, "e2e", "workspace.contract.spec.ts"))) throw new Error("Workspace E2E 시나리오가 없습니다. 해당 화면과 검증 파일이 포함된 브랜치에서 실행하세요.");
 
 export default defineConfig({
   testDir: "./e2e",
