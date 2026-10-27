@@ -136,6 +136,21 @@
    "pr": 442
   },
   {
+   "id": "D-070",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "pricing.module.css:1의 @media(max-width:900px)는 .meterRail{display:flex;gap:8px;flex-wrap:wrap}, .meterRail button{width:auto;min-width:145px;flex:1}로 칩 배치를 의도하지만 flex-direction을 주지 않는다. 같은 요소의 .workspace-panel(globals.css:171, 443에서 들어옴)이 flex-direction: column이라 방향이 세로로 남는다. 최상단 빌드 CSS(.next/static/chunks의 globals와 pricing 모듈)를 Playwright로 375px에 띄운 결과 rail은 flex-direction column, 미터 7개 버튼이 333x89px로 세로로 쌓여 rail 높이 750px, 오른쪽 단가 패널은 y=774에서 시작했다. flex-direction:row를 더하면 2열 칩이 되어 rail 높이 459px로 줄었다. 451부터는 rail에 ListPagination(페이지 크기 20)이 있어 미터가 최대 20개 세로로 쌓인다. 반박 시도: 세로 목록도 동작은 하지만 모듈이 칩 배치를 명시적으로 의도했고 그 규칙이 죽어 있다. 원 지적의 선택 칸 테두리 넘침(379px)은 정적 재현에서는 보이지 않았다.",
+   "evidence": "frontend/src/components/pricing/pricing.module.css:1 @ 5efe449, frontend/src/app/globals.css:171 @ 5efe449, frontend/src/components/pricing/pricing.module.css:1 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "globals.css의 .workspace-panel 규칙은 k5 범위지만 고칠 곳은 모듈 쪽 900px 규칙이라 k6 범위다. 재현 스크립트와 스크린샷: S/scripts/pricing-mobile-chips/probe.js, S/shots/pricing-mobile-chips/rail-375.png, rail-fixed-375.png.",
+   "pr": 446
+  },
+  {
    "id": "D-113",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -149,6 +164,51 @@
    "behavior_change": false,
    "notes": "k5 X-009, D-005, D-131, D-211, D-251과 겹친다. k5가 lib(예: lib/invoice-payment-status.ts)에 같은 맵을 #451 이하에 두면 1)의 components/invoices 모듈은 만들지 않고 그 맵을 쓴다. 두 묶음이 서로 다른 맵을 만들지 않게 수정 담당이 먼저 확인한다. 인보이스 표 태그 색은 invoice-status-tag-grey 묶음 D-156에서 같은 파일(InvoicesSection.tsx, InvoicesTable.tsx)을 고치므로 같은 수정 단위로 묶는 편이 낫다. D-149, D-027, D-046이 든 #451 부분도 이 결과가 맡는다.",
    "pr": 451
+  },
+  {
+   "id": "D-118",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 표 바로 위 role=status 문단(BillingSection.tsx:107, InvoicesSection.tsx:87)이 '조건 전체 N곳, 예정액 X'와 '조건 전체 N건, 세금 포함 X'를 알려 하단 값과 같다는 단서는 있다. 그러나 표 하단 요약 행 라벨은 '합계'(BillingTable.tsx:276, InvoicesTable.tsx:248)이고 모바일은 '공급가액 합계'(BillingTable.tsx:254), '세금 포함 합계'(InvoicesTable.tsx:228)라서 현재 페이지 행의 합으로 읽힌다. 값은 서버 summary의 조건 전체 금액이다: 청구는 lib/api/billing.ts:107이 total_amount에 summary.amount를 넣고(백엔드 WorkspaceQueryService가 필터된 selected 전체 합을 summary에 넣은 뒤 page로 자른다) BillingSection.tsx:112가 그대로 넘기며, 인보이스는 InvoicesSection.tsx:91이 summary.total_amount를 쓴다. 기본 페이지 크기는 20(list-query.ts DEFAULT_PAGE_SIZE)이라 조건에 맞는 고객이나 인보이스가 21개 이상이면 보이는 행의 합과 하단 '합계'가 어긋난다. #450까지는 capabilities의 previewDraftInvoice, listInvoices가 page false라 모든 행이 한 화면에 나와 합계와 행 합이 같았고(인보이스는 페이지 행의 reduce), #451이 페이지네이션과 summary 합계를 함께 들였다. 금액 자체는 맞고 위 상태 문단이 단서를 주므로 low.",
+   "evidence": "frontend/src/components/billing/BillingTable.tsx:276 @ 53ec3d9, frontend/src/components/billing/BillingTable.tsx:254 @ 53ec3d9, frontend/src/components/invoices/InvoicesTable.tsx:248 @ 53ec3d9, frontend/src/components/invoices/InvoicesTable.tsx:228 @ 53ec3d9, frontend/src/components/billing/BillingSection.tsx:112 @ 53ec3d9, frontend/src/components/invoices/InvoicesSection.tsx:91 @ 53ec3d9, frontend/src/lib/api/billing.ts:107 @ 53ec3d9",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "e2e/aggregation.real.spec.ts:35의 '합계 (SUM)'은 미터 집계 함수 라벨이라 무관하다. 라벨에 개수를 넣는 안('조건 전체 합계 (N곳)')은 BillingTable과 InvoicesTable에 개수 prop을 새로 더해야 해서 택하지 않았고, 개수는 바로 위 상태 문단에 이미 있다. 백엔드 summary 계약과 lib/api(k5)는 바꾸지 않는다. k3 C451-009(인보이스 금액 범위 검색의 공급가액과 합계 기준)와 같은 summary를 쓰지만 별개 문제다.",
+   "pr": 451
+  },
+  {
+   "id": "D-121",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "446(5efe449)에서는 page.tsx가 /v1/billable-metrics 전체 응답을 넘기고 PricingWorkspace.tsx:62가 모든 미터에 metricCalculationFormula를 보여 줘 둘째 줄이 일관됐다. 451(53ec3d9)이 목록을 검색 API 항목(aggregation 없음, rate_count 있음)으로 바꾸면서 page.tsx:39가 선택된 미터만 상세 응답(aggregation 있음, rate_count 없음)으로 교체하고, PricingWorkspace.tsx:69는 metric.aggregation 유무로 계산식과 '등록 단가 N개'를 가른다. 그래서 선택된 미터만 계산식이 나오고 단가 개수가 사라지며, 선택을 바꾸면 이전 카드가 단가 개수로 돌아간다. 반박 시도: 선택 미터의 계산식을 보이려는 의도일 수 있으나, 같은 목록에서 줄의 의미가 선택 여부로 바뀌고 라벨이 없어 단가 없는 미터(0개)를 선택 상태에서 확인할 수 없다. 451 head와 최상단 854e293의 두 줄은 같다.",
+   "evidence": "frontend/src/app/(console)/pricing/page.tsx:39 @ 53ec3d9, frontend/src/components/pricing/PricingWorkspace.tsx:69 @ 53ec3d9, frontend/src/app/(console)/pricing/page.tsx:39 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:69 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-230(같은 묶음 아님) 수정과 오른쪽 패널 계산식 줄이 겹치므로 같은 줄을 두 번 넣지 않게 조정한다. 446에서는 모든 미터가 전체 응답이라 문제가 없어 446이 아닌 451에서 고친다.",
+   "pr": 451
+  },
+  {
+   "id": "D-146",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "pricing.module.css:2의 .tierEditorRow .workspace-field{font-size:12px}와 1행 480px 규칙의 .tierEditorRow>.ant-btn{grid-column:3}은 :global 없이 써서 빌드 CSS(.next/static/chunks/3e_jdterg8a9s.css)에서 .pricing-module__Xy_1OW__workspace-field, .pricing-module__Xy_1OW__ant-btn으로 해시되어 어떤 요소에도 맞지 않는다. 그래서 1행 .tierEditorRow label{font-size:11px}가 남아 구간 편집기의 '끝 수량', '1당 단가 (원)' 라벨이 375px과 1280px 모두 11px로 나왔다(Playwright 확인). 폼의 다른 라벨(.workspace-field 13px)보다 작다. 반박 시도: .ant-btn 규칙은 죽어 있어도 600px 규칙 .tierEditorRow>button{grid-column:2}가 대신 적용되어 해가 없지만, 라벨 크기 보정은 어느 폭에서도 적용되지 않는다.",
+   "evidence": "frontend/src/components/pricing/pricing.module.css:1 @ 5efe449, frontend/src/components/pricing/pricing.module.css:2 @ 5efe449, frontend/src/components/pricing/pricing.module.css:2 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "480px 미디어의 .tierEditorRow{grid-template-columns:42px 1fr 1fr}도 뒤의 600px 규칙에 덮여 죽어 있으나 지적 범위 밖이라 계획에 넣지 않았다. 재현 스크립트: S/scripts/pricing-css-global-class/probe.js.",
+   "pr": 446
   },
   {
    "id": "D-149",
@@ -169,6 +229,21 @@
    "behavior_change": false,
    "notes": "k5 X-009, D-005, D-131, D-211, D-251(WorkspaceView.tsx:19 수납 상태 이름)과 같은 문제다. k5가 lib에 공용 수납 상태 맵을 #445 이하에 두면 1), 2)는 그 맵의 label을 가져다 쓰고 같은 줄을 두 묶음이 따로 고치지 않게 맞춘다. D-149, D-027, D-046은 #451의 InvoicesSection, ResourceSearchControls 부분도 들었는데 그 부분은 결과 D-113에 있다. 두 결과는 같은 이름 한 벌을 쓴다. 같은 파일의 '{attempt.mode}' 원문 노출은 raw-codes-many-screens 묶음 X-029에서 다룬다.",
    "pr": 445
+  },
+  {
+   "id": "D-156",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "InvoicesTable.tsx:154 '{row.paymentStatus && <Tag>{row.paymentStatus}</Tag>}'에 color가 없어 결제 실패, 결제 전, 수납 완료가 모두 같은 기본 회색 태그다. 같은 status를 보이는 수납 목록, 고객 상세, 개요는 WorkspaceView.tsx:32 규칙으로 paid는 success, failed는 error, pending은 warning 색이라, 다른 화면에서 빨간 '실패'로 보던 건이 인보이스 화면에서는 회색이 된다. InvoiceGroupView(InvoicesTable.tsx:21-36)에는 InvoicesSection.tsx:111에서 이미 번역한 문자열만 넘어가 지금 구조로는 코드 기준 색을 줄 수 없다. 모바일 카드(228행)도 상태를 일반 문단으로만 쓴다. #451에서 처음 들어왔다. 반박 시도: 글자로 상태가 구분되고 수납 상태 필터로 실패 건만 고를 수 있어 정보가 빠지지는 않는다. 그래서 심각도는 low로 두되, 화면 사이 색 규칙이 어긋나 훑어보기 단서가 사라지는 문제는 코드로 짚을 수 있어 confirmed로 둔다.",
+   "evidence": "frontend/src/components/invoices/InvoicesTable.tsx:154 @ 53ec3d9, frontend/src/components/invoices/InvoicesTable.tsx:228 @ 53ec3d9, frontend/src/components/invoices/InvoicesSection.tsx:111 @ 53ec3d9, frontend/src/components/workspace/WorkspaceView.tsx:32 @ 53ec3d9",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "payment-status-names 묶음 D-113과 같은 파일(InvoicesSection.tsx:111, InvoicesTable.tsx)과 같은 PR(#451)이라 한 수정 단위로 묶는 편이 낫다. k5 X-009 이전 판정의 수정 안내에도 InvoicesTable Tag color가 들어 있다. k5가 lib에 색까지 담은 공용 맵을 #451 이하에 두면 그 맵을 쓰고 components/invoices 모듈은 만들지 않는다.",
+   "pr": 451
   },
   {
    "id": "D-163",
@@ -208,6 +283,21 @@
    "behavior_change": false,
    "notes": "k5 X-076(globals.css:146)이 '고객 상세 하단에서 목록 링크와 고객 보관이 붙어 있다'까지 함께 다룬다. k5가 CSS로 정렬만 고쳐도 위험 작업이 이동 링크 줄에 있는 배치는 남으므로 이 페이지 수정이 필요하다. 반대로 이 수정 뒤에도 다른 화면의 버튼과 필드가 섞인 .workspace-actions 정렬은 k5 몫이다. 지적의 다른 제안(별도 하단 패널, 제목 위 이동 링크)은 제품의 기존 상세 화면 관례와 달라 택하지 않았다.",
    "pr": 451
+  },
+  {
+   "id": "D-230",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "PricingWorkspace.tsx:109(최상단, 446에서는 93행)은 단일 단가를 '{금액}원 / 사용량 1', 111행(446은 95행)은 구간 단가를 '{금액}원 / 1'로 쓴다. 미터에는 unit_size(과금 단위 크기)가 있어 집계 값을 나눈 '과금 수량'에 단가를 곱한다(billable-metric-calculation.ts의 metricCalculationFormula, metricCalculationExample '과금 수량', 미터 폼의 '과금 단위 크기'). unit_size가 1,000인 토큰 미터에서 '0.5원 / 사용량 1'은 토큰 1개당으로 읽히지만 실제로는 1,000토큰당이다. 반박 시도: 72행 안내문이 '미터에서 정한 단위와 반올림을 적용한 수량에 단가를 곱한다'고 설명하지만 단위 크기 숫자를 보여 주지 않고, 화면 용어도 미터 화면의 '과금 수량'과 다르다. 원 제안의 '{미터 이름} 1당'은 unit_size가 1이 아닐 때 다시 틀리므로 계획은 '과금 수량' 용어와 계산식을 쓴다.",
+   "evidence": "frontend/src/components/pricing/PricingWorkspace.tsx:109 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:111 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:93 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:95 @ 5efe449, frontend/src/lib/billable-metric-calculation.ts:67 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-121 수정(451)이 같은 오른쪽 패널에 계산식 줄을 두므로 한 번만 넣는다. X-052 수정이 같은 93, 95, 86행의 금액 포맷을 바꾸므로 함께 적용한다.",
+   "pr": 446
   },
   {
    "id": "G-056",
@@ -257,6 +347,36 @@
    "pr": 453
   },
   {
+   "id": "X-018",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "PricingWorkspace.tsx:83, 91(446에서는 76, 82행)은 Table locale.emptyText에 문자열을 바로 넣는다. antd 6.6.7 table/style/empty.js가 tr.ant-table-placeholder에 color: colorTextDisabled를 주고, colorTextDisabled는 colorTextQuaternary(rgba(0,0,0,.25), 흰 배경에서 #bfbfbf)다. AppProviders.tsx의 테마는 colorText, colorTextDescription만 덮고 colorTextDisabled는 덮지 않는다(446과 최상단 같음). 대비는 1.84:1로 WCAG 1.4.3(4.5:1)에 못 미친다. 반박 시도: 장식 문구라면 예외지만 내용이 '보관됨 또는 전체에서 이전 요금제를 확인하세요' 같은 다음 행동 안내다. 다른 표는 WorkspaceView.tsx:55처럼 <Empty description>을 넣어 .ant-empty-normal의 colorTextDescription(#5a6578)을 쓰고, emptyText에 문자열을 넣는 곳은 이 두 표뿐이다.",
+   "evidence": "frontend/src/components/pricing/PricingWorkspace.tsx:83 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:91 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:76 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:82 @ 5efe449, frontend/src/components/shell/AppProviders.tsx:17 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 X-022(테마가 일부 파생 토큰을 덮지 않음)가 AppProviders에서 colorTextDisabled나 colorTextQuaternary를 덮으면 이 대비도 달라지지만, 비활성 컨트롤 색 전체가 바뀌므로 k6 수정은 그와 무관하게 이 두 표만 고친다.",
+   "pr": 446
+  },
+  {
+   "id": "X-029",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "여섯 부분을 따로 확인했다. 원인(API 값을 라벨 없이 출력)은 같아 보여도 들어온 PR과 범위가 달라, k6에서 고칠 것은 (2), (3)뿐이다. (2) 확인: payments/[id]/page.tsx '승인 결제 취소' 부제가 {attempt.mode}를 그대로 찍어 '... 승인 / test'가 된다(445에서 33, 49행, 최상단 35, 51행). 같은 화면 상태 줄(445에서 99행)과 시도 표 mode 열(WorkspaceView.tsx:33)은 '테스트 결제', '실결제'로 바꿔 보이므로 한 화면 안에서 같은 값이 두 모양이다. #445에서 들어왔다. (3) 확인: EventDetailDrawer.tsx:46, 54-56 라벨이 transaction_id, type, occurred_at, received_at이고 같은 서랍의 '고객', '수집 요청', '전송 주체'와 섞인다. main부터 #450까지는 EventsTable 머리글도 같은 영문 필드명이라 서로 맞았으나, #451(53ec3d9)이 표 머리글만 '전송 ID', '이벤트 유형', '발생 시각 (KST)', '수신 시각 (KST)'로 바꾸고 서랍은 두어 어긋남이 #451에서 생겼다. 서랍 시각 값은 formatKstDateTime이라 KST 표기가 없다. (1) 반박: 수납 목록 열 이름이 '실패 코드'라 코드 표시는 열 이름과 맞고, 사람이 읽을 사유는 상세 '실패 사유' 열에 있다. 목록 응답 InvoicePaymentResponse에는 last_failure_code만 있고 실패 메시지가 없어 프론트만으로는 사유를 보일 수 없다(백엔드 DTO 변경 필요). (4) 사실이나 k5 범위: WorkspaceView.tsx:22 JOB_LABELS에 백엔드가 등록하는 unbilled_usage_report(UnbilledUsageNotificationConfig.java:32)가 없어 /admin 예약 작업 표에 코드가 제목으로 나온다. (5) 스택 밖: invoices/page.tsx의 '확정 (finalized)'와 BillingStatusTag.tsx:17의 '확정됨 (finalized)', '확정 전 (draft)'는 origin/main(f088399)에 이미 있고 442에서 455 중 어느 PR도 들이지 않았다. 인보이스 화면 태그는 달의 상태가 아니라 '확정 인보이스' 목록이라는 화면 성격을 말하고, 0건인 달에는 빈 상태가 '확정된 인보이스가 없습니다'라고 알려 '마감된 달' 오해 근거도 약하다. (6) 스택 밖이고 k5 범위: lib/api/usage.ts:88 label = billableMetricUsage.code도 main에 이미 있다.",
+   "evidence": "frontend/src/app/(console)/payments/[id]/page.tsx:33 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:49 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:99 @ 2e98143, frontend/src/components/events/EventDetailDrawer.tsx:46 @ 53ec3d9, frontend/src/components/events/EventDetailDrawer.tsx:54 @ 53ec3d9, frontend/src/components/events/EventsTable.tsx:58 @ 53ec3d9, frontend/src/app/(console)/payments/page.tsx:17 @ 2e98143, backend/src/main/java/com/meterengine/payment/dto/InvoicePaymentResponse.java:33 @ 854e293, frontend/src/components/workspace/WorkspaceView.tsx:22 @ 854e293, frontend/src/components/billing/BillingStatusTag.tsx:17 @ f088399, frontend/src/lib/api/usage.ts:88 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "묶음 id가 하나라 결과를 나누지 못했다. pr은 지적이 가리킨 화면과 (2)가 들어온 #445로 두었고, (3)은 #451 브랜치에서 고쳐야 한다. 수정 단위를 PR별로 나눌 때 (3)을 #451 쪽으로 옮긴다. (4)는 k5 D-202, D-226과 같다. (2)는 payment-status-names 묶음 D-149와 같은 파일(#445 payments/[id]/page.tsx)이라 같은 수정 단위로 묶을 수 있다.",
+   "pr": 445
+  },
+  {
    "id": "X-032",
    "merged_ids": [
     "D-095"
@@ -272,6 +392,69 @@
    "behavior_change": true,
    "notes": "D-095의 마지막 문장('도입사 선택으로' 링크)은 invite-anon-org-link(D-061)에서 판정한다. k5 D-127, X-004(ActionPanel의 초대 링크 모달)와 화면이 이어진다. 수락 시 기존 세션을 서버에서 끝내지 않는 점은 새 계정 수락을 막지 않아 이 결과에서는 고치지 않는다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
    "pr": 442
+  },
+  {
+   "id": "X-036",
+   "merged_ids": [
+    "D-114",
+    "D-155"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: FilterBar(components/screen/FilterBar.tsx:17)와 globals.css의 767px 이하 규칙 어디에도 ExpandControls를 모바일에서 숨기는 규칙이 없다. ExpandControls(components/table/ExpandControls.tsx:8)는 CollapseProvider의 mode만 바꾸고, 이 상태를 읽는 곳은 useExpandedRowKeys가 만드는 데스크톱 Table의 expandedRowKeys뿐이다. 767px 이하에서는 .data-desktop-table이 display:none이고, 보이는 모바일 카드의 계산 내역은 상태와 연결되지 않은 비제어 details다(BillingTable.tsx:254, InvoicesTable.tsx:228). 사용량 모바일 카드(UsageTable.tsx:164)에는 접을 요소가 아예 없어 늘 모두 펼친 상태다. 그런데 billing/page.tsx:92와 96, invoices/page.tsx:44, usage/page.tsx:54는 화면 폭과 관계없이 ExpandControls를 렌더하므로, 모바일에서 '모두 펼치기'와 '모두 접기'가 보이지만 눌러도 보이는 화면이 바뀌지 않는다. ExpandControls는 main부터 있었고 모바일 카드는 #446이 세 표에 함께 들였으므로 #446에서 처음 생긴 조합이다. 세 지적은 원인이 같아 하나로 합친다. 데이터 손상은 없고 모바일 운영자가 고장으로 오인하는 정도라 low로 다시 매긴다.",
+   "evidence": "frontend/src/components/billing/BillingTable.tsx:254 @ 5efe449, frontend/src/components/invoices/InvoicesTable.tsx:221 @ 5efe449, frontend/src/components/usage/UsageTable.tsx:162 @ 5efe449, frontend/src/components/table/ExpandControls.tsx:8 @ 5efe449, frontend/src/app/(console)/usage/page.tsx:52 @ 5efe449, frontend/src/app/(console)/invoices/page.tsx:45 @ 5efe449, frontend/src/app/(console)/billing/page.tsx:92 @ 5efe449",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "대안으로 모바일 details의 open을 CollapseProvider에 묶는 방법(키는 고객 id에 #mobile을 붙이고 collapsedByDefault true로 두어 기본은 접힘, onToggle에서 toggle 호출)도 있으나, 사용량 모바일 카드에는 details가 없어 결국 숨김이 따로 필요하고 표 세 곳을 고쳐야 해서 숨김 하나로 정했다. 사용량 모바일 카드가 늘 펼쳐져 9000px 넘게 길어지는 점(D-155 말미)은 별개 디자인 과제다. k5 범위 파일(FilterBar, globals.css)은 바꾸지 않는다. X-056(dual-render-mobile-desktop)과 같은 모바일 카드 코드를 다루지만 원인이 달라 합치지 않았다. 지적 줄 번호는 최상단(854e293) 기준 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164, usage/page.tsx:54, invoices/page.tsx:44와 같다.",
+   "pr": 446
+  },
+  {
+   "id": "X-044",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "반박: 세 패턴 모두 main(f088399)에 같은 코드로 있었다. main의 BillingTable.tsx:241-243이 고객, 미터, 라인 금액을 모두 NumberText strong으로, InvoicesTable.tsx:199-202가 인보이스, 미터, 라인 금액은 strong이고 공급가액과 세액 행은 secondary로, UsageTable.tsx:150이 수량을 0까지 모두 strong으로 그렸다. 스택은 이 줄들을 그대로 옮겼고(최상단 BillingTable.tsx:242-244, InvoicesTable.tsx:217-220, UsageTable.tsx:155) #446 모바일 카드도 같은 강조를 따랐을 뿐이라 이 스택이 들인 문제가 아니다. 또 위계는 행 구조로 이미 드러난다: 고객과 인보이스 행이 최상위이고 하위 행은 들여쓰기와 펼침 아이콘 아래에 있으며, '모두 접기'를 누르면 고객별 금액만 남고, 요약 행 합계는 strong에 fontSizeLG다. 인보이스의 공급가액과 세액 행은 라벨(InvoicesTable.tsx:164)과 값이 함께 secondary인 분해 행이고, 세금 포함 금액은 상위 행에서 강조된다. 값을 잘못 읽게 하는 경로나 기능 결함이 없고 굵기 위계에 대한 선호에 가깝다.",
+   "evidence": "frontend/src/components/billing/BillingTable.tsx:242 @ 854e293, frontend/src/components/invoices/InvoicesTable.tsx:219 @ 854e293, frontend/src/components/usage/UsageTable.tsx:155 @ 854e293, frontend/src/components/billing/BillingTable.tsx:241 @ f088399, frontend/src/components/invoices/InvoicesTable.tsx:201 @ f088399, frontend/src/components/usage/UsageTable.tsx:150 @ f088399",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "다듬기로 하겠다면 main 기준 별도 변경으로 BillingTable과 InvoicesTable의 meter, line 금액에서 strong을 빼고 UsageTable의 수량 0을 type secondary로 낮추는 방법이 있다. 스택 PR에 넣으면 그 PR이 들이지 않은 줄을 고치게 된다. 판정을 바꾸려면 이 굵기 때문에 금액을 잘못 읽은 사례 같은 구체적 결과가 필요하다.",
+   "pr": null
+  },
+  {
+   "id": "X-052",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "PricingWorkspace.tsx:28(446은 20행) MONEY는 maximumFractionDigits 8이고 단가 표시 109, 111, 95행(446은 93, 95, 86행)에 쓰인다. 백엔드 CreatePriceRateRequest와 PriceRateTier는 @Digits(fraction=16383)이고 컬럼은 NUMERIC이며 입력(193행)은 step='any'라 8자리를 넘는 단가가 저장된다. node 확인: MONEY.format(0.000000001)='0', formatKrw는 '0.000000001', 0.123456789012는 MONEY '0.12345679', formatKrw '0.123456789'. 청구 예정액(BillingSection.tsx:198)과 인보이스(InvoicesSection.tsx:142)는 formatKrw(10자리)를 써서 같은 단가가 화면마다 다르게 보인다. 반박 시도: 청구 계산은 백엔드 BigDecimal이라 금액에는 영향이 없고 8자리를 넘는 단가는 드물어 severity는 low로 낮춘다. 99999999999999999999999 예시는 JSON number 정밀도 문제라 화면 포맷만으로는 못 고친다.",
+   "evidence": "frontend/src/components/pricing/PricingWorkspace.tsx:28 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:109 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:20 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:93 @ 5efe449, backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:24 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "fee-truncation-display(C446-009)의 planAmount는 MONEY를 기본료와 최소 사용료에 계속 쓰므로 MONEY 상수를 지우지 않는다. D-230과 같은 93, 95행을 바꾸므로 함께 적용한다.",
+   "pr": 446
+  },
+  {
+   "id": "X-056",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "반박: (1) '두 배'라는 전제가 틀렸다. 지적이 잰 수치로도 숨긴 모바일 카드는 /invoices DOM 1,591개 중 435개(27%), /usage 2,560개 중 776개(30%)이고, 모바일 카드는 antd 표 행보다 가볍다. display:none 하위 트리(globals.css:240-241)는 레이아웃과 페인트를 건너뛴다. (2) '모두 펼치기' 때 비용의 대부분은 antd Table이 펼친 하위 행을 만드는 일이다. 모바일 카드 JSX(BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164)는 같은 컴포넌트 안이라 함께 다시 계산되지만 groups가 그대로라 DOM 변경 없이 재조정만 한다. 측정한 INP 232ms(CPU 4배 저하)는 모바일 카드 몫을 따로 떼어 재지 않아 이 패턴 때문이라는 근거가 없고, 카드를 없애도 표 펼치기 비용은 남는다. (3) 두 표현을 모두 SSR하고 CSS로 고르는 방식은 서버가 화면 폭을 모르는 상태에서 하이드레이션 불일치와 레이아웃 이동을 피하려는 의도된 반응형 패턴이고, #442가 들인 components/workspace/WorkspaceView.tsx(k5)도 같은 방식이다. 제안된 useBreakpoint 단일 렌더는 모바일 첫 화면에 데스크톱 표를 그렸다가 카드로 바꾸는 이동을 새로 만든다. 사용자가 겪는 구체적 실패 경로가 없다.",
+   "evidence": "frontend/src/components/billing/BillingTable.tsx:254 @ 5efe449, frontend/src/components/invoices/InvoicesTable.tsx:228 @ 854e293, frontend/src/components/usage/UsageTable.tsx:164 @ 854e293, frontend/src/components/events/EventsTable.tsx:114 @ 53ec3d9, frontend/src/app/globals.css:240 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "청구, 인보이스, 사용량 표의 모바일 카드는 #446, 수집 로그 표(EventsTable)는 #451이 들였다. k5 C442-017(WorkspaceView 표와 카드 이중 렌더)과 같은 패턴이다. 큰 페이지 크기에서 펼치기가 느리다면 원인은 antd Table 쪽이라 따로 재야 한다. 원한다면 모바일 카드 목록을 groups와 totalAmount만 받는 memo 컴포넌트로 빼 펼침 상태 변경 때 재조정을 건너뛰는 작은 최적화는 가능하나 필요를 보인 측정이 없다. 판정을 바꾸려면 size=100 데이터에서 모바일 카드가 있을 때와 없을 때의 INP 비교가 필요하다.",
+   "pr": 446
   },
   {
    "id": "X-074",
@@ -305,6 +488,36 @@
    "behavior_change": false,
    "notes": "k5 D-078(WorkspaceHeader.tsx:7)이 같은 증상을 공용 컴포넌트에서 children을 감싸는 방식으로 제안한다. 둘을 함께 하면 .workspace-actions가 겹으로 들어가 동작은 같지만 중복이므로 한쪽만 택한다. 자식이 여럿인 사용처가 이 화면뿐이라 페이지 쪽 수정으로 충분하다. destructive-in-nav-row의 D-018도 이 헤더 문제를 일부로 언급한다.",
    "pr": 445
+  },
+  {
+   "id": "X-077",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "PricingWorkspace.tsx:85-86(446은 78-79행) 기본료, 최소 사용료 열과 95행(446은 86행) 단가 열에 align이 없어 antd 기본 왼쪽 정렬이고 tabular-nums도 없다. 같은 콘솔의 WorkspaceTable(WorkspaceView.tsx:56)은 isMoney, isNumber 열을 align 'right'로 두고 값을 className='numeric'(globals.css:148, tabular-nums)로 감싼다. 446에도 같은 관례가 있다. 반박 시도: 열이 짧아 차이가 작다고 볼 수 있으나 버전 여러 개의 금액을 위아래로 비교하는 이력 표라 자릿수가 맞지 않는 결과가 남는다.",
+   "evidence": "frontend/src/components/pricing/PricingWorkspace.tsx:85 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:86 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:78 @ 5efe449, frontend/src/components/workspace/WorkspaceView.tsx:56 @ 5efe449",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "C446-009, X-052와 같은 열의 render를 바꾸므로 한 번에 적용한다.",
+   "pr": 446
+  },
+  {
+   "id": "X-081",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "반박: ScreenNote(components/screen/ScreenNote.tsx:8, 폭 제한 없는 12px Typography.Paragraph)와 청구, 인보이스 안내문은 main(f088399)에 같은 코드로 있었고(main BillingSection.tsx:113, InvoicesSection.tsx:91) 스택은 ScreenNote를 바꾸지 않았다. main 콘솔 본문은 CONTENT_MAX_WIDTH 1220px(components/shell/layout-sizes.ts:3)라 1440 폭에서 카드 본문 폭이 지금(1440에서 사이드바 228, 본문 좌우 패딩 76, 카드 패딩 48을 빼 약 1,088px)과 비슷하거나 더 넓었으므로 스택이 줄 길이를 늘린 것도 아니다. #446은 안내문에 문장 하나를 덧붙였을 뿐 한 줄 길이는 그대로다. 안내는 3에서 4줄짜리 보조 문단이고 화면 동작이나 금액 해석을 막는 경로가 없다. 고칠 곳도 8개 화면이 함께 쓰는 k5 범위 공통 컴포넌트(ScreenNote)다.",
+   "evidence": "frontend/src/components/screen/ScreenNote.tsx:8 @ 854e293, frontend/src/components/billing/BillingSection.tsx:121 @ 854e293, frontend/src/components/invoices/InvoicesSection.tsx:98 @ 854e293, frontend/src/components/billing/BillingSection.tsx:113 @ f088399, frontend/src/components/shell/layout-sizes.ts:3 @ f088399",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "가독성 지적 자체는 일리가 있다(WCAG 1.4.8 AAA는 CJK 한 줄 40자 이하를 권한다). 다만 main부터 있던 공통 컴포넌트 문제라 스택 PR이 아니라 main 기준 별도 변경이나 k5에서 다룰 일이다. k5 지적 목록에 ScreenNote 폭 지적은 없다.",
+   "pr": null
   }
  ],
  "new_findings": [],
@@ -360,9 +573,19 @@
    "why": "일부만 범위 밖: MVP 실제 스택의 사전 준비 중 고정 경로(/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json, toss-state.json, workspace 결과 기본 경로)는 pw-hardcoded-paths 묶음(C442-014, G-023, G-037, G-190)이 바꿀 수 있다. 그 수정이 환경변수를 들이면 README에는 그 변수 이름을 적고, 아직 고정 경로이면 'macOS 경로가 고정돼 있다'는 사실만 적고 경로를 고치지 않는다. CI에서 단위 검사를 돌리는 단계는 C442-005의 out_of_scope_parts(.github/workflows/ci.yml)다."
   },
   {
+   "id": "X-029",
+   "file": "frontend/src/app/(console)/payments/[id]/page.tsx, frontend/src/components/events/EventDetailDrawer.tsx",
+   "why": "일부만 범위 밖: (1) 수납 목록에 실패 사유를 보이려면 backend InvoicePaymentResponse(backend/src/main/java/com/meterengine/payment/dto/InvoicePaymentResponse.java)와 조회 프로젝션에 최근 실패 메시지를 더해야 한다. 열 이름이 '실패 코드'라 지금 표시는 틀리지 않아 이번에는 고치지 않는다. (4) frontend/src/components/workspace/WorkspaceView.tsx:22 JOB_LABELS에 unbilled_usage_report 이름을 더하는 일은 k5 범위다(k5 D-202, D-226). (5) frontend/src/app/(console)/invoices/page.tsx:40 '확정 (finalized)'와 frontend/src/components/billing/BillingStatusTag.tsx:17은 origin/main에 이미 있던 코드라 스택 PR 몫이 아니다. 바꾸면 workspace.contract.spec.ts:238의 '확정됨 (finalized)' exact 단언도 같이 고쳐야 한다. (6) frontend/src/lib/api/usage.ts:88은 k5 범위이고 main부터 있던 코드다."
+  },
+  {
    "id": "X-032",
    "file": "frontend/src/app/organization-invitations/[token]/page.tsx, frontend/src/app/organization-invitations/[token]/actions.ts",
    "why": "일부만 범위 밖: 원 지적의 대안인 발급 모달의 '초대 링크 열기' 제거나 문구 변경은 frontend/src/components/workspace/ActionPanel.tsx(k5 범위, 줄은 #442 이후 화면 공통 컴포넌트)라 여기서 다루지 않는다. 이 수정만으로도 혼동은 막힌다."
+  },
+  {
+   "id": "X-052",
+   "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
+   "why": "일부만 범위 밖: 백엔드 단가 응답이 JSON number라 유효 숫자 15자리를 넘으면 프론트에서 정밀도가 사라진다(문자열 직렬화나 @Digits 상한은 backend 범위). WorkspaceView.tsx NUMBER(12자리)와 lib/format formatDecimal(10자리)의 포맷 통일은 k5 범위(frontend/src/components/workspace, frontend/src/lib)."
   }
  ],
  "not_done": [],
