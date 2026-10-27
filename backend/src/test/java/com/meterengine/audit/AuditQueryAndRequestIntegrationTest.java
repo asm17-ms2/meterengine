@@ -102,6 +102,24 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
+  void 감사조회는_발생시각과_id로_정렬하고_정렬방향을_지킨다() {
+    UUID organizationId = UUID.randomUUID();
+    String read = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    String target = UUID.randomUUID().toString();
+    String prefix = UUID.randomUUID().toString().substring(0, 35);
+    String smaller = prefix + "1";
+    String larger = prefix + "2";
+    String earliest = UUID.randomUUID().toString();
+    insertAudit(larger, "2026-10-01T00:01:00Z", organizationId, target);
+    insertAudit(smaller, "2026-10-01T00:01:00Z", organizationId, target);
+    insertAudit(earliest, "2026-10-01T00:00:00Z", organizationId, target);
+
+    assertThat(auditIds(read, target, "occurred_at_asc"))
+        .containsExactly(earliest, smaller, larger);
+    assertThat(auditIds(read, target, null)).containsExactly(larger, smaller, earliest);
+  }
+
+  @Test
   void 감사조회의_잘못된_필터와_기간은_400이다() {
     String read = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID(), "read");
     for (Map<String, String> invalid :
@@ -322,6 +340,29 @@ class AuditQueryAndRequestIntegrationTest {
         "SELECT actor_type,organization_id,detail->>'method' AS method,detail->>'route' AS"
             + " route,detail->>'status' AS status FROM audit_log WHERE detail->>'request_id'=?",
         result.getResponse().getHeader("X-Request-ID"));
+  }
+
+  private void insertAudit(String id, String occurredAt, UUID organizationId, String target) {
+    jdbcTemplate.update(
+        "INSERT INTO audit_log(id,occurred_at,organization_id,actor_type,action,target_type,"
+            + "target_id) VALUES(?::uuid,?::timestamptz,?,'system','customer_created',"
+            + "'customer',?)",
+        id,
+        occurredAt,
+        organizationId,
+        target);
+  }
+
+  private List<String> auditIds(String authorization, String target, String sort) {
+    var request =
+        mvc.get()
+            .uri("/v1/audit-logs")
+            .header(AUTHORIZATION, authorization)
+            .queryParam("q", target);
+    if (sort != null) request.queryParam("sort", sort);
+    MvcTestResult result = request.exchange();
+    assertThat(result).hasStatusOk();
+    return JsonPath.read(body(result), "$.audit_logs[*].id");
   }
 
   private long requestAuditCount() {
