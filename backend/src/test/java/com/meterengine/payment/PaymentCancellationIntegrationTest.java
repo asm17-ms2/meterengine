@@ -80,6 +80,81 @@ class PaymentCancellationIntegrationTest {
   }
 
   @Test
+  void 테스트_키는_라이브_결제를_취소하지_못한다() {
+    assertMismatchedKeyCannotCreate("live", "test");
+  }
+
+  @Test
+  void 라이브_키는_테스트_결제를_취소하지_못한다() {
+    assertMismatchedKeyCannotCreate("test", "live");
+  }
+
+  @Test
+  void 테스트_키는_라이브_취소를_멱등_재요청하지_못한다() {
+    assertMismatchedKeyCannotReplay("live", "test");
+  }
+
+  @Test
+  void 라이브_키는_테스트_취소를_멱등_재요청하지_못한다() {
+    assertMismatchedKeyCannotReplay("test", "live");
+  }
+
+  @Test
+  void 테스트_키는_테스트_취소와_멱등_재요청을_허용한다() {
+    assertMatchingKeyCanCancelAndReplay("test");
+  }
+
+  @Test
+  void 라이브_키는_라이브_취소와_멱등_재요청을_허용한다() {
+    assertMatchingKeyCanCancelAndReplay("live");
+  }
+
+  private void assertMismatchedKeyCannotCreate(String attemptMode, String keyMode) {
+    Paid paid = attempt("done", attemptMode);
+    tossReturns(canceledPayment(paid, 10200L, cancel("txkey-mode", 3000L)));
+
+    MvcTestResult result = cancellationWithApiKey(paid, keyMode, UUID.randomUUID());
+
+    assertError(result, 409, ErrorCode.PAYMENT_MODE_MISMATCH);
+    assertThat(countCancellations(paid.attemptId())).isZero();
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  private void assertMismatchedKeyCannotReplay(String attemptMode, String keyMode) {
+    Paid paid = attempt("done", attemptMode);
+    UUID key = UUID.randomUUID();
+    tossReturns(canceledPayment(paid, 10200L, cancel("txkey-replay-mode", 3000L)));
+    assertThat(createCancellation(paid, "{\"amount\":3000,\"reason\":\"고객 요청\"}", key))
+        .hasStatus(201);
+
+    assertError(cancellationWithApiKey(paid, keyMode, key), 409, ErrorCode.PAYMENT_MODE_MISMATCH);
+    assertThat(countCancellations(paid.attemptId())).isEqualTo(1);
+    verify(tossPaymentsClient, times(1)).cancel(anyString(), anyString(), any(), anyString());
+  }
+
+  private void assertMatchingKeyCanCancelAndReplay(String mode) {
+    Paid paid = attempt("done", mode);
+    UUID key = UUID.randomUUID();
+    tossReturns(canceledPayment(paid, 10200L, cancel("txkey-same-mode", 3000L)));
+
+    assertThat(cancellationWithApiKey(paid, mode, key)).hasStatus(201);
+    assertThat(cancellationWithApiKey(paid, mode, key)).hasStatus(201);
+    assertThat(countCancellations(paid.attemptId())).isEqualTo(1);
+    verify(tossPaymentsClient, times(1)).cancel(anyString(), anyString(), any(), anyString());
+  }
+
+  private MvcTestResult cancellationWithApiKey(Paid paid, String mode, UUID key) {
+    return mvc.post()
+        .uri("/v1/payment-attempts/{id}/cancellations", paid.attemptId())
+        .header(
+            "Authorization", TestCredentials.issueApiKey(jdbcTemplate, paid.organizationId(), mode))
+        .header("Idempotency-Key", key.toString())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"amount\":3000,\"reason\":\"고객 요청\"}")
+        .exchange();
+  }
+
+  @Test
   void 부분_취소가_done이면_201이고_결제_상태는_partially_canceled다() {
     Paid paid = paidAttempt();
     tossReturns(canceledPayment(paid, 10200L, cancel("txkey-first", 3000L)));
@@ -825,9 +900,13 @@ class PaymentCancellationIntegrationTest {
   }
 
   private Paid attempt(String status) {
+    return attempt(status, "test");
+  }
+
+  private Paid attempt(String status, String mode) {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);
-    insertCredential(organizationId);
+    insertCredential(organizationId, mode);
     UUID invoiceId = insertInvoice(organizationId, customerId);
     UUID attemptId = UUID.randomUUID();
     boolean done = "done".equals(status);
@@ -838,12 +917,13 @@ class PaymentCancellationIntegrationTest {
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status,
            payment_key, failure_code, failure_message, requested_at, completed_at)
-        SELECT ?, organization_id, customer_id, id, 'test', total_amount, '2026-08 사용료', ?,
+        SELECT ?, organization_id, customer_id, id, ?, total_amount, '2026-08 사용료', ?,
                ?, ?, ?, ?, ?
         FROM invoice
         WHERE organization_id = ? AND id = ?
         """,
         attemptId,
+        mode,
         status,
         paymentKey,
         failed ? "REJECT_CARD_PAYMENT" : null,
@@ -882,11 +962,11 @@ class PaymentCancellationIntegrationTest {
         completedAt);
   }
 
-  private void insertCredential(UUID organizationId) {
+  private void insertCredential(UUID organizationId, String mode) {
     tossPaymentsCredentialRepository.saveAndFlush(
         new TossPaymentsCredential(
             organizationId,
-            "test",
+            mode,
             TEST_CLIENT_KEY,
             TEST_SECRET_KEY,
             OffsetDateTime.parse("2026-10-01T00:00:00Z")));
