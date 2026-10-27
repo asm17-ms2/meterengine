@@ -17,4 +17,6 @@ public record CreateCustomerRequest(
             message = Customer.BILLING_EMAIL_FORMAT_MESSAGE)
         @Size(max = Customer.BILLING_EMAIL_MAX_LENGTH) @StorableText
         @JsonProperty("billing_email")
-        String billingEmail) {}
+        String billingEmail,
+    @Size(min = 1, max = Customer.EXTERNAL_ID_MAX_LENGTH) @StorableText @JsonProperty("external_id")
+        String externalId) {}

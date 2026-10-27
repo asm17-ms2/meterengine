@@ -57,6 +57,11 @@ class BillableMetricCreateConcurrencyTest {
         DELETE FROM api_key
         WHERE organization_id IN (SELECT id FROM organization WHERE name = '미터 동시성 테스트 도입사')
         """);
+    jdbcTemplate.update(
+        """
+        DELETE FROM organization_environment
+        WHERE organization_id IN (SELECT id FROM organization WHERE name = '미터 동시성 테스트 도입사')
+        """);
     jdbcTemplate.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
   }
 

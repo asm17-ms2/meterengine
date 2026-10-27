@@ -9,8 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.meterengine.customer.entity.Customer;
-import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.customer.api.CustomerDirectory;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.repository.EventRepository;
@@ -22,7 +21,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +31,7 @@ import org.springframework.dao.DuplicateKeyException;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
-class EventServiceTest {
+class EventIngestionServiceTest {
 
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final UUID CUSTOMER_ID = UUID.randomUUID();
@@ -41,26 +39,24 @@ class EventServiceTest {
       OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
   @Mock private EventRepository eventRepository;
-  @Mock private CustomerRepository customerRepository;
+  @Mock private CustomerDirectory customerDirectory;
 
   private SimpleMeterRegistry meterRegistry;
-  private EventService eventService;
+  private EventIngestionService eventService;
 
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
     eventService =
-        new EventService(
+        new EventIngestionService(
             eventRepository,
-            customerRepository,
+            customerDirectory,
             JsonMapper.builder().build(),
             new EventIngestMetrics(meterRegistry));
   }
 
   @Test
   void 저장에_성공하면_중복이_아니라고_응답한다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     IngestEventResponse response = eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -71,8 +67,6 @@ class EventServiceTest {
 
   @Test
   void 이미_있는_키라_저장이_건너뛰어지면_중복이라고_응답한다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     assertThat(eventService.ingest(ORGANIZATION_ID, request("tx-1")).duplicate()).isTrue();
@@ -80,8 +74,6 @@ class EventServiceTest {
 
   @Test
   void 저장에_성공하면_stored_건수를_기록한다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -92,8 +84,6 @@ class EventServiceTest {
 
   @Test
   void 저장이_건너뛰어지면_duplicate_건수만_기록한다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -104,8 +94,6 @@ class EventServiceTest {
 
   @Test
   void 받는_기간_밖이지만_이미_저장된_이벤트도_duplicate_건수로_센다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.exists(ORGANIZATION_ID, "tx-1")).thenReturn(true);
     IngestEventRequest oldRequest =
         new IngestEventRequest(
@@ -119,8 +107,6 @@ class EventServiceTest {
 
   @Test
   void 중복_키_예외도_중복_성공으로_바꾸지_않고_그대로_올려_보낸다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     DuplicateKeyException duplicateKey =
         new DuplicateKeyException("duplicate key value violates unique constraint");
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any()))
@@ -132,8 +118,9 @@ class EventServiceTest {
 
   @Test
   void 이_도입사의_고객이_아니면_저장하지_않고_예외를_던진다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.empty());
+    org.mockito.Mockito.doThrow(new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND))
+        .when(customerDirectory)
+        .check(ORGANIZATION_ID, CUSTOMER_ID);
 
     assertThatThrownBy(() -> eventService.ingest(ORGANIZATION_ID, request("tx-1")))
         .isInstanceOf(NotFoundException.class)
@@ -145,8 +132,6 @@ class EventServiceTest {
 
   @Test
   void properties는_판정_없이_그대로_직렬화해_넘긴다() {
-    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     eventService.ingest(
@@ -186,7 +171,7 @@ class EventServiceTest {
     Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
     Instant occurredAt = OffsetDateTime.parse("2026-09-15T14:00:00.000000001+09:00").toInstant();
 
-    assertThat(EventService.isTooOld(occurredAt, now)).isFalse();
+    assertThat(EventIngestionService.isTooOld(occurredAt, now)).isFalse();
   }
 
   @Test
@@ -194,7 +179,7 @@ class EventServiceTest {
     Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
     Instant occurredAt = Instant.parse("2026-09-15T05:00:00Z");
 
-    assertThat(EventService.isTooOld(occurredAt, now)).isFalse();
+    assertThat(EventIngestionService.isTooOld(occurredAt, now)).isFalse();
   }
 
   @Test
@@ -202,6 +187,6 @@ class EventServiceTest {
     Instant now = OffsetDateTime.parse("2026-10-20T14:00:00+09:00").toInstant();
     Instant occurredAt = OffsetDateTime.parse("2026-09-15T13:59:59.999999999+09:00").toInstant();
 
-    assertThat(EventService.isTooOld(occurredAt, now)).isTrue();
+    assertThat(EventIngestionService.isTooOld(occurredAt, now)).isTrue();
   }
 }

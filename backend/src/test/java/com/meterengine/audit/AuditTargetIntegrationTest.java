@@ -44,14 +44,20 @@ class AuditTargetIntegrationTest {
   }
 
   @Test
-  void 고객_생성과_수정은_대상과_필드만_감사한다() {
+  void 고객_생성과_수정은_대상과_필드만_감사하고_외부ID_중복은_생성감사를_추가하지_않는다() {
     String externalId = "private-external-" + UUID.randomUUID();
     String initial = "private-initial-name";
     String changed = "private-changed-name";
     String email = "private-billing@example.invalid";
-    MvcTestResult created = post("/v1/customers", Map.of("name", initial));
+    MvcTestResult created =
+        post("/v1/customers", Map.of("name", initial, "external_id", externalId));
     assertThat(created).hasStatus(201);
     String id = JsonPath.read(body(created), "$.id");
+    assertThat(
+            post(
+                "/v1/customers",
+                Map.of("name", changed, "external_id", externalId, "billing_email", email)))
+        .hasStatus(200);
     MvcTestResult updated =
         put("/v1/customers/" + id, admin, Map.of("name", changed, "billing_email", email));
     assertThat(updated).hasStatusOk();
@@ -62,7 +68,7 @@ class AuditTargetIntegrationTest {
     var createdLogs = semantic("customer_created", id);
     assertThat(createdLogs).hasSize(1);
     assertThat(jsonMapper.readTree(createdLogs.getFirst()).path("changed_fields").toString())
-        .contains("name");
+        .contains("name", "external_id");
     var changedLogs = semantic("customer_updated", id);
     assertThat(changedLogs).hasSize(1);
     assertThat(jsonMapper.readTree(changedLogs.getFirst()).path("changed_fields").toString())
