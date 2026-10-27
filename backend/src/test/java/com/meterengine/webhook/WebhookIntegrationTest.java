@@ -2,11 +2,15 @@ package com.meterengine.webhook;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.error.ConflictException;
+import com.meterengine.global.error.ErrorCode;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
+import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookEndpointResponse;
 import com.meterengine.webhook.dto.WebhookOutcome;
@@ -161,12 +165,20 @@ class WebhookIntegrationTest {
   void 실패를_여섯_번까지만_재시도하고_수동_재시도에도_이력을_보존한다() {
     responseStatus.set(500);
     UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    long[] retrySeconds = {60, 300, 1800, 7200, 28800};
     for (int attempt = 0; attempt < 6; attempt++) {
-      jdbcTemplate.update(
-          "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE organization_id = ? AND webhook_event_id = ?",
-          organizationId,
-          eventId);
-      webhookDeliveryService.deliver();
+      pullNextAttempt(eventId);
+      assertThat(webhookDeliveryService.deliver().failedCount()).isZero();
+      assertThat(received).hasSize(attempt + 1);
+      if (attempt < retrySeconds.length) {
+        assertThat(
+                jdbcTemplate.queryForObject(
+                    "SELECT extract(epoch FROM next_attempt_at - clock_timestamp()) FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+                    Double.class,
+                    organizationId,
+                    eventId))
+            .isCloseTo(retrySeconds[attempt], within(5.0));
+      }
     }
     var delivery =
         webhookDeliveryService
@@ -239,6 +251,9 @@ class WebhookIntegrationTest {
 
   @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
     for (int i = 0; i < 20; i++) {
       webhookEndpointService.test(organizationId, endpoint.id());
     }
@@ -265,18 +280,140 @@ class WebhookIntegrationTest {
       claims.addAll(first.get(15, TimeUnit.SECONDS));
       claims.addAll(second.get(15, TimeUnit.SECONDS));
     }
+    assertThat(claims).allMatch(claim -> claim.organizationId().equals(organizationId));
     assertThat(claims.stream().map(WebhookClaim::id).distinct().count()).isEqualTo(20);
     WebhookClaim old = claims.getFirst();
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE id = ?", old.id());
     WebhookClaim replacement = webhookDeliveryRepository.claim().orElseThrow();
     assertThat(replacement.id()).isEqualTo(old.id());
-    assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isFalse();
+    assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isEmpty();
     assertThat(webhookDeliveryRepository.complete(replacement, new WebhookOutcome(200, null, 1)))
-        .isTrue();
+        .contains("done");
     for (WebhookClaim claim : claims.subList(1, claims.size())) {
       webhookDeliveryRepository.complete(claim, new WebhookOutcome(200, null, 1));
     }
+  }
+
+  @Test
+  void 비활성화한_엔드포인트의_대기_전송은_보내지_않고_재시도할_수_없다() {
+    UUID eventId = failOnce();
+    webhookEndpointService.update(
+        organizationId,
+        endpoint.id(),
+        new UpdateWebhookEndpointRequest(
+            endpoint.url(), endpoint.eventTypes(), false, endpoint.description()));
+    pullNextAttempt(eventId);
+    webhookDeliveryService.deliver();
+
+    assertThat(received).hasSize(1);
+    var delivery =
+        webhookDeliveryService
+            .list(organizationId, endpoint.id(), "failed", 0, 20)
+            .deliveries()
+            .getFirst();
+    assertThat(delivery.webhookEventId()).isEqualTo(eventId);
+    assertThat(delivery.failureReason()).isEqualTo("endpoint_disabled");
+    assertThat(delivery.nextAttemptAt()).isNull();
+    assertThat(delivery.attempts())
+        .extracting(attempt -> attempt.failureReason())
+        .containsExactly("unexpected_status", "endpoint_disabled");
+    assertThatThrownBy(
+            () -> webhookDeliveryService.retry(organizationId, endpoint.id(), delivery.id()))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((ConflictException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
+  }
+
+  @Test
+  void 삭제한_엔드포인트의_대기_전송은_보내지_않고_다시_대기시키지_않는다() {
+    UUID eventId = failOnce();
+    webhookEndpointService.delete(organizationId, endpoint.id());
+    pullNextAttempt(eventId);
+    webhookDeliveryService.deliver();
+
+    assertThat(received).hasSize(1);
+    Map<String, Object> delivery =
+        jdbcTemplate.queryForMap(
+            "SELECT id, status, failure_reason, next_attempt_at FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+            organizationId,
+            eventId);
+    assertThat(delivery)
+        .containsEntry("status", "failed")
+        .containsEntry("failure_reason", "endpoint_disabled");
+    assertThat(delivery.get("next_attempt_at")).isNull();
+    assertThat(
+            webhookDeliveryRepository.retry(
+                organizationId, endpoint.id(), (UUID) delivery.get("id")))
+        .isZero();
+  }
+
+  @Test
+  void 마지막_시도_중_선점이_만료된_전송은_lease_expired로_실패하고_수동_재시도로_되살린다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET attempt_count = 6, last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() - interval '1 second', claim_token = gen_random_uuid() WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    webhookDeliveryService.deliver();
+
+    assertThat(received).isEmpty();
+    var delivery =
+        webhookDeliveryService
+            .list(organizationId, endpoint.id(), "failed", 0, 20)
+            .deliveries()
+            .getFirst();
+    assertThat(delivery.webhookEventId()).isEqualTo(eventId);
+    assertThat(delivery.failureReason()).isEqualTo("lease_expired");
+    assertThat(delivery.nextAttemptAt()).isNull();
+
+    webhookDeliveryService.retry(organizationId, endpoint.id(), delivery.id());
+    webhookDeliveryService.deliver();
+
+    assertThat(received).hasSize(1);
+    assertThat(
+            webhookDeliveryService
+                .list(organizationId, endpoint.id(), "done", 0, 20)
+                .deliveries()
+                .getFirst()
+                .webhookEventId())
+        .isEqualTo(eventId);
+  }
+
+  @Test
+  void 비밀값을_풀지_못한_전송은_secret_unavailable_시도로_남기고_재시도_간격을_따른다() {
+    String stored =
+        jdbcTemplate.queryForObject(
+            "SELECT secret FROM webhook_endpoint WHERE id = ?", String.class, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_endpoint SET secret = ? WHERE id = ?",
+        "v1:" + Base64.getEncoder().encodeToString(new byte[40]),
+        endpoint.id());
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+
+    assertThat(webhookDeliveryService.deliver().failedCount()).isEqualTo(1);
+
+    assertThat(received).isEmpty();
+    var delivery =
+        webhookDeliveryService
+            .list(organizationId, endpoint.id(), "pending", 0, 20)
+            .deliveries()
+            .getFirst();
+    assertThat(delivery.webhookEventId()).isEqualTo(eventId);
+    assertThat(delivery.attemptCount()).isEqualTo(1);
+    assertThat(delivery.failureReason()).isEqualTo("secret_unavailable");
+    assertThat(delivery.attempts())
+        .extracting(attempt -> attempt.failureReason())
+        .containsExactly("secret_unavailable");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT extract(epoch FROM next_attempt_at - clock_timestamp()) FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+                Double.class,
+                organizationId,
+                eventId))
+        .isCloseTo(60, within(5.0));
+    jdbcTemplate.update(
+        "UPDATE webhook_endpoint SET secret = ? WHERE id = ?", stored, endpoint.id());
   }
 
   @Test
@@ -306,6 +443,21 @@ class WebhookIntegrationTest {
                 .header("Authorization", other)
                 .exchange())
         .hasStatus(404);
+  }
+
+  private UUID failOnce() {
+    responseStatus.set(500);
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    webhookDeliveryService.deliver();
+    assertThat(received).hasSize(1);
+    return eventId;
+  }
+
+  private void pullNextAttempt(UUID eventId) {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
   }
 
   private record Received(String id, String timestamp, String signature, String body) {}
