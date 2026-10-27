@@ -8,13 +8,16 @@ import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.StorableJsonValidator;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.StorableTimestamp;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -42,6 +45,7 @@ import org.springframework.util.ClassUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 
@@ -87,7 +91,11 @@ class RequestValidationCoverageTest {
             "IngestEventRequest",
             "CreateSignupRequest",
             "CreateSignupConsentRequest",
-            "CreateApiKeyRequest");
+            "CreateApiKeyRequest",
+            "CreatePaymentCancellationRequest",
+            "IngestEventBatchRequest",
+            "CreatePricePlanRequest",
+            "CreateWebhookEndpointRequest");
   }
 
   @Test
@@ -401,6 +409,21 @@ class RequestValidationCoverageTest {
   }
 
   @Test
+  void 배치_봉투와_조건부_요금_구간의_제약을_검사한다() throws Exception {
+    Field events = requestRecord("IngestEventBatchRequest").getDeclaredField("events");
+    assertThat(events.isAnnotationPresent(NotEmpty.class)).isTrue();
+    assertThat(events.getAnnotation(Size.class).max()).isEqualTo(100);
+    Field tiers = requestRecord("CreatePriceRateRequest").getDeclaredField("tiers");
+    assertThat(tiers.getAnnotation(Size.class).min()).isEqualTo(1);
+    assertThat(tiers.getAnnotation(Size.class).max()).isEqualTo(100);
+    assertThat(
+            requestRecord("CreatePriceRateRequest")
+                .getMethod("isValidPricing")
+                .isAnnotationPresent(AssertTrue.class))
+        .isTrue();
+  }
+
+  @Test
   void 요청_DTO의_월과_참거짓과_금액_타입의_제약을_검사한다() {
     for (Class<?> record : requestRecords()) {
       for (RecordComponent component : record.getRecordComponents()) {
@@ -461,7 +484,16 @@ class RequestValidationCoverageTest {
   }
 
   private static boolean isKnownType(Parameter parameter) {
-    if (parameter.getType() == HttpServletResponse.class) {
+    if (parameter.getType() == Map.class) {
+      return parameter.isAnnotationPresent(RequestParam.class)
+          && parameter.isAnnotationPresent(StorableJson.class)
+          && parameter.getParameterizedType() instanceof ParameterizedType type
+          && java.util.Arrays.equals(
+              type.getActualTypeArguments(),
+              new java.lang.reflect.Type[] {String.class, String.class});
+    }
+    if (parameter.getType() == HttpServletResponse.class
+        || parameter.getType() == HttpServletRequest.class) {
       return true;
     }
     if (parameter.getType() == AuthenticatedPrincipal.class) {

@@ -1,4 +1,4 @@
-import type { ErrorResponse, FieldError } from "./types.ts";
+import type { ErrorResponse, FieldError, IngestEventBatchResult } from "./types.ts";
 
 export class MeterEngineApiError extends Error {
   readonly status: number;
@@ -30,6 +30,19 @@ export class MeterEngineTimeoutError extends Error {
     super(`MeterEngine 서버가 ${timeoutMs}ms 안에 응답하지 않았습니다`);
     this.name = "MeterEngineTimeoutError";
     this.timeoutMs = timeoutMs;
+  }
+}
+
+export class MeterEngineBatchError extends Error {
+  readonly results: IngestEventBatchResult[];
+  declare readonly cause: Error;
+  readonly failedBatch: { startIndex: number; size: number } | undefined;
+
+  constructor(results: IngestEventBatchResult[], cause: Error, failedBatch?: { startIndex: number; size: number }) {
+    super(`배치 전송이 ${results.length}건 처리 뒤 실패했습니다`, { cause });
+    this.name = "MeterEngineBatchError";
+    this.results = results;
+    this.failedBatch = failedBatch;
   }
 }
 

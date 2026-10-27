@@ -121,8 +121,17 @@ class ApiClient:
     def get_invoice(self, month: Optional[str]) -> ApiResult:
         return self._request("GET", "/v1/invoices/draft", query=_month_query(month))
 
-    def get_billable_metric_prices(self) -> ApiResult:
-        return self._request("GET", "/v1/billable-metric-prices")
+    def get_billable_metric_prices(self, month: Optional[str] = None, customer_id: Optional[str] = None) -> ApiResult:
+        query = _month_query(month)
+        if customer_id:
+            query["customer_id"] = customer_id
+        return self._request("GET", "/v1/billable-metric-prices", query=query)
+
+    def get_price_plans(self, month: Optional[str] = None, customer_id: Optional[str] = None) -> ApiResult:
+        query = _month_query(month)
+        if customer_id:
+            query["customer_id"] = customer_id
+        return self._request("GET", "/v1/price-plans", query=query)
 
     def get_events_page(self, month: Optional[str]) -> ApiResult:
         query = _month_query(month)
@@ -132,8 +141,14 @@ class ApiClient:
     def get_customers(self) -> ApiResult:
         return self._request("GET", "/v1/customers")
 
-    def create_customer(self, name: str) -> ApiResult:
-        body = json.dumps({"name": name}, ensure_ascii=False).encode("utf-8")
+    def post_events(self, body_text: str) -> ApiResult:
+        return self._request("POST", "/v1/event-batches", body=body_text.encode("utf-8"), content_type="application/json")
+
+    def create_customer(self, name: str, external_id: Optional[str] = None) -> ApiResult:
+        fields = {"name": name}
+        if external_id is not None:
+            fields["external_id"] = external_id
+        body = json.dumps(fields, ensure_ascii=False).encode("utf-8")
         return self._request("POST", "/v1/customers", body=body, content_type="application/json")
 
     def _request(self, method, path, query=None, body=None, content_type=None) -> ApiResult:

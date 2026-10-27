@@ -1,9 +1,11 @@
 package com.meterengine.customer.controller;
 
 import com.meterengine.customer.dto.CreateCustomerRequest;
+import com.meterengine.customer.dto.CustomerRegistration;
 import com.meterengine.customer.dto.CustomerResponse;
 import com.meterengine.customer.dto.ListCustomersResponse;
 import com.meterengine.customer.dto.UpdateCustomerRequest;
+import com.meterengine.customer.service.CustomerRegistrationService;
 import com.meterengine.customer.service.CustomerService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
@@ -18,8 +20,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,9 +40,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class CustomerController {
 
   private final CustomerService customerService;
+  private final CustomerRegistrationService customerRegistrationService;
 
-  CustomerController(CustomerService customerService) {
+  CustomerController(
+      CustomerService customerService, CustomerRegistrationService customerRegistrationService) {
     this.customerService = customerService;
+    this.customerRegistrationService = customerRegistrationService;
   }
 
   @GetMapping
@@ -56,23 +63,26 @@ public class CustomerController {
   })
   public ListCustomersResponse listCustomers(
       @CurrentOrganizationId UUID organizationId,
+      @RequestParam(name = "external_id", required = false) @Size(min = 1, max = 255) @StorableText
+          String externalId,
       @RequestParam(defaultValue = "active") @StorableText String status) {
-    return ListCustomersResponse.from(customerService.list(organizationId, status));
+    return ListCustomersResponse.from(
+        customerRegistrationService.list(organizationId, externalId, status));
   }
 
   @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
   @IngestAccess
   @Operation(
       summary = "고객 등록",
       description =
           """
           고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
-          이름이 같은 고객을 여럿 등록할 수 있다. 구별은 id로 한다.
+          external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다.
           billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "등록된 고객"),
+    @ApiResponse(responseCode = "200", description = "같은 external_id로 이미 등록한 고객"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -84,11 +94,12 @@ public class CustomerController {
             code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘는다.
             """)
   })
-  public CustomerResponse createCustomer(
+  public ResponseEntity<CustomerResponse> createCustomer(
       @CurrentOrganizationId UUID organizationId,
       @Valid @RequestBody CreateCustomerRequest request) {
-    return CustomerResponse.from(
-        customerService.create(organizationId, request.name(), request.billingEmail()));
+    CustomerRegistration registration = customerRegistrationService.create(organizationId, request);
+    return ResponseEntity.status(registration.created() ? HttpStatus.CREATED : HttpStatus.OK)
+        .body(CustomerResponse.from(registration.customer()));
   }
 
   @GetMapping("/{id}")

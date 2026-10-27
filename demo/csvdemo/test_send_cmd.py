@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bridge.const import LOGS_DIR as BRIDGE_LOGS_DIR
-from core.api_client import ApiResult, Organization
+from core.api_client import ApiResult, Organization, TransportError
 from core.model import Event
 from csvdemo import send_cmd
 from csvdemo.render import Console, format_gate
@@ -141,6 +141,50 @@ class FormatGateTest(unittest.TestCase):
         self.assertNotIn(KEY, text)
         self.assertIn("me_live_****2LtA", text)
         self.assertIn("데모 도입사 (%s)" % ORGANIZATION.id, text)
+
+
+class BatchSendTest(unittest.TestCase):
+    setUp = SendLoopTest.setUp
+    log_text = SendLoopTest.log_text
+
+    def test_배치_실패_뒤_모든_입력행을_UNKNOWN과_NOT_SENT로_구분해_남긴다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                rows = json.loads(body_text)["events"]
+                self.posted.append(body_text)
+                if len(self.posted) > 1:
+                    raise TransportError("connection lost")
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(_events(5), client, ORGANIZATION, Console(False), args)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(client.posted), 2)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3, 4, 5])
+        self.assertEqual([row["outcome"] for row in records[:2]], ["new", "new"])
+        self.assertIn("UNKNOWN", records[2]["error"])
+        self.assertIn("UNKNOWN", records[3]["error"])
+        self.assertIn("NOT_SENT", records[4]["error"])
+
+    def test_배치의_속성_숫자는_원문_자릿수를_그대로_보낸다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                return _result(200, {"results": [{"index": 0, "transaction_id": "evt-1", "result": "stored"}]})
+
+        events = _events(1)
+        number = "12345678901234567890.12345678901234567890"
+        events[0].properties_text = '{"quantity":' + number + '}'
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(send_cmd.send_events(events, client, ORGANIZATION, Console(False), args), 0)
+        self.assertIn(number, client.posted[0])
 
 
 if __name__ == "__main__":

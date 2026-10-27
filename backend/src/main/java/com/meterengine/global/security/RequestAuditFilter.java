@@ -16,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
+  public static final String REQUEST_ID_ATTRIBUTE =
+      RequestAuditFilter.class.getName() + ".requestId";
   private static final List<String> UUID_VARIABLES =
       List.of("delivery_id", "id", "organization_id");
   private static final Pattern UUID_VALUE =
@@ -40,6 +42,7 @@ public class RequestAuditFilter extends OncePerRequestFilter {
     boolean failed = true;
     UUID requestId = UUID.randomUUID();
     response.setHeader("X-Request-ID", requestId.toString());
+    request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
     try {
       filterChain.doFilter(request, response);
       failed = false;

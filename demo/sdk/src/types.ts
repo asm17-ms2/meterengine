@@ -1,3 +1,33 @@
+export interface IngestEventRequest {
+  transaction_id: string;
+  customer_id: string;
+  type: string;
+  timestamp: string;
+  properties: Record<string, unknown>;
+}
+
+export type IngestEventInput = Omit<IngestEventRequest, "transaction_id"> & { transaction_id?: string };
+
+export interface IngestEventResponse {
+  transaction_id: string;
+  duplicate: boolean;
+}
+
+export interface IngestEventBatchRequest {
+  events: IngestEventRequest[];
+}
+
+export interface IngestEventBatchResult {
+  index: number;
+  transaction_id: string;
+  result: "stored" | "duplicate" | "rejected";
+  error?: ErrorResponse;
+}
+
+export interface IngestEventBatchResponse {
+  results: IngestEventBatchResult[];
+}
+
 export interface FieldError {
   field: string;
   message: string;
@@ -224,3 +254,38 @@ export interface ListWebhookDeliveriesResponse {
     attempts: Array<{ attempted_at: string; response_status: number | null; failure_reason: string | null; duration_ms: number }>;
   }>;
 }
+
+export interface UnbilledEventsResponse {
+  month: string;
+  cutoff_at: string;
+  unmatched_type: { event_count: number; types: Array<{ type: string; event_count: number }> };
+  non_numeric_value: { event_count: number; billable_metrics: Array<{ billable_metric_code: string; event_count: number }> };
+  future_timestamp: { event_count: number; earliest_occurred_at: string | null; latest_occurred_at: string | null };
+  negative_quantity: { event_count: number; billable_metrics: Array<{ billable_metric_code: string; event_count: number }> };
+}
+
+export type EventIssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
+
+export type EventIssue = {
+  transaction_id: string; customer_id: string; customer_name: string; type: string;
+  occurred_at: string; received_at: string; reason: EventIssueReason;
+  billable_metric_code: string | null; target_property: string | null;
+  action_hint: string; negative_quantity: boolean;
+};
+
+export type EventIssueSearchResponse = {
+  month: string; cutoff_at: string; page: number; size: number; total: number;
+  issues: EventIssue[]; summary: Record<EventIssueReason, number>;
+  warnings: { scope: "organization_month"; future_event_count: number; negative_event_metric_count: number };
+};
+
+export type EventRejection = {
+  id: string; transaction_id: string | null; customer_id: string | null; type: string | null;
+  occurred_at: string | null; error_code: string; error_fields: string[];
+  request_id: string | null; batch_index: number | null; recorded_at: string;
+};
+
+export type EventRejectionSearchResponse = {
+  month: string; recording_started_at: string | null; page: number; size: number; total: number;
+  rejections: EventRejection[];
+};

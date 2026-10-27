@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.event.repository.UnbilledEventRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
@@ -37,6 +38,7 @@ class MetricAggregationIntegrationTest {
   @Autowired private jakarta.persistence.EntityManager entityManager;
   @Autowired private BillableMetricService metrics;
   @Autowired private BillableMetricUsageService usage;
+  @Autowired private UnbilledEventRepository diagnostics;
   @Autowired private com.meterengine.invoice.service.DraftInvoiceService draftInvoices;
   @Autowired private com.meterengine.invoice.service.InvoiceFinalizationService finalization;
   @Autowired private com.meterengine.invoice.service.InvoiceService invoices;
@@ -248,6 +250,20 @@ class MetricAggregationIntegrationTest {
       assertThat(quantity(aggregation).rawQuantity()).isEqualByComparingTo("0");
       assertThat(quantity(aggregation).dimensionUsages()).isEmpty();
     }
+  }
+
+  @Test
+  void count와_distinct의_정상_스칼라는_숫자_누락이나_음수_진단에_잡히지_않는다() {
+    create("count", "count", List.of(), null, null, null, null);
+    create("distinct", "count_distinct", List.of(), null, null, null, null);
+    event("a", "{\"value\":-1}", START);
+    event("b", "{\"value\":\"valid\"}", START);
+    event("c", "{\"value\":false}", START);
+    assertThat(diagnostics.findNonNumericValues(organization, START, END).eventCount()).isZero();
+    assertThat(diagnostics.findNegativeQuantities(organization, START, END).eventCount()).isZero();
+    event("d", "{}", START);
+    assertThat(diagnostics.findNonNumericValues(organization, START, END).eventCount())
+        .isEqualTo(1);
   }
 
   @Test
