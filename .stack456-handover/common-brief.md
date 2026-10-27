@@ -1,7 +1,7 @@
 # 스택 #456 클라우드 검토 공통 지침
 
 - 맡은 묶음의 지적을 현재 head에서 다시 확인하고, 맞는 것은 고쳐 검사를 통과하는 대로 바로 커밋해 `claude/s456-<묶음>-<PR 번호>` 브랜치로 push한다. 모아 두지 않는다.
-- 판정과 로그는 `claude/s456-<묶음>-report` 브랜치에 PR 하나를 끝낼 때마다 push한다. 세션 한도가 다 되어 가거나 일을 마치면 아래 "넘기기"대로 정리해 push한다. 로컬 조율 세션은 이 브랜치를 1시간마다 확인해 이어받는다.
+- 판정과 로그는 `claude/s456-<묶음>-report` 브랜치에 판정 10건마다, 그리고 PR 하나를 끝낼 때마다 push한다. 한도는 경고 없이 끊길 수 있어서, 마지막 push까지만 이어받을 수 있다. 세션 한도가 다 되어 가거나 일을 마치면 아래 "넘기기"대로 정리해 push한다. 로컬 조율 세션은 이 브랜치를 1시간마다 확인해 검토하고 이어받는다.
 - `feat/*`와 `main`에는 push하지 않고 GitHub에 댓글, 리뷰, PR을 만들지 않는다. 스택 브랜치로 합치는 일과 PR 댓글은 로컬 조율 세션이 한다.
 
 ## 대상
@@ -46,7 +46,9 @@ git show origin/claude/s456-handover:.stack456-handover/<묶음>/findings.json >
 ## 순서
 
 1. 실행 환경을 확인한다: `java -version`(25 필요), docker, node, `corepack pnpm`. 돌릴 수 없는 검사는 보고에 적는다.
+   - 기본 환경의 Java는 21이고 백엔드 toolchain은 25를 찾는다. `apt-get update && apt-get install -y openjdk-25-jdk-headless`로 깔면 Gradle이 `/usr/lib/jvm`에서 찾는다. apt에 없으면 Temurin 25를 GitHub 릴리스(`adoptium/temurin25-binaries`)에서 받는다. 둘 다 안 되면 백엔드 검사는 `not-run`으로 적고 판정은 코드로 한다.
 2. 지적마다 현재 head의 코드, 호출부, 설정, 테스트, PR 본문을 읽고 먼저 반박을 시도한다.
+   - 클라우드에서는 `gh pr` 명령이 막혀 있다. PR 본문은 `gh api repos/asm17-ms2/meterengine/pulls/<번호> --jq .body`로 읽는다.
    - 판정은 `confirmed`, `refuted`, `already-fixed`, `uncertain` 중 하나다. 실패 경로를 코드로 짚을 수 있을 때만 `confirmed`다.
    - severity가 high, critical이거나 category가 security이면 두 관점으로 따로 본다. 하나는 재현 경로, 다른 하나는 이 제품에서 실제로 해로운지와 다른 PR에서 이미 막는지다.
    - 원인이 같은 지적은 하나로 묶고 묶은 id를 남긴다. 다른 묶음 자료와 겹쳐 보이면 보고에 적기만 한다.
