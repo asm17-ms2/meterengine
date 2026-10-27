@@ -30,6 +30,7 @@
 - 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
 - `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`과 Caddy 내부 사이트 `8081`은 compose 네트워크 안에서만 닿는다.
+- 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - compose 프로젝트 이름은 `meterengine-prod`다.
 - 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
 - 마지막으로 성공한 배포의 색과 SHA는 `/etc/meterengine/deploy-state`에 `LIVE_COLOR`, `LIVE_SHA`로 남는다.
@@ -384,7 +385,14 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 ## 공개 인증의 실제 IP
 
-공개 Caddy는 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓰며, 내부 8081 사이트는 프론트 서버가 전달한 값을 유지한다. 백엔드의 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에는 실제 Caddy와 프론트의 직접 연결 IP/CIDR만 지정한다. 기본값은 비어 있어 헤더를 신뢰하지 않는다. 배포 네트워크에 맞게 이 값을 정하지 않으면 프록시 뒤 사용자들이 IP 한도를 공유한다. 전체 사설망을 일괄 신뢰하지 않는다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
+공개 Caddy는 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓰며, 내부 8081 사이트는 프론트 서버가 전달한 값을 유지한다. 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에 든 직접 연결에서 온 헤더만 믿는다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
+
+- 백엔드 두 색은 compose의 `proxy` 네트워크(`172.30.0.0/24`)에만 붙는다. Caddy는 `172.30.0.10`, 프론트는 `172.30.0.11`로 주소를 고정한다.
+- compose가 이 값의 기본값을 고정 주소 대역 `172.30.0.8/29`로 넣어 Parameter Store 파라미터가 따로 필요 없다. 다른 컨테이너는 `172.30.0.128/25`에서 주소를 받아 이 대역에 들지 않는다.
+- 주소나 대역을 바꾸면 compose의 고정 주소, `ip_range`, 이 기본값을 같이 바꾼다. 비우면 모든 사용자가 Caddy IP 하나의 한도를 나눠 쓴다. 전체 사설망을 일괄 신뢰하지 않는다.
+- 서버에 `172.30.0.0/24`와 겹치는 docker 네트워크가 있으면 compose가 `proxy` 네트워크를 만들지 못해 배포가 실패한다.
+- `proxy` 네트워크가 생기는 첫 배포에서 Caddy, 프론트, Prometheus가 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 80과 443이 닫혀 공개 접속이 끊긴다. 다시 뜬 Caddy는 `default`에도 붙어 있어 그때까지 받던 색에 계속 보낸다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
+- `proxy` 네트워크가 없던 SHA로 롤백하면 Caddy가 `default`에만 붙어, 새 색이 뜰 때까지 `proxy`에만 있는 받던 색에 보내지 못한다.
 
 ## 설정값
 

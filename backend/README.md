@@ -264,7 +264,7 @@ unset SESSION
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(승인, 거절, 정지, 재개), 소속 추가 | `/v1/organization`, `/v1/organizations` |
 | `apikey` | API 키 발급, 폐기, 교체와 키 검증 | `/v1/api-keys` |
 | `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/user-accounts` |
-| `audit` | 핵심 동작의 감사 기록. 남긴 행은 고치지 않는다 | 없음 |
+| `audit` | 핵심 동작의 감사 기록. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다 | 없음 |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |

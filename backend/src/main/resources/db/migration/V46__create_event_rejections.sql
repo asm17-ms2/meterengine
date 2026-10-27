@@ -1,9 +1,11 @@
 ALTER TABLE event ADD COLUMN request_id UUID;
-ALTER TABLE event ADD COLUMN actor_type VARCHAR CHECK (actor_type IN ('api_key', 'user_account', 'system'));
+ALTER TABLE event ADD COLUMN actor_type VARCHAR;
+ALTER TABLE event ADD CONSTRAINT event_actor_type_check
+  CHECK (actor_type IN ('api_key', 'user_account', 'system')) NOT VALID;
 ALTER TABLE event ADD COLUMN actor_id UUID;
 ALTER TABLE event ADD CONSTRAINT event_actor_identity_check CHECK (
   CASE WHEN actor_type IS NULL OR actor_type = 'system' THEN actor_id IS NULL
-       ELSE actor_id IS NOT NULL END);
+       ELSE actor_id IS NOT NULL END) NOT VALID;
 
 CREATE TABLE event_rejection_recording_start (
   singleton BOOLEAN CONSTRAINT event_rejection_recording_start_pk PRIMARY KEY DEFAULT TRUE CHECK (singleton),
