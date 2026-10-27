@@ -6,7 +6,10 @@ import com.meterengine.webhook.dto.WebhookDeliveryResponse;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse.Attempt;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -119,33 +122,57 @@ public class WebhookDeliveryRepository {
 
   public List<WebhookDeliveryResponse> findByEndpoint(
       UUID organizationId, UUID endpointId, String status, int page, int size) {
-    return jdbcTemplate.query(
-        """
-        SELECT d.*, e.type FROM webhook_delivery d
-        JOIN webhook_event e ON e.organization_id = d.organization_id AND e.environment_scope_id = d.environment_scope_id AND e.id = d.webhook_event_id
-        WHERE d.organization_id = ? AND d.environment_scope_id = ? AND d.webhook_endpoint_id = ? AND (?::varchar IS NULL OR d.status = ?)
-        ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?
-        """,
-        (rs, rowNum) ->
-            new WebhookDeliveryResponse(
-                rs.getObject("id", UUID.class),
-                rs.getObject("webhook_event_id", UUID.class),
-                rs.getString("type"),
-                rs.getString("status"),
-                rs.getInt("attempt_count"),
-                rs.getObject("next_attempt_at", OffsetDateTime.class),
-                rs.getObject("last_attempted_at", OffsetDateTime.class),
-                (Integer) rs.getObject("response_status"),
-                rs.getString("failure_reason"),
-                rs.getObject("created_at", OffsetDateTime.class),
-                attempts(organizationId, rs.getObject("id", UUID.class))),
-        organizationId,
-        BusinessEnvironmentContext.scopeId(),
-        endpointId,
-        status,
-        status,
-        size,
-        (long) page * size);
+    UUID scopeId = BusinessEnvironmentContext.scopeId();
+    List<WebhookDeliveryResponse> deliveries =
+        jdbcTemplate.query(
+            """
+            SELECT d.*, e.type FROM webhook_delivery d
+            JOIN webhook_event e ON e.organization_id = d.organization_id AND e.environment_scope_id = d.environment_scope_id AND e.id = d.webhook_event_id
+            WHERE d.organization_id = ? AND d.environment_scope_id = ? AND d.webhook_endpoint_id = ? AND (?::varchar IS NULL OR d.status = ?)
+            ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?
+            """,
+            (rs, rowNum) ->
+                new WebhookDeliveryResponse(
+                    rs.getObject("id", UUID.class),
+                    rs.getObject("webhook_event_id", UUID.class),
+                    rs.getString("type"),
+                    rs.getString("status"),
+                    rs.getInt("attempt_count"),
+                    rs.getObject("next_attempt_at", OffsetDateTime.class),
+                    rs.getObject("last_attempted_at", OffsetDateTime.class),
+                    (Integer) rs.getObject("response_status"),
+                    rs.getString("failure_reason"),
+                    rs.getObject("created_at", OffsetDateTime.class),
+                    List.of()),
+            organizationId,
+            scopeId,
+            endpointId,
+            status,
+            status,
+            size,
+            (long) page * size);
+    if (deliveries.isEmpty()) {
+      return deliveries;
+    }
+    Map<UUID, List<Attempt>> attempts =
+        attempts(
+            organizationId, scopeId, deliveries.stream().map(WebhookDeliveryResponse::id).toList());
+    return deliveries.stream()
+        .map(
+            delivery ->
+                new WebhookDeliveryResponse(
+                    delivery.id(),
+                    delivery.webhookEventId(),
+                    delivery.type(),
+                    delivery.status(),
+                    delivery.attemptCount(),
+                    delivery.nextAttemptAt(),
+                    delivery.lastAttemptedAt(),
+                    delivery.responseStatus(),
+                    delivery.failureReason(),
+                    delivery.createdAt(),
+                    attempts.getOrDefault(delivery.id(), List.of())))
+        .toList();
   }
 
   public int retry(UUID organizationId, UUID endpointId, UUID id) {
@@ -161,17 +188,31 @@ public class WebhookDeliveryRepository {
     return claim.environmentId() == null ? new UUID(0, 0) : claim.environmentId();
   }
 
-  private List<Attempt> attempts(UUID organizationId, UUID id) {
-    return jdbcTemplate.query(
-        "SELECT * FROM webhook_delivery_attempt WHERE organization_id = ? AND environment_scope_id = ? AND webhook_delivery_id = ? ORDER BY attempted_at, id",
-        (rs, rowNum) ->
-            new Attempt(
-                rs.getObject("attempted_at", OffsetDateTime.class),
-                (Integer) rs.getObject("response_status"),
-                rs.getString("failure_reason"),
-                rs.getLong("duration_ms")),
-        organizationId,
-        BusinessEnvironmentContext.scopeId(),
-        id);
+  private Map<UUID, List<Attempt>> attempts(
+      UUID organizationId, UUID scopeId, List<UUID> deliveryIds) {
+    Map<UUID, List<Attempt>> attempts = new HashMap<>();
+    jdbcTemplate.query(
+        "SELECT * FROM webhook_delivery_attempt WHERE organization_id = ? AND environment_scope_id = ? AND webhook_delivery_id = ANY(?) ORDER BY attempted_at, id",
+        preparedStatement -> {
+          preparedStatement.setObject(1, organizationId);
+          preparedStatement.setObject(2, scopeId);
+          preparedStatement.setArray(
+              3,
+              preparedStatement
+                  .getConnection()
+                  .createArrayOf("uuid", deliveryIds.toArray(UUID[]::new)));
+        },
+        rs -> {
+          attempts
+              .computeIfAbsent(
+                  rs.getObject("webhook_delivery_id", UUID.class), id -> new ArrayList<>())
+              .add(
+                  new Attempt(
+                      rs.getObject("attempted_at", OffsetDateTime.class),
+                      (Integer) rs.getObject("response_status"),
+                      rs.getString("failure_reason"),
+                      rs.getLong("duration_ms")));
+        });
+    return attempts;
   }
 }

@@ -52,6 +52,8 @@ CREATE TABLE webhook_delivery_attempt (
   CONSTRAINT webhook_delivery_attempt_webhook_delivery_same_organization_fk FOREIGN KEY (organization_id, webhook_delivery_id) REFERENCES webhook_delivery(organization_id, id)
 );
 
+CREATE INDEX webhook_delivery_attempt_webhook_delivery_lookup ON webhook_delivery_attempt(organization_id, webhook_delivery_id);
+
 CREATE FUNCTION webhook_block_mutation() RETURNS trigger AS $$
 BEGIN
   RAISE EXCEPTION 'webhook history is append-only';
