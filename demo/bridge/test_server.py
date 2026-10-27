@@ -7,10 +7,11 @@ import threading
 import time
 import unittest
 from http.server import ThreadingHTTPServer
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from bridge import server
+from bridge import server, state
 from bridge.state import BridgeConfig, BridgeState
 from core.api_client import Organization
 
@@ -496,6 +497,195 @@ class RequestOriginTest(unittest.TestCase):
         status = self.post("/v1/logs", "{}", {"Origin": "https://evil.example"})
         self.assertEqual(status, 403)
         self.assertEqual(self.sender.submitted, [])
+
+
+class ConfigEndpointTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.config_path = os.path.join(self.directory.name, "bridge.json")
+        BridgeConfig(owner="박성종", base_url="http://127.0.0.1:9", allow=["meterengine"]).save(
+            self.config_path
+        )
+        self.running = BridgeConfig.load(self.config_path)
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), server.BridgeHandler)
+        self.server.config = self.running
+        self.server.config_path = self.config_path
+        self.server.state = BridgeState(os.path.join(self.directory.name, "state.json"), "scope")
+        self.server.sender = RequestOriginTest.RecordingSender()
+        self.server.daemon_threads = True
+        self.serving = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.serving.start()
+        self.addCleanup(self.server.server_close)
+        self.addCleanup(self.server.shutdown)
+        self.port = self.server.server_address[1]
+
+    def request(self, method, path, body=None, headers=None):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request(method, path, body, headers or {})
+            response = connection.getresponse()
+            raw = response.read()
+            return response.status, json.loads(raw.decode("utf-8")) if raw else None
+        finally:
+            connection.close()
+
+    def put(self, changes, headers=None):
+        body = changes if isinstance(changes, str) else json.dumps(changes, ensure_ascii=False)
+        return self.request("PUT", "/meterengine/config", body.encode("utf-8"), headers)
+
+    def on_disk(self):
+        with open(self.config_path, encoding="utf-8") as f:
+            return f.read()
+
+    def test_설정을_조회한다(self):
+        self.server.config = BridgeConfig()
+        status, body = self.request("GET", "/meterengine/config")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["owner"], "박성종")
+        self.assertEqual(body["base_url"], "http://127.0.0.1:9")
+
+    def test_가릴_필드는_가려서_보낸다(self):
+        with mock.patch.dict(state.SECRET_FIELDS, {"owner": lambda v: "****"}):
+            status, body = self.request("GET", "/meterengine/config")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["owner"], "****")
+        self.assertEqual(body["base_url"], "http://127.0.0.1:9")
+
+    def test_설정을_바꾸면_파일에_쓰고_재시작이_필요하다고_답한다(self):
+        status, body = self.put({"owner": "문인호", "deny": ["비밀"], "timeout_seconds": 3})
+        self.assertEqual(status, 200)
+        self.assertEqual(body, {"saved": True, "restart_required": True})
+        saved = BridgeConfig.load(self.config_path)
+        self.assertEqual(saved.owner, "문인호")
+        self.assertEqual(saved.deny, ["비밀"])
+        self.assertEqual(saved.timeout_seconds, 3.0)
+        self.assertEqual(saved.allow, ["meterengine"])
+        self.assertIs(self.server.config, self.running)
+        self.assertEqual(self.server.config.owner, "박성종")
+
+    def test_빈_비밀값은_기존_값을_유지한다(self):
+        with mock.patch.dict(state.SECRET_FIELDS, {"owner": lambda v: "****"}):
+            status, _ = self.put({"owner": "", "fallback_project": "기타"})
+        self.assertEqual(status, 200)
+        saved = BridgeConfig.load(self.config_path)
+        self.assertEqual(saved.owner, "박성종")
+        self.assertEqual(saved.fallback_project, "기타")
+
+    def test_잘못된_base_url은_400과_field(self):
+        before = self.on_disk()
+        status, body = self.put({"base_url": "localhost:8080"})
+        self.assertEqual(status, 400)
+        self.assertEqual(body["field"], "base_url")
+        self.assertTrue(body["error"])
+        self.assertEqual(self.on_disk(), before)
+
+    def test_모르는_필드는_400(self):
+        before = self.on_disk()
+        status, body = self.put({"owner": "문인호", "colour": "red"})
+        self.assertEqual(status, 400)
+        self.assertEqual(body["field"], "colour")
+        self.assertEqual(self.on_disk(), before)
+
+    def test_타입이_틀린_필드는_400(self):
+        before = self.on_disk()
+        for changes, name in (
+            ({"allow": "a,b"}, "allow"),
+            ({"deny": ["a", 1]}, "deny"),
+            ({"timeout_seconds": True}, "timeout_seconds"),
+            ({"timeout_seconds": 0}, "timeout_seconds"),
+            ({"timeout_seconds": "10"}, "timeout_seconds"),
+            ({"owner": None}, "owner"),
+        ):
+            status, body = self.put(changes)
+            self.assertEqual(status, 400, changes)
+            self.assertEqual(body["field"], name, changes)
+        self.assertEqual(self.on_disk(), before)
+
+    def test_JSON이_아닌_본문은_400(self):
+        before = self.on_disk()
+        for raw in ("owner=문인호", "[1, 2]", ""):
+            status, body = self.put(raw)
+            self.assertEqual(status, 400, raw)
+            self.assertIsNone(body["field"], raw)
+            self.assertTrue(body["error"], raw)
+        self.assertEqual(self.on_disk(), before)
+
+    def test_Origin이_붙은_PUT은_403이고_파일을_바꾸지_않는다(self):
+        before = self.on_disk()
+        status, _ = self.put(
+            {"owner": "누군가"}, {"Origin": "https://evil.example", "Content-Type": "text/plain"}
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(self.on_disk(), before)
+
+    def test_브라우저에서_온_재시작은_403이고_서버를_멈추지_않는다(self):
+        with mock.patch.dict(os.environ, {"XPC_SERVICE_NAME": "com.meterengine.otel-bridge"}):
+            for headers in (
+                {"Origin": "https://evil.example"},
+                {"Sec-Fetch-Site": "cross-site"},
+                {"Host": "evil.example:4318"},
+            ):
+                status, _ = self.request("POST", "/meterengine/restart", b"", headers)
+                self.assertEqual(status, 403, headers)
+        self.assertTrue(self.serving.is_alive())
+
+    def test_Origin이_붙은_설정_조회는_403(self):
+        status, _ = self.request("GET", "/meterengine/config", None, {"Origin": "https://evil.example"})
+        self.assertEqual(status, 403)
+
+    def test_launchd_밖에서_재시작하면_409(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("XPC_SERVICE_NAME", None)
+            status, body = self.request("POST", "/meterengine/restart", b"")
+        self.assertEqual(status, 409)
+        self.assertEqual(body, {"error": "not_launchd"})
+        self.assertTrue(self.serving.is_alive())
+
+    def test_launchd_아래에서_재시작하면_202이고_서버를_멈춘다(self):
+        calls = []
+        original = self.server.shutdown
+
+        def recording_shutdown():
+            calls.append(True)
+            original()
+
+        self.server.shutdown = recording_shutdown
+        with mock.patch.dict(os.environ, {"XPC_SERVICE_NAME": "com.meterengine.otel-bridge"}):
+            status, body = self.request("POST", "/meterengine/restart", b"")
+        self.assertEqual(status, 202)
+        self.assertEqual(body, {"restarting": True})
+        self.serving.join(timeout=5)
+        self.assertEqual(calls, [True])
+        self.assertFalse(self.serving.is_alive())
+
+
+class ServeConfigPathTest(unittest.TestCase):
+    def test_serve는_설정_파일_경로를_서버에_둔다(self):
+        captured = {}
+
+        class StoppingServer(ThreadingHTTPServer):
+            def serve_forever(self, poll_interval=0.5):
+                captured["config_path"] = self.config_path
+
+        class QuietSender:
+            counts = {}
+
+            def __init__(self, *args):
+                pass
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(
+            server, "ThreadingHTTPServer", StoppingServer
+        ), mock.patch.object(server, "Sender", QuietSender), mock.patch.object(
+            server.signal, "signal"
+        ):
+            path = os.path.join(directory, "bridge.json")
+            bridge_state = BridgeState(os.path.join(directory, "state.json"), "scope")
+            server.serve(BridgeConfig(), bridge_state, "127.0.0.1", 0, config_path=path)
+        self.assertEqual(captured["config_path"], path)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,8 @@ CLAUDE_SETTINGS_PATH = os.path.join(os.path.expanduser("~"), ".claude", "setting
 LOGS_PATH = "/v1/logs"
 SESSION_PATH = "/meterengine/session"
 HEALTH_PATH = "/meterengine/health"
+CONFIG_ENDPOINT_PATH = "/meterengine/config"
+RESTART_PATH = "/meterengine/restart"
 
 
 def logs_endpoint(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> str:

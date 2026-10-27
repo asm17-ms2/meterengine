@@ -11,8 +11,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import List, Optional, Tuple
 
 from bridge import otel_map
-from bridge.const import HEALTH_PATH, LOGS_DIR, LOGS_PATH, SESSION_PATH
-from bridge.state import BridgeConfig, BridgeState, CustomerResolver, project_for_cwd
+from bridge.const import (
+    CONFIG_ENDPOINT_PATH,
+    CONFIG_PATH,
+    HEALTH_PATH,
+    LAUNCHD_LABEL,
+    LOGS_DIR,
+    LOGS_PATH,
+    RESTART_PATH,
+    SESSION_PATH,
+)
+from bridge.state import (
+    BridgeConfig,
+    BridgeState,
+    ConfigFieldError,
+    CustomerResolver,
+    project_for_cwd,
+)
 from core.api_client import (
     ApiClient,
     ApiRequestError,
@@ -205,6 +220,9 @@ def _unknown_customer(result) -> bool:
     return isinstance(result.body, dict) and result.body.get("code") == "customer_not_found"
 
 
+_config_lock = threading.Lock()
+
+
 class BridgeHandler(BaseHTTPRequestHandler):
     server_version = "MeterEngineBridge/1.0"
 
@@ -216,6 +234,17 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._handle_logs(raw)
         elif self.path.startswith(SESSION_PATH):
             self._handle_session(raw)
+        elif self.path.startswith(RESTART_PATH):
+            self._handle_restart()
+        else:
+            self._respond(404, b"{}")
+
+    def do_PUT(self):  # noqa: N802
+        raw = self._read_body()
+        if not self._from_local_tool():
+            return
+        if self.path.startswith(CONFIG_ENDPOINT_PATH):
+            self._handle_config_put(raw)
         else:
             self._respond(404, b"{}")
 
@@ -246,8 +275,55 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 ensure_ascii=False,
             ).encode("utf-8")
             self._respond(200, body)
+        elif self.path.startswith(CONFIG_ENDPOINT_PATH):
+            self._handle_config_get()
         else:
             self._respond(404, b"{}")
+
+    def _handle_config_get(self) -> None:
+        try:
+            config = BridgeConfig.load(self.server.config_path)
+        except (TypeError, ValueError) as error:
+            self._respond_json(500, {"error": str(error), "field": None})
+            return
+        self._respond_json(200, config.public_dict())
+
+    def _handle_config_put(self, raw: bytes) -> None:
+        try:
+            changes = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            self._respond_json(400, {"error": "본문이 JSON이 아닙니다", "field": None})
+            return
+        if not isinstance(changes, dict):
+            self._respond_json(400, {"error": "본문은 JSON 객체여야 합니다", "field": None})
+            return
+        path = self.server.config_path
+        with _config_lock:
+            try:
+                current = BridgeConfig.load(path)
+            except (TypeError, ValueError) as error:
+                self._respond_json(500, {"error": str(error), "field": None})
+                return
+            try:
+                updated = current.merged(changes)
+            except ConfigFieldError as error:
+                self._respond_json(400, {"error": str(error), "field": error.field})
+                return
+            try:
+                updated.save(path)
+            except OSError as error:
+                self._respond_json(500, {"error": "설정을 저장하지 못했습니다: %s" % error, "field": None})
+                return
+        _log("설정을 저장했습니다: %s (재시작해야 적용됩니다)" % path)
+        self._respond_json(200, {"saved": True, "restart_required": True})
+
+    def _handle_restart(self) -> None:
+        if os.environ.get("XPC_SERVICE_NAME") != LAUNCHD_LABEL:
+            self._respond_json(409, {"error": "not_launchd"})
+            return
+        self._respond_json(202, {"restarting": True})
+        _log("재시작 요청을 받았습니다. launchd가 다시 띄웁니다.")
+        threading.Thread(target=self.server.shutdown, daemon=True).start()
 
     def _handle_logs(self, raw: bytes) -> None:
         self._respond(200, b"{}")
@@ -303,6 +379,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
             return b""
         return self.rfile.read(length) if length > 0 else b""
 
+    def _respond_json(self, status: int, data: dict) -> None:
+        self._respond(status, json.dumps(data, ensure_ascii=False).encode("utf-8"))
+
     def _respond(self, status: int, body: bytes) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -324,11 +403,14 @@ def startup_lines(config: BridgeConfig, host: str, port: int) -> List[str]:
     ]
 
 
-def serve(config: BridgeConfig, state: BridgeState, host: str, port: int) -> int:
+def serve(
+    config: BridgeConfig, state: BridgeState, host: str, port: int, config_path: str = CONFIG_PATH
+) -> int:
     server = ThreadingHTTPServer((host, port), BridgeHandler)
     sender = Sender(config, state, LOGS_DIR)
 
     server.config = config
+    server.config_path = config_path
     server.state = state
     server.sender = sender
     server.listen_host = host

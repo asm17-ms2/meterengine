@@ -8,7 +8,7 @@
 | --- | --- |
 | `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
-| `demo/` | 수집-조회 데모/검증 CLI와 Claude Code 사용량 브리지. Python 3.9+, 표준 라이브러리만 쓴다 |
+| `demo/` | 데모와 검증 CLI, Claude Code 사용량 브리지(Python 3.9+, 표준 라이브러리), TypeScript SDK와 테스트 웹(Node 24, pnpm) |
 | `deploy/` | 배포 구성. compose, Caddy, 배포 스크립트 |
 | `measurements/` | 측정과 측정에 쓰는 SUT |
 
@@ -33,6 +33,9 @@ python3 demo/meterdemo.py --help
 # Claude Code 사용량을 실제로 흘려보내는 브리지 (설정은 demo/README.md 참조)
 python3 demo/otel_bridge.py --help
 uv run demo/console.py            # 같은 일을 화면으로
+
+# SDK로 이벤트와 웹훅을 시험하는 테스트 웹 (http://127.0.0.1:3100, 설정은 demo/README.md 참조)
+cd demo && corepack enable pnpm && pnpm install && pnpm --filter @meterengine/demo-web dev
 
 # DB만 필요할 때
 docker compose up -d
