@@ -89,9 +89,20 @@ public class PaymentCancellationService {
       UUID paymentAttemptId,
       CreatePaymentCancellationRequest request,
       UUID idempotencyKey) {
+    return create(organizationId, paymentAttemptId, request, idempotencyKey, null);
+  }
+
+  public PaymentCancellationResponse create(
+      UUID organizationId,
+      UUID paymentAttemptId,
+      CreatePaymentCancellationRequest request,
+      UUID idempotencyKey,
+      String principalMode) {
     PendingCancellation pending =
         transactionTemplate.execute(
-            status -> insertPending(organizationId, paymentAttemptId, request, idempotencyKey));
+            status ->
+                insertPending(
+                    organizationId, paymentAttemptId, request, idempotencyKey, principalMode));
     return pending.created()
         ? cancel(pending)
         : PaymentCancellationResponse.from(pending.cancellation());
@@ -185,7 +196,8 @@ public class PaymentCancellationService {
       UUID organizationId,
       UUID paymentAttemptId,
       CreatePaymentCancellationRequest request,
-      UUID idempotencyKey) {
+      UUID idempotencyKey,
+      String principalMode) {
     if (BusinessEnvironmentContext.environmentId() != null) {
       paymentAttemptRepository
           .findByOrganizationIdAndId(organizationId, paymentAttemptId)
@@ -206,6 +218,7 @@ public class PaymentCancellationService {
             || !fingerprint.equals(cancellation.getIdempotencyFingerprint())) {
           throw new ConflictException(ErrorCode.PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT);
         }
+        validateMode(principalMode, cancellation.getMode());
         return new PendingCancellation(cancellation, null, null, false);
       }
     }
@@ -213,6 +226,7 @@ public class PaymentCancellationService {
         paymentAttemptRepository
             .findForUpdate(organizationId, paymentAttemptId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_ATTEMPT_NOT_FOUND));
+    validateMode(principalMode, attempt.getMode());
     if (!PaymentAttempt.DONE.equals(attempt.getStatus())) {
       throw new ConflictException(ErrorCode.PAYMENT_ATTEMPT_NOT_CANCELABLE);
     }
@@ -256,6 +270,12 @@ public class PaymentCancellationService {
         attempt.getPaymentKey(),
         new TossPaymentsCancelRequest(request.reason(), cancelAmount),
         true);
+  }
+
+  private static void validateMode(String principalMode, String paymentMode) {
+    if (principalMode != null && !principalMode.equals(paymentMode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
   }
 
   private PaymentCancellationResponse cancel(PendingCancellation pending) {
