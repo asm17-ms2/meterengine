@@ -189,6 +189,21 @@
    "pr": 447
   },
   {
+   "id": "C449-003",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "루트 layout.tsx:29의 <a href=\"#main-content\">본문으로 이동</a>(#443에서 들어옴)은 일반 a라 누르면 주소가 /invoice-links#main-content가 된다. PublicInvoiceView.tsx:60 openLink는 해시가 main-content이면 바로 return하는데, 이 분기는 hashchange(81행)뿐 아니라 첫 마운트 호출(80행)에도 적용된다. 그 주소로 새로고침하면 load가 불리지 않고, view 초기값(27행 { kind: \"loading\" })에는 다시 조회 버튼이 없어(112행) 빠져나갈 길이 없다. 반박 시도: 해시 변경 때 무시하는 것은 맞는 동작이고, 새로고침 말고는 이 주소로 다시 들어올 일이 드물다. 하지만 결제 상태를 확인하려 새로고침하는 것은 이 화면의 주 사용 방식이고(e2e 254행도 새로고침 재사용을 검사), 키보드 사용자는 건너뛰기 링크를 자연스럽게 쓴다. 실행 확인: 토큰 링크로 연 뒤 Tab 첫 초점이 '본문으로 이동'이었고 Enter 뒤 주소가 #main-content가 됐으며, 새로고침 4초 뒤에도 제목 '청구서를 불러오고 있습니다', aria-busy=true 1개, 버튼 0개, lookup 추가 요청 0회였고 sessionStorage에는 토큰이 남아 있었다. 원래 링크를 다시 열면 복구되므로 medium.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:60 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:80 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:112 @ 7ce9d36, frontend/src/app/layout.tsx:29 @ 5535638, frontend/src/components/invoice-links/PublicInvoiceView.tsx:60 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/skip-link-reload-stuck/after-reload.png. 원인 줄은 #449의 PublicInvoiceView이고 #443 건너뛰기 링크와의 조합에서 생긴다. 449부터 455까지 파일이 같아 449 수정이 위층에 그대로 올라간다.",
+   "pr": 449
+  },
+  {
    "id": "C449-005",
    "merged_ids": [
     "G-188"
@@ -221,6 +236,36 @@
    "pr": 451
   },
   {
+   "id": "C453-009",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: unbilled-events가 month 없이도 미래 이벤트를 다음 달까지 세는지 백엔드에서 확인했으나 그렇지 않다. mvp.real.spec.ts는 #453(23b1844)이 들였고 #453 head(f040e96)와 최상단이 같다. 145행이 event(4, 100, now + 1시간)을 보내고 151-152행이 month 없이 GET /v1/unbilled-events를 불러 future_timestamp.event_count가 1이라고 단언한다. UnbilledEventService.get(31-32행)은 month가 null이면 Asia/Seoul 기준 현재 달을 쓰고, aggregate(38-48행)는 endAt을 다음 달 1일 0시 KST로 두며, UnbilledEventRepository.findFutureTimestamps(65-71행)는 occurred_at >= startAt AND occurred_at < endAt AND occurred_at >= cutoffAt인 행만 센다. 그래서 KST 기준 달의 마지막 1시간 안에 145행이 실행되면 이벤트 4가 다음 달로 넘어가 개수가 0이 되고 152행 toMatchObject가 실패한다. 147행 저장 결과(stored)와 156-158행 초안 금액은 영향이 없다. 컨트롤러(UnbilledEventController 33-37행)는 month에 형식 검사만 해서 다음 달을 넘겨도 된다. 시각에 따라 깨지는 수동 e2e라 low다. 실제 스택이 없어 실행 재현은 하지 않았고 백엔드 쿼리로 판정했다.",
+   "evidence": "frontend/e2e/mvp.real.spec.ts:145 @ f040e96, frontend/e2e/mvp.real.spec.ts:151 @ f040e96, frontend/e2e/mvp.real.spec.ts:36 @ f040e96, frontend/e2e/mvp.real.spec.ts:145 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 spec에 더 좁은 월 경계 문제가 하나 더 있다: month는 테스트 시작(36행)에 정하고 과거 이벤트는 수집 단계에서 now - 60초로 보내므로, 1일 0시 KST를 사이에 두고 테스트가 시작되고 수집되면 초안, 확정, 고객 화면 단언이 모두 어긋난다. 창이 몇 분이고 이 지적의 범위 밖이라 fix_plan에 넣지 않았다. customer-payment-retry, invoice-links, permissions의 fixture도 같은 방식(month 계산 뒤 now - 60초 이벤트)이다. C453-011, C453-012와 같은 #453 수정 브랜치에서 고치지만 파일이 달라 충돌하지 않는다.",
+   "pr": 453
+  },
+  {
+   "id": "C453-011",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 이 spec을 고르는 설정이나 스크립트가 있는지, 의도적으로 뺐다는 흔적이 있는지 찾았으나 없다. query-workspace.real.spec.ts는 #453(23b1844)이 처음 들였고 #453 head(f040e96)와 최상단(854e293)의 e2e 폴더가 같다. playwright.config.ts:19-20 projects는 auth.contract.spec.ts, auth.real.spec.ts만, playwright.payment.config.ts:5와 playwright.workspace.config.ts:9는 계약 spec 하나씩만, playwright.mvp.config.ts:9 scenarios는 10개 파일만 잡고 query-workspace.real.spec.ts가 없다. git grep 'query-workspace'도 이 파일 밖에서는 나오지 않고, PR 본문과 커밋 메시지에도 언급이 없다. 실행 확인(최상단 작업 트리, 웹 서버를 뺀 mvp 설정 사본 S/scripts/query-ws-spec-unmatched/mvp-noserver.config.ts): --list는 'Total: 21 tests in 10 files'이고, 파일 인자로 e2e/query-workspace.real.spec.ts를 주면 'Error: No tests found'다. 기본 설정도 0건이다. spec이 쓰는 문구와 role 이름(조회 조건, 페이지 크기, 조건 적용, 조건 전체 CSV 내보내기, 과금 미터 선택, 단가 버전 등록, 이 단가 버전 저장 등)은 #453 head 화면 코드에 모두 있어 낡은 spec으로 버려진 것으로 보기 어렵다. QUERY_FRONTEND_URL 기본값 http://localhost:33147(7행)은 mvp 설정 baseURL과 같고, spec이 자기 context를 baseURL FRONTEND_URL로 만들어 설정에 넣으면 그대로 돈다. 다만 environment 보존의 순수 함수 부분은 workspace-href.test.mjs:47, resource-query.test.mjs:38, 90, 112가 따로 검사하므로 빠지는 것은 화면 통합 경로(레일 다음 링크, 폼 hidden 값, 공유 세션 전환 뒤 단가 폼과 CSV 403)다. mvp 묶음 자체가 CI 밖 수동 실행이라 영향은 검증 공백에 그쳐 low로 낮춘다.",
+   "evidence": "frontend/playwright.mvp.config.ts:9 @ f040e96, frontend/playwright.config.ts:19 @ f040e96, frontend/e2e/query-workspace.real.spec.ts:7 @ f040e96, frontend/playwright.mvp.config.ts:9 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "pw-missing-specs(C445-014, G-191)와 pw-hardcoded-paths(C442-014, G-023)가 playwright.mvp.config.ts를 #442에서 #453으로 옮기거나 고칠 수 있다. 그렇게 되면 #453 수정 에이전트가 옮겨진 설정의 시나리오 목록에 query-workspace.real.spec.ts를 같이 넣는다. readme-test-commands(G-189)의 notes는 이 spec을 README에 적지 않는다고 했는데, 이 수정으로 test:e2e:mvp에 포함되므로 README의 mvp 설명이 시나리오를 나열한다면 같이 넣는다. spec을 지우는 대안은 고르지 않았다: 화면 통합 경로를 검사하는 유일한 spec이고 선택자가 현재 화면과 맞다.",
+   "pr": 453
+  },
+  {
    "id": "C453-012",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -234,6 +279,21 @@
    "behavior_change": false,
    "notes": "C449-005, G-188과 원인이 같지만 이 파일은 #453이 들였고 #449 수정 브랜치에는 없어 결과를 나눴다. #453 수정 브랜치는 #449 수정 커밋을 담지 않으므로 이 브랜치만 보면 customer-payment-retry와 invoice-links는 아직 고정값이다. 스택을 다시 쌓으면 맞춰진다. 그 두 파일을 #453에서 다시 고치지 않는다(충돌 방지). readme-test-commands(G-189)와 같은 README 절을 같은 #453 수정 에이전트가 고치므로 한 커밋 안에서 맞춘다. pw-hardcoded-paths(G-190)가 증적 폴더 기본값을 outputDir 아래로 옮기면 남는 passed 증적 문제도 함께 사라진다.",
    "pr": 453
+  },
+  {
+   "id": "D-023",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "지적의 실패 경로는 '누구에게 문의할지 화면에서 확인할 수 없다'인데, 도입사 이름을 아는 화면에서는 이미 보인다. 등록 화면은 RegistrationFrame.tsx:9 eyebrow에 organizationName을 보이고(모바일에서도 .eyebrow는 숨기지 않는다, registration.module.css:29), CardRegistration.tsx:60 요약에 '서비스 제공자: {organization_name}'을 보인다. 최상단 E2E 스크린샷에서 '시연 도입사'가 왼쪽 위와 '서비스 제공자' 줄에 보이고, 푸터의 '서비스를 제공하는 담당자'는 이 '서비스 제공자' 줄과 같은 말이라 MeterEngine으로 오해할 근거가 약하다. 이름을 모르는 화면(잘못된 링크 page.tsx:14, 성공이 아닌 complete 화면 page.tsx:16은 outcome.organizationName이 없다)에서는 제안대로 고쳐도 지금 문구가 그대로 나오고, 본문이 이미 '링크를 보낸 담당자'를 안내한다. 결국 바뀌는 곳은 이름이 두 번 보이는 화면의 푸터뿐이라 사용자 결과가 달라지지 않는다. 공개 청구서 푸터처럼 이름을 넣으면 더 낫지만 문구 취향 수준이다.",
+   "evidence": "frontend/src/components/payment-registration/RegistrationFrame.tsx:19 @ 2e98143, frontend/src/components/payment-registration/RegistrationFrame.tsx:9 @ 2e98143, frontend/src/components/payment-registration/CardRegistration.tsx:60 @ 2e98143, frontend/src/app/payment-method-registrations/[token]/complete/page.tsx:16 @ 2e98143, /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/card-consent-collapsed/registration-mobile.png",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "고친다면 #445 RegistrationFrame.tsx:19를 organizationName이 있을 때 '카드 등록과 결제 문의는 {organizationName} 담당자에게 해 주세요.'로 쓰는 선택적 문구 정리다. 지금 문구는 '문의는 ... 문의해 주세요'로 같은 말이 겹치는데 이것도 다듬을 거리일 뿐 기능 문제는 아니다.",
+   "pr": 445
   },
   {
    "id": "D-057",
@@ -251,6 +311,21 @@
    "pr": 451
   },
   {
+   "id": "D-060",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "frontend/src/components/auth/AuthFrame.tsx:11 의 네 ol.onboarding-steps는 li를 모두 같은 마크업으로 그리고 현재 단계를 받는 prop도 aria-current도 없다. 반박 시도: 이 목록이 진행 표시가 아니라 정적인 절차 안내일 수 있다(aside aria-label '가입 절차', 900px 이하에서는 globals.css:106 @ 5535638 에서 숨김). 그러나 #443의 스타일(globals.css:54-57 @ 5535638)은 번호 원과 세로 연결선으로 단계 표시기 모양을 만들고, 같은 signup 변형이 가입 화면(1단계)과 승인 대기 화면(2단계)에, join/operator 변형이 초대 화면(1단계)과 이용 안내 확인 화면(2단계)에 똑같이 나온다. 그래서 데스크톱에서 가입 신청을 제출해도 화면 왼쪽 절반은 하나도 바뀌지 않고, 단계 표시기가 진행을 전혀 반영하지 않는다. 화면 제목이 위치를 알려 주므로 막히는 경로는 아니어서 low다. 원 지적의 '가입을 다시 시도한다'는 주로 승인 대기 문구(X-034) 탓이라 여기서는 근거로 쓰지 않았다. 마크업은 #442에서 들어와 top까지 그대로고, 시각 스타일은 #443 globals.css(k5)에 있다.",
+   "evidence": "frontend/src/components/auth/AuthFrame.tsx:11 @ 0245c15, frontend/src/components/auth/AuthFrame.tsx:11 @ 854e293, frontend/src/app/globals.css:57 @ 5535638",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "pending-page-copy(X-034)의 단계 표시 부분과 같은 지적이다. X-034는 문구로 판정했고 단계 표시는 여기서 다룬다. AuthFrame.tsx는 auth-heading-order(D-106, refuted)와 같은 파일이라 같은 수정 담당이 맡으면 충돌이 없다. 로그인 뒤 이용 안내 확인 화면에서 일반 계정에 join 변형(계정 확인, 안내 동의, 소속 도입사로 이동)이 나오는 것은 이번 범위 밖이다.",
+   "pr": 442
+  },
+  {
    "id": "D-061",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -266,6 +341,21 @@
    "pr": 442
   },
   {
+   "id": "D-068",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "PublicInvoiceView.module.css:25 표 min-width 560px, 27행 첫 열 width 42%라 390px 폭(콘텐츠 폭 320px)에서는 항목 열(235px)과 수량 열 일부만 보이고 단가, 공급가액 열은 스크롤 뒤에 있다. 실행 측정: 영역 clientWidth 320, scrollWidth 560, 공급가액 머리글은 영역 오른쪽 끝(355)보다 오른쪽(497-595)에 있었다. 더 중요한 점은 항목 열(표 기준 0-235)과 공급가액 열(462-560)의 거리가 보이는 폭 320보다 길어서, 어떤 스크롤 위치에서도 항목명과 그 줄 금액을 한 화면에서 같이 볼 수 없다는 것이다. 반박 시도: (1) 123행 안내와 124행 tabIndex=0 region, e2e 271-279행의 키보드 스크롤 검사로 보아 가로 스크롤은 의도된 설계이고 접근 가능한 대안은 있다. (2) 합계(125행)는 스크롤 없이 보인다. 그래도 항목별 청구서의 핵심 확인(어느 항목이 얼마인지)이 모바일 기본 화면에서 불가능하고, 같은 제품 콘솔은 같은 데이터를 모바일에서 레코드로 보인다(InvoicesTable.tsx:228, BillingTable.tsx:254의 data-mobile-record, '수량 / 단가' 보조 줄). 로그인 없이 링크로 여는 고객용 화면이라 휴대폰 진입 비중이 크다. 금전 오류는 없으나 주 과업 방해라 medium.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.module.css:25 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.module.css:27 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:123 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:124 @ 854e293, frontend/src/components/invoices/InvoicesTable.tsx:228 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/public-invoice-mobile-scroll/failed-mobile.png, failed-desktop.png. public-invoice-rounding-note(D-111) 결과 notes는 271행 스크롤 안내를 바꾸지 말라고 했는데, 이 수정이 그 문장을 지우므로 이 결과가 우선한다. D-216, D-225와 같은 124행을 고치므로 (1)의 함수 추출을 먼저 하거나 세 수정을 한 커밋 단위로 묶는다.",
+   "pr": 449
+  },
+  {
    "id": "D-070",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -279,6 +369,23 @@
    "behavior_change": false,
    "notes": "globals.css의 .workspace-panel 규칙은 k5 범위지만 고칠 곳은 모듈 쪽 900px 규칙이라 k6 범위다. 재현 스크립트와 스크린샷: S/scripts/pricing-mobile-chips/probe.js, S/shots/pricing-mobile-chips/rail-375.png, rail-fixed-375.png.",
    "pr": 446
+  },
+  {
+   "id": "D-102",
+   "merged_ids": [
+    "X-099"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "두 지적의 월 표기 부분은 원인이 같아 합쳤고, D-102의 일시 부분도 같은 결과(공용 포맷 함수 대신 원시 값이나 toLocaleString을 씀)에 넣었다. 반박 시도와 결과. (1) 문장 안 월: main(f088399)부터 제목은 formatKoreanMonth(billing/page.tsx:55, invoices/page.tsx:39, usage/page.tsx:41, BillingSection 빈 상태 제목), 본문 문장은 원시 YYYY-MM(BillingSection.tsx 본문 3곳, InvoicesSection.tsx 빈 상태, UsageSection.tsx, EventsSection.tsx)을 쓰는 관례가 이미 있다. 그래서 수납 상세 설명 '2026-09 청구액'(payments/[id]/page.tsx:98, #445에서 들어옴)과 요금 설계 보조 줄 '2026-10 / 고객명'(PricingWorkspace.tsx:70, #446), 수집 로그 조회 상태 '2026-10 월별'(EventFilters.tsx:43)은 기존 관례를 따른 것이라 이 스택의 결함으로 보지 않는다. 문장까지 모두 바꾸자는 X-099 제안은 main 화면을 포함한 문구 정책 결정이다. (2) 확인된 월 부분: 고객 상세 h2 '{month} 청구와 수납'(customers/[id]/page.tsx:43)이 월이 들어간 콘솔 제목 중 유일하게 원시 '2026-10'을 쓴다. 사용량, 청구 검토, 인보이스 제목은 '2026년 10월'이다. 이 파일은 #451에서 처음 생겼다. (3) 확인된 일시 부분: 개요 하단(overview/page.tsx:26)이 calculated_at을 toLocaleString('ko-KR', Asia/Seoul)로 그려 Node ICU 실측으로 '2026. 10. 27. 오후 6:52:20 기준'이 되고 시간대 표기가 없다. 같은 계산 시각을 청구 검토는 BillingCalculatedStamp.tsx:14 formatKstStamp로 '2026-10-27 18:52:20 KST'로 보이고, 표 셀(WorkspaceView.tsx:36)과 수집 문제 화면(event-issues/page.tsx:47)도 'YYYY-MM-DD HH:mm:ss KST'다. 개요 페이지도 #451에서 처음 생겼다. 운영자가 개요 기준 시각과 수납 표 시각을 비교할 때 12시간제와 24시간제, 시간대 표기 유무를 맞춰 읽어야 한다. (4) 가입 승인 카드 신청일(admin/organizations/page.tsx:16)도 같은 toLocaleString이지만 #442에서 들어왔고 admin-formatting-dup 묶음 G-059가 같은 줄을 다루므로 여기서는 고치지 않는다. 영향은 읽기 불편에 그쳐 low.",
+   "evidence": "frontend/src/app/(console)/customers/[id]/page.tsx:43 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:26 @ 53ec3d9, frontend/src/components/billing/BillingCalculatedStamp.tsx:14 @ 854e293, frontend/src/app/(console)/usage/page.tsx:41 @ 854e293, frontend/src/app/(console)/billing/page.tsx:55 @ 854e293, frontend/src/components/billing/BillingSection.tsx:66 @ f088399, frontend/src/app/(console)/payments/[id]/page.tsx:85 @ 2e98143, frontend/src/app/admin/organizations/page.tsx:16 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "admin/organizations/page.tsx:16 신청일 toLocaleString은 admin-formatting-dup 묶음 G-059(#442)와 같은 줄이라 그쪽에서 고친다. overview/page.tsx:26은 overview-title-month 묶음 X-065도 언급하므로 #451 수정 단위에서 같은 파일 수정이 겹치지 않게 한 번에 고친다. 문장 안 월까지 통일할지는 main 화면(BillingSection, InvoicesSection, UsageSection, EventsSection)을 포함한 문구 정책이라 팀 결정이 필요하다.",
+   "pr": 451
   },
   {
    "id": "D-103",
@@ -297,6 +404,51 @@
    "behavior_change": false,
    "notes": "문구 기준: 사용자가 직접 셀 수 있는 글자 수로 쓰고 한글만 예외로 알린다. 이모지 같은 4바이트 문자는 드물어 문구에 넣지 않았다. 같은 파일을 consent-block-unstyled(D-232, InvitationForm 구조 변경), signup-name-empty-msg(X-101, (public)/actions.ts 이름 검사), validation-rules-dup(G-050, 공용 규칙 모듈)이 함께 고치므로 한 커밋 묶음으로 맞추는 편이 충돌이 적다. 공용 모듈 자리는 frontend/src/lib/auth/가 더 자연스럽지만 k5 범위라 k6 안의 components/auth에 둔다(components/auth/use-mutation-scope.ts 선례).",
    "pr": 442
+  },
+  {
+   "id": "D-104",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "admin/users/page.tsx:13 은 사용자 카드의 div.workspace-actions 안에 AttachOrganizationButton과 ReviewAction을 나란히 둔다. AttachOrganizationButton.tsx:41-42 는 비활성 Button 바로 뒤에 형제 p.field-hint('추가로 연결할 사용 중인 도입사가 없습니다.')를, ReviewAction.tsx:12 는 Button 뒤에 형제 p.field-hint(disabledReason)를 그린다. #443이 .workspace-actions를 display:flex, flex-wrap, gap 8px로 만들어(globals.css:146 @ 5535638) 문구가 두 버튼 사이의 flex 항목이 된다. 정적 재현(top globals.css, 1280px)에서 회색 버튼(x 49-186), 문구(x 194-428, 버튼 위쪽 정렬), 빨간 '플랫폼 운영자로 변경'(x 436-601)이 한 줄에 놓이고 문구는 양쪽 버튼과 똑같이 8px 떨어져 어느 버튼의 설명인지 구분되지 않는다. 반박 시도: 문구가 드물게만 보이는지 봤다. 활성 도입사가 모두 이미 연결된 사용자(도입사 하나에 소속된 일반 사용자가 대표적)면 항상 나오고, 계약 서버(#442 contract-server.mjs:56)는 /v1/organizations를 빈 배열로 돌려 모든 카드에 나온다. 마지막 운영자 카드에서는 두 문구가 [버튼][문구][빨간 비활성 버튼][문구]로 섞인다. 문구와 버튼 사이에 aria-describedby도 없어 비활성 이유가 버튼과 프로그램으로 연결되지 않는다. #442 head에는 .workspace-actions 스타일이 없어 문구가 버튼 사이 별도 줄에 놓이지만, 이때도 연결이 없고 위아래 버튼 사이에 끼어 같은 모호함이 있다. 버튼 이름과 동작은 바뀌지 않아 low다.",
+   "evidence": "frontend/src/components/auth/AttachOrganizationButton.tsx:42 @ 0245c15, frontend/src/components/auth/ReviewAction.tsx:12 @ 0245c15, frontend/src/app/admin/users/page.tsx:13 @ 0245c15, frontend/src/app/globals.css:146 @ 5535638, frontend/src/components/auth/AttachOrganizationButton.tsx:42 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "정적 재현 S/scripts/attach-org-disabled-reason/render.js, 스크린샷 S/shots/attach-org-disabled-reason/row-static.png. antd Button 대신 같은 크기의 버튼으로 그린 재현이다. Tooltip으로 옮기는 안은 비활성 버튼이 포커스를 받지 못해 키보드 사용자가 이유를 볼 수 없어 택하지 않았다. 원 지적이 든 ReviewAction의 disabledReason은 마지막 운영자 카드에서만 나온다. k5 X-076(workspace-actions 줄 세로 정렬)과 같은 CSS 규칙을 다루지만 이 수정은 CSS를 건드리지 않아 겹치지 않는다.",
+   "pr": 442
+  },
+  {
+   "id": "D-106",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "사실관계는 맞다: AuthFrame.tsx:10 의 aside .auth-intro h2가 main의 h1(같은 파일 13행)보다 DOM에서 먼저 나온다. 그러나 문제로 볼 근거가 없다. 1) DOM 순서는 화면의 시각 순서(왼쪽 aside, 오른쪽 main)와 같아 1.3.2를 어기지 않는다. 2) aside는 aria-label('가입 절차' 등)이 붙은 complementary 랜드마크이고 layout.tsx:29 @ 854e293 에 '본문으로 이동' 건너뛰기 링크가 #main-content로 간다. 제목 단축키 1로 h1에 바로 갈 수 있다. 3) 이 문구는 globals.css:52 @ 5535638 에서 clamp(28px, 3vw, 42px) 굵은 글씨라 1280px에서 38.4px로 h1(34px)보다 크게 보인다. 시각적으로 제목인 글을 p로 바꾸면 오히려 보이는 구조와 프로그램 구조가 어긋난다. 4) 정적 재현(top globals.css와 AuthFrame 마크업, 1280px와 800px)에 axe-core 4.12.1을 wcag2a, wcag2aa, wcag21a, wcag21aa, best-practice 태그로 돌리면 위반 0건이고 heading-order와 page-has-heading-one 모두 통과한다. 900px 이하에서는 .auth-intro가 display:none이라 제목 목록에도 없다. h2가 h1 앞에 오는 것은 사이드 영역 제목에서 흔하고 허용되는 구조라 수정할 결함이 아니다.",
+   "evidence": "frontend/src/components/auth/AuthFrame.tsx:10 @ 0245c15, frontend/src/components/auth/AuthFrame.tsx:10 @ 854e293, frontend/src/app/globals.css:52 @ 5535638, frontend/src/app/layout.tsx:29 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "재현 스크립트 S/scripts/auth-heading-order/axe.js, 스크린샷 S/shots/auth-heading-order/pending-static-1280.png, pending-static-800.png. 실제 Next 화면이 아니라 같은 마크업과 CSS의 정적 재현이다. 홍보 문구를 h2로 둘지는 디자인 선택으로 남는다. 바꾸기로 한다면 k5 globals.css의 .auth-intro h2 규칙도 같이 바꿔야 한다.",
+   "pr": 442
+  },
+  {
+   "id": "D-110",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "PublicInvoiceView.tsx:62가 첫 진입 때 주소의 #토큰을 지우고 토큰은 같은 탭 sessionStorage(66행)에만 둔다. 그래서 정리된 주소(/invoice-links)를 즐겨찾기하거나 새 탭, 다른 기기에서 열면 68행에서 token이 ''가 되고, load(34행)의 isValidInvoiceViewToken('') 실패로 view가 invalid가 된다. 114-115행은 이 경우와 서버 404(43-44행)를 구분하지 않아 '사용할 수 없는 조회 링크입니다', '링크가 만료되었거나 폐기되었을 수 있습니다. 청구서를 보낸 담당자에게 새 링크를 요청해 주세요.'를 보인다. 반박 시도: (1) 문구가 '수 있습니다'로 단정을 피하지만 이 경우의 실제 원인(주소에 조회 정보가 없음)과 올바른 행동(원래 링크 다시 열기)을 알려 주지 않고 틀린 행동(새 링크 요청)으로 보낸다. (2) footer(135행)의 '주소창의 주소로는 청구서를 공유할 수 없습니다'는 공유만 말하고 ready 상태에서만 보여, 즐겨찾기한 고객을 막지 못한다. (3) e2e invoice-links.real.spec.ts:316-318은 토큰 누락에 같은 제목을 단언하므로 같은 제목은 의도지만, 그 테스트 이름도 '조회 링크 누락'을 따로 다루려는 것이라 문구 분리가 의도와 어긋나지 않는다. 실행에서도 토큰 없는 /invoice-links가 lookup 요청 없이 위 만료, 폐기 문구를 보였다. 원래 링크는 유효한데 고객이 폐기됐다고 믿고 새 링크를 요청하게 되므로 confirmed. 금전, 데이터 손상은 없고 고객용 화면의 흔한 경로(즐겨찾기, 새 탭)라 medium.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:62 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:68 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:34 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:114 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:115 @ 854e293, frontend/e2e/invoice-links.real.spec.ts:318 @ 7ce9d36",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/public-invoice-no-token/no-token.png. 형식이 틀린 토큰(메일 클라이언트가 링크를 잘라 붙인 경우)도 같은 만료, 폐기 문구로 가는데, 이 묶음 범위 밖이라 p4 수준의 후속으로만 적는다. public-invoice-retry-progress(D-123)와 같은 메시지 영역(113-116행)을 고치므로 같은 수정 단위로 묶으면 충돌이 없다.",
+   "pr": 449
   },
   {
    "id": "D-111",
@@ -329,6 +481,21 @@
    "pr": 451
   },
   {
+   "id": "D-115",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "#446이 InvoicesTable에 데스크톱 행의 인보이스 번호와 '수납 상세' 링크(5efe449 InvoicesTable.tsx:147-148)와 모바일 카드(같은 파일 221행)를 한 번에 들였는데, 모바일 카드에는 고객명, 금액, 월과 확정 시각, 계산 내역만 있고 invoiceNumber와 /payments/<id> 링크가 없다. #449가 데스크톱 링크를 '수납과 고객 조회 링크'(/payments/<id>#invoice-view-links)로 바꾸고 #451이 모바일에 수납 상태와 취소액 문단을 더했지만, 최상단(854e293 InvoicesTable.tsx:153-155, 228행)에서도 모바일에는 번호와 링크가 없다. globals.css:240이 767px 이하에서 .data-desktop-table을 숨기므로 휴대폰 운영자에게는 데스크톱 행의 번호와 링크가 보이지 않는다. 반박 시도: 수납과 취소 목록(payments/page.tsx의 WorkspaceTable 모바일 카드)에서 고객명을 눌러 같은 /payments/<id>로 갈 수 있어 정보가 막히지는 않는다. 다만 화면을 옮겨 고객을 다시 찾아야 하고, #451 이후 모바일 카드는 '결제 실패' 상태를 보여 주면서도 그 건으로 가는 길을 주지 않는다. #446 본문이 '인보이스 번호와 공급자 정보를 표시하도록 했다'고 하는데 같은 데이터의 모바일 표현에서 번호가 빠져 고객 문의 번호와 카드를 대조할 수 없다. 같은 PR 안의 두 표현이 어긋난 것이라 confirmed, 우회 경로가 있어 low. 지적은 도입을 #449로 적었으나 번호와 링크의 누락은 #446부터다.",
+   "evidence": "frontend/src/components/invoices/InvoicesTable.tsx:148 @ 5efe449, frontend/src/components/invoices/InvoicesTable.tsx:221 @ 5efe449, frontend/src/components/invoices/InvoicesTable.tsx:155 @ 854e293, frontend/src/components/invoices/InvoicesTable.tsx:228 @ 854e293, frontend/src/app/globals.css:240 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 모바일 카드 줄을 D-156(invoice-status-tag-grey, #451, 수납 상태를 색 Tag로)과 X-036(billing-mobile-expand, #446, 모바일 펼치기 버튼 숨김)이 함께 건드리므로 #446과 #451 수정 단위를 같은 에이전트가 이어서 하면 충돌이 적다. X-056(dual-render-mobile-desktop)은 이중 렌더 자체를 문제 삼은 다른 원인이라 합치지 않았다. 청구 검토와 사용량 모바일 카드에는 대응하는 데스크톱 링크가 없어 이 결과 범위가 아니다.",
+   "pr": 446
+  },
+  {
    "id": "D-118",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -359,6 +526,21 @@
    "pr": 451
   },
   {
+   "id": "D-123",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "PublicInvoiceView.tsx:116 '다시 조회'는 load(tokenRef.current)로 isRefresh 없이 부른다. 35행 setIsRefreshing은 isRefresh일 때만 켜지고, 이 버튼에는 disabled나 aria-busy가 없으며, 실패하면 44행 또는 52행이 같은 { kind: \"unavailable\" }을 다시 넣어 화면이 그대로다. 메시지 영역(113행)에는 live region도 없어 스크린 리더 사용자에게도 아무 안내가 없다. 반박 시도: 성공하면 청구서가 바로 보이므로 성공 경로는 문제가 없고, 여러 번 눌러도 requestRef(33, 41행)가 이전 응답을 버려 상태가 꼬이지 않는다. 하지만 느리거나 다시 실패하는 경우 재시도가 일어났는지 알 수 없다는 지적은 맞다. 실행 확인: lookup을 2초 지연 503으로 가로챈 뒤 버튼을 누르니 요청은 나갔지만(호출 2회) 요청 중 main의 HTML이 누르기 전과 같고 버튼은 활성, aria-busy 0개, role=status 0개였고, 실패 뒤에도 HTML이 같았다. 데이터나 결제에 영향은 없어 low.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.tsx:116 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:35 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:44 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:52 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:116 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/public-invoice-retry-progress/during-retry.png. public-invoice-no-token(D-110)과 같은 메시지 영역(113-116행)을 고치므로 함께 고치면 좋다. 실패 뒤 role=alert 1개는 Next 경로 안내 요소이고 이 화면의 안내가 아니다.",
+   "pr": 449
+  },
+  {
    "id": "D-125",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -372,6 +554,21 @@
    "behavior_change": true,
    "notes": "behavior_change는 결과 모달에 보이는 인보이스가 최대 5건으로 줄어드는 화면 동작 변화라 true로 두었다. API 계약은 그대로다. C451-002(finalize-dialog-crash)와 같은 줄이지만 원인(응답 필드 없음과 개수 제한 없음)이 달라 합치지 않았다. 목록 항목이 기본형 버튼이라 무거운 점은 LinkButton type=\"link\"로 줄일 수 있으나 이 지적 범위 밖이라 계획에 넣지 않았다. 백엔드가 확정 응답에 인보이스 전체(라인 포함)를 싣는 크기 문제는 frontend 밖이라 적기만 한다.",
    "pr": 451
+  },
+  {
+   "id": "D-126",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "RegistrationFrame.tsx:10 aside의 홍보 문장 '서비스 이용료를 결제할 카드입니다.'가 h2이고 화면 제목 h1(15행)이 DOM에서 그 뒤에 온다. 이 frame은 등록 화면(page.tsx:20), 잘못된 링크 화면(page.tsx:14), 결과 화면(complete/page.tsx:16)이 모두 쓰므로 제목 목록의 첫 항목이 늘 같은 h2 문장이다. 스타일도 h2가 clamp(23px, 2.4vw, 30px)로 h1의 clamp(23px, 2.2vw, 28px)보다 커서(registration.module.css:8, 12) 시각 위계와 구조 위계가 어긋나고, 모바일 스크린샷에서는 두 제목이 연달아 보인다. 반박 시도: aside 안의 h2는 그 영역의 제목으로 볼 수 있고 axe heading-order는 h2 뒤 h1을 실패로 잡지 않는다. 그러나 이 h2는 아래 내용을 묶는 절 제목이 아니라 큰 글씨용 문장이라 제목 탐색 사용자는 화면 제목보다 이 문장을 먼저 만난다. 영향이 작아 low.",
+   "evidence": "frontend/src/components/payment-registration/RegistrationFrame.tsx:10 @ 2e98143, frontend/src/components/payment-registration/RegistrationFrame.tsx:15 @ 2e98143, frontend/src/components/payment-registration/registration.module.css:8 @ 2e98143, /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/card-consent-collapsed/registration-mobile.png",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 구조가 인증 화면 AuthFrame.tsx:10(auth-heading-order 묶음 D-106, #442)에도 있어 고치는 방식(h2를 p로)을 맞춘다. 같은 #445 파일을 card-steps-current(D-207)도 고치므로 한 수정 단위로 묶는다.",
+   "pr": 445
   },
   {
    "id": "D-146",
@@ -509,6 +706,36 @@
    "behavior_change": false,
    "notes": "제목 줄은 main(f088399)부터 있었고 451이 page.tsx를 바꿨지만 제목은 그대로라 pr은 null로 두었다. 메뉴 이름은 '청구 검토'(NavMenu.tsx:13, ConsoleShell.tsx:23, k5)인데 화면 제목은 '청구 예정액'이라 이름이 다르다. 이것은 확정 여부와 무관한 별개 문구 문제이고, 고친다면 상태와 무관한 '청구 검토 - <월>' 쪽이지 '청구 확정액'이 아니다. 판정에는 넣지 않았다.",
    "pr": null
+  },
+  {
+   "id": "D-207",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "RegistrationFrame.tsx:12 단계 목록은 세 li가 같은 모양이고 현재 단계를 알리는 aria-current나 강조가 없다. 이 frame은 동의 화면(page.tsx:20)과 결과 화면(complete/page.tsx:16)이 같이 써서 결과 화면에서도 목록이 바뀌지 않는다. 글자색은 .steps { color: #48339a }(registration.module.css:10)로, 같은 화면에서 유일하게 누를 수 있는 글자인 '등록과 결제 안내 보기' summary(21행, cursor: pointer)와 같은 색, 비슷한 크기라 스크린샷에서 둘이 같은 링크처럼 보인다. 콘솔에서도 #48339a는 선택된 탭 표시(globals.css의 aria-current 규칙)에 쓰는 색이다. 반박 시도: 목록 이름이 '카드 등록 절차'라 진행 표시가 아닌 절차 안내로 볼 수 있고, h1이 현재 상태를 말하며, 모바일에서는 목록이 숨는다(29행). 그래도 데스크톱에서 누를 수 있는 글자와 구분되지 않고 결과 화면에서도 위치를 알려 주지 않는다는 점은 코드와 화면으로 확인된다. 영향이 작아 low.",
+   "evidence": "frontend/src/components/payment-registration/RegistrationFrame.tsx:12 @ 2e98143, frontend/src/components/payment-registration/registration.module.css:10 @ 2e98143, frontend/src/components/payment-registration/registration.module.css:21 @ 2e98143, /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/card-consent-collapsed/registration-desktop.png",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "인증 화면 AuthFrame.tsx:11의 같은 지적(auth-steps-current 묶음 D-060, #442)과 표시 방식(aria-current=step과 굵은 글자)을 맞춘다. 같은 #445 RegistrationFrame.tsx를 card-heading-order(D-126)도 고치므로 한 수정 단위로 묶는다.",
+   "pr": 445
+  },
+  {
+   "id": "D-208",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "InvoicePaymentRetry.tsx:83 '결제 다시 시도' 시작 버튼에 class가 없어 PublicInvoiceView.module.css:10의 흰 보조 버튼 모양이고, 헤더의 '결제 상태 새로 조회', '조회 링크 복사'와 같다(실행 측정: 세 버튼 모두 흰 배경, 테두리 rgb(124,135,153), 14px 400). 사실관계는 맞다. 그러나 (1) 이 버튼은 결제를 바로 하지 않고 확인 단계를 여는 버튼이고, 실제 결제를 일으키는 확인 단계 버튼(88행)은 styles.confirmButton 주 버튼이다. 여는 버튼은 보조, 확정 버튼은 주 버튼인 구성은 콘솔 ActionPanel과 같다(ActionPanel.tsx:141 여는 버튼 기본 Button, 90행 제출 버튼 type=primary). 콘솔의 같은 '결제 다시 시도' 동작도 같은 위계다. (2) 재시도 영역은 h3 '실패한 결제 다시 시도'(78행)와 '현재 등록된 카드로 N원을 다시 결제할 수 있습니다'(79행)로 따로 드러나고, 위 상태 문단(PublicInvoiceView.tsx:128)이 '아래에서 금액을 확인한 뒤 등록된 카드로 다시 시도할 수 있습니다'로 이 영역을 가리킨다. 고객이 버튼을 지나치고 창을 닫는다는 실패 경로는 코드로 보일 수 없고, 버튼 위계 선호에 가까워 confirmed 기준에 맞지 않는다.",
+   "evidence": "frontend/src/components/invoice-links/InvoicePaymentRetry.tsx:83 @ 7ce9d36, frontend/src/components/invoice-links/InvoicePaymentRetry.tsx:88 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:128 @ 7ce9d36, frontend/src/components/workspace/ActionPanel.tsx:141 @ 854e293, frontend/src/components/workspace/ActionPanel.tsx:90 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/public-invoice-mobile-scroll/failed-desktop.png, failed-mobile.png. 팀이 원하면 p4로 83행 버튼에 className={styles.confirmButton}만 더하면 된다(.retry .confirmButton 선택자가 같은 section 안이라 그대로 먹고, 확인 단계에서는 이 버튼이 사라져 주 버튼이 동시에 둘이 되지 않는다). e2e는 역할 이름만 쓰므로(customer-payment-retry.real.spec.ts:339-449) 영향이 없다. 같은 버튼 영역의 포커스 문제는 payment-retry-focus(X-002, D-175) 묶음이다.",
+   "pr": 449
   },
   {
    "id": "D-209",
@@ -675,6 +902,21 @@
    "pr": 442
   },
   {
+   "id": "G-044",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "현재 head에서 다시 봤다. 도우미는 이제 쓰인다(useMutationScope는 고객, 미터, 청구, 단가 다이얼로그 6곳, mutationScopeError는 customers, billable-metrics, billing actions.ts). 그러나 API 키, 사용자, 초대, 웹훅, 결제 작업이 모두 지나가는 workspaceAction은 같은 검사를 인라인으로 다시 한다: workspace-actions.ts:31 환경 비교와 :39 도입사 비교. 이 두 줄과 lib/auth/mutation-scope.ts:8,10 은 #453에서 이미 갈렸다. 같은 환경 불일치에 도우미는 '열어 둔 화면의 업무 환경이 바뀌었습니다. 환경을 확인한 뒤 다시 시도하세요.', workspaceAction은 '열어 둔 화면과 요청의 업무 환경이 다릅니다. 환경을 확인한 뒤 다시 시도하세요.'를 돌려준다. 순서도 도우미는 도입사, 환경 순이고 workspaceAction은 환경, 권한, 도입사 순이며, environment 필드가 없을 때 도우미는 거절하고 인라인은 legacy로 본다. 클라이언트도 ActionPanel.tsx:35-37, 93-94 가 useMutationScope와 같은 고정을 useState와 hidden input으로 복사한다. 반박 시도: #442 시점에는 인라인과 도우미 문구가 같았고 도우미는 #446부터 쓰여 죽은 코드도 아니다. 어긋남은 #453(environment-isolation)이 환경 축을 두 곳에 따로 더하면서 생겼다. 원 지적의 'mutationScopeError가 await 없이 async'는 #453 이후 headers()를 await해 해소됐다. 현재 사용자 영향은 같은 상황에 문구가 화면마다 다른 정도라 low로 낮췄다. 다만 원 지적의 우려(새 범위 축을 도우미에만 더하면 workspaceAction 경로가 빠짐)는 #453에서 실제로 반쯤 일어났다.",
+   "evidence": "frontend/src/app/(console)/workspace-actions.ts:31 @ f040e96, frontend/src/app/(console)/workspace-actions.ts:39 @ f040e96, frontend/src/lib/auth/mutation-scope.ts:10 @ f040e96, frontend/src/components/workspace/ActionPanel.tsx:37 @ f040e96, frontend/src/app/(console)/workspace-actions.ts:31 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "behavior_change는 workspaceAction의 환경 불일치 문구와 검사 순서(권한보다 범위 검사가 먼저)가 바뀌기 때문이다. API 계약은 그대로다. #442에서 처음부터 workspaceAction이 도우미를 쓰게 고칠 수도 있지만, 수정이 PR head별 독립 커밋이라 #442만 고치면 #453의 인라인 환경 줄이 남는다. 어긋남이 생긴 #453 하나로 고치는 편이 맞다. k5 G-049(ActionPanel 모달 폼 로직 복사), G-058과 ActionPanel 부분이 겹친다.",
+   "pr": 453
+  },
+  {
    "id": "G-050",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -812,6 +1054,23 @@
    "pr": 445
   },
   {
+   "id": "X-031",
+   "merged_ids": [
+    "D-117"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "CardRegistration.tsx:66에서 동의 대상 안내 두 문장이 닫힌 details 안에 있고, 67~69행 체크박스는 '[필수] 위 내용을 확인하고 자동결제 카드 등록에 동의합니다.'라고 접힌 내용을 가리킨다. 펼치지 않아도 체크와 등록이 된다(31행은 hasConsent만 본다). 최상단 e2e 스크린샷(데스크톱, 모바일)에서도 '등록과 결제 안내 보기' 한 줄만 보이고 체크박스가 바로 아래에 있다. 반박 시도: 58행 Alert가 live 모드에서 '등록한 카드는 서비스 이용료를 실제로 결제할 때 사용합니다'를 펼쳐 보여 결제에 쓰인다는 요지는 보인다. 그러나 접힌 문단의 '지금은 카드 등록만 진행', '결제 조건과 카드 변경 문의처'는 보이지 않고, 펼쳐도 금액이 청구마다 사용량에 따라 정해진다는 점과 자동결제를 멈추는 방법이 없다. 백엔드는 도입사가 확정 청구마다 이 카드로 결제를 요청하고(PaymentAttemptController POST /v1/invoices/{id}/payment-attempts, 고객 승인 없음) 실패 건을 예약 작업으로 다시 시도하며(PaymentJobScheduler payment_retry), 중단은 도입사의 카드 보관(DELETE /v1/customers/{id}/payment-method, '새 자동 결제를 중단한다')뿐이다. 그래서 고객이 금액 변동과 중단 방법을 모른 채 자동결제에 동의할 수 있다는 두 지적의 전제가 코드로 맞다. 두 지적은 같은 fieldset의 같은 줄(접힌 안내와 '위 내용' 문구)이 원인이라 하나로 합친다. 실결제 모드의 공개 동의 화면이라 medium으로 둔다.",
+   "evidence": "frontend/src/components/payment-registration/CardRegistration.tsx:66 @ 2e98143, frontend/src/components/payment-registration/CardRegistration.tsx:68 @ 2e98143, frontend/src/components/payment-registration/registration.module.css:20 @ 2e98143, frontend/src/app/payment-method-registrations/flow.ts:9 @ 2e98143, /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/card-consent-collapsed/registration-desktop.png",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "behavior_change=true는 동의 문서 내용과 저장되는 consent_document_version 값이 바뀌기 때문이다. 배포 순간 진행 중인 15분 이내 흐름은 버전 불일치로 invalid가 되어 다시 시작해야 한다. 같은 frame의 다른 card-* 묶음(card-heading-order, card-steps-current, card-expiry-format, card-alert-role-nested)과 같은 #445 파일을 고치므로 한 수정 단위로 순서를 맞춘다. 인증 화면의 접힌 약관(AccountConsentForm, InvitationForm의 details)은 문서별 체크박스가 따로 있고 긴 문서라 같은 원인이 아니어서 이 결과에 넣지 않는다.",
+   "pr": 445
+  },
+  {
    "id": "X-032",
    "merged_ids": [
     "D-095"
@@ -826,6 +1085,24 @@
    "tests": [],
    "behavior_change": true,
    "notes": "D-095의 마지막 문장('도입사 선택으로' 링크)은 invite-anon-org-link(D-061)에서 판정한다. k5 D-127, X-004(ActionPanel의 초대 링크 모달)와 화면이 이어진다. 수락 시 기존 세션을 서버에서 끝내지 않는 점은 새 계정 수락을 막지 않아 이 결과에서는 고치지 않는다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
+  },
+  {
+   "id": "X-034",
+   "merged_ids": [
+    "D-063",
+    "D-228"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "frontend/src/app/(public)/pending/page.tsx:5 의 AuthFrame description이 '가입 신청을 마쳤다면 운영자의 승인을 기다려 주세요.'로 조건문이고, pending-note 마지막 문장은 '승인 여부는 운영자에게 확인하세요.'로 끝난다. 반박 시도 1: /pending은 proxy.ts의 공개 경로라 직접 열 수도 있어 조건문이 의도일 수 있다. 그러나 frontend 전체에서 /pending으로 가는 경로는 signupAction 성공 뒤 redirect 하나뿐이다((public)/actions.ts:47 @ 0245c15, :50 @ 854e293, 실패는 모두 message를 돌려주고 머문다). 그래서 이 화면을 보는 사람은 사실상 방금 신청에 성공한 사람이고, 화면은 접수됐다는 사실을 한 번도 확정해 말하지 않는다. 제목 '가입 신청 후 승인 안내'도 결과가 아니라 안내 제목이다. 반박 시도 2: 운영자에게 확인할 경로가 어딘가에 있는지 봤다. frontend에 운영자 문의 주소나 mailto가 없고, 백엔드 가입 흐름(SignupController, SignupService)에 승인 알림 메일도 없다. 신청자는 MeterEngine 운영자를 알 방법이 없어 마지막 문장은 따를 수 없는 지시다. 실제로 할 수 있는 확인은 로그인 시도뿐이다: 승인 전 로그인은 403 organization_not_active(SignupController.java:45 설명)를 받고 loginAction이 '사용 가능한 도입사가 없습니다...'를 보여 준다((public)/actions.ts:24 @ 854e293). 세 지적은 같은 줄의 같은 문구 수정으로 함께 풀려 하나로 합쳤다. D-063의 '예상 처리 시간'과 '연락처'는 제품에 정해진 값이 없어 넣지 않는다(notes). 사용자 영향은 신청 직후 접수 여부를 확신하지 못하고 다시 가입해 중복 이메일 오류를 만나거나 따를 수 없는 지시에 막히는 정도라 low로 낮췄다. 문구와 파일은 #442에서 들어와 top까지 그대로다.",
+   "evidence": "frontend/src/app/(public)/pending/page.tsx:5 @ 0245c15, frontend/src/app/(public)/pending/page.tsx:5 @ 854e293, frontend/src/app/(public)/actions.ts:47 @ 0245c15, frontend/src/app/(public)/actions.ts:24 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "X-034의 단계 목록 현재 단계 부분은 auth-steps-current(D-060)에서 따로 판정했다. 직접 /pending을 연 사람도 '접수했습니다'를 보게 되지만 제품 안에 그곳으로 가는 다른 링크가 없고 개인 정보도 드러나지 않아 해가 없다고 봤다. 운영자 문의 주소나 예상 승인 시간을 넣으려면 제품 결정(운영 문의 채널, 처리 기준)이 먼저 필요하다. 정해지면 둘째 p에 더한다. 로그인 실패 문구(actions.ts:24)도 '운영자에게 확인한 뒤'로 같은 막힌 지시를 담고 있으나 이번 지적의 범위 밖이라 수정 계획에 넣지 않았다. k5 D-009, D-036, D-079, D-260, X-043은 같은 승인 대기 화면의 색 지적이라 겹치지 않는다.",
    "pr": 442
   },
   {
@@ -860,6 +1137,21 @@
    "behavior_change": false,
    "notes": "다듬기로 하겠다면 main 기준 별도 변경으로 BillingTable과 InvoicesTable의 meter, line 금액에서 strong을 빼고 UsageTable의 수량 0을 type secondary로 낮추는 방법이 있다. 스택 PR에 넣으면 그 PR이 들이지 않은 줄을 고치게 된다. 판정을 바꾸려면 이 굵기 때문에 금액을 잘못 읽은 사례 같은 구체적 결과가 필요하다.",
    "pr": null
+  },
+  {
+   "id": "X-049",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "complete/page.tsx:15는 성공과 취소가 아니면 모두 '카드 등록을 완료하지 못했습니다'를 제목으로 쓴다. outcome이 null(결과 쿠키 없음)이거나 status가 unavailable이면 본문(34행)은 '등록 결과를 확인하지 못했습니다. 링크를 보낸 담당자에게 카드 등록 여부를 먼저 확인해 주세요.'인데 제목은 실패라고 단정한다. 실제 경로: 결과 쿠키는 15분 maxAge(flow.ts:11, 88행)라 등록에 성공한 고객이 15분 뒤 완료 화면을 다시 열거나 다른 브라우저로 열면 outcome이 null이고, 성공 때 링크가 사용 처리되어(PaymentMethodRegistrationService markUsed, findUsable는 usedAt null만 찾는다) 조회가 404라 '카드 등록 다시 시작' 대신 '새 링크를 요청' 안내까지 붙는다. 또 백엔드 응답을 70초 안에 받지 못하면(flow.ts:117) unavailable이 되는데 백엔드는 그 뒤 커밋했을 수 있다. 반박 시도: 본문이 결과 미확인을 정확히 말하므로 주의 깊은 사용자는 확인할 수 있다. 그러나 화면 제목(h1, 제목 탐색의 기준)이 실패라 카드가 등록된 고객이 다시 등록을 요청하거나 결제 카드가 없다고 믿을 수 있어 지적이 맞다. 공개 결제 화면이라 medium.",
+   "evidence": "frontend/src/app/payment-method-registrations/[token]/complete/page.tsx:15 @ 2e98143, frontend/src/app/payment-method-registrations/[token]/complete/page.tsx:34 @ 2e98143, frontend/src/app/payment-method-registrations/flow.ts:11 @ 2e98143, frontend/src/app/payment-method-registrations/[token]/success/route.ts:34 @ 2e98143",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "같은 #445 complete/page.tsx는 card-steps-current(D-207)가 currentStep을 넘기려고 16행을 고치므로 한 수정 단위로 묶는다.",
+   "pr": 445
   },
   {
    "id": "X-051",
@@ -1005,6 +1297,21 @@
    "pr": 446
   },
   {
+   "id": "X-080",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "PublicInvoiceView.tsx:128의 상태 <p className={styles.status}>는 module.css:41 .status { font-size: 18px; font-weight: 650 }이고 색 지정이 없다. 실행 측정: 상태 '결제 실패' 18px 650, 바로 아래 재시도 h3 '실패한 결제 다시 시도' 18px 700, 위 h2 '결제 내역' 20px 700이고 셋 다 rgb(32,43,64)라 상태가 소제목 사이 또 하나의 소제목처럼 보인다(데스크톱 스크린숏). 결제 실패, 결과 확인 중, 납부 완료가 같은 모양이다. 반박 시도: 상태는 글자로 전달되고 18px 굵은 글씨라 눈에 띄며, 다음 문단이 '아래에서 ... 다시 시도할 수 있습니다'로 재시도 영역을 가리키므로, 고객이 재시도 영역까지 내려가지 않는다는 실패 시나리오는 과장이다. 콘솔 결제 상세(payments/[id]/page.tsx:112)도 상태를 색 없는 굵은 글씨로 쓴다. 그러나 콘솔의 수납 상태 표시 규칙(WorkspaceView.tsx:32: paid success, failed error, pending warning)은 같은 상태를 색으로 구분하고, 같은 원인의 콘솔 인보이스 표 지적(invoice-status-tag-grey D-156)도 규칙 어긋남으로 confirmed low가 됐다. 고객이 조치해야 하는 유일한 상태(실패)가 완료 상태와 같은 모양이라 훑어보기 단서가 없다는 점은 코드로 짚을 수 있어 confirmed low로 둔다.",
+   "evidence": "frontend/src/components/invoice-links/PublicInvoiceView.module.css:41 @ 7ce9d36, frontend/src/components/invoice-links/PublicInvoiceView.tsx:128 @ 7ce9d36, frontend/src/components/invoice-links/InvoicePaymentRetry.module.css:2 @ 7ce9d36, frontend/src/components/workspace/WorkspaceView.tsx:32 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실행 확인: 최상단 standalone 빌드(localhost:33300, /home/user/wt/top/frontend/.next/standalone)를 Playwright로 열고 /invoice-links/lookup 요청은 모두 브라우저에서 가로채 응답했다(백엔드 호출과 공유 데이터 변경 없음). 스크립트 S/scripts/skip-link-reload-stuck/areaF.js. live-stack.md는 없어서 판정은 코드 근거가 주이고 실행은 보조다. 스크린숏 S/shots/public-invoice-failed-style/failed-desktop.png. payment-status-names(D-113, D-149)는 상태 이름 한 벌을 정하는 묶음이고 PublicInvoiceView의 label은 그 결과의 fix_files에 없다. 이 결과는 모양만 바꾸므로 겹치지 않는다. 실패 시나리오(재시도 영역을 지나침)는 과장으로 보아 severity는 low.",
+   "pr": 449
+  },
+  {
    "id": "X-081",
    "merged_ids": [],
    "verdict": "refuted",
@@ -1018,6 +1325,21 @@
    "behavior_change": false,
    "notes": "가독성 지적 자체는 일리가 있다(WCAG 1.4.8 AAA는 CJK 한 줄 40자 이하를 권한다). 다만 main부터 있던 공통 컴포넌트 문제라 스택 PR이 아니라 main 기준 별도 변경이나 k5에서 다룰 일이다. k5 지적 목록에 ScreenNote 폭 지적은 없다.",
    "pr": null
+  },
+  {
+   "id": "X-083",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "현재 head(451에서 455까지 InvoicesSection.tsx 동일)의 마지막 빈 상태(InvoicesSection.tsx:67-83)는 resetHref를 query.customerId ? ... : '/invoices'로 두고 EmptyState(screen/EmptyState.tsx:11, 20)가 기본 라벨 '필터 초기화'의 LinkButton을 그린다. #451이 앞에 '조건에 맞는 인보이스가 없습니다' 분기(65행, q, customerId, 수납 상태, 금액, 기간, 결제 모드)를 넣었기 때문에 이 마지막 분기는 필터가 하나도 없을 때만 닿고, 77행 customerId 분기는 죽은 코드가 됐다. 남는 조건은 month와 정렬, 페이지 크기, 페이지뿐이고, 결과가 0건이면 정렬과 페이지를 풀어도 0건이다. /invoices의 month 기본값은 KST 현재 월(lib/month.ts readMonth)이라, 이번 달 인보이스가 없는 기본 화면에서 버튼은 지금과 같은 URL로 router.push만 하고 화면이 그대로다. month=all에서 0건이면 현재 월로 가도 역시 0건이라 결과가 같다. 지난 달을 고른 경우에만 현재 월로 바뀌는데, 이것도 필터 초기화가 아니라 월 이동이다. 본문은 '확정 전 금액은 청구 예정액에서 봅니다'라고 하면서 그 화면 링크는 주지 않는다. 반박 시도: 같은 카드 위에 월 선택과 #451의 '데이터가 있는 월'(DataMonths.tsx:9)이 있어 다른 달로 갈 길은 있고, 메뉴로 청구 검토에 갈 수도 있다. 그래도 화면의 유일한 행동 버튼이 눌러도 아무것도 바꾸지 않는 것은 코드로 짚을 수 있는 결함이라 confirmed로 두고, 데이터나 금액에 영향이 없어 low로 둔다. 이 마지막 분기의 코드는 main(f088399, InvoicesSection.tsx:61-76)부터 같았고, 스택에서 빈 상태 분기 구성을 바꾼 PR은 #451이라 고칠 PR로 #451을 골랐다.",
+   "evidence": "frontend/src/components/invoices/InvoicesSection.tsx:79 @ 53ec3d9, frontend/src/components/invoices/InvoicesSection.tsx:65 @ 53ec3d9, frontend/src/components/invoices/InvoicesSection.tsx:73 @ f088399, frontend/src/components/screen/EmptyState.tsx:20 @ 53ec3d9, frontend/src/lib/month.ts:36 @ 53ec3d9, frontend/src/components/screen/DataMonths.tsx:9 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "빈 상태의 기본 라벨 '필터 초기화' 자체는 k5 범위 EmptyState의 기본값이라 건드리지 않았다. 지난 달에서 현재 월로 돌아가는 길은 월 선택과 '데이터가 있는 월'이 이미 준다. 같은 화면의 X-081(billing-rule-text-long, ScreenNote 폭)과 X-036(모바일 펼치기 버튼)과는 원인과 줄이 달라 합치지 않았다. 77행의 죽은 customerId 분기는 이 수정으로 함께 사라진다.",
+   "pr": 451
   },
   {
    "id": "X-084",
@@ -1035,6 +1357,36 @@
    "pr": 442
   },
   {
+   "id": "X-087",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "antd 6.6.7 Alert는 루트 div에 role: \"alert\"를 넣고 그 뒤에 restProps를 펼친다(node_modules/antd/es/alert/Alert.js:222). 그래서 CardRegistration.tsx:71의 <div role=\"alert\"><Alert/></div>는 alert 안에 alert가 겹치고, AccountConsentForm.tsx:14와 SessionControls.tsx:22는 Alert title에 <span role=\"alert\">를 넣어 같은 중첩을 만든다. InvitationForm.tsx:14와 ReviewAction.tsx:18은 성공일 때 title에 <span role=\"status\">를 넣지만 바깥 Alert가 여전히 role=alert(assertive)라 성공 안내도 경고처럼 즉시 끼어든다. 반박 시도: 중첩 live region을 두 번 읽는지는 스크린 리더마다 다르다. 그러나 성공 안내를 polite로 하려던 의도가 바깥 role=alert에 막히는 것은 확정이고, 중첩 alert는 alert 이벤트를 요소마다 낼 수 있어 중복 낭독 위험이 있다. 안쪽 역할을 지우고 Alert의 role prop(AlertProps.role, Alert.d.ts:67)을 쓰면 해결된다. CardRegistration은 #445, 나머지 네 파일은 #442에서 들어왔고 이후 바뀌지 않았다(브랜치별 blob 비교). 영향이 알림 중복과 강도에 그쳐 low.",
+   "evidence": "frontend/src/components/payment-registration/CardRegistration.tsx:71 @ 2e98143, frontend/src/components/auth/AccountConsentForm.tsx:14 @ 0245c15, frontend/src/components/auth/SessionControls.tsx:22 @ 0245c15, frontend/src/components/auth/InvitationForm.tsx:14 @ 0245c15, frontend/src/components/auth/ReviewAction.tsx:18 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "묶음 id가 하나라 결과를 나누지 못했다. pr은 지적이 가리킨 화면(CardRegistration.tsx:71)이 들어온 #445로 두었고, [#442] 부분 네 파일은 #442 브랜치에서 고쳐야 한다. 수정 단위를 PR별로 나눌 때 그 부분을 #442 쪽으로 옮긴다. AccountConsentForm과 InvitationForm은 오류 때 감싼 div로 포커스를 옮기므로 포커스 낭독과 alert 낭독이 겹칠 수 있으나 포커스 이동은 의도된 설계라 이 결과에서 바꾸지 않는다. 같은 성격의 공통 컴포넌트(k5 범위 InvoiceViewLinks 등)는 Alert 중첩이 아니라 해당 없다.",
+   "pr": 445
+  },
+  {
+   "id": "X-100",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "CardRegistration.tsx:28은 Intl.DateTimeFormat('ko-KR', { month: long, day: numeric, hour: 2-digit, minute: 2-digit, timeZone: Asia/Seoul })이라 node에서 2026-10-28T09:47Z가 '10월 28일 오후 06:47'로 나오고, 최상단 E2E 스크린샷에서는 '10월 29일 오전 12:06까지'로 보인다. 시간대 표시가 없고, 자정 직후가 '오전 12:06'처럼 12시간제로 나와 정오로 잘못 읽을 수 있다. 같은 스택의 고객용 화면은 시간대를 밝힌다: 초대 화면 organization-invitations/[token]/page.tsx:28 '{formatKstDateTime(...)} KST까지', 공개 청구서는 KST 표기. 반박 시도: 링크는 만든 때부터 24시간 유효(PaymentMethodRegistrationResponse expires_at 설명)라 연도가 빠진 것은 실제 혼동이 거의 없어 그 부분은 받아들이지 않는다. 시간대 누락과 오전 12시 표기는 남으므로 confirmed, 영향이 작아 low.",
+   "evidence": "frontend/src/components/payment-registration/CardRegistration.tsx:28 @ 2e98143, frontend/src/components/payment-registration/CardRegistration.tsx:62 @ 2e98143, frontend/src/app/organization-invitations/[token]/page.tsx:28 @ 2e98143, /tmp/claude-0/-home-user-meterengine/16b686e2-c1df-5995-bef3-8af736eb3e4c/scratchpad/k6/shots/card-consent-collapsed/registration-desktop.png",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "연도 누락 부분은 24시간 유효라 받아들이지 않았다. 같은 #445 CardRegistration.tsx를 card-consent-collapsed(X-031), card-alert-role-nested(X-087)도 고치므로 한 수정 단위로 묶는다.",
+   "pr": 445
+  },
+  {
    "id": "X-101",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -1048,6 +1400,21 @@
    "behavior_change": false,
    "notes": "이메일과 비밀번호 오류도 상단 Alert 하나로만 나온다는 부분은 문구가 칸 이름을 말하고 Alert에 포커스가 가므로 결함으로 보지 않았다. password-utf8-hint(D-103)와 validation-rules-dup(G-050)이 같은 서버 액션 파일을 고치므로 충돌에 주의한다. 라이브 재현은 공유 스택이 없어 하지 못했고 코드 경로로 판정했다.",
    "pr": 442
+  },
+  {
+   "id": "X-102",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "CustomerLabel.tsx:8이 이름(strong)과 UUID(12px 코드 글꼴)를 <Typography.Text ellipsis> 한 줄로 감싼다. antd 6.6.7 Typography(Base/index.js)는 ellipsis가 true이면 tooltip 설정이 없어 Tooltip을 만들지 않고, CSS 말줄임일 때는 aria-label과 title도 붙이지 않는다. BillingTable.tsx:171과 UsageTable.tsx:111의 열 ellipsis: true도 셀 자식이 문자열이 아니라 title을 만들지 않는다. 그래서 잘린 값을 볼 방법이 없다는 지적은 맞다. 폭 추정: 1280px에서 청구 검토 표의 고객 셀(라벨과 조합 두 열 합)은 약 390px이고 UUID 36자가 약 260px이라 이름이 10자 안팎만 넘어도 UUID가 잘리며, 1100px 이하에서는 표가 min 900px로 가로 스크롤되어 비슷하다. 고객 이름은 DB에 유일 제약이 없어(V1 customer, external_id만 유일) 같은 이름을 가르는 값이 UUID인데 그것이 먼저 잘린다. 반박 시도: 화면 낭독기는 CSS 말줄임과 무관하게 전체 글자를 읽고, 767px 이하 모바일 카드(#446)는 이름 전체를 줄바꿈해 보여 준다. 고객 필터로 좁히면 한 고객만 남는다. 그래도 데스크톱 마우스 사용자가 잘린 이름과 ID를 확인할 수단이 없는 것은 코드로 짚을 수 있는 결함이라 confirmed, 금액이나 동작에는 영향이 없어 low. CustomerLabel.tsx와 세 표의 고객 셀, 열 폭은 main(f088399)부터 같고 스택은 바꾸지 않았다. 스택에서 이 컴포넌트를 쓰는 세 표(BillingTable, UsageTable, InvoicesTable)를 처음 함께 고친 PR이 #446이라 고칠 PR로 골랐다.",
+   "evidence": "frontend/src/components/table/CustomerLabel.tsx:8 @ 854e293, frontend/src/components/table/CustomerLabel.tsx:8 @ f088399, frontend/src/components/billing/BillingTable.tsx:171 @ 5efe449, frontend/src/components/usage/UsageTable.tsx:111 @ 5efe449, frontend/src/components/invoices/InvoicesTable.tsx:149 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "문제 줄은 main부터 있었고 스택 PR이 들이지 않았다. 스택 PR 범위를 넓히지 않으려면 main 기준 별도 변경으로 내도 되며, 그때도 수정은 같은 한 줄이다. 같은 k6의 X-044(amount-weight)는 main 유래 취향 지적이라 refuted였지만, 이 지적은 잘린 값을 확인할 수단이 없는 구체적 결과가 있어 confirmed로 두었다. CustomerFilter가 k5 범위(components/screen)지만 고칠 파일은 components/table이라 k6 범위다. 대안인 UUID 둘째 줄 배치는 세 표의 행 높이를 모두 바꿔 범위가 커서 고르지 않았다.",
+   "pr": 446
   }
  ],
  "new_findings": [],
@@ -1081,6 +1448,11 @@
    "id": "C451-002",
    "file": "frontend/src/app/(console)/billing/state.ts, frontend/src/app/(console)/billing/actions.ts, frontend/src/components/billing/InvoiceFinalizeDialog.tsx, frontend/e2e/finalize-state.test.mjs",
    "why": "일부만 범위 밖: frontend/src/lib/api/invoices.ts(k5) 52-55행 FinalizeInvoicesResponse의 invoices, supply_amount, tax_amount, total_amount를 451 백엔드 계약에 맞게 선택 필드로 바꾸는 것은 k5 범위다. 바꾸지 않아도 위 수정은 타입 검사를 통과한다. 근본 대안인 백엔드 확장(backend/src/main/java/com/meterengine/invoice/dto/FinalizeInvoicesResponse.java, InvoiceController.finalizeInvoices의 from(...) 사용, backend/openapi.yaml)을 453에서 451로 내리는 것은 frontend 밖이다."
+  },
+  {
+   "id": "D-060",
+   "file": "frontend/src/components/auth/AuthFrame.tsx, frontend/src/app/(public)/signup/page.tsx, frontend/src/app/(public)/pending/page.tsx, frontend/src/app/(public)/login/page.tsx, frontend/src/app/account/consents/page.tsx, frontend/src/app/organization-invitations/[token]/page.tsx",
+   "why": "일부만 범위 밖: 시각 강조는 k5 범위인 frontend/src/app/globals.css(#443 feat/product-design 5535638, 54-57행 .onboarding-steps 규칙)에 더해야 한다: .onboarding-steps li.is-current::before 를 채운 원(브랜드 색 배경, 흰 글자)으로, li.is-current strong 을 진하게, li.is-done::before 를 완료 표시로 그린다. 색은 k5의 인증 화면 색 지적(D-009, X-043 등) 결정에 맞춘다. 이 CSS가 없으면 k6 수정은 스크린리더용 aria-current만 더한다."
   },
   {
    "id": "D-103",
@@ -1126,6 +1498,11 @@
    "id": "G-020",
    "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/src/app/(console)/integrations/page.tsx",
    "why": "일부만 범위 밖: k5 범위: frontend/src/lib/api/transport.ts:93과 frontend/src/lib/api/client.ts:16의 X-MeterEngine-Organization-Id 전송(organizationId)은 #453으로 옮길 대상이다. frontend/src/lib/auth/permissions.ts:15~23의 ADMIN_OPERATIONS가 #442에 없는 고객, 결제, 웹훅, 가격 operation까지 담은 것도 같은 성격이다. 둘 다 k5에서 다룬다."
+  },
+  {
+   "id": "G-044",
+   "file": "frontend/src/app/(console)/workspace-actions.ts, frontend/e2e/workspace.contract.spec.ts",
+   "why": "일부만 범위 밖: 클라이언트 복사본 frontend/src/components/workspace/ActionPanel.tsx(k5 범위, #453 f040e96의 35-37행 useState 고정과 93-94행 hidden input)를 useMutationScope로 바꾸는 일: useActionState 콜백에서 workspaceAction(previous, bindScope(data))로 넘기고 hidden input 두 줄과 mutationScope 상태를 지운다. lib/auth/mutation-scope.ts(k5)는 고칠 필요가 없다."
   },
   {
    "id": "G-050",
