@@ -92,7 +92,7 @@ class LocalCredentialsTest {
 
     jdbcTemplate.update(
         """
-        UPDATE organization_member SET role = 'admin', revoked_at = now()
+        UPDATE organization_member SET role = 'member', scopes = '{read}', revoked_at = now()
         WHERE user_account_id = (SELECT id FROM user_account WHERE email = ?)
         """,
         MEMBER_EMAIL);
