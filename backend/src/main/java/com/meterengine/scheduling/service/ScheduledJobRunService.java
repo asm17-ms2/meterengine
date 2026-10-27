@@ -41,7 +41,6 @@ public class ScheduledJobRunService {
   }
 
   public void register(String jobName) {
-    lastSuccessOf(jobName);
     refreshLastSuccess(jobName);
   }
 
