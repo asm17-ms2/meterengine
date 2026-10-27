@@ -14,6 +14,7 @@ import jakarta.validation.Validator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -160,6 +161,7 @@ public class EventBatchService {
                 request.occurredAt()));
       }
     }
+    insertions.sort(Comparator.comparing(EventInsertion::transactionId));
     Set<String> inserted =
         new HashSet<>(eventRepository.insertAllIfAbsent(organizationId, insertions));
     for (Map.Entry<Integer, IngestEventRequest> entry : requestsByIndex.entrySet()) {

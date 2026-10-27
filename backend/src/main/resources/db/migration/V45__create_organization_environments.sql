@@ -40,14 +40,14 @@ CREATE UNIQUE INDEX customer_environment_external_id_unique
 
 ALTER TABLE event ADD COLUMN environment_id UUID;
 ALTER TABLE event ADD CONSTRAINT event_environment_fk
-  FOREIGN KEY (organization_id, environment_id) REFERENCES organization_environment (organization_id, id);
+  FOREIGN KEY (organization_id, environment_id) REFERENCES organization_environment (organization_id, id) NOT VALID;
 ALTER TABLE event ADD COLUMN environment_scope_id UUID GENERATED ALWAYS AS
   (COALESCE(environment_id, '00000000-0000-0000-0000-000000000000'::UUID)) STORED NOT NULL;
 ALTER TABLE event DROP CONSTRAINT event_pk;
 ALTER TABLE event ADD CONSTRAINT event_pk PRIMARY KEY (organization_id, environment_scope_id, transaction_id);
 ALTER TABLE event ADD CONSTRAINT event_customer_same_environment_fk
   FOREIGN KEY (organization_id, environment_scope_id, customer_id)
-  REFERENCES customer (organization_id, environment_scope_id, id);
+  REFERENCES customer (organization_id, environment_scope_id, id) NOT VALID;
 
 ALTER TABLE audit_log ADD COLUMN environment_id UUID;
 ALTER TABLE audit_log ADD CONSTRAINT audit_log_environment_fk
