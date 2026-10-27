@@ -1,0 +1,332 @@
+{
+  "Comment": "Stop only a confirmed RDS seven-day automatic restart, then retire the legacy RDS schedule",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Configure",
+  "TimeoutSeconds": 7200,
+  "States": {
+    "Configure": {
+      "Type": "Pass",
+      "Output": {},
+      "Next": "ValidateAutomaticRestart"
+    },
+    "ValidateAutomaticRestart": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $event.version = \"0\" and $event.source = \"aws.rds\" and $event.\"detail-type\" = \"RDS DB Instance Event\" and $event.account = $config.account_id and $event.region = $config.region and $count($event.resources) = 1 and $event.resources[0] = $config.db_arn and $event.detail.SourceArn = $config.db_arn and $event.detail.SourceIdentifier = $config.db_identifier and $event.detail.SourceType = \"DB_INSTANCE\" and $event.detail.EventID = \"RDS-EVENT-0154\" and $exists($match($event.id, /^[0-9a-f-]{36}$/)) and $toMillis($states.context.Execution.StartTime) - $toMillis($event.time) >= -60000 and $toMillis($states.context.Execution.StartTime) - $toMillis($event.time) <= 900000 and $abs($toMillis($event.detail.Date) - $toMillis($event.time)) <= 60000 %}",
+          "Next": "ClaimEvent"
+        }
+      ],
+      "Default": "IgnoredEvent"
+    },
+    "ClaimEvent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:putItem",
+      "Arguments": {
+        "TableName": "{% $config.claim_table %}",
+        "Item": {
+          "event_key": {
+            "S": "{% $config.db_identifier & \"#\" & $event.id %}"
+          },
+          "event_id": {
+            "S": "{% $event.id %}"
+          },
+          "occurred_at": {
+            "S": "{% $event.detail.Date %}"
+          },
+          "execution_arn": {
+            "S": "{% $states.context.Execution.Id %}"
+          },
+          "expires_at": {
+            "N": "{% $string($floor($toMillis($states.context.Execution.StartTime) / 1000) + 604800) %}"
+          }
+        },
+        "ConditionExpression": "attribute_not_exists(event_key)"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "DescribeDatabase",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "DynamoDb.ConditionalCheckFailedException"
+          ],
+          "Next": "DuplicateEvent"
+        }
+      ]
+    },
+    "DescribeDatabase": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeDBInstances",
+      "Arguments": {
+        "DbInstanceIdentifier": "{% $config.db_identifier %}"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "CheckDatabaseStatus",
+      "Assign": {
+        "dbStatus": "{% $states.result.DbInstances[0].DbInstanceStatus %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "CheckDatabaseStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $dbStatus = \"available\" %}",
+          "Next": "ReadNativeRestart"
+        },
+        {
+          "Condition": "{% $dbStatus = \"stopped\" %}",
+          "Next": "AlreadyStopped"
+        },
+        {
+          "Condition": "{% $dbStatus in [\"starting\", \"stopping\", \"backing-up\", \"maintenance\", \"modifying\", \"upgrading\"] %}",
+          "Next": "WaitForAvailable"
+        }
+      ],
+      "Default": "UnexpectedDatabaseStatus"
+    },
+    "WaitForAvailable": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "DescribeDatabase"
+    },
+    "ReadNativeRestart": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeEvents",
+      "Arguments": {
+        "SourceIdentifier": "{% $config.db_identifier %}",
+        "SourceType": "db-instance",
+        "StartTime": "{% $fromMillis($toMillis($event.detail.Date) - 60000) %}",
+        "MaxRecords": 100
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "VerifyNativeRestart",
+      "Assign": {
+        "nativeEvents": "{% $states.result.Events %}",
+        "hasMoreNativeEvents": "{% $exists($states.result.Marker) and $states.result.Marker != \"\" %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "VerifyNativeRestart": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $hasMoreNativeEvents %}",
+          "Next": "NativeEventQueryIncomplete"
+        },
+        {
+          "Condition": "{% $count($nativeEvents[SourceArn = $config.db_arn and SourceIdentifier = $config.db_identifier and Message = \"DB instance stopped\" and ($type(Date) = \"number\" ? Date * 1000 : $toMillis(Date)) > $toMillis($event.detail.Date)]) > 0 %}",
+          "Next": "SupersededEvent"
+        },
+        {
+          "Condition": "{% $count($nativeEvents[SourceArn = $config.db_arn and SourceIdentifier = $config.db_identifier and $contains(Message, \"exceeding the maximum allowed time being stopped\") and $abs(($type(Date) = \"number\" ? Date * 1000 : $toMillis(Date)) - $toMillis($event.detail.Date)) <= 60000]) > 0 %}",
+          "Next": "StopAutomaticRestart"
+        }
+      ],
+      "Default": "NativeEventNotConfirmed"
+    },
+    "StopAutomaticRestart": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:rds:stopDBInstance",
+      "Arguments": {
+        "DbInstanceIdentifier": "{% $config.db_identifier %}"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "WaitForStopped"
+    },
+    "WaitForStopped": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "DescribeStoppedDatabase"
+    },
+    "DescribeStoppedDatabase": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeDBInstances",
+      "Arguments": {
+        "DbInstanceIdentifier": "{% $config.db_identifier %}"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "ConfirmStopped",
+      "Assign": {
+        "dbStatus": "{% $states.result.DbInstances[0].DbInstanceStatus %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "ConfirmStopped": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $dbStatus = \"stopped\" %}",
+          "Next": "ReadLegacySchedule"
+        },
+        {
+          "Condition": "{% $dbStatus in [\"stopping\", \"available\"] %}",
+          "Next": "WaitForStopped"
+        }
+      ],
+      "Default": "UnexpectedDatabaseStatus"
+    },
+    "ReadLegacySchedule": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:scheduler:getSchedule",
+      "Arguments": {
+        "Name": "{% $config.legacy_schedule_name %}",
+        "GroupName": "{% $config.legacy_schedule_group %}"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "ValidateLegacySchedule",
+      "Assign": {
+        "legacySchedule": "{% $states.result %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "ValidateLegacySchedule": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $legacySchedule.State = \"DISABLED\" %}",
+          "Next": "AutomaticStopConfirmed"
+        },
+        {
+          "Condition": "{% $legacySchedule.State = \"ENABLED\" and $legacySchedule.Name = $config.legacy_schedule_name and $legacySchedule.GroupName = $config.legacy_schedule_group and $legacySchedule.Target.Arn = \"arn:aws:scheduler:::aws-sdk:rds:stopDBInstance\" and $legacySchedule.Target.RoleArn = $config.legacy_scheduler_role_arn and $parse($legacySchedule.Target.Input).DbInstanceIdentifier = $config.db_identifier %}",
+          "Next": "DisableLegacySchedule"
+        }
+      ],
+      "Default": "LegacyScheduleChanged"
+    },
+    "DisableLegacySchedule": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:scheduler:updateSchedule",
+      "Arguments": "{% $merge([$sift($legacySchedule, function($value, $key) { $key in [\"Name\", \"GroupName\", \"ScheduleExpression\", \"ScheduleExpressionTimezone\", \"FlexibleTimeWindow\", \"Target\", \"Description\", \"StartDate\", \"EndDate\", \"KmsKeyArn\", \"ActionAfterCompletion\"] }), {\"State\": \"DISABLED\"}]) %}",
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "ReadBackLegacySchedule",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "ReadBackLegacySchedule": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:scheduler:getSchedule",
+      "Arguments": {
+        "Name": "{% $config.legacy_schedule_name %}",
+        "GroupName": "{% $config.legacy_schedule_group %}"
+      },
+      "TimeoutSeconds": 30,
+      "Output": {},
+      "Next": "ConfirmLegacyDisabled",
+      "Assign": {
+        "legacyState": "{% $states.result.State %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "ConfirmLegacyDisabled": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Condition": "{% $legacyState = \"DISABLED\" %}",
+          "Next": "AutomaticStopConfirmed"
+        }
+      ],
+      "Default": "LegacyScheduleNotDisabled"
+    },
+    "IgnoredEvent": {
+      "Type": "Succeed"
+    },
+    "DuplicateEvent": {
+      "Type": "Succeed"
+    },
+    "AlreadyStopped": {
+      "Type": "Succeed"
+    },
+    "SupersededEvent": {
+      "Type": "Succeed"
+    },
+    "AutomaticStopConfirmed": {
+      "Type": "Succeed"
+    },
+    "UnexpectedDatabaseStatus": {
+      "Type": "Fail",
+      "Error": "UnexpectedDatabaseStatus",
+      "Cause": "RDS is not in a supported state. This execution did not change the legacy schedule; check its current state."
+    },
+    "NativeEventNotConfirmed": {
+      "Type": "Fail",
+      "Error": "NativeEventNotConfirmed",
+      "Cause": "Native RDS automatic-start event was not confirmed. This execution did not change the legacy schedule; check its current state."
+    },
+    "LegacyScheduleChanged": {
+      "Type": "Fail",
+      "Error": "LegacyScheduleChanged",
+      "Cause": "Legacy RDS schedule target changed; no update was made"
+    },
+    "LegacyScheduleNotDisabled": {
+      "Type": "Fail",
+      "Error": "LegacyScheduleNotDisabled",
+      "Cause": "Legacy RDS schedule disable could not be confirmed"
+    },
+    "NativeEventQueryIncomplete": {
+      "Type": "Fail",
+      "Error": "NativeEventQueryIncomplete",
+      "Cause": "Native RDS event response has another page; no stop was attempted"
+    }
+  }
+}

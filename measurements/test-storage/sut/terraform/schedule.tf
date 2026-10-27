@@ -5,9 +5,13 @@ locals {
 
 resource "aws_scheduler_schedule" "stop_rds" {
   name                         = "${local.prefix}-stop-rds"
-  state                        = var.auto_stop_state
+  state                        = "ENABLED"
   schedule_expression          = local.auto_stop_cron
   schedule_expression_timezone = local.auto_stop_timezone
+
+  lifecycle {
+    ignore_changes = [state]
+  }
 
   flexible_time_window {
     mode = "OFF"
