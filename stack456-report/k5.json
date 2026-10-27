@@ -40,7 +40,24 @@
    "tests": [],
    "behavior_change": true,
    "notes": "#442부터 #452까지 이 상태다. billable-metric-prices/actions.ts는 #451, #452, 정점에서도 mutationScopeError를 부르지 않아 #453 백엔드 검사 전까지 열려 있다. 정점의 잔여 경우: 화면 URL에 organization_id가 없으면(직접 주소 입력) 헤더가 없어 백엔드 검사도 건너뛰고 billable-metric-prices 액션은 세션 도입사에 쓴다. 드물어 별도 지적으로 올리지 않았다.",
-   "batch": "lib-tenant"
+   "batch": "lib-tenant",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/api/client.ts",
+     "frontend/src/lib/auth/organization-mismatch.ts",
+     "frontend/e2e/organization-mismatch.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/e2e/auth.contract.spec.ts"
+    ],
+    "change": "tenantRequest에서 scope 검사 뒤 requestApi 전에, method가 GET이 아니고 x-meterengine-organization-id 헤더가 있으며 session.organization.id와 다르면 백엔드를 부르지 않고 { ok: false, error: { status: 403, code: 'permission_denied', message: '열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요.' } }를 돌려준다. 비교는 server-only 없는 순수 함수(lib/auth/organization-mismatch.ts, 선언 위 한 줄 설명만)로 빼서 단위 시험한다. 문구는 workspaceAction:34, mutationScopeError와 같고 상태와 코드는 #453 백엔드가 같은 상황에 내는 403 permission_denied와 맞춘다. 이 한 곳에서 serverSend를 거치는 customers, billing, billable-metrics, billable-metric-prices 액션이 함께 막힌다. GET은 막지 않는다: 렌더 중 조회는 layout 차단 화면이 가리고, 정점의 workspace.contract.spec.ts 격리 계약 시험이 조회 요청이 백엔드에 닿아 403과 customerQueries 기록을 받는 것을 단언하므로 GET까지 막으면 위층에서 그 시험이 깨진다.",
+    "tests": "frontend/e2e/organization-mismatch.test.mjs(node --test): POST, PUT, PATCH, DELETE에서 헤더 A와 세션 B면 오류, 같으면 null, 헤더가 없으면 null, GET이면 null. 선택: auth 대역 서버(contract-server.mjs)에 이미 두 활성 도입사 소속 member와 PUT /v1/sessions/current/organization이 있으므로 auth.contract.spec.ts에 두 페이지 시나리오(페이지1 /customers?organization_id=A에서 고객 등록 대화상자 열기, 세션을 B로 전환, 저장)를 더해 POST /v1/customers가 기록되지 않는지 본다. 기존 파일이라 k6 또는 조율 세션 몫이다.",
+    "behavior_change": true,
+    "screens": "고객 등록, 수정, 삭제 대화상자, 청구 검토의 인보이스 확정 대화상자, 미터와 단가 등록, 삭제 대화상자. 다른 탭에서 도입사가 바뀐 경우에만 오류 문구가 보이고 평소 동작은 같다.",
+    "conflict_risk": "삽입 위치(#442 client.ts 15행과 16행 사이)는 #453이 16행 requestApi 호출을 바꾸고 environment 줄을 더한 곳과 붙어 있어 위층 반영 때 충돌한다. #451은 12행 시그니처만 바꿔 낮다. 정점에서는 #451 mutationScopeError와 #453 백엔드 403이 이미 막고 있어 중복 방어가 되지만 문구와 코드가 같아 화면 차이는 없다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "C442-012",
@@ -57,7 +74,25 @@
    "tests": [],
    "behavior_change": true,
    "notes": "X-103을 고쳐 세션 거부 시에도 returnTo를 붙이면 이 문제가 나타나는 경우가 늘어난다(소속 해제로 세션이 끊긴 뒤 returnTo의 도입사에 더는 소속되지 않음). 둘을 같이 넣거나 이것을 먼저 넣는다. 고칠 호출부가 k6 파일이라 k5 범위 안에서는 순수 함수와 단위 시험만 가능하다.",
-   "batch": "lib-tenant"
+   "batch": "lib-tenant",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/navigation.ts",
+     "frontend/e2e/return-organization.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(public)/actions.ts",
+     "frontend/src/app/account/consents/actions.ts",
+     "frontend/e2e/auth.contract.spec.ts"
+    ],
+    "change": "navigation.ts 끝에 경로의 organization_id를 읽는 함수와 organization_id만 지우고 나머지 search(month 등)는 보존하는 순수 함수를 더한다. loginAction은 saveSession 뒤 safeReturnPath 결과의 organization_id(requested)가 result.data.organization?.id와 다르면 새 토큰으로 PUT /v1/sessions/current/organization {organization_id: requested}를 부른다. 응답이 ok이고 organization.status가 active면 그 도입사 기준으로 destination을 만들고, 실패(소속 아님 403 등)하거나 활성이 아니면 organization_id를 지운 경로에 세션 도입사를 workspaceHref로 붙인다. consent_required 분기도 이 destination을 쓴다. acceptAccountConsents는 returnTo의 organization_id가 session.organization.id와 다르면 지우고 세션 도입사를 붙인다(동의 전 전환이 막히는 경우 대비). navigation.ts의 search 보존은 바꾸지 않는다.",
+    "tests": "frontend/e2e/return-organization.test.mjs(node --test): '/billing?organization_id=B&month=2026-10'에서 B를 읽고, 지운 결과가 '/billing?month=2026-10'인지, organization_id가 없으면 그대로인지. 범위 밖 auth.contract.spec.ts에 대역 서버의 두 도입사로 (1) returnTo에 B를 넣고 로그인하면 URL이 organization_id=B와 month=2026-10을 유지하고 '도입사 선택이 바뀌었습니다' 제목이 없으며 PUT /v1/sessions/current/organization이 기록되는지, (2) 소속이 아닌 도입사 id를 넣으면 organization_id=A인 같은 경로로 가는지 더한다.",
+    "behavior_change": true,
+    "screens": "로그인 뒤 이동과 필수 동의 뒤 이동. 재로그인 경로에서 콘솔의 '도입사 선택이 바뀌었습니다' 화면이 더는 뜨지 않고, 세션 도입사가 돌아갈 주소의 도입사로 바뀐다.",
+    "conflict_risk": "(public)/actions.ts는 #454가 21-22행(clientIp)을 바꿨지만 destination 줄(#442 27행, 정점 29행)과 떨어져 있어 낮다. navigation.ts는 여러 PR이 1, 4, 9, 11행을 바꾸므로 새 함수를 파일 끝에 두면 낮다. account/consents/actions.ts는 정점까지 같은 구조라 낮다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "C443-003",
@@ -82,7 +117,24 @@
    "tests": [],
    "behavior_change": false,
    "notes": "C453-007은 pr 453으로 달렸지만 문제의 줄은 #443이 들였다. README 148행 'test/live 1차 범위는 고객, 수집 로그, API 키, 감사와 수집 거절이며 나머지 업무 메뉴는 준비 중으로 표시한다'는 #452에서 들어왔고 최상단 environmentReadyPath와도 어긋나지만 k5 파일 범위 밖이라 k6 또는 문서 담당에 넘긴다. #443의 app/(console)/integrations/page.tsx 21행 hint('격리된 키는 위의 업무 환경을 전환해 발급하세요')도 같은 유형의 앞선 문구인데 k6 범위다.",
-   "batch": "home-page"
+   "batch": "home-page",
+   "fix_plan": {
+    "fix_pr": "443 (환경 문장 삭제), 453 (정확한 범위 문구 추가)",
+    "files": [
+     "frontend/src/app/page.tsx",
+     "frontend/e2e/home-page.test.mjs (새 파일)"
+    ],
+    "out_of_scope_files": [
+     "frontend/README.md (148행, #452에서 들어온 '준비 중으로 표시한다' 문장, C453-007 일부)",
+     "frontend/src/app/HomePage.module.css (#443에서 문단을 지우면 #452까지 .modeNote 규칙이 쓰이지 않는다. 무해하고 #453에서 다시 쓰이므로 고치지 않는다)"
+    ],
+    "change": "권장안 2단계. (1) claude/s456-k5-443: page.tsx 62행 <p className={styles.modeNote}> 문단을 지운다. #443 시점에는 업무 환경 기능이 없어 남길 수 있는 사실 문장이 없다. (2) claude/s456-k5-453: 같은 자리에 <p className={styles.modeNote}>테스트 환경과 실제 환경은 고객, 사용량, 청구, 결제와 연동 키를 따로 관리합니다. 도입사 계정과 권한은 두 환경에서 같습니다.</p>를 둔다. 용어는 ENVIRONMENT_LABELS('테스트 환경', '실제 환경')와 ConsoleShell 58행 안내에 맞췄고, 시점에 따라 바뀌는 '준비 중', '현재 ... 지원' 표현과 뜻이 모호한 세 번째 문장은 넣지 않는다. 대안(충돌 없음): #453에서만 62행 문장을 위 문구로 바꾼다. 이 경우 #443에서 #452까지 앞서가는 문제는 G-088 묶음과 함께 남는다.",
+    "tests": "새 frontend/e2e/home-page.test.mjs(node --test): readFileSync로 ../src/app/page.tsx를 읽어 '준비 중' 문자열이 없는지 단언한다. #453 브랜치에서는 modeNote 문단이 '테스트 환경과 실제 환경'과 '청구', '결제'를 포함하는지도 단언한다. 각 head에서 git grep -n '준비 중' -- frontend/src/app/page.tsx가 비는지 확인하고, 빌드 뒤 .next/server/app/index.html에서 같은 문자열이 없는지 본다. 이 문구를 쓰는 기존 e2e 선택자는 없다.",
+    "behavior_change": false,
+    "screens": "/ 소개 화면의 '업무 역할과 서버 권한' 구역 하단 안내 문단(1440, 390 모두). #443에서 #452까지는 문단이 사라지고 #453부터 새 문구로 보인다.",
+    "conflict_risk": "page.tsx는 #443 이후 바뀌지 않아 #443 수정은 위로 그대로 올라간다. 다만 #453 수정도 같은 62행을 건드리므로, 현재 #453 head에서 만든 수정 브랜치는 #443 삭제가 올라온 뒤 수정/삭제 충돌이 난다. 조율 세션이 #443 수정을 #453까지 올린 뒤 #453 수정을 적용하거나 충돌 시 #453 쪽 문구를 택한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "C445-004",
@@ -99,7 +151,21 @@
    "tests": [],
    "behavior_change": true,
    "notes": "검증 스크립트: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-api/capabilities-contract-probe.mjs (openapi 경로별 GET query 파라미터와 CAPABILITIES true 플래그 대조). 같은 #445 변경의 archive: true(listCustomers 등)도 백엔드 status 지원(#447)보다 앞서지만 #445에는 보관 필터 UI가 없고 백엔드가 무시하는 status만 붙어 화면 영향이 없어 이 그룹에 넣지 않았다.",
-   "batch": "lib-api"
+   "batch": "lib-api",
+   "fix_plan": {
+    "fix_pr": "445",
+    "files": [
+     "frontend/src/lib/api/capabilities.ts",
+     "frontend/e2e/capabilities-contract.test.mjs"
+    ],
+    "out_of_scope_files": [],
+    "change": "#445(feat/billing-payments)의 capabilities.ts에서 listEvents를 sort: false, q: false, range 키 제거(또는 false)로, aggregateBillableMetricUsages와 previewDraftInvoice의 customer_id를 false로 되돌린다. ListCapabilities 타입의 range?, archive? 선언은 그대로 둔다. #450(feat/event-ingestion)에서 백엔드가 sort, q, from, to를 받기 시작하므로 같은 파일 listEvents 줄을 sort: true, q: true, range: true로 다시 켠다. #451은 이미 두 줄을 customer_id: true로 다시 쓰므로 그대로 둔다.",
+    "tests": "새 node --test 파일 frontend/e2e/capabilities-contract.test.mjs: ../src/lib/api/capabilities.ts를 import하고 ../../backend/openapi.yaml에서 경로별 GET의 'in: query' 파라미터를 읽어, true 플래그(sort->sort, q->q, customer_id->customer_id, range->from,to, page->page, size->size, type->type)가 모두 선언됐는지 단언한다. 경로 표는 #445-#450에서 listEvents:/v1/events, aggregateBillableMetricUsages:/v1/usage, previewDraftInvoice:/v1/invoices/draft, listInvoices:/v1/invoices, #451부터 /v1/usage/search, /v1/invoices/draft/search, /v1/invoices/search로 바꾼다. 시제품 기준 수정 뒤 #445-#450과 #451 이상 모두 통과한다.",
+    "behavior_change": true,
+    "screens": "#445-#450 구간의 /usage, /billing에서 고객 선택이 사라지고, #445-#449의 /events에서 occurred_at 정렬 헤더가 사라진다. 스택 꼭대기 화면과 API 계약은 바뀌지 않는다.",
+    "conflict_risk": "#446-#450은 capabilities.ts를 고치지 않아 #450까지 전파는 깨끗하다. #450에서 listEvents 줄을 다시 켜는 수정이 추가로 필요하다. #451이 15-16행(usage, draft)과 14행 아래 줄들을 다시 쓰므로 #451로 전파할 때 그 줄에서 충돌이 나며 #451 쪽을 택하면 된다. frontend/e2e에 고객 필터나 이벤트 정렬을 쓰는 선택자는 없다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "C449-001",
@@ -143,7 +209,33 @@
    "tests": [],
    "behavior_change": true,
    "notes": "고칠 파일이 모두 k5 밖(deploy, backend, measurements, frontend/README, frontend/Dockerfile)이라 이 묶음에서는 수정하지 않고 담당 묶음에 넘긴다. 운영 DB에 이미 들어간 '프론트 콘솔' 키 폐기와 SSM 파라미터 3개(frontend-api-key, organization-id, organization-name) 삭제는 코드 밖 운영 절차로 따로 필요하다. top의 frontend/README.md:64와 Dockerfile:50 주석은 뒤 PR에서 이미 갱신됐다.",
-   "batch": "lib-config-proxy"
+   "batch": "lib-config-proxy",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [],
+    "out_of_scope_files": [
+     "deploy/compose.prod.yml",
+     "deploy/README.md",
+     "deploy/tests/test_public_origin.py",
+     "deploy/tests/test_trusted_proxies.py",
+     "backend/src/main/java/com/meterengine/account/service/BootstrapService.java",
+     "backend/src/main/java/com/meterengine/account/config/BootstrapProperties.java",
+     "backend/src/main/resources/application.properties",
+     "backend/src/test/java/com/meterengine/account/BootstrapServiceIntegrationTest.java",
+     "backend/README.md",
+     "measurements/test-slo/sut/terraform/parameters.tf",
+     "measurements/test-storage/sut/terraform/parameters.tf",
+     "measurements/test-storage/README.md",
+     "frontend/README.md",
+     "frontend/Dockerfile"
+    ],
+    "change": "compose.prod.yml frontend environment에서 METERENGINE_ORGANIZATION_ID, METERENGINE_ORGANIZATION_NAME, METERENGINE_API_KEY를 지우고 backend environment에서 FRONTEND_API_KEY, FRONTEND_ORGANIZATION_ID를 지운다. BootstrapService에서 콘솔 키 생성(consoleOrganizationId, bootstrapConsoleApiKey, CONSOLE_KEY_*)과 BootstrapProperties의 frontendApiKey, frontendOrganizationId, application.properties 21-22행을 지우고 운영자 부트스트랩만 남긴다. deploy/README의 organization-id, organization-name, frontend-api-key 행과 put-parameter 예시를 지우고 기존 '프론트 콘솔' 키 폐기와 SSM 파라미터 삭제 절차를 적는다. backend/README 부트스트랩 절, measurements terraform의 frontend_api_key 자원과 organization-* 값, test-storage README 179행을 맞춘다. #442 head의 frontend/README.md 67-69행과 Dockerfile:50 주석도 정리한다.",
+    "tests": "deploy 테스트에 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME 없이 docker compose config가 성공하고 frontend environment에 METERENGINE_API_KEY가 없음을 확인하는 케이스를 더하고, test_public_origin.py와 test_trusted_proxies.py의 DUMMY_ENV에서 세 값을 뺀다. BootstrapServiceIntegrationTest의 콘솔 키 케이스는 지우고 운영자 케이스만 남긴다.",
+    "behavior_change": true,
+    "screens": "없음. 배포 전제(SSM 파라미터)와 백엔드 기동 부트스트랩이 바뀐다.",
+    "conflict_risk": "compose.prod.yml 68-70행 바로 뒤에 #449 7ce9d36이 METERENGINE_PUBLIC_ORIGIN을, backend env 23-24행 앞에 #454가 rate limit 값을 넣어 전파 때 수동 해결이 필요하다. deploy tests DUMMY_ENV(#449, #454), deploy/README, backend/README, application.properties도 뒤 PR이 고쳐 충돌 가능성이 높다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-042",
@@ -160,7 +252,27 @@
    "tests": [],
    "behavior_change": false,
    "notes": "#447부터 #450까지 고객 등록이 깨진 것은 k6 파일(customers/page.tsx, workspace-actions.ts)에서 생긴 일이라 k6 자료에 따로 있을 수 있다. scratch 검사 스크립트: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-auth/workspace-operations.check.mjs, 작업 비교: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-auth/ops.py. #444부터 #446까지는 integrations/[id] 화면에 restoreWebhookEndpoint 패널이 case 없이 있다. 다만 그 head의 백엔드가 archived_at을 주지 않아서 도달할 수 없다.",
-   "batch": "lib-auth"
+   "batch": "lib-auth",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/permissions.ts",
+     "frontend/e2e/workspace-operations.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/workspace-actions.ts",
+     "frontend/src/app/(console)/customers/page.tsx",
+     "frontend/src/app/(console)/integrations/[id]/page.tsx",
+     "frontend/src/app/(console)/integrations/page.tsx",
+     "frontend/src/app/(console)/members/page.tsx"
+    ],
+    "change": "permissions.ts: OWNER_OPERATIONS와 ADMIN_OPERATIONS를 as const 배열에서 만든다. WORKSPACE_OPERATIONS(두 배열과 createCustomer), WorkspaceOperation 타입, isWorkspaceOperation 가드를 export한다. canPerformWorkspaceOperation의 동작은 그대로 둔다. 새 e2e/workspace-operations.test.mjs는 두 가지를 검사한다. (1) src 아래 화면의 operation=\"x\", operation: \"x\"가 모두 WORKSPACE_OPERATIONS에 있고 workspace-actions.ts에 case \"x\"도 있다. (2) workspace-actions.ts의 case가 모두 WORKSPACE_OPERATIONS에 있다. 권한 집합에는 있는데 case가 없는 방향은 #442의 선반영 작업 이름 때문에 검사하지 않는다. k6 몫: workspace-actions.ts의 대표관리자 전용 중복 목록(#442 35행, top 40행)을 지우고 operation을 isWorkspaceOperation으로 좁힌다. ActionPanelProps.operation을 WorkspaceOperation으로 바꾸는 일은 k6 화면 수정과 함께 할 때만 한다. scratch tsc 실험에서 integrations/page.tsx 36행과 members/page.tsx 22-24행의 객체 리터럴이 string으로 넓혀져 실패했다. tenantRequestScope는 지금 백엔드와 같으므로 바꾸지 않는다.",
+    "tests": "node --test e2e/workspace-operations.test.mjs를 추가한다. scratch 초안은 top에서 통과하고 #447에서 실패했다. 기존 e2e/permissions.test.mjs는 그대로 두고 typecheck와 lint를 돌린다.",
+    "behavior_change": false,
+    "screens": "검사와 export만 바뀌어 화면 변화는 없다. k6 몫까지 반영하면 #447부터 #450까지 고객 화면의 고객 등록이 정상 동작한다.",
+    "conflict_risk": "permissions.ts는 14개 head에서 같은 blob이고 새 테스트도 새 파일이라 줄 충돌은 없다. 다만 위층으로 옮기면 #444부터 #446까지(restoreWebhookEndpoint)와 #447부터 #450까지(createCustomer) head에서 새 검사가 실패한다. 그 head의 workspace-actions.ts(k6)에 case를 더하거나 패널을 해당 PR로 옮겨야 한다. workspace-actions.ts는 거의 모든 PR이 고친 파일이라 k6 쪽 충돌 위험이 높다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-043",
@@ -194,7 +306,22 @@
    "tests": [],
    "behavior_change": true,
    "notes": "한 번에 합치면 k6 화면 15개 이상을 바꿔야 하므로 이번에는 k5 안에서 오류 표시만 기존 부품으로 모은다. WorkspaceTable 페이지를 URL로 옮기는 일과 WorkspaceHeader/ScreenHeader 중 하나로 정리하는 일은 화면 모양이 바뀌는 후속 작업으로 남기고 PR 본문에 계획을 적는다. WorkspaceError 호출부는 모두 서버 컴포넌트라 ErrorAlert(클라이언트) 사용에 문제가 없다. transport.ts는 server-only라 클라이언트 파일인 WorkspaceView에서 toDisplayMessage를 import하면 안 된다.",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/WorkspaceView.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/**/page.tsx (WorkspaceError 호출부에 status 전달, 후속)"
+    ],
+    "change": "WorkspaceError({ message, status? })가 자체 Alert 대신 main의 ErrorAlert를 렌더하게 바꾼다: title '데이터를 불러오지 못했습니다'는 유지하고, message에 status가 있으면 ' (상태)'를 붙인다. '다시 시도'는 ErrorAlert 안의 RetryButton(router.refresh, type=primary 버튼)이 맡는다. 서버 쪽 호출부가 나중에 toDisplayMessage(error)와 error.status를 넘길 수 있게 status를 선택 인자로 둔다. WorkspaceTable, WorkspaceHeader는 이번에 바꾸지 않는다.",
+    "tests": "lint, typecheck. archive-filters.real.spec.ts:282는 제목 문구 'getByText(데이터를 불러오지 못했습니다)' 개수만 보므로 제목을 유지하면 그대로다. 계약 서버가 응답하지 않는 경로를 여는 Playwright 확인을 더해 오류 제목과 role=button '다시 시도'가 보이는지 확인할 수 있다(auth.contract.spec.ts:109의 '다시 시도' 버튼은 다른 화면이라 영향 없음).",
+    "behavior_change": true,
+    "screens": "WorkspaceError를 쓰는 모든 화면의 조회 실패 상태: 개요, 고객, 고객 상세, 이벤트 매핑 진단, 거부 이벤트, 연동 설정, 통보 발송 내역, 사용자 관리, 수납과 취소, 수납 상세, 요금 설계, 설정, 서비스 운영 현황, 변경 이력, 사용량 수집 진단.",
+    "conflict_risk": "낮음. WorkspaceView.tsx는 #442 뒤로 바뀌지 않았다. 같은 파일을 X-095, G-046, D-226 수정도 건드리므로 묶어서 순서대로 적용한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-046",
@@ -211,7 +338,26 @@
    "tests": [],
    "behavior_change": false,
    "notes": "수납 상태 라벨은 X-009 묶음, 권한 라벨은 X-095 묶음이 맡는다. 키 이름 분기를 column.kind로 바꾸는 리팩터링은 지금 잘못 그려지는 곳이 없어 하지 않는다. 웹훅 부분은 k6 파일과 #453 e2e를 같이 고쳐야 한다.",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "443",
+    "files": [
+     "frontend/src/lib/auth/permissions.ts",
+     "frontend/src/components/shell/ConsoleShell.tsx",
+     "frontend/src/components/workspace/WorkspaceView.tsx",
+     "frontend/e2e/role-labels.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/integrations/[id]/page.tsx",
+     "frontend/e2e/workspace.contract.spec.ts"
+    ],
+    "change": "#443: permissions.ts에 ORGANIZATION_ROLE_LABELS: Record<OrganizationRole, string> = { owner: '대표관리자', admin: '관리자', member: '일반 사용자' }를 둔다. ConsoleShell.tsx:53의 삼항식을 이 맵 조회로 바꾸고, WorkspaceView.tsx:19 STATUS_LABELS의 owner, admin, member 항목은 이 맵을 펼쳐 넣어 정본을 하나로 한다. #444(k6 몫): integrations/[id]/page.tsx:26 상태 열에 statusLabels { pending: '발송 대기', done: '완료', failed: '실패' }를 넘기고, WorkspaceView STATUS_LABELS의 쓰이지 않는 waiting 키는 지운다. workspace.contract.spec.ts:122 기대 문구를 '발송 대기'로 바꾼다(그 줄은 #453에서 들어왔다).",
+    "tests": "새 frontend/e2e/role-labels.test.mjs(node --test): ORGANIZATION_ROLE_LABELS가 owner, admin, member 세 값을 모두 갖고 member가 '일반 사용자'인지 확인한다. 웹훅 부분은 workspace.contract.spec.ts 재전송 계약 테스트가 '발송 대기' 셀을 확인하게 바꿔 돌린다. lint, typecheck.",
+    "behavior_change": false,
+    "screens": "콘솔 상단 사용자 표시(모든 콘솔 화면), 사용자 관리(/members) 도입사 역할 열, 통보 발송 내역(/integrations/[id]) 상태 열.",
+    "conflict_risk": "중간. ConsoleShell.tsx는 #443 뒤 #444, #445, #446, #451, #453이 계속 바꿨다(53행 근처 포함). WorkspaceView.tsx와 permissions.ts는 #442 뒤로 그대로라 낮다. e2e 122행은 #453에만 있으므로 #444 수정과 별도로 #453에서 맞춰야 한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-047",
@@ -228,7 +374,35 @@
    "tests": [],
    "behavior_change": false,
    "notes": "원래 클러스터의 G-053과는 원인이 달라 나눴다. intro는 #442지만 수정 PR은 꼭대기(#455) 또는 스택 머지 뒤 후속 PR을 권한다. #442에 넣으면 이후 13개 PR이 새로 더한 호출부마다 인자 수 타입 오류가 나 전파 비용이 크고, 동작 변화가 없는 정리라 중간 상태에서 얻는 것이 없다.",
-   "batch": "lib-api"
+   "batch": "lib-api",
+   "fix_plan": {
+    "fix_pr": "455",
+    "files": [
+     "frontend/src/lib/api/client.ts",
+     "frontend/src/lib/api/workspace.ts",
+     "frontend/src/lib/api/billable-metric-prices.ts",
+     "frontend/src/lib/api/billable-metrics.ts",
+     "frontend/src/lib/api/billing.ts",
+     "frontend/src/lib/api/customers.ts",
+     "frontend/src/lib/api/events.ts",
+     "frontend/src/lib/api/invoices.ts",
+     "frontend/src/lib/api/pricing.ts",
+     "frontend/src/lib/api/search.ts",
+     "frontend/src/lib/api/usage.ts",
+     "frontend/src/components/screen/ListControlsLoader.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/invoices/view-link-actions.ts",
+     "frontend/src/app/(console)/pricing/page.tsx",
+     "frontend/src/app/(console)/workspace-actions.ts"
+    ],
+    "change": "serverFetch(path, searchParams)와 serverSend(path, options)로 첫 인자 _baseUrl을 지우고, 모든 호출부에서 config.apiBaseUrl 인자와 그 때문에만 있던 config import를 지운다. workspaceFetch는 serverFetch와 같아지므로 workspace.ts의 호출부를 serverFetch로 통일하거나 workspaceFetch를 serverFetch 재수출로 줄인다. client.ts의 toDisplayMessage와 타입 재수출 정리는 선택이다.",
+    "tests": "pnpm typecheck가 남은 호출부를 모두 잡는다. 동작이 같으므로 pnpm lint, pnpm build와 기존 node --test, 계약 e2e 통과로 충분하다.",
+    "behavior_change": false,
+    "screens": "없음",
+    "conflict_risk": "꼭대기에 한 번 적용하면 충돌이 없다. 중간 PR에 넣으면 서명 변경이 이후 PR이 더한 호출부와 계속 엇갈려 높다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-048",
@@ -262,7 +436,28 @@
    "tests": [],
    "behavior_change": false,
    "notes": "네 파일 모두 #442 단일 커밋 d4f1714에서 들어왔다(PricingWorkspace만 #446). main의 MODAL_WIDTH(520px)로 맞추면 ActionPanel 대화상자가 좁아지는 화면 변화가 생기므로 공용 컴포넌트 안의 상수로 600px를 유지하는 쪽을 권한다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/WorkspaceDialog.tsx",
+     "frontend/src/components/workspace/use-dismissed-field-errors.ts",
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/auth/CreateOperatorButton.tsx",
+     "frontend/src/components/auth/AttachOrganizationButton.tsx",
+     "frontend/src/components/auth/ReviewAction.tsx",
+     "frontend/src/components/pricing/PricingWorkspace.tsx",
+     "frontend/src/app/admin/users/page.tsx"
+    ],
+    "change": "components/workspace/WorkspaceDialog.tsx에 antd Modal 공통 설정(className workspace-dialog, width 상수, top 24, D-165 수정을 반영한 body 스타일, isPending일 때 keyboard, mask, closable 잠금, '닫기'와 제출 버튼 footer, isDirty 확인 닫기)을 모은다. use-dismissed-field-errors.ts에 fieldErrors와 dismissedErrors 계산을 모은다. ActionPanel이 먼저 쓰고, auth 대화상자와 PricingWorkspace는 각 영역에서 옮긴다. 닫을 때 액션 상태를 초기화하는 방식(open일 때만 본문 마운트)으로 바꾸면 admin/users의 key 재마운트를 없앨 수 있다.",
+    "tests": "기존 workspace.contract.spec.ts '발급 중 닫기를 막고 도착한 비밀값을 그 창에서만 보여 준다'와 operator-create, people real spec이 잠금과 닫기 동작을 덮는다. 옮긴 뒤 이 테스트를 그대로 통과해야 한다.",
+    "behavior_change": false,
+    "screens": "보이는 변화 없음(ReviewAction을 옮기면 진행 중 닫기 버튼이 숨김에서 비활성으로 통일).",
+    "conflict_risk": "중간. ActionPanel 본문 구조를 크게 바꾸므로 D-141, josa, X-040, G-069, D-165 수정과 같은 #442 브랜치에서 순서를 정해 한 번에 하고 위로 전파하는 편이 낫다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-051",
@@ -296,7 +491,25 @@
    "tests": [],
    "behavior_change": false,
    "notes": "#442 시점의 AuditLog, AuditLogsResponse는 백엔드 감사 로그 API(#448)보다 먼저 선언돼 #448 전까지 쓰는 곳이 없다.",
-   "batch": "lib-api"
+   "batch": "lib-api",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/api/management.ts",
+     "frontend/src/lib/auth/types.ts",
+     "frontend/src/components/workspace/AuditScreen.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/organization-invitations/[token]/page.tsx",
+     "frontend/src/app/organization-invitations/[token]/actions.ts"
+    ],
+    "change": "management.ts에서 OrganizationMember를 ManagedMemberResponse로, OrganizationInvitation을 OrganizationInvitationResponse로, AuditLog를 AuditLogResponse로, AuditLogsResponse를 ListAuditLogsResponse로 바꾼다. management.ts의 organization_role과 auth/types.ts SessionResponse.organization_role은 lib/auth/permissions.ts의 OrganizationRole을 가져다 쓴다. AuditScreen.tsx(#448에서 생김)의 import 이름을 맞춘다. 초대 미리보기 타입을 lib/api의 InvitationPreview 하나로 모으는 것은 k6 호출부 수정이 필요해 범위 밖이다. scopes는 string[]로 둔다.",
+    "tests": "이름 변경과 타입 공유뿐이라 pnpm typecheck로 충분하다.",
+    "behavior_change": false,
+    "screens": "없음",
+    "conflict_risk": "낮음. management.ts는 #448에서 import 한 줄만 바뀌고 auth/types.ts, permissions.ts는 스택 내내 그대로다. AuditScreen.tsx는 #448에서 생기므로 #442 변경을 #448로 전파할 때 import 이름을 맞춰야 한다(타입 오류로 드러남)."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-053",
@@ -332,7 +545,30 @@
    "tests": [],
    "behavior_change": false,
    "notes": "부수 관찰: proxy는 공개 경로에서 헤더를 덮어쓰기 전에 NextResponse.next()를 돌려 내부 헤더를 지우지 않는다(top proxy.ts를 node로 실행해 /login에 위조 헤더를 보내면 x-middleware-override-headers가 없음). 지금은 공개 경로 코드가 이 헤더를 읽지 않아 실제 버그는 아니다. 고칠 때 공개 경로에도 같은 requestHeaders를 넘기면 계약이 한결같아진다(작은 동작 변경). 검증 스크립트: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-config-proxy/probe-proxy.mts",
-   "batch": "lib-config-proxy"
+   "batch": "lib-config-proxy",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/contract.ts",
+     "frontend/src/proxy.ts",
+     "frontend/src/lib/auth/session.ts",
+     "frontend/src/lib/api/client.ts",
+     "frontend/src/lib/auth/mutation-scope.ts",
+     "frontend/e2e/auth-contract.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/layout.tsx",
+     "frontend/src/app/(console)/workspace-actions.ts",
+     "frontend/src/app/organization-invitations/[token]/actions.ts",
+     "frontend/src/app/organization-invitations/continue/page.tsx"
+    ],
+    "change": "server-only가 아닌 새 lib/auth/contract.ts에 SESSION_COOKIE = \"me_session\", INVITATION_FLOW_COOKIE = \"me_invitation_flow\", INVITATION_FLOW_COOKIE_OPTIONS(httpOnly, secure, sameSite lax, path /organization-invitations), INTERNAL_HEADERS = { organizationId, currentPath } as const를 둔다(#453 전파 때 environment 추가). proxy.ts는 이 모듈을 import해 Object.values(INTERNAL_HEADERS)를 돌며 모두 지운 뒤 currentPath와 organizationId를 설정하고 쿠키 검사에 SESSION_COOKIE를 쓴다. session.ts는 contract의 SESSION_COOKIE를 다시 export하고 38행을 INTERNAL_HEADERS.currentPath로, client.ts는 INTERNAL_HEADERS.organizationId로 바꾼다. #453에서 mutation-scope.ts와 client.ts의 environment 헤더도 상수로 바꾼다. k6 파일((console)/layout.tsx, workspace-actions.ts, 초대 actions.ts와 continue/page.tsx)은 같은 상수를 쓰도록 k6에 넘긴다. 이름 값은 그대로라 동작은 바뀌지 않는다.",
+    "tests": "새 frontend/e2e/auth-contract.test.mjs(node --test): contract.ts를 import하고 src/ 아래 .ts, .tsx를 읽어 'me_session', 'me_invitation_flow', INTERNAL_HEADERS 각 값이 contract.ts 밖에 문자열로 남지 않았는지, proxy.ts가 Object.values(INTERNAL_HEADERS)로 지우는지 확인한다. 기존 auth.contract.spec.ts, workspace.contract.spec.ts Playwright 계약 검사가 그대로 통과해야 한다. e2e 스펙의 'me_session' 리터럴은 쿠키 계약 확인용이라 그대로 둔다. CI는 node 검사를 돌지 않으므로 ci.yml 추가는 범위 밖으로 보고한다.",
+    "behavior_change": false,
+    "screens": "없음",
+    "conflict_risk": "proxy.ts는 #445, #449(공개 경로 줄, 쿠키 검사 줄과 인접)와 #453(헤더 처리 7-14행)이, client.ts는 #451, #453이, session.ts는 #444, #451이 고쳐 전파 때 충돌이 예상된다. #453에서는 INTERNAL_HEADERS에 environment를 더하는 추가 수정이 필요하다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-058",
@@ -349,7 +585,23 @@
    "tests": [],
    "behavior_change": true,
    "notes": "추정 코드는 #442, 사용자에게 보이는 잘못된 문구는 #445부터. workspace-actions.ts는 k6 영역.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/workspace-operation-results.ts",
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/workspace-actions.ts"
+    ],
+    "change": "(범위 안) lib/workspace-operation-results.ts에 작업별 결과 문구 표를 둔다: createPaymentAttempt와 createPaymentCancellation은 새로 조회 링크 '결제와 취소 내역 새로 조회', 재요청 버튼은 각각 '새 요청', '새 취소 요청'; createPaymentMethodRegistration은 링크 라벨 '카드 등록 링크'; 그 밖은 '최신 상태 새로 조회'. ActionPanel 123-126행은 이 표로만 고른다. (범위 밖) workspaceAction은 status 추정을 결제 작업에만, token을 링크로 바꾸는 일을 createPaymentMethodRegistration과 createOrganizationInvitation에만 적용하고, #445에서 updateTossPaymentsCredential 미확정 문구를 '저장 결과를 확인하지 못했습니다. 토스 키 목록을 새로 조회해 저장 여부를 확인하세요.'로 나눈다.",
+    "tests": "frontend/e2e/workspace-operation-results.test.mjs(node --test): updateTossPaymentsCredential의 새로 조회 라벨에 '결제'가 없고, createPaymentCancellation은 '결제와 취소 내역 새로 조회'와 '새 취소 요청', 알 수 없는 작업은 기본값인지 확인.",
+    "behavior_change": true,
+    "screens": "/settings 토스 키 저장의 응답 유실 상태 문구, /payments/{id} 문구는 그대로. API 계약 변화 없음.",
+    "conflict_risk": "낮음. ActionPanel 123-126행은 #442 이후 바뀌지 않았다. workspace-actions.ts(범위 밖)는 #445와 #453에서 근처가 바뀌어 전파 때 주의."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-061",
@@ -372,7 +624,7 @@
    "id": "G-062",
    "merged_ids": [],
    "verdict": "confirmed",
-   "severity": "medium",
+   "severity": "low",
    "reason": "재현 경로: deploy.sh(main, #442, 정점 모두 같은 파일)는 503행에서 frontend를 포함한 백엔드 외 서비스를 먼저 up -d 하고 505행에서 새 백엔드를 올린 뒤 513행(최대 90초)과 532행(최대 60초)을 기다린다. 그동안 Caddy 백엔드 목록은 옛 색만 가리키고(serving_upstreams) 새 프론트는 caddy:8081로 옛 백엔드를 부른다(compose.prod.yml:67). main 백엔드의 SessionResponse, SessionTokenResponse에는 scopes, organization_role, consent_required가 없고, #442 FE의 hasScope는 scopes가 없으면 false라 tenantRequest(client.ts:15)가 모든 조회를 403 '현재 도입사의 조회 권한이 없습니다'로 돌려주며 NavMenu.tsx:22는 '도입사 선택'만 남긴다. 정점 빌드를 scopes와 organization_role을 뺀 대역 서버에 붙여 렌더하니 로그인 뒤 /customers, /billing 모두 '업무 조회 권한이 없습니다... 대표관리자에게 권한을 요청하거나' 화면이 뜨고 메뉴는 '도입사 선택'뿐이며 백엔드 호출은 세션 생성과 조회뿐이었다. 실제 해와 다른 방어: main 백엔드는 세션 주체에 모든 scope를 준다(AuthenticatedPrincipal.java:47, kind == SESSION). 그래서 이 창에서 옛 화면은 FE 검사가 없으면 동작했을 것이고 FE 검사가 장애를 콘솔 전체로 넓힌다. 다만 scopes가 없을 때 거부하는 것은 permissions.test.mjs가 fail closed로 명시한 의도된 설계라 hasScope를 풀면 안 된다. 새 백엔드가 실패하면 on_exit의 discard_target은 백엔드 대상 색만 지우고 프론트는 새 이미지로 남는다. PR 본문도 기존 DB 순차 업그레이드는 검증하지 않았다고 적었다. 이를 막는 다른 PR은 없다. 영향은 main 백엔드와 새 FE가 처음 만나는 배포 한 번의 기동 창(보통 수십 초)과 백엔드 배포가 실패한 경우이고, 데이터 손상은 없으며 실패 시 CD 작업이 실패로 끝나 알 수 있으므로 high에서 medium으로 낮춘다.",
    "evidence": "deploy/deploy.sh:503-505,513,532 @ 854e293 (f088399와 같음); deploy/compose.prod.yml:67 @ f088399; backend/src/main/java/com/meterengine/account/dto/SessionResponse.java @ f088399 (scopes 없음); backend/src/main/java/com/meterengine/global/security/AuthenticatedPrincipal.java:47 @ f088399; frontend/src/lib/api/client.ts:15 @ 0245c15 (16 @ 854e293); frontend/src/lib/auth/permissions.ts:25-27 @ 0245c15; frontend/src/components/shell/NavMenu.tsx:22 @ 0245c15; frontend/src/components/shell/ConsoleShell.tsx:58 @ 854e293; 렌더 재현 /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-tenant/g-062.png",
    "intro_pr": "442",
@@ -382,7 +634,7 @@
    "fix_commits": [],
    "tests": [],
    "behavior_change": true,
-   "notes": "본질적인 수정은 deploy/deploy.sh라 k5와 k6 범위 모두 밖이다. 배포 순서 위험 자체는 main부터 있었고 #442가 FE를 새 세션 필드에 강하게 묶으면서 드러난다. 새 백엔드는 CurrentSession이 scopes를 List.copyOf로 항상 채우므로 응답에 scopes가 없는 것은 옛 백엔드를 뜻한다.",
+   "notes": "본질적인 수정은 deploy/deploy.sh라 k5와 k6 범위 모두 밖이다. 배포 순서 위험 자체는 main부터 있었고 #442가 FE를 새 세션 필드에 강하게 묶으면서 드러난다. 새 백엔드는 CurrentSession이 scopes를 List.copyOf로 항상 채우므로 응답에 scopes가 없는 것은 옛 백엔드를 뜻한다. 두 번째 관점이 배포 순간의 짧은 구간에만 생긴다고 보아 심각도를 low로 낮췄고 이를 따른다.",
    "batch": "lib-tenant",
    "second_lens": {
     "final_verdict": "confirmed",
@@ -391,7 +643,23 @@
     "harmful_in_product": true,
     "blocked_elsewhere": false,
     "reason": "판정: confirmed, 심각도는 1차 판정의 medium에서 low로 낮춘다. 도입 PR은 #442이고 정점에도 그대로 남아 있다.\n\n(a) 재현 경로\n- deploy/deploy.sh는 main(f088399), #442(0245c15), 정점(854e293)에서 md5까지 같다.\n- 503행이 frontend를 포함한 백엔드 외 서비스를 먼저 up -d 하고, 505행이 대상 색을 올린다. 이어 513행에서 최대 90초, 532행에서 최대 60초를 기다린다.\n- 그동안 upstreams.caddy는 살아 있는 옛 색만 가리키고, 새 프론트는 compose.prod.yml의 METERENGINE_API_BASE_URL=http://caddy:8081로 옛 백엔드를 부른다.\n- main의 SessionResponse에는 scopes, organization_role, consent_required가 없다. 세 필드는 #442가 처음 넣는다.\n- tenantRequest(#442 client.ts:15, 정점 client.ts:16)는 hasScope(undefined)가 false라 백엔드를 부르지 않고 403 permission_denied를 돌려준다. #442의 (console)/layout.tsx는 session.scopes를 그대로 넘기고, NavMenu.tsx:22는 '도입사 선택' 링크만 남긴다. #442 머리는 코드로 추적했다.\n- 정점은 렌더로 따로 재현했다. 정점 빌드를 스텁 API 앞의 프록시에 붙였고, 이 프록시는 세션 응답에서 세 필드만 지운다. /overview, /customers, /billing, /members 모두 h1이 '업무 조회 권한이 없습니다'였고 메뉴는 '도입사 선택'뿐이었다. 백엔드 호출은 GET /v1/sessions/current 5번이 전부였다.\n- requireSession은 요청마다 세션을 다시 읽고 쿠키에는 토큰만 둔다. 그래서 Caddy가 새 색으로 넘어간 뒤 새로고침하면 바로 복구된다.\n\n(b) 실제 해와 완화 요인\n- main 백엔드는 SESSION 주체에 모든 scope를 준다(AuthenticatedPrincipal의 grants). 프론트 검사가 없었다면 기존 화면은 이 창에서도 동작했을 것이다. 이 검사가 장애를 콘솔 전체로 넓힌다는 1차 주장은 맞다.\n- 다만 main 프론트에는 로그인이 없다. METERENGINE_API_KEY 하나로 데모 도입사를 보여 주는 콘솔이라, #442 첫 배포 시점에 운영에서 세션으로 일하는 도입사 관리자는 사실상 없다. 있다면 팀과 부트스트랩 운영자 정도다.\n- 영향은 첫 배포의 수십 초 창에 로그인한 사람이 '대표관리자에게 권한을 요청하세요'라는 잘못된 안내를 보는 정도다. fail closed라 잘못된 쓰기는 생기지 않는다.\n- 공개 인보이스와 카드 등록 화면은 tenantRequest를 거치지 않아 이 검사와 상관없다.\n- 새 백엔드가 기동에 실패하면 discard_target이 백엔드 대상 색만 지우고 프론트는 새 이미지로 남는다. 그래도 cd.yml이 SSM Status로 실패를 표시하고, workflow_dispatch 롤백으로 옛 프론트가 돌아온다. 그 상태는 프론트와 백엔드의 버전 불일치 자체가 문제라 사용자 관리, 동의 같은 새 화면도 함께 깨진다. 이 검사만의 문제는 아니다.\n- 이를 막는 PR이나 파일은 없다. 스택의 deploy 변경은 Caddyfile과 compose 보강뿐이고 deploy.sh는 같다.\n\n수정 계획\n- 근본 수정은 deploy/deploy.sh라 k5와 k6 범위 모두 밖이다. frontend를 503행 목록에서 빼고, 532행 routed_to 확인 뒤에 up -d frontend로 올린다.\n- 이렇게 바꾸면 반대로 옛 main 프론트가 새 백엔드에 붙는 창이 생긴다. main 프론트는 Bearer API 키만 쓰므로, 그 키가 새 백엔드에서 read 권한을 유지하는지 함께 확인해야 한다.\n- k5 범위 안에서 할 수 있는 것은 선택 사항이다. scopes가 배열이 아니면 '서비스를 갱신하는 중입니다' 안내로 가르는 정도다. 효과가 첫 배포 한 번의 수십 초에 그치고, ConsoleShell 줄은 #443 이후 충돌 위험이 높아 권하지 않는다. 바꾸더라도 hasScope와 permissions.test.mjs의 fail closed 단언은 그대로 둔다.\n\n증거\n- 렌더 스크린샷: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-tenant-2/old-customers.png 외 3장.\n- 프록시: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-tenant-2/old-backend-proxy.mjs\n- 띄운 프록시와 프론트 프로세스는 정리했고, 미리보기 하네스(33160)는 건드리지 않았다."
-   }
+   },
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/api/client.ts",
+     "frontend/src/components/shell/ConsoleShell.tsx"
+    ],
+    "out_of_scope_files": [
+     "deploy/deploy.sh"
+    ],
+    "change": "필수(범위 밖): deploy.sh에서 frontend를 503행의 첫 up -d 목록에서 빼고, 532행 routed_to로 새 백엔드 전환을 확인한 뒤 up -d frontend로 올린다. 백엔드가 준비되지 않아 die하면 프론트는 다시 만들어지지 않아 옛 이미지가 남는다. 머지 전에 운영 DB 스냅샷으로 V38, V44를 포함한 순차 마이그레이션을 확인한다. 선택(범위 안, fail closed 유지): tenantRequest(#442)에서 Array.isArray(session.scopes)가 아니면 권한 문구 대신 { status: 503, code: 'service_updating', message: '서비스를 갱신하는 중입니다. 잠시 후 새로고침하세요.' }를 돌려주고, ConsoleShell(#443에서 들어온 권한 없음 패널)도 scopes가 배열이 아니면 같은 안내를 보여 '대표관리자에게 권한을 요청' 같은 잘못된 행동 안내를 막는다. hasScope와 permissions.test.mjs의 fail closed 단언은 바꾸지 않는다.",
+    "tests": "deploy.sh 변경은 기존 배포 스크립트 시험 방식(있다면 deploy 쪽 시험)으로 frontend가 routed_to 뒤에 올라가는지 확인한다. 선택 수정은 scopes가 배열인지 판정하는 순수 함수를 lib/auth/permissions.ts에 두고 frontend/e2e/permissions.test.mjs와 별도인 새 node --test 파일에서 undefined면 '갱신 중', 빈 배열이면 기존 권한 없음으로 갈리는지 본다.",
+    "behavior_change": true,
+    "screens": "배포 순서 변경은 화면 변화 없음. 선택 수정 시 옛 백엔드와 붙은 경우의 콘솔 전 화면 안내 문구(권한 없음 대신 갱신 중)와 사이드바.",
+    "conflict_risk": "deploy.sh는 스택의 어느 PR도 바꾸지 않아 낮다. 선택 수정의 client.ts 줄은 #453이 바로 아래 requestApi 줄을 바꿔 충돌 가능성이 있고, ConsoleShell.tsx 58행은 #443 이후 여러 PR이 같은 줄을 바꿔 충돌 위험이 높다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-065",
@@ -408,7 +676,25 @@
    "tests": [],
    "behavior_change": true,
    "notes": "시간 초과 판별 시험: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/lib-api/timeout-probe.mjs. G-184(인보이스 확정 5초)는 원인이 달라 따로 두었지만, 이 수정의 시간 초과 문구가 들어가면 G-184의 잘못된 안내도 함께 줄어든다.",
-   "batch": "lib-api"
+   "batch": "lib-api",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/api/transport.ts",
+     "frontend/src/lib/api/transport-failure.ts",
+     "frontend/e2e/transport-failure.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/organization-invitations/[token]/actions.ts",
+     "frontend/src/app/admin/actions.ts"
+    ],
+    "change": "server-only와 경로 별칭 없이 순수 함수만 둔 lib/api/transport-failure.ts를 새로 만들고 describeTransportFailure(cause, method, path, elapsedMs)와 maskApiPath(path)를 둔다. maskApiPath는 쿼리를 떼고 ^v\\d+$, ^[a-z-]+$ 세그먼트만 남기고 나머지(UUID, me_invite_ 토큰, 결제수단 등록 토큰)는 :id로 가린다. describeTransportFailure는 console.error로 '[api] POST /v1/organization-invitations/:id/accept timeout 5003ms' 같은 한 줄을 남긴다. TimeoutError이고 GET이면 { status: 0, code: 'timeout', message: '응답이 늦어 정보를 불러오지 못했습니다. 잠시 후 다시 조회하세요.' }를, GET이 아니면 { status: 0, code: 'timeout', message: '응답이 늦어 결과를 확인하지 못했습니다. 요청이 처리됐을 수 있으니 화면을 새로 조회해 결과를 확인한 뒤 진행하세요.' }를 돌려준다. 그 밖의 실패는 지금의 network_error를 그대로 돌려준다. requestApi는 fetch 앞에서 시작 시각을 재고, catch를 catch (cause)로 바꿔 이 함수를 부른다. status 0을 유지하므로 workspace-actions.ts:107, admin/actions.ts:36의 기존 분기가 그대로 동작한다. 각 action에서 timeout을 '결과 확인 필요' 상태로 따로 다루는 것은 k6 범위로 남긴다.",
+    "tests": "새 frontend/e2e/transport-failure.test.mjs(node --test): DOMException('...', 'TimeoutError')와 TypeError('fetch failed')를 넣어 code(timeout, network_error), GET과 POST의 문구, status 0을 단언한다. node:test의 mock.method(console, 'error')로 로그 한 줄을 받아 'me_invite_' 토큰과 쿼리 문자열이 들어 있지 않고 :id로 가려졌는지 확인한다.",
+    "behavior_change": true,
+    "screens": "백엔드가 5초 넘게 응답하지 않을 때의 모든 오류 문구: 초대 수락, 가입 승인과 거절, 역할 변경, 도입사 연결, 인보이스 확정, 콘솔 조회 화면. API 계약은 바뀌지 않는다.",
+    "conflict_risk": "낮음-중간. transport.ts는 #451(헤더 줄, catch 뒤 responseType 블록 추가)과 #454(헤더 줄, toDisplayMessage, toApiError)가 고친다. 바꿀 줄(try 앞 한 줄, catch 두 줄)과 겹치지 않지만 #451의 추가 블록이 두 줄 아래라 문맥이 가깝다. 새 파일은 충돌이 없다. e2e에서 network_error나 '서버에 연결하지 못했습니다'를 찾는 곳은 없다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-067",
@@ -425,7 +711,33 @@
    "tests": [],
    "behavior_change": true,
    "notes": "수정은 모두 백엔드와 정책 결정이라 k5 범위 밖이고, 백엔드 묶음 자료와 겹칠 수 있다. 정식 약관 전에 운영에서 가입을 열지는 Jira(MS2)에서 정할 일이다. 판을 문자열로 받는 설계는 main부터 있었고, 스택이 더한 것은 FE 상수와 boolean consent_required다.",
-   "batch": "lib-auth"
+   "batch": "lib-auth",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/consents.ts"
+    ],
+    "out_of_scope_files": [
+     "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java",
+     "backend/src/main/java/com/meterengine/account/service/SignupService.java",
+     "backend/src/main/java/com/meterengine/account/service/SessionService.java",
+     "backend/src/main/java/com/meterengine/account/dto/CreateSignupConsentRequest.java",
+     "backend/src/main/java/com/meterengine/organization/dto/InvitationConsentRequest.java",
+     "backend/src/main/java/com/meterengine/account/dto/SessionResponse.java",
+     "backend/src/main/resources/application.yml",
+     "backend/openapi.yaml",
+     "frontend/src/app/(public)/actions.ts",
+     "frontend/src/app/account/consents/actions.ts",
+     "frontend/src/app/organization-invitations/[token]/actions.ts",
+     "frontend/src/components/auth/AuthForm.tsx"
+    ],
+    "change": "백엔드 설정에 문서별 현재 판을 둔다. 가입, 초대 수락, 세션 동의 요청은 판이 현재 판과 같을 때만 받고, 다르면 400 검증 오류로 돌려준다. 세션 응답의 consent_required는 '현재 판 동의 기록 없음'으로 계산하고, accept의 조기 반환도 같은 기준으로 바꾼다. 공개 API나 세션 응답으로 현재 판을 내려 주고, FE consents.ts는 상수 대신 그 값을 쓴다(k5에서는 이 파일만 바뀐다). 컨트롤러나 DTO가 바뀌므로 openapi.yaml을 다시 만든다.",
+    "tests": "백엔드: 옛 판으로 가입하면 400을 돌려주는지, 현재 판 설정을 올리면 기존 사용자의 consent_required가 true가 되는지, 새 판 동의 뒤 false로 돌아오는지 본다. FE: real e2e들이 CONSENT_VERSION을 쓰므로 판을 받아 오는 방식에 맞춰 고친다.",
+    "behavior_change": true,
+    "screens": "가입, 초대 수락, /account/consents 동의 화면",
+    "conflict_risk": "SessionConsentService, SignupService, consents.ts는 #442 뒤로 바뀌지 않았다. SignupController는 #454에서 바뀌어서 그 head와 충돌 위험이 있다. consents.ts를 쓰는 real e2e 파일이 여러 PR에 걸쳐 있다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-069",
@@ -442,7 +754,25 @@
    "tests": [],
    "behavior_change": false,
    "notes": "재현 스크립트: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/action-panel-b/probe.mjs. 같은 호출이 CustomerFormDialog, BillableMetricFormDialog(#451, k6)에도 있다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/request-id.ts",
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/customers/CustomerFormDialog.tsx",
+     "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx",
+     "frontend/README.md"
+    ],
+    "change": "lib/request-id.ts에 createRequestId()를 두어 crypto.randomUUID가 함수면 그대로 쓰고, 아니면 crypto.getRandomValues로 16바이트를 채워 version 4와 variant 비트를 맞춘 UUID 문자열을 만든다. ActionPanel 141-142행의 crypto.randomUUID()를 createRequestId()로 바꾼다.",
+    "tests": "frontend/e2e/request-id.test.mjs(node --test): randomUUID가 없는 crypto 대역에서 결과가 /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/와 맞고 1000회 중복이 없는지, randomUUID가 있으면 그 값을 쓰는지 확인.",
+    "behavior_change": false,
+    "screens": "보이는 변화 없음. HTTP LAN 접속에서 작업 버튼이 동작한다.",
+    "conflict_risk": "낮음. 141-142행은 #442 이후 바뀌지 않았다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-088",
@@ -459,7 +789,58 @@
    "tests": [],
    "behavior_change": false,
    "notes": "62행 환경 문장은 첫 묶음(C443-003)에서 고치므로 이 묶음은 12, 14, 58, 59행과 ConsoleShell 시연 안내만 대상이다. ConsoleShell 시연 안내의 앞선 문구는 다른 k5 배치(셸 문구)와 겹칠 수 있다.",
-   "batch": "home-page"
+   "batch": "home-page",
+   "fix_plan": {
+    "fix_pr": "443",
+    "files": [],
+    "out_of_scope_files": [
+     "PR #443 본문(GitHub 작업, 조율 세션 담당)"
+    ],
+    "change": "권장: 코드는 고치지 않는다. 조율 세션이 #443 본문에 '#442부터 #455까지 연속으로 머지하고, 소개 화면 문구는 스택 전체 머지 뒤 배포 기준이다'처럼 머지와 배포 순서를 적거나, 스택을 연속 머지해 중간 배포 구간을 두지 않는다. 대안(코드): #443에서 page.tsx 12, 14, 58, 59행과 ConsoleShell.tsx 52행 시연 안내를 #443에 있는 기능만 말하도록 줄이고, 각 문장을 #444(웹훅), #445(카드 등록, 취소), #446(구간 단가, 기본료, 최소 사용료), #453(환경)에서 다시 넣는다. 두 파일 모두 k5 범위지만 수정 PR이 5개로 늘고 충돌이 크다.",
+    "tests": "권장안은 테스트 없음. 대안을 고르면 각 PR head에서 page.tsx의 기능 문장과 백엔드 파일 유무를 대조하는 git grep 점검을 PR마다 돌린다.",
+    "behavior_change": false,
+    "screens": "권장안은 화면 변화 없음. 대안을 고르면 / 소개 화면의 운영 흐름, 역할과 연동 구역과 콘솔 시연 안내가 #443에서 #452 사이 PR마다 달라진다.",
+    "conflict_risk": "권장안은 없음. 대안은 높다: page.tsx는 #443 이후 그대로라 문장 삭제는 잘 올라가지만, 각 기능 PR의 다시 넣기 수정이 같은 줄을 건드려 순서대로 올려야 하고, ConsoleShell.tsx는 #444, #445, #446, #451, #453이 모두 고쳐 충돌 가능성이 크다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
+  },
+  {
+   "id": "G-131",
+   "merged_ids": [
+    "D-041"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "코드로 실패 경로를 확인했다. URL에 environment가 없으면 proxy.ts:14가 헤더를 legacy로 넣고 lib/environment.ts:4도 legacy로 읽는다. 로그인 redirect(actions.ts:29)는 organization_id만 붙이므로, #453 이후 승인된 새 도입사도 첫 화면이 legacy이고 '기존에 저장한 업무 데이터입니다' 띠가 뜬다. 새 도입사는 V45 트리거로 test, live 환경이 생기지만(V45:15-23) 기본으로 쓰이지 않는다. 세션 요청에서 헤더가 legacy면 BusinessEnvironmentInterceptor.java:68-71이 환경 없음으로 처리한다. ApiKeyService.java:126-128은 BusinessEnvironmentContext.mode()가 null이면 test, live 어느 mode든 발급한다. 그래서 legacy의 test 키와 live 키가 같은 고객, 이벤트, 청구를 공유한다. #453 본문이 막으려던 '테스트 요청이 실제 과금 데이터와 섞이는' 상태가 새 도입사에서 그대로 열린다.\n반박 시도: (1) integrations/page.tsx:29의 legacy 키 폼은 'test/live 구분은 데이터 격리를 뜻하지 않습니다. 격리된 키는 위의 업무 환경을 전환해 발급하세요'라고 안내한다. 사용자가 이 안내를 읽으면 피할 수 있어 high는 아니다. (2) backend/README.md:108의 '헤더를 생략하면 기존 데이터 범위'는 기존 API 호출자 호환을 위한 의도된 설계다. 하지만 README:111이 말하는 legacy의 목적은 기존 원장 보존이고, 원장이 없는 새 도입사가 기본으로 legacy에 들어가는 것은 이 목적과 맞지 않는다. 기본 키 구분도 '기존 운영 키 (live)'다. 그래서 실제 섞임 위험이 있는 결함으로 보되, 고치는 방향은 팀 결정이 필요하다.",
+   "evidence": "frontend/src/proxy.ts:14 @ 854e293 (f040e96과 동일); frontend/src/lib/environment.ts:4 @ 854e293; frontend/src/app/(public)/actions.ts:29 @ 854e293; backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:68-71 @ 854e293; backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:126-128 @ 854e293; backend/src/main/resources/db/migration/V45__create_organization_environments.sql:15-23 @ 854e293; frontend/src/app/(console)/integrations/page.tsx:29 @ 854e293; frontend/src/components/shell/ConsoleShell.tsx:58 @ 854e293; backend/README.md:108,111 @ 854e293",
+   "intro_pr": "453",
+   "still_at_top": true,
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "X-003, D-246의 '다시 로그인하면 기존 데이터' 부분은 이 정책에 속한다. 마지막 환경을 쿠키에 기억하는 안은 재로그인한 운영자를 모르는 사이 live에 내려놓을 수 있어 권하지 않는다. 기본 환경 변경은 팀 전체 제약이라 합의 대상이다.",
+   "batch": "environment",
+   "fix_plan": {
+    "fix_pr": "453",
+    "files": [
+     "frontend/src/components/shell/ConsoleShell.tsx"
+    ],
+    "out_of_scope_files": [
+     "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java",
+     "backend/src/main/java/com/meterengine/auth (세션 응답 DTO의 organization)",
+     "backend/openapi.yaml",
+     "frontend/src/app/(public)/actions.ts",
+     "frontend/src/app/(console)/integrations/page.tsx"
+    ],
+    "change": "기본 환경 정책은 팀 합의가 필요하다. 권하는 순서: 1) 백엔드(범위 밖): legacy 원장이 없는 도입사(V45 이후 생성)는 legacy 범위의 API 키 발급을 거절한다. ApiKeyService.create에서 mode()가 null이고 legacy 데이터가 없으면 409 environment_not_ready를 돌려준다. 2) 세션 응답 organization에 legacy 사용 여부(예: has_legacy_data)를 더한다. 로그인 redirect(actions.ts:29)와 도입사 전환에서 false면 environment=test를 붙인다. DTO가 바뀌므로 openapi.yaml도 같이 커밋한다. 3) k5 완화: ConsoleShell.tsx:58의 legacy 문구를 '기존 데이터 범위입니다. 이 범위의 test 키와 live 키는 같은 고객과 사용량을 씁니다. 새로 연동한다면 상단 업무 환경에서 테스트 환경을 고르세요.'로 바꾼다. 4) integrations/page.tsx:29(k6)의 legacy 키 폼은 2)가 들어가면 legacy 데이터가 있는 도입사에만 보인다.",
+    "tests": "백엔드 통합 시험: 새로 만든 도입사(트리거로 test/live 생성, legacy 원장 없음)에 환경 헤더 없이 POST /v1/api-keys를 보내면 거절되고, legacy 원장이 있는 도입사는 발급된다. 프론트엔드: 로그인 목적지를 만드는 순수 함수를 lib로 빼고, 새 frontend/e2e/login-destination.test.mjs(node --test)에서 has_legacy_data=false면 environment=test가 붙는지 확인한다. 띠 문구를 쓰는 e2e 셀렉터는 없다.",
+    "behavior_change": true,
+    "screens": "로그인 직후 첫 콘솔 화면, 모든 콘솔 화면의 legacy 안내 띠, API 키와 통보(integrations)의 키 발급 폼",
+    "conflict_risk": "중간. #454가 actions.ts의 4, 21-22, 44행(clientIp)을 바꿔 29행 수정과 가까워 위로 전파할 때 충돌 가능성이 있다. ConsoleShell.tsx는 X-003 그룹 수정과 같은 58행을 고치므로 함께 적용한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "G-184",
@@ -476,7 +857,23 @@
    "tests": [],
    "behavior_change": true,
    "notes": "main에는 serverSend에 timeoutMs 옵션이 없었고 #442가 처음 옵션을 열었으므로 수정은 #442 브랜치가 가장 이르다. workspace-actions.ts의 finalizeInvoices 분기는 UI에서 쓰지 않는다. 백엔드의 확정 뒤 재조회 N+1(#453 도입)은 백엔드 범위라 따로 다룬다.",
-   "batch": "lib-api"
+   "batch": "lib-api",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/api/invoices.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/billing/actions.ts",
+     "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java"
+    ],
+    "change": "finalizeInvoices의 serverSend 옵션에 timeoutMs: 60_000을 더한다(결제 75초보다 짧게, 확정 한 번을 기다리기에 충분하게). status 0일 때 revalidatePath와 '결과를 확인하지 못했습니다, 인보이스 목록을 새로 조회하세요' 안내는 billing/actions.ts(k6)에서 한다. G-065의 timeout 문구가 들어가면 action 수정 없이도 안내는 바로잡힌다.",
+    "tests": "invoices.ts는 server-only라 node 단위 테스트가 어렵다. pnpm typecheck와 함께, 가능하면 workspace-contract-server.mjs를 본뜬 새 Playwright 계약 테스트에서 POST /v1/invoices를 6초 늦게 응답시키고 확정 대화상자가 '인보이스 N건을 확정했습니다'를 보이는지 단언한다.",
+    "behavior_change": true,
+    "screens": "/billing 인보이스 확정 대화상자(오래 걸리는 확정이 실패 대신 성공으로 끝남)",
+    "conflict_risk": "낮음. finalizeInvoices 본문은 main부터 top까지 같고, invoices.ts의 다른 부분만 #445, #446, #451에서 바뀐다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-034",
@@ -493,7 +890,25 @@
    "tests": [],
    "behavior_change": false,
    "notes": "k5 안에서는 usage.ts에 이름을 실어 나르는 일만 할 수 있고 표시(UsageTable, MeterLabel)와 고객 상세는 k6다. 청구 검토, 확정 인보이스의 미터 라벨도 같은 형식으로 맞출지는 k6에서 정한다.",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "451",
+    "files": [
+     "frontend/src/lib/api/usage.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/usage/UsageSection.tsx",
+     "frontend/src/components/usage/UsageTable.tsx",
+     "frontend/src/components/table/MeterLabel.tsx",
+     "frontend/src/app/(console)/customers/[id]/page.tsx"
+    ],
+    "change": "usage.ts: BillableMetricLine에 name(미터 이름) 필드를 더하고 toCustomerGroups에서 billableMetricUsage.name을 넣는다. label(code)은 그룹 키와 정렬에 그대로 쓴다. k6 몫: UsageLineView에 name을 넘기고 MeterLabel이 이름을 본문, 코드를 작은 code 글꼴 보조 텍스트로 보여 주게 한다(요금 설계 미터 목록 형식). customers/[id]/page.tsx:33 미터 열에도 코드를 보조 텍스트로 붙인다.",
+    "tests": "typecheck로 타입 연결을 확인한다. usage.ts는 server-only와 @/ alias를 import해 node --test로 직접 읽을 수 없으므로, 라벨 조합을 순수 함수로 lib에 뽑으면 그 함수를 node --test로 확인한다(이름과 코드가 다를 때 둘 다 반환, 이름이 같은 두 미터가 코드로 구분되는지).",
+    "behavior_change": false,
+    "screens": "사용량(/usage) 미터 줄 라벨, 고객 상세(/customers/[id]) 사용량 표 미터 열.",
+    "conflict_risk": "낮음. usage.ts는 #451이 마지막 변경이고 88행은 main부터 그대로다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-107",
@@ -510,7 +925,21 @@
    "tests": [],
    "behavior_change": false,
    "notes": "검증 스크립트: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/home-page/axe-home.mjs. 수정 뒤 같은 스크립트로 group 노출과 axe 결과를 다시 볼 수 있다.",
-   "batch": "home-page"
+   "batch": "home-page",
+   "fix_plan": {
+    "fix_pr": "443",
+    "files": [
+     "frontend/src/app/page.tsx",
+     "frontend/e2e/home-page.test.mjs (새 파일, 첫 묶음과 같은 파일)"
+    ],
+    "out_of_scope_files": [],
+    "change": "page.tsx 31행을 <div className={styles.trace} role=\"group\" aria-labelledby=\"home-trace-title\">로 바꿔 aria-label을 없애고, 32행 strong에 id=\"home-trace-title\"을 준다. 접근 이름이 화면에 보이는 '한 고객, 한 청구 월'과 같아진다. section으로 바꾸면 hero region 안에 랜드마크가 하나 더 생기므로 role=\"group\"을 쓴다. 클래스 선택자만 쓰므로 CSS는 바뀌지 않는다.",
+    "tests": "home-page.test.mjs(node --test)에서 page.tsx 원문에 styles.trace 요소가 role=\"group\"과 aria-labelledby=\"home-trace-title\"을 갖고 id=\"home-trace-title\"이 있는지, aria-label=\"같은 고객과 청구 월로 이어지는 확인 항목\"이 없는지 단언한다. 빌드 뒤 axe-home.mjs로 ariaSnapshot에 group \"한 고객, 한 청구 월\"이 나오고 aria-prohibited-attr incomplete가 사라졌는지 확인한다.",
+    "behavior_change": false,
+    "screens": "/ 소개 화면 hero 오른쪽 '한 고객, 한 청구 월' 상자. 보이는 모양은 그대로이고 접근성 트리만 바뀐다.",
+    "conflict_risk": "없음. page.tsx는 #443 이후 바뀌지 않고, 첫 묶음 수정(62행)과 줄이 달라 같은 claude/s456-k5-443 브랜치에 함께 둘 수 있다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-141",
@@ -529,7 +958,25 @@
    "tests": [],
    "behavior_change": true,
    "notes": "같은 기본 검증 의존이 CreateOperatorButton, AttachOrganizationButton(#442), PricingWorkspace(#446)에도 있다(k6 또는 auth 영역). ActionPanel이 antd 입력이 아닌 HTML 입력을 쓰는 것은 README 문구와도 어긋나지만 장기 과제로 남긴다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx",
+     "frontend/src/lib/field-validation.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/auth/CreateOperatorButton.tsx",
+     "frontend/src/components/auth/AttachOrganizationButton.tsx",
+     "frontend/src/components/pricing/PricingWorkspace.tsx"
+    ],
+    "change": "form에 noValidate를 주고 required 속성은 aria-required 의미로 남긴다. 새 lib/field-validation.ts에 fieldValidationMessage(validity, field)를 두어 라벨 없이 한국어 문구를 돌려준다(valueMissing: 입력란 '값을 입력하세요.', select '항목을 선택하세요.', typeMismatch email '이메일 주소 형식으로 입력하세요.', url 'URL 형식으로 입력하세요.', rangeUnderflow 'N 이상으로 입력하세요.', rangeOverflow 'N 이하로 입력하세요.', stepMismatch와 badInput '정수로 입력하세요.' 또는 '숫자로 입력하세요.'). submit()에서 hidden이 아닌 각 필드의 #formId-name 요소 validity를 읽어 nextErrors에 넣고, 기존처럼 요약에 포커스한다. 요약은 이미 '라벨: 문구'로 그리므로 문구에 라벨과 조사를 넣지 않는다.",
+    "tests": "frontend/e2e/field-validation.test.mjs(node --test): validity 조합별 문구와 문구에 라벨이 들어가지 않음을 확인. 새 frontend/e2e/action-panel.contract.spec.ts: /customers에서 '고객 등록'을 열고 빈 채로 '고객 저장'을 누르면 대화상자 alert에 '고객명: 값을 입력하세요.'가 보이고 고객명 입력이 aria-invalid=true인지 확인.",
+    "behavior_change": true,
+    "screens": "ActionPanel을 쓰는 모든 대화상자와 인라인 폼: 고객 등록, 고객 정보 수정, API 키 발급과 권한 변경, 수신 주소 등록과 수정, 사용자 추가와 초대, 공급자 정보, 토스 키 저장, 결제 취소 등. API 계약 변화 없음.",
+    "conflict_risk": "낮음. submit()과 form 줄은 #442 이후 바뀌지 않았고 #453은 import와 hidden input만 더했다. josa, X-040, G-069 수정과 같은 파일이라 #442 브랜치에서 함께 고치고 위로 전파하는 편이 충돌이 적다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-152",
@@ -551,7 +998,28 @@
    "tests": [],
    "behavior_change": true,
    "notes": "요약 줄의 이름 표시(원인 1)는 k5 안에서 바로 고칠 수 있다. 기본 보기(원인 2)는 백엔드 파라미터를 더해야 해서 백엔드 담당과 협의해야 한다. 두 부분은 따로 머지할 수 있다.\n\n기본값을 바꿀 때 지킬 것: EventDetailDrawer의 '/audit?q=<requestId>' 링크와 people.real.spec의 '/audit?action=api_request_completed&q=...'가 API 요청 행을 기대한다. 그래서 '변경 기록만' 기본값은 URL에 action과 q가 모두 없을 때만 적용해야 한다.",
-   "batch": "audit"
+   "batch": "audit",
+   "fix_plan": {
+    "fix_pr": "448",
+    "files": [
+     "frontend/src/components/workspace/AuditScreen.tsx",
+     "frontend/src/lib/audit.ts",
+     "frontend/e2e/audit.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java",
+     "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java",
+     "backend/openapi.yaml",
+     "backend/src/test/java/com/meterengine/audit (목록 조회 테스트)",
+     "frontend/src/app/(console)/members/page.tsx"
+    ],
+    "change": "1단계(k5, 단독 머지 가능): AuditScreen.tsx 71행 요약의 `<span>{ACTORS[log.actor_type] ?? log.actor_type}</span>`를 `<span>{(log.actor_id && names.get(log.actor_id)) || (ACTORS[log.actor_type] ?? log.actor_type)}</span>`로 바꾼다. 같은 로직을 frontend/src/lib/audit.ts의 `auditActorLabel(log, names)`로 빼서 테스트한다. 요약의 strong은 행동 라벨 하나만 남긴다. e2e가 `.audit-summary strong`을 행동 라벨로 읽는다. 72행 상세의 '실행 주체'(이름과 이메일)도 그대로 둔다. e2e가 `.audit-detail`에서 이메일을 찾는다.\n\n2단계(백엔드, 범위 밖): 두 목록 엔드포인트에 선택 파라미터 `kind`(값 change)를 더한다. AuditLogQueryService에서는 `\"change\".equals(kind)`일 때 `cb.notEqual(root.get(\"action\"), \"api_request_completed\")`를 더한다. openapi.yaml을 다시 만들어 커밋한다.\n\n3단계(k5, 2단계 뒤): AuditScreen 36-40행 파라미터 구성을 lib의 `auditListParams(query)`로 옮긴다. URL에 action과 q가 모두 없으면 kind=change를 붙인다. 행동 select 첫 선택지 '모든 행동'(value \"\")은 '변경 기록 (API 요청 제외)'로 바꾸고, 다음에 '모든 기록'(value all, 전송 시 action과 kind를 모두 빼고 보낸다)을 더한다. 67행 안내는 '기본 목록은 변경 기록입니다. API 요청은 행동에서 API 요청을 고르세요.'로 바꾼다.\n\n4단계(k6, 범위 밖): members/page.tsx 33행 '변경 이력 보기'를 ScopedLink 또는 workspaceHref로 `/audit?q=organization_member`에 연결한다. q는 action LIKE이고 밑줄이 이스케이프되므로, 백엔드 변경 없이도 사용자 소속, 역할, 권한 변경 행만 남는다.",
+    "tests": "새 frontend/e2e/audit.test.mjs(node --test)를 둔다.\n- auditActorLabel: actor_id가 names에 있으면 이름, 없으면 유형 라벨, actor_id가 null이면 유형 라벨\n- auditListParams: 빈 query에 kind=change, action이나 q가 있으면 kind 없음, action=all이면 action과 kind 모두 없음\n\n백엔드 테스트도 둔다(범위 밖): kind=change가 api_request_completed를 빼는지 확인한다.\n\n기존 e2e(people.real.spec.ts 182-197, 202행, operator-create.real.spec.ts 189-193행)는 값과 라벨을 바꾸지 않으므로 그대로 통과해야 한다.",
+    "behavior_change": true,
+    "screens": "/audit, /admin/audit 요약 줄의 실행 주체 열과 기본 목록, 행동 select 첫 선택지와 안내문. /members의 '변경 이력 보기' 링크(k6)",
+    "conflict_risk": "프론트는 낮음. AuditScreen.tsx에서 이후 PR이 바꾼 곳은 #453의 2행 import와 57행뿐이고, 36-40행, 61행, 67행, 71행은 #448에서 top까지 그대로다. lib import를 1-8행에 더하면 #453의 2행 import 추가와 붙어 충돌이 날 수 있다. 백엔드는 중간. AuditLogQueryService는 #450과 #453에서, AuditLogController는 #453에서 바뀌었다. openapi.yaml은 단마다 다시 만들어야 한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-165",
@@ -568,7 +1036,58 @@
    "tests": [],
    "behavior_change": true,
    "notes": "재현: /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/action-panel-b/focus-case1.png(현재, 좌우 잘림), focus-case2.png(padding 8px와 좌우 margin -8px, 온전), default-case1.png(#442 기본 링, 온전). 같은 패딩이 CreateOperatorButton, AttachOrganizationButton(#442), PricingWorkspace(#446)에 있고 ReviewAction은 body 패딩 0에 overflowY auto라 버튼 링이 잘릴 수 있다. 제안된 '4px 4px 4px 8px'는 오른쪽과 아래가 여전히 잘린다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "443",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/auth/CreateOperatorButton.tsx",
+     "frontend/src/components/auth/AttachOrganizationButton.tsx",
+     "frontend/src/components/auth/ReviewAction.tsx",
+     "frontend/src/components/pricing/PricingWorkspace.tsx"
+    ],
+    "change": "styles.body를 { maxHeight, overflowY: 'auto', padding: 8, marginInline: -8 }로 바꿔 링이 그려질 7px 여유를 주면서 본문 왼쪽 정렬은 제목, 하단과 같게 유지한다. antd 6 .ant-modal-container는 overflow를 자르지 않고 좌우 padding 24px라 -8px가 들어간다.",
+    "tests": "새 frontend/e2e/action-panel.contract.spec.ts: '고객 등록'을 열고 Tab으로 고객명에 포커스한 뒤 .ant-modal-body의 getBoundingClientRect가 입력보다 좌우 7px 이상 넓은지 단언.",
+    "behavior_change": true,
+    "screens": "ActionPanel을 쓰는 모든 대화상자. 입력 폭이 4px 늘고 포커스 링이 네 변 모두 보인다. API 변화 없음.",
+    "conflict_risk": "낮음. 131행 Modal 줄은 #443 이후 바뀌지 않았다. G-049(공용 대화상자)로 묶어 고치면 auth와 pricing 대화상자도 한 곳에서 해결된다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
+  },
+  {
+   "id": "D-204",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "EnvironmentSwitch.tsx:19는 `if (!window.confirm(...)) return;`으로, confirm이 false면 아무 안내 없이 끝난다. Firefox는 3초 안에 이어 뜨는 대화상자에 '이 사이트가 다시 묻지 않도록' 체크를 보인다(dom.successive_dialog_time_limit). 체크하면 이후 confirm()이 바로 false를 돌려준다. X-060에서 재현한 대로 화살표마다 confirm이 연달아 뜨므로 이 체크가 나오기 쉽다. 그 뒤로는 환경 전환이 조용히 되돌아간다. 여기 설치된 브라우저는 Chromium뿐이라 이 억제 동작은 직접 재현하지 못했고, 코드 경로와 Firefox 동작으로 판단했다. 확인창은 목적지 환경도 말하지 않는다(재현에서 받은 메시지로 확인). 틀린 부분: '콘솔의 다른 확인은 모두 antd Modal'은 사실이 아니다. ActionPanel.tsx:80, PricingWorkspace.tsx:134, InvoiceViewLinks.tsx:47, AttachOrganizationButton.tsx:29, CreateOperatorButton.tsx:48도 window.confirm을 쓴다. 다만 그 다섯은 닫기 확인이나 링크 중지라, 화면 이동을 막는 것은 환경 전환뿐이다.",
+   "evidence": "frontend/src/components/workspace/EnvironmentSwitch.tsx:19 @ 854e293 (f040e96과 동일); frontend/src/components/workspace/ActionPanel.tsx:80 @ 854e293; frontend/src/components/workspace/InvoiceViewLinks.tsx:47 @ 854e293; frontend/src/components/pricing/PricingWorkspace.tsx:134 @ 854e293",
+   "intro_pr": "453",
+   "still_at_top": true,
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "원인은 다르지만(window.confirm 사용) 고칠 자리가 X-060과 같다. 한 커밋으로 묶어 적용하기를 권한다.",
+   "batch": "environment",
+   "fix_plan": {
+    "fix_pr": "453",
+    "files": [
+     "frontend/src/components/workspace/EnvironmentSwitch.tsx",
+     "frontend/src/lib/environment.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/e2e/environment-cycle.real.spec.ts"
+    ],
+    "change": "window.confirm을 App.useApp()의 modal.confirm으로 바꾼다. AppProviders.tsx:22가 <App>으로 감싸 콘솔에서 쓸 수 있다. 제목에는 목적지를 넣는다('실제 환경으로 전환할까요?'). 본문은 '현재 화면의 입력과 선택이 초기화됩니다.', 확인 버튼은 '전환'이다. onOk에서 router.push한다. X-060 그룹의 antd Select 전환과 같은 onChange 안의 수정이라 한 커밋으로 적용한다. 다른 window.confirm 다섯 곳은 이 지적의 범위 밖이다.",
+    "tests": "X-060 그룹의 새 environment-switch.contract.spec.ts에 두 가지를 넣는다. 옵션을 고를 때 page.on('dialog')가 한 번도 불리지 않는지, role=dialog 제목에 목적지 환경 이름이 있는지 확인한다. environment-cycle.real.spec.ts:133의 page.once('dialog', accept)는 모달 '전환' 버튼 클릭으로 바꾼다(범위 밖 파일).",
+    "behavior_change": true,
+    "screens": "콘솔 헤더 업무 환경 전환 확인 창(1440, 390)",
+    "conflict_risk": "낮음. 후속 PR이 이 파일을 바꾸지 않는다. X-060 수정과 같은 줄이라 따로 적용하면 서로 충돌한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-226",
@@ -587,7 +1106,22 @@
    "tests": [],
    "behavior_change": false,
    "notes": "라벨은 '과금 제외 사용량 통보'를 권한다. 연동 설정의 웹훅 종류 라벨 '과금 제외 사용량'(integrations/page.tsx:13, #444부터 있음)과 '결과 통보 발송'에 맞춘 말이다. 검토자 제안 '미청구 사용량'은 수납 상태 '미청구' 혼동 지적과 부딪쳐 피한다. #444~#449에서는 백엔드 작업이 아직 없어 이 줄이 늘 '기록 없음'으로 남는다(백엔드 범위라 보고만 한다).",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "444",
+    "files": [
+     "frontend/src/lib/scheduled-job-labels.ts",
+     "frontend/src/components/workspace/WorkspaceView.tsx",
+     "frontend/e2e/scheduled-job-labels.test.mjs"
+    ],
+    "out_of_scope_files": [],
+    "change": "JOB_LABELS를 순수 TS 모듈 frontend/src/lib/scheduled-job-labels.ts(SCHEDULED_JOB_LABELS)로 옮기고 unbilled_usage_report: '과금 제외 사용량 통보'를 더한다. 백엔드에 없는 invoice_email 항목은 지운다. WorkspaceView.tsx:22는 이 맵을 import해 쓰고 37행 표시 규칙(라벨 + 작은 원시 코드)은 그대로 둔다.",
+    "tests": "새 frontend/e2e/scheduled-job-labels.test.mjs(node --test): backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java의 values 목록을 정규식으로 읽어 모든 작업 이름에 라벨이 있는지 확인한다. 백엔드가 작업을 더하면 이 검사가 실패해 라벨 누락을 잡는다. lint, typecheck.",
+    "behavior_change": false,
+    "screens": "서비스 운영 현황(/admin) 예약 작업 표의 작업 열.",
+    "conflict_risk": "낮음. WorkspaceView.tsx는 #442 뒤로 어느 PR도 바꾸지 않았다. admin/page.tsx는 건드리지 않는다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "D-254",
@@ -604,7 +1138,67 @@
    "tests": [],
    "behavior_change": true,
    "notes": "배치 위치(usage/page.tsx)와 개요의 '단가 없는 사용량' 링크(overview/page.tsx:24, reason=unpriced_usage로 보낼 수 있음)는 k6 범위다. 미래 시각과 음수 수량은 이벤트 매핑 진단에 사유가 없어 지금 링크를 유지한다.",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "450",
+    "files": [
+     "frontend/src/components/workspace/UsageQuality.tsx",
+     "frontend/src/lib/usage-quality.ts",
+     "frontend/e2e/usage-quality.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/usage/page.tsx",
+     "frontend/src/app/(console)/overview/page.tsx"
+    ],
+    "change": "사유 목록 생성을 순수 함수(frontend/src/lib/usage-quality.ts의 usageQualityReasons(data))로 뽑고 링크를 바꾼다. unmatched_type -> /event-issues?reason=unknown_event_type&month=<data.month>, non_numeric_value -> /event-issues?reason=invalid_target_property&month=<data.month>. 두 링크 문구는 '대상 이벤트 보기'로 해 이동 결과를 말하게 하고, 미터 등록 안내 문장은 detail에 남긴다. 미래 시각, 음수 수량 링크는 그대로 둔다. k6 몫: usage/page.tsx에서 문제가 1건 이상일 때 UsageQuality를 표 위 요약 영역으로 올리고, overview/page.tsx:24 '단가 없는 사용량' 링크를 /event-issues?reason=unpriced_usage&month=로 바꿀지 정한다.",
+    "tests": "새 frontend/e2e/usage-quality.test.mjs(node --test): usageQualityReasons가 month=2026-10 입력에서 두 링크를 /event-issues?reason=unknown_event_type&month=2026-10, /event-issues?reason=invalid_target_property&month=2026-10으로 만들고, 0건 항목은 정상 목록으로 가는지 확인한다. workspace-href.test.mjs가 /event-issues를 월별 경로로 다루는지 그대로 통과해야 한다. lint, typecheck.",
+    "behavior_change": true,
+    "screens": "사용량(/usage) 아래 '수집 확인과 정정' 패널의 두 링크. 배치 변경은 k6에서 하면 사용량 화면 레이아웃도 바뀐다.",
+    "conflict_risk": "낮음. UsageQuality.tsx는 #451이 1행 import만 바꿨고 링크 줄(12-13행)은 #450 뒤로 그대로다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
+  },
+  {
+   "id": "X-003",
+   "merged_ids": [
+    "D-000",
+    "D-028",
+    "D-069",
+    "D-130",
+    "D-168",
+    "D-192",
+    "D-246"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "렌더로 재현했다. 미리보기 하네스에서 /billing을 기존 데이터, ?environment=test, ?environment=live로 열고 .environment-notice의 computed 값을 쟀다. 세 환경 모두 배경 rgb(241,239,249), 테두리 rgb(198,192,223), 글자 rgb(71,59,112)이고 높이도 56px로 같다. 달라지는 것은 live에서 헤더 select 테두리 rgb(154,98,12) 1px뿐이다(globals.css:321). ConsoleShell.tsx:58의 p는 className이 고정이라 환경별 변형이 없다. CSS 규칙은 #443에 미리 들어갔지만 쓰는 마크업(띠와 EnvironmentSwitch)은 #453에서 처음 생겨, 문제는 #453부터 보인다. #454, #455는 이 파일들을 바꾸지 않아 top에도 그대로다.\n반박 시도와 범위 조정: (1) 띠 문구와 select가 환경 이름을 글자로 보이므로 '알아볼 수 없다'가 아니라 '시각적으로 구분되지 않는다'가 정확하다. (2) 결제 취소, 잔액 전액 취소, 결제 요청 모달은 설명 첫머리에 '실결제'/'테스트 결제'를 밝힌다(payments/[id]/page.tsx:54, 61, 107). X-003, D-246의 결제 모달 주장은 틀렸다. (3) 월 확정 모달(InvoiceFinalizeDialog.tsx:109)은 환경을 밝히지 않는다. 맞지만 components/billing이라 k6 범위다. (4) '다시 로그인하면 기존 데이터'는 /login에서 바로 로그인할 때만 맞다(actions.ts:29). 세션 만료 뒤에는 proxy.ts:18이 returnTo에 search를 담아 환경이 유지된다. 이 부분은 legacy 기본값 정책(G-131 그룹)으로 넘긴다. (5) D-069의 띠 삭제 제안은 취향이고, D-000의 확인창 목적지 미표시는 D-204/X-060 그룹에서 다룬다. 남는 영향은 실결제 작업을 하는 live 화면이 test, 기존 데이터 화면과 같은 보라 띠라는 점이다. 비가역 작업 직전의 오인을 막는 신호가 약하므로 medium으로 본다(high에서 낮춤).",
+   "evidence": "frontend/src/components/shell/ConsoleShell.tsx:58 @ 854e293 (f040e96과 동일); frontend/src/app/globals.css:321-322 @ 854e293 (규칙은 5535638 #443에 선반영); frontend/src/components/billing/InvoiceFinalizeDialog.tsx:109 @ 854e293; frontend/src/app/(console)/payments/[id]/page.tsx:54,61,107 @ 854e293; frontend/src/app/(public)/actions.ts:29 @ 854e293; frontend/src/proxy.ts:18 @ 854e293; 렌더 /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/environment/billing-live.png, billing-live-390.png",
+   "intro_pr": "453",
+   "still_at_top": true,
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-069의 높이 수치는 측정과 맞는다(데스크톱 56px). 모바일은 78px이 아니라 약 101px이다. legacy 범위도 payment_setting.mode가 live이면 실결제가 일어나지만 띠는 보라로 남는다. 결제 모달이 시도별로 '실결제'를 밝히므로 이번 수정에서는 다루지 않는다. 확인창 목적지 표시(D-000 일부)는 D-204 그룹 수정에 포함된다. 중단으로 고위험 두 번째 관점(피해와 다른 PR 차단 여부) 검증을 하지 못했다. 앞선 검증 2건도 confirmed medium이었다.",
+   "batch": "environment",
+   "fix_plan": {
+    "fix_pr": "453",
+    "files": [
+     "frontend/src/components/shell/ConsoleShell.tsx",
+     "frontend/src/app/globals.css",
+     "frontend/src/lib/environment.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/billing/InvoiceFinalizeDialog.tsx"
+    ],
+    "change": "1) ConsoleShell.tsx:58: p의 className을 `environment-notice environment-notice-${environment}`로 바꾸고 role=\"status\"는 유지한다. test와 live 분기에서 {ENVIRONMENT_LABELS[environment]}를 <strong>으로 감싼다. live일 때만 첫 문장 뒤에 '결제와 취소는 실결제로 처리됩니다.'를 더한다. live 환경의 결제 모드는 PaymentSettingService.java:37-38에서 live로 고정되므로 사실과 맞다. 2) globals.css 322행 뒤에 `.environment-notice-live { border-color: #9a620c; background: #fff8e9; color: #874d00; }`를 더한다. 배경은 테마 colorWarningBg, 테두리는 colorWarning(흰 배경 대비 5.09), 글자는 .status-pending 팔레트(#fff8e9 위 대비 6.42)다. 321행에는 `background: #fff8e9;`를 더해 select도 같은 톤으로 맞춘다. legacy와 test는 지금 보라를 유지한다. 3) 선택: lib/environment.ts에 `environmentNoticeClass(environment)`를 두어 단위 시험이 가능하게 한다. 4) 범위 밖(k6): InvoiceFinalizeDialog.tsx:109 제목 앞에 창을 연 순간의 환경 라벨을 붙인다. useMutationScope처럼 useState로 고정한다. ActionPanel의 title prop에는 환경을 넣지 않는다. 버튼 이름이 바뀌어 e2e exact 셀렉터가 깨진다. 헤더 Tag 추가와 마지막 환경 쿠키 기억은 하지 않는다.",
+    "tests": "새 frontend/e2e/environment-notice.test.mjs(node --test): environmentNoticeClass가 live에만 environment-notice-live를 붙이는지 확인한다. 미리보기 하네스에서 shoot.mjs --eval로 /billing?environment=live와 test의 .environment-notice 배경을 잰다. live는 rgb(255, 248, 233), test는 rgb(241, 239, 249)여야 한다. 390px에서 scrollWidth <= innerWidth도 확인한다. e2e에는 .environment-notice나 띠 문구를 쓰는 셀렉터가 없어 깨지는 시험은 없다.",
+    "behavior_change": false,
+    "screens": "ConsoleShell을 쓰는 콘솔 전 화면(overview, customers, billing, invoices, payments, settings, integrations 등)의 live 환경 상단 띠와 헤더 select, 1440과 390 모두",
+    "conflict_risk": "낮음. #454, #455는 ConsoleShell.tsx와 globals.css를 바꾸지 않는다(프론트엔드 변경은 actions.ts, transport.ts뿐). 규칙 추가는 322행 뒤의 새 줄이라 #443-#452의 같은 줄과도 겹치지 않는다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-007",
@@ -633,7 +1227,22 @@
     "harmful_in_product": true,
     "blocked_elsewhere": false,
     "reason": "판정: confirmed, medium. 첫 검증의 판정에 동의하지만 근거 몇 가지는 바로잡는다.\n\n(a) 재현 경로\n- 시작점: AuditScreen.tsx는 main부터 #447까지 없다(빈 blob). #448(origin/feat/request-audit, 4f8e59f)에서 처음 생겼다.\n- #448과 top(854e293)의 차이: 57행 hidden input이 EnvironmentInput으로 바뀐 것과 2행 import뿐이다. ACTIONS 블록(top 11-22행), 61행 select, 71행 `ACTIONS[log.action] ?? log.action`은 같다.\n- 대조 방법: 백엔드 auditLogService.record 호출의 행동 인자를 따로 뽑았다. 인자 위치가 오버로드마다 다르므로 문자열 리터럴과 *_ACTION 상수를 함께 풀었다. 결과는 verify/audit2/extract.py와 compare.py다.\n- 결과: #448 머리와 top 모두 같은 15개가 맵에 없다. api_key_scopes_updated, organization_member_scopes_updated, payment_setting_updated, toss_payments_credential_updated와 _archived, supplier_updated, payment_method_archived, webhook_endpoint_created/updated/archived/restored, webhook_delivery_retried, session_organization_updated, user_account_consents_accepted, user_account_password_updated.\n- top 렌더(미리보기 하네스, owner, 1440x900):\n  - 행동 select의 선택지 37개에 scopes, payment_setting, toss 계열이 없다.\n  - /audit 요약에 'organization_member_scopes_updated', 'api_key_scopes_updated', 'payment_setting_updated'가 영문 코드로 찍힌다.\n  - 1440px에서도 코드가 단어 중간에서 줄바꿈된다.\n  - 스크린샷: verify/audit2/audit-scopes-1440.png\n- #448 머리는 렌더하지 않았다. ACTIONS 블록과 61, 71행이 같으므로 코드 추적으로 재현을 확인했다.\n\n(b) 피해와 완화\n- 피해:\n  - 이 화면은 도입사 대표관리자가 '누가 무엇을 바꿨는지' 확인하는 곳이다. 그런데 권한 상승, 결제 모드 변경, 토스 키 저장과 보관처럼 가장 민감한 변경을 행동으로 거를 수 없다.\n  - 목록에서도 이 행들만 영문 코드로 보인다.\n  - members/page.tsx 33행 '변경 이력 보기'가 필터 없이 /audit로 보낸다. 사용자 관리에서 '권한 변경'을 한 뒤 따라가도 그 행동을 고를 수 없다.\n- 완화:\n  - q 검색은 action 열을 부분 일치로 찾는다(AuditLogQueryService). 'scopes' 같은 영문 조각을 알면 찾을 수 있다.\n  - 상세의 '행동 코드'에 원문이 나온다.\n  - 같은 변경의 api_request_completed 행에 PATCH 경로가 보인다.\n  - 기록이 빠지지는 않는다. 다만 화면 어디에도 코드 목록이 없다. 한국어 라벨 '권한'으로 검색하면 맞는 행이 없다.\n- 다른 차단: 이를 고치는 후속 PR이나 다른 파일은 없다. 백엔드 action 파라미터는 패턴 검사만 하므로 화면 문제를 막지 못한다.\n- 심각도: 데이터 손실이나 과금 오류가 아니고 우회로가 있어 high는 과하다. 화면의 핵심 목적이 민감한 변경에서 깨지므로 low도 아니다.\n\n첫 검증에서 바로잡을 점\n1. 15개가 #442, #444, #445에서 왔다는 설명은 일부 틀렸다.\n   - supplier_updated는 #446에서 왔다.\n   - toss_payments_credential_archived, payment_method_archived, webhook_endpoint_archived와 _restored는 #447에서 왔다.\n   - session_organization_updated와 user_account_password_updated는 main부터 있었다.\n   - 모두 #448 이전이므로 시작점이 #448이라는 결론은 그대로다.\n2. #448 머리의 맵에는 invoice_view_link_created/revoked, invoice_viewed, payment_retry_requested가 이미 있다. 백엔드는 이 넷을 #449부터 남긴다. 그래서 #448 단독으로는 이 넷도 늘 0건이다. #449 이후로는 해소된다. 대조 테스트는 '백엔드 코드가 라벨에 모두 있다' 방향만 검사해야 #448에서도 통과한다.\n3. price_rate_deleted는 main의 PriceRateService.java 110행이 남기던 코드다. main에는 V25 audit_log 테이블도 있다. 따라서 라벨 사전에는 남기고 select 선택지에서만 빼는 것이 맞다. D-214의 '지운다'는 틀렸다.\n\n수정안 검토\n- 수정안(lib/audit-labels.ts로 분리, 15개 라벨 추가, 선택지 목록 분리, optgroup)은 k5 범위 안이다.\n- '도입사 선택'은 /organizations 제목과 셸 링크에 쓰는 용어와 맞다.\n- e2e 선택자는 영향받지 않는다. people.real.spec.ts 184-192행의 selectOption 값과 '초대 수락', 'API 요청', operator-create.real.spec.ts 190행의 '운영자 계정 생성'을 바꾸지 않는다.\n- top에서 이 파일을 바꾼 커밋은 #448의 15692f8과 #453의 23b1844 둘뿐이다. 충돌 위험은 #453의 import 줄 근처뿐이다."
-   }
+   },
+   "fix_plan": {
+    "fix_pr": "448",
+    "files": [
+     "frontend/src/lib/audit-labels.ts",
+     "frontend/src/components/workspace/AuditScreen.tsx",
+     "frontend/e2e/audit-labels.test.mjs"
+    ],
+    "out_of_scope_files": [],
+    "change": "ACTORS와 ACTIONS를 새 frontend/src/lib/audit-labels.ts로 옮겨 export한다(`AUDIT_ACTOR_LABELS`, `AUDIT_ACTION_LABELS`, `AUDIT_ACTION_FILTERS`). AuditScreen은 이 모듈을 import한다.\n\n빠진 15개에 라벨을 더한다. 기존 키와 라벨은 바꾸지 않는다.\n- organization_member_scopes_updated: '사용자 권한 변경'\n- api_key_scopes_updated: 'API 키 권한 변경'\n- payment_setting_updated: '결제 모드 변경'\n- toss_payments_credential_updated: '토스 키 저장'\n- toss_payments_credential_archived: '토스 키 보관'\n- supplier_updated: '공급자 정보 변경'\n- payment_method_archived: '카드 보관'\n- webhook_endpoint_created: '수신 주소 등록'\n- webhook_endpoint_updated: '수신 주소와 통보 수정'\n- webhook_endpoint_archived: '수신 주소 보관'\n- webhook_endpoint_restored: '수신 주소 복원'\n- webhook_delivery_retried: '통보 다시 보내기'\n- session_organization_updated: '도입사 선택'\n- user_account_consents_accepted: '이용 안내 동의'\n- user_account_password_updated: '비밀번호 변경'\n\nprice_rate_deleted는 라벨 사전에 남기고, select 선택지 목록(AUDIT_ACTION_FILTERS)에서는 뺀다.\n\n선택지가 50개 가까이 되므로 61행 select를 영역별 optgroup으로 묶는다(로그인과 계정, 사용자와 권한, API 키와 통보, 고객과 카드, 미터와 요금, 청구와 결제, 결제 설정, API 요청). 네이티브 select를 유지한다.\n\n71행 요약은 `AUDIT_ACTION_LABELS[log.action] ?? log.action`을 그대로 쓴다. 테스트로 누락을 막으므로 원문 코드 대체 표시는 남겨 둔다.",
+    "tests": "새 frontend/e2e/audit-labels.test.mjs(node --test)를 둔다. ../backend/src/main/java의 .java 파일 중 auditLogService를 쓰는 파일에서 `record(` 호출의 첫 action 인자를 모은다. 이때 *_ACTION 상수는 값으로 바꾸고, 중첩된 new AuditActor(...) 안 문자열은 건너뛴다. api_request_completed(RequestAuditService)를 더한다. 그다음 세 가지를 확인한다.\n- 모든 코드가 AUDIT_ACTION_LABELS에 있다\n- AUDIT_ACTION_FILTERS에 price_rate_deleted가 없다\n- 모든 선택지에 라벨이 있다\n\ne2e 선택자 확인: people.real.spec.ts 184, 189행의 selectOption 값과 186, 192행의 '초대 수락', 'API 요청', operator-create.real.spec.ts 190행의 '운영자 계정 생성'을 바꾸지 않으므로 그대로 통과한다. getByLabel('행동')도 유지된다.",
+    "behavior_change": true,
+    "screens": "/audit, /admin/audit의 행동 select 선택지와 목록 요약 라벨. API 계약은 바뀌지 않는다",
+    "conflict_risk": "낮음. ACTIONS 블록(11-22행), 61행, 71행은 #448에서 top까지 바뀌지 않았다. AuditScreen 상단에 lib import를 더하면 #453이 2행에 넣은 EnvironmentInput import와 붙어 #453 리베이스 때 충돌이 날 수 있다. #449부터 #455까지 차례로 전파해야 한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-009",
@@ -664,7 +1273,29 @@
     "harmful_in_product": true,
     "blocked_elsewhere": false,
     "reason": "(a) 재현: top(854e293)의 프리뷰 하네스에서 2026-09를 그려 확인했다. 하네스 README는 없지만 health가 응답해 shoot.mjs로 읽기만 했다. 수납과 취소(/payments) 목록에서 아름미디어는 '결제 전'(회색), 바른데이터는 빨간 '실패'다. 같은 아름미디어 상세(/payments/0e135c7d...)의 현재 결제 상태는 '테스트 결제 / 미청구'로 나온다. 같은 화면 머리말에는 '2026-09 청구액 1,785,815원'과 '청구서 번호 INV-202609-0006'이 함께 보인다(1440, 390 모두 같다). 확정 인보이스(/invoices) 행 태그는 '미납', '납부 완료', '결제 실패'이고, 20개 모두 글자색이 rgb(32,43,64)로 같아 결제 실패에도 색이 없다(InvoicesTable.tsx:154 <Tag>). 수납 상태 필터 옵션(ResourceSearchControls.tsx:112)도 '미납', '납부 완료'다. 개요의 결제 대기액 설명은 '미결제와 결과 확인 중'이다. 처음 들어온 PR: origin/main에는 없다. #442에서 WorkspaceView 공용 맵의 unpaid가 '결제 전'이 됐고, #445(2e98143, 커밋 4ace811)에서 상세 PAYMENT_STATES의 '미청구'와 '결제 결과 확인 중'이 들어와 처음 갈렸다. #445 head에서도 목록 '결제 전', 상세 '미청구'가 같이 있다. #451(53ec3d9)에서 '미납/납부 완료' 맵, 같은 라벨의 필터, 색 없는 태그, 개요 '미결제'가 더해졌다. #455 top까지 고친 PR은 없다. (b) 해악: 청구와 수납을 맡는 도입사 운영자가 같은 탭 묶음(청구 검토 / 확정 인보이스 / 수납과 취소)을 오가며 한 상태 코드를 '결제 전', '미납', '미청구' 세 이름으로 본다. 특히 '미청구'는 이 제품에서 '청구'가 인보이스 발행(청구 검토, 청구액, 청구서 번호)을 뜻하므로, 이미 확정해 번호가 붙은 인보이스를 아직 청구하지 않은 건으로 잘못 읽게 한다. 상세 페이지 설명문은 '청구'를 카드 결제 요청이라는 뜻으로 쓰고 있어(추가로 청구할 수 없습니다, 재청구) 화면 안에서도 뜻이 갈린다. 색 없는 '결제 실패' 태그는 확정 인보이스 목록에서 실패 건을 눈에 덜 띄게 한다. 완화 요소: 필터 값과 API 파라미터는 코드라 조회 결과는 맞고 금액, 데이터는 틀어지지 않는다. 상세의 설명문과 '등록 카드로 결제' 버튼이 다음 행동을 알려 주고, 수납 목록은 실패를 빨간색으로, 개요 '확인할 항목'은 결제 실패 건수를 따로 띄운다. 고객용 공개 청구서(PublicInvoiceView.tsx)는 독자가 달라 결함에서 빼는 것이 맞고, 그 문구('납부 완료')는 customer-payment-retry.real.spec.ts:359,414가 exact로 고정한다. 따라서 high가 아니라 medium이다. 첫 판정과 다른 점: not_required 관련 부분(InvoicesSection 맵에 not_required가 없어 원시 코드가 나옴, 필터에 not_required 옵션이 없음)은 실제로는 닿지 않는다. InvoiceFinalizationService.finalize가 amount != 0인 고객만 확정하고 세액은 공급가액의 10%라 total_amount가 0원인 인보이스가 만들어지지 않으므로 not_required는 정상 흐름에서 나오지 않는다. 이 부분은 근거와 심각도에서 빼고, 수정 계획에서 필터에 '결제 불필요' 옵션을 더하는 것은 선택 사항으로 낮춘다. 수정 계획 메모: 1단계에서 #445에 만들 lib 맵은 k5 범위 안에 #445 시점 소비자가 없다(첫 소비자는 #451의 ResourceSearchControls, 상세 페이지는 k6). k6가 같은 PR에서 payments/[id]/page.tsx를 맵으로 바꾸지 않으면 #445에 쓰이지 않는 파일만 남으니 k6와 순서를 맞춰야 한다. 공용 STATUS_LABELS의 failed '실패'는 결제 시도, 웹훅, 작업 표가 같이 쓰므로 바꾸지 말고 수납 상태 열에만 statusLabels를 넘기는 방식이 맞다. 웹훅 '결과 확인 중' 셀(workspace.contract.spec.ts:122)과 '전액 취소' 셀(mvp.real.spec.ts:261)은 그대로 유지된다."
-   }
+   },
+   "fix_plan": {
+    "fix_pr": "445",
+    "files": [
+     "frontend/src/lib/invoice-payment-status.ts",
+     "frontend/src/components/screen/ResourceSearchControls.tsx",
+     "frontend/e2e/invoice-payment-status.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/payments/page.tsx",
+     "frontend/src/app/(console)/payments/[id]/page.tsx",
+     "frontend/src/components/invoices/InvoicesSection.tsx",
+     "frontend/src/components/invoices/InvoicesTable.tsx",
+     "frontend/src/app/(console)/overview/page.tsx",
+     "frontend/src/app/(console)/customers/[id]/page.tsx"
+    ],
+    "change": "1단계(#445, claude/s456-k5-445): 새 파일 frontend/src/lib/invoice-payment-status.ts에 코드 -> { label, color } 맵 하나를 둔다. not_required '결제 불필요' default, unpaid '결제 전' default, pending '결과 확인 중' warning, paid '수납 완료' success, failed '결제 실패' error, partially_canceled '부분 취소' default, canceled '전액 취소' default. 라벨만 뽑은 INVOICE_PAYMENT_STATUS_LABELS와 필터용 순서 배열도 같이 내보낸다. alias import 없이 순수 TS로 둬서 node --test로 읽히게 한다. k6 몫: payments/page.tsx:17 수납 상태 열에 statusLabels: INVOICE_PAYMENT_STATUS_LABELS를 넘기고, payments/[id]/page.tsx:19-26 PAYMENT_STATES의 label을 맵에서 읽는다(description은 유지). 이로써 '미청구'와 '결제 결과 확인 중'이 사라진다. 2단계(#451, claude/s456-k5-451, 1단계가 위층에 반영된 뒤): ResourceSearchControls.tsx:112의 옵션 라벨 배열을 맵에서 읽고 not_required 옵션을 더한다. value와 payment_status 파라미터는 그대로 둔다. k6 몫: InvoicesSection.tsx:111 인라인 맵을 맵 조회로 바꾸고 InvoiceGroupView에 paymentStatusCode를 더해 InvoicesTable.tsx:154 Tag에 color를 준다(228행 모바일 문구는 라벨만 같아지면 된다). overview/page.tsx:25와 customers/[id]/page.tsx:43 수납 상태 열에 statusLabels를 넘기고, overview/page.tsx:22 '미결제와 결과 확인 중, 취소 별도'를 '결제 전, 결제 실패와 결과 확인 중, 취소 별도'로 바꾼다(백엔드 DashboardService OUTSTANDING = unpaid, pending, failed). WorkspaceView.tsx:19 공용 맵과 PublicInvoiceView.tsx는 건드리지 않는다.",
+    "tests": "새 frontend/e2e/invoice-payment-status.test.mjs(node --test): 일곱 코드 모두 label과 color가 있는지, 라벨이 서로 겹치지 않는지, '미청구', '미납', '납부 완료'를 쓰지 않는지, paid=success, failed=error, pending=warning인지, 필터 순서 배열이 맵 키와 같은지 확인한다. 기존 workspace.contract.spec.ts:122(웹훅 '결과 확인 중' 셀), mvp.real.spec.ts:261('전액 취소' 셀), customer-payment-retry.real.spec.ts와 invoice-links.real.spec.ts(고객용 문구), resource-query.test.mjs(payment_status 값)가 그대로 통과해야 한다. lint, typecheck를 돌린다.",
+    "behavior_change": true,
+    "screens": "수납과 취소(/payments) 수납 상태 열, 수납 상세(/payments/[id]) 현재 결제 상태, 확정 인보이스(/invoices) 행 태그 색과 수납 상태 필터(결제 불필요 옵션 추가), 개요(/overview) 수납 표와 결제 대기액 설명, 고객 상세(/customers/[id]) 수납 표. 고객용 공개 청구서는 바뀌지 않는다.",
+    "conflict_risk": "낮음. WorkspaceView.tsx는 #442 뒤로 바뀌지 않았고 payments/[id] PAYMENT_STATES(19-27행)는 #445 뒤로 그대로다(#449, #451은 다른 줄만 바꿈). ResourceSearchControls.tsx 112행은 #451 뒤 #453이 다른 줄만 바꿨다. InvoicesSection, InvoicesTable은 #451이 마지막이다. 2단계는 1단계 lib 파일이 #451까지 반영된 뒤에 해야 한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-040",
@@ -681,7 +1312,23 @@
    "tests": [],
    "behavior_change": true,
    "notes": "원 심각도 medium에서 low로 낮춤. ReviewAction 트리거(기본형 danger)는 auth 영역이라 범위 밖.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx",
+     "frontend/src/components/workspace/WorkspaceView.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/components/auth/ReviewAction.tsx"
+    ],
+    "change": "ActionPanel 확정 버튼을 isDanger와 관계없이 type='primary'로 두고 danger={isDanger}만 유지한다. ActionPanelProps에 triggerType?: 'default' | 'link'를 더해 'link'면 트리거를 type='link' size='small' danger={isDanger}로 그린다. WorkspaceView RowActions는 모든 행 동작에 triggerType='link'를 넘겨 main 표의 '수정', '보관' 링크와 맞춘다. 표 밖 단독 트리거(결제 취소, 수신 주소 보관 등)는 지금처럼 기본형을 유지한다.",
+    "tests": "새 frontend/e2e/action-panel.contract.spec.ts: /integrations API 키 행의 '키 폐기'를 열어 대화상자 하단 확정 버튼이 .ant-btn-primary.ant-btn-dangerous인지 단언. 기존 e2e는 role과 이름으로만 찾고 버튼 클래스 단언이 없어 영향 없음.",
+    "behavior_change": true,
+    "screens": "/integrations, /integrations/{id}, /members, /settings, /customers/{id}, /payments/{id}의 행 동작 모양과 모든 위험 동작 확정 버튼. API 변화 없음.",
+    "conflict_risk": "낮음. 90행과 141행, WorkspaceView 43-44행은 #442 이후 바뀌지 않았다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-045",
@@ -698,7 +1345,61 @@
    "tests": [],
    "behavior_change": true,
    "notes": "측정 스크립트와 스크린샷:\n- /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/audit/audit-static.mjs\n- /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/audit/audit-static-1440.png\n- /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/audit/audit-static-390.png\n\n웹폰트 없이 렌더했으므로 높이는 수 px 차이가 날 수 있다. 콘솔 셸(사이드 메뉴, 헤더)은 넣지 않았다.",
-   "batch": "audit"
+   "batch": "audit",
+   "fix_plan": {
+    "fix_pr": "448",
+    "files": [
+     "frontend/src/components/workspace/AuditScreen.tsx",
+     "frontend/src/app/globals.css",
+     "frontend/e2e/audit-layout.contract.spec.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/e2e/workspace-contract-server.mjs (기존 계약 스텁에 /v1/audit-logs 응답 추가 시)"
+    ],
+    "change": "AuditScreen.tsx 70-71행: status >= 400인 결과는 components/screen/StatusTag의 `<StatusTag color=\"error\">요청 거절/오류 (403)</StatusTag>`로 그린다. 성공은 지금처럼 글자로 둔다. 문구는 그대로이므로 색에만 기대지 않는다. strong은 행동 라벨 하나로 유지한다(e2e).\n\nglobals.css:\n- .audit-list: `gap: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); overflow: hidden`\n- .audit-entry: 테두리와 반경을 없애고 `border-top: 1px solid var(--line)`, `.audit-entry:first-child { border-top: 0 }`\n- .audit-summary: `padding: 12px 16px 12px 40px; gap: 6px 18px`. ::before는 `left: 16px; top: 18px`\n- .audit-request: font-size 13px. 메서드와 경로가 행을 구분하는 정보이므로 color를 var(--muted)보다 진하게 한다\n- 모바일 미디어쿼리(306, 311행)도 같은 비율로 줄인다\n- .audit-detail 여백은 16px로 맞춘다\n\nantd 컴포넌트로 바꾸지 않고 기존 details와 summary 구조를 유지해, 키보드 펼침과 e2e 선택자(.audit-summary, .audit-detail)를 지킨다.",
+    "tests": "새 frontend/e2e/audit-layout.contract.spec.ts를 둔다. 계약 스텁이 /v1/audit-logs에 200행과 403행을 섞어 돌려주게 한다. 다음을 확인한다.\n- 1440x900에서 연속 .audit-entry의 top 차이가 72px 이하\n- 403행의 `.audit-summary .ant-tag` 텍스트가 '요청 거절/오류 (403)'\n- 390x844에서 document.documentElement.scrollWidth <= innerWidth\n\n스텁 파일 수정이 어려우면 위 정적 렌더 측정 스크립트를 PR 검증 기록으로 남긴다. people.real.spec.ts 200-207행의 모바일 가로 넘침 검사는 그대로 통과해야 한다.",
+    "behavior_change": true,
+    "screens": "/audit, /admin/audit 목록 밀도와 거절/오류 결과 표시(데스크톱, 모바일)",
+    "conflict_risk": "낮음. globals.css 295-311행의 감사 규칙은 #443부터 top까지 같다. AuditScreen 70-71행도 #448 이후 바뀌지 않았다. 같은 파일의 다른 줄은 이후 PR이 바꾸므로 단마다 리베이스해야 한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
+  },
+  {
+   "id": "X-060",
+   "merged_ids": [
+    "D-140"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "Linux headless Chromium에서 재현했다. 미리보기 하네스 /customers에서 업무 환경 select에 포커스를 두고 ArrowDown을 누르면 곧바로 confirm 대화상자가 떴다. 메시지는 '업무 환경을 바꾸면 현재 화면의 입력과 선택이 초기화됩니다. 계속할까요?'다. 취소하면 React 제어 값으로 legacy에 되돌아가고, 다시 ArrowDown을 누르면 또 대화상자가 뜬다. 확인하면 바로 ?environment=test로 이동했고, 한 번 더 누르면 live로 이동했다. 원인은 EnvironmentSwitch.tsx:17-25가 네이티브 select의 change에서 confirm과 router.push를 바로 실행하는 것이다. 확인창이 목적지를 말하지 않아, 화살표로 둘러보던 사용자는 어느 환경을 확인하는지도 모른다.\n반박 시도: Alt+ArrowDown이나 F4로 목록을 열면 change 없이 고를 수 있다. End 키는 한 번의 확인으로 live에 간다. 확인 단계가 있어 조용한 전환은 없다. macOS에서는 화살표가 목록을 연다. 그래서 낮은 심각도로 본다. 그래도 WCAG 3.2.2 입력 시 맥락 변경에 해당하는 실제 키보드 장애다.",
+   "evidence": "frontend/src/components/workspace/EnvironmentSwitch.tsx:17-25 @ 854e293 (f040e96에서 처음 생김, 이전 브랜치에는 파일 없음); 재현 스크립트 /tmp/claude-0/-home-user-meterengine/48499257-b2d5-5570-8de6-2783dd8c6abc/scratchpad/verify/environment/keyboard-switch.mjs; frontend/e2e/environment-cycle.real.spec.ts:133-134,145,158 @ 854e293",
+   "intro_pr": "453",
+   "still_at_top": true,
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "pending 값을 select에 남기고 옆에 '전환' 버튼을 두는 안(X-060 제안)은 헤더 select가 현재 환경이 아닌 값을 보이게 된다. 환경 표시기로서 위험하므로 antd Select와 확인 모달을 권한다.",
+   "batch": "environment",
+   "fix_plan": {
+    "fix_pr": "453",
+    "files": [
+     "frontend/src/components/workspace/EnvironmentSwitch.tsx",
+     "frontend/src/app/globals.css",
+     "frontend/src/lib/environment.ts"
+    ],
+    "out_of_scope_files": [
+     "frontend/e2e/environment-cycle.real.spec.ts",
+     "frontend/playwright.config.ts"
+    ],
+    "change": "EnvironmentSwitch의 네이티브 select를 antd Select로 바꾼다. 설정: value={environment} 제어, options는 ENVIRONMENT_LABELS, aria-label=\"업무 환경\", live일 때 status=\"warning\". rc-select 1.10.1은 닫힌 상태에서 화살표가 목록만 열고, onChange는 Enter, Tab, 클릭으로 고를 때만 실행한다(SelectInput/index.js:84-86, OptionList.js:199-208). onChange(next)에서는 next가 현재와 같으면 무시한다. 다르면 App.useApp()의 modal.confirm을 연다. 제목은 lib/environment.ts에 둘 목적지 라벨 맵(legacy '기존 데이터로', test '테스트 환경으로', live '실제 환경으로')으로 '실제 환경으로 전환할까요?'처럼 쓴다. 본문은 '현재 화면의 입력과 선택이 초기화됩니다.', okText는 '전환', cancelText는 '취소'로 둔다. onOk에서 지금과 같은 query로 router.push한다. 취소하면 아무것도 바꾸지 않는다. globals.css 320, 321, 323행의 `.workspace-environment select` 규칙은 `.workspace-environment .ant-select`로 옮긴다(데스크톱 max-width 180px, 높이 38px, 모바일 170px, 44px). live 테두리는 status=\"warning\"이 맡는다.",
+    "tests": "새 frontend/e2e/environment-switch.contract.spec.ts를 만든다. 로그인 뒤 업무 환경 combobox에 포커스하고 ArrowDown을 누른다. page.on('dialog')가 0회이고 URL에 environment가 생기지 않는지 확인한다. title이 '실제 환경'인 옵션을 고르면 role=dialog에 '실제 환경으로 전환할까요?'가 보이는지, 취소하면 URL과 표시값이 그대로인지, '전환'을 누르면 environment=live로 가는지 본다. 지금 playwright.config.ts의 contract 프로젝트는 auth.contract.spec.ts만 잡으므로 testMatch 추가가 필요하다(범위 밖). 그 전에는 위 재현 스크립트로 하네스에서 수동 확인한다. 기존 environment-cycle.real.spec.ts:133-134의 page.once('dialog')와 selectOption, 145와 158의 toHaveValue는 antd Select에서 동작하지 않는다. combobox 클릭, 옵션 클릭, 모달 '전환' 클릭과 URL 검사로 바꿔야 한다.",
+    "behavior_change": true,
+    "screens": "콘솔 전 화면 헤더의 업무 환경 선택(1440, 390), 환경 전환 확인 모달",
+    "conflict_risk": "낮음. #454, #455는 EnvironmentSwitch.tsx와 globals.css를 바꾸지 않는다. D-204 그룹 수정과 같은 줄이므로 한 커밋으로 적용한다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-061",
@@ -715,7 +1416,21 @@
    "tests": [],
    "behavior_change": true,
    "notes": "e2e people.real.spec.ts:126이 getByRole('link', { name: '초대 링크 열기', exact: true })로 찾으므로 링크 이름은 바꾸지 말고 설명(aria-describedby)으로 안내해야 한다. InvoiceViewLinks 부분은 #449 브랜치에서 고친다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx",
+     "frontend/src/components/workspace/InvoiceViewLinks.tsx"
+    ],
+    "out_of_scope_files": [],
+    "change": "링크 옆에 <small id={hintId} className='field-hint'>새 탭에서 열립니다.</small>를 두고 링크에 aria-describedby={hintId}를 준다. 링크 문구와 접근 가능한 이름은 그대로 둔다. InvoiceViewLinks의 '고객 화면 열기'도 같은 방식(#449).",
+    "tests": "새 frontend/e2e/*.contract.spec.ts에서 링크 발급을 재현할 수 있는 화면(초대 링크 또는 고객 조회 링크)에서 해당 링크가 toHaveAccessibleDescription('새 탭에서 열립니다.')인지 단언.",
+    "behavior_change": true,
+    "screens": "초대 링크 만들기와 카드 등록 링크 발급 결과(대화상자), 인보이스 상세의 고객 조회 링크 발급 결과. API 변화 없음.",
+    "conflict_risk": "낮음. ActionPanel 126행은 #442 이후, InvoiceViewLinks 81행은 #449 이후 바뀌지 않았다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-085",
@@ -766,7 +1481,22 @@
    "tests": [],
    "behavior_change": true,
    "notes": "동시 수정은 드물고 새로고침으로 빠져나올 수 있어 low. 같은 무재조회 문제가 main 계열 customers/actions.ts updateCustomerAction에도 있으나 그 대화상자(CustomerFormDialog)는 top 화면에서 쓰이지 않는다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "451",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/(console)/workspace-actions.ts"
+    ],
+    "change": "(범위 밖) workspaceAction이 result.error.code === 'resource_version_conflict'면 { message: '다른 사용자가 먼저 수정했습니다. 최신 정보를 불러온 뒤 다시 수정하세요.', isStale: true }를 돌려준다. (범위 안) ActionPanel은 state.isStale이면 오류 Alert 아래에 '최신 정보 불러오기' 버튼을 두고 useRouter().refresh()를 startTransition으로 부른다. ActionBody key를 requestId와 hidden version 값으로 만들어, 새 version이 도착하면 폼이 최신 이름과 이메일로 다시 그려지게 한다. 다른 사람의 변경을 보지 않고 덮어쓰지 않도록 입력 유지 대신 최신 값 표시를 택한다(입력 유지가 필요하면 key 변경 없이 version만 갱신하는 대안).",
+    "tests": "새 frontend/e2e/action-panel.contract.spec.ts 또는 계약 서버 확장: 첫 PATCH에 409 resource_version_conflict, 상세 조회에 version+1을 돌려주게 하고 '최신 정보 불러오기' 뒤 다시 저장하면 If-Match가 새 version인지 단언.",
+    "behavior_change": true,
+    "screens": "/customers/{id} 고객 정보 수정 대화상자에 버튼 추가. API 계약 변화 없음(상태 타입에 isStale 추가).",
+    "conflict_risk": "중간. workspace-actions.ts는 #453에서 환경 검사 줄이 바뀌어 #451에서 고치면 위로 전파할 때 근처 충돌 가능. ActionPanel은 #453의 import와 hidden input 추가와만 겹친다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-095",
@@ -783,7 +1513,22 @@
    "tests": [],
    "behavior_change": false,
    "notes": "G-046이 같은 예시를 들지만 이 묶음은 권한 라벨 정본 하나로 좁혀 따로 둔다. G-046 수정과 같은 파일(permissions.ts, WorkspaceView.tsx)을 건드리므로 한 브랜치에서 순서대로 하면 된다.",
-   "batch": "workspace-labels"
+   "batch": "workspace-labels",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/permissions.ts",
+     "frontend/src/components/workspace/WorkspaceView.tsx",
+     "frontend/e2e/scope-labels.test.mjs"
+    ],
+    "out_of_scope_files": [],
+    "change": "permissions.ts에 ACCESS_SCOPE_LABELS = { read: '조회', ingest: '수집', admin: '전체 관리' }와 이 순서(read, ingest, admin)로 정렬해 라벨 배열을 돌려주는 scopeLabels(scopes)를 둔다. scopeSummary와 ACCESS_SCOPE_OPTIONS 라벨 앞부분도 이 맵에서 읽는다. WorkspaceView.tsx:21 SCOPE_LABELS를 지우고 34행 scopes 열은 scopeLabels(value).join(', ')을 쓴다. 모르는 값은 원문 그대로 뒤에 붙인다.",
+    "tests": "새 frontend/e2e/scope-labels.test.mjs(node --test): ACCESS_SCOPE_LABELS.ingest === '수집', scopeLabels(['ingest','read'])가 ['조회','수집']인지, 모르는 값이 원문으로 남는지 확인한다. 기존 permissions.test.mjs:60-62(scopeSummary '전체 관리', '조회, 수집', '수집')가 그대로 통과해야 한다.",
+    "behavior_change": false,
+    "screens": "사용자 관리(/members) 업무 권한 열과 초대 이력 참여 권한 열, 연동 설정(/integrations) API 키 권한 열.",
+    "conflict_risk": "낮음. permissions.ts와 WorkspaceView.tsx는 #442 뒤로 바뀌지 않았다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-097",
@@ -802,7 +1547,20 @@
    "tests": [],
    "behavior_change": true,
    "notes": "증상은 #444부터. 라벨 쪽(k6)을 바꾸는 대신 라벨에 기대지 않는 문구로 고치면 앞으로 추가될 라벨에도 안전하다.",
-   "batch": "action-panel-b"
+   "batch": "action-panel-b",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/components/workspace/ActionPanel.tsx"
+    ],
+    "out_of_scope_files": [],
+    "change": "71행 문구를 라벨 없이 '하나 이상 선택하세요.'로 바꾼다. 요약은 '받을 통보: 하나 이상 선택하세요.', 필드 아래는 legend '받을 통보 (필수)' 아래 '하나 이상 선택하세요.'가 된다. D-141 수정과 함께 하면 lib/field-validation.ts의 상수로 둔다.",
+    "tests": "frontend/e2e/field-validation.test.mjs에 다중 선택 필수 문구가 라벨과 조사를 포함하지 않는지 단언. 계약 서버가 /integrations를 그리면 새 contract spec에서 '수신 주소 등록'의 받을 통보를 모두 해제하고 등록할 때 '받을 통보: 하나 이상 선택하세요.'를 확인.",
+    "behavior_change": true,
+    "screens": "수신 주소 등록과 수정, API 키 발급과 권한 변경, 사용자 추가와 권한 변경, 초대 링크 만들기의 다중 선택 오류 문구. e2e에 이 문구 셀렉터 없음.",
+    "conflict_risk": "없음에 가깝다. 71행은 #442 이후 바뀌지 않았다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-103",
@@ -819,7 +1577,27 @@
    "tests": [],
    "behavior_change": true,
    "notes": "C442-012보다 먼저 넣으면 returnTo에 organization_id가 실려 재로그인 뒤 '도입사 선택이 바뀌었습니다' 화면이 뜨는 경우가 늘어난다(특히 소속 해제로 끊긴 경우). C442-012와 같이 넣거나 그 뒤에 넣는다. 무효 쿠키가 남는 점은 서버 컴포넌트에서 쿠키를 지울 수 없고 재로그인이 덮어쓰므로 따로 고치지 않아도 된다.",
-   "batch": "lib-tenant"
+   "batch": "lib-tenant",
+   "fix_plan": {
+    "fix_pr": "442",
+    "files": [
+     "frontend/src/lib/auth/navigation.ts",
+     "frontend/src/lib/auth/session.ts",
+     "frontend/src/lib/api/client.ts",
+     "frontend/src/lib/api/operator.ts",
+     "frontend/e2e/expired-login-path.test.mjs"
+    ],
+    "out_of_scope_files": [
+     "frontend/src/app/session-actions.ts",
+     "frontend/e2e/auth.contract.spec.ts"
+    ],
+    "change": "navigation.ts에 현재 경로를 받아 '/login?reason=expired&returnTo=' 뒤에 safeReturnPath(raw, true)로 거른 경로를 encodeURIComponent로 붙인 주소를 돌려주는 순수 함수를 더한다(경로가 없으면 '/login?reason=expired'). 역할을 모르는 시점이라 isOperator=true로 걸러 /admin 경로도 남기고, loginAction이 실제 역할로 다시 거른다. requireSession의 401/403, tenantRequest와 operatorRequest의 401 redirect는 headers()의 x-meterengine-current-path로 이 함수를 불러 보낸다. 서버 액션도 요청 URL이 화면 URL이라 같은 헤더를 쓴다. 범위 밖 switchOrganizationAction(session-actions.ts:31)도 같은 함수를 쓰게 맞춘다.",
+    "tests": "frontend/e2e/expired-login-path.test.mjs(node --test): '/billing?month=2026-09&organization_id=A'면 returnTo에 그 경로가 인코딩되어 붙는지, '//evil.example'이나 null이면 안전한 기본 경로이거나 returnTo가 없는지, '/admin/users'가 남는지. 범위 밖 auth.contract.spec.ts:28, 71의 reason=expired 끝 단언을 returnTo 포함으로 바꾸고, 무효 쿠키로 /customers?q=abc를 연 뒤 로그인하면 같은 주소로 돌아오는지 단언을 더한다.",
+    "behavior_change": true,
+    "screens": "세션이 서버에서 거부된 뒤의 로그인 화면(주소에 returnTo가 붙음)과 재로그인 뒤 이동 화면. 로그인 화면 문구는 그대로다.",
+    "conflict_risk": "session.ts:22와 operator.ts:11은 정점까지 바뀌지 않아 낮다. client.ts의 401 redirect 줄은 #453이 바로 위 requestApi 줄을 바꿔 붙어 있어 위층 반영 때 충돌 가능성이 있다. C442-004 수정과 같은 함수라 함께 반영하면 충돌 정리가 한 번으로 끝난다."
+   },
+   "unfixed_reason": "중단 요청으로 수정을 시작하지 않았다. fix_plan을 보고 이어서 고친다."
   },
   {
    "id": "X-105",
@@ -840,8 +1618,524 @@
   }
  ],
  "new_findings": [],
- "out_of_scope": [],
- "not_done": [],
+ "out_of_scope": [
+  {
+   "id": "C443-003",
+   "file": "frontend/README.md (148행, #452에서 들어온 '준비 중으로 표시한다' 문장, C453-007 일부)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "C443-003",
+   "file": "frontend/src/app/HomePage.module.css (#443에서 문단을 지우면 #452까지 .modeNote 규칙이 쓰이지 않는다. 무해하고 #453에서 다시 쓰이므로 고치지 않는다)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-088",
+   "file": "PR #443 본문(GitHub 작업, 조율 세션 담당)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/app/(console)/payments/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/app/(console)/payments/[id]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/components/invoices/InvoicesSection.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/components/invoices/InvoicesTable.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/app/(console)/overview/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-009",
+   "file": "frontend/src/app/(console)/customers/[id]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-046",
+   "file": "frontend/src/app/(console)/integrations/[id]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-046",
+   "file": "frontend/e2e/workspace.contract.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-045",
+   "file": "frontend/src/app/(console)/**/page.tsx (WorkspaceError 호출부에 status 전달, 후속)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-034",
+   "file": "frontend/src/components/usage/UsageSection.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-034",
+   "file": "frontend/src/components/usage/UsageTable.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-034",
+   "file": "frontend/src/components/table/MeterLabel.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-034",
+   "file": "frontend/src/app/(console)/customers/[id]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-254",
+   "file": "frontend/src/app/(console)/usage/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-254",
+   "file": "frontend/src/app/(console)/overview/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-152",
+   "file": "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-152",
+   "file": "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-152",
+   "file": "backend/openapi.yaml",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-152",
+   "file": "backend/src/test/java/com/meterengine/audit (목록 조회 테스트)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-152",
+   "file": "frontend/src/app/(console)/members/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-045",
+   "file": "frontend/e2e/workspace-contract-server.mjs (기존 계약 스텁에 /v1/audit-logs 응답 추가 시)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-141",
+   "file": "frontend/src/components/auth/CreateOperatorButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-141",
+   "file": "frontend/src/components/auth/AttachOrganizationButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-141",
+   "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-165",
+   "file": "frontend/src/components/auth/CreateOperatorButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-165",
+   "file": "frontend/src/components/auth/AttachOrganizationButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-165",
+   "file": "frontend/src/components/auth/ReviewAction.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-165",
+   "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-040",
+   "file": "frontend/src/components/auth/ReviewAction.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-092",
+   "file": "frontend/src/app/(console)/workspace-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-069",
+   "file": "frontend/src/components/customers/CustomerFormDialog.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-069",
+   "file": "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-069",
+   "file": "frontend/README.md",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-049",
+   "file": "frontend/src/components/auth/CreateOperatorButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-049",
+   "file": "frontend/src/components/auth/AttachOrganizationButton.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-049",
+   "file": "frontend/src/components/auth/ReviewAction.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-049",
+   "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-049",
+   "file": "frontend/src/app/admin/users/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-058",
+   "file": "frontend/src/app/(console)/workspace-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "C442-004",
+   "file": "frontend/e2e/auth.contract.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "C442-012",
+   "file": "frontend/src/app/(public)/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "C442-012",
+   "file": "frontend/src/app/account/consents/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "C442-012",
+   "file": "frontend/e2e/auth.contract.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-062",
+   "file": "deploy/deploy.sh",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-103",
+   "file": "frontend/src/app/session-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-103",
+   "file": "frontend/e2e/auth.contract.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "deploy/compose.prod.yml",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "deploy/README.md",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "deploy/tests/test_public_origin.py",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "deploy/tests/test_trusted_proxies.py",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "backend/src/main/java/com/meterengine/account/service/BootstrapService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "backend/src/main/java/com/meterengine/account/config/BootstrapProperties.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "backend/src/main/resources/application.properties",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "backend/src/test/java/com/meterengine/account/BootstrapServiceIntegrationTest.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "backend/README.md",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "measurements/test-slo/sut/terraform/parameters.tf",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "measurements/test-storage/sut/terraform/parameters.tf",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "measurements/test-storage/README.md",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "frontend/README.md",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-039",
+   "file": "frontend/Dockerfile",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-055",
+   "file": "frontend/src/app/(console)/layout.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-055",
+   "file": "frontend/src/app/(console)/workspace-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-055",
+   "file": "frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-055",
+   "file": "frontend/src/app/organization-invitations/continue/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-065",
+   "file": "frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-065",
+   "file": "frontend/src/app/admin/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-184",
+   "file": "frontend/src/app/(console)/billing/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-184",
+   "file": "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-047",
+   "file": "frontend/src/app/(console)/invoices/view-link-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-047",
+   "file": "frontend/src/app/(console)/pricing/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-047",
+   "file": "frontend/src/app/(console)/workspace-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-052",
+   "file": "frontend/src/app/organization-invitations/[token]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-052",
+   "file": "frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-042",
+   "file": "frontend/src/app/(console)/workspace-actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-042",
+   "file": "frontend/src/app/(console)/customers/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-042",
+   "file": "frontend/src/app/(console)/integrations/[id]/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-042",
+   "file": "frontend/src/app/(console)/integrations/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-042",
+   "file": "frontend/src/app/(console)/members/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/account/service/SignupService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/account/service/SessionService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/account/dto/CreateSignupConsentRequest.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/organization/dto/InvitationConsentRequest.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/java/com/meterengine/account/dto/SessionResponse.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/src/main/resources/application.yml",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "backend/openapi.yaml",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "frontend/src/app/(public)/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "frontend/src/app/account/consents/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-067",
+   "file": "frontend/src/components/auth/AuthForm.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-003",
+   "file": "frontend/src/components/billing/InvoiceFinalizeDialog.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-131",
+   "file": "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-131",
+   "file": "backend/src/main/java/com/meterengine/auth (세션 응답 DTO의 organization)",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-131",
+   "file": "backend/openapi.yaml",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-131",
+   "file": "frontend/src/app/(public)/actions.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "G-131",
+   "file": "frontend/src/app/(console)/integrations/page.tsx",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-060",
+   "file": "frontend/e2e/environment-cycle.real.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "X-060",
+   "file": "frontend/playwright.config.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  },
+  {
+   "id": "D-204",
+   "file": "frontend/e2e/environment-cycle.real.spec.ts",
+   "why": "수정에 필요하지만 k5 파일 범위 밖이다(fix_plan 참고)."
+  }
+ ],
+ "not_done": [
+  "중단 요청으로 판정하지 못한 배치 10개: shell-layout, theme-color, global-css-misc, layout-head-font, shell-nav-header, action-panel-a, workspace-table, workspace-header-links, search-controls, csv-customer-filter.",
+  "판정한 confirmed 묶음은 하나도 고치지 않았다. 수정 브랜치 claude/s456-k5-*는 만들지 않았다.",
+  "X-003 묶음(고위험 D-246 포함)의 두 번째 관점 검증을 하지 못했다.",
+  "추가 검토(유지보수성, 운영)는 k5에 대상 PR이 없어 해당 없다."
+ ],
  "checks": [
   {
    "command": "cd frontend && corepack pnpm install --frozen-lockfile (feat/rds-auto-stop)",
