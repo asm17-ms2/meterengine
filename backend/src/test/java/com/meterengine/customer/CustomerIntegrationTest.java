@@ -733,16 +733,24 @@ class CustomerIntegrationTest {
   }
 
   private void insertFailedPaymentAttempt(UUID organizationId, UUID customerId) {
+    insertInvoice(organizationId, customerId);
+    UUID invoiceId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM invoice WHERE organization_id = ? AND customer_id = ?",
+            UUID.class,
+            organizationId,
+            customerId);
     jdbcTemplate.update(
         """
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, amount, order_name, status,
-           failure_code, failure_message, requested_at, completed_at)
-        VALUES (gen_random_uuid(), ?, ?, gen_random_uuid(), 1000, '2026-08 사용료', 'failed',
-                'billing_key_not_registered', '등록된 카드가 없어 결제를 요청하지 않았습니다', now(), now())
+           failure_code, failure_message, requested_at, completed_at, mode)
+        VALUES (gen_random_uuid(), ?, ?, ?, 1000, '2026-08 사용료', 'failed',
+                'billing_key_not_registered', '등록된 카드가 없어 결제를 요청하지 않았습니다', now(), now(), 'live')
         """,
         organizationId,
-        customerId);
+        customerId,
+        invoiceId);
   }
 
   private Integer customerCount(UUID organizationId) {

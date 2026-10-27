@@ -1,0 +1,29 @@
+.page { min-height: 100dvh; color: #202b40; background: #f3f5f9; padding: 0 24px; }
+.brand { max-width: 1040px; margin: 0 auto; min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #dce1eb; }
+.brand span:first-child { font-family: "Avenir Next", sans-serif; font-size: 23px; font-weight: 750; letter-spacing: -.05em; }
+.brand span:last-child { color: #5a6578; font-size: 13px; }
+.main { display: grid; grid-template-columns: minmax(240px, 2fr) minmax(360px, 3fr); max-width: 1040px; margin: 56px auto 32px; background: white; border: 1px solid #dce1eb; border-radius: 14px; overflow: hidden; }
+.context { padding: 42px 32px; background: #eeeafb; border-right: 1px solid #dce1eb; }
+.eyebrow { color: #48339a; font-weight: 650; font-size: 14px; margin-bottom: 32px; overflow-wrap: anywhere; }
+.context h2 { font-size: clamp(23px, 2.4vw, 30px); letter-spacing: -.04em; line-height: 1.5; margin-bottom: 20px; }
+.context p:not(.eyebrow) { color: #5a6578; font-size: 14px; }
+.steps { margin: 48px 0 0; padding-left: 20px; display: grid; gap: 20px; font-size: 13px; color: #48339a; }
+.panel { padding: 42px 40px; min-width: 0; }
+.panel h1 { font-size: clamp(23px, 2.2vw, 28px); line-height: 1.45; margin-bottom: 28px; }
+.form { display: grid; gap: 24px; }
+.summary { margin: 0; border-top: 2px solid #5746ad; padding: 18px 0; border-bottom: 1px solid #dce1eb; display: grid; gap: 17px; }
+.summary div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.summary dt { color: #5a6578; font-size: 13px; }
+.summary dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.consent { margin: 0; padding: 18px; border: 1px solid #dce1eb; border-radius: 8px; min-width: 0; }
+.consent legend { padding: 0 6px; font-size: 14px; font-weight: 650; }
+.consent details { font-size: 13px; margin-bottom: 18px; }
+.consent summary { cursor: pointer; color: #48339a; }
+.consent details p { margin: 14px 0 0; color: #5a6578; }
+.note { margin: 0; color: #5a6578; font-size: 12px; line-height: 1.7; }
+.outcome { display: grid; gap: 20px; }
+.outcome p { margin: 0; }
+.retry { display: inline-flex; width: fit-content; padding: 11px 20px; border-radius: 6px; background: #5746ad; color: white; text-decoration: none; font-size: 14px; font-weight: 600; }
+.retry:hover { background: #48339a; color: white; }
+.footer { text-align: center; max-width: 1040px; padding: 0 0 32px; margin: 0 auto; color: #5a6578; font-size: 12px; line-height: 1.7; }
+@media (max-width: 760px) { .page { padding: 0 16px; }.brand { min-height: 70px; }.main { grid-template-columns: 1fr; margin-top: 24px; }.context { padding: 22px 24px; border-right: 0; border-bottom: 1px solid #dce1eb; }.eyebrow { margin-bottom: 8px; }.context h2 { font-size: 23px; margin: 0; }.context h2 br { display: none; }.context p:not(.eyebrow), .steps { display: none; }.panel { padding: 28px 24px; }.summary div { grid-template-columns: 100px minmax(0,1fr); gap: 8px; } }

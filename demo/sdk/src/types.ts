@@ -9,11 +9,51 @@ export interface ErrorResponse {
   errors?: FieldError[];
 }
 
+export interface InvoicePaymentResponse {
+  invoice_id: string;
+  status: "not_required" | "unpaid" | "pending" | "paid" | "failed" | "partially_canceled" | "canceled";
+  mode: "test" | "live";
+  amount: number;
+  canceled_amount: number;
+  attempt_count: number;
+  last_failure_code: string | null;
+  next_retry_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ListInvoicePaymentsResponse {
+  invoice_payments: InvoicePaymentResponse[];
+}
+
+export interface PaymentMethodResponse {
+  customer_id: string;
+  card_issuer_code: string;
+  card_number: string;
+  mode: "test" | "live";
+  authenticated_at: string;
+  
+}
+
+export interface ListPaymentMethodsResponse {
+  payment_methods: PaymentMethodResponse[];
+}
+
 export interface OrganizationResponse {
   id: string;
   name: string;
   status: "pending" | "active" | "rejected" | "suspended";
   created_at: string;
+}
+
+export interface PaymentMethodRegistrationResponse {
+  token?: string;
+  customer_id: string;
+  customer_name: string;
+  organization_name: string;
+  client_key: string;
+  customer_key: string;
+  mode: "test" | "live";
+  expires_at: string;
 }
 
 export interface WebhookEndpointResponse {

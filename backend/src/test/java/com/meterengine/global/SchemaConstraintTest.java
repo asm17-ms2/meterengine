@@ -445,7 +445,11 @@ class SchemaConstraintTest {
 
   @Test
   void 인보이스_테이블은_TRUNCATE할_수_없다() {
-    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice, invoice_line, outbound_email"))
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.execute(
+                    "TRUNCATE invoice, invoice_line, outbound_email, payment_attempt,"
+                        + " payment_cancellation"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("invoice is append-only");
   }

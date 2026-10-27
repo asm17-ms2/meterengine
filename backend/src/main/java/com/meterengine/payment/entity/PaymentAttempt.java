@@ -27,6 +27,9 @@ public class PaymentAttempt implements Persistable<UUID> {
   private UUID invoiceId;
 
   @Column(nullable = false)
+  private String mode;
+
+  @Column(nullable = false)
   private long amount;
 
   @Column(name = "order_name", nullable = false)
@@ -57,35 +60,38 @@ public class PaymentAttempt implements Persistable<UUID> {
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
+      String mode,
       long amount,
       String orderName,
-      String status,
-      String paymentKey,
-      OffsetDateTime requestedAt,
-      OffsetDateTime completedAt) {
+      OffsetDateTime requestedAt) {
     this.id = id;
     this.organizationId = organizationId;
     this.customerId = customerId;
     this.invoiceId = invoiceId;
+    this.mode = mode;
     this.amount = amount;
     this.orderName = orderName;
-    this.status = status;
-    this.paymentKey = paymentKey;
+    this.status = PENDING;
     this.requestedAt = requestedAt;
-    this.completedAt = completedAt;
   }
 
-  public static PaymentAttempt done(
+  public static PaymentAttempt pending(
       UUID id,
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
+      String mode,
       long amount,
-      String orderName,
-      String paymentKey) {
-    OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+      String orderName) {
     return new PaymentAttempt(
-        id, organizationId, customerId, invoiceId, amount, orderName, DONE, paymentKey, now, now);
+        id,
+        organizationId,
+        customerId,
+        invoiceId,
+        mode,
+        amount,
+        orderName,
+        OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS));
   }
 
   @Override
@@ -108,6 +114,10 @@ public class PaymentAttempt implements Persistable<UUID> {
 
   public UUID getInvoiceId() {
     return invoiceId;
+  }
+
+  public String getMode() {
+    return mode;
   }
 
   public long getAmount() {
