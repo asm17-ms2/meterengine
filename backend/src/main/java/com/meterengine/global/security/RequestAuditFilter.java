@@ -1,5 +1,7 @@
 package com.meterengine.global.security;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,9 +28,14 @@ public class RequestAuditFilter extends OncePerRequestFilter {
   private static final String INGEST_METHOD = "POST";
   private static final Set<String> INGEST_PATHS = Set.of("/v1/events", "/v1/event-batches");
   private final RequestAuditRecorder requestAuditRecorder;
+  private final Counter failures;
 
-  public RequestAuditFilter(RequestAuditRecorder requestAuditRecorder) {
+  public RequestAuditFilter(RequestAuditRecorder requestAuditRecorder, MeterRegistry registry) {
     this.requestAuditRecorder = requestAuditRecorder;
+    this.failures =
+        Counter.builder("meterengine.request.audit.failures")
+            .description("요청 감사 저장 실패 건수")
+            .register(registry);
   }
 
   @Override
@@ -70,6 +77,7 @@ public class RequestAuditFilter extends OncePerRequestFilter {
             requestId,
             route.equals("/v1/{unmatched}") ? RequestAuditTarget.empty() : target(request));
       } catch (RuntimeException exception) {
+        failures.increment();
         logger.error("Request audit failed request_id=" + requestId, exception);
       }
     }

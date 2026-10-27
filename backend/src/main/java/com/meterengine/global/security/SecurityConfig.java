@@ -1,5 +1,6 @@
 package com.meterengine.global.security;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +38,7 @@ public class SecurityConfig {
       SessionCredentials sessionCredentials,
       ErrorResponseWriter errorResponseWriter,
       RequestAuditRecorder requestAuditRecorder,
+      MeterRegistry meterRegistry,
       Clock clock)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
@@ -82,7 +84,8 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(new RequestLogFilter(), DisableEncodeUrlFilter.class)
-        .addFilterBefore(new RequestAuditFilter(requestAuditRecorder), RequestLogFilter.class)
+        .addFilterBefore(
+            new RequestAuditFilter(requestAuditRecorder, meterRegistry), RequestLogFilter.class)
         .addFilterBefore(
             new ApiCredentialAuthenticationFilter(
                 apiKeyCredentials, sessionCredentials, errorResponseWriter),
