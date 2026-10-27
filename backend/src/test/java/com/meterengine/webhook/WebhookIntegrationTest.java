@@ -230,6 +230,11 @@ class WebhookIntegrationTest {
                 .list(organizationId, endpoint.id(), "failed", 0, 20)
                 .deliveries())
         .isEmpty();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE tablename = 'webhook_delivery_attempt' AND indexname = 'webhook_delivery_attempt_webhook_delivery_lookup'",
+                Integer.class))
+        .isOne();
   }
 
   @Test
