@@ -1,5 +1,7 @@
 package com.meterengine.global.security;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,10 +14,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
+  static final String AUDITED_ATTRIBUTE = RequestAuditFilter.class.getName() + ".audited";
   private static final List<String> UUID_VARIABLES =
       List.of("delivery_id", "id", "organization_id");
   private static final Pattern UUID_VALUE =
@@ -24,9 +28,14 @@ public class RequestAuditFilter extends OncePerRequestFilter {
   private static final String INGEST_METHOD = "POST";
   private static final Set<String> INGEST_PATHS = Set.of("/v1/events", "/v1/event-batches");
   private final RequestAuditRecorder requestAuditRecorder;
+  private final Counter failures;
 
-  public RequestAuditFilter(RequestAuditRecorder requestAuditRecorder) {
+  public RequestAuditFilter(RequestAuditRecorder requestAuditRecorder, MeterRegistry registry) {
     this.requestAuditRecorder = requestAuditRecorder;
+    this.failures =
+        Counter.builder("meterengine.request.audit.failures")
+            .description("요청 감사 저장 실패 건수")
+            .register(registry);
   }
 
   @Override
@@ -39,7 +48,7 @@ public class RequestAuditFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     long started = System.nanoTime();
-    boolean failed = true;
+    int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     UUID requestId = UUID.randomUUID();
     response.setHeader("X-Request-ID", requestId.toString());
     if (isIngestion(request)) {
@@ -48,8 +57,12 @@ public class RequestAuditFilter extends OncePerRequestFilter {
     }
     try {
       filterChain.doFilter(request, response);
-      failed = false;
+      status = response.getStatus();
+    } catch (RequestRejectedException exception) {
+      status = HttpServletResponse.SC_BAD_REQUEST;
+      throw exception;
     } finally {
+      request.setAttribute(AUDITED_ATTRIBUTE, Boolean.TRUE);
       Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
       String route = pattern == null ? "/v1/{unmatched}" : pattern.toString();
       if (!route.startsWith("/v1/")) route = "/v1/{unmatched}";
@@ -59,13 +72,13 @@ public class RequestAuditFilter extends OncePerRequestFilter {
             actor instanceof AuthenticatedPrincipal principal ? principal : null,
             request.getMethod(),
             route,
-            failed ? 500 : response.getStatus(),
+            status,
             TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started),
             requestId,
             route.equals("/v1/{unmatched}") ? RequestAuditTarget.empty() : target(request));
       } catch (RuntimeException exception) {
+        failures.increment();
         logger.error("Request audit failed request_id=" + requestId, exception);
-        throw exception;
       }
     }
   }

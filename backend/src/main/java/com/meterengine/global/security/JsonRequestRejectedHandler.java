@@ -32,7 +32,9 @@ public class JsonRequestRejectedHandler implements RequestRejectedHandler {
       throws IOException {
     errorResponseWriter.write(response, ErrorCode.VALIDATION_ERROR);
     RequestLogFilter.logRejected(request);
-    if (requestAuditRecorder != null && request.getRequestURI().startsWith("/v1/"))
+    if (requestAuditRecorder != null
+        && request.getRequestURI().startsWith("/v1/")
+        && request.getAttribute(RequestAuditFilter.AUDITED_ATTRIBUTE) == null)
       requestAuditRecorder.record(
           null,
           request.getMethod(),
