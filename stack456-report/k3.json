@@ -32,6 +32,161 @@
       "notes": ""
     },
     {
+      "id": "C446-001",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "medium",
+      "summary": "#446부터 #449까지 verify는 실제 ApiClient에 없는 인자와 메서드를 불러 TypeError로 끝난다. #450에서야 해소된다.",
+      "reason": "#446 head의 verify_cmd.py 85행은 client.get_billable_metric_prices(month)를, 189행과 197행은 client.get_price_plans(...)를 부른다. 그런데 같은 head의 api_client.py 124행 get_billable_metric_prices(self)는 인자를 받지 않고 get_price_plans는 정의돼 있지 않다. --log 경로(125행)와 --csv 경로(141행) 모두 실제 ApiClient를 만들기 때문에 피할 길이 없다. #446 소스 사본에서 직접 불러 보니 'TypeError: ApiClient.get_billable_metric_prices() takes 1 positional argument but 2 were given'이 났고, hasattr(client, 'get_price_plans')는 False였다. meterdemo.main의 generic except가 이 오류를 받아 exit 2로 끝낸다. test_verify_cmd.py 166-168행은 ApiClient를 FakeVerifyClient로 바꿔 끼우므로 테스트 29건이 통과한다. #447, #448, #449의 api_client.py도 똑같고, #450 커밋 8bb17c3이 두 메서드를 더하면서 해소된다.",
+      "evidence": "demo/csvdemo/verify_cmd.py:85,189,196-197 @ 5efe449; demo/csvdemo/verify_cmd.py:125,141 @ 5efe449; demo/core/api_client.py:124 @ 5efe449; demo/csvdemo/test_verify_cmd.py:135-168 @ 5efe449; demo/core/api_client.py:124 @ 7ce9d36 (#449도 동일); demo/core/api_client.py:124-134 @ 457a0d8 (8bb17c3에서 추가)",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": ""
+    },
+    {
+      "id": "C446-003",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#446 head에서 count 미터와 문자열, 불리언 값만 있는 count_distinct 미터는 이벤트가 있어도 delete 가드를 통과해 행이 지워진다. #447의 보관 전환으로 해소된다.",
+      "reason": "#446 BillableMetricService.delete 143행은 eventService.existsWithNumericProperty(organizationId, eventType, targetProperty)로 판단하고, EventRepository 91~99행 쿼리는 jsonb_typeof(properties -> ?::text) = 'number' 조건이다. count 미터는 validate 186행 때문에 targetProperty가 항상 null이라 properties -> NULL이 NULL이 되어 EXISTS가 false이고, count_distinct는 BillableMetricUsageRepository 59행처럼 number, string, boolean을 세지만 가드는 number만 본다. 같은 PR의 update 118~119행은 eventService.exists(organizationId, eventType)를 써서 기준이 어긋나고, openapi.yaml 403행의 '집계된 이벤트가 한 건이라도 있으면 409' 설명과도 다르다. 이 줄 자체는 #445부터 있었지만 sum만 있던 때는 맞았고 #446이 count, count_distinct를 더하면서 결함이 됐다. #447(afdf8f1) 178~197행은 delete를 archive로 바꿔 이벤트 검사 없이 행을 남기므로 스택 끝에서는 해소된다. 단독 배포 구간에만 영향이 있어 심각도를 낮게 본다.",
+      "evidence": "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:143 @ 5efe449; backend/src/main/java/com/meterengine/event/repository/EventRepository.java:91 @ 5efe449; backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:59 @ 5efe449; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:118 @ 5efe449; backend/openapi.yaml:403 @ 5efe449; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:178 @ afdf8f1",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": ""
+    },
+    {
+      "id": "C446-004",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "요금제 지난 월 등록 거절(PRICE_PLAN_HISTORY_IMMUTABLE)을 검증하는 테스트가 #446과 스택 최상단 어디에도 없다.",
+      "reason": "#446 head의 PricePlanService.create는 62~65행에서 시작 월이 이번 달보다 이전이면 PRICE_PLAN_HISTORY_IMMUTABLE로 거절하고, delete도 111~113행에서 같은 코드로 거절한다. VersionedPricingIntegrationTest의 지난 월 거절 테스트(121~133행)는 단가(PriceRateService)만 부르고, PricePlanAuditIntegrationTest와 VersionedPricingIntegrationTest의 요금제 호출은 모두 effective_from=이번 달이다. git grep으로 #446, #447, #449, #451, #455 브랜치의 backend/src/test, demo, frontend/e2e 전부를 찾아도 PRICE_PLAN_HISTORY_IMMUTABLE 단언이 없다. 최상단에서도 create의 같은 검사(PricePlanService.java 83행)가 남아 있으므로 조건이 빠지면 지난달 요금제가 같은 월 행을 덮어써 지난달 예정액이 바뀌어도 테스트가 통과한다.",
+      "evidence": "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:62-65 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:111-113 @ 5efe449; backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:121-133 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:83 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C446-005",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "round 샘플 2와 2.3은 FLOOR, HALF_EVEN, HALF_DOWN으로도 같은 값이라 round의 HALF_UP 매핑을 검증하지 못하고, 다른 테스트에도 이를 잡는 단언이 없다.",
+      "reason": "#446 MetricAggregationIntegrationTest 177, 180행의 round 샘플은 avg 93/4를 unit_size 10으로 나눈 2.325를 자릿수 0, 1로 반올림해 2, 2.3을 기대하는데, 2.325는 자릿수 0, 1에서 동률이 아니라 FLOOR, HALF_EVEN, HALF_DOWN 결과도 같다. MetricAggregation.transform 37행의 \"round\" -> RoundingMode.HALF_UP을 바꿔도 이 테스트는 통과한다. backend/src/test 전체에서 rounding_mode round를 쓰는 곳은 이 두 샘플뿐이고(#447 177, 180행, 스택 끝 179, 182행 그대로), demo/csvdemo/test_expected.py의 round 케이스는 백엔드가 아닌 demo의 expected.py를 검증하며 CI(ci.yml)는 demo 테스트를 돌리지도 않는다. openapi.yaml 335행은 round를 사사오입으로 적고 이 수량이 청구 수량이 된다.",
+      "evidence": "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:177 @ 5efe449; backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:180 @ 5efe449; backend/src/main/java/com/meterengine/metric/entity/MetricAggregation.java:37 @ 5efe449; backend/openapi.yaml:335 @ 5efe449; .github/workflows/ci.yml:53 @ 5efe449",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C446-006",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#446 head에는 같은 달에 겹치는 단가, 요금제 버전 중 늦은 시작 월을 고르는 규칙의 테스트가 없고, #447이 더한 테스트로만 스택에서 메워진다.",
+      "reason": "ChargeService.calculate는 겹치는 단가를 merge(64~68행, effective_from이 큰 쪽)로, 요금제는 effective_from 내림차순 putIfAbsent(70~75행)로 고른다. #446 테스트를 보면 미래_버전과_종료_월은 종료 월로 끊어 겹치지 않고, 기존_조합_삭제는 조합 삭제로 이번 달 20원 버전을 지우고 2000-01 버전을 이번 달로 닫은 뒤에만 금액을 봐서 겹친 상태의 금액을 보지 않는다. 요금제 테스트도 공통과 고객 요금제처럼 키가 다른 경우만 있고, ChargeServiceTest의 단가는 모두 2000-01 한 버전이며 요금제 저장소는 스텁하지 않는다. 그래서 #446 단독으로는 merge 비교를 뒤집거나 요금제 순서를 오름차순으로 바꿔도 통과한다. #447 커밋 2ec5d85가 최신_단가_보관(amount(month)=2000)과 최신_요금제_보관(amount(month)=1200) 테스트를 더해 이 변이를 잡으므로 스택 전체로는 해소되어 심각도를 낮춘다.",
+      "evidence": "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:64-75 @ 5efe449; backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:113-154 @ 5efe449; backend/src/test/java/com/meterengine/pricing/service/ChargeServiceTest.java:451-461 @ 5efe449; backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:155-186 @ afdf8f1 (2ec5d85)",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C446-007",
+      "merged_ids": [
+        "G-113",
+        "G-172"
+      ],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "invoice_number가 조직과 무관한 테이블 전역 IDENTITY를 그대로 드러내 다른 도입사의 확정 건수가 번호 차이로 보인다",
+      "reason": "#446 5efe449의 V41__create_invoice_view_links.sql 1~2행이 invoice.display_number를 테이블 전체 IDENTITY로 추가하고, Invoice.java 15~18행이 INSERT 때 생성값을 읽으며, InvoiceService.toInvoiceResponse 86~90행이 이를 'ME-' + 청구월 + '-' + %08d로 invoice_number에 싣는다. 조직 범위 카운터가 없어 조직 A 확정, B 확정, A 확정 순이면 A의 번호는 n, n+2가 된다(임시 Postgres에서 같은 DDL로 A=4, B=5, A=7 재현). 이 값은 @ReadAccess인 GET /v1/invoices와 /v1/invoices/{id}로 도입사에게, #449부터는 @PublicAccess인 POST /v1/public/invoice-links/lookup의 PublicInvoiceResponse(InvoiceViewLinkService 195행)로 최종 고객에게 나간다. top 854e293까지 번호 생성 방식은 바뀌지 않았다(InvoiceService 104~108행, V41 1~2행 동일). 조회 키가 아니라 IDOR는 아니고 번호 차이로 플랫폼 전체 확정 건수를 추정하는 정보 노출이다.",
+      "evidence": "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql:1-2 @ 5efe449; backend/src/main/java/com/meterengine/invoice/entity/Invoice.java:15-18 @ 5efe449; backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:86-90 @ 5efe449; backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:42-43 @ 5efe449; backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:195 @ 7ce9d36; backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:104-108 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "고치지 않았다. 도입사별(또는 #453 이후 환경별) 순번이나 비순차 번호 중 어떤 정책을 택할지 제품 결정이 필요하고, V41의 IDENTITY를 트리거 기반 번호로 바꾸는 수정은 #453 환경 분리와 함께 정해야 한다. 제안: V41에서 display_number를 (organization_id[, environment_id])별 max+1로 채우는 BEFORE INSERT 트리거와 advisory lock, UNIQUE(organization_id, display_number). 두 번째 관점은 승인된 도입사와 admin이 발급한 공개 링크 수신자에게만 보이는 낮은 정보 노출로 보았다."
+    },
+    {
+      "id": "C446-008",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "SDK InvoiceLineResponse.billable_metric_code가 string으로 선언돼 있지만, 서버는 기본료와 최소 사용료 라인에 null을 보낸다. top에서도 그대로다.",
+      "reason": "ChargeService.surcharge(201-205행)는 minimum_adjustment와 base_fee 라인을 billableMetricCode=null로 만든다. DraftInvoiceService 99-101행과 InvoiceService 105-106행은 이 값을 그대로 응답에 싣는다. 전역 NON_NULL 설정이 없어 JSON에 null로 나간다. V38__extend_invoice_line_types.sql도 base_fee와 minimum_adjustment 라인에 billable_metric_code IS NULL을 강제한다. 반면 #446이 추가한 SDK types.ts 44행은 string이고, top(854e293)의 141행도 같다. 저장소 안의 사용처(llm-service의 service.ts metricName(code: string | null), contracts.ts의 BillingLine.metricCode: string | null)는 이미 null을 가정하고 짜여 있다. 그래서 타입을 고쳐도 다른 코드가 깨지지 않고, 지금 타입만 실제 응답과 어긋나 있다.",
+      "evidence": "demo/sdk/src/types.ts:43-54 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:194-205 @ 5efe449; backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java:99-101 @ 5efe449; backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:105-106 @ 5efe449; backend/src/main/resources/db/migration/V38__extend_invoice_line_types.sql:2-9 @ 5efe449; demo/sdk/src/types.ts:140-151 @ 854e293; demo/llm-service/src/lib/contracts.ts:37 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": ""
+    },
+    {
+      "id": "C446-011",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "'올림으로 0이 된 음수' 테스트가 rounding_mode none 미터를 써서 classify의 원본 분자 음수 검사를 변환 수량 검사로 바꿔도 실패하지 않는다.",
+      "reason": "ChargeServiceTest 220~241행 테스트는 billableMetric(\"token-usage\", \"token\")을 쓰는데 이 7인자 생성자는 BillableMetric의 기본값 roundingMode \"none\", unitSize 1을 쓴다. none이면 ChargeService.quantity()(217~223행)가 원본 분자 -0.4로 분수를 만들므로, classify 122행의 usage.rawQuantityNumerator().signum() < 0을 quantity.signum() < 0으로 바꿔도 여전히 음수로 잡혀 테스트가 통과한다. 실제 ceil 미터는 MetricAggregation.transform(29~40행)이 -0.4를 CEILING으로 0으로 만들어 quantity가 0이 되므로 그 변경에서 0원 라인으로 들어가고 negative_usages가 빠진다. backend/src/test 전체에서 ceil이나 round 미터에 음수 원본을 넣는 Java 테스트는 없고(MetricAggregationIntegrationTest의 작은_음수_평균도 none), 최상단에서도 ChargeServiceTest와 classify 검사(131행)는 그대로다.",
+      "evidence": "backend/src/test/java/com/meterengine/pricing/service/ChargeServiceTest.java:220-241 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:121-122 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:217-223 @ 5efe449; backend/src/main/java/com/meterengine/metric/entity/MetricAggregation.java:29-40 @ 5efe449",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C446-012",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "단가 버전 ID 삭제(DELETE /v1/billable-metrics/{code}/price-rates/{id})의 도입사 경계를 검증하는 테스트가 없다.",
+      "reason": "#446의 PriceRateService.delete(UUID, String, UUID)는 findById 결과를 143~147행에서 organization_id와 code로만 걸러 도입사 경계를 지킨다. 이 경로를 부르는 테스트는 VersionedPricingIntegrationTest 130행(지난 월 거절)과 152행(같은 도입사 고객 단가 삭제)뿐이고, PriceRateIntegrationTest와 AuditLogIntegrationTest는 조합(dimension_values) 삭제만 부른다. 최상단에서도 ID 삭제 테스트는 같은 도입사의 다른 환경을 보는 EnvironmentBillingIntegrationTest 195행과 frontend e2e의 같은 도입사 삭제뿐이다. TestCredentials.issueApiKey가 다른 도입사 행을 만들어 주므로 B 도입사 키 요청은 필터까지 도달하고, 필터에서 조직 비교가 빠지면 A의 단가가 지워지는데 이를 잡는 테스트가 없다.",
+      "evidence": "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:140-147 @ 5efe449; backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:130,152 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:185-195 @ 854e293; backend/src/test/java/com/meterengine/invoice/EnvironmentBillingIntegrationTest.java:195 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C446-013",
+      "merged_ids": [
+        "C447-011"
+      ],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "이름만 바꾸는 update 단위 테스트가 update가 부르지 않는 메서드만 never()로 검증해 실패할 수 없다.",
+      "reason": "#446 update는 이름 외 필드가 바뀔 때만 eventService.exists(organizationId, eventType)(2인자)를 부른다(118~119행). 그런데 BillableMetricServiceTest의 event_type과_target_property가_그대로면_이벤트와_중복을_확인하지_않는다는 237~239행에서 existsWithNumericProperty와 existsByOrganizationIdAndEventTypeAndTargetProperty 호출이 없음만 보며, 두 메서드는 #446의 update와 create 어디서도 부르지 않아 검증이 항상 참이다. #445에서는 update가 existsWithNumericProperty를 불렀으므로 #446의 update 변경이 이 verify를 빈 검증으로 만들었다. update가 이름만 바꿔도 2인자 exists를 부르도록 회귀해도 mock 기본값 false라 테스트는 통과한다. 같은 동작은 MetricAggregationIntegrationTest 이벤트가_있으면_집계와_단위와_차원을_바꾸지_못한다의 마지막 이름 변경 단언이 통합 수준에서 잡으므로 위험은 작다.",
+      "evidence": "backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java:237 @ 5efe449; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:118 @ 5efe449; backend/src/main/java/com/meterengine/event/service/EventService.java:126 @ 5efe449; backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:273 @ 5efe449",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
+    },
+    {
       "id": "C447-000",
       "merged_ids": [],
       "verdict": "already-fixed",
@@ -182,6 +337,21 @@
       "notes": ""
     },
     {
+      "id": "C447-011",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#447에서 verify 대상을 EventPresence의 3인자 exists로 옮겼지만 update는 2인자 exists만 불러 같은 테스트가 여전히 항상 통과한다.",
+      "reason": "#447 BillableMetricServiceTest 250행은 verify(eventService, never()).exists(any(), any(), any())인데, Mockito는 컴파일 시점에 고른 3인자 오버로드 호출만 확인한다. BillableMetricService는 153행에서 2인자 eventPresence.exists(organizationId, eventType)만 부르고 3인자 exists는 metric 패키지 어디서도 부르지 않으므로 이 verify는 항상 참이다. 251~252행의 existsByOrganizationIdAndEventTypeAndTargetProperty 검증도 update가 부르지 않아 빈 검증이다. 스택 끝(rds-auto-stop)도 250행 그대로이고 서비스는 167행에서 2인자 exists를 부른다. C446-013과 같은 테스트, 같은 원인이며 #447은 메서드 이름만 바꿨다.",
+      "evidence": "backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java:250 @ afdf8f1; backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:153 @ afdf8f1; backend/src/main/java/com/meterengine/event/api/EventPresence.java:6 @ afdf8f1",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "C446-013와 같은 원인이라 그쪽에 묶었다."
+    },
+    {
       "id": "C447-013",
       "merged_ids": [
         "G-115"
@@ -211,6 +381,21 @@
       "fix_commits": [],
       "tests": [],
       "behavior_change": false,
+      "notes": ""
+    },
+    {
+      "id": "C450-010",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "--batch-size 모드에서 properties JSON이 깨진 행이 하나라도 있으면 봉투 전체가 400이 된다. 그 묶음의 정상 행이 모두 rejected로 기록되고, 마지막 묶음이면 종료 코드가 0이다.",
+      "reason": "_send_batches(135행)는 build_body_text가 properties 원문을 그대로 넣은 행들을 이어 붙여 봉투 하나를 만든다(model.py 123행). csvio.py 31행은 빈 칸을 \"\"로 읽고, expected.py 160-163행은 문제를 표시만 할 뿐 그 행을 보낸다. 서버의 IngestEventBatchRequest는 List<JsonNode>라 원소 하나가 깨지면 본문 전체를 읽지 못하고, GlobalExceptionHandler 160-163행이 400 malformed_request_body를 돌려준다. 그러면 145-149행과 160행이 그 묶음의 모든 행을 rejected로 세고, 170-171행에서 반복을 멈춘다. 122행의 종료 코드는 counts['error']와 sent < len(events)만 보므로 실패한 묶음이 마지막이면 0이다. #450 사본에서 100행 중 50번째 행의 properties를 비운 재현 결과: 단건 모드는 99 new, 1 rejected였다. --batch-size 100은 요청 1번에 100행 모두 rejected, exit 0이었다. --batch-size 30은 30 new, 30 rejected, 40 NOT_SENT, exit 2였다. #460은 백엔드 쪽 수정이라 send_cmd.py와 무관하고, #451부터 top까지 이 부분은 바뀌지 않았다.",
+      "evidence": "demo/csvdemo/send_cmd.py:122,135,144-149,160,170-171 @ 457a0d8; demo/core/model.py:117-126 @ 457a0d8; demo/csvdemo/csvio.py:31 @ 457a0d8; demo/csvdemo/expected.py:160-163 @ 457a0d8; backend/src/main/java/com/meterengine/event/dto/IngestEventBatchRequest.java:10-15 @ 457a0d8; backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:160-163 @ 457a0d8; demo/csvdemo/send_cmd.py @ 854e293 (_send_batches 동일)",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
       "notes": ""
     },
     {
@@ -309,6 +494,21 @@
       "notes": ""
     },
     {
+      "id": "C451-010",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "createCustomer가 external_id가 없을 때만 재시도하지 않는 규칙을 어떤 테스트도 검사하지 않는다. canRetry 인자를 빼도 SDK 테스트가 모두 통과한다.",
+      "reason": "#451이 추가한 meter-engine-client.ts 127-129행은 request.external_id !== undefined일 때만 canRetry를 켠다. 서버는 같은 external_id면 기존 고객을 200으로 돌려주지만 external_id가 없으면 매번 새 고객을 만든다(CustomerController 88행 설명). 그래서 이 규칙이 고객 중복 생성을 막는 유일한 장치다. demo 전체에서 createCustomer를 부르는 테스트는 top의 read-contract.test.ts 17행 하나이고, external_id를 준 정상 응답 경로다. 사본에서 canRetry 인자를 지워 기본값 true로 만든 뒤 SDK 테스트를 돌렸더니 #451에서 77건, top에서 81건이 모두 통과했다. 같은 사본에 503 뒤 201을 주는 fake fetch로 시험해 보면 현재 동작은 맞다. external_id가 없으면 호출 1번 뒤 거절하고, 있으면 2번째에 성공한다.",
+      "evidence": "demo/sdk/src/meter-engine-client.ts:127-129 @ 53ec3d9; demo/sdk/src/meter-engine-client.ts:249-265 @ 53ec3d9; backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:88 @ 53ec3d9; demo/sdk/src/read-contract.test.ts:17 @ 854e293; demo/sdk/src/meter-engine-client.ts:168-170 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "다른 묶음과 겹침: 관련: k2 G-148(SDK 테스트가 CI에서 돌지 않음). 이것을 고치지 않으면 더한 테스트도 로컬에서만 돈다."
+    },
+    {
       "id": "G-105",
       "merged_ids": [],
       "verdict": "confirmed",
@@ -322,6 +522,21 @@
       "tests": [],
       "behavior_change": true,
       "notes": ""
+    },
+    {
+      "id": "G-107",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "요금제 기본료와 최소 사용료를 10원 미만 절사해 청구하지만 API는 아무 정수나 받고 이 규칙을 문서에 적지 않는다.",
+      "reason": "CreatePricePlanRequest는 base_fee, minimum_amount에 @NotNull @Min(0)만 걸고 PricePlanResponse는 저장값을 그대로 돌려준다. ChargeService.apply(194~200행)는 trim()(225~227행)으로 최소 사용료와 기본료의 10원 미만을 버린 값을 청구하므로 기본료 9,999원은 9,990원 라인, 5원은 라인 없음이 된다. 이 절사는 의도된 규칙으로 보인다(라인 금액이 모두 10원 단위라 최소 사용료 절사는 보정 라인 절사와 같고, demo/csvdemo/expected.py 389행도 같은 규칙을 구현). 그러나 PricePlanController 39~41행 설명은 절사를 말하지 않고, DraftInvoiceController 43행은 절사 대상 라인을 고객 x 미터 x 조합으로 정의해 기본료와 최소 사용료가 빠진다. 최상단(PricePlanController 42~44행, ChargeService 205, 207, 234행)도 같아서 등록값과 청구값의 차이를 API 문서로 설명할 수 없다.",
+      "evidence": "backend/src/main/java/com/meterengine/pricing/dto/CreatePricePlanRequest.java:14-15 @ 5efe449; backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:194-200,225-227 @ 5efe449; backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:39-41 @ 5efe449; backend/src/main/java/com/meterengine/invoice/controller/DraftInvoiceController.java:43 @ 5efe449; demo/csvdemo/expected.py:389 @ 5efe449",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "다른 묶음과 겹침: k6 C446-009 (PricingWorkspace가 기본료와 최소 사용료를 입력값 그대로 표시하지만 청구에서는 10원 미만을 버린다)"
     },
     {
       "id": "G-108",
@@ -354,6 +569,23 @@
       "notes": "보관 고객의 기존 인보이스 수금(자동 재시도, 관리자 결제, 공개 링크 재시도)을 멈출지 정한 정책이 없어 고치지 않았다. 쓰지 않는 ErrorCode.CUSTOMER_HAS_PAYMENT_ATTEMPTS와 PaymentAttemptRepository.existsByOrganizationIdAndCustomerId가 스택 끝까지 남는다."
     },
     {
+      "id": "G-110",
+      "merged_ids": [
+        "G-173"
+      ],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#446의 V41이 #449에서야 쓰는 invoice_view_link 표와 감사 행위자 값을 만들어, #449가 표를 고치려고 이미 V44에서 ALTER를 따로 쓰고 있다.",
+      "reason": "현재 #446 헤드의 V41__create_invoice_view_links.sql은 1-2행에서 #446이 쓰는 invoice.display_number(Invoice.java:17)를 더하고, 4-22행에서 invoice_view_link 표와 인덱스를, 24-26행에서 audit_log_actor_type_check에 'invoice_view_link'를 더한다. 이 표를 매핑하는 InvoiceViewLink 엔티티, 서비스, 컨트롤러는 #449(customer-invoices) diff에서 새로 생기고 #446-#448 헤드의 main 코드에는 쓰는 곳이 없다. CD는 main 머지가 곧 배포라서 #446이 먼저 머지되면 쓰지 않는 표와 제약이 운영 DB에 고정된다. 실제로 #449의 V44__allow_customer_payment_retry.sql은 ALTER TABLE invoice_view_link ADD COLUMN allow_payment_retry 한 줄이라, 지적이 말한 'V__를 못 고쳐 새 마이그레이션을 더한다' 형태가 이미 생겼고 #449 리뷰어는 자기 엔티티의 CREATE TABLE을 diff에서 볼 수 없다. #446의 SchemaConstraintTest.java:461도 이 표가 FK로 invoice를 가리키는 탓에 TRUNCATE 목록에 invoice_view_link를 넣어 두었다. 런타임 오류는 없어 심각도는 낮다.",
+      "evidence": "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql:1-26 @ 5efe449; backend/src/main/resources/db/migration/V44__allow_customer_payment_retry.sql:1 @ 7ce9d36; backend/src/main/java/com/meterengine/invoiceview/entity/InvoiceViewLink.java (#449에서 추가) @ 7ce9d36; backend/src/test/java/com/meterengine/global/SchemaConstraintTest.java:461 @ 5efe449; .github/workflows/cd.yml:12-14 @ 5efe449",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "고치지 않았다. invoice_view_link 표와 감사 값을 #449로 옮기려면 #446의 V41과 #449의 V44(k2 범위)를 함께 고쳐야 한다. 제안: #446 V41은 display_number 두 줄만 남겨 V41__add_invoice_display_number.sql로, 표 생성(allow_payment_retry 열 포함), 인덱스, audit_log_actor_type_check 교체는 #449 V44__create_invoice_view_links.sql로 옮기고 SchemaConstraintTest의 TRUNCATE 목록을 맞춘다. 런타임 오류는 없다."
+    },
+    {
       "id": "G-111",
       "merged_ids": [
         "G-171"
@@ -369,6 +601,21 @@
       "tests": [],
       "behavior_change": true,
       "notes": "다른 묶음과 겹침: k2 G-181 (#445, 같은 Idempotency-Key 계약 분기)"
+    },
+    {
+      "id": "G-113",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "전역 순번 노출은 사실이고 #453 test 환경 확정도 같은 IDENTITY를 소비해 live 번호에 공백이 생긴다. 다만 청구 메일에는 번호가 없다",
+      "reason": "전역 순번의 근거는 C446-007과 같다(V41 1~2행, InvoiceService 86~90행 @ 5efe449). #453 f040e96의 V48 22~23행은 invoice에 environment_id와 environment_scope_id만 더하고 display_number는 그대로 두며, InvoiceFinalizationService.save 104~116행은 test 환경 확정도 같은 invoice 테이블에 INSERT하므로 같은 IDENTITY 값을 쓴다. 그래서 같은 조직이 live 확정, test 확정, live 확정 순으로 하면 live 번호 사이에 test 건수만큼 빈다(임시 Postgres에서 live 4, test 6, live 7 재현). #449 공개 조회로 고객에게 나간다는 부분도 맞다(InvoiceViewLinkService 211행 @ 854e293). 청구 메일로 나간다는 부분은 틀리다. InvoiceEmailService 36~46행의 제목과 템플릿 변수에 invoice_number가 없다.",
+      "evidence": "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:22-23 @ f040e96; backend/src/main/java/com/meterengine/invoice/service/InvoiceFinalizationService.java:104-116 @ f040e96; backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:104-108 @ f040e96; backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:211 @ 854e293; backend/src/main/java/com/meterengine/invoice/service/InvoiceEmailService.java:36-46 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "C446-007와 같은 원인이라 그쪽에 묶었다. 두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none (#453 V48과 InvoiceService.java:104-108 @854e293에서도 전역 순번 그대로). C446-007과 같은 원인(V41:1-2 전역 IDENTITY, InvoiceService.java:104-108)이라 C446-007로 묶는다. 지적 일부는 틀렸다: 번호가 청구 메일로 고객에게 나간다고 했지만 InvoiceEmailService.record는 제목을 [도입사명] 청구월 사용료 청구서로 만들고 템플릿 변수에 번호를 넣지 않는다. 고객에게 닿는 경로는 admin이 발급한 공개 조회 링크(PublicInvoiceView.tsx:121, InvoicePaymentRetry.tsx:86)뿐이다. test 환경 확정이 live 번호 사이를 비운다는 점은 동작상 맞지만, backend/README.md가 invoice_number를 ME-청구월-고유번호이고 세금계산서나 영수증 번호가 아니라고 정해 연속성을 약속하지 않으므로 계약 위반은 아니다. IDENTITY는 롤백에도 번호를 소비해 원래 연속을 보장하지 않는다. 남는 피해는 승인된 도입사와 그 고객이 플랫폼 전체 확정 건수를 추정하는 정도라 low다."
     },
     {
       "id": "G-115",
@@ -491,6 +738,21 @@
       "notes": ""
     },
     {
+      "id": "G-147",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#447이 웹훅 엔드포인트 API에 status 필터와 archived_at을 더했지만, SDK의 listWebhookEndpoints와 WebhookEndpointResponse에는 반영하지 않았다. top에서도 그대로다.",
+      "reason": "#447 head의 WebhookEndpointController 49-53행은 GET /v1/webhook-endpoints에 status(기본 active)를 받고, WebhookEndpointResponse 17행은 archived_at을 돌려준다. top의 openapi.yaml에도 status 파라미터와 archived_at이 있다. 같은 #447에서 SDK의 listPaymentMethods와 listPricePlans에는 status?: ArchiveStatus가 생겼다. 그런데 listWebhookEndpoints(meter-engine-client.ts 120행)는 인자가 없고 WebhookEndpointResponse(types.ts 173-181행)에는 archived_at이 없다. 그래서 SDK로는 보관된 엔드포인트를 조회할 수 없고, 기본 active 목록에서 사라진 엔드포인트가 삭제된 것인지 보관된 것인지 구분할 수 없다. top(854e293)의 meter-engine-client.ts 228행과 types.ts 290-298행도 같다.",
+      "evidence": "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:49-53 @ afdf8f1; backend/src/main/java/com/meterengine/webhook/dto/WebhookEndpointResponse.java:17 @ afdf8f1; demo/sdk/src/meter-engine-client.ts:100,112,120-122 @ afdf8f1; demo/sdk/src/types.ts:173-181 @ afdf8f1; demo/sdk/src/meter-engine-client.ts:228-230 @ 854e293; demo/sdk/src/types.ts:290-298 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "다른 묶음과 겹침: k2 G-148(SDK와 데모 검사가 CI에 없음)이 근거로 같은 웹훅 보관 필드 차이를 든다."
+    },
+    {
       "id": "G-171",
       "merged_ids": [],
       "verdict": "confirmed",
@@ -504,6 +766,51 @@
       "tests": [],
       "behavior_change": true,
       "notes": "G-111와 같은 원인이라 그쪽에 묶었다. 다른 묶음과 겹침: k2 G-181 (#445, 같은 Idempotency-Key 계약 분기)"
+    },
+    {
+      "id": "G-172",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "공개 링크의 invoice_number가 전역 IDENTITY라 플랫폼 건수가 드러나고, V41 적용 시 기존 행도 물리 순서로 번호를 받는다",
+      "reason": "V41 1~2행의 ALTER TABLE ADD COLUMN ... GENERATED ALWAYS AS IDENTITY는 테이블 재작성 중 물리 저장 순서대로 기존 행에 번호를 채운다. 임시 Postgres에서 id 3, 1, 2 순으로 넣고 3을 UPDATE한 뒤 컬럼을 추가하자 물리 순서인 1, 2, 3이 1, 2, 3을 받아 삽입 순서와 달랐다. 즉 finalized_at 순서가 보장되지 않는다. 이후 번호는 InvoiceService 86~90행(@ 5efe449)에서 그대로 형식화되고, #449의 @PublicAccess POST /v1/public/invoice-links/lookup(InvoiceViewLinkController 85~86행, InvoiceViewLinkService 195행 @ 7ce9d36)과 PublicInvoiceView.tsx 121행의 '청구서 번호'로 고객에게 보인다. #453 V48 22~23행은 display_number를 손대지 않아 test 환경 인보이스도 같은 시퀀스를 쓴다.",
+      "evidence": "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql:1-2 @ 5efe449; backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:86-90 @ 5efe449; backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:85-86 @ 7ce9d36; backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:195 @ 7ce9d36; backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:22-23 @ f040e96; frontend/src/components/invoice-links/PublicInvoiceView.tsx:121 @ 854e293",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": true,
+      "notes": "C446-007와 같은 원인이라 그쪽에 묶었다. 두 번째 관점(실제 피해, 다른 PR의 차단): harmful=partial, 다른 곳 차단=none (V41은 main에 없고 CD는 main만 배포하므로 아직 적용된 DB가 없다. 그 밖에 막는 PR은 없다). C446-007과 같은 원인이라 C446-007로 묶는다. 공개 링크로 전역 번호가 보이는 점은 맞다(InvoiceViewLinkService.java:211, PublicInvoiceView.tsx:121). 더한 주장인 기존 인보이스가 V41 적용 때 힙 순서로 번호를 받는다는 것은 동작상 맞지만, V41이 main에 없고 배포 서버는 main만 배포하는 개발 서버 한 대라(deploy/README.md, cd.yml push branches main) 지금 영향받는 기존 데이터가 없다. README도 고유번호라고만 하고 확정 순서를 약속하지 않는다. test 반복 확정으로 live 번호에 공백이 생겨 고객 문의가 생긴다는 시나리오는 README의 계약(고유번호, 세금계산서 번호 아님)상 결함이라기보다 표시 방식의 아쉬움이다. 노출 대상이 승인된 도입사와 admin이 링크를 준 고객으로 한정되고 드러나는 것은 집계 건수뿐이라 low다."
+    },
+    {
+      "id": "G-173",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "G-110과 같은 원인이다. 표와 감사 행위자 값은 맞지만, 오류 코드와 FE 타입은 #446이 아니라 #442에서 들어왔다.",
+      "reason": "V41(#446) 4-26행이 invoice_view_link 표와 audit_log의 'invoice_view_link' 행위자 값을 만들고 이를 쓰는 코드는 #449에서 생긴다는 핵심은 G-110과 같다. ddl-auto=validate가 매핑 없는 표를 보지 않아 CI가 조용하다는 점도 맞다. 다만 INVOICE_VIEW_LINK_NOT_FOUND(ErrorCode.java:32)와 frontend/src/lib/api/management.ts:32의 actor_type 'invoice_view_link'는 #442(account-permissions) 헤드에 이미 있어 #446 diff에는 없다. 수정은 G-110과 같다.",
+      "evidence": "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql:4-26 @ 5efe449; backend/src/main/java/com/meterengine/global/error/ErrorCode.java:32 @ origin/feat/account-permissions; frontend/src/lib/api/management.ts:32 @ origin/feat/account-permissions",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": "G-110와 같은 원인이라 그쪽에 묶었다. 다른 묶음과 겹침: G-110과 같다. #442에서 먼저 들어온 FE actor_type은 k5 G-052(FE API 타입) 자료와 닿는다."
+    },
+    {
+      "id": "G-174",
+      "merged_ids": [],
+      "verdict": "confirmed",
+      "severity": "low",
+      "summary": "#446 V39, V40의 제약 이름 넷이 종류 접미사가 없고 #450 V45가 org 약어를 써 naming.md를 어긴다. 지적이 제안한 billable_metric_percentile_check는 자동 이름과 충돌한다.",
+      "reason": "main의 docs/contributing/naming.md:44는 DB 제약을 '<테이블>_<대상>_<종류>'(pk, fk, unique, check, not_null)로, 16행은 약어 금지를 정한다. V39(#446) 9, 11, 13행의 billable_metric_supported_aggregation, billable_metric_percentile_configuration, billable_metric_target_configuration과 V40(#446) 4행의 invoice_line_quantity_fraction_pair는 접미사가 없다. 빈 PG18에 #446까지 적용해 보니 접미사 없는 제약은 이 넷과 main에 이미 있는 outbound_email_period_format(V22)뿐이다. #450 V45:8의 organization_environment_org_id_unique는 main이 V9에서 invoice_org_id_unique를 invoice_organization_id_unique로 고친 바로 그 형태다. 이 이름을 분기에 쓰는 코드나 테스트는 스택 끝까지 없어 기능 오류는 없고 규칙 위반만 있다. key_mode_unique는 해석 여지가 있어 선택 사항으로 둔다.",
+      "evidence": "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql:9,11,13 @ 5efe449; backend/src/main/resources/db/migration/V40__preserve_exact_invoice_quantities.sql:4 @ 5efe449; backend/src/main/resources/db/migration/V45__create_organization_environments.sql:8-9 @ 457a0d8; docs/contributing/naming.md:16,44 @ origin/main; backend/src/main/resources/db/migration/V9__rename_organization_and_billable_metric_in_constraint_names.sql:8 @ origin/main",
+      "fixed": false,
+      "fix_branch": null,
+      "fix_commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "notes": ""
     }
   ],
   "new_findings": [],
@@ -515,8 +822,29 @@
     }
   ],
   "not_done": [
-    "#446, #447, #450 지적 판정과 네 PR의 추가 검토는 진행 중이다.",
-    "#451 확인된 지적의 수정은 아직 시작하지 않았다."
+    "#450 지적 판정과 네 PR의 추가 검토는 진행 중이다.",
+    "확인된 지적의 수정은 #447부터 진행 중이다."
   ],
-  "checks": []
+  "checks": [
+    {
+      "command": "cd backend && ./gradlew build (origin/feat/pricing-aggregation 5efe449)",
+      "result": "pass",
+      "detail": "기준선. 182초, openapi.yaml 변화 없음"
+    },
+    {
+      "command": "cd backend && ./gradlew build (origin/feat/resource-archive afdf8f1)",
+      "result": "pass",
+      "detail": "기준선. 244초, openapi.yaml 변화 없음"
+    },
+    {
+      "command": "cd backend && ./gradlew build (origin/feat/event-ingestion 457a0d8)",
+      "result": "pass",
+      "detail": "기준선. 248초, openapi.yaml 변화 없음"
+    },
+    {
+      "command": "cd backend && ./gradlew build (origin/feat/billing-queries 53ec3d9)",
+      "result": "pass",
+      "detail": "기준선. 261초, openapi.yaml 변화 없음"
+    }
+  ]
 }
