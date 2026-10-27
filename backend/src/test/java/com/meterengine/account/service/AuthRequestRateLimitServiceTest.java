@@ -74,7 +74,11 @@ class AuthRequestRateLimitServiceTest {
     first.addHeader(AuthRequestRateLimitService.CLIENT_IP_HEADER, "2001:db8::2");
     var second = request("2001:db8:1:0:0:0:0:1");
     second.addHeader(AuthRequestRateLimitService.CLIENT_IP_HEADER, "2001:db8:0:0:0:0:0:2");
-    assertThat(service.clientAddress(first)).isEqualTo(service.clientAddress(second));
+    assertThat(service.clientAddress(first)).isEqualTo("2001:db8:0:0:0:0:0:2");
+    assertThat(service.clientAddress(second)).isEqualTo("2001:db8:0:0:0:0:0:2");
+    var untrusted = request("2001:db8:2::1");
+    untrusted.addHeader(AuthRequestRateLimitService.CLIENT_IP_HEADER, "2001:db8::2");
+    assertThat(service.clientAddress(untrusted)).isEqualTo("2001:db8:2:0:0:0:0:1");
   }
 
   @Test
