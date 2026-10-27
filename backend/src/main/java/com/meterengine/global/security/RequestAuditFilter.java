@@ -65,7 +65,6 @@ public class RequestAuditFilter extends OncePerRequestFilter {
             route.equals("/v1/{unmatched}") ? RequestAuditTarget.empty() : target(request));
       } catch (RuntimeException exception) {
         logger.error("Request audit failed request_id=" + requestId, exception);
-        throw exception;
       }
     }
   }
