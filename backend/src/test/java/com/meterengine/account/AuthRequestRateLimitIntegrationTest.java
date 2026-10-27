@@ -8,6 +8,7 @@ import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
 import com.meterengine.account.service.AuthRequestRateLimitService;
 import com.meterengine.global.error.TooManyRequestsException;
+import com.meterengine.global.security.SecureTokens;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -165,6 +166,26 @@ class AuthRequestRateLimitIntegrationTest {
             jdbcTemplate.queryForList(
                 "SELECT octet_length(identity_hash) FROM auth_request_rate_limit", Integer.class))
         .containsOnly(32);
+  }
+
+  @Test
+  void 정리되지_않은_만료_행은_다음_시도에서_새_창으로_센다() {
+    byte[] address = SecureTokens.hash("203.0.113.17");
+    byte[] account = SecureTokens.hash(email());
+    assertThat(repository.consume("login", address, account, 1, 1, 300)).isZero();
+    assertThat(repository.consume("login", address, account, 1, 1, 300)).isPositive();
+    jdbcTemplate.update(
+        "UPDATE auth_request_rate_limit SET expires_at=statement_timestamp()-interval '1 second'");
+
+    assertThat(repository.consume("login", address, account, 1, 1, 300)).isZero();
+    assertThat(
+            jdbcTemplate.queryForList("SELECT attempts FROM auth_request_rate_limit", Long.class))
+        .containsOnly(1L);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT bool_and(expires_at > statement_timestamp()) FROM auth_request_rate_limit",
+                Boolean.class))
+        .isTrue();
   }
 
   @Test
