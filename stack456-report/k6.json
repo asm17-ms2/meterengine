@@ -46,6 +46,36 @@
    "pr": 442
   },
   {
+   "id": "C442-011",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "반박 시도: 새 계정 분기에서 Bearer가 실려도 백엔드가 무시하는지 확인했다. 무시하지 않는다. frontend/src/app/organization-invitations/[token]/actions.ts:48 은 account_exists와 관계없이 token: sessionToken(me_session 쿠키 값, lib/auth/session.ts:13-15)을 넘기고 transport가 Authorization: Bearer를 붙인다. 백엔드 ApiCredentialAuthenticationFilter.java:48-72는 헤더가 있으면 permitAll 경로라도 먼저 인증하고, 세션이 없거나 취소됐으면 INVALID_CREDENTIALS(401), 동의가 필요한 세션이면 consent 경로 밖이라 CONSENT_REQUIRED(403)로 끝낸다. OrganizationPeopleService.accept(top 235-289)의 새 계정 분기(user == null)는 principal을 쓰지 않으므로 헤더가 필요 없다. 서버에서만 세션이 끝나는 경로가 실제로 있다: 소속 보관(OrganizationPeopleService.remove -> OrganizationAccountService.revoke -> UserSessionRepository.detachMembership이 revokedAt을 넣음), 부트스트랩 비밀번호 변경(BootstrapService.revokeSessions). 쿠키는 saveSession의 expires(ttl 12h)까지 남고, 프론트에서 쿠키를 지우는 곳은 logoutAction의 clearSession 하나뿐이다. page.tsx:24-31은 current가 401이어도 새 계정이면 InvitationForm만 그리고 로그아웃 수단을 보이지 않는다. '도입사 선택으로'는 /login?reason=expired로 가는데 초대받은 사람은 계정이 없어 로그인으로 쿠키를 바꿀 수도 없다. 그래서 이전 판정의 '옛 계정으로 다시 로그인하면 된다'는 쿠키 주인과 초대받은 사람이 같을 때만 맞고, 공용 PC에서는 쿠키가 만료될 때까지(최대 12시간) 수락이 막힌다. 같은 PR의 계약 테스트 auth.contract.spec.ts는 가입에서 'without stale Bearer'를 따로 검사하므로 공개 요청에 남은 Bearer를 싣지 않는 것이 팀 의도다. 줄은 #442에서 들어와 top까지 그대로다(이후 바뀐 것은 61행 redirect 대상뿐). 심각도: 드문 조건이지만 신규 가입 흐름이 원인 모를 '인증 정보가 올바르지 않습니다'로 막히고 화면 안 회복 수단이 없어 medium.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/actions.ts:48 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:48 @ 854e293, frontend/src/app/organization-invitations/[token]/page.tsx:24 @ 0245c15, backend/src/main/java/com/meterengine/global/security/ApiCredentialAuthenticationFilter.java:61 @ 854e293, backend/src/main/java/com/meterengine/account/repository/UserSessionRepository.java:23 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "k5 X-103(lib/auth/session.ts:22, 서버가 세션을 거부해도 무효 쿠키를 남김)과 원인이 이웃한다. X-103을 고쳐 requireSession이 401에서 쿠키를 지우게 해도 초대 화면은 requireSession을 쓰지 않으므로 이 수정이 따로 필요하다. invite-logout-breaks(C442-013) 수정안대로 signInForInvitation이 현재 세션을 끝내면 기존 계정 분기의 남은 쿠키도 함께 지워진다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
+  },
+  {
+   "id": "C442-013",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 로그아웃 뒤에도 초대 흐름으로 돌아오는 길이 있는지 찾았으나 없다. frontend/src/app/organization-invitations/[token]/page.tsx:30 은 기존 계정 초대이고 다른 계정으로 로그인돼 있으면 '현재 로그인: ...'과 공용 LogoutButton을 보인다. LogoutButton(components/auth/SessionControls.tsx:8-11)은 app/session-actions.ts:10-21의 logoutAction을 부르고, 이 액션은 DELETE /v1/sessions/current, clearSession 뒤 redirect('/login')만 한다. returnTo도 me_invitation_flow 쿠키도 없다. 흐름을 잇는 것은 같은 블록의 signInForInvitation(actions.ts:15-20, 쿠키를 넣고 /login?returnTo=%2Forganization-invitations%2Fcontinue)뿐이다. 로그아웃 뒤 /login에서 b로 로그인하면 loginAction이 safeReturnPath('')의 기본값(#442 /customers, top /overview)으로 보낸다. b에게 활성 소속이 없어도 SessionService.create(top 105-118)가 유효한 초대(existsByEmail)를 근거로 도입사 없는 세션을 만들어 로그인은 되고, requireTenantSession이 /organizations로 보내 '소속된 도입사가 없습니다. 운영자에게 소속 추가를 요청하세요.'를 보인다. 초대가 대기 중인데도 틀린 안내다. 링크를 다시 열면 이어갈 수 있고 데이터 손실이 없어 low. 덧붙여 '해당 계정으로 로그인' 경로도 쿠키만 덮어써 a의 세션이 서버에 12시간 남는다. 줄은 #442에서 들어와 top까지 그대로다.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/page.tsx:30 @ 0245c15, frontend/src/app/organization-invitations/[token]/page.tsx:30 @ 854e293, frontend/src/app/session-actions.ts:20 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:15 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "invite-other-account(X-032) 수정이 같은 endCurrentSession()을 쓴다. signInForInvitation이 남은 쿠키도 지우므로 C442-011의 기존 계정 쪽 회복도 쉬워진다. reviewConsentsForInvitation은 일치 계정 경로라 바꾸지 않는다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
+  },
+  {
    "id": "C446-002",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -91,6 +121,56 @@
    "pr": 446
   },
   {
+   "id": "D-061",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "frontend/src/app/organization-invitations/[token]/page.tsx:32 은 세션과 관계없이 <Link href=\"/organizations\">도입사 선택으로</Link>를 그린다. 반박 시도: 비로그인 사용자에게도 쓸모가 있는지 봤다. /organizations는 proxy.ts(#442 10-15행, top 15-20행)의 공개 경로가 아니어서 me_session 쿠키가 없으면 /login?returnTo=%2Forganizations로 보낸다. 새 계정 초대 수신자는 계정이 없어 그 로그인 화면에서 나아갈 수 없고, 기존 계정 수신자도 로그인 뒤 /organizations로 가서 초대 흐름(continue)을 잃는다. 바로 위의 '해당 계정으로 로그인'이 그 역할을 한다. 브라우저 뒤로 가기로 돌아올 수 있어 원 지적의 '메일의 링크를 다시 찾아야 한다'는 과장이지만, 비로그인 사용자에게는 막다른 길로만 이어지는 링크다. 로그인한 사용자(current?.ok)에게는 초대를 받지 않고 콘솔로 돌아가는 탈출구라 의미가 있다. 줄은 #442에서 들어와 top까지 그대로다.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/page.tsx:32 @ 0245c15, frontend/src/app/organization-invitations/[token]/page.tsx:32 @ 854e293, frontend/src/proxy.ts:11 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "D-095(invite-other-account)의 마지막 문장과 같은 지적이다. 그 결과에는 합치지 않고 여기서 판정했다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
+  },
+  {
+   "id": "D-113",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "#451(feat/billing-queries)에서 확정 인보이스 표의 수납 상태 태그(InvoicesSection.tsx:111)와 수납 상태 필터(ResourceSearchControls.tsx:112)가 unpaid '미납', paid '납부 완료', failed '결제 실패'를 새로 들였다. 같은 PR에서 생긴 고객 상세 '수납 상태' 열(customers/[id]/page.tsx:43)과 개요 '고객별 수납 현황'(overview/page.tsx:25), 그리고 #445의 수납 목록은 WorkspaceView STATUS_LABELS로 '결제 전', '수납 완료', '실패'를 보인다. 인보이스 행의 '수납과 고객 조회 링크'로 /payments/{id}에 가면 같은 건의 이름이 바뀐다. 반박 시도: 인보이스 화면은 고객에게 받을 돈 관점이라 '납부'를 썼다고 볼 수 있으나, 같은 운영자 콘솔이고 열 이름이 똑같이 '수납 상태'이며 메뉴가 '수납과 취소'라 의도된 구분으로 볼 근거가 없다. 또 InvoicesSection.tsx:111 맵에 not_required가 없어 백엔드가 0원 인보이스에 주는 not_required(InvoicePaymentService.java:93)가 원문 그대로 태그에 나온다. '미납'은 실패까지 포함하는 말로 읽히지만 unpaid는 시도가 없는 건만이라(InvoicePaymentService.java:97), 필터에서 '미납'을 고른 운영자가 결제 실패 건을 놓친다.",
+   "evidence": "frontend/src/components/invoices/InvoicesSection.tsx:111 @ 53ec3d9, frontend/src/components/screen/ResourceSearchControls.tsx:112 @ 53ec3d9, frontend/src/app/(console)/customers/[id]/page.tsx:43 @ 53ec3d9, frontend/src/app/(console)/overview/page.tsx:25 @ 53ec3d9, frontend/src/components/workspace/WorkspaceView.tsx:19 @ 53ec3d9, backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java:93 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 X-009, D-005, D-131, D-211, D-251과 겹친다. k5가 lib(예: lib/invoice-payment-status.ts)에 같은 맵을 #451 이하에 두면 1)의 components/invoices 모듈은 만들지 않고 그 맵을 쓴다. 두 묶음이 서로 다른 맵을 만들지 않게 수정 담당이 먼저 확인한다. 인보이스 표 태그 색은 invoice-status-tag-grey 묶음 D-156에서 같은 파일(InvoicesSection.tsx, InvoicesTable.tsx)을 고치므로 같은 수정 단위로 묶는 편이 낫다. D-149, D-027, D-046이 든 #451 부분도 이 결과가 맡는다.",
+   "pr": 451
+  },
+  {
+   "id": "D-149",
+   "merged_ids": [
+    "D-027",
+    "D-046",
+    "D-087",
+    "D-183"
+   ],
+   "verdict": "confirmed",
+   "severity": "medium",
+   "reason": "같은 /v1/invoice-payments status를 #445에서 두 화면이 다르게 부른다. 수납 목록(payments/page.tsx:17 '수납 상태' 열)은 statusLabels 없이 WorkspaceView.tsx:19 STATUS_LABELS를 써서 unpaid '결제 전', pending '결과 확인 중', failed '실패'로 보이고, 결제 상세(payments/[id]/page.tsx PAYMENT_STATES, 445에서 18-21행, 최상단 20-23행)는 unpaid '미청구', pending '결제 결과 확인 중', failed '결제 실패'로 보인다. 반박 시도: 이 파일 안에서 '청구'는 카드 결제 요청 뜻으로 쓰여(ActionPanel '등록 카드로 청구합니다', pending 설명 '추가로 청구할 수 없습니다') '미청구'를 '카드 청구 전'으로 읽을 여지가 있고, 백엔드 InvoicePaymentService.java:97도 시도가 없을 때만 unpaid를 준다. 그러나 같은 화면 머리말이 '{월} 청구액 N원'(445에서 85행)이고 제품 전체에서 '청구'는 인보이스 확정, 발행(청구 검토, 청구 예정액, 청구서 번호)을 뜻하므로, 확정된 인보이스에 '미청구'가 붙으면 아직 청구하지 않은 것으로 읽힌다. 목록에서 '결제 전'으로 본 고객을 열면 '테스트 결제 / 미청구'가 나와 두 상태가 다른지 판단할 수 없다(k5 X-009 이전 판정의 캡처 payments__id.state-unpaid-no-card.png와 payments.desktop.png도 같다). 지적의 인보이스 목록 '미납', '납부 완료'와 필터 부분은 #451에서 들어왔으므로 결과 D-113으로 나눴다. D-087이 든 개요의 '미결제'(overview/page.tsx:22)는 상태 이름이 아니라 DashboardService OUTSTANDING(unpaid, pending, failed) 금액 묶음 설명이라 결함으로 보지 않는다. 고객용 PublicInvoiceView의 '결제 전', '납부 완료'는 독자가 달라 그대로 둔다.",
+   "evidence": "frontend/src/app/(console)/payments/[id]/page.tsx:18 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:20 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:85 @ 2e98143, frontend/src/app/(console)/payments/page.tsx:17 @ 2e98143, frontend/src/components/workspace/WorkspaceView.tsx:19 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:20 @ 854e293, backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java:97 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 X-009, D-005, D-131, D-211, D-251(WorkspaceView.tsx:19 수납 상태 이름)과 같은 문제다. k5가 lib에 공용 수납 상태 맵을 #445 이하에 두면 1), 2)는 그 맵의 label을 가져다 쓰고 같은 줄을 두 묶음이 따로 고치지 않게 맞춘다. D-149, D-027, D-046은 #451의 InvoicesSection, ResourceSearchControls 부분도 들었는데 그 부분은 결과 D-113에 있다. 두 결과는 같은 이름 한 벌을 쓴다. 같은 파일의 '{attempt.mode}' 원문 노출은 raw-codes-many-screens 묶음 X-029에서 다룬다.",
+   "pr": 445
+  },
+  {
    "id": "D-163",
    "merged_ids": [
     "D-015",
@@ -130,6 +210,38 @@
    "pr": 451
   },
   {
+   "id": "G-056",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "복사를 확인했다. 토큰 형식 /^me_invite_[A-Za-z0-9]{32}$/ 이 frontend/src/app/organization-invitations/[token]/actions.ts:17,24,31, frontend/src/app/organization-invitations/[token]/page.tsx:19, frontend/src/app/organization-invitations/continue/page.tsx:11 다섯 곳에, me_invitation_flow 쿠키 이름과 옵션(httpOnly, secure, sameSite lax, path /organization-invitations, maxAge)이 frontend/src/app/organization-invitations/[token]/actions.ts:18,25,50 세 곳, 이름이 frontend/src/app/organization-invitations/continue/page.tsx:10 에 따로 있다. 형식은 백엔드 SecureTokens.generate(접두사 뒤 base62 32자)와 묶인 값이다. 반박 시도: 지금 서로 어긋난 곳이 있는지 봤으나 없다. 다섯 정규식과 세 옵션은 #442와 top 모두 글자까지 같아 현재 실패 경로는 없다. 그래서 위험은 바꿀 때 생기는 것뿐이고 low다. 그래도 confirmed로 두는 이유: 50행의 삭제는 set과 같은 path여야 지워지는데 이 짝을 묶는 것이 없고, invite-logout-breaks, invite-other-account 수정이 토큰 검사와 세션 정리를 더 늘리므로 지금 한곳으로 모으는 비용이 가장 작다. 줄은 모두 #442에서 들어왔고 top까지 정규식과 쿠키 줄은 그대로다.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/actions.ts:17 @ 0245c15, frontend/src/app/organization-invitations/[token]/actions.ts:50 @ 0245c15, frontend/src/app/organization-invitations/[token]/page.tsx:19 @ 0245c15, frontend/src/app/organization-invitations/continue/page.tsx:11 @ 0245c15",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 G-070과 일부 겹친다(초대 흐름 쿠키 부분). 이 결과는 초대 화면 파일 범위만 맡는다. continue/page.tsx 12행은 #451(53ec3d9)에서 링크 대상만 바뀌어 이웃 줄이라 스택을 다시 쌓을 때 작은 충돌이 날 수 있다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
+  },
+  {
+   "id": "G-099",
+   "merged_ids": [
+    "G-179"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "두 지적은 같은 줄, 같은 원인이라 합친다. frontend/src/app/organization-invitations/[token]/actions.ts:53 의 초대 수락 뒤 자동 로그인 requestApi('/v1/sessions', { method: 'POST', body })는 clientIp를 넘기지 않는다. #454(ecf459b)는 (public)/actions.ts의 loginAction(21-22행), signupAction(44행)에 clientIp: (await headers()).get('x-meterengine-client-ip')를 넣고 transport.ts:98에 X-MeterEngine-Client-IP 헤더를 더했지만 이 호출처는 빠졌다. PR 본문도 '프록시를 거친 실제 IP를 전달'을 변경으로 적었다. 반박 시도: 헤더 없이도 실제 IP가 잡히는지 봤으나 아니다. 프론트는 METERENGINE_API_BASE_URL=http://caddy:8081 로 백엔드를 부르고, 내부 8081 사이트는 헤더를 덮어쓰지 않는다(deploy/caddy/Caddyfile:57은 공개 사이트에만 있다). AuthRequestRateLimitService.clientAddress(75-86행)는 접속 상대가 신뢰 프록시(compose 기본 172.30.0.8/29, Caddy 172.30.0.10)이고 헤더가 정확히 하나일 때만 헤더를 쓰고, 아니면 접속 상대 주소를 쓴다. 그래서 이 요청들은 모두 Caddy 주소 버킷(login 100회/5분)을 나눠 쓰고, 넘으면 수락은 됐는데 54행의 '초대를 수락했습니다. 로그인 화면에서 도입사로 이동하세요.'로 떨어진다. 원 지적의 '로그에서도 실제 IP를 알 수 없다'는 틀렸다: RequestLogFilter.java:130은 헤더를 보지 않고 getRemoteAddr만 쓰므로 이 수정과 관계없다. 버킷을 넘으려면 5분에 초대 수락 100건이 필요해 영향은 low. 문제 조합(한도와 헤더 규칙)은 #454에서 생겼고, #442 head에는 호출 제한이 없어 문제가 없다. #454와 top의 이 파일은 같다.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/actions.ts:53 @ ecf459b, frontend/src/app/organization-invitations/[token]/actions.ts:53 @ 854e293, frontend/src/app/(public)/actions.ts:21 @ ecf459b, backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:78 @ 854e293, deploy/caddy/Caddyfile:76 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "k1 C454-011(RequestLogFilter 초대 토큰 가림 테스트)과 파일은 다르다. 초대 수락 화면 묶음 중 이것만 #454를 고친다. actions.ts는 #442 수정(C442-011 등)과 같은 파일이라 #454로 올라오면서 5행 import가 겹칠 수 있다.",
+   "pr": 454
+  },
+  {
    "id": "G-189",
    "merged_ids": [],
    "verdict": "confirmed",
@@ -143,6 +255,23 @@
    "behavior_change": false,
    "notes": "unit-tests-unrun(C442-005)과 겹친다: test:unit 스크립트 줄은 두 수정이 같은 글자, 같은 자리로 더하게 맞췄다. 단위 검사 문서화 부분만 보면 README 시험 절을 들인 #452가 빠뜨린 것이지만, 지적 id가 하나라 나눌 수 없고 #453에서 한 번에 고치는 편이 충돌이 적다. query-ws-spec-unmatched(C453-011): query-workspace.real.spec.ts는 어느 설정의 testMatch에도 없어 test:e2e:mvp로도 돌지 않는다. README에 이 spec을 적지 않는다. pw-missing-specs(C445-014, G-191): #442부터 #452 head의 payment, workspace, mvp 설정이 #453에서야 생기는 spec을 가리키는 문제로, 고칠 PR을 #453으로 잡은 근거와 같다. 실행 확인은 최상단 작업 트리(/home/user/wt/top, 854e293)에서 했고 결과 경로는 S/shots/readme-test-commands/ 아래로 돌렸다. 작업 트리의 git status는 깨끗했다.",
    "pr": 453
+  },
+  {
+   "id": "X-032",
+   "merged_ids": [
+    "D-095"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "두 지적은 같은 원인(새 계정 분기 frontend/src/app/organization-invitations/[token]/page.tsx:31 이 현재 로그인 상태를 보지 않고 InvitationForm만 그림)이라 합친다. 반박 시도: 초대 화면이 다른 경로로 로그인 상태를 알리는지 봤으나 없다. 기존 계정 분기(30행)는 current?.ok일 때 '현재 로그인: ...'을 보이지만 31행 분기는 sessionToken, current를 읽어 두고도 쓰지 않는다. account_exists가 false면 현재 계정은 반드시 초대 이메일과 다른 계정이다. acceptInvitationAction(actions.ts:52-56)은 새 계정으로 로그인해 saveSession으로 기존 쿠키를 덮어쓴다. 기존 세션은 서버에서 끝내지 않아 TTL까지 남고 브라우저만 새 계정으로 바뀐다. 발급 모달(components/workspace/ActionPanel.tsx:126)은 '초대 링크 열기'를 target=_blank로 같은 브라우저에 열어 대표관리자 본인이 이 화면을 보기 쉽다. 그 상태에서 제출하면 초대 이메일 계정이 대표관리자가 정한 비밀번호로 만들어지고 초대는 한 번만 쓸 수 있다. 다만 화면 제목과 설명이 초대 도입사와 초대 이메일을 밝히고 이름, 비밀번호, 두 동의를 직접 채워야 제출되므로 잘못 수락할 가능성은 낮다. 원 지적의 medium보다 low가 맞다. 줄은 #442에서 들어와 top까지 그대로다.",
+   "evidence": "frontend/src/app/organization-invitations/[token]/page.tsx:31 @ 0245c15, frontend/src/app/organization-invitations/[token]/page.tsx:31 @ 854e293, frontend/src/app/organization-invitations/[token]/actions.ts:55 @ 0245c15, frontend/src/components/workspace/ActionPanel.tsx:126 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "D-095의 마지막 문장('도입사 선택으로' 링크)은 invite-anon-org-link(D-061)에서 판정한다. k5 D-127, X-004(ActionPanel의 초대 링크 모달)와 화면이 이어진다. 수락 시 기존 세션을 서버에서 끝내지 않는 점은 새 계정 수락을 막지 않아 이 결과에서는 고치지 않는다. invite-stale-bearer, invite-logout-breaks, invite-other-account, invite-anon-org-link, invite-token-dup의 수정은 모두 #442의 같은 두 파일(actions.ts, page.tsx)을 고치므로 한 수정 담당이 한 번에 적용하는 것이 충돌이 적다. invite-token-dup(G-056)의 공용 모듈을 먼저 만들고 나머지가 그것을 쓰게 한다.",
+   "pr": 442
   },
   {
    "id": "X-074",
@@ -201,14 +330,39 @@
    "why": "일부만 범위 밖: 백엔드 PriceRateService.list가 조직 단가 전체를 읽고 메모리에서 거르는 것은 backend 범위다. 화면 호출 수를 줄이면 이 묶음 문제는 풀린다."
   },
   {
+   "id": "D-113",
+   "file": "frontend/src/components/invoices/invoice-payment-status.ts, frontend/src/components/invoices/InvoicesSection.tsx, frontend/src/app/(console)/customers/[id]/page.tsx, frontend/src/app/(console)/overview/page.tsx, frontend/src/app/(console)/payments/page.tsx, frontend/src/app/(console)/payments/[id]/page.tsx, frontend/e2e/invoice-payment-status.test.mjs",
+   "why": "일부만 범위 밖: frontend/src/components/screen/ResourceSearchControls.tsx:112 수납 상태 필터 옵션 이름('미납', '납부 완료' 등)은 k5 범위다. 같은 한 벌(결제 전, 결과 확인 중, 수납 완료, 결제 실패, 부분 취소, 전액 취소)로 바꾸고 option value는 그대로 둬야 한다(k5 X-009, D-005, D-131). 백엔드 필터가 not_required를 받으므로(WorkspaceQueryService PAYMENT_STATUSES) 그 옵션을 더할지도 k5가 정한다."
+  },
+  {
+   "id": "D-149",
+   "file": "frontend/src/app/(console)/payments/[id]/page.tsx, frontend/src/app/(console)/payments/page.tsx",
+   "why": "일부만 범위 밖: WorkspaceView.tsx:19 공용 STATUS_LABELS(k5 범위)는 바꾸지 않는다. 공용 수납 상태 맵을 lib에 두는 일은 k5 X-009 몫이다."
+  },
+  {
    "id": "D-166",
    "file": "frontend/src/app/(console)/customers/[id]/page.tsx",
    "why": "일부만 범위 밖: D-018의 '.workspace-actions { align-items: center }' 기본값 제안은 globals.css(k5 범위) 공통 규칙 변경이라 k6에서 하지 않는다. k5 X-076이 같은 내용이다. D-018의 수납 상세 헤더 링크 흩어짐은 header-links-scattered 결과 X-075(#445, payments/[id]/page.tsx)에서 고친다."
   },
   {
+   "id": "G-056",
+   "file": "frontend/src/app/organization-invitations/invitation-flow.ts, frontend/src/app/organization-invitations/[token]/actions.ts, frontend/src/app/organization-invitations/[token]/page.tsx, frontend/src/app/organization-invitations/continue/page.tsx",
+   "why": "일부만 범위 밖: k5 G-070(proxy.ts의 'me_session' 문자열 직접 사용, 쿠키 이름과 옵션 공용 모듈 제안)은 lib/와 proxy.ts라 k5에서 다룬다. k5가 lib/auth/cookies.ts 같은 공용 모듈을 만들면 이 파일의 쿠키 옵션은 그쪽으로 옮겨도 된다."
+  },
+  {
+   "id": "G-099",
+   "file": "frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "일부만 범위 밖: 원 지적의 '공개 로그인 호출을 한 함수로 모은다'는 공용 함수를 frontend/src/lib/(k5 범위)에 두게 되므로 여기서 하지 않는다. 필요하면 k5에서 lib/auth에 createSession(email, password) 같은 함수를 만들고 loginAction과 이 호출이 함께 쓰게 한다."
+  },
+  {
    "id": "G-189",
    "file": "frontend/package.json, frontend/README.md",
    "why": "일부만 범위 밖: MVP 실제 스택의 사전 준비 중 고정 경로(/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json, toss-state.json, workspace 결과 기본 경로)는 pw-hardcoded-paths 묶음(C442-014, G-023, G-037, G-190)이 바꿀 수 있다. 그 수정이 환경변수를 들이면 README에는 그 변수 이름을 적고, 아직 고정 경로이면 'macOS 경로가 고정돼 있다'는 사실만 적고 경로를 고치지 않는다. CI에서 단위 검사를 돌리는 단계는 C442-005의 out_of_scope_parts(.github/workflows/ci.yml)다."
+  },
+  {
+   "id": "X-032",
+   "file": "frontend/src/app/organization-invitations/[token]/page.tsx, frontend/src/app/organization-invitations/[token]/actions.ts",
+   "why": "일부만 범위 밖: 원 지적의 대안인 발급 모달의 '초대 링크 열기' 제거나 문구 변경은 frontend/src/components/workspace/ActionPanel.tsx(k5 범위, 줄은 #442 이후 화면 공통 컴포넌트)라 여기서 다루지 않는다. 이 수정만으로도 혼동은 막힌다."
   }
  ],
  "not_done": [],
