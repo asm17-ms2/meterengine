@@ -1,0 +1,13 @@
+# 추가 검토 관점
+
+앞선 검토는 버그, 보안, 테스트, 화면 디자인을 덮었다. 이 검토는 아래 두 관점만 본다. 취향만의 지적은 하지 않고, 지적마다 구체적인 결과(앞으로 생길 버그, 구현 갈라짐, 장애, 느린 쿼리, 배포 실패, 운영자가 못 보는 문제, 라이선스나 공급망 위험, 규칙 위반)를 적는다.
+
+## 유지보수성과 설계
+
+Look for: logic duplicated from existing code in the repo (search the codebase for an existing util/service doing the same; name it), copy-pasted blocks inside the PR that will diverge, layering violations versus the existing package structure (controller doing persistence, domain depending on web, cross-module reach-ins), dead code and unused parameters/endpoints/flags, needless complexity that hides bugs, misleading names (method does more or less than its name), type design problems (money as double/long without currency or scale, primitive ids that can be swapped, nullable where an Optional or invariant fits, stringly-typed enums, mutable value objects, invalid states representable), API design inconsistencies versus existing controllers (URL style, HTTP methods, status codes, error body format and codes, pagination/sorting params, date formats), openapi.yaml drift from controllers, frontend component/hook duplication and inconsistent data-fetching patterns, and code comments that violate the team rule.
+
+## 운영과 배포
+
+Look for: missing or misleveled logging/metrics for new jobs, webhook deliveries, payments, rate limiting and failures (an operator could not tell something broke); secrets or PII in logs; new queries without a supporting index (read the migrations in the stack and main for indexes; consider table growth like events/usage/audit), full scans, unbounded IN lists, missing pagination, exports loading everything into memory; transaction scope too large or holding locks over network calls; rollout safety (migration and code deploy order, NOT NULL without default on existing tables, renamed/dropped columns used by the old version during rolling deploy, data backfills inside Flyway on large tables, irreversible changes without a rollback path); config and environment (new properties without defaults or with unsafe defaults, missing in deploy/compose/env examples, profile-specific behavior, hardcoded URLs/ports/regions); scheduler and retry behavior under multiple instances; deploy and infra scripts (bash safety: set -euo pipefail, quoting, idempotency, IAM least privilege, destructive commands, cost leaks); dependency changes in build.gradle.kts / package.json / lockfiles (new libraries, version pins, licenses, known-vulnerable versions, duplicated libraries); README/docs that must change per the documents.md README check rule but did not.
+
+PR 하나의 diff는 `git diff origin/<base 브랜치> origin/<PR 브랜치>`로 본다. 지적 위치는 그 PR head의 파일과 줄이다.

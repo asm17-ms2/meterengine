@@ -1,0 +1,149 @@
+{
+ "k1": {
+  "name": "백엔드 계정, 권한, 요청 감사, 호출 제한",
+  "prs": [
+   442,
+   443,
+   448,
+   454
+  ],
+  "count": 80,
+  "by_scope_status": {
+   "code:confirmed": 10,
+   "code:unverified": 19,
+   "gap:unverified": 51
+  },
+  "by_severity": {
+   "high": 14,
+   "medium": 35,
+   "low": 31
+  },
+  "refuted": 5,
+  "maint_ops_todo": [
+   448,
+   454
+  ],
+  "bytes": 252043
+ },
+ "k2": {
+  "name": "백엔드 웹훅과 예약 작업, 결제, 고객 인보이스",
+  "prs": [
+   444,
+   445,
+   449
+  ],
+  "count": 58,
+  "by_scope_status": {
+   "code:confirmed": 11,
+   "code:unverified": 24,
+   "gap:unverified": 23
+  },
+  "by_severity": {
+   "high": 8,
+   "medium": 17,
+   "low": 33
+  },
+  "refuted": 1,
+  "maint_ops_todo": [
+   444,
+   445,
+   449
+  ],
+  "bytes": 180260
+ },
+ "k3": {
+  "name": "백엔드 요금과 집계, 자원 보관, 수집, 조회와 내보내기",
+  "prs": [
+   446,
+   447,
+   450,
+   451
+  ],
+  "count": 75,
+  "by_scope_status": {
+   "code:unverified": 42,
+   "gap:unverified": 33
+  },
+  "by_severity": {
+   "high": 6,
+   "medium": 28,
+   "low": 41
+  },
+  "refuted": 0,
+  "maint_ops_todo": [
+   446,
+   447,
+   450,
+   451
+  ],
+  "bytes": 140347
+ },
+ "k4": {
+  "name": "demo와 Lumen 예제, 환경 분리, 배포와 측정 인프라",
+  "prs": [
+   452,
+   453,
+   455
+  ],
+  "count": 45,
+  "by_scope_status": {
+   "code:unverified": 29,
+   "gap:unverified": 16
+  },
+  "by_severity": {
+   "medium": 20,
+   "low": 21,
+   "high": 4
+  },
+  "refuted": 0,
+  "maint_ops_todo": [
+   452,
+   453,
+   455
+  ],
+  "bytes": 91424
+ },
+ "k5": {
+  "name": "프론트 공통: 셸, 화면 틀, 작업 공간 컴포넌트, 전역 스타일",
+  "prs": [],
+  "count": 238,
+  "by_scope_status": {
+   "code:confirmed": 8,
+   "code:unverified": 4,
+   "design:unverified": 134,
+   "extra:confirmed": 8,
+   "extra:confirmed-partial": 2,
+   "extra:unverified": 43,
+   "gap:unverified": 39
+  },
+  "by_severity": {
+   "medium": 103,
+   "low": 120,
+   "high": 15
+  },
+  "refuted": 0,
+  "maint_ops_todo": [],
+  "bytes": 515133
+ },
+ "k6": {
+  "name": "프론트 화면별: 콘솔 페이지, 인증, 요금, 청구, 인보이스 링크, 결제수단 등록 등",
+  "prs": [],
+  "count": 239,
+  "by_scope_status": {
+   "code:confirmed": 6,
+   "code:unverified": 20,
+   "design:unverified": 130,
+   "extra:confirmed": 5,
+   "extra:unverified": 48,
+   "gap:unverified": 30
+  },
+  "by_severity": {
+   "medium": 84,
+   "low": 145,
+   "high": 10
+  },
+  "refuted": 2,
+  "maint_ops_todo": [],
+  "bytes": 444443
+ }
+}
