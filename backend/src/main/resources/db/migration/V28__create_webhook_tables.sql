@@ -47,7 +47,7 @@ CREATE TABLE webhook_delivery_attempt (
   webhook_delivery_id UUID NOT NULL,
   attempted_at TIMESTAMPTZ NOT NULL,
   response_status INTEGER,
-  failure_reason VARCHAR CONSTRAINT webhook_delivery_attempt_failure_reason_check CHECK (failure_reason IN ('timeout', 'connection_error', 'unexpected_status', 'blocked_address', 'endpoint_disabled', 'lease_expired')),
+  failure_reason VARCHAR CONSTRAINT webhook_delivery_attempt_failure_reason_check CHECK (failure_reason IN ('timeout', 'connection_error', 'unexpected_status', 'blocked_address', 'endpoint_disabled', 'secret_unavailable', 'lease_expired')),
   duration_ms BIGINT NOT NULL CONSTRAINT webhook_delivery_attempt_duration_ms_check CHECK (duration_ms >= 0),
   CONSTRAINT webhook_delivery_attempt_webhook_delivery_same_organization_fk FOREIGN KEY (organization_id, webhook_delivery_id) REFERENCES webhook_delivery(organization_id, id)
 );
