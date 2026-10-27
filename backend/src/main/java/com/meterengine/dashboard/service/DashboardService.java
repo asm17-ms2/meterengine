@@ -106,12 +106,12 @@ public class DashboardService {
         OffsetDateTime.now(clock),
         count(
             "select count(*) from customer where organization_id = ? and environment_id IS NOT"
-                + " DISTINCT FROM ?::uuid",
+                + " DISTINCT FROM ?::uuid and archived_at is null",
             organizationId,
             BusinessEnvironmentContext.environmentId()),
         count(
             "select count(*) from billable_metric where organization_id = ? and environment_id IS"
-                + " NOT DISTINCT FROM ?::uuid",
+                + " NOT DISTINCT FROM ?::uuid and archived_at is null",
             organizationId,
             BusinessEnvironmentContext.environmentId()),
         count(
@@ -147,7 +147,8 @@ public class DashboardService {
             > 0,
         count(
                 "select count(*) from toss_payments_credential where organization_id = ? and"
-                    + " environment_id IS NOT DISTINCT FROM ?::uuid and mode = ?",
+                    + " environment_id IS NOT DISTINCT FROM ?::uuid and mode = ? and"
+                    + " archived_at is null",
                 organizationId,
                 BusinessEnvironmentContext.environmentId(),
                 mode)
