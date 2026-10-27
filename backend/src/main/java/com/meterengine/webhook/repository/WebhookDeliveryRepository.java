@@ -69,7 +69,7 @@ public class WebhookDeliveryRepository {
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public boolean complete(WebhookClaim claim, WebhookOutcome outcome) {
+  public Optional<String> complete(WebhookClaim claim, WebhookOutcome outcome) {
     boolean terminal =
         outcome.isSuccessful()
             || claim.attemptCount() >= MAX_ATTEMPTS
@@ -94,7 +94,7 @@ public class WebhookDeliveryRepository {
             scope(claim),
             claim.claimToken());
     if (changed == 0) {
-      return false;
+      return Optional.empty();
     }
     jdbcTemplate.update(
         "INSERT INTO webhook_delivery_attempt (id, organization_id, environment_id, webhook_delivery_id, attempted_at, response_status, failure_reason, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -106,7 +106,7 @@ public class WebhookDeliveryRepository {
         outcome.responseStatus(),
         outcome.failureReason(),
         outcome.durationMs());
-    return true;
+    return Optional.of(status);
   }
 
   public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {
