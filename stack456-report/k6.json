@@ -25,9 +25,192 @@
   "playwright": "@playwright/test 1.64.1, chromium 1248을 따로 받아 PLAYWRIGHT_BROWSERS_PATH로 지정",
   "notes": "docker CLI는 있으나 데몬이 없어 실제 스택 E2E(*.real.spec.ts)는 돌릴 수 없다. 대역 서버 계약 테스트(playwright.config.ts contract, playwright.workspace.config.ts, playwright.payment.config.ts)는 최상단에서 모두 통과했다."
  },
- "results": [],
+ "results": [
+  {
+   "id": "C442-005",
+   "merged_ids": [
+    "C449-007",
+    "C451-005",
+    "C453-013"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "네 지적 모두 원인이 같다: frontend의 node:test 파일을 부르는 스크립트와 CI 단계가 없다. 반박을 시도했으나 실행 경로를 찾지 못했다. 1) frontend/package.json scripts(6-14행)는 dev, build, start, lint, typecheck, test:e2e:contract, test:e2e:real뿐이고 #442부터 #455까지 같다. 2) playwright.config.ts는 testDir ./e2e지만 프로젝트 testMatch가 auth.contract.spec.ts, auth.real.spec.ts뿐이고, payment, workspace, mvp 설정도 testMatch가 spec 파일 이름으로 고정이라 *.test.mjs를 줍지 않는다. 3) .github/workflows/ci.yml frontend 잡(60-81행)은 pnpm install, lint, build만 돌고 main부터 최상단까지 바뀌지 않았다. cd.yml, claude*.yml, aws-access-check.yml, Dockerfile, husky나 lefthook 같은 훅에도 실행처가 없다. demo 패키지들은 test 스크립트(node --test)를 두지만 frontend에는 없다. 4) PR #442, #453 본문의 '단위 검사를 통과했다'는 수동 실행 결과다. 검사 내용 자체는 맞다: git archive로 뽑은 사본에서 Node 22.22(타입 제거 기본 켜짐)로 node --test e2e/*.test.mjs를 돌리면 #442 3건, #449 15건, #451 30건, #453 46건, 최상단 작업 트리 46건이 모두 통과한다. #453 사본에서 workspace-href.ts 12행(environment 전파)을 지우면 workspace-href.test.mjs 4건이 실패하지만 이 변경은 lint와 build를 그대로 통과한다. 즉 회귀를 잡도록 만든 검사가 CI에서 돌지 않는다. 문제의 조합(.test.mjs를 더하면서 실행 스크립트와 CI 단계를 두지 않음)은 #442가 permissions.test.mjs, package.json scripts, playwright.config.ts를 들이며 처음 생겼고, #449, #451, #453은 같은 공백에 파일을 더했을 뿐이다. #442에 glob 스크립트를 두면 위층 파일 네 개도 함께 돈다. 심각도는 low로 둔다. 지금 사용자가 겪는 잘못된 동작은 없고, 앞으로 회귀가 생겼을 때 CI가 막지 못하는 잠재 위험이다. 서버 액션과 백엔드가 권한, 출처, 환경을 다시 검사하므로 권한 판정 회귀는 UX 문제에 그친다. 다만 workspace-href 회귀는 test 환경에서 legacy 데이터 화면으로 이동시켜 잘못된 환경 변경으로 이어질 수 있어 CI 실행 가치가 크다.",
+   "evidence": "frontend/package.json:6 @ 0245c15, frontend/playwright.config.ts:19 @ 0245c15, .github/workflows/ci.yml:79 @ 0245c15, frontend/e2e/permissions.test.mjs:1 @ 0245c15, frontend/e2e/public-invoice-request.test.mjs:1 @ 7ce9d36, frontend/e2e/resource-query.test.mjs:1 @ 53ec3d9, frontend/e2e/workspace-href.test.mjs:1 @ f040e96, frontend/package.json:6 @ 854e293, .github/workflows/ci.yml:79 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "C449-007(#449 public-invoice-request, invoice-payment-retry), C451-005(#451 resource-query), C453-013(#453 workspace-href와 수정된 resource-query, permissions)은 같은 원인이라 합쳤다. 각 PR에 따로 고칠 필요 없이 #442의 glob 스크립트가 위층 파일을 함께 실행한다. readme-test-commands(G-189)와 겹친다: 그쪽은 README와 Playwright 설정용 스크립트 문서화이고, test:unit 스크립트 줄은 두 수정이 같은 글자로 더하게 맞췄다. CI에서 계약 Playwright(test:e2e:contract, payment, workspace)도 돌지 않지만 이 묶음의 지적 범위가 아니라 판정에 넣지 않았다. 확인 실행: 사본은 S/scripts/unit-tests-unrun/heads/ 아래 git archive 결과이고 node_modules는 최상단 작업 트리를 링크했다. 저장소와 작업 트리는 바꾸지 않았다.",
+   "pr": 442
+  },
+  {
+   "id": "C446-002",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 백엔드가 구간 단가에도 unit_price를 채우는지, 이 화면이 닿지 않는지 봤으나 둘 다 아니다. 446에서 V36__version_price_rates.sql:42 CHECK가 graduated, volume이면 unit_price IS NULL을 강제하고 BillableMetricPriceService.toResponse가 rate.getUnitPrice()를 그대로 내보낸다. 프론트 lib/api/billable-metric-prices.ts:13 타입은 unit_price: number이고 BillableMetricPricesSection.tsx:22가 formatKrw(priceRate.unit_price)를 부른다. format.ts:43 formatDecimal(null)은 null !== 0이 참, Math.abs(null)=0이 기준보다 작아 null.toExponential(10)에서 TypeError가 난다(node로 재현: Cannot read properties of null (reading 'toExponential')). 446의 /pricing PriceRateEditor(PricingWorkspace.tsx:121)로 누진, 총량 구간 단가를 이번 달부터 등록할 수 있고, /billable-metric-prices page.tsx는 네비게이션에서만 빠졌을 뿐 그대로 남아 직접 URL, 북마크, returnTo로 열린다. 그러면 서버 컴포넌트가 던지고 (console)/error.tsx의 '화면을 그리지 못했습니다'가 나온다. 446부터 450(event-ingestion)까지 같은 page.tsx와 Section이 남아 있고, 451(billing-queries, e5fca11)에서 page.tsx가 /pricing redirect로 바뀌어 최상단에서는 해소된다. 그래서 고칠 PR은 문제 조합(V36 null 단가 + 남은 옛 화면)을 처음 들인 446이다. 영향은 네비게이션 밖 옛 화면 하나이고 대체 화면은 동작하므로 low로 낮춘다.",
+   "evidence": "frontend/src/components/billable-metric-prices/BillableMetricPricesSection.tsx:22 @ 5efe449, frontend/src/lib/api/billable-metric-prices.ts:13 @ 5efe449, frontend/src/lib/format.ts:43 @ 5efe449, frontend/src/app/(console)/billable-metric-prices/page.tsx:27 @ 5efe449, backend/src/main/resources/db/migration/V36__version_price_rates.sql:42 @ 5efe449, frontend/src/app/(console)/billable-metric-prices/page.tsx:12 @ 53ec3d9",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "옛 경로가 목록 화면 대신 /pricing으로 이동하는 동작 변경이다. 451에서 이미 같은 redirect를 하므로 최상단 동작과 같아진다. 다른 묶음과 겹침 없음(other_bundles_index에 같은 화면 지적 없음).",
+   "pr": 446
+  },
+  {
+   "id": "C446-009",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 기본료와 최소 사용료 절사가 화면 어딘가에 안내되는지 봤다. 청구 예정액 화면(BillingSection.tsx:121 @ 5efe449)은 '줄마다 10원 미만은 버립니다'라고 적지만, 요금 설계 화면은 사용량 단가 영역(PricingWorkspace.tsx:65)에서만 라인 절사를 말하고 기본료 영역에는 안내가 없다. 백엔드 ChargeService.apply(196, 198 @ 5efe449, 최상단 205, 207)는 trim(amount - amount % 10)을 적용하고 CreatePricePlanRequest는 @Min(0)만 검사하며 프론트 amount() 파서도 0 이상의 정수만 본다. 화면은 현재 요금제(PricingWorkspace.tsx:75)와 이력 표(78, 79)에서 MONEY.format(plan.base_fee) 등 저장값을 그대로 보이고, 입력 필드(72, 73)는 step 기본 1에 절사 안내가 없다. 그래서 9,995원 입력 시 요금 설계 화면은 9,995원, 청구 예정액과 인보이스 기본료 라인은 9,990원으로 다르다. 최상단 PricingWorkspace.tsx:79, 80, 82, 85, 86도 같다. 문제의 줄과 trim 모두 446이 처음 들였다. 금액 차이가 10원 미만이라 low.",
+   "evidence": "frontend/src/components/pricing/PricingWorkspace.tsx:72 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:75 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:78 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:82 @ 854e293, frontend/src/components/pricing/PricingWorkspace.tsx:85 @ 854e293, backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:198 @ 5efe449",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": true,
+   "notes": "k3 G-107(ChargeService 기본료, 최소 사용료 절사, 백엔드)과 원인이 같다. 이 결과는 화면 부분만 다룬다. step 10은 화면 입력을 10원 단위로 막는 동작 변경이라 behavior_change=true로 두었다. API 계약은 바꾸지 않는다. G-107이 거절로 정해지면 (2)의 표시 보정은 기존 데이터용으로만 남는다.",
+   "pr": 446
+  },
+  {
+   "id": "C446-010",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박 시도: 화면이 여러 미터의 이력을 함께 그리는지, 미터 전환이 클라이언트에서만 일어나는지 봤으나 둘 다 아니다. 446 pricing/page.tsx:29가 metrics.data.billable_metrics 전체에 listPriceRates(metric.code, customerId, \"all\")를 Promise.all로 부르는데, PricingWorkspace.tsx:82는 histories[selectedCode] 하나만 그린다. 미터 버튼(62행)은 setSelectedCode로 router.replace(`/pricing?...metric=`)를 하고, page는 searchParams를 읽는 동적 서버 컴포넌트라 전환마다 다시 렌더되어 고정 6회와 미터 수 N회 호출이 반복된다. 백엔드 PriceRateService.list(69행)는 rates(organizationId)(208행)로 조직의 price_rate 전체를 읽고 메모리에서 거르므로 호출마다 비용이 단가 총량에 비례한다. 446부터 450까지 같고, 451(billing-queries) page.tsx:37에서 선택된 미터 하나만 조회해 최상단은 해소된다. 기능 오류는 아니고 규모 의존 성능 문제라 low.",
+   "evidence": "frontend/src/app/(console)/pricing/page.tsx:29 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:36 @ 5efe449, frontend/src/components/pricing/PricingWorkspace.tsx:82 @ 5efe449, backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:208 @ 5efe449, frontend/src/app/(console)/pricing/page.tsx:37 @ 53ec3d9",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "선택 미터가 바뀌면 이력도 그 미터만 새로 받는다. 보관 필터(metric_status) 규칙을 서버와 클라이언트가 따로 계산하므로 두 식이 같아야 한다. 다른 묶음과 겹침 없음.",
+   "pr": 446
+  },
+  {
+   "id": "D-163",
+   "merged_ids": [
+    "D-015",
+    "D-037",
+    "D-101",
+    "D-197",
+    "D-218",
+    "D-257"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "현재 head 854e293의 payments/[id]/page.tsx:35(취소 내역 조회 실패 분기)와 :51(승인 결제 취소 패널 제목 아래)이 '{시각} 승인 / {attempt.mode}'로 API 값을 그대로 찍는다. 백엔드 PaymentAttemptResponse.mode는 allowableValues test, live이고 V30 CHECK도 test, live뿐이라 화면에는 항상 영문 'test' 또는 'live'가 나온다. 반박 시도: 같은 파일의 다른 곳이 이미 번역하는지 확인했다. :54, :61 취소 모달 설명, :107 결제 모달 설명, :112 현재 상태 줄은 모두 'mode === \"test\" ? 테스트 결제 : 실결제'로 바꾸고, :115 결제 시도 표의 mode 열도 WorkspaceView.tsx:33이 '테스트 결제', '실결제' Tag로 바꾼다. 그래서 한 화면에서 같은 값이 'test'와 '테스트 결제'로 두 번 다르게 보이는 것은 사실이고, 의도된 기술 표기라는 근거(주석, PR 본문)도 없다. 일곱 지적 모두 같은 두 줄의 같은 원인이라 하나로 합쳤다. 문제의 두 줄은 #445(2e98143)의 :33, :49에서 처음 들어왔고 이후 #449에서 줄 번호만 35, 51로 밀렸다. 실제 피해는 표기 혼동 수준이라 low.",
+   "evidence": "frontend/src/app/(console)/payments/[id]/page.tsx:33 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:49 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:35 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:51 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:112 @ 854e293, frontend/src/components/workspace/WorkspaceView.tsx:33 @ 854e293, backend/src/main/java/com/meterengine/payment/dto/PaymentAttemptResponse.java:16 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "결제 시도 표(:115)는 WorkspaceView.tsx:33이 이미 번역하므로 손대지 않는다. k5 D-000, D-130(실제 환경 시각 구분)과 주제가 닿지만 원인 줄이 다르다. 같은 화면의 payment-status-display(X-074)는 별도 판정이다.",
+   "pr": 445
+  },
+  {
+   "id": "D-166",
+   "merged_ids": [
+    "D-018"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "customers/[id]/page.tsx:46이 '수집 로그 확인', '고객 목록으로' 두 Link와 '고객 보관'(isDanger) ActionPanel을 한 .workspace-actions(globals.css:146, flex, gap 8px)에 둔다. 페이지 끝에서 자주 누르는 '고객 목록으로' 바로 8px 옆에 보관 버튼이 붙어 이동 묶음처럼 읽힌다. 반박 시도: 1) ActionPanel.tsx:141은 바로 실행하지 않고 확인 모달을 열며, 보관은 restoreCustomer로 되돌릴 수 있다. 그래도 보관하면 그 고객의 신규 업무와 사용량 수집이 멈추므로(모달 설명 문구) 습관적 확인의 비용이 있다. 2) 제품의 다른 상세 화면 integrations/[id]/page.tsx:17-24는 이동 링크를 헤더에 두고 보관을 동작 버튼 줄의 마지막에 두어 이 화면만 어긋난다. D-018의 정렬 부분도 코드로 맞다. .workspace-actions에 align-items가 없어 기본 stretch이고 antd 버튼 높이는 AppProviders.tsx의 controlHeight 38이라, 링크 글자가 위로 붙는다. top CSS로 그려 보니 링크 글자 중심 y=344, 버튼 글자 중심 y=353으로 9px 어긋났다(S/shots/header-links-scattered/static-1280.png). :40의 '고객별 요금 설계' 링크도 버튼 줄에 섞여 같은 이유로 어긋난다. D-018은 같은 줄(:46)의 위험 작업 배치가 중심이라 D-166에 합쳤다. D-018의 수납 상세 헤더 부분은 header-links-scattered(X-075, #445)와 같은 원인이고, 정렬의 공통 CSS 부분은 k5 범위다. 고객 상세 화면과 :40, :46은 #451(53ec3d9)에서 처음 생겼고 top까지 파일이 같다.",
+   "evidence": "frontend/src/app/(console)/customers/[id]/page.tsx:46 @ 53ec3d9, frontend/src/app/(console)/customers/[id]/page.tsx:40 @ 53ec3d9, frontend/src/app/(console)/customers/[id]/page.tsx:46 @ 854e293, frontend/src/components/workspace/ActionPanel.tsx:141 @ 854e293, frontend/src/app/(console)/integrations/[id]/page.tsx:17 @ 854e293, frontend/src/app/globals.css:146 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 X-076(globals.css:146)이 '고객 상세 하단에서 목록 링크와 고객 보관이 붙어 있다'까지 함께 다룬다. k5가 CSS로 정렬만 고쳐도 위험 작업이 이동 링크 줄에 있는 배치는 남으므로 이 페이지 수정이 필요하다. 반대로 이 수정 뒤에도 다른 화면의 버튼과 필드가 섞인 .workspace-actions 정렬은 k5 몫이다. 지적의 다른 제안(별도 하단 패널, 제목 위 이동 링크)은 제품의 기존 상세 화면 관례와 달라 택하지 않았다.",
+   "pr": 451
+  },
+  {
+   "id": "G-189",
+   "merged_ids": [],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "반박을 시도했으나 다른 문서에서도 명령을 찾지 못했다. 최상단(854e293)과 #453 head(f040e96)의 frontend/README.md '인증 흐름 검증'(176-197행)은 playwright install, pnpm build, pnpm test:e2e:contract, pnpm test:e2e:real만 적는다. package.json scripts(11-13행)에도 typecheck, test:e2e:contract, test:e2e:real뿐이다. 저장소 전체를 grep해도 playwright.payment.config.ts, playwright.workspace.config.ts, playwright.mvp.config.ts, node --test e2e를 적은 README나 docs가 없다(루트 README, .github/workflows/README.md, docs/ 포함). 빠진 것: 1) node --test e2e/*.test.mjs 단위 검사 46건(#442부터 파일이 있음). 2) -c playwright.payment.config.ts 계약 6건(FE 33149, 대역 38149, pnpm build 필요). 3) -c playwright.workspace.config.ts 계약 9건(33150, 38150, 결과 경로 WORKSPACE_CONTRACT_OUTPUT_DIR, 기본값은 macOS /private/tmp 경로). 4) -c playwright.mvp.config.ts 실제 스택 10개 시나리오(S1_API_URL 38147, FE 33147, 토스 대역 38447, MVP_EXTERNAL_PG_FIXTURE, MVP_REUSE_FRONTEND, E2E_OPERATOR_EMAIL, E2E_OPERATOR_PASSWORD, 백엔드 TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447, permissions.real과 customer-payment-retry.real이 읽는 고정 backend-e2e-environment.json). 최상단에서 실제로 pnpm build가 된 작업 트리로 payment 설정 6건, workspace 설정 9건(WORKSPACE_CONTRACT_OUTPUT_DIR를 스크래치로 지정)을 돌려 모두 통과했다. 즉 명령은 동작하는데 README와 scripts에 없어 README만 보는 사람은 auth 계약 9건만 돌리고 끝난다. docs/contributing/documents.md 'README 점검'의 '실행 명령이나 사전 준비가 바뀌었다 -> 해당 하위 README'에 어긋난다. 고칠 PR은 #453이다. payment 설정(#445)은 #453에서야 생기는 payment-registration.contract.spec.ts와 대역 서버를, workspace와 mvp 설정(#442)은 existsSync 검사로 #453 전까지 바로 throw하므로, 세 설정이 실행 가능한 명령이 된 것은 #453이다. README의 시험 절은 #452가 들였고 #453부터 #455는 README와 package.json을 바꾸지 않아 #453 head 수정이 최상단까지 그대로 통한다. 심각도는 low다. 제품 동작 문제는 없고 검증 누락 위험이다.",
+   "evidence": "frontend/README.md:176 @ f040e96, frontend/package.json:11 @ f040e96, frontend/playwright.payment.config.ts:5 @ f040e96, frontend/playwright.workspace.config.ts:10 @ f040e96, frontend/playwright.mvp.config.ts:9 @ f040e96, frontend/README.md:181 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "unit-tests-unrun(C442-005)과 겹친다: test:unit 스크립트 줄은 두 수정이 같은 글자, 같은 자리로 더하게 맞췄다. 단위 검사 문서화 부분만 보면 README 시험 절을 들인 #452가 빠뜨린 것이지만, 지적 id가 하나라 나눌 수 없고 #453에서 한 번에 고치는 편이 충돌이 적다. query-ws-spec-unmatched(C453-011): query-workspace.real.spec.ts는 어느 설정의 testMatch에도 없어 test:e2e:mvp로도 돌지 않는다. README에 이 spec을 적지 않는다. pw-missing-specs(C445-014, G-191): #442부터 #452 head의 payment, workspace, mvp 설정이 #453에서야 생기는 spec을 가리키는 문제로, 고칠 PR을 #453으로 잡은 근거와 같다. 실행 확인은 최상단 작업 트리(/home/user/wt/top, 854e293)에서 했고 결과 경로는 S/shots/readme-test-commands/ 아래로 돌렸다. 작업 트리의 git status는 깨끗했다.",
+   "pr": 453
+  },
+  {
+   "id": "X-074",
+   "merged_ids": [],
+   "verdict": "refuted",
+   "severity": "low",
+   "reason": "지적의 사실 부분은 맞다. payments/[id]/page.tsx:112는 '<p role=\"status\"><strong>{테스트 결제|실결제} / {state.label}</strong></p>'를 색 없는 굵은 본문으로 h2 '현재 결제 상태' 아래에 두고, :72는 '승인액 869원 / 취소 완료 300원 / 잔액 569원'을 한 문단으로 쓴다. 그러나 반박이 선다. 1) 상태는 h2 바로 아래 굵게, 한국어 라벨(결제 실패, 부분 취소 등)과 다음 단계 설명(:112의 state.description)까지 붙어 있어 읽지 못하거나 오인할 경로가 없다. 섹션 제목보다 값이 작은 것은 제목과 값의 일반적 위계다. 2) 잔액은 '잔액 569원'으로 계산된 값을 그대로 보여 주므로 failure_scenario의 '문장에서 다시 계산하다 놓친다'는 코드상 일어나지 않는다. 세 값이 한 줄 안에 라벨과 함께 있다. 3) 실결제 여부는 이 줄의 텍스트, 결제와 취소 모달 설명(:54, :61, :107의 '실결제:' 접두)에 모두 적혀 있어 행동 직전에 확인할 수 있다. settings/page.tsx:29도 같은 텍스트 표기다. 남는 것은 Tag 색과 detail-strip 배치라는 시각 위계 선호이고 문제를 만드는 줄과 구체적 피해를 함께 짚을 수 없어 refuted로 둔다. 줄은 #445(2e98143)의 :99, :60에서 들어왔다.",
+   "evidence": "frontend/src/app/(console)/payments/[id]/page.tsx:112 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:72 @ 854e293, frontend/src/app/(console)/payments/[id]/page.tsx:99 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:60 @ 2e98143, frontend/src/app/(console)/settings/page.tsx:29 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "실결제를 테스트와 시각적으로 구분하는 문제는 k5 D-000(globals.css:322), D-130(ConsoleShell.tsx:58)이 환경 전체 단위로 다룬다. 같은 화면 :35, :51의 영문 mode 노출은 payment-mode-raw(D-163)에서 confirmed로 따로 처리한다. 다듬기로 Tag와 detail-strip을 쓰는 것은 막지 않지만 결함 수정 대상은 아니다.",
+   "pr": 445
+  },
+  {
+   "id": "X-075",
+   "merged_ids": [
+    "D-162",
+    "D-198"
+   ],
+   "verdict": "confirmed",
+   "severity": "low",
+   "reason": "payments/[id]/page.tsx:99-100이 WorkspaceHeader의 children으로 링크 두 개를 감싸지 않고 넘긴다. WorkspaceHeader.tsx:7은 children을 그대로 .workspace-heading(globals.css:140, display flex, justify-content space-between, flex-wrap wrap)에 넣으므로 제목 div, 링크, 링크 세 항목이 고르게 벌어진다. 반박 시도: 다른 화면도 같은지 top 전체의 WorkspaceHeader 사용처를 grep했다. 자식이 둘 이상인 곳은 이 화면뿐이고(integrations/[id], members, pricing은 링크 하나, customers 계열은 form 하나) 그 화면들은 오른쪽 끝에 붙는다. 실행 확인: top globals.css로 같은 마크업을 1280px에서 그려 보니 감싸지 않으면 '고객으로 이동' x=765, '내역 새로 조회' x=1120으로 떨어지고, div.workspace-actions로 감싸면 x=1012와 x=1120으로 오른쪽에 붙는다(S/shots/header-links-scattered/static-1280.png). 세 지적 모두 같은 원인이라 합쳤다. 링크 두 개를 감싸지 않은 조합은 #445(2e98143) :86-87('고객 목록으로 이동', '내역 새로 조회')에서 처음 생겼고 #451이 첫 링크를 '고객으로 이동'으로 바꿨을 뿐 조합은 그대로다. 결과는 헤더 가운데에 이동 링크가 떠서 제목과 동작 영역 어디에도 속하지 않아 보이는 것이라 low.",
+   "evidence": "frontend/src/app/(console)/payments/[id]/page.tsx:86 @ 2e98143, frontend/src/app/(console)/payments/[id]/page.tsx:99 @ 854e293, frontend/src/components/workspace/WorkspaceHeader.tsx:7 @ 854e293, frontend/src/app/globals.css:140 @ 854e293",
+   "fixed": false,
+   "fix_branch": null,
+   "fix_commits": [],
+   "tests": [],
+   "behavior_change": false,
+   "notes": "k5 D-078(WorkspaceHeader.tsx:7)이 같은 증상을 공용 컴포넌트에서 children을 감싸는 방식으로 제안한다. 둘을 함께 하면 .workspace-actions가 겹으로 들어가 동작은 같지만 중복이므로 한쪽만 택한다. 자식이 여럿인 사용처가 이 화면뿐이라 페이지 쪽 수정으로 충분하다. destructive-in-nav-row의 D-018도 이 헤더 문제를 일부로 언급한다.",
+   "pr": 445
+  }
+ ],
  "new_findings": [],
- "out_of_scope": [],
+ "out_of_scope": [
+  {
+   "id": "C442-005",
+   "file": "frontend/package.json",
+   "why": "일부만 범위 밖: .github/workflows/ci.yml frontend 잡(#442 head 79-81행)에 pnpm install 다음 - run: pnpm test:unit 단계를 더해야 CI가 실제로 막는다. 같이 .github/workflows/README.md 7행의 ci.yml 설명 'frontend lint/빌드'를 'frontend lint/단위 검사/빌드'로 고친다. 둘 다 frontend 밖이라 k6에서 고치지 않는다. setup-node가 .node-version(24)을 쓰므로 .ts import를 그대로 실행하고 추가 의존성은 없다. #442에 넣으면 스택 전체가 같은 단계를 받는다."
+  },
+  {
+   "id": "C446-002",
+   "file": "frontend/src/app/(console)/billable-metric-prices/page.tsx",
+   "why": "일부만 범위 밖: lib/api/billable-metric-prices.ts의 unit_price 타입(number)이 백엔드와 어긋나는 것은 k5 범위(frontend/src/lib/)다. redirect로 이 타입을 쓰는 렌더 경로가 사라지므로 이번 수정에는 필요 없다."
+  },
+  {
+   "id": "C446-009",
+   "file": "frontend/src/components/pricing/PricingWorkspace.tsx",
+   "why": "일부만 범위 밖: API에서 10원 단위가 아닌 base_fee, minimum_amount를 400으로 거절하거나 응답에 청구 기준 금액을 넣는 것은 backend(CreatePricePlanRequest, ChargeService)로 k3 G-107 범위다."
+  },
+  {
+   "id": "C446-010",
+   "file": "frontend/src/app/(console)/pricing/page.tsx",
+   "why": "일부만 범위 밖: 백엔드 PriceRateService.list가 조직 단가 전체를 읽고 메모리에서 거르는 것은 backend 범위다. 화면 호출 수를 줄이면 이 묶음 문제는 풀린다."
+  },
+  {
+   "id": "D-166",
+   "file": "frontend/src/app/(console)/customers/[id]/page.tsx",
+   "why": "일부만 범위 밖: D-018의 '.workspace-actions { align-items: center }' 기본값 제안은 globals.css(k5 범위) 공통 규칙 변경이라 k6에서 하지 않는다. k5 X-076이 같은 내용이다. D-018의 수납 상세 헤더 링크 흩어짐은 header-links-scattered 결과 X-075(#445, payments/[id]/page.tsx)에서 고친다."
+  },
+  {
+   "id": "G-189",
+   "file": "frontend/package.json, frontend/README.md",
+   "why": "일부만 범위 밖: MVP 실제 스택의 사전 준비 중 고정 경로(/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json, toss-state.json, workspace 결과 기본 경로)는 pw-hardcoded-paths 묶음(C442-014, G-023, G-037, G-190)이 바꿀 수 있다. 그 수정이 환경변수를 들이면 README에는 그 변수 이름을 적고, 아직 고정 경로이면 'macOS 경로가 고정돼 있다'는 사실만 적고 경로를 고치지 않는다. CI에서 단위 검사를 돌리는 단계는 C442-005의 out_of_scope_parts(.github/workflows/ci.yml)다."
+  }
+ ],
  "not_done": [],
  "checks": [
   {
