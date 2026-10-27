@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 const mode = process.env.E2E_MODE === "real" ? "real" : "contract";
-const port = mode === "real" ? 33147 : 33148;
+const port = mode === "real" ? Number(process.env.E2E_FRONTEND_PORT ?? 33147) : 33148;
 const apiUrl = mode === "real" ? (process.env.S1_API_URL ?? "http://127.0.0.1:38147") : "http://127.0.0.1:38148";
 const parsedApi = new URL(apiUrl);
 if (!["127.0.0.1", "localhost", "[::1]"].includes(parsedApi.hostname) || parsedApi.protocol !== "http:") throw new Error("E2E requires a local HTTP backend");
