@@ -2,6 +2,7 @@ package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.CreatePaymentCancellationRequest;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,7 +47,7 @@ public class PaymentCancellationController {
           남은 결제 금액은 시도 금액에서 done인 취소의 합을 뺀 값이다. 시도의 결제 모드 키로 토스페이먼츠를 부른다.
           취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
           토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려준다.
-          시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다.
+          시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다. API 키의 모드가 취소 대상과 다르면 409다.
           Idempotency-Key를 주면 같은 도입사의 같은 요청을 다시 보내도 기존 결과를 돌려준다. 같은 키로 다른 요청을 보내면 409다.
           requested_at과 completed_at은 KST(+09:00)로 나온다.
           """)
@@ -77,6 +79,7 @@ public class PaymentCancellationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
+            code=payment_mode_mismatch: API 키의 모드가 취소 대상의 모드와 다르다.
             code=payment_attempt_not_cancelable: 시도가 done이 아니다.
             code=payment_attempt_fully_canceled: done인 시도를 이미 전액 취소해 남은 결제 금액이 0원이다.
             code=payment_cancellation_in_progress: 이 시도에 pending인 취소가 있다.
@@ -86,12 +89,14 @@ public class PaymentCancellationController {
   })
   public PaymentCancellationResponse createPaymentCancellation(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Parameter(description = "취소할 결제 시도의 id.") @PathVariable UUID id,
       @Parameter(description = "취소 요청마다 발급한 UUID. 응답을 받지 못해 다시 요청할 때는 같은 값을 보낸다.")
           @RequestHeader(name = "Idempotency-Key", required = false)
           UUID idempotencyKey,
       @Valid @RequestBody CreatePaymentCancellationRequest request) {
-    return paymentCancellationService.create(organizationId, id, request, idempotencyKey);
+    return paymentCancellationService.create(
+        organizationId, id, request, idempotencyKey, principal.mode());
   }
 
   @GetMapping("/v1/payment-attempts/{id}/cancellations")
