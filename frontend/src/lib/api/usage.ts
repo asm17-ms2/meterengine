@@ -5,6 +5,7 @@ import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 import { formatTargetPropertyTooltip } from "@/lib/format";
+import { metricCalculationFormula, type MetricCalculation } from "@/lib/billable-metric-calculation";
 import { toServerParams, type MonthlyListQuery, type PaginationFields } from "@/lib/list-query";
 
 export type ListBillableMetricUsagesResponse = PaginationFields & {
@@ -12,7 +13,7 @@ export type ListBillableMetricUsagesResponse = PaginationFields & {
   billable_metric_usages: BillableMetricUsageResponse[];
 };
 
-export type BillableMetricUsageResponse = {
+export type BillableMetricUsageResponse = MetricCalculation & {
   code: string;
   name: string;
   event_type: string;
@@ -26,11 +27,17 @@ export type BillableMetricUsageCustomer = {
   customer_name: string;
   dimension_usages: BillableMetricUsageDimensionUsage[];
   quantity: number;
+  raw_quantity?: number;
+  raw_quantity_numerator?: number;
+  raw_quantity_denominator?: number;
 };
 
 export type BillableMetricUsageDimensionUsage = {
   dimension_values: Record<string, string | number | boolean | null>;
   quantity: number;
+  raw_quantity?: number;
+  raw_quantity_numerator?: number;
+  raw_quantity_denominator?: number;
 };
 
 export type CustomerGroup = {
@@ -44,6 +51,9 @@ export type BillableMetricLine = {
   labelTooltip?: string;
   dimensionValues: BillableMetricUsageDimensionUsage["dimension_values"];
   quantity: number;
+  rawQuantity?: number;
+  overallQuantity: number;
+  overallRawQuantity?: number;
 };
 
 const NO_USAGE_DIMENSION_USAGE: BillableMetricUsageDimensionUsage = {
@@ -54,14 +64,18 @@ const NO_USAGE_DIMENSION_USAGE: BillableMetricUsageDimensionUsage = {
 function toBillableMetricLines(
   label: string,
   labelTooltip: string | undefined,
-  dimensionUsages: BillableMetricUsageDimensionUsage[],
+  customer: BillableMetricUsageCustomer,
 ): BillableMetricLine[] {
+  const dimensionUsages = customer.dimension_usages;
   const rows = dimensionUsages.length === 0 ? [NO_USAGE_DIMENSION_USAGE] : dimensionUsages;
   return rows.map((dimensionUsage) => ({
     label,
     labelTooltip,
     dimensionValues: dimensionUsage.dimension_values,
     quantity: dimensionUsage.quantity,
+    rawQuantity: dimensionUsage.raw_quantity,
+    overallQuantity: customer.quantity,
+    overallRawQuantity: customer.raw_quantity,
   }));
 }
 
@@ -70,7 +84,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
     const label = billableMetricUsage.code;
-    const labelTooltip = formatTargetPropertyTooltip(billableMetricUsage.target_property);
+    const labelTooltip = [formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
 
     for (const customer of billableMetricUsage.customers) {
       let group = customerGroupByCustomerId.get(customer.customer_id);
@@ -82,7 +96,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
         };
         customerGroupByCustomerId.set(customer.customer_id, group);
       }
-      group.billableMetricLines.push(...toBillableMetricLines(label, labelTooltip, customer.dimension_usages));
+      group.billableMetricLines.push(...toBillableMetricLines(label, labelTooltip, customer));
     }
   }
 

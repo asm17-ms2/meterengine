@@ -122,4 +122,8 @@ public class EventService {
         event.occurredAt(),
         event.receivedAt());
   }
+
+  public boolean exists(UUID organizationId, String type) {
+    return eventRepository.existsWithType(organizationId, type);
+  }
 }

@@ -11,19 +11,18 @@ export type ListCustomersResponse = PaginationFields & {
 };
 
 export type CustomerResponse = {
+  archived_at?: string | null;
   id: string;
   name: string;
   billing_email: string | null;
   created_at: string;
 };
 
-export const CUSTOMERS_CACHE_TAG = "customers";
-
 export async function listCustomers(
   query: ListQuery,
-  devState: DevState,
-  cacheTag?: string,
+  devState: DevState, _cacheTag?: string,
 ): Promise<Result<ListCustomersResponse>> {
+  void _cacheTag;
   if (devState === "empty") {
     return { ok: true, data: { customers: [] } };
   }
@@ -43,7 +42,6 @@ export async function listCustomers(
     config.apiBaseUrl,
     "/v1/customers",
     toServerParams(query, CAPABILITIES.listCustomers),
-    cacheTag,
   );
 }
 
@@ -73,3 +71,5 @@ export async function deleteCustomer(id: string): Promise<Result<void>> {
     method: "DELETE",
   });
 }
+
+export const CUSTOMERS_CACHE_TAG = "customers";

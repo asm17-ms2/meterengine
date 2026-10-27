@@ -1,5 +1,7 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { Button } from "antd";
 import { useCallback, useState } from "react";
 
@@ -37,6 +39,7 @@ export function BillableMetricsScreen({
   query: ListQuery;
   capabilities: ListCapabilities;
 }) {
+  const canManage = useTenantScope("admin");
   const search = useSearchText(query, capabilities);
   const searchText = search.text;
   const [sortSelection, setSortSelection] = useState<ClientSortSelection | undefined>(undefined);
@@ -59,9 +62,9 @@ export function BillableMetricsScreen({
       <ScreenHeader
         title="미터"
         extra={
-          <Button type="primary" onClick={openCreate}>
+          canManage ? <Button type="primary" onClick={openCreate}>
             미터 등록
-          </Button>
+          </Button> : undefined
         }
       >
         총 <b>{visibleRows.length}</b>개
@@ -85,9 +88,9 @@ export function BillableMetricsScreen({
 
         {hasNoBillableMetrics ? (
           <EmptyState
-            title="등록된 미터가 없습니다"
-            body="이 도입사에 등록된 미터가 없습니다. 미터 등록으로 첫 미터를 추가하세요."
-            action={<Button onClick={openCreate}>미터 등록</Button>}
+            title={query.status === "archived" ? "보관된 미터가 없습니다" : query.status === "all" ? "등록된 미터가 없습니다" : "사용 중인 미터가 없습니다"}
+            body="미터를 새로 등록하거나 관리 상태를 바꿔 보관한 미터를 확인하세요."
+            action={canManage ? <Button onClick={openCreate}>미터 등록</Button> : undefined}
           />
         ) : visibleRows.length === 0 ? (
           <EmptyState
@@ -111,7 +114,7 @@ export function BillableMetricsScreen({
         )}
       </ScreenCard>
 
-      {form ? (
+      {form && canManage ? (
         <BillableMetricFormDialog
           key={form.billableMetric?.code ?? "new"}
           billableMetric={form.billableMetric}
@@ -119,7 +122,7 @@ export function BillableMetricsScreen({
         />
       ) : null}
 
-      {deleting ? (
+      {deleting && canManage ? (
         <BillableMetricDeleteDialog billableMetric={deleting} onClose={closeDelete} />
       ) : null}
     </>

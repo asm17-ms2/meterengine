@@ -44,6 +44,15 @@ public class Organization implements Persistable<UUID> {
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
 
+  @Column(name = "business_registration_number")
+  private String businessRegistrationNumber;
+
+  @Column(name = "representative_name")
+  private String representativeName;
+
+  @Column(name = "business_address")
+  private String businessAddress;
+
   @Transient private boolean isNew;
 
   protected Organization() {}
@@ -92,5 +101,24 @@ public class Organization implements Persistable<UUID> {
       throw new IllegalStateException(status + " -> " + nextStatus);
     }
     this.status = nextStatus;
+  }
+
+  public String getBusinessRegistrationNumber() {
+    return businessRegistrationNumber;
+  }
+
+  public String getRepresentativeName() {
+    return representativeName;
+  }
+
+  public String getBusinessAddress() {
+    return businessAddress;
+  }
+
+  public void updateSupplier(
+      String businessRegistrationNumber, String representativeName, String businessAddress) {
+    this.businessRegistrationNumber = businessRegistrationNumber;
+    this.representativeName = representativeName;
+    this.businessAddress = businessAddress;
   }
 }

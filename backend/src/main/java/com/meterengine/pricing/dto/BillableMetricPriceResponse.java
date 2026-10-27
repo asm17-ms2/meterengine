@@ -11,7 +11,8 @@ public record BillableMetricPriceResponse(
         List<String> dimensionProperties,
     @Schema(
             description =
-                "속성 값 조합별 단가. dimension_values 오름차순이고, 단가가 하나도 없으면 빈 배열이라 그 미터는 청구 예정액에 라인이 나오지 않는다")
+                "속성 값 조합별 단가. dimension_values 오름차순이고, 단가가 하나도 없으면 빈 배열이라 그 미터는 청구 예정액에 라인이 나오지"
+                    + " 않는다")
         @JsonProperty("price_rates")
         List<BillableMetricPricePriceRate> priceRates) {
 

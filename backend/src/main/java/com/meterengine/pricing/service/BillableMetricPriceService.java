@@ -1,16 +1,20 @@
 package com.meterengine.pricing.service;
 
-import com.meterengine.metric.entity.BillableMetric;
+import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.metric.repository.BillableMetricRepository;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.BillableMetricPricePriceRate;
 import com.meterengine.pricing.dto.BillableMetricPriceResponse;
 import com.meterengine.pricing.dto.ListBillableMetricPricesResponse;
 import com.meterengine.pricing.entity.PriceRate;
 import com.meterengine.pricing.repository.PriceRateRepository;
-import java.util.List;
+import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
@@ -18,54 +22,82 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class BillableMetricPriceService {
-
   private static final TypeReference<Map<String, Object>> DIMENSION_VALUES_TYPE =
       new TypeReference<>() {};
-
   private final BillableMetricRepository billableMetricRepository;
   private final PriceRateRepository priceRateRepository;
+  private final CustomerRepository customerRepository;
   private final JsonMapper jsonMapper;
 
   BillableMetricPriceService(
       BillableMetricRepository billableMetricRepository,
       PriceRateRepository priceRateRepository,
+      CustomerRepository customerRepository,
       JsonMapper jsonMapper) {
     this.billableMetricRepository = billableMetricRepository;
     this.priceRateRepository = priceRateRepository;
+    this.customerRepository = customerRepository;
     this.jsonMapper = jsonMapper;
   }
 
   @Transactional(readOnly = true)
   public ListBillableMetricPricesResponse list(UUID organizationId) {
-    Map<String, List<BillableMetricPricePriceRate>> priceRatesByBillableMetricCode =
-        priceRateRepository
-            .findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(organizationId)
-            .stream()
-            .collect(
-                Collectors.groupingBy(
-                    PriceRate::getBillableMetricCode,
-                    Collectors.mapping(this::toBillableMetricPricePriceRate, Collectors.toList())));
+    return list(organizationId, null, null);
+  }
 
+  @Transactional(readOnly = true)
+  public ListBillableMetricPricesResponse list(
+      UUID organizationId, YearMonth month, UUID customerId) {
+    if (customerId != null
+        && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId))
+      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+    String period =
+        (month == null ? YearMonth.now(BillableMetricUsageService.BILLING_ZONE) : month).toString();
+    Map<PriceRateKey, PriceRate> priceRateByPriceRateKey = new LinkedHashMap<>();
+    for (PriceRate rate :
+        priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            organizationId)) {
+      if (!Objects.equals(rate.getCustomerId(), customerId)
+          || rate.getEffectiveFrom().compareTo(period) > 0
+          || (rate.getEffectiveUntil() != null && rate.getEffectiveUntil().compareTo(period) <= 0))
+        continue;
+      PriceRateKey key =
+          new PriceRateKey(
+              rate.getBillableMetricCode(),
+              PriceRateDimensions.normalize(
+                  jsonMapper.readValue(rate.getDimensionValues(), DIMENSION_VALUES_TYPE)));
+      priceRateByPriceRateKey.merge(
+          key,
+          rate,
+          (left, right) ->
+              left.getEffectiveFrom().compareTo(right.getEffectiveFrom()) >= 0 ? left : right);
+    }
     return new ListBillableMetricPricesResponse(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
             .map(
-                billableMetric ->
-                    toBillableMetricPriceResponse(billableMetric, priceRatesByBillableMetricCode))
+                metric ->
+                    BillableMetricPriceResponse.of(
+                        metric.getCode(),
+                        metric.getDimensionProperties(),
+                        priceRateByPriceRateKey.values().stream()
+                            .filter(rate -> rate.getBillableMetricCode().equals(metric.getCode()))
+                            .map(this::toResponse)
+                            .toList()))
             .toList());
   }
 
-  private static BillableMetricPriceResponse toBillableMetricPriceResponse(
-      BillableMetric billableMetric,
-      Map<String, List<BillableMetricPricePriceRate>> priceRatesByBillableMetricCode) {
-    return BillableMetricPriceResponse.of(
-        billableMetric.getCode(),
-        billableMetric.getDimensionProperties(),
-        priceRatesByBillableMetricCode.getOrDefault(billableMetric.getCode(), List.of()));
+  private BillableMetricPricePriceRate toResponse(PriceRate rate) {
+    return new BillableMetricPricePriceRate(
+        jsonMapper.readValue(rate.getDimensionValues(), DIMENSION_VALUES_TYPE),
+        rate.getUnitPrice(),
+        rate.getId(),
+        rate.getCustomerId(),
+        rate.getEffectiveFrom(),
+        rate.getEffectiveUntil(),
+        rate.getModel(),
+        rate.getTiers());
   }
 
-  private BillableMetricPricePriceRate toBillableMetricPricePriceRate(PriceRate priceRate) {
-    return new BillableMetricPricePriceRate(
-        jsonMapper.readValue(priceRate.getDimensionValues(), DIMENSION_VALUES_TYPE),
-        priceRate.getUnitPrice());
-  }
+  private record PriceRateKey(
+      String billableMetricCode, Map<String, Object> dimensionValueByDimensionProperty) {}
 }

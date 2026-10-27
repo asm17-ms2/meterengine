@@ -157,4 +157,13 @@ public class EventRepository {
     }
     return where.append('\n').toString();
   }
+
+  public boolean existsWithType(UUID organizationId, String type) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND type = ?)",
+            Boolean.class,
+            organizationId,
+            type));
+  }
 }

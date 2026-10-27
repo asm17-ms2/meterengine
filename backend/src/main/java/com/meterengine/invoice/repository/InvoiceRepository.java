@@ -1,10 +1,12 @@
 package com.meterengine.invoice.repository;
 
 import com.meterengine.invoice.entity.Invoice;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
@@ -30,4 +32,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
   List<Invoice> findNewestFirst(UUID organizationId, UUID customerId, String period);
 
   Optional<Invoice> findByOrganizationIdAndId(UUID organizationId, UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select i from Invoice i where i.organizationId=:organizationId and i.id=:id")
+  Optional<Invoice> findForUpdate(UUID organizationId, UUID id);
 }

@@ -23,7 +23,7 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
 
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'token-usage', '{}', 0.007)
-ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values, effective_from) WHERE customer_id IS NULL DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
 INSERT INTO customer (id, organization_id, name) VALUES
@@ -76,7 +76,7 @@ INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values,
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-sonnet-5"}', 0.0159),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'output-tokens', '{"model": "claude-sonnet-5-5"}', 0.0159),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'network-egress', '{}', 120.0)
-ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values, effective_from) WHERE customer_id IS NULL DO UPDATE SET
   unit_price = EXCLUDED.unit_price;
 
 INSERT INTO billable_metric
@@ -96,5 +96,5 @@ ON CONFLICT (organization_id, code) DO UPDATE SET
 INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values, unit_price) VALUES
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-read-tokens', '{}', 0.0007),
   ('d7cee55d-8c82-4afc-b996-6749d8b26a4e', 'cache-creation-tokens', '{}', 0.00875)
-ON CONFLICT (organization_id, billable_metric_code, dimension_values) DO UPDATE SET
+ON CONFLICT (organization_id, billable_metric_code, dimension_values, effective_from) WHERE customer_id IS NULL DO UPDATE SET
   unit_price = EXCLUDED.unit_price;

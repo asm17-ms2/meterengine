@@ -17,8 +17,8 @@ export type ListInvoicesResponse = PaginationFields & {
 };
 
 export type InvoiceResponse = {
-  invoice_number?: string;
   id: string;
+  invoice_number?: string;
   customer_id: string;
   customer_name: string;
   month: string;
@@ -30,12 +30,16 @@ export type InvoiceResponse = {
 };
 
 export type InvoiceLineResponse = {
-  billable_metric_code: string;
+  billable_metric_code: string | null;
   target_property: string | null;
   dimension_values: DimensionValues;
   quantity: number;
+  quantity_numerator?: number | null;
+  quantity_denominator?: number | null;
   unit_price: number;
   amount: number;
+  line_type?: "per_unit" | "volume" | "graduated_tier" | "base_fee" | "minimum_adjustment";
+  tier_index?: number;
 };
 
 export type FinalizeInvoicesResponse = {

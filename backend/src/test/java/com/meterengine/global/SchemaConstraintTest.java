@@ -41,7 +41,8 @@ class SchemaConstraintTest {
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE transaction_id = 'tx-1'"))
+                    "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE"
+                        + " transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
@@ -143,11 +144,18 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 같은_도입사에서_event_type과_target_property가_같은_미터는_두_번_저장되지_않는다() {
+  void 같은_도입사에서_같은_속성의_다른_코드는_허용하고_동일_코드는_금지한다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertBillableMetric(organizationId, "token-usage-copy"))
+    insertBillableMetric(organizationId, "token-usage-copy");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM billable_metric WHERE organization_id = ?",
+                Long.class,
+                organizationId))
+        .isEqualTo(2L);
+    assertThatThrownBy(() -> insertBillableMetric(organizationId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -182,6 +190,7 @@ class SchemaConstraintTest {
   void 사람이_읽는_이름_컬럼은_한국어_collation을_쓴다() {
     assertThat(collationOf("customer", "name")).isEqualTo("korean");
     assertThat(collationOf("organization", "name")).isEqualTo("korean");
+    assertThat(collationOf("organization", "representative_name")).isEqualTo("korean");
     assertThat(collationOf("billable_metric", "name")).isEqualTo("korean");
     assertThat(collationOf("invoice", "customer_name")).isEqualTo("korean");
     assertThat(collationOf("user_account", "name")).isEqualTo("korean");
@@ -449,7 +458,7 @@ class SchemaConstraintTest {
             () ->
                 jdbcTemplate.execute(
                     "TRUNCATE invoice, invoice_line, outbound_email, payment_attempt,"
-                        + " payment_cancellation"))
+                        + " payment_cancellation, invoice_view_link"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("invoice is append-only");
   }
@@ -523,7 +532,7 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 확정_라인에서_비울_수_있는_열은_집계_기준뿐이다() {
+  void 기본료_라인의_미터와_집계_기준은_비울_수_있다() {
     assertThat(
             jdbcTemplate.queryForList(
                 """
@@ -532,7 +541,11 @@ class SchemaConstraintTest {
                   AND is_nullable = 'YES'
                 """,
                 String.class))
-        .containsExactly("target_property");
+        .containsExactlyInAnyOrder(
+            "billable_metric_code",
+            "target_property",
+            "quantity_numerator",
+            "quantity_denominator");
   }
 
   @Test

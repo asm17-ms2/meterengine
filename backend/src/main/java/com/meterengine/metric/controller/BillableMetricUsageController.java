@@ -36,14 +36,16 @@ public class BillableMetricUsageController {
       summary = "고객별 월 사용량 조회",
       description =
           """
-          미터마다 type이 그 미터의 event_type과 같은 이벤트를 고객별로 합산해 돌려준다.
+          미터마다 event_type이 같은 이벤트를 설정한 집계 방식으로 계산한다.
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
           지금 이후 시각의 이벤트는 집계에 들지 않는다.
           모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열이다.
           dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값의 조합별로 수량을 나눈 것이고,
-          고객의 quantity는 그 합이다. 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 요소 하나다.
-          properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
+          고객 전체 수량은 원본 이벤트를 따로 집계하므로 조합별 수량의 합과 다를 수 있다. 청구는 조합별 정확 수량에 단가를 적용한다. none이면 raw_quantity_numerator/(raw_quantity_denominator*unit_size), 반올림 모드이면 처리한 quantity를 사용한다.
+          raw_quantity는 변환 전 집계량, quantity는 unit_size 나눗셈과 반올림을 적용한 결과다.
+          count는 속성과 관계없이 전체 이벤트를 센다. count_distinct는 숫자, 문자열, 불리언 고유값만 세고 나머지는 제외한다.
+          다른 집계는 target_property가 숫자인 이벤트만 계산한다. 차원이 없으면 dimension_values가 빈 객체다.
           금액은 싣지 않는다. 금액은 청구 예정액 조회(GET /v1/invoices/draft)가 준다.
           """)
   @ApiResponses({
