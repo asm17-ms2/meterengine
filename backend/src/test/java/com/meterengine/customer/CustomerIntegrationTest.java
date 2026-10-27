@@ -512,97 +512,50 @@ class CustomerIntegrationTest {
     assertThat(listedBillingEmail(organizationId)).isEqualTo("billing@acme.example");
   }
 
-  // --- 삭제 ---
-
   @Test
-  void 이벤트가_없는_고객은_삭제되고_목록에서_빠진다() {
+  void 보관은_기존_이벤트와_청구결제_행을_보존하고_목록에서_숨긴다() {
     UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "지울 고객");
-
-    assertThat(delete(organizationId, customerId)).hasStatus(204);
-
-    assertThat(list(organizationId)).bodyJson().extractingPath("$.customers").asArray().isEmpty();
-    assertThat(customerCount(organizationId)).isZero();
-  }
-
-  @Test
-  void 이벤트가_있는_고객을_지우면_409이고_고객은_그대로다() {
-    UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "이벤트 있는 고객");
+    UUID customerId = createCustomer(organizationId, "보관 고객");
     insertEvent(organizationId, customerId);
-
-    assertThat(delete(organizationId, customerId))
-        .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.CUSTOMER_HAS_EVENTS.getCode());
-
+    insertFailedPaymentAttempt(organizationId, customerId);
+    assertThat(delete(organizationId, customerId)).hasStatus(204);
+    assertThat(delete(organizationId, customerId)).hasStatus(204);
     assertThat(customerCount(organizationId)).isEqualTo(1);
+    assertThat(list(organizationId)).bodyJson().extractingPath("$.customers").asArray().isEmpty();
+    assertThat(
+            mvc.get()
+                .uri("/v1/customers?status=archived")
+                .header(AUTHORIZATION, authorization(organizationId))
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.customers")
+        .asArray()
+        .hasSize(1);
+    assertThat(
+            mvc.get()
+                .uri("/v1/customers/" + customerId)
+                .header(AUTHORIZATION, authorization(organizationId))
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.archived_at")
+        .isNotNull();
+    assertThat(
+            mvc.post()
+                .uri("/v1/customers/" + customerId + "/restorations")
+                .header(AUTHORIZATION, authorization(organizationId))
+                .exchange())
+        .hasStatusOk();
     assertThat(list(organizationId)).bodyJson().extractingPath("$.customers").asArray().hasSize(1);
   }
 
   @Test
-  void 결제_기록이_있는_고객을_지우면_409이고_고객은_그대로다() {
+  void 보관한_고객은_복원_전까지_수정할_수_없다() {
     UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "결제 기록 있는 고객");
-    insertFailedPaymentAttempt(organizationId, customerId);
-
-    assertThat(delete(organizationId, customerId))
-        .hasStatus(409)
-        .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.CUSTOMER_HAS_PAYMENT_ATTEMPTS.getCode());
-
-    assertThat(customerCount(organizationId)).isEqualTo(1);
-  }
-
-  @Test
-  void 인보이스가_있는_고객을_지우면_500이다() {
-    UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "인보이스 있는 고객");
-    insertInvoice(organizationId, customerId);
-
-    assertThat(delete(organizationId, customerId))
-        .hasStatus(500)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
-  }
-
-  @Test
-  void 같은_고객을_두_번_지우면_두_번째는_404다() {
-    UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "지울 고객");
-
-    assertThat(delete(organizationId, customerId)).hasStatus(204);
-
-    assertThat(delete(organizationId, customerId))
-        .hasStatus(404)
-        .bodyJson()
-        .extractingPath("$.code")
-        .asString()
-        .isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND.getCode());
-  }
-
-  @Test
-  void 지운_고객은_고칠_수도_없다() {
-    UUID organizationId = insertOrganization();
-    UUID customerId = createCustomer(organizationId, "지울 고객");
+    UUID customerId = createCustomer(organizationId, "보관 고객");
     delete(organizationId, customerId);
-
-    assertThat(
-            put(
-                organizationId,
-                customerId,
-                """
-        {"name":"되살리기 시도"}
-        """))
-        .hasStatus(404);
+    assertThat(put(organizationId, customerId, "{\"name\":\"이름\"}")).hasStatus(409);
   }
 
   @Test

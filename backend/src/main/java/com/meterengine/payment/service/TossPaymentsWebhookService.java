@@ -69,7 +69,8 @@ public class TossPaymentsWebhookService {
       return;
     }
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(organizationId, attempt.get().getMode());
+        tossPaymentsCredentialService.historical(
+            organizationId, attempt.get().getMode(), attempt.get().getRequestedAt());
     if (credential.isEmpty()) {
       logOutcome(organizationId, attempt.get().getId(), PaymentMetrics.IGNORED, null);
       paymentMetrics.countWebhook(eventType, PaymentMetrics.IGNORED);

@@ -58,8 +58,10 @@ public class TossPaymentsCredentialController {
         description = "code=validation_error: 요청 값이 올바르지 않다")
   })
   public ListTossPaymentsCredentialsResponse listTossPaymentsCredentials(
-      @CurrentOrganizationId UUID organizationId) {
-    return tossPaymentsCredentialService.list(organizationId);
+      @CurrentOrganizationId UUID organizationId,
+      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
+          String status) {
+    return tossPaymentsCredentialService.list(organizationId, status);
   }
 
   @PutMapping("/{mode}")
@@ -106,5 +108,18 @@ public class TossPaymentsCredentialController {
           String mode,
       @Valid @RequestBody UpdateTossPaymentsCredentialRequest request) {
     return tossPaymentsCredentialService.update(organizationId, mode, request);
+  }
+
+  @org.springframework.web.bind.annotation.DeleteMapping("/{mode}")
+  @AdminAccess
+  @org.springframework.web.bind.annotation.ResponseStatus(
+      org.springframework.http.HttpStatus.NO_CONTENT)
+  @Operation(
+      summary = "토스페이먼츠 키 보관",
+      description = "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.")
+  public void deleteTossPaymentsCredential(
+      @CurrentOrganizationId UUID organizationId,
+      @PathVariable @Pattern(regexp = "test|live") @StorableText String mode) {
+    tossPaymentsCredentialService.delete(organizationId, mode);
   }
 }

@@ -6,6 +6,7 @@ import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.repository.EventRepository;
+import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
-public class EventService {
+public class EventService implements com.meterengine.event.api.EventPresence {
 
   private static final Duration MAX_EVENT_AGE = Duration.ofDays(35);
 
@@ -47,9 +48,13 @@ public class EventService {
   }
 
   public IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
-    if (!customerRepository.existsByOrganizationIdAndId(organizationId, request.customerId())) {
-      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
-    }
+    var customer =
+        customerRepository
+            .findByOrganizationIdAndId(organizationId, request.customerId())
+            .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+    if (customer.getArchivedAt() != null
+        && !eventRepository.exists(organizationId, request.transactionId()))
+      throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
 
     if (isTooOld(request.occurredAt().toInstant(), Instant.now())) {
       if (eventRepository.exists(organizationId, request.transactionId())) {
@@ -125,5 +130,9 @@ public class EventService {
 
   public boolean exists(UUID organizationId, String type) {
     return eventRepository.existsWithType(organizationId, type);
+  }
+
+  public boolean exists(UUID organizationId, String type, String property) {
+    return existsWithNumericProperty(organizationId, type, property);
   }
 }

@@ -66,7 +66,7 @@ class PaymentMethodIntegrationTest {
             """
             {
               "customer_id": "%s", "card_issuer_code": "61", "card_number": "4330****",
-              "mode": "test", "authenticated_at": "2026-10-26T10:02:03+09:00"
+              "mode": "test", "authenticated_at": "2026-10-26T10:02:03+09:00", "archived_at": null
             }
             """
                 .formatted(customerId));

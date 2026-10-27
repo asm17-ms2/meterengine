@@ -47,8 +47,9 @@ public class WebhookEndpointController {
   @ReadAccess
   @Operation(summary = "웹훅 엔드포인트 목록 조회")
   public ListWebhookEndpointsResponse listWebhookEndpoints(
-      @CurrentOrganizationId UUID organizationId) {
-    return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId));
+      @CurrentOrganizationId UUID organizationId,
+      @RequestParam(defaultValue = "active") @StorableText String status) {
+    return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId, status));
   }
 
   @GetMapping("/{id}")
@@ -125,5 +126,13 @@ public class WebhookEndpointController {
       @PathVariable UUID id,
       @PathVariable("delivery_id") UUID deliveryId) {
     webhookDeliveryService.retry(organizationId, id, deliveryId);
+  }
+
+  @PostMapping("/{id}/restorations")
+  @AdminAccess
+  @Operation(summary = "웹훅 엔드포인트 복원", description = "비활성 상태로 복원한다. 주소와 등록 한도를 확인하며 과거 전송 기록을 유지한다.")
+  public WebhookEndpointResponse restoreWebhookEndpoint(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    return webhookEndpointService.restore(organizationId, id);
   }
 }

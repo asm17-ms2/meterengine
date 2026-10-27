@@ -131,6 +131,16 @@ public class BillableMetricController {
     return billableMetricService.update(organizationId, code, request);
   }
 
+  @GetMapping
+  @ReadAccess
+  @Operation(summary = "미터 목록 조회")
+  public ListBillableMetricsResponse listBillableMetrics(
+      @CurrentOrganizationId UUID organizationId,
+      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
+          String status) {
+    return billableMetricService.list(organizationId, status);
+  }
+
   @GetMapping("/{code}")
   @ReadAccess
   @Operation(summary = "미터 상세 조회")
@@ -139,65 +149,22 @@ public class BillableMetricController {
     return billableMetricService.get(organizationId, code);
   }
 
+  @PostMapping("/{code}/restorations")
+  @AdminAccess
+  @Operation(summary = "미터 복원", description = "다음 달부터 집계를 재개한다. 보관한 기간을 소급 집계하지 않는다.")
+  public BillableMetricResponse restoreBillableMetric(
+      @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
+    return billableMetricService.restore(organizationId, code);
+  }
+
   @DeleteMapping("/{code}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @AdminAccess
   @Operation(
-      summary = "집계 미터 삭제",
-      description =
-          """
-          미터를 지운다. 지운 미터는 되돌릴 수 없다.
-          집계된 이벤트가 한 건이라도 있거나 단가가 붙은 미터는 지울 수 없고 409다.
-          이미 지운 미터를 다시 지우면 404다.
-          """)
-  @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
-    @ApiResponse(
-        responseCode = "400",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다."),
-    @ApiResponse(
-        responseCode = "404",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
-    @ApiResponse(
-        responseCode = "409",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=billable_metric_has_events: 집계된 이벤트가 있어 지울 수 없다.
-            code=billable_metric_has_price_rate: 단가가 붙어 있어 지울 수 없다.
-            """)
-  })
+      summary = "미터 보관",
+      description = "현재 월까지 집계를 유지하고 다음 달부터 중단한다. 이벤트와 단가는 유지한다. 반복 요청은 204다.")
   public void deleteBillableMetric(
-      @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "지울 미터의 code.") @PathVariable @StorableText String code) {
+      @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
     billableMetricService.delete(organizationId, code);
-  }
-
-  @GetMapping
-  @ReadAccess
-  @Operation(
-      summary = "미터 목록 조회",
-      description =
-          """
-          등록한 미터를 code 오름차순으로 전부 돌려준다.
-          페이지를 나누지 않는다.
-          """)
-  @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "미터 목록. 미터가 없으면 billable_metrics가 빈 배열이다")
-  })
-  public ListBillableMetricsResponse listBillableMetrics(
-      @CurrentOrganizationId UUID organizationId) {
-    return billableMetricService.list(organizationId);
   }
 }

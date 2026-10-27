@@ -82,11 +82,11 @@ public class PriceRateController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @AdminAccess
   @Operation(
-      summary = "단가 삭제",
+      summary = "단가 조합 보관",
       description =
           """
-          미터에서 속성 값 조합 하나의 단가를 지운다. dimension_values는 JSON 객체 문자열이고,
-          빈 객체 {}는 기본 단가다. 같은 조합인지는 키 순서와 상관없이 본다.
+          미터에서 속성 값 조합의 현재 단가를 보관하고 다음 달부터 효력을 중단한다. dimension_values는 JSON 객체 문자열이고,
+          빈 객체 {}는 기본 단가다. 현재 월 계산과 버전 이력, 미래 예약은 유지한다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
@@ -123,18 +123,33 @@ public class PriceRateController {
   public ListPriceRatesResponse listPriceRates(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,
-      @RequestParam(name = "customer_id", required = false) UUID customerId) {
-    return priceRateService.list(organizationId, code, customerId);
+      @RequestParam(name = "customer_id", required = false) UUID customerId,
+      @RequestParam(defaultValue = "active") @StorableText String status) {
+    return priceRateService.list(organizationId, code, customerId, status);
   }
 
   @DeleteMapping("/{id}")
   @AdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "단가 버전 삭제", description = "현재 월 또는 미래 월에 시작하는 버전만 삭제한다. 지난달 이전 단가는 보존한다.")
+  @Operation(
+      summary = "단가 버전 보관",
+      description = "현재 월 효력은 유지하고 다음 달부터 중단한다. 미래 예약은 시작 전 보관되며 버전 이력은 유지한다.")
   public void deletePriceRateVersion(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,
       @PathVariable UUID id) {
     priceRateService.delete(organizationId, code, id);
+  }
+
+  @PostMapping("/{id}/restorations")
+  @AdminAccess
+  @Operation(
+      summary = "단가 버전 복원",
+      description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
+  public PriceRateResponse restorePriceRate(
+      @CurrentOrganizationId UUID organizationId,
+      @PathVariable @StorableText String code,
+      @PathVariable UUID id) {
+    return priceRateService.restore(organizationId, code, id);
   }
 }

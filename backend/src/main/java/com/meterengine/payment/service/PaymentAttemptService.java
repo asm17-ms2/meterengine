@@ -119,7 +119,7 @@ public class PaymentAttemptService {
     UUID attemptId = pendingAttempt.getId();
     String mode = pendingAttempt.getMode();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(organizationId, mode);
+        tossPaymentsCredentialService.active(organizationId, mode);
     if (credential.isEmpty()) {
       return failWithoutToss(pendingAttempt, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
     }
@@ -356,7 +356,7 @@ public class PaymentAttemptService {
     }
     TossPaymentsCredential credential =
         tossPaymentsCredentialService
-            .find(organizationId, mode)
+            .active(organizationId, mode)
             .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
     if (findBillingKey(organizationId, invoice.getCustomerId(), mode).isEmpty()) {
       throw new ConflictException(ErrorCode.PAYMENT_METHOD_MISSING);
@@ -425,7 +425,9 @@ public class PaymentAttemptService {
   }
 
   private Optional<BillingKey> findBillingKey(UUID organizationId, UUID customerId, String mode) {
-    return billingKeyRepository.findById(new BillingKeyId(organizationId, customerId, mode));
+    return billingKeyRepository
+        .findById(new BillingKeyId(organizationId, customerId, mode))
+        .filter(key -> key.getArchivedAt() == null);
   }
 
   private PaymentAttemptResponse failWithoutToss(PaymentAttempt pendingAttempt, ErrorCode reason) {

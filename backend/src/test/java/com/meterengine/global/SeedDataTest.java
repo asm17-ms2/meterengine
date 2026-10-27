@@ -113,7 +113,7 @@ class SeedDataTest {
   }
 
   @Test
-  void 무차원_단가가_남은_DB에서_시드를_다시_실행하면_model_단가만_남는다() {
+  void 시드_재실행은_무차원_단가를_보관하고_model_단가를_활성으로_둔다() {
     jdbcTemplate.update(
         "DELETE FROM price_rate WHERE billable_metric_code IN ('input-tokens', 'output-tokens')");
     jdbcTemplate.update(
@@ -136,7 +136,12 @@ class SeedDataTest {
         .containsOnly("{model}");
     assertThat(modelsPricedFor("input-tokens")).isEqualTo(MODELS);
     assertThat(modelsPricedFor("output-tokens")).isEqualTo(MODELS);
-    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES + 2);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM price_rate WHERE billable_metric_code IN ('input-tokens', 'output-tokens') AND dimension_values = '{}' AND archived_at IS NOT NULL",
+                Integer.class))
+        .isEqualTo(2);
   }
 
   @Test
@@ -196,7 +201,7 @@ class SeedDataTest {
 
   private List<String> modelsPricedFor(String billableMetricCode) {
     return jdbcTemplate.queryForList(
-        "SELECT dimension_values ->> 'model' FROM price_rate WHERE billable_metric_code = ?"
+        "SELECT dimension_values ->> 'model' FROM price_rate WHERE billable_metric_code = ? AND archived_at IS NULL"
             + " ORDER BY 1",
         String.class,
         billableMetricCode);

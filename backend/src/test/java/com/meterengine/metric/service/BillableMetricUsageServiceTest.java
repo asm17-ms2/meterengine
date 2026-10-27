@@ -40,6 +40,7 @@ class BillableMetricUsageServiceTest {
   @Mock private BillableMetricUsageRepository billableMetricUsageRepository;
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private CustomerRepository customerRepository;
+  @Mock private com.meterengine.metric.repository.BillableMetricPeriodRepository periodRepository;
 
   @Captor private ArgumentCaptor<OffsetDateTime> startCaptor;
   @Captor private ArgumentCaptor<OffsetDateTime> endCaptor;
@@ -50,7 +51,10 @@ class BillableMetricUsageServiceTest {
   void setUp() {
     billableMetricUsageService =
         new BillableMetricUsageService(
-            billableMetricUsageRepository, billableMetricRepository, customerRepository);
+            billableMetricUsageRepository,
+            billableMetricRepository,
+            customerRepository,
+            periodRepository);
   }
 
   @Test

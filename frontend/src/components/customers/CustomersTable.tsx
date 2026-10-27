@@ -1,5 +1,7 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { Button, Flex, Table, theme, Typography } from "antd";
 
 import { NumberText } from "@/components/table/NumberText";
@@ -43,6 +45,7 @@ export function CustomersTable({
   clientSortSelection?: ClientSortSelectionState;
 }) {
   const { token } = theme.useToken();
+  const canManage = useTenantScope("admin");
 
   const sortableColumns: SortableColumn<CustomerRowView>[] = [
     {
@@ -113,7 +116,7 @@ export function CustomersTable({
     },
   ];
 
-  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns, {
+  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns.filter(column => column.key !== "actions" || canManage), {
     clientSortSelection,
   });
 

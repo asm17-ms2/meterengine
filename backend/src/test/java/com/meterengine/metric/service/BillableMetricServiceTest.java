@@ -8,7 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.meterengine.event.service.EventService;
+import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.event.api.EventPresence;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
@@ -21,8 +22,10 @@ import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.service.PriceRateService;
+import com.meterengine.organization.entity.Organization;
+import com.meterengine.organization.repository.OrganizationRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,15 +44,25 @@ class BillableMetricServiceTest {
   private static final String BILLABLE_METRIC_CODE = "token-usage";
 
   @Mock private BillableMetricRepository billableMetricRepository;
-  @Mock private EventService eventService;
-  @Mock private PriceRateService priceRateService;
+  @Mock private EventPresence eventService;
+  @Mock private BillableMetricPeriodRepository periodRepository;
+  @Mock private OrganizationRepository organizationRepository;
+  @Mock private AuditLogService auditLogService;
 
   private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
     billableMetricService =
-        new BillableMetricService(billableMetricRepository, eventService, priceRateService);
+        new BillableMetricService(
+            billableMetricRepository,
+            eventService,
+            periodRepository,
+            organizationRepository,
+            auditLogService);
+    org.mockito.Mockito.lenient()
+        .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
+        .thenReturn(Optional.of(org.mockito.Mockito.mock(Organization.class)));
   }
 
   @Test
@@ -234,7 +247,7 @@ class BillableMetricServiceTest {
 
     update("chat_completion", "token");
 
-    verify(eventService, never()).existsWithNumericProperty(any(), any(), any());
+    verify(eventService, never()).exists(any(), any(), any());
     verify(billableMetricRepository, never())
         .existsByOrganizationIdAndEventTypeAndTargetProperty(any(), any(), any());
   }
@@ -284,42 +297,15 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 이벤트가_집계된_미터는_삭제할_수_없다() {
+  void 미터를_보관해도_행과_현재_월_효력은_유지한다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(eventService.existsWithNumericProperty(ORGANIZATION_ID, "chat_completion", "token"))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
-    verify(billableMetricRepository, never()).delete(any());
-  }
-
-  @Test
-  void 단가가_붙은_미터는_삭제할_수_없다() {
-    BillableMetric stored = storedBillableMetric();
-    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(priceRateService.existsForBillableMetric(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE);
-    verify(billableMetricRepository, never()).delete(any());
-  }
-
-  @Test
-  void 이벤트와_단가가_없는_미터는_삭제된다() {
-    BillableMetric stored = storedBillableMetric();
-    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-
     billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE);
-
-    verify(billableMetricRepository).delete(stored);
-    verify(billableMetricRepository).flush();
+    assertThat(stored.getArchivedAt()).isNotNull();
+    assertThat(stored.getInactiveFrom())
+        .isEqualTo(BillableMetricUsageService.currentMonth().plusMonths(1).toString());
+    verify(billableMetricRepository, never()).delete(any());
+    verify(periodRepository).save(any());
   }
 
   private BillableMetric storedBillableMetric() {

@@ -8,6 +8,7 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -54,6 +55,38 @@ public class BillableMetric implements Persistable<BillableMetricId> {
   @JdbcTypeCode(SqlTypes.ARRAY)
   @Column(name = "dimension_properties", nullable = false)
   private List<String> dimensionProperties = List.of();
+
+  @Column(name = "archived_at")
+  private OffsetDateTime archivedAt;
+
+  @Column(name = "active_from", nullable = false)
+  private String activeFrom = "0001-01";
+
+  @Column(name = "inactive_from")
+  private String inactiveFrom;
+
+  public OffsetDateTime getArchivedAt() {
+    return archivedAt;
+  }
+
+  public String getActiveFrom() {
+    return activeFrom;
+  }
+
+  public String getInactiveFrom() {
+    return inactiveFrom;
+  }
+
+  public void archive(String cutoff) {
+    archivedAt = OffsetDateTime.now();
+    inactiveFrom = cutoff;
+  }
+
+  public void restore(String start) {
+    archivedAt = null;
+    activeFrom = start;
+    inactiveFrom = null;
+  }
 
   @Transient private boolean isNew = true;
 

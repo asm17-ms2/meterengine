@@ -127,8 +127,7 @@ class VersionedPricingIntegrationTest {
             ConflictException.class,
             error ->
                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_RATE_HISTORY_IMMUTABLE));
-    assertThatThrownBy(() -> priceRateService.delete(organizationId, "tokens", id))
-        .isInstanceOf(ConflictException.class);
+    priceRateService.delete(organizationId, "tokens", id);
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
   }
 
@@ -146,11 +145,44 @@ class VersionedPricingIntegrationTest {
                 .billableMetricPrices()
                 .getFirst()
                 .priceRates())
-        .isEmpty();
+        .hasSize(1);
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
     assertThat(amount(month, "100")).isEqualTo(300);
     priceRateService.delete(organizationId, "tokens", customerRate.id());
     assertThat(amount(month.plusMonths(1), "100")).isEqualTo(3000);
+  }
+
+  @Test
+  void 최신_단가_보관은_과거와_현재를_유지하고_다음월에_구단가로_돌아가지_않는다() {
+    legacyRate();
+    var current = rate(null, month, null, "per_unit", new BigDecimal("20"), null);
+    priceRateService.delete(organizationId, "tokens", current.id());
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
+    assertThat(amount(month, "100")).isEqualTo(2000);
+    assertThat(amount(month.plusMonths(1), "100")).isZero();
+    assertThat(
+            billableMetricPriceService
+                .list(organizationId, month.plusMonths(1), null)
+                .billableMetricPrices()
+                .getFirst()
+                .priceRates())
+        .isEmpty();
+  }
+
+  @Test
+  void 최신_요금제_보관은_다음월에_구요금제를_되살리지_않는다() {
+    legacyRate();
+    jdbcTemplate.update(
+        "INSERT INTO price_plan (organization_id,effective_from,base_fee,minimum_amount) VALUES (?, ?, 100, 0)",
+        organizationId,
+        month.minusMonths(1).toString());
+    var current =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, month, null, 200L, 0L));
+    pricePlanService.delete(organizationId, current.id());
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+    assertThat(amount(month, "100")).isEqualTo(1200);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
   }
 
   @Test

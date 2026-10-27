@@ -131,14 +131,14 @@ class PriceRateIntegrationTest {
   }
 
   @Test
-  void DELETE하면_204이고_그_조합만_사라진다() {
+  void DELETE하면_204이고_그_조합의_이력을_보관한다() {
     UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
     create(organizationId, Map.of("model", "opus"), "0.007");
     create(organizationId, Map.of("model", "haiku"), "1");
 
     assertThat(delete(organizationId, "{\"model\":\"opus\"}")).hasStatus(204);
 
-    assertThat(priceRateCount(organizationId)).isEqualTo(1);
+    assertThat(priceRateCount(organizationId)).isEqualTo(2);
     assertThat(storedUnitPrice(organizationId, "{\"model\": \"haiku\"}")).isEqualByComparingTo("1");
   }
 

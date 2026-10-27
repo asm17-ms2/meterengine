@@ -309,6 +309,24 @@ class MetricAggregationIntegrationTest {
   }
 
   @Test
+  void 보관_효력_기간이_겹쳐도_한_번_집계하고_공백_월은_제외한다() {
+    create("periods", "avg", List.of(), null, null, null, null);
+    jdbc.update(
+        "UPDATE billable_metric SET active_from = '2026-10' WHERE organization_id = ? AND code = 'periods'",
+        organization);
+    jdbc.update(
+        "INSERT INTO billable_metric_period(id, organization_id, billable_metric_code, active_from, active_until) VALUES (gen_random_uuid(), ?, 'periods', '2026-07', '2026-09'), (gen_random_uuid(), ?, 'periods', '2026-08', '2026-09')",
+        organization,
+        organization);
+    event("aug-a", "{\"value\":10}", START);
+    event("aug-b", "{\"value\":90}", START.plusSeconds(1));
+    event("sep-gap", "{\"value\":999}", END);
+    entityManager.clear();
+    assertThat(quantity("periods").quantity()).isEqualByComparingTo("50");
+    assertThat(usage.aggregate(organization, YearMonth.of(2026, 9))).isEmpty();
+  }
+
+  @Test
   void 잘못된_설정은_필드별로_거절한다() {
     List<CreateBillableMetricRequest> invalid =
         List.of(

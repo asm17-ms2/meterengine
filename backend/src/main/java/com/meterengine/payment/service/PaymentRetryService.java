@@ -93,7 +93,7 @@ public class PaymentRetryService {
 
   private boolean retryCandidate(PaymentRetryCandidateProjection candidate) {
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(candidate.getOrganizationId(), candidate.getMode());
+        tossPaymentsCredentialService.active(candidate.getOrganizationId(), candidate.getMode());
     if (credential.isEmpty()) {
       logSkipped(candidate, "toss_payments_credential_missing");
       return false;
@@ -126,8 +126,10 @@ public class PaymentRetryService {
       logSkipped(candidate, "candidate_changed");
       return Optional.empty();
     }
-    if (!billingKeyRepository.existsById(
-        new BillingKeyId(organizationId, failedAttempt.getCustomerId(), mode))) {
+    if (billingKeyRepository
+        .findById(new BillingKeyId(organizationId, failedAttempt.getCustomerId(), mode))
+        .filter(key -> key.getArchivedAt() == null)
+        .isEmpty()) {
       logSkipped(candidate, "payment_method_missing");
       return Optional.empty();
     }
