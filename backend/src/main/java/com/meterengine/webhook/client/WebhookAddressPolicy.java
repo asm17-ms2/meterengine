@@ -49,11 +49,12 @@ public class WebhookAddressPolicy {
     int first = Byte.toUnsignedInt(bytes[0]);
     int second = Byte.toUnsignedInt(bytes[1]);
     if (bytes.length == 4) {
+      int third = Byte.toUnsignedInt(bytes[2]);
       return first == 0
           || first >= 224
           || first == 100 && second >= 64 && second <= 127
           || first == 198 && (second == 18 || second == 19)
-          || first == 192 && second == 0;
+          || first == 192 && second == 0 && (third == 0 || third == 2);
     }
     return (first & 0xe0) != 0x20
         || first == 0x20 && second == 0x02
