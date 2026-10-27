@@ -67,9 +67,11 @@ pnpm build
 | `METERENGINE_API_KEY` | 백엔드 호출에 쓰는 API 키. `Authorization: Bearer` 헤더로 나가고, 이 키의 도입사 데이터를 본다 | `backend/src/main/resources/db/local/R__local_credentials.sql`의 live 키 `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` (데모 도입사, admin 스코프) |
 | `METERENGINE_ORGANIZATION_ID` | 셸 표시용 도입사 식별자. 백엔드 호출에는 쓰지 않는다 | `backend/src/main/resources/db/migration/R__seed.sql`의 데모 도입사 |
 | `METERENGINE_ORGANIZATION_NAME` | 셸 표시용 도입사 이름. 상단 바에 나온다 | `데모 도입사` |
+| `METERENGINE_PUBLIC_ORIGIN` | 공개 인보이스 조회와 결제 재시도를 받을 origin. 예: `https://meterengine.com` | 없음. localhost에서 온 요청만 받는다 |
 
 - 셸 표시용 변수는 API 키가 속한 도입사와 같은 값으로 맞춘다. 다르면 상단 바와 화면의 데이터가 어긋난다.
 - 배포할 때는 `deploy/compose.prod.yml`이 API 키와 셸 표시용 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
+- `METERENGINE_PUBLIC_ORIGIN`은 배포할 때 `https://<SITE_DOMAIN>`으로 주입된다.
 - 배포 환경의 백엔드 주소는 공개 도메인이 아니라 컨테이너 네트워크 안의 Caddy 내부 사이트 `http://caddy:8081`이다. Caddy가 헬스체크를 통과한 백엔드 색으로 보낸다.
 
 ## 컨테이너 이미지
