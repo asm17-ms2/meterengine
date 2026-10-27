@@ -59,7 +59,7 @@ pnpm build
 
 `frontend/.env.local`의 `METERENGINE_API_BASE_URL`로 백엔드 주소를 정한다. 기본값은 `http://localhost:8080`이며 서버에서만 읽는다. 배포 시 컨테이너 네트워크 주소를 지정한다.
 
-외부 고객에게 인보이스 조회 링크를 제공할 때는 런타임 `METERENGINE_PUBLIC_ORIGIN`을 공개 콘솔 origin으로 지정한다. 예: `https://console.example.com`. 프록시는 해당 Host를 보존해야 한다. 공개 조회 중계는 이 origin과 Host를 검사하며 `X-Forwarded-*`는 신뢰하지 않는다. 설정이 없으면 localhost, 127.0.0.1과 ::1의 같은 origin 요청만 허용한다.
+운영 compose는 `METERENGINE_PUBLIC_ORIGIN`에 `https://<SITE_DOMAIN>`을 주입한다. 외부 고객에게 인보이스 조회 링크를 제공할 때는 런타임 `METERENGINE_PUBLIC_ORIGIN`을 공개 콘솔 origin으로 지정한다. 예: `https://console.example.com`. 프록시는 해당 Host를 보존해야 한다. 공개 조회 중계는 이 origin과 Host를 검사하며 `X-Forwarded-*`는 신뢰하지 않는다. 설정이 없으면 localhost, 127.0.0.1과 ::1의 같은 origin 요청만 허용한다.
 
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
