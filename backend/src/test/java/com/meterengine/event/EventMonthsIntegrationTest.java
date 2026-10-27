@@ -51,8 +51,22 @@ class EventMonthsIntegrationTest {
   }
 
   @Test
-  void 다른_조직의_월을_숨긴다() {
+  void 같은_조직의_세_환경과_다른_조직의_월을_분리한다() {
+    UUID testEnvironment = environment("test");
+    UUID liveEnvironment = environment("live");
     insert(organizationId, customer(organizationId, null), null, "same-id", "2026-10-02T00:00:00Z");
+    insert(
+        organizationId,
+        customer(organizationId, testEnvironment),
+        testEnvironment,
+        "same-id",
+        "2026-11-02T00:00:00Z");
+    insert(
+        organizationId,
+        customer(organizationId, liveEnvironment),
+        liveEnvironment,
+        "same-id",
+        "2026-12-02T00:00:00Z");
     UUID otherOrganization = UUID.randomUUID();
     TestCredentials.issueApiKey(jdbcTemplate, otherOrganization, "read");
     insert(
@@ -61,7 +75,13 @@ class EventMonthsIntegrationTest {
         null,
         "same-id",
         "2027-01-02T00:00:00Z");
+    String testKey = key("test");
+    String liveKey = key("live");
     assertThat(months(get(authorization, null))).containsExactly("2026-10");
+    assertThat(months(get(testKey, null))).containsExactly("2026-11");
+    assertThat(months(get(liveKey, "live"))).containsExactly("2026-12");
+    assertThat(get(testKey, "live")).hasStatus(403);
+    assertThat(get(authorization, "test")).hasStatus(403);
   }
 
   @Test

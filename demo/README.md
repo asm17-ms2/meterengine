@@ -88,6 +88,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 |---|---|---|
 | `--base-url` | `http://localhost:8080` | 백엔드 주소. `verify`는 로그 헤더 값을 우선한다 |
 | `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 live 키 | `Authorization: Bearer`로 보내는 API 키 |
+| `--environment` | 환경변수 `METERENGINE_ENVIRONMENT`, 없으면 키의 환경 | `test` 또는 `live`. 키와 다른 환경 요청은 거절된다. |
 | `--timeout` | `10` | HTTP 타임아웃 초 |
 | `--no-color` | 끔 | ANSI 색 비활성화 |
 
@@ -260,7 +261,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
 - 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 도입사와 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
-- 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상과 도입사 id별로 담는다. 서버가 404 `customer_not_found`로 답하면 그 자리에서 캐시를 버리고 다음 이벤트에서 다시 찾는다.
+- 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 도입사 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
 
 ### 보내는 이벤트와 properties
 
@@ -366,6 +367,7 @@ await client.ingestEvent({
 ```
 
 - 요청마다 `Authorization: Bearer <API 키>`를 붙인다.
+- `environment: "test"` 또는 `"live"`를 지정하면 모든 요청에 환경 헤더를 붙인다. 생략하면 API 키의 환경을 사용한다. 같은 조직이라도 다른 환경의 키와 고객을 섞어 쓸 수 없다.
 - 재시도
   - 연결 오류, 타임아웃(기본 10초), 429, 5xx만 다시 보낸다. 기본 3번까지다(`maxRetries`).
   - `Retry-After`가 있으면 그만큼 기다리고, 없으면 최대 5초인 지수 백오프에 무작위 지연을 섞는다.
@@ -395,8 +397,10 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 변수 | 내용 |
 |---|---|
 | `METERENGINE_API_KEY` | `http://localhost:8080` 백엔드에 쓸 API 키. 대상 이름은 `local` |
-| `METERENGINE_TARGETS` | 대상이 여럿일 때 `[{"name": "local", "base_url": "http://localhost:8080", "api_key": "..."}]` 형태의 JSON 배열. 있으면 `METERENGINE_API_KEY`보다 먼저 쓴다 |
-| `METERENGINE_WEBHOOK_SECRET` | 웹훅 서명 비밀값. `whsec_`로 시작한다 |
+| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 키의 환경을 사용한다 |
+| `METERENGINE_TARGETS` | `[{"name": "local-test", "base_url": "http://localhost:8080", "api_key": "...", "environment": "test", "webhook_secret": "whsec_..."}]`. API 키와 웹훅 비밀값은 서버에서만 쓴다. 단일 대상 설정보다 먼저 적용한다 |
+| `METERENGINE_LEGACY_WEBHOOK_TARGET` | 기존 전역 비밀값과 수신 기록을 사용할 원래 무환경 대상 이름. 예: `e2e` |
+| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상의 웹훅 비밀값. 새 `test/live` 대상에는 적용하지 않는다 |
 | `METERENGINE_BRIDGE_URL` | 브리지 주소. 기본 `http://127.0.0.1:4318` |
 | `METERENGINE_CONSOLE_URL` | 공개 카드 등록 화면이 있는 콘솔 주소. 기본 `http://127.0.0.1:3000` |
 
@@ -406,7 +410,7 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 고객 사용량과 납부 | `/customers` | 고객과 월 선택, 사용량, 청구 예정과 확정 내역, 수납 상태, 카드 등록 링크 |
 | 이벤트 보내기 | `/events` | 한 건을 `ingestEvent`로 보내고 응답을 본다 |
 | CSV 보내기 | `/events/csv` | 위 CSV 스키마의 파일을 `ingestEventBatch`로 보내고 행별 결과를 본다 |
-| 웹훅 수신 | `/webhooks` | `/api/webhooks`로 받은 웹훅과 서명 검증 결과 |
+| 웹훅 수신 | `/webhooks` | 대상을 선택해 해당 수신 URL과 서명 검증 기록 조회 |
 | 브리지 설정 | `/bridge` | 브리지 설정 조회, 저장, 재시작 |
 
 - 키는 시연 서버에만 두고 브라우저에 전달하지 않는다. 조회에는 `read`, 이벤트 전송에는 `ingest`, 카드 등록 링크 생성에는 `admin` 스코프가 필요하다.
@@ -414,24 +418,27 @@ corepack pnpm --filter @meterengine/demo-web dev
 
 ### 웹훅 받기
 
+대상마다 `webhook_secret`과 `?target=대상이름` 수신 URL을 사용한다. 등록 응답의 비밀값을 해당 대상 설정에 저장하고 서버를 다시 띄운다.
+
 ```bash
 curl -X POST http://localhost:8080/v1/webhook-endpoints \
   -H "Authorization: Bearer <API 키>" -H "Content-Type: application/json" \
-  -d '{"url": "http://127.0.0.1:3100/api/webhooks", "event_types": ["webhook_test"]}'
+  -d '{"url": "http://127.0.0.1:3100/api/webhooks?target=local-test", "event_types": ["webhook_test"]}'
 
 curl -X POST http://localhost:8080/v1/webhook-endpoints/<id>/test-events \
   -H "Authorization: Bearer <API 키>"
 ```
 
-- 같은 `webhook-id`가 재전송될 수 있으므로 수신한 ID로 업무 처리를 중복 방지한다.
-- 등록 응답은 비밀값을 한 번만 돌려준다. `METERENGINE_WEBHOOK_SECRET`에 넣고 dev 서버를 다시 띄운다.
-- 백엔드 없이 서명 검증만 볼 때는 시험 웹훅을 직접 보낸다. 스크립트는 비밀값을 환경 변수에서만 읽으므로 `--env-file`로 넘긴다.
+- 서명 검증 뒤 본문의 `environment`가 선택한 대상과 같은지 확인한다. 대상이 없거나 중복된 URL은 거절한다.
+- 기록은 대상 이름, API 주소, 환경과 키별로 분리한다. 같은 `webhook-id`의 재전송도 수신 기록에 남으므로 업무 처리의 중복 방지는 별도로 한다.
+- 기존 `.data/webhooks.jsonl`은 `METERENGINE_LEGACY_WEBHOOK_TARGET`으로 지정한 원래 legacy 연결에만 고정한다. 기존 파일을 복사하거나 `test/live`에 자동 배정하지 않는다. 연결 키나 주소를 바꾼 뒤에도 원래 파일은 보존한다.
+- 백엔드 없이 검증하려면 대상 설정을 담은 비공개 환경 파일로 시험 통보를 보낸다.
 
 ```bash
 cd demo/web
-node --env-file=.env.local scripts/send-test-webhook.ts           # 맞는 서명
-node --env-file=.env.local scripts/send-test-webhook.ts --tamper  # 본문을 바꿔 서명 불일치
-node --env-file=.env.local scripts/send-test-webhook.ts --old     # 10분 전 시각
+node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test           # 맞는 서명
+node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test --tamper  # 본문을 바꿔 서명 불일치
+node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test --old     # 10분 전 시각
 ```
 
 ## 파일 구성

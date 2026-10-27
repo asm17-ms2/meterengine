@@ -1,6 +1,7 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.payment.service.TossPaymentsWebhookService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class TossPaymentsWebhookController {
 
   private final TossPaymentsWebhookService tossPaymentsWebhookService;

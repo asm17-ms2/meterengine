@@ -3,6 +3,7 @@ package com.meterengine.payment.service;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsError;
@@ -17,6 +18,7 @@ import com.meterengine.payment.entity.PaymentCancellation;
 import com.meterengine.payment.entity.PaymentReconciliationMismatch;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.entity.TossPaymentsCredentialId;
+import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.PaymentAttemptRepository;
 import com.meterengine.payment.repository.PaymentCancellationRepository;
 import com.meterengine.payment.repository.PaymentReconciliationMismatchRepository;
@@ -60,6 +62,7 @@ public class PaymentReconciliationService {
   private final PaymentCancellationRepository paymentCancellationRepository;
   private final PaymentReconciliationMismatchRepository paymentReconciliationMismatchRepository;
   private final TossPaymentsClient tossPaymentsClient;
+  private final PaymentArchiveRepository paymentArchiveRepository;
   private final PaymentMetrics paymentMetrics;
   private final PaymentProperties paymentProperties;
 
@@ -70,7 +73,8 @@ public class PaymentReconciliationService {
       PaymentReconciliationMismatchRepository paymentReconciliationMismatchRepository,
       TossPaymentsClient tossPaymentsClient,
       PaymentMetrics paymentMetrics,
-      PaymentProperties paymentProperties) {
+      PaymentProperties paymentProperties,
+      PaymentArchiveRepository paymentArchiveRepository) {
     this.tossPaymentsCredentialRepository = tossPaymentsCredentialRepository;
     this.paymentAttemptRepository = paymentAttemptRepository;
     this.paymentCancellationRepository = paymentCancellationRepository;
@@ -78,6 +82,7 @@ public class PaymentReconciliationService {
     this.tossPaymentsClient = tossPaymentsClient;
     this.paymentMetrics = paymentMetrics;
     this.paymentProperties = paymentProperties;
+    this.paymentArchiveRepository = paymentArchiveRepository;
   }
 
   public PaymentJobResult reconcile(OffsetDateTime slot) {
@@ -86,7 +91,11 @@ public class PaymentReconciliationService {
     PaymentJobTally tally = new PaymentJobTally();
     for (TossPaymentsCredentialId credentialId : tossPaymentsCredentialRepository.findAllIds()) {
       try {
-        switch (reconcileCredential(credentialId, window)) {
+        switch (PaymentEnvironments.call(
+            credentialId.getOrganizationId(),
+            credentialId.getEnvironmentId(),
+            credentialId.getMode(),
+            () -> reconcileCredential(credentialId, window))) {
           case COMPARED -> tally.count(true);
           case NOTHING_TO_COMPARE -> tally.count(false);
           case FAILED -> tally.countFailed();
@@ -121,28 +130,60 @@ public class PaymentReconciliationService {
     if (credential.isEmpty()) {
       return Outcome.NOTHING_TO_COMPARE;
     }
-    Optional<List<TossPaymentsTransaction>> transactions =
-        listTransactions(credential.get(), window);
+    Map<OffsetDateTime, TossPaymentsCredential> versions = new LinkedHashMap<>();
+    versions.put(credential.get().getUpdatedAt(), credential.get());
+    for (TossPaymentsCredential historical :
+        paymentArchiveRepository.credentialVersions(
+            credentialId.getOrganizationId(), credentialId.getMode())) {
+      versions.putIfAbsent(historical.getUpdatedAt(), historical);
+    }
+    Outcome outcome = Outcome.NOTHING_TO_COMPARE;
+    for (TossPaymentsCredential version : versions.values()) {
+      Outcome result =
+          reconcileVersion(
+              version, window, version.getUpdatedAt().isEqual(credential.get().getUpdatedAt()));
+      if (result == Outcome.FAILED) return result;
+      if (result == Outcome.COMPARED) outcome = result;
+    }
+    return outcome;
+  }
+
+  private Outcome reconcileVersion(
+      TossPaymentsCredential credential, Window window, boolean current) {
+    Optional<List<TossPaymentsTransaction>> transactions = listTransactions(credential, window);
     if (transactions.isEmpty()) {
       return Outcome.FAILED;
     }
-    UUID organizationId = credentialId.getOrganizationId();
-    String mode = credentialId.getMode();
+    UUID organizationId = credential.getOrganizationId();
+    String mode = credential.getMode();
     Reconciliation reconciliation =
         new Reconciliation(
             organizationId,
             mode,
             window,
-            paymentAttemptRepository.findDoneCompletedBetween(
-                organizationId, mode, window.lookbackStartAt(), window.slotAt()),
-            paymentCancellationRepository.findDoneCompletedBetween(
-                organizationId, mode, window.lookbackStartAt(), window.slotAt()));
+            paymentAttemptRepository
+                .findDoneCompletedBetween(
+                    organizationId, mode, window.lookbackStartAt(), window.slotAt())
+                .stream()
+                .filter(attempt -> usesCredential(attempt, credential, current))
+                .toList(),
+            paymentCancellationRepository
+                .findDoneCompletedBetween(
+                    organizationId, mode, window.lookbackStartAt(), window.slotAt())
+                .stream()
+                .filter(
+                    cancellation ->
+                        paymentAttemptRepository
+                            .findUnscoped(organizationId, cancellation.getPaymentAttemptId())
+                            .filter(attempt -> usesCredential(attempt, credential, current))
+                            .isPresent())
+                .toList());
     reconciliation.useFallbackAttempts(
         findAttempts(organizationId, mode, reconciliation.fallbackAttemptIds(transactions.get())));
     for (TossPaymentsTransaction transaction : transactions.get()) {
-      reconciliation.match(transaction);
+      if (belongsToCredential(transaction, credential, current)) reconciliation.match(transaction);
     }
-    boolean complete = reconciliation.collectMissingInTossPayments(credential.get());
+    boolean complete = reconciliation.collectMissingInTossPayments(credential);
     OffsetDateTime detectedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     for (Mismatch mismatch : reconciliation.mismatches) {
       record(mismatch.toEntity(organizationId, mode, detectedAt));
@@ -155,6 +196,31 @@ public class PaymentReconciliationService {
             && reconciliation.attempts.isEmpty()
             && reconciliation.cancellations.isEmpty();
     return nothingToCompare ? Outcome.NOTHING_TO_COMPARE : Outcome.COMPARED;
+  }
+
+  private boolean usesCredential(
+      PaymentAttempt attempt, TossPaymentsCredential credential, boolean current) {
+    return attempt.getCredentialUpdatedAt() == null
+        ? current
+        : attempt.getCredentialUpdatedAt().isEqual(credential.getUpdatedAt());
+  }
+
+  private boolean belongsToCredential(
+      TossPaymentsTransaction transaction, TossPaymentsCredential credential, boolean current) {
+    Optional<PaymentAttempt> original =
+        parseAttemptId(transaction.orderId()).flatMap(paymentAttemptRepository::findById);
+    if (original.isEmpty()) return current;
+    return credential.getOrganizationId().equals(original.get().getOrganizationId())
+        && BusinessEnvironmentContext.matches(original.get().getEnvironmentId())
+        && usesCredential(original.get(), credential, current);
+  }
+
+  private static Optional<UUID> parseAttemptId(String orderId) {
+    try {
+      return Optional.of(UUID.fromString(orderId));
+    } catch (IllegalArgumentException | NullPointerException ignored) {
+      return Optional.empty();
+    }
   }
 
   private Optional<List<TossPaymentsTransaction>> listTransactions(

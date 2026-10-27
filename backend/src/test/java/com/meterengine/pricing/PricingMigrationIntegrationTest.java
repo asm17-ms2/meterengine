@@ -119,9 +119,32 @@ class PricingMigrationIntegrationTest {
         assertThat(
                 scalar(
                     connection,
-                    "SELECT (to_jsonb(invoice)-'display_number')::text FROM invoice WHERE id=?",
+                    "SELECT"
+                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id')::text"
+                        + " FROM invoice WHERE id=?",
                     invoiceId))
             .isEqualTo(invoiceBefore);
+        for (String table :
+            List.of(
+                "customer",
+                "billable_metric",
+                "event",
+                "price_rate",
+                "invoice",
+                "invoice_line",
+                "payment_attempt")) {
+          assertThat(
+                  scalar(
+                      connection,
+                      "SELECT count(*)::text || ':' || (count(*) FILTER (WHERE environment_id IS"
+                          + " NULL AND environment_scope_id ="
+                          + " '00000000-0000-0000-0000-000000000000'::uuid))::text FROM "
+                          + table
+                          + " WHERE organization_id=?",
+                      organizationId))
+              .as(table)
+              .isEqualTo("1:1");
+        }
         String legacyDisplayNumber =
             scalar(connection, "SELECT display_number::text FROM invoice WHERE id=?", invoiceId);
         assertThat(legacyDisplayNumber).matches("[1-9][0-9]*");
@@ -222,14 +245,18 @@ class PricingMigrationIntegrationTest {
         assertThat(
                 scalar(
                     connection,
-                    "SELECT (to_jsonb(invoice)-'display_number')::text FROM invoice WHERE id=?",
+                    "SELECT"
+                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id')::text"
+                        + " FROM invoice WHERE id=?",
                     invoiceId))
             .isEqualTo(invoiceBefore);
         assertThat(latest.migrate().migrationsExecuted).isZero();
         assertThat(
                 scalar(
                     connection,
-                    "SELECT count(*)::text || ':' || count(display_number)::text || ':' || count(DISTINCT display_number)::text FROM invoice WHERE organization_id=?",
+                    "SELECT count(*)::text || ':' || count(display_number)::text || ':' ||"
+                        + " count(DISTINCT display_number)::text FROM invoice WHERE"
+                        + " organization_id=?",
                     organizationId))
             .isEqualTo("2:2:2");
         assertThat(

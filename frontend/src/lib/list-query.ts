@@ -1,3 +1,4 @@
+import { readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import { isDevStateEnabled, readDevState, type DevState } from "@/lib/dev-state";
 import { ALL_MONTHS, readMonth, readMonthOrAll } from "@/lib/month";
@@ -10,6 +11,7 @@ export type SortDirection = "asc" | "desc";
 export type ArchiveStatus = "active" | "archived" | "all";
 
 export type ListQuery = {
+  environment?: WorkspaceEnvironment;
   organizationId?: string;
   archiveParameter?: "metric_status";
   preservedParameters?: Record<string, string>;
@@ -91,7 +93,7 @@ export function readListQuery(
 ): ListQuery {
   const sort = capabilities.sort ? readFirst(searchParams.sort) : undefined;
   return {
-    
+    environment: readFirst(searchParams.environment) ? readEnvironment(readFirst(searchParams.environment)) : undefined,
     organizationId: readFirst(searchParams.organization_id),
     archiveParameter: capabilities.archiveParameter,
     preservedParameters: capabilities.preservedParameters ? Object.fromEntries(capabilities.preservedParameters.flatMap(key => { const value = readFirst(searchParams[key]); return value ? [[key, value]] : []; })) : undefined,
@@ -168,7 +170,7 @@ export function buildListHref(
   const next = applyListOverrides(query, overrides);
 
   const params = new URLSearchParams(next.preservedParameters);
-  
+  if (next.environment) params.set("environment", next.environment);
   if (next.organizationId) params.set("organization_id", next.organizationId);
   if (next.from || next.to) {
     if (next.from) params.set("from", next.from);

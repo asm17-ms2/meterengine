@@ -1,6 +1,7 @@
 package com.meterengine.payment.entity;
 
 import com.meterengine.global.crypto.EncryptedStringConverter;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -20,6 +21,12 @@ public class BillingKey implements Persistable<BillingKeyId> {
   @Id
   @Column(name = "organization_id")
   private UUID organizationId;
+
+  @Column(name = "environment_id")
+  private UUID environmentId;
+
+  @Column(name = "credential_updated_at")
+  private OffsetDateTime credentialUpdatedAt;
 
   @Id
   @Column(name = "customer_id")
@@ -72,6 +79,7 @@ public class BillingKey implements Persistable<BillingKeyId> {
       String consentDocumentVersion,
       OffsetDateTime consentedAt) {
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.customerId = customerId;
     this.mode = mode;
     update(
@@ -113,6 +121,19 @@ public class BillingKey implements Persistable<BillingKeyId> {
   @Override
   public boolean isNew() {
     return isNew;
+  }
+
+  public OffsetDateTime getCredentialUpdatedAt() {
+    return credentialUpdatedAt;
+  }
+
+  public BillingKey pinCredential(OffsetDateTime credentialUpdatedAt) {
+    this.credentialUpdatedAt = credentialUpdatedAt;
+    return this;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public UUID getOrganizationId() {

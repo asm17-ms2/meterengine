@@ -20,6 +20,9 @@ public class PriceRate implements Persistable<UUID> {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(name = "billable_metric_code", nullable = false)
   private String billableMetricCode;
 
@@ -154,6 +157,10 @@ public class PriceRate implements Persistable<UUID> {
     return isNew;
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -188,5 +195,31 @@ public class PriceRate implements Persistable<UUID> {
 
   public String getTiers() {
     return tiers;
+  }
+
+  public PriceRate(
+      UUID id,
+      UUID organizationId,
+      String billableMetricCode,
+      String dimensionValues,
+      BigDecimal unitPrice,
+      UUID customerId,
+      String effectiveFrom,
+      String effectiveUntil,
+      String model,
+      String tiers,
+      UUID environmentId) {
+    this(
+        id,
+        organizationId,
+        billableMetricCode,
+        dimensionValues,
+        unitPrice,
+        customerId,
+        effectiveFrom,
+        effectiveUntil,
+        model,
+        tiers);
+    this.environmentId = environmentId;
   }
 }

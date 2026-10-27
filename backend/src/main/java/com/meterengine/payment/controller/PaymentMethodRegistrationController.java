@@ -3,6 +3,7 @@ package com.meterengine.payment.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.payment.dto.PaymentMethodRegistrationResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class PaymentMethodRegistrationController {
 
   private final PaymentMethodRegistrationService paymentMethodRegistrationService;

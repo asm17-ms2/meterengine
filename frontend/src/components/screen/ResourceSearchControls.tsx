@@ -9,6 +9,7 @@ import { queryOptionsAction } from "@/app/query-options-actions";
 import { CustomerFilter, type CustomerOption } from "@/components/screen/CustomerFilter";
 import { MonthPicker } from "@/components/screen/MonthPicker";
 import { useListNavigation } from "@/components/screen/use-list-navigation";
+import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { QueryOption } from "@/lib/api/search";
 import { PAGE_SIZE_OPTIONS, type ListQuery, type ListQueryOverrides } from "@/lib/list-query";
@@ -100,7 +101,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
   return <div className="resource-search">
     <p className="field-hint" id={`${formId}-hint`}>조건을 함께 선택한 뒤 조건 적용을 누르세요.</p>
     <form id={formId} method="get" className="workspace-actions" aria-label="조회 조건" aria-describedby={`${formId}-hint`} onSubmit={apply} onInvalidCapture={revealInvalid}>
-      <input type="hidden" name="organization_id" value={query.organizationId ?? ""} />
+      <EnvironmentInput />
       {Object.entries(draft.preservedParameters ?? {}).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
       {!month && search.get("month") && <input type="hidden" name="month" value={search.get("month")!} />}
       {month && <div className="workspace-field"><label htmlFor={`${formId}-month`}>{resource === "billable-metric-prices" ? "적용 월" : "조회 기간"}</label><MonthPicker id={`${formId}-month`} label={resource === "billable-metric-prices" ? "적용 월" : "조회 기간"} query={draft} capabilities={capabilities} month={month.value} allowAll={month.allowAll} onChange={value => change({ month: value, from: undefined, to: undefined, rangeMode: undefined })} /><input type="hidden" name="month" value={draft.month ?? month.value} /></div>}
@@ -115,7 +116,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
           <label className="workspace-field"><span>정렬 기준</span><select name="sort" value={draft.sort ?? SORTS[resource][0].value} onChange={event => change({ sort: event.target.value })}>{SORTS[resource].map(sort => <option key={sort.value} value={sort.value}>{sort.label}</option>)}</select></label>
           <label className="workspace-field"><span>정렬 방향</span><select name="order" value={draft.order ?? (resource === "invoices" ? "desc" : "asc")} onChange={event => change({ order: event.target.value as ListQuery["order"] })}><option value="asc">오름차순</option><option value="desc">내림차순</option></select></label>
           {capabilities.amount && <><label className="workspace-field"><span>최소 금액 (원)</span><input type="number" name="min_amount" min="0" step="1" value={draft.minAmount ?? ""} onChange={event => change({ minAmount: event.target.value })} /></label><label className="workspace-field"><span>최대 금액 (원)</span><input type="number" name="max_amount" min="0" step="1" value={draft.maxAmount ?? ""} onChange={event => change({ maxAmount: event.target.value })} /></label></>}
-          {capabilities.mode && <label className="workspace-field"><span>결제 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 결제 환경</option><option value="test">테스트</option><option value="live">실제</option></select></label>}
+          {capabilities.mode && (!query.environment || query.environment === "legacy") && <label className="workspace-field"><span>결제 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 결제 환경</option><option value="test">테스트</option><option value="live">실제</option></select></label>}
           {resource === "invoices" && <><label className="workspace-field"><span>확정 시각 시작 (KST)</span><input type="datetime-local" step="1" name="from" value={draft.from ?? ""} onChange={event => change({ from: event.target.value })} /></label><label className="workspace-field"><span>확정 시각 종료 전 (KST)</span><input type="datetime-local" step="1" name="to" value={draft.to ?? ""} onChange={event => change({ to: event.target.value })} /></label></>}
           {capabilities.size && <label className="workspace-field"><span>페이지 크기</span><select aria-label="페이지 크기" name="size" value={draft.size} onChange={event => change({ size: Number(event.target.value) })}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건씩</option>)}</select></label>}
         </div>

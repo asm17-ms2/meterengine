@@ -3,6 +3,7 @@ package com.meterengine.pricing.service;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.BillableMetricPricePriceRate;
@@ -49,14 +50,20 @@ public class BillableMetricPriceService {
   public ListBillableMetricPricesResponse list(
       UUID organizationId, YearMonth month, UUID customerId) {
     if (customerId != null
-        && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId))
-      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+        && !(BusinessEnvironmentContext.environmentId() == null
+            ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
+            : customerRepository
+                .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
+                .isPresent())) throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     String period =
         (month == null ? YearMonth.now(BillableMetricUsageService.BILLING_ZONE) : month).toString();
     Map<PriceRateKey, PriceRate> priceRateByPriceRateKey = new LinkedHashMap<>();
     for (PriceRate rate :
-        priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
-            organizationId)) {
+        (BusinessEnvironmentContext.environmentId() == null
+            ? priceRateRepository
+                .findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(organizationId)
+            : priceRateRepository.listScoped(
+                organizationId, BusinessEnvironmentContext.environmentId()))) {
       if (!Objects.equals(rate.getCustomerId(), customerId)
           || (!rate.applies(period) && !rate.stops(period))) continue;
       PriceRateKey key =
@@ -72,17 +79,22 @@ public class BillableMetricPriceService {
     }
     priceRateByPriceRateKey.values().removeIf(rate -> !rate.applies(period));
     return new ListBillableMetricPricesResponse(
-        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
-            .map(
-                metric ->
-                    BillableMetricPriceResponse.of(
-                        metric.getCode(),
-                        metric.getDimensionProperties(),
-                        priceRateByPriceRateKey.values().stream()
-                            .filter(rate -> rate.getBillableMetricCode().equals(metric.getCode()))
-                            .map(this::toResponse)
-                            .toList()))
-            .toList());
+        (BusinessEnvironmentContext.environmentId() == null
+                ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
+                : billableMetricRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream()
+                .map(
+                    metric ->
+                        BillableMetricPriceResponse.of(
+                            metric.getCode(),
+                            metric.getDimensionProperties(),
+                            priceRateByPriceRateKey.values().stream()
+                                .filter(
+                                    rate -> rate.getBillableMetricCode().equals(metric.getCode()))
+                                .map(this::toResponse)
+                                .toList()))
+                .toList());
   }
 
   private BillableMetricPricePriceRate toResponse(PriceRate rate) {

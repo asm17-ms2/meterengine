@@ -2,6 +2,7 @@ package com.meterengine.webhook.controller;
 
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/webhook-endpoints")
 public class WebhookEndpointController {
   private final WebhookEndpointService webhookEndpointService;
@@ -65,7 +67,7 @@ public class WebhookEndpointController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "웹훅 엔드포인트 등록",
-      description = "서명 비밀값은 이 응답에서만 한 번 돌려준다. 등록 한도는 도입사마다 10개다. 운영에서는 HTTPS와 공개 주소만 허용한다.")
+      description = "서명 비밀값은 이 응답에서만 한 번 돌려준다. 등록 한도는 도입사의 환경마다 10개다. 운영에서는 HTTPS와 공개 주소만 허용한다.")
   public WebhookEndpointResponse createWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId,
       @Valid @RequestBody CreateWebhookEndpointRequest request) {

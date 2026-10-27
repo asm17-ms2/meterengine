@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
+import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
@@ -32,7 +34,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
     <WorkspaceHeader title="이벤트 매핑 진단" description="저장된 이벤트에서 미터, 집계 수량과 단가 연결을 확인하세요. 한 이벤트에 여러 미터의 문제가 있으면 각각 표시합니다." />
     <section className="workspace-panel">
       <form method="get" className="workspace-actions">
-        <input type="hidden" name="organization_id" value={params.organization_id ?? ""} />
+        <Suspense><EnvironmentInput /></Suspense>
         <label className="workspace-field"><span>대상 월</span><input type="month" name="month" defaultValue={month} required /></label>
         <label className="workspace-field"><span>문제 종류</span><select name="reason" defaultValue={reason ?? ""}><option value="">전체</option>{Object.entries(REASONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />

@@ -278,10 +278,11 @@ class InvoiceFinalizeIntegrationTest {
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
 
-    assertThat(finalizeInvoices(organizationId, "?month=2026-08"))
-        .hasStatusOk()
-        .bodyJson()
-        .isStrictlyEqualTo("{\"month\": \"2026-08\", \"finalized_count\": 1}");
+    MvcTestResult finalized = finalizeInvoices(organizationId, "?month=2026-08");
+    assertThat(finalized).hasStatusOk().bodyJson().extractingPath("$.finalized_count").isEqualTo(1);
+    assertThat(finalized).bodyJson().extractingPath("$.invoices").asArray().hasSize(1);
+    assertThat(finalized).bodyJson().extractingPath("$.total_amount").isEqualTo(1804);
+    assertThat(finalized).bodyJson().extractingPath("$.invoices[0].total_amount").isEqualTo(1804);
     insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-08-20T12:00:00+09:00");
     assertThat(finalizeInvoices(organizationId, "?month=2026-08"))
         .bodyJson()

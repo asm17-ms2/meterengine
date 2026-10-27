@@ -2,6 +2,7 @@ package com.meterengine.event.repository;
 
 import com.meterengine.event.dto.EventIssueResponse;
 import com.meterengine.event.dto.EventIssuesResponse.Summary;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -36,6 +37,7 @@ public class EventIssueRepository {
       String unpricedJson) {
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
+    parameters.add(BusinessEnvironmentContext.environmentId());
     parameters.add(start);
     parameters.add(cutoff);
     StringBuilder filters = new StringBuilder();
@@ -45,67 +47,73 @@ public class EventIssueRepository {
     }
     if (query != null && !query.isBlank()) {
       filters.append(
-          " AND (position(lower(?) in lower(e.transaction_id)) > 0 OR position(lower(?) in lower(c.name)) > 0 OR position(lower(?) in lower(coalesce(c.external_id, ''))) > 0)");
+          " AND (position(lower(?) in lower(e.transaction_id)) > 0 OR position(lower(?) in"
+              + " lower(c.name)) > 0 OR position(lower(?) in lower(coalesce(c.external_id, ''))) >"
+              + " 0)");
       parameters.add(query);
       parameters.add(query);
       parameters.add(query);
     }
     parameters.add(organizationId);
+    parameters.add(BusinessEnvironmentContext.environmentId());
     parameters.add(month.toString());
     parameters.add(month.toString());
     parameters.add(month.toString());
     parameters.add(unpricedJson);
     String eligible =
-        "(m.aggregation = 'count' OR (m.aggregation = 'count_distinct' AND coalesce(jsonb_typeof(e.properties -> m.target_property), 'null') IN ('number', 'string', 'boolean')) OR (m.aggregation NOT IN ('count', 'count_distinct') AND jsonb_typeof(e.properties -> m.target_property) = 'number'))";
+        "(m.aggregation = 'count' OR (m.aggregation = 'count_distinct' AND"
+            + " coalesce(jsonb_typeof(e.properties -> m.target_property), 'null') IN ('number',"
+            + " 'string', 'boolean')) OR (m.aggregation NOT IN ('count', 'count_distinct') AND"
+            + " jsonb_typeof(e.properties -> m.target_property) = 'number'))";
     String cte =
         """
         WITH selected_events AS (
           SELECT e.*, c.name AS customer_name FROM event e
-          JOIN customer c ON c.organization_id = e.organization_id AND c.id = e.customer_id
-          WHERE e.organization_id = ? AND e.environment_id IS NULL
+          JOIN customer c ON c.organization_id = e.organization_id AND c.environment_scope_id = e.environment_scope_id AND c.id = e.customer_id
+          WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid
             AND e.occurred_at >= ? AND e.occurred_at < ?
         """
             + filters
             + """
-        ), active_metrics AS (
-          SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND (
-            (m.archived_at IS NULL AND m.active_from <= ?)
-            OR EXISTS (SELECT 1 FROM billable_metric_period p
-              WHERE p.organization_id = m.organization_id AND p.billable_metric_code = m.code
-                AND p.active_from <= ? AND p.active_until > ?))
-        ), unpriced_groups AS (
-          SELECT * FROM jsonb_to_recordset(?::jsonb)
-            AS g(customer_id UUID, billable_metric_code TEXT, dimension_values JSONB)
-        ), issues AS (
-          SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
-            'unknown_event_type'::text AS reason, NULL::text AS billable_metric_code,
-            NULL::text AS target_property, false AS negative_quantity
-          FROM selected_events e WHERE NOT EXISTS (SELECT 1 FROM active_metrics m WHERE m.event_type = e.type)
-          UNION ALL
-          SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
-            'invalid_target_property'::text, m.code, m.target_property, false
-          FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
-          WHERE NOT coalesce(
-        """
+            ), active_metrics AS (
+              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_id IS NOT DISTINCT FROM ?::uuid AND (
+                (m.archived_at IS NULL AND m.active_from <= ?)
+                OR EXISTS (SELECT 1 FROM billable_metric_period p
+                  WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code
+                    AND p.active_from <= ? AND p.active_until > ?))
+            ), unpriced_groups AS (
+              SELECT * FROM jsonb_to_recordset(?::jsonb)
+                AS g(customer_id UUID, billable_metric_code TEXT, dimension_values JSONB)
+            ), issues AS (
+              SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
+                'unknown_event_type'::text AS reason, NULL::text AS billable_metric_code,
+                NULL::text AS target_property, false AS negative_quantity
+              FROM selected_events e WHERE NOT EXISTS (SELECT 1 FROM active_metrics m WHERE m.event_type = e.type)
+              UNION ALL
+              SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
+                'invalid_target_property'::text, m.code, m.target_property, false
+              FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
+              WHERE NOT coalesce(
+            """
             + eligible
             + """
-          , false)
-          UNION ALL
-          SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
-            'unpriced_usage'::text, m.code, m.target_property,
-            CASE WHEN m.aggregation NOT IN ('count', 'count_distinct')
-              AND jsonb_typeof(e.properties -> m.target_property) = 'number'
-              THEN (e.properties ->> m.target_property)::numeric < 0 ELSE false END
-          FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
-          JOIN unpriced_groups g ON g.customer_id = e.customer_id AND g.billable_metric_code = m.code
-            AND g.dimension_values = coalesce((SELECT jsonb_object_agg(dimension_key, e.properties -> dimension_key)
-              FROM unnest(m.dimension_properties) dimensions(dimension_key)), '{}'::jsonb)
-          WHERE
-        """
+              , false)
+              UNION ALL
+              SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
+                'unpriced_usage'::text, m.code, m.target_property,
+                CASE WHEN m.aggregation NOT IN ('count', 'count_distinct')
+                  AND jsonb_typeof(e.properties -> m.target_property) = 'number'
+                  THEN (e.properties ->> m.target_property)::numeric < 0 ELSE false END
+              FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
+              JOIN unpriced_groups g ON g.customer_id = e.customer_id AND g.billable_metric_code = m.code
+                AND g.dimension_values = coalesce((SELECT jsonb_object_agg(dimension_key, e.properties -> dimension_key)
+                  FROM unnest(m.dimension_properties) dimensions(dimension_key)), '{}'::jsonb)
+              WHERE
+            """
             + eligible
             + """
-        )
-        """;
+            )
+            """;
     String reasonWhere = reason == null ? "" : " WHERE reason = ?";
     if (reason != null) parameters.add(reason);
     Map<String, Long> counts =
@@ -132,7 +140,8 @@ public class EventIssueRepository {
             cte
                 + " SELECT * FROM issues"
                 + reasonWhere
-                + " ORDER BY occurred_at DESC, transaction_id COLLATE \"C\", billable_metric_code COLLATE \"C\" NULLS FIRST, reason LIMIT ? OFFSET ?",
+                + " ORDER BY occurred_at DESC, transaction_id COLLATE \"C\", billable_metric_code"
+                + " COLLATE \"C\" NULLS FIRST, reason LIMIT ? OFFSET ?",
             EventIssueRepository::row,
             parameters.toArray());
     return new IssuePage(rows, summary);

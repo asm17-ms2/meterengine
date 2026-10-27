@@ -1,10 +1,12 @@
 "use client";
 
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
 import { Alert, App, Button, Checkbox, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 
+import { readEnvironment } from "@/lib/environment";
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
@@ -30,8 +32,9 @@ export type ActionPanelProps = { title: string; operation: string; description?:
 
 function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: () => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
+  const environment = readEnvironment(useWorkspaceSearch().get("environment"));
   const tenantAccess = useTenantAccess();
-  const [mutationScope] = useState(() => ({ organizationId: tenantAccess?.organizationId ?? "" }));
+  const [mutationScope] = useState(() => ({ organizationId: tenantAccess?.organizationId ?? "", environment }));
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   const submitButton = <Button form={formId} type={isDanger ? "default" : "primary"} danger={isDanger} htmlType="submit" loading={isPending} disabled={isLocked}>{label ?? title}</Button>;
   const form = <form id={formId} ref={formRef} onSubmit={submit} onChange={event => { setIsDirty(true); const target = event.nativeEvent.target; const name = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.name : ""; setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))); setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] })); }} className="workspace-form" aria-busy={isPending}>
     <input type="hidden" name="operation" value={operation} />
+    <input type="hidden" name="environment" value={mutationScope.environment} />
     <input type="hidden" name="organization_id" value={mutationScope.organizationId} />
     {requestId && <input type="hidden" name="request_id" value={requestId} />}
     {description && <p className="muted">{description}</p>}

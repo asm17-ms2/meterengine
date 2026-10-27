@@ -14,4 +14,32 @@ public record WebhookClaim(
     boolean enabled,
     boolean deleted,
     int attemptCount,
-    OffsetDateTime lastAttemptedAt) {}
+    OffsetDateTime lastAttemptedAt,
+    UUID environmentId) {
+  public WebhookClaim(
+      UUID id,
+      UUID organizationId,
+      UUID webhookEventId,
+      UUID claimToken,
+      String url,
+      String secret,
+      String payload,
+      boolean enabled,
+      boolean deleted,
+      int attemptCount,
+      OffsetDateTime lastAttemptedAt) {
+    this(
+        id,
+        organizationId,
+        webhookEventId,
+        claimToken,
+        url,
+        secret,
+        payload,
+        enabled,
+        deleted,
+        attemptCount,
+        lastAttemptedAt,
+        null);
+  }
+}

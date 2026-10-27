@@ -8,6 +8,7 @@ export type LumenConfig = {
   accounts: ServiceAccount[];
   meterEngineBaseUrl: string;
   meterEngineApiKey: string;
+  meterEngineEnvironment?: "test" | "live";
   billingApiKey: string;
   meterEngineConsoleUrl: string;
   flushIntervalMs: number;
@@ -50,6 +51,8 @@ export function readConfig(env: Readonly<Record<string, string | undefined>> = p
   if (origin.pathname !== "/") throw new Error("서비스 주소에는 경로를 넣지 마세요.");
   const accounts = parseAccounts(env.LUMEN_ACCOUNTS);
   const meterEngineApiKey = env.METERENGINE_API_KEY ?? "";
+  const meterEngineEnvironment = env.METERENGINE_ENVIRONMENT || undefined;
+  if (meterEngineEnvironment !== undefined && meterEngineEnvironment !== "test" && meterEngineEnvironment !== "live") throw new Error("업무 환경은 test 또는 live로 설정하세요.");
   const interval = Number(env.LUMEN_AUTO_FLUSH_INTERVAL_MS ?? "3000");
   if (!Number.isInteger(interval) || interval < 0 || interval > 60000 || (interval > 0 && interval < 500)) {
     throw new Error("사용량 전송 주기를 확인하세요.");
@@ -60,6 +63,7 @@ export function readConfig(env: Readonly<Record<string, string | undefined>> = p
     accounts,
     meterEngineBaseUrl: httpUrl(env.METERENGINE_API_BASE_URL ?? "http://127.0.0.1:38147").href.replace(/\/$/, ""),
     meterEngineApiKey,
+    meterEngineEnvironment,
     billingApiKey: env.METERENGINE_BILLING_API_KEY ?? "",
     meterEngineConsoleUrl: httpUrl(env.METERENGINE_CONSOLE_URL ?? "http://localhost:33147").origin,
     flushIntervalMs: interval,

@@ -43,10 +43,11 @@ public interface PaymentCancellationRepository extends JpaRepository<PaymentCanc
   long countPendingRequestedBefore(OffsetDateTime requestedBefore);
 
   @Query(
-      "select c from PaymentCancellation c where c.organizationId = :organizationId"
-          + " and c.mode = :mode and c.status = 'done'"
-          + " and c.completedAt >= :completedFrom and c.completedAt < :completedTo"
-          + " order by c.completedAt asc, c.id asc")
+      "select c from PaymentCancellation c where c.organizationId = :organizationId and"
+          + " c.environmentId IS NOT DISTINCT FROM"
+          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} and"
+          + " c.mode = :mode and c.status = 'done' and c.completedAt >= :completedFrom and"
+          + " c.completedAt < :completedTo order by c.completedAt asc, c.id asc")
   List<PaymentCancellation> findDoneCompletedBetween(
       UUID organizationId, String mode, OffsetDateTime completedFrom, OffsetDateTime completedTo);
 

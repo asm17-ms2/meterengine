@@ -69,9 +69,9 @@ test("CSV preserves the screen first-value semantics for repeated filter paramet
 test("submitted filters combine all fields, retain scope, and reset pagination", async () => {
   const { submittedResourceParameters } = await import("../src/lib/resource-query.ts");
   const fields = new FormData();
-  for (const [name, value] of Object.entries({ organization_id: "rendered-organization", month: "2026-10", q: "  고객 & 토큰  ", customer_id: "customer-2", billable_metric_code: "tokens", status: "all", min_amount: "0", max_amount: "10000", sort: "amount", order: "desc", size: "50", page: "7", plan_status: "archived", rate_status: "all", metric: "first-metric" })) fields.append(name, value);
+  for (const [name, value] of Object.entries({ environment: "test", organization_id: "rendered-organization", month: "2026-10", q: "  고객 & 토큰  ", customer_id: "customer-2", billable_metric_code: "tokens", status: "all", min_amount: "0", max_amount: "10000", sort: "amount", order: "desc", size: "50", page: "7", plan_status: "archived", rate_status: "all", metric: "first-metric" })) fields.append(name, value);
   const query = submittedResourceParameters(fields);
-  for (const [key, value] of Object.entries({ organization_id: "rendered-organization", month: "2026-10", q: "고객 & 토큰", customer_id: "customer-2", billable_metric_code: "tokens", status: "all", min_amount: "0", max_amount: "10000", sort: "amount", order: "desc", size: "50", plan_status: "archived", rate_status: "all", metric: "first-metric" })) assert.equal(query.get(key), value, key);
+  for (const [key, value] of Object.entries({ environment: "test", organization_id: "rendered-organization", month: "2026-10", q: "고객 & 토큰", customer_id: "customer-2", billable_metric_code: "tokens", status: "all", min_amount: "0", max_amount: "10000", sort: "amount", order: "desc", size: "50", plan_status: "archived", rate_status: "all", metric: "first-metric" })) assert.equal(query.get(key), value, key);
   assert.equal(query.has("page"), false);
 });
 
@@ -87,7 +87,7 @@ test("explicit invoice time ranges replace month without dropping other draft co
 test("selecting a pricing detail applies draft inputs and replaces only the selected metric", async () => {
   const { submittedResourceParameters } = await import("../src/lib/resource-query.ts");
   const fields = new FormData();
-  for (const [key, value] of Object.entries({ organization_id: "rendered-organization", q: "typed before selection", customer_id: "new-customer", month: "2026-11", plan_status: "active", rate_status: "archived", metric: "old-metric", size: "100" })) fields.append(key, value);
+  for (const [key, value] of Object.entries({ organization_id: "rendered-organization", environment: "legacy", q: "typed before selection", customer_id: "new-customer", month: "2026-11", plan_status: "active", rate_status: "archived", metric: "old-metric", size: "100" })) fields.append(key, value);
   fields.append("plan_status", "all");
   const query = submittedResourceParameters(fields, { name: "metric", value: "new-metric" });
   assert.deepEqual(query.getAll("metric"), ["new-metric"]);
@@ -109,15 +109,15 @@ test("clearing controls removes their values while preserving explicit zero amou
 
 test("data month shortcuts apply current draft fields and clear the previous explicit range", async () => {
   const { submittedResourceParameters } = await import("../src/lib/resource-query.ts");
-  const query = submittedResourceParameters(new URLSearchParams({ organization_id: "rendered-organization", month: "2026-10", from: "2026-10-01T00:00:00", to: "2026-10-08T00:00:00", range_mode: "date", q: "typed query", min_amount: "0", customer_id: "customer" }), { name: "month", value: "2026-09" });
+  const query = submittedResourceParameters(new URLSearchParams({ organization_id: "rendered-organization", environment: "legacy", month: "2026-10", from: "2026-10-01T00:00:00", to: "2026-10-08T00:00:00", range_mode: "date", q: "typed query", min_amount: "0", customer_id: "customer" }), { name: "month", value: "2026-09" });
   assert.equal(query.get("month"), "2026-09");
   for (const key of ["from", "to", "range_mode", "page"]) assert.equal(query.has(key), false, key);
-  for (const [key, value] of Object.entries({ organization_id: "rendered-organization", q: "typed query", min_amount: "0", customer_id: "customer" })) assert.equal(query.get(key), value, key);
+  for (const [key, value] of Object.entries({ organization_id: "rendered-organization", environment: "legacy", q: "typed query", min_amount: "0", customer_id: "customer" })) assert.equal(query.get(key), value, key);
 });
 
 test("event CSV exports the complete applied range while retaining scope and exact property JSON", async () => {
   const { csvDownloadParameters } = await import("../src/lib/resource-query.ts");
-  const values = { from: "2026-09-30T23:59:10", to: "2026-10-01T00:00:13", range_mode: "datetime", customer_id: "selected-customer", type: "llm.response", q: "한글 / 전송", properties: '{"tokens":12345678901234567890,"enabled":true}', sort: "transaction_id", order: "asc", include_properties: "true" };
+  const values = { environment: "test", from: "2026-09-30T23:59:10", to: "2026-10-01T00:00:13", range_mode: "datetime", customer_id: "selected-customer", type: "llm.response", q: "한글 / 전송", properties: '{"tokens":12345678901234567890,"enabled":true}', sort: "transaction_id", order: "asc", include_properties: "true" };
   const query = csvDownloadParameters("events", new URLSearchParams({ ...values, organization_id: "other-session-organization", page: "4", size: "50" }), "rendered-organization");
   for (const [key, value] of Object.entries(values)) assert.equal(query.get(key), value, key);
   assert.equal(query.get("organization_id"), "rendered-organization");

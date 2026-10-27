@@ -5,6 +5,7 @@ import com.meterengine.event.dto.IngestEventBatchResponse;
 import com.meterengine.event.service.EventBatchService;
 import com.meterengine.event.service.EventRejectionService;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.IngestAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class EventBatchController {
   private final EventBatchService eventBatchService;
   private final EventRejectionService eventRejectionService;

@@ -5,6 +5,7 @@ import com.meterengine.account.dto.SessionResponse;
 import com.meterengine.account.service.SessionConsentService;
 import com.meterengine.account.service.SessionService;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.MemberAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class SessionConsentController {
   private final SessionConsentService sessionConsentService;
   private final SessionService sessionService;

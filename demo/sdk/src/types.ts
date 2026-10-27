@@ -91,7 +91,6 @@ export interface ListEventsParams {
 }
 
 export type ListEventTypesParams = Pick<ListEventsParams, "customer_id" | "month" | "from" | "to" | "q" | "properties">;
-
 export type EventExportParams = ListEventsParams & { include_properties?: boolean };
 
 export interface ListEventTypesResponse {
@@ -106,6 +105,7 @@ export interface CreateCustomerRequest {
   external_id?: string;
 }
 
+export type BillableMetricAggregation = "sum" | "count" | "count_distinct" | "min" | "max" | "avg" | "first" | "last" | "median" | "percentile";
 export type BillableMetricRoundingMode = "none" | "ceil" | "floor" | "round";
 
 export interface BillableMetricCalculation {
@@ -329,45 +329,35 @@ export interface UnbilledEventsResponse {
   negative_quantity: { event_count: number; billable_metrics: Array<{ billable_metric_code: string; event_count: number }> };
 }
 
+export type WorkspaceEnvironment = "test" | "live";
 export type SearchParams = {
   page?: number; size?: number; q?: string; sort?: string; order?: "asc" | "desc";
   status?: string; month?: string; customer_id?: string; external_id?: string; billable_metric_code?: string;
   from?: string; to?: string; min_amount?: number; max_amount?: number; mode?: "test" | "live";
 };
-
 export type SearchPage<T, Summary = Record<string, unknown>> = {
   items: T[]; total: number; total_unfiltered: number; page: number; size: number;
   summary: Summary;
 };
-
 export type UsageSearchSummary = {
   month: string; customer_count: number; metric_count: number; line_count: number; nonzero_customer_count: number;
 };
-
 export type BillableMetricResponse = BillableMetricCalculation & {
   code: string; name: string; event_type: string; target_property: string | null;
   dimension_properties: string[]; archived_at: string | null; version?: number;
 };
-
 export type CustomerSearchItem = CustomerResponse & { version: number };
-
 export type CustomerUsageSearchItem = { customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] };
-
 export type InvoiceSearchItem = { invoice: InvoiceResponse; payment: InvoicePaymentResponse };
-
 export type SearchResource = "customers" | "billable-metrics" | "billable-metric-prices" | "usage" | "invoices/draft" | "invoices";
-
 export type CsvResource = SearchResource | "events";
-
 export type EventIssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
-
 export type EventIssue = {
   transaction_id: string; customer_id: string; customer_name: string; type: string;
   occurred_at: string; received_at: string; reason: EventIssueReason;
   billable_metric_code: string | null; target_property: string | null;
   action_hint: string; negative_quantity: boolean;
 };
-
 export type EventIssueSearchResponse = {
   month: string; cutoff_at: string; page: number; size: number; total: number;
   issues: EventIssue[]; summary: Record<EventIssueReason, number>;
@@ -379,7 +369,6 @@ export type EventRejection = {
   occurred_at: string | null; error_code: string; error_fields: string[];
   request_id: string | null; batch_index: number | null; recorded_at: string;
 };
-
 export type EventRejectionSearchResponse = {
   month: string; recording_started_at: string | null; page: number; size: number; total: number;
   rejections: EventRejection[];

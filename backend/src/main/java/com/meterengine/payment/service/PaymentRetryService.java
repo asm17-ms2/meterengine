@@ -1,5 +1,7 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.config.PaymentProperties;
 import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.entity.BillingKeyId;
@@ -33,6 +35,7 @@ public class PaymentRetryService {
   private final PaymentRetryPolicy paymentRetryPolicy;
   private final PaymentProperties paymentProperties;
   private final TransactionTemplate transactionTemplate;
+  private final InvoiceRepository invoiceRepository;
 
   PaymentRetryService(
       PaymentAttemptRepository paymentAttemptRepository,
@@ -42,7 +45,8 @@ public class PaymentRetryService {
       PaymentAttemptService paymentAttemptService,
       PaymentRetryPolicy paymentRetryPolicy,
       PaymentProperties paymentProperties,
-      PlatformTransactionManager platformTransactionManager) {
+      PlatformTransactionManager platformTransactionManager,
+      InvoiceRepository invoiceRepository) {
     this.paymentAttemptRepository = paymentAttemptRepository;
     this.tossPaymentsCredentialService = tossPaymentsCredentialService;
     this.billingKeyRepository = billingKeyRepository;
@@ -51,6 +55,7 @@ public class PaymentRetryService {
     this.paymentRetryPolicy = paymentRetryPolicy;
     this.paymentProperties = paymentProperties;
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
+    this.invoiceRepository = invoiceRepository;
   }
 
   public PaymentJobResult retry() {
@@ -68,7 +73,12 @@ public class PaymentRetryService {
         continue;
       }
       try {
-        tally.count(retryCandidate(candidate));
+        tally.count(
+            PaymentEnvironments.call(
+                candidate.getOrganizationId(),
+                candidate.getEnvironmentId(),
+                candidate.getMode(),
+                () -> retryCandidate(candidate)));
       } catch (RuntimeException exception) {
         logger.warn(
             "payment retry failed: failed_attempt_id={}, mode={}",
@@ -92,8 +102,18 @@ public class PaymentRetryService {
   }
 
   private boolean retryCandidate(PaymentRetryCandidateProjection candidate) {
+    PaymentAttempt original = paymentAttemptRepository.findById(candidate.getId()).orElseThrow();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.active(candidate.getOrganizationId(), candidate.getMode());
+        original.getCredentialUpdatedAt() != null
+            ? tossPaymentsCredentialService.historical(
+                candidate.getOrganizationId(),
+                candidate.getMode(),
+                original.getCredentialUpdatedAt())
+            : candidate.getEnvironmentId() == null
+                ? tossPaymentsCredentialService.active(
+                    candidate.getOrganizationId(), candidate.getMode())
+                : tossPaymentsCredentialService.historical(
+                    candidate.getOrganizationId(), candidate.getMode(), original.getRequestedAt());
     if (credential.isEmpty()) {
       logSkipped(candidate, "toss_payments_credential_missing");
       return false;
@@ -116,11 +136,18 @@ public class PaymentRetryService {
     UUID organizationId = candidate.getOrganizationId();
     UUID invoiceId = candidate.getInvoiceId();
     String mode = candidate.getMode();
+    (candidate.getEnvironmentId() == null
+            ? invoiceRepository.findForUpdate(organizationId, invoiceId)
+            : invoiceRepository.lockScoped(organizationId, candidate.getEnvironmentId(), invoiceId))
+        .orElseThrow();
     PaymentAttempt failedAttempt =
         paymentAttemptRepository.findForUpdate(organizationId, candidate.getId()).orElseThrow();
     PaymentAttempt latestAttempt =
         paymentAttemptRepository.findLatest(organizationId, invoiceId, mode).orElseThrow();
     if (!latestAttempt.getId().equals(failedAttempt.getId())
+        || paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
+                organizationId, invoiceId, mode)
+            != candidate.getAttemptCount()
         || !mode.equals(paymentSettingService.findMode(organizationId))
         || paymentAttemptRepository.findActive(organizationId, invoiceId, mode).isPresent()) {
       logSkipped(candidate, "candidate_changed");
@@ -128,6 +155,7 @@ public class PaymentRetryService {
     }
     if (billingKeyRepository
         .findById(new BillingKeyId(organizationId, failedAttempt.getCustomerId(), mode))
+        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(key -> key.getArchivedAt() == null)
         .isEmpty()) {
       logSkipped(candidate, "payment_method_missing");

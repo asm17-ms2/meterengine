@@ -2,6 +2,7 @@ package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.payment.dto.ListInvoicePaymentsResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class InvoicePaymentController {
 
   private final InvoicePaymentService invoicePaymentService;
@@ -55,7 +57,8 @@ public class InvoicePaymentController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"),
+            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터"
+                + " 9999-12까지의 범위 밖이다"),
     @ApiResponse(
         responseCode = "404",
         content =

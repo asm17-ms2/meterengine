@@ -1,4 +1,4 @@
-const TENANT_PATHS = ["/audit", "/billable-metric-prices", "/billable-metrics", "/billing", "/customers", "/event-issues", "/event-rejections", "/events", "/integrations", "/invoices", "/members", "/organizations", "/overview", "/payments", "/pricing", "/settings", "/usage"];
+const TENANT_PATHS = ["/usage", "/pricing", "/integrations", "/settings", "/payments", "/overview", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/customers", "/billable-metrics", "/billable-metric-prices", "/organizations", "/members", "/audit"];
 
 export function safeReturnPath(raw: unknown, isOperator: boolean): string {
   const fallback = isOperator ? "/admin" : "/overview";

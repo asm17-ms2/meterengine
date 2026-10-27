@@ -12,6 +12,8 @@ import type { WebhookReceipt } from "@/lib/webhook-receipt";
 type WebhookRow = WebhookReceipt & { key: string };
 
 type WebhookListProps = {
+  targetName: string;
+  environmentLabel: string;
   receiveUrl: string;
   hasSecret: boolean;
   receipts: WebhookReceipt[];
@@ -51,29 +53,30 @@ function PayloadView({ payload }: { payload: string }) {
   return <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{payload}</pre>;
 }
 
-export function WebhookList({ receiveUrl, hasSecret, receipts, loadError }: WebhookListProps) {
+export function WebhookList({ targetName, environmentLabel, receiveUrl, hasSecret, receipts, loadError }: WebhookListProps) {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
   const rows = toRows(receipts);
 
   return (
-    <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16, minWidth: 0 }}>
       <Typography.Title level={3}>웹훅 수신</Typography.Title>
-      <Descriptions
+      <div style={{ minWidth: 0, overflowX: "auto" }}><Descriptions
         size="small"
         column={1}
         bordered
         items={[
+          { key: "target", label: "연동 대상", children: `${targetName} / ${environmentLabel}` },
           { key: "url", label: "수신 URL", children: <Typography.Text copyable>{receiveUrl}</Typography.Text> },
           {
             key: "secret",
-            label: "METERENGINE_WEBHOOK_SECRET",
+            label: "서명 비밀값",
             children: hasSecret ? <Tag color="green">설정됨</Tag> : <Tag color="red">설정 안 됨</Tag>,
           },
         ]}
-      />
+      /></div>
       {hasSecret ? null : (
-        <Alert type="warning" title="비밀값이 없어 받은 웹훅을 모두 무효(secret_not_configured)로 기록합니다" />
+        <Alert type="warning" title="이 대상의 서명 비밀값이 없습니다" description="서버의 대상 설정에 서명 비밀값을 등록하세요. 다른 대상의 비밀값은 대신 사용하지 않습니다." />
       )}
       {loadError === undefined ? null : <Alert type="error" title="수신 기록을 읽지 못했습니다" description={loadError} />}
       <Space>
@@ -82,13 +85,13 @@ export function WebhookList({ receiveUrl, hasSecret, receipts, loadError }: Webh
         </Button>
         <Typography.Text type="secondary">최근 {rows.length}건</Typography.Text>
       </Space>
-      <Table<WebhookRow>
+      <div style={{ minWidth: 0, overflowX: "auto" }}><Table<WebhookRow>
         size="small"
         columns={COLUMNS}
         dataSource={rows}
         pagination={{ pageSize: 20 }}
         expandable={{ expandedRowRender: (row) => <PayloadView payload={row.payload} /> }}
-      />
-    </Space>
+      /></div>
+    </div>
   );
 }

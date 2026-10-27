@@ -3,6 +3,7 @@ package com.meterengine.invoice.service;
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
 import com.meterengine.invoice.entity.Invoice;
@@ -58,6 +59,8 @@ public class InvoiceFinalizationService {
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
   @Transactional
   public List<Invoice> finalize(UUID organizationId, YearMonth month) {
+    if (BusinessEnvironmentContext.environmentId() != null)
+      organizationRepository.findForUpdateById(organizationId).orElseThrow();
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
         draftInvoiceService.preview(organizationId, month).customers().stream()
             .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
@@ -70,8 +73,11 @@ public class InvoiceFinalizationService {
     String organizationName =
         organizationRepository.findById(organizationId).orElseThrow().getName();
     Map<UUID, Customer> customerById =
-        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId).stream()
-            .collect(Collectors.toMap(Customer::getId, Function.identity()));
+        (BusinessEnvironmentContext.environmentId() == null
+                ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+                : customerRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream().collect(Collectors.toMap(Customer::getId, Function.identity()));
 
     return draftInvoiceCustomers.stream()
         .map(
@@ -106,7 +112,8 @@ public class InvoiceFinalizationService {
                 month.toString(),
                 supplyAmount,
                 Math.multiplyExact(supplyAmount, TAX_RATE_PERCENT) / 100,
-                OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE)));
+                OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE),
+                BusinessEnvironmentContext.environmentId()));
 
     invoiceLineRepository.saveAll(
         draftInvoiceCustomer.lines().stream()
@@ -143,6 +150,7 @@ public class InvoiceFinalizationService {
         draftInvoiceLine.lineType(),
         draftInvoiceLine.tierIndex(),
         draftInvoiceLine.quantityNumerator(),
-        draftInvoiceLine.quantityDenominator());
+        draftInvoiceLine.quantityDenominator(),
+        invoice.getEnvironmentId());
   }
 }

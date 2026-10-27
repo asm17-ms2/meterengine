@@ -4,6 +4,7 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -41,7 +42,7 @@ public class IdempotencyService {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR,
           List.of(new FieldError("Idempotency-Key", "1부터 255자까지의 재시도 키를 보내세요")));
-    UUID environmentId = (UUID) null;
+    UUID environmentId = BusinessEnvironmentContext.environmentId();
     String scope = environmentId == null ? "legacy" : environmentId.toString();
     String keyHash = hash(key);
     String requestHash = hash(jsonMapper.writeValueAsString(request));

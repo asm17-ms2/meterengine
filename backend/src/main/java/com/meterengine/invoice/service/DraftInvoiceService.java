@@ -2,6 +2,7 @@ package com.meterengine.invoice.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -47,11 +48,17 @@ public class DraftInvoiceService {
     OffsetDateTime calculatedAt = OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
 
     Set<UUID> finalizedCustomerIds =
-        Set.copyOf(invoiceRepository.findCustomerIds(organizationId, month.toString()));
+        Set.copyOf(
+            (BusinessEnvironmentContext.environmentId() == null
+                ? invoiceRepository.findCustomerIds(organizationId, month.toString())
+                : invoiceRepository.findCustomerIdsScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId(), month.toString())));
     List<Customer> organizationCustomers =
-        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId).stream()
-            .filter(customer -> !finalizedCustomerIds.contains(customer.getId()))
-            .toList();
+        (BusinessEnvironmentContext.environmentId() == null
+                ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+                : customerRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream().filter(customer -> !finalizedCustomerIds.contains(customer.getId())).toList();
 
     Map<UUID, CustomerCharge> customerChargeByCustomerId =
         chargeService.calculate(

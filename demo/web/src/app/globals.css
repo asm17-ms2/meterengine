@@ -1,6 +1,6 @@
-:root { --portal-ink: #17344f; --portal-muted: #64788b; --portal-line: #dbe6ed; --portal-accent: #146c94; }
+:root { --portal-ink: #17344f; --portal-muted: #526879; --portal-line: #dbe6ed; --portal-accent: #146c94; }
 * { box-sizing: border-box; }
-body { color: var(--portal-ink); background: #f3f7fb; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+body { color: var(--portal-ink); background: #f3f7fb; font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #218fb6; outline-offset: 3px; }
 .customer-portal { max-width: 1160px; margin: 0 auto; }
 .portal-context { display: flex; justify-content: space-between; padding: 12px 0 18px; border-bottom: 1px solid var(--portal-line); font-size: 13px; color: var(--portal-muted); }
@@ -8,7 +8,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .portal-eyebrow { margin: 0; font-size: 14px; font-weight: 600; color: var(--portal-accent); }
 .portal-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 16px; background: #fff; border: 1px solid var(--portal-line); border-radius: 12px; margin-bottom: 24px; }
 .portal-filters label { display: flex; flex: 1 1 160px; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; }
-.portal-filters input, .portal-filters select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #b9cbd8; border-radius: 6px; background: #fff; color: var(--portal-ink); font: inherit; font-size: 14px; }
+.portal-filters input, .portal-filters select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #7c8799; border-radius: 6px; background: #fff; color: var(--portal-ink); font: inherit; font-size: 14px; }
 .portal-statement { display: grid; grid-template-columns: repeat(3, 1fr); background: #e7f1f6; border-left: 4px solid var(--portal-accent); padding: 24px 28px; margin: 0 0 24px; border-radius: 0 12px 12px 0; gap: 20px; }
 .portal-statement p { margin: 0 0 12px; font-size: 13px; }
 .portal-statement strong { display: block; font-size: clamp(22px, 2.8vw, 32px); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
@@ -33,7 +33,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 600px) { .demo-main { padding: 16px !important; } .portal-header { margin-top: 20px; } .portal-statement { grid-template-columns: 1fr; padding: 20px; } .portal-statement > div + div { padding-top: 16px; border-top: 1px solid #c5dce8; } .portal-statement strong { font-size: 30px; } }
 .portal-statement span { color: #455f72; }
 .portal-context { padding-left: 0; }
-.demo-operator-controls { padding: 20px; border: 1px solid #b9cbd8; background: #edf3f7; border-radius: 10px; margin-bottom: 28px; }
+.demo-operator-controls { padding: 20px; border: 1px solid #7c8799; background: #edf3f7; border-radius: 10px; margin-bottom: 28px; }
 .demo-operator-controls h2 { margin-top: 0; font-size: 18px; }
 .demo-operator-controls > p { color: #455f72; font-size: 13px; line-height: 1.7; }
 .demo-operator-controls .portal-filters { margin-bottom: 0; }
@@ -44,3 +44,8 @@ body:has(.demo-preview-navigation) .demo-main { padding-top: 72px !important; }
 .portal-usage li > div { min-width: 0; overflow-wrap: anywhere; }
 .portal-invoice { min-width: 0; }
 @media(max-width: 600px) { .demo-preview-navigation { padding-inline: 16px; }.portal-filters input, .portal-filters select { font-size: 16px; min-height: 44px; }.portal-lines { overflow-wrap: anywhere; }.demo-operator-controls { padding: 16px; } }
+
+.wordmark { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+pre, code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+
+@media (max-width: 991px) { .webhook-page { padding-top: 48px; } }

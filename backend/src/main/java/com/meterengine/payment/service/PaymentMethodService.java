@@ -4,6 +4,7 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.dto.ListPaymentMethodsResponse;
 import com.meterengine.payment.dto.PaymentMethodResponse;
@@ -40,12 +41,15 @@ public class PaymentMethodService {
 
   @Transactional(readOnly = true)
   public PaymentMethodResponse get(UUID organizationId, UUID customerId) {
-    if (!customerRepository.existsByOrganizationIdAndId(organizationId, customerId)) {
+    if (!customerRepository
+        .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
+        .isPresent()) {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
     String mode = paymentSettingService.findMode(organizationId);
     return billingKeyRepository
         .findById(new BillingKeyId(organizationId, customerId, mode))
+        .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
         .map(PaymentMethodResponse::from)
         .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
   }
@@ -65,6 +69,7 @@ public class PaymentMethodService {
                 .findByOrganizationIdAndModeOrderByCustomerIdAsc(organizationId, mode)
                 .stream()
                 .filter(key -> filter.includes(key.getArchivedAt()))
+                .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
                 .map(PaymentMethodResponse::from)
                 .toList());
     if (filter != ArchiveStatus.ACTIVE)
@@ -79,6 +84,7 @@ public class PaymentMethodService {
     var key =
         billingKeyRepository
             .findById(new BillingKeyId(organizationId, customerId, mode))
+            .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
     if (key.getArchivedAt() != null) return;
     key.archive();

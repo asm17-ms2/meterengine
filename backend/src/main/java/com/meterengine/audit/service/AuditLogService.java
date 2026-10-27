@@ -3,6 +3,7 @@ package com.meterengine.audit.service;
 import com.meterengine.audit.entity.AuditLog;
 import com.meterengine.audit.repository.AuditLogRepository;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -56,7 +57,8 @@ public class AuditLogService {
             action,
             targetType,
             targetId,
-            jsonMapper.writeValueAsString(detail == null ? Map.of() : detail)));
+            jsonMapper.writeValueAsString(detail == null ? Map.of() : detail),
+            BusinessEnvironmentContext.environmentId()));
   }
 
   private static AuditActor currentActor(AuditActor fallback) {

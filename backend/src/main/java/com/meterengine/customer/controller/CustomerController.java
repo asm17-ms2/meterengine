@@ -10,6 +10,7 @@ import com.meterengine.customer.service.CustomerService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.IngestAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
@@ -40,6 +41,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/customers")
 public class CustomerController {
 

@@ -9,7 +9,7 @@ export type WebhookReceipt = {
   payload: string;
 };
 
-export type ReceiveWebhookInput = { payload: string; headers: Headers; secret: string | undefined; now?: Date };
+export type ReceiveWebhookInput = { payload: string; headers: Headers; secret: string | undefined; environment?: "legacy" | "test" | "live"; now?: Date };
 
 export type ReceiveWebhookResult = { status: 200 | 400; receipt: WebhookReceipt };
 
@@ -55,6 +55,8 @@ export function receiveWebhook(input: ReceiveWebhookInput): ReceiveWebhookResult
   }
   try {
     const event: unknown = verifyWebhookSignature({ payload: input.payload, headers: input.headers, secret: input.secret, now });
+    const environment = isRecord(event) ? event.environment : undefined;
+    if (input.environment !== undefined && (input.environment === "legacy" ? environment !== undefined && environment !== "legacy" : environment !== input.environment)) return rejected("environment_mismatch");
     return { status: 200, receipt: { ...received, type: typeOf(event), verified: true, reason: null } };
   } catch (error) {
     if (error instanceof WebhookVerificationError) {

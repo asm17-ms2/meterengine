@@ -9,6 +9,8 @@ public interface PaymentRetryCandidateProjection {
 
   UUID getOrganizationId();
 
+  UUID getEnvironmentId();
+
   UUID getInvoiceId();
 
   String getMode();

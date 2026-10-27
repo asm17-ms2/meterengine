@@ -1,0 +1,157 @@
+import { test, expect, type Page } from "@playwright/test";
+
+const FIXTURE_URL = "http://127.0.0.1:38148";
+const LOGIN_PASSWORD = "contract-password";
+const ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
+
+async function expectTenantUrl(page: Page, pathname: string) {
+  await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
+}
+
+async function login(page: Page, email = "member@contract.local", returnTo = "/customers") {
+  await page.goto(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+  await page.getByLabel("이메일", { exact: true }).fill(email);
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+}
+
+test.beforeEach(async ({ request }) => { await request.post(`${FIXTURE_URL}/__control`, { data: { reset: true } }); });
+
+test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
+  expect((await request.get("/health")).status()).toBe(200);
+  for (const path of ["/customers?q=abc", "/admin/users", "/organizations"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login\?returnTo=/);
+  }
+  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
+  await page.goto("/customers");
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.find((call: { path: string }) => call.path === "/v1/sessions").hasAuthorization).toBe(false);
+  expect(calls.some((call: { hasOrganizationHeader: boolean }) => call.hasOrganizationHeader)).toBe(false);
+});
+
+test("signup sends displayed consent versions without stale Bearer or a password-bearing follow-up", async ({ page, request }) => {
+  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
+  await page.goto("/signup");
+  await page.getByLabel("도입사 이름", { exact: true }).fill("새 도입사");
+  await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
+  await page.getByLabel("이메일", { exact: true }).fill("new@contract.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("checkbox").nth(0).check();
+  await page.getByRole("checkbox").nth(1).check();
+  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await expect(page).toHaveURL(/\/pending$/);
+  await page.reload();
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+  expect(await page.content()).not.toContain(LOGIN_PASSWORD);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, consents: [{ document: "terms_of_service", document_version: "2026-10-26-preview" }, { document: "privacy_policy", document_version: "2026-10-26-preview" }] }]);
+});
+
+test("safe relative return targets and member admin denial", async ({ page }) => {
+  for (const returnTo of ["https://example.com", "//example.com/customers", "//[", "/\\example.com", "/%2f%2fexample.com", "/admin/users", "/login", "javascript:alert(1)"]) {
+    await login(page, "member@contract.local", returnTo);
+    await expectTenantUrl(page, "/overview");
+  }
+  await page.goto("/admin/users");
+  await expectTenantUrl(page, "/overview");
+});
+
+test("tenant actions recheck session after revocation, independently of route layout", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
+  await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
+  const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
+  await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
+  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
+});
+
+test("operator actions recheck current role after demotion", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await expect(page.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "플랫폼 운영자로 변경", exact: true }).click();
+  const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
+  await request.post(`${FIXTURE_URL}/__control`, { data: { demote: cookie.value } });
+  await page.getByRole("button", { name: "플랫폼 운영자로 변경 확정" }).click();
+  await expect(page).toHaveURL(/\/organizations$/);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path.endsWith("/role") && call.method === "PUT")).toBe(false);
+});
+
+test("suspended tenant blocks mutations but permits switching", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
+  await request.post(`${FIXTURE_URL}/__control`, { data: { suspend: cookie.value } });
+  await page.goto("/customers");
+  await expect(page).toHaveURL(/\/organizations$/);
+  await expect(page.getByRole("status")).toContainText("이용 가능 여부");
+});
+
+test("network failure is recoverable and logout does not claim success before revocation", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
+  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "로그아웃을 완료하지 못했습니다" })).toContainText("로그아웃을 완료하지 못했습니다");
+  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(page.locator(".organization-link")).toContainText("계약 테스트 도입사");
+  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test("375px forms and tenant header fit, keyboard focus and menu work", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/login");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "본문으로 이동" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("이메일", { exact: true })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "업무 메뉴 열기" })).toBeFocused();
+});
+
+test("server action replay on a public route cannot create a customer without a session", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
+  await page.getByRole("dialog").getByLabel(/^고객명/).fill("액션 경계 확인");
+  const actionRequest = page.waitForRequest(req => req.method() === "POST" && Boolean(req.headers()["next-action"]));
+  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
+  const captured = await actionRequest;
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const before = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const createsBefore = before.filter((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST").length;
+  expect(createsBefore).toBe(1);
+  await page.context().clearCookies();
+  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(false);
+  await page.request.post("/login", {
+    headers: { "Next-Action": captured.headers()["next-action"], "Content-Type": captured.headers()["content-type"], Origin: "http://localhost:33148" },
+    data: captured.postDataBuffer()!,
+    maxRedirects: 0,
+  });
+  const after = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(after.filter((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toHaveLength(createsBefore);
+  await page.goto("/customers");
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+});

@@ -3,6 +3,7 @@ package com.meterengine.event.repository;
 import com.meterengine.event.dto.Event;
 import com.meterengine.event.dto.EventInsertion;
 import com.meterengine.event.service.EventSearch;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.RequestIdentity;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public class EventRepository {
         type,
         propertiesJson,
         occurredAt,
-        (UUID) null,
+        BusinessEnvironmentContext.environmentId(),
         identity.requestId(),
         identity.actorType(),
         identity.actorId());
@@ -64,7 +65,7 @@ public class EventRepository {
       parameters.add(event.type());
       parameters.add(event.properties());
       parameters.add(event.occurredAt());
-      parameters.add((UUID) null);
+      parameters.add(BusinessEnvironmentContext.environmentId());
       parameters.add(identity.requestId());
       parameters.add(identity.actorType());
       parameters.add(identity.actorId());
@@ -83,7 +84,7 @@ public class EventRepository {
     }
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add((UUID) null);
+    parameters.add(BusinessEnvironmentContext.environmentId());
     parameters.addAll(transactionIds);
     return jdbcTemplate.query(
         "SELECT transaction_id FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND transaction_id IN ("
@@ -186,7 +187,7 @@ public class EventRepository {
         "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid ORDER BY month DESC",
         (rs, rowNum) -> rs.getString("month"),
         organizationId,
-        (UUID) null);
+        BusinessEnvironmentContext.environmentId());
   }
 
   public java.util.Optional<Event> find(UUID organizationId, String transactionId) {
@@ -211,7 +212,7 @@ public class EventRepository {
                     rs.getString("actor_type"),
                     rs.getObject("actor_id", UUID.class)),
             organizationId,
-            (UUID) null,
+            BusinessEnvironmentContext.environmentId(),
             transactionId)
         .stream()
         .findFirst();
@@ -261,7 +262,7 @@ public class EventRepository {
             "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND type = ?)",
             Boolean.class,
             organizationId,
-            (UUID) null,
+            BusinessEnvironmentContext.environmentId(),
             type));
   }
 
@@ -279,7 +280,7 @@ public class EventRepository {
             """,
             Boolean.class,
             organizationId,
-            (UUID) null,
+            BusinessEnvironmentContext.environmentId(),
             type,
             property));
   }
@@ -295,7 +296,7 @@ public class EventRepository {
             """,
             Boolean.class,
             organizationId,
-            (UUID) null,
+            BusinessEnvironmentContext.environmentId(),
             transactionId));
   }
 
@@ -310,7 +311,7 @@ public class EventRepository {
             """,
             Boolean.class,
             organizationId,
-            (UUID) null,
+            BusinessEnvironmentContext.environmentId(),
             customerId));
   }
 
@@ -325,7 +326,7 @@ public class EventRepository {
         new StringBuilder(
             "WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid AND e.occurred_at >= ? AND e.occurred_at < ?");
     parameters.add(organizationId);
-    parameters.add((UUID) null);
+    parameters.add(BusinessEnvironmentContext.environmentId());
     parameters.add(start);
     parameters.add(end);
 

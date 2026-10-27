@@ -4,6 +4,7 @@ import path from "node:path";
 
 type SeedState = {
   baseUrl: string;
+  environment?: "test" | "live";
   ownerEmail: string;
   ownerPassword: string;
   organizationName?: string;
@@ -18,6 +19,8 @@ if (args.length !== 2 || args[0] !== "--output") throw new Error("사용법: nod
 const output = path.resolve(args[1]);
 if (await stat(output).then(() => true, () => false)) throw new Error("기존 설정 파일은 덮어쓰지 않습니다");
 const baseUrl = (process.env.METERENGINE_API_BASE_URL ?? "http://127.0.0.1:38147").replace(/\/+$/, "");
+const environment = process.env.METERENGINE_ENVIRONMENT ?? "test";
+if (environment !== "test" && environment !== "live") throw new Error("METERENGINE_ENVIRONMENT는 test 또는 live여야 합니다");
 const parsedBase = new URL(baseUrl);
 if (!new Set(["localhost", "127.0.0.1", "[::1]"]).has(parsedBase.hostname) || !["http:", "https:"].includes(parsedBase.protocol) || parsedBase.username || parsedBase.password) {
   throw new Error("초기화는 로컬 MeterEngine 시연 서버에서만 실행할 수 있습니다");
@@ -30,10 +33,12 @@ await mkdir(path.dirname(output), { recursive: true, mode: 0o700 });
 const saved = await readFile(statePath, "utf8").catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return null; throw error; });
 const state: SeedState = saved ? JSON.parse(saved) : {
   baseUrl,
+  environment,
   ownerEmail: process.env.LUMEN_OWNER_EMAIL ?? `lumen-owner-${randomUUID()}@example.test`,
   ownerPassword: process.env.LUMEN_OWNER_PASSWORD ?? randomBytes(24).toString("base64url"),
 };
 if (state.baseUrl !== baseUrl) throw new Error("진행 중인 초기화의 API 서버가 다릅니다");
+if (state.environment !== environment) throw new Error("진행 중인 초기화의 업무 환경이 다릅니다. 별도 출력 경로를 사용하세요");
 state.organizationName ??= process.env.LUMEN_ORGANIZATION_NAME ?? "Lumen LLM 예제 서비스";
 async function saveState() {
   const temporary = `${statePath}.tmp`;
@@ -55,7 +60,7 @@ class ApiFailure extends Error {
 async function request<T>(method: string, route: string, body?: JsonObject, token?: string): Promise<T> {
   const response = await fetch(baseUrl + route, {
     method, redirect: "error", signal: AbortSignal.timeout(15_000),
-    headers: { Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { Accept: "application/json", "X-MeterEngine-Environment": environment, ...(body ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data: unknown = response.status === 204 ? null : await response.json().catch(() => null);
@@ -136,7 +141,7 @@ for (const [field, scopes, label] of [["runtimeKey", ["read", "ingest"], "Lumen 
     try { await request("GET", "/v1/organization", undefined, state[field]); continue; }
     catch (error) { if (!(error instanceof ApiFailure) || ![401, 403].includes(error.status)) throw error; }
   }
-  const key = await request<{ secret: string }>("POST", "/v1/api-keys", { label, mode: "test", scopes: [...scopes] }, owner.token);
+  const key = await request<{ secret: string }>("POST", "/v1/api-keys", { label, mode: environment, scopes: [...scopes] }, owner.token);
   state[field] = key.secret;
   await saveState();
 }
@@ -145,6 +150,7 @@ const runtime = {
   LUMEN_DATABASE_PATH: path.resolve(process.env.LUMEN_DATABASE_PATH ?? path.join(path.dirname(output), "lumen.sqlite")),
   LUMEN_ACCOUNTS: JSON.stringify(accounts),
   METERENGINE_API_BASE_URL: baseUrl,
+  METERENGINE_ENVIRONMENT: environment,
   METERENGINE_API_KEY: state.runtimeKey!,
   METERENGINE_BILLING_API_KEY: state.billingKey!,
   METERENGINE_CONSOLE_URL: process.env.METERENGINE_CONSOLE_URL ?? "http://localhost:33147",

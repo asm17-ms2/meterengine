@@ -69,7 +69,12 @@ public class PaymentAttemptConfirmationService {
     for (PaymentAttempt attempt :
         paymentAttemptRepository.findPendingRequestedBetween(confirmableFrom, confirmableBefore)) {
       try {
-        tally.count(confirmAttempt(attempt, notFoundFailableBefore));
+        tally.count(
+            PaymentEnvironments.call(
+                attempt.getOrganizationId(),
+                attempt.getEnvironmentId(),
+                attempt.getMode(),
+                () -> confirmAttempt(attempt, notFoundFailableBefore)));
       } catch (RuntimeException exception) {
         logger.warn(
             "payment attempt confirmation failed: attempt_id={}, mode={}",
@@ -83,7 +88,12 @@ public class PaymentAttemptConfirmationService {
         paymentCancellationRepository.findPendingRequestedBetween(
             confirmableFrom, confirmableBefore)) {
       try {
-        tally.count(confirmCancellation(cancellation, notFoundFailableBefore));
+        tally.count(
+            PaymentEnvironments.call(
+                cancellation.getOrganizationId(),
+                cancellation.getEnvironmentId(),
+                cancellation.getMode(),
+                () -> confirmCancellation(cancellation, notFoundFailableBefore)));
       } catch (RuntimeException exception) {
         logger.warn(
             "payment cancellation confirmation failed: cancellation_id={}, mode={}",
@@ -106,7 +116,11 @@ public class PaymentAttemptConfirmationService {
     UUID attemptId = attempt.getId();
     Optional<TossPaymentsCredential> credential =
         tossPaymentsCredentialService.historical(
-            attempt.getOrganizationId(), attempt.getMode(), attempt.getRequestedAt());
+            attempt.getOrganizationId(),
+            attempt.getMode(),
+            attempt.getCredentialUpdatedAt() == null
+                ? attempt.getRequestedAt()
+                : attempt.getCredentialUpdatedAt());
     if (credential.isEmpty()) {
       logger.warn(
           "payment attempt confirmation skipped without toss payments credential: attempt_id={},"
@@ -172,14 +186,15 @@ public class PaymentAttemptConfirmationService {
   private boolean confirmCancellation(
       PaymentCancellation cancellation, OffsetDateTime notFoundFailableBefore) {
     UUID cancellationId = cancellation.getId();
+    PaymentAttempt originalAttempt =
+        paymentAttemptRepository.findById(cancellation.getPaymentAttemptId()).orElseThrow();
     Optional<TossPaymentsCredential> credential =
         tossPaymentsCredentialService.historical(
             cancellation.getOrganizationId(),
             cancellation.getMode(),
-            paymentAttemptRepository
-                .findById(cancellation.getPaymentAttemptId())
-                .orElseThrow()
-                .getRequestedAt());
+            originalAttempt.getCredentialUpdatedAt() == null
+                ? originalAttempt.getRequestedAt()
+                : originalAttempt.getCredentialUpdatedAt());
     if (credential.isEmpty()) {
       logger.warn(
           "payment cancellation confirmation skipped without toss payments credential:"

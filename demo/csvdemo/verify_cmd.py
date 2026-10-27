@@ -118,11 +118,19 @@ def _load_log_source(args, console: Console) -> Optional[VerifySource]:
         print("로그의 이벤트를 해석하지 못했습니다: %s" % error, file=sys.stderr)
         return None
     base_url = args.base_url or (log.header.base_url if log.header else None) or DEFAULT_BASE_URL
+    environment = getattr(args, "environment", None) or (log.header.environment if log.header else None)
+    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout, environment=environment)
+    if log.header and log.header.source_fingerprint and log.header.source_fingerprint != client.source_fingerprint:
+        print("전송 로그와 연결 키 또는 업무 환경이 다릅니다. 전송 당시의 연결 설정으로 검증하세요", file=sys.stderr)
+        return None
+    if log.header and not log.header.source_fingerprint and environment:
+        print("기존 로그의 업무 환경을 확인할 수 없습니다. 환경별로 새 전송 로그를 만들어 검증하세요", file=sys.stderr)
+        return None
     return VerifySource(
         stored=stored,
         rejected_count=sum(1 for r in log.records if r.outcome == "rejected"),
         error_count=sum(1 for r in log.records if r.outcome == "error"),
-        client=ApiClient(base_url, args.api_key, timeout_seconds=args.timeout),
+        client=client,
         label=args.log + " (send 로그, 서버 판정 기록)",
         organization_id=log.header.organization_id if log.header else None,
     )
@@ -138,7 +146,7 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
         print(str(error), file=sys.stderr)
         return None
     base_url = args.base_url or DEFAULT_BASE_URL
-    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout)
+    client = ApiClient(base_url, args.api_key, timeout_seconds=args.timeout, environment=getattr(args, "environment", None))
     organization = require_organization(client)
 
     usage = client.get_usage(args.month)
