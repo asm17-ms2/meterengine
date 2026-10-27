@@ -132,7 +132,7 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
-  void 지난_월_요금제_등록과_삭제는_거절하고_기존_요금제를_보존한다() {
+  void 지난_월_요금제_등록은_거절하고_삭제해도_지난달_요금제를_보존한다() {
     legacyRate();
     UUID id =
         jdbcTemplate.queryForObject(
@@ -150,11 +150,7 @@ class VersionedPricingIntegrationTest {
             ConflictException.class,
             error ->
                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
-    assertThatThrownBy(() -> pricePlanService.delete(organizationId, id))
-        .isInstanceOfSatisfying(
-            ConflictException.class,
-            error ->
-                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
+    pricePlanService.delete(organizationId, id);
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
   }
 
