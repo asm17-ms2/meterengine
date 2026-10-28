@@ -9,6 +9,13 @@ export const ACCESS_SCOPE_OPTIONS = [
   { value: "admin", label: "전체 관리 (admin): 조회와 수집을 포함한 데이터 변경" },
 ];
 
+export const ACCESS_SCOPE_LABELS: Record<AccessScope, string> = { read: "조회", ingest: "수집", admin: "전체 관리" };
+
+export function scopeLabels(scopes: readonly string[]): string[] {
+  const known = (["read", "ingest", "admin"] as const).filter(scope => scopes.includes(scope)).map(scope => ACCESS_SCOPE_LABELS[scope]);
+  return [...known, ...scopes.filter(scope => !isAccessScope(scope))];
+}
+
 export function isAccessScope(scope: unknown): scope is AccessScope {
   return scope === "read" || scope === "ingest" || scope === "admin";
 }
@@ -49,7 +56,7 @@ export function tenantRequestScope(path: string, method: string = "GET"): Access
 }
 
 export function scopeSummary(scopes: readonly string[] | null | undefined): string {
-  if (hasScope(scopes, "admin")) return "전체 관리";
-  const labels = [hasScope(scopes, "read") ? "조회" : "", hasScope(scopes, "ingest") ? "수집" : ""].filter(Boolean);
+  if (hasScope(scopes, "admin")) return ACCESS_SCOPE_LABELS.admin;
+  const labels = [hasScope(scopes, "read") ? ACCESS_SCOPE_LABELS.read : "", hasScope(scopes, "ingest") ? ACCESS_SCOPE_LABELS.ingest : ""].filter(Boolean);
   return labels.length ? labels.join(", ") : "권한 없음";
 }

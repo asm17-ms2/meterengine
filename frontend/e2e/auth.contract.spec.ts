@@ -44,6 +44,8 @@ test("signup sends displayed consent versions without stale Bearer or a password
   await page.getByRole("checkbox").nth(1).check();
   await page.getByRole("button", { name: "가입 신청", exact: true }).click();
   await expect(page).toHaveURL(/\/pending$/);
+  await expect(page.getByRole("heading", { level: 1, name: "가입 신청을 접수했습니다", exact: true })).toBeVisible();
+  await expect(page.getByText("승인 여부는 운영자에게 확인하세요")).toHaveCount(0);
   await page.reload();
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
@@ -245,6 +247,121 @@ test("logging in to a return path of another member organization opens that orga
   await login(page, "member@contract.local", "/customers?organization_id=99999999-9999-4999-8999-999999999999&q=abc");
   await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === ORGANIZATION_ID && url.searchParams.get("q") === "abc");
   await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
+});
+
+test("a required choice group error reads without a broken particle", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("권한 없는 키");
+  for (const box of await dialog.getByRole("checkbox").all()) await box.uncheck();
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("하나 이상 선택하세요.", { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByText("을 하나 이상", { exact: false })).toHaveCount(0);
+});
+
+test("a one-time link that opens in a new tab says so", async ({ page }) => {
+  await login(page, "member@contract.local", "/members");
+  await expectTenantUrl(page, "/members");
+  await page.getByRole("button", { name: "초대 링크 만들기", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^초대할 이메일|^이메일/).fill("invitee@contract.local");
+  await dialog.getByRole("button", { name: "초대 링크 발급", exact: true }).click();
+  await expect(dialog.getByRole("link", { name: "초대 링크 열기", exact: true })).toHaveAccessibleDescription("새 탭에서 열립니다.");
+});
+
+test("an API key without a rate limit is listed as unlimited", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("한도 없는 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await page.reload();
+  const table = page.locator(".workspace-desktop-table");
+  await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("무제한");
+});
+
+test("the sign-in frame starts its headings with the page h1", async ({ page }) => {
+  for (const path of ["/login", "/signup"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.querySelector("h1, h2, h3, h4, h5, h6")?.tagName)).toBe("H1");
+  }
+});
+
+test("an empty workspace table uses the small empty illustration", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.locator(".workspace-desktop-table .ant-empty-normal")).toHaveCount(1);
+});
+
+test("an invitation opened without a session does not offer the organization picker", async ({ page }) => {
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await expect(page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "도입사 선택으로", exact: true })).toHaveCount(0);
+});
+
+test("a new-account invitation opened while signed in as someone else says who is signed in", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  const status = page.getByRole("status").filter({ hasText: "member@contract.local" });
+  await expect(status).toContainText("invited@contract.local");
+  await expect(page.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
+});
+
+test("logging out on an invitation keeps the invitation open", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto("/organization-invitations/me_invite_ContractExisting0000000000000001");
+  await expect(page.getByRole("status").filter({ hasText: "member@contract.local" })).toBeVisible();
+  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page.getByText("member@contract.local")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/organization-invitations\/me_invite_ContractExisting0000000000000001$/);
+  await expect(page.getByRole("button", { name: "해당 계정으로 로그인", exact: true })).toBeVisible();
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/sessions/current" && call.method === "DELETE")).toBe(true);
+});
+
+test("signup and invitation show the same required consent block", async ({ page }) => {
+  const names: string[][] = [];
+  for (const path of ["/signup", "/organization-invitations/me_invite_ContractInvitation00000000000001"]) {
+    await page.goto(path);
+    const checks = page.locator("fieldset.consent-fields label.consent-check");
+    await expect(checks).toHaveCount(2);
+    names.push(await checks.allTextContents());
+  }
+  expect(names[1]).toEqual(names[0]);
+});
+
+test("an out-of-range rate limit is reported on that field", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("큰 한도 키");
+  await dialog.getByLabel(/^분당 요청 한도/).evaluate(input => input.removeAttribute("max"));
+  await dialog.getByLabel(/^분당 요청 한도/).fill("2147483648");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요.").first()).toBeVisible();
+  await expect(dialog.getByText("JSON", { exact: false })).toHaveCount(0);
+});
+
+test("signup with a blank name asks for that name instead of a length limit", async ({ page, request }) => {
+  await page.goto("/signup");
+  await page.getByLabel("도입사 이름", { exact: true }).fill("   ");
+  await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
+  await page.getByLabel("이메일", { exact: true }).fill("blank@contract.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("checkbox").nth(0).check();
+  await page.getByRole("checkbox").nth(1).check();
+  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await expect(page.getByText("도입사 이름을 입력하세요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("255자 이내", { exact: false })).toHaveCount(0);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string }) => call.path === "/v1/signups")).toBe(false);
 });
 
 test("operator actions recheck current role after demotion", async ({ page, request }) => {

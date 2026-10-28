@@ -36,3 +36,12 @@ test("organization roles have one label definition that matches the member list"
   const permissions = await import("../src/lib/auth/permissions.ts");
   assert.deepEqual(permissions.ORGANIZATION_ROLE_LABELS, { owner: "대표관리자", admin: "관리자", member: "일반 사용자" });
 });
+
+
+test("owner-only workspace operations need the owner role with admin scope", () => {
+  for (const operation of ["createMember", "updateMemberRole", "updateMemberScopes", "archiveMember", "createOrganizationInvitation", "revokeOrganizationInvitation"]) {
+    assert.equal(canPerformWorkspaceOperation(["admin"], "owner", operation), true);
+    for (const role of ["admin", "member", null]) assert.equal(canPerformWorkspaceOperation(["admin"], role, operation), false);
+    assert.equal(canPerformWorkspaceOperation(["read", "ingest"], "owner", operation), false);
+  }
+});
