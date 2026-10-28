@@ -90,8 +90,9 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   }
 
   async function copy(value: string) {
-    try { await navigator.clipboard.writeText(value); setCopyResult("복사했습니다."); setIsCopied(true); }
-    catch { setCopyResult("복사하지 못했습니다. 표시된 값을 선택해 직접 복사하세요."); }
+    setCopyResult("");
+    try { await navigator.clipboard.writeText(value); requestAnimationFrame(() => setCopyResult("복사했습니다.")); setIsCopied(true); }
+    catch { requestAnimationFrame(() => setCopyResult("복사하지 못했습니다. 표시된 값을 선택해 직접 복사하세요.")); }
   }
 
   const isLocked = Boolean(state.secret || state.registrationPath || state.isUnconfirmed || state.isConfirmedFailure);
@@ -104,7 +105,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
     {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
     {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer">{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
-    {copyResult && <p role="status" className="field-hint">{copyResult}</p>}
+    <div role="status">{copyResult && <p className="field-hint">{copyResult}</p>}</div>
     <fieldset disabled={isPending || isLocked}>
       {fields.map(field => {
         if (field.type === "hidden") return <input key={field.name} type="hidden" name={field.name} value={field.value ?? ""} />;

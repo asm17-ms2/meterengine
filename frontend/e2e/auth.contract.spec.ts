@@ -199,6 +199,20 @@ test("a workspace table scroll area is a named keyboard stop", async ({ page }) 
   await expect(page.getByRole("region", { name: "API 키 목록" })).toHaveAttribute("tabindex", "0");
 });
 
+test("copy results are announced through a status region that is already present", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("상태 영역 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveCount(1);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await expect(dialog.getByRole("status")).toHaveText("복사했습니다.");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
