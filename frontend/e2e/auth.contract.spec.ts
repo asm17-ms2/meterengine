@@ -88,6 +88,28 @@ test("closing a workspace dialog returns focus to its trigger", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
+test("an issued secret is shown first and closing before copying asks for confirmation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("계약 시험 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const result = dialog.locator(".secret-result");
+  await expect(result).toBeFocused();
+  await expect(result).toBeInViewport();
+  let isAsked = false;
+  page.once("dialog", async confirm => { isAsked = true; await confirm.dismiss(); });
+  await page.keyboard.press("Escape");
+  await expect.poll(() => isAsked).toBe(true);
+  await expect(dialog).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await expect(dialog.getByRole("status")).toHaveText("복사했습니다.");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
