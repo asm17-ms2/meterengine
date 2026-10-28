@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:41:02+09:00",
+  "updated_at": "2026-10-29T00:43:13+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -25,7 +25,7 @@
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
     "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
-    "fix/s456-448-t-inho": "1164c203e59b54c7eb704b71c130c9555b87e4fc"
+    "fix/s456-448-t-inho": "80a3ad0ac6282b2f844e61970360924bca1372f3"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -5591,15 +5591,41 @@
       "id": "X-024",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "사용자 관리의 '변경 이력 보기'는 필터 없이 /audit로 가고(members/page.tsx:36), 감사 화면은 받은 조건만 넘기며 기본 행동이 '모든 행동' 하나뿐이라(AuditScreen.tsx:35-39, 60) 기본 20건(AuditLogController.java:33)에 api_request_completed가 섞인다. 요청 감사 필터는 수집만 빼고 /v1 GET까지 모두 남기고(RequestAuditFilter.java:41-44, RequestAuditService.java:53) 화면 안내문(AuditScreen.tsx:66)도 이를 인정하므로, 링크 이름 '변경 이력'과 실제로 열리는 목록이 어긋난다. 요약 행은 실행 주체 유형만 보이고 이름 맵은 펼친 상세에서만 쓰는 것이 70행과 71행에서 바로 보인다. 층 head와 정점 모두 같은 코드이고 이를 막는 검사나 시험은 없다. 원인이 이미 fix로 잡힌 D-152(D-253 묶음, 링크 지적 포함)와 같아 함께 고치면 된다. 요약 줄의 실행 주체를 이름(이메일)으로 보이고 '변경 이력 보기'를 /audit?q=organization_(사용자 소속, 역할, 권한, 초대, 도입사 상태 변경)로 열게 했다. 감사 화면을 직접 열었을 때 기본 목록에서 API 요청을 빼는 일은 감사 조회 API에 새 조회 파라미터가 필요해 NT-inho-004(needs-decision)로 뗐다.",
+      "evidence": [
+        "frontend/src/app/(console)/members/page.tsx:36 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:35-39 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:60 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:66 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:70-71 @ 6431cef",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:41-44 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:53-54 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:33 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:60-81 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:71-72 @ b5506b6",
+        "frontend/src/app/(console)/members/page.tsx:36 @ b5506b6",
+        "an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다)",
+        "커밋 80a3ad0ac6282b2f844e61970360924bca1372f3"
+      ],
+      "commits": [
+        "80a3ad0ac6282b2f844e61970360924bca1372f3"
+      ],
+      "tests": [
+        "node --test e2e/audit.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "실화면(.s456-work/probe-x024.mjs): 고치기 전 사용자 관리의 '변경 이력 보기'가 조건 없는 /audit를 열어 9건 중 6건이 API 요청이고 요약 줄이 '로그인 사용자', 고친 뒤 /audit?q=organization_로 관리자 초대 1건만 나오고 요약 줄에 실행한 사람 이름이 보임. 캡처는 evidence/D-152/before, after"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 AuditScreen.tsx 요약 줄(71-72행)과 members/page.tsx 36행 링크가 그대로다. AuditScreen을 바꾼 위층 커밋 23b1844(#453)은 2행 import와 환경 조건만 더했다",
+      "propagation_note": "#453 23b1844가 AuditScreen.tsx import 줄을 바꿨다. 반영 때 @/lib/audit import와 auditActorLabel 호출을 남긴다. 정점 people.real.spec.ts와 operator-create.real.spec.ts는 .audit-summary strong과 .audit-detail만 읽어 영향이 없다.",
+      "summary": "감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다"
     },
     {
       "id": "Ck1-448-01",
@@ -5690,15 +5716,39 @@
         "D-253"
       ],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head 6431cef의 AuditScreen.tsx 70행 요약 줄은 ACTORS[log.actor_type]만 그려 '로그인 사용자'만 보이고, 45-49행에서 만든 이름 맵은 71행 펼친 상세에서만 쓴다. RequestAuditFilter는 수집 POST만 빼고 /v1/ 요청을 모두 api_request_completed로 남기며, 콘솔은 화면마다 /v1/sessions/current를, 감사 화면은 audit-logs와 organization/members를 GET하므로 기본 목록(34-38행, 기본 필터 없음)이 조회 기록으로 채워진다. 백엔드 목록 조회는 action 일치(AuditLogQueryService 56행)만 있어 '변경 기록만' 볼 방법이 없고, 사용자 관리의 '변경 이력 보기'(members/page.tsx 36행)도 필터 없이 /audit로 보낸다. bc7e538 뒤 이 층에서 AuditScreen.tsx를 바꾼 커밋은 없고 요약 줄과 링크 모두 15692f85(#448)에서 들어왔다. 감사 대상을 바꾸지 않고 보기 기본값만 바꾸는 수정이라 Q3(수집 요청 감사 기준)에는 걸리지 않으며, 묶인 D-007, D-032, D-194, D-253도 같은 끝 상태다. 요약 줄의 실행 주체를 이름(이메일)으로 보이고 '변경 이력 보기'를 /audit?q=organization_(사용자 소속, 역할, 권한, 초대, 도입사 상태 변경)로 열게 했다. 감사 화면을 직접 열었을 때 기본 목록에서 API 요청을 빼는 일은 감사 조회 API에 새 조회 파라미터가 필요해 NT-inho-004(needs-decision)로 뗐다.",
+      "evidence": [
+        "frontend/src/components/workspace/AuditScreen.tsx:70 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:45-49,71 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:34-38,66 @ 6431cef",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:42-44,54-57 @ 6431cef",
+        "frontend/src/lib/auth/session.ts:20 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:56 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:30-46 @ 6431cef",
+        "frontend/src/app/(console)/members/page.tsx:36 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:71-72 @ b5506b6",
+        "an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다)",
+        "커밋 80a3ad0ac6282b2f844e61970360924bca1372f3"
+      ],
+      "commits": [
+        "80a3ad0ac6282b2f844e61970360924bca1372f3"
+      ],
+      "tests": [
+        "node --test e2e/audit.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "실화면(.s456-work/probe-x024.mjs): 고치기 전 사용자 관리의 '변경 이력 보기'가 조건 없는 /audit를 열어 9건 중 6건이 API 요청이고 요약 줄이 '로그인 사용자', 고친 뒤 /audit?q=organization_로 관리자 초대 1건만 나오고 요약 줄에 실행한 사람 이름이 보임. 캡처는 evidence/D-152/before, after"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 AuditScreen.tsx 요약 줄(71-72행)과 members/page.tsx 36행 링크가 그대로다. AuditScreen을 바꾼 위층 커밋 23b1844(#453)은 2행 import와 환경 조건만 더했다",
+      "propagation_note": "#453 23b1844가 AuditScreen.tsx import 줄을 바꿨다. 반영 때 @/lib/audit import와 auditActorLabel 호출을 남긴다. 정점 people.real.spec.ts와 operator-create.real.spec.ts는 .audit-summary strong과 .audit-detail만 읽어 영향이 없다.",
+      "summary": "감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다"
     },
     {
       "id": "GA-B1",
@@ -8001,9 +8051,75 @@
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8"
       },
       "question": "웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다."
+    },
+    {
+      "id": "NT-inho-004",
+      "merged_ids": [],
+      "layer": 448,
+      "branch": "feat/request-audit",
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "title": "감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다",
+      "reason": "D-152, X-024에서 요약 줄 이름과 '변경 이력 보기' 링크 범위는 고쳤지만, /audit를 바로 열면 행동 조건이 없어 화면 조회마다 남는 api_request_completed가 기본 목록을 채운다. 감사 조회 API는 action 일치만 지원해 'API 요청 제외'를 화면만으로 고를 수 없고, 고치려면 GET /v1/audit-logs와 /v1/operations/audit-logs에 새 조회 파라미터(공개 API)를 더해야 한다.",
+      "evidence": [
+        "frontend/src/components/workspace/AuditScreen.tsx:34-38 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:56 @ 6431cef"
+      ],
+      "commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2"
+      },
+      "question": "감사 조회 API에 'API 요청 제외'를 고르는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면의 기본 보기를 변경 기록으로 할지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다."
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (28.8s)"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (8.6s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 24 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "1164c203e59b54c7eb704b71c130c9555b87e4fc",
@@ -10948,6 +11064,11 @@
       "branch": "fix/s456-448-t-inho",
       "sha": "1164c203e59b54c7eb704b71c130c9555b87e4fc",
       "at": "2026-10-29T00:37:11+09:00"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "80a3ad0ac6282b2f844e61970360924bca1372f3",
+      "at": "2026-10-29T00:42:52+09:00"
     }
   ],
   "usage_log": [],
