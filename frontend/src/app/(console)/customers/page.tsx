@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { readArchiveStatus } from "@/lib/list-query";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
@@ -6,6 +7,8 @@ import { ArchiveFilter } from "@/components/workspace/ArchiveFilter";
 import { WorkspaceTable, WorkspaceError } from "@/components/workspace/WorkspaceView";
 
 type CustomerResponse = Record<string, unknown> & { id: string; name: string; external_id: string | null; archived_at?: string | null };
+
+export const metadata: Metadata = { title: "고객" };
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;

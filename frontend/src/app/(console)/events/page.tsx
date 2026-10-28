@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { EventsMeta } from "@/components/events/EventsMeta";
@@ -17,6 +18,8 @@ import { formatKstStamp } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = { title: "수집 로그" };
 
 export default async function EventsPage({
   searchParams,
