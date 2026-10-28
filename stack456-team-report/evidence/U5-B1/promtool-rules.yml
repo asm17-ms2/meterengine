@@ -1,0 +1,7 @@
+groups:
+  - name: missed-day
+    rules:
+      - record: before_fix
+        expr: time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"})
+      - record: after_fix
+        expr: time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}[26h]))

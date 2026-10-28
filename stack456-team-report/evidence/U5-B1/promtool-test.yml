@@ -1,0 +1,29 @@
+rule_files: [promtool-rules.yml]
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      # 이긴 blue가 1시간 시각에 오늘 성공을 낸 뒤 1시간 30분에 멈춰 시리즈가 사라진다.
+      - series: 'meterengine_scheduled_job_last_success_seconds{job_name="payment_reconciliation",instance="backend-blue:8080"}'
+        values: '3600x90 stale'
+      # 진 green은 같은 슬롯에서 DB를 읽어 어제 성공만 들고 있다.
+      - series: 'meterengine_scheduled_job_last_success_seconds{job_name="payment_reconciliation",instance="backend-green:8080"}'
+        values: '-86400x180'
+      # 정말로 26시간 성공이 없는 작업.
+      - series: 'meterengine_scheduled_job_last_success_seconds{job_name="unbilled_usage_report",instance="backend-green:8080"}'
+        values: '-86400x180'
+    promql_expr_test:
+      - expr: before_fix
+        eval_time: 2h
+        exp_samples:
+          - labels: 'before_fix{job_name="payment_reconciliation"}'
+            value: 93600
+          - labels: 'before_fix{job_name="unbilled_usage_report"}'
+            value: 93600
+      - expr: after_fix
+        eval_time: 2h
+        exp_samples:
+          - labels: 'after_fix{job_name="payment_reconciliation"}'
+            value: 3600
+          - labels: 'after_fix{job_name="unbilled_usage_report"}'
+            value: 93600
