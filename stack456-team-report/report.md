@@ -1,14 +1,14 @@
-미완료 344건, 결과: 끝 상태 28/372건 (fixed 11, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 3번(마지막 ee07130)
+미완료 342건, 결과: 끝 상태 30/372건 (fixed 13, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 4번(마지막 e26db2c)
 정할 것: 16건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T17:21:18+09:00
+상태: running, 갱신 2026-10-28T17:22:23+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 11 | 1 | 0 | 16 | 0 | 64 |
+| #443 | fix/s456-443-t-inho | 92 | 13 | 1 | 0 | 16 | 0 | 62 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -26,6 +26,7 @@ push: fix/s456-443-t-inho 3번(마지막 ee07130)
 | D-024 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
 | X-010 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
 | X-001 | #443 | ee07130 | 테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다 | an antd button shows a focus ring in the brand color: 실패 Expected "rgb(87, 70, 173)" Received "rgb(193, 186, 212)" |
+| X-042 | #443 | e26db2c | 지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다 | 없음(git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다; git grep -n finance-flow origin/feat/) |
 | D-002 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
 | D-048 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
 | D-064 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
@@ -33,6 +34,7 @@ push: fix/s456-443-t-inho 3번(마지막 ee07130)
 | D-249 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
 | D-151 | #443 | ee07130 | 테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다 | an antd button shows a focus ring in the brand color: 실패 Expected "rgb(87, 70, 173)" Received "rgb(193, 186, 212)" |
 | D-174 | #443 | ee07130 | 테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다 | an antd button shows a focus ring in the brand color: 실패 Expected "rgb(87, 70, 173)" Received "rgb(193, 186, 212)" |
+| D-080 | #443 | e26db2c | 지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다 | 없음(git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다; git grep -n finance-flow origin/feat/) |
 
 ## 정할 것
 
@@ -70,7 +72,8 @@ push: fix/s456-443-t-inho 3번(마지막 ee07130)
 
 ## 위층 반영 때 볼 것
 
-없음
+- X-042 (#443): #451 (console)/overview/page.tsx 22행의 순수납액 div에 className="is-settled"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.
+- D-080 (#443): #451 (console)/overview/page.tsx 22행의 순수납액 div에 className="is-settled"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.
 
 ## fixed-above로 둔 것
 

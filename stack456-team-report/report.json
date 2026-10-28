@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:21:18+09:00",
+  "updated_at": "2026-10-28T17:22:23+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "ee07130326131afca1b9374477bd48afc6e8bd1d"
+    "fix/s456-443-t-inho": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -218,15 +218,38 @@
       "id": "X-042",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:144 @ 0f1d1bf의 `.finance-flow > div:last-child { border: 0; background: #f0f8f7; }`는 칸 내용과 상관없이 마지막 칸에 청록 계열 배경을 깐다. 이 색은 AppProviders.tsx의 colorSuccess #087f75, colorSuccessBg #f5fbf8와 같은 성공 계열이다. 정점 admin/page.tsx:12는 같은 클래스로 승인 대기, 사용 중 도입사, 결과 확인 중 결제, 발송 실패 통보를 그려서 마지막 칸인 발송 실패 통보가 이 배경을 받는다. 767px 이하 규칙(150행)도 배경을 덮지 않는다. #443 head에는 이 클래스를 쓰는 마크업이 없다(admin/page.tsx는 redirect뿐). 증상은 #444 80a3ef1의 운영 현황에서 처음 보이고, 원래 강조하려던 개요의 순수납액 칸은 #451 e5fca11에서 들어온다. 원인인 위치 기반 규칙이 이 층에 있고 위층은 globals.css를 바꾸지 않으므로 이 층에서 파일 하나로 고칠 수 있다.",
+      "evidence": [
+        "frontend/src/app/globals.css:144 @ 0f1d1bf",
+        "frontend/src/app/globals.css:150 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12,14 @ 0f1d1bf",
+        "frontend/src/app/admin/page.tsx:2 @ 0f1d1bf",
+        "frontend/src/app/admin/page.tsx:12 @ 81651ed",
+        "frontend/src/app/admin/page.tsx:12 @ 0fe7d2a",
+        "frontend/src/app/(console)/overview/page.tsx:22 @ 0fe7d2a",
+        "커밋 e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79"
+      ],
+      "commits": [
+        "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79"
+      ],
+      "tests": [
+        "git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다",
+        "git grep -n finance-flow origin/feat/rds-auto-stop -- frontend/src: 정점에서는 admin/page.tsx 12행과 (console)/overview/page.tsx 22행이 쓴다",
+        "보이는 색만 바뀌는 CSS이고 이 층에는 쓰는 화면이 없어 고치기 전과 뒤 캡처로 차이를 볼 수 없다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (globals.css 144행이 정점 b8abfdf에서도 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#451 (console)/overview/page.tsx 22행의 순수납액 div에 className=\"is-settled\"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.",
+      "summary": "지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다"
     },
     {
       "id": "D-071",
@@ -941,15 +964,36 @@
       "id": "D-080",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "X-042와 같은 줄(globals.css:144 @ 0f1d1bf의 last-child 배경 규칙)과 같은 증상이라 원인이 같다. 정점 admin/page.tsx:12에서 마지막 칸이 발송 실패 통보라서, 성공 계열 색(AppProviders.tsx의 colorSuccessBg #f5fbf8에 가까운 #f0f8f7) 배경을 받는다. 원래 의도한 개요의 순수납액 칸은 overview/page.tsx:22 @ 0fe7d2a(#451)에서 쓴다. #443 head에는 이 클래스를 쓰는 마크업이 없어서, 이 층에서 바꿀 것은 CSS 규칙 하나다.",
+      "evidence": [
+        "frontend/src/app/globals.css:144 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12,14 @ 0f1d1bf",
+        "frontend/src/app/admin/page.tsx:2 @ 0f1d1bf",
+        "frontend/src/app/admin/page.tsx:12 @ 0fe7d2a",
+        "frontend/src/app/(console)/overview/page.tsx:22 @ 0fe7d2a",
+        "커밋 e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79"
+      ],
+      "commits": [
+        "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79"
+      ],
+      "tests": [
+        "git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다",
+        "git grep -n finance-flow origin/feat/rds-auto-stop -- frontend/src: 정점에서는 admin/page.tsx 12행과 (console)/overview/page.tsx 22행이 쓴다",
+        "보이는 색만 바뀌는 CSS이고 이 층에는 쓰는 화면이 없어 고치기 전과 뒤 캡처로 차이를 볼 수 없다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (globals.css 144행이 정점 b8abfdf에서도 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#451 (console)/overview/page.tsx 22행의 순수납액 div에 className=\"is-settled\"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.",
+      "summary": "지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다"
     },
     {
       "id": "D-084",
@@ -5546,6 +5590,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "20 passed (11.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "20 passed (11.6s)"
     }
   ],
   "pushes": [
@@ -5563,6 +5644,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
       "at": "2026-10-28T17:20:16+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "at": "2026-10-28T17:22:09+09:00"
     }
   ],
   "usage_log": [],
