@@ -1,15 +1,15 @@
-미완료 260건, 결과: 끝 상태 112/372건 (fixed 79, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 4번(마지막 f0aa95b)
-정할 것: 28건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001). 로컬 DB 다시 만들기: 없음
+미완료 259건, 결과: 끝 상태 113/372건 (fixed 80, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 5번(마지막 ed25d3e)
+정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T22:12:54+09:00
+상태: running, 갱신 2026-10-28T22:15:56+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 4 | 0 | 4 | 11 | 1 | 20 |
+| #444 | fix/s456-444-t-inho | 40 | 5 | 0 | 4 | 11 | 1 | 19 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -101,6 +101,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 4번(마
 | Ck2-001 | #444 | 02b14f4 | 웹훅 요청에 User-Agent 헤더를 싣는다 | 요청에_수신_서버가_발신자를_알아볼_User_Agent를_싣는다: 실패 Expecting actual "POST /hook HTTP/1.1 Host: 127.0.0.1:63777 Content-Type: application/json ..." to contain "User-Agent:  |
 | Ck2-002 | #444 | c5fb0e0 | 웹훅 수신 주소의 DNS 조회를 트랜잭션 밖에서 한다 | 수신_주소의_DNS_조회는_트랜잭션_밖에서_해_DB_커넥션을_쥐지_않는다: 실패 Expecting actual [true, true] to contain exactly (and in same order) [false, false] |
 | Ck2-003 | #444 | f0aa95b | 밀린 웹훅 발송을 지표로 내고 10분 넘게 밀리면 경보한다 | 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다: 실패 error: cannot find symbol method measure() (적체를 세어 지표로 내는 경로가 없다) |
+| Ck2-004 | #444 | ed25d3e | 웹훅 전송 실패의 예외를 로그에 남긴다 | 전송_중_예상하지_못한_예외는_원인과_함께_ERROR로_남긴다: 실패 Expecting actual "" to contain "ERROR" |
 
 ## 정할 것
 
@@ -134,6 +135,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 4번(마
 | Ck2-015 | #444 | frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 CI 경로 필터와 #452 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다. |
 | G-151 | #444 | 예약 작업 이름을 scheduling 패키지 enum 하나로 모아 #444, #445, #450에 걸쳐 바꾸고 운영 화면을 등록된 작업 목록 기준으로 바꿀지, 아니면 운영 코드는 그대로 두고 등록 이름, 운영 화면 VALUES, 경보 정규식이 일치하는지 보는 시험만 더할지 정한다. |
 | NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
+| NT-inho-003 | #444 | 웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다. |
 
 ## 막힌 것
 
@@ -147,6 +149,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 4번(마
 | --- | --- | --- | --- |
 | NT-inho-001 | #443 | needs-decision | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
 | NT-inho-002 | #444 | already-fixed | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
+| NT-inho-003 | #444 | needs-decision | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
 
 ## 돌리지 못한 검사
 

@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:12:54+09:00",
+  "updated_at": "2026-10-28T22:15:56+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "f0aa95b83b1f832b22462a9f19c831a7bbd619ce"
+    "fix/s456-444-t-inho": "ed25d3e43d59e42d724018abd40364763c15787b"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3262,27 +3262,36 @@
       "id": "Ck2-004",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "층 head f3855f4의 WebhookClient에는 로거가 없다. send의 ExecutionException(67-68행)은 원인과 상관없이, sendPinned의 IOException(138-139행)은 SSLHandshakeException과 UnknownHostException까지 모두 connection_error로 바뀌고 예외 객체는 어디에도 남지 않는다. WebhookDeliveryService는 종결 실패일 때만 사유 문자열 한 줄을 WARN으로 남기고(147-153행) 재시도 중에는 로그가 없어서, 운영자는 인증서나 DNS 문제를 도입사 연결 문제와 구분할 수 없다. sendPinned 안에서 난 RuntimeException도 67-68행에서 삼켜져 a886852가 정한 항목 예외 경로(92-97행, 스택 로그를 남기고 작업 failed로 셈)에 닿지 못하고, 도입사에게 보이는 시도 기록에 connection_error로 남는다. 원문의 로그가 한 줄도 없다는 말은 종결 때 한 줄이 남으니 과장이다. 수신 실패를 작업 succeeded로 끝내는 것은 a886852가 의도한 설계이고, CHECK 값은 여섯이 아니라 일곱이며, 정점 508beb5에서도 세 파일이 같다.",
+      "reason": "층 head f3855f4의 WebhookClient에는 로거가 없다. send의 ExecutionException(67-68행)은 원인과 상관없이, sendPinned의 IOException(138-139행)은 SSLHandshakeException과 UnknownHostException까지 모두 connection_error로 바뀌고 예외 객체는 어디에도 남지 않는다. WebhookDeliveryService는 종결 실패일 때만 사유 문자열 한 줄을 WARN으로 남기고(147-153행) 재시도 중에는 로그가 없어서, 운영자는 인증서나 DNS 문제를 도입사 연결 문제와 구분할 수 없다. sendPinned 안에서 난 RuntimeException도 67-68행에서 삼켜져 a886852가 정한 항목 예외 경로(92-97행, 스택 로그를 남기고 작업 failed로 셈)에 닿지 못하고, 도입사에게 보이는 시도 기록에 connection_error로 남는다. 원문의 로그가 한 줄도 없다는 말은 종결 때 한 줄이 남으니 과장이다. 수신 실패를 작업 succeeded로 끝내는 것은 a886852가 의도한 설계이고, CHECK 값은 여섯이 아니라 일곱이며, 정점 508beb5에서도 세 파일이 같다. IOException은 webhook-id, 예외 종류와 메시지를 WARN으로, 주소 원문이 담길 수 있는 IllegalArgumentException은 예외 종류만 WARN으로, 전송 작업 안의 예상하지 못한 예외는 원인과 스택을 ERROR로 남긴다. 도입사에게 보이는 failure_reason 값 집합을 나누는 일(tls_error, internal_error 등)은 V28 CHECK와 화면, 공개 값이 걸려 NT-inho-003(needs-decision)으로 뗐다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:67-68 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:138-139 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:147-153 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:92-97 @ 178e19e",
-        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:50 @ 178e19e",
-        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:152,187 @ 178e19e",
-        "커밋 a886852"
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:67-68 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:138-139 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:147-153 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:92-97 @ f3855f4",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:50 @ f3855f4",
+        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:152,187 @ f3855f4",
+        "커밋 a886852",
+        "전송_중_예상하지_못한_예외는_원인과_함께_ERROR로_남긴다: 실패 Expecting actual \"\" to contain \"ERROR\"",
+        "연결하지_못하면_예외를_WARN으로_남기고_주소의_경로와_쿼리는_남기지_않는다: 실패 Expecting actual \"\" to contain \"WARN\"",
+        "커밋 ed25d3e43d59e42d724018abd40364763c15787b"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ed25d3e43d59e42d724018abd40364763c15787b"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.webhook.client.WebhookClientTest': 고치기 전 새 시험 2개 실패, 고친 뒤 통과(주소 쿼리 값은 로그에 없다)"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점 WebhookClient.java도 예외를 버린다(위층 커밋 없음)",
+      "summary": "웹훅 전송 실패의 예외를 로그에 남긴다"
     },
     {
       "id": "Ck2-007",
@@ -7297,9 +7306,90 @@
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8"
       }
+    },
+    {
+      "id": "NT-inho-003",
+      "merged_ids": [],
+      "layer": 444,
+      "branch": "feat/webhook-jobs",
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "title": "도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다",
+      "reason": "Ck2-004에서 운영자 로그로는 원인을 가르게 했지만, 시도 기록과 전송 기록 API의 failure_reason은 여전히 TLS 인증서 오류, DNS 실패, 연결 거부, 전송 작업 안의 예상하지 못한 예외를 모두 connection_error로 남긴다. 값을 나누려면 V28의 시도 표 CHECK 목록, 전송 기록 API의 값 집합, 콘솔 실패 사유 라벨이 함께 바뀌고 Ck2-011(failure_reason 정본)과 엮인다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:68,139 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:50 @ 178e19e"
+      ],
+      "commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8"
+      },
+      "question": "웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다."
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.613s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "53 passed (24.2s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.7s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-444-t-inho",
       "sha": "f0aa95b83b1f832b22462a9f19c831a7bbd619ce",
@@ -9099,6 +9189,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "f0aa95b83b1f832b22462a9f19c831a7bbd619ce",
       "at": "2026-10-28T22:10:25+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
+      "at": "2026-10-28T22:15:34+09:00"
     }
   ],
   "usage_log": [],
