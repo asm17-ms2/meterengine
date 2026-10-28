@@ -188,6 +188,21 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다() {
+    JsonNode operation = root().path("paths").path("/v1/price-plans").path("get");
+    assertThat(operation.path("description").asText()).isNotBlank();
+    assertThat(operation.path("responses").has("400")).isTrue();
+    assertThat(operation.path("responses").has("404")).isTrue();
+    operation
+        .path("parameters")
+        .forEach(
+            parameter ->
+                assertThat(parameter.path("description").asText())
+                    .as(parameter.path("name").asText())
+                    .isNotBlank());
+  }
+
+  @Test
   void 운영자_경로는_보안_요구를_물려받고_401과_403을_문서화한다() {
     JsonNode paths = root().path("paths");
     List<JsonNode> operatorOperations =

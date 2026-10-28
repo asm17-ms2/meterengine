@@ -107,6 +107,29 @@ class PriceRateServiceTest {
   }
 
   @Test
+  void 종료_월이_시작_월보다_뒤가_아니면_요금제와_같은_validation_error다() {
+    billableMetricDeclares(List.of("model"));
+    YearMonth month = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
+
+    assertThatThrownBy(
+            () ->
+                priceRateService.create(
+                    ORGANIZATION_ID,
+                    BILLABLE_METRIC_CODE,
+                    new CreatePriceRateRequest(
+                        Map.of("model", "opus"), UNIT_PRICE, null, month, month, null, null)))
+        .isInstanceOfSatisfying(
+            InvalidRequestException.class,
+            exception -> {
+              assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR);
+              assertThat(exception.getErrors())
+                  .extracting(FieldError::field)
+                  .containsExactly("effective_until");
+            });
+    verify(priceRateRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
   void 정상_등록이면_조합과_단가가_저장되고_저장된_모양이_응답이_된다() {
     billableMetricDeclares(List.of("model", "region"));
     Map<String, Object> dimensionValues = new LinkedHashMap<>();
