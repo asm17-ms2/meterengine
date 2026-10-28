@@ -1,12 +1,12 @@
-미완료 229건, 결과: 끝 상태 99/328건 (fixed 58, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 33개(마지막 09d27a3)
+미완료 228건, 결과: 끝 상태 100/328건 (fixed 59, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 34개(마지막 9dff033)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 58 | 1 | 7 | 30 | 3 | 44 |
+| #442 | 143 | 59 | 1 | 7 | 30 | 3 | 43 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -39,6 +39,7 @@ push: feat/account-permissions 33개(마지막 09d27a3)
 | D-050 | #442 | 65fc925 | 403, 404 조회 실패의 제목과 다시 시도 구분 | a forbidden workspace load says so without a retry: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByText('조회 권한이 없습니다') |
 | D-059 | #442 | ff89f04 | 역할 변경 설명 조사와 역할 이름 수정 | 없음(보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-066 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
+| D-078 | #442 | 9dff033 | 머리말 children을 workspace-actions로 묶음 | 없음(이 층에는 머리말 children을 넘기는 화면이 없어 화면 차이가 없다. lint, typecheck, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 수납 상세 캡처는) |
 | D-086 | #442 | c0171f0 | 역할 변경 시 업무 권한이 전체 관리로 바뀐다고 안내 | 없음(보이는 변경(문구): 대화상자 설명과 관리자 선택지 문구를 백엔드 changeRole 동작과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-090 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
 | D-091 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -150,6 +151,7 @@ push: feat/account-permissions 33개(마지막 09d27a3)
 | D-031 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | D-043 | #442 | #453 workspace.contract.spec.ts에 확정 실패 뒤 창을 닫았다 다시 열어 보내면 새 request_id가 실리는지 보는 시험을 더할 수 있다(T-yang #453 차례). |
 | D-050 | #442 | 위층 WorkspaceError 호출부(정점 16개 파일)는 status를 넘기지 않아 지금처럼 일반 실패로 보인다. 상세 화면(#444 integrations/[id], #445 payments/[id], #447 customers/[id] 등)에서 404를 구분하려면 그 층이 status={...error.status}를 넘긴다. |
+| D-078 | #442 | #445 수납 상세 화면(payments/[id])에서 머리말 링크 둘이 오른쪽에 함께 놓이는지 그 층 차례에 캡처로 본다(T-yang 층). |
 | D-086 | #442 | 정점 members/page.tsx 23행이 같은 문구다. 2ec5d85, 15692f8이 같은 파일을 바꿨으니 반영 때 이 줄의 두 문구가 남았는지 본다. |
 | D-090 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |
 | D-127 | #442 | 복사하지 않고 닫으면 확인 창이 뜬다. Playwright는 확인 창을 기본으로 거절하므로 #453 23b1844가 더한 명세가 반영 뒤 실패한다: workspace.contract.spec.ts 39-42행 closeDialog(비밀값 표시 뒤 X로 닫음, 153행과 168행 호출), mvp.real.spec.ts 128행과 136행 Escape, people.real.spec.ts 135행 닫기. 반영 때 닫기 앞에 page.once("dialog", d => d.accept())를 두거나 복사 버튼을 먼저 누르게 맞춘다. #453은 T-yang 층이라 그 차례에 함께 본다. 정점 ActionPanel.tsx는 23b1844가 environment 숨은 입력만 더해 같은 수정이 맞는다. |
