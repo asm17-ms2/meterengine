@@ -1,8 +1,8 @@
-미완료 240건, 결과: 끝 상태 132/372건 (fixed 98, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 2(그중 no-evidence 0))
+미완료 230건, 결과: 끝 상태 142/372건 (fixed 98, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a)
-정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T23:06:29+09:00
+상태: running, 갱신 2026-10-28T23:22:43+09:00
 
 ## 층별 상태
 
@@ -10,7 +10,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
+| #446 | feat/pricing-aggregation | 50 | 0 | 0 | 3 | 4 | 3 | 40 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
@@ -149,6 +149,10 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck2-012 | #444 | #444가 발행하지 않는 PAYMENT_* 셋과 UNBILLED_USAGE_DETECTED를 #444에서 빼 발행 코드가 있는 #445, #450으로 옮길지(스택 재분할, #445는 담당 밖), 아니면 #444에 구독 계약을 미리 두는 지금 분할을 유지하고 PR 본문에만 적을지 정한다. |
 | Ck2-015 | #444 | frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 CI 경로 필터와 #452 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다. |
 | G-151 | #444 | 예약 작업 이름을 scheduling 패키지 enum 하나로 모아 #444, #445, #450에 걸쳐 바꾸고 운영 화면을 등록된 작업 목록 기준으로 바꿀지, 아니면 운영 코드는 그대로 두고 등록 이름, 운영 화면 VALUES, 경보 정규식이 일치하는지 보는 시험만 더할지 정한다. |
+| Ck3-446-03 | #446 | line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 내는 변경(엔티티 2개, 서비스 3개, DTO 5개, openapi.yaml)을 #446에서 할지, 미터 aggregation처럼 문자열로 둘지. |
+| Ck3-446-07 | #446 | 단가 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 README 설명이나 감사 검색(detail.billable_metric_code)으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다. |
+| Ck3-446-08 | #446 | #446에서 운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 두 파일 상한의 예외), 아니면 지적 위치인 DraftInvoiceResponse만 지울지 정한다. |
+| Ck3-446-09 | #446 | OrganizationService.find(UUID)가 없으면 예외를 던져 naming.md의 get 뜻인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지 정한다. |
 | NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
 | NT-inho-003 | #444 | 웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다. |
 
@@ -157,6 +161,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | id | 층 | 까닭 |
 | --- | --- | --- |
 | Ck2-014 | #444 | not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다. |
+| Ck3-446-10 | #446 | needs-new-migration: price_rate에 부분 조건이 없는 도입사 인덱스가 있어야 한다. 필요한 SQL은 CREATE INDEX price_rate_organization_index ON price_rate (organization_id, billable_metric_code); 이다. V36 안에 넣어 고치는 길은 do-not-touch Ck3-446-01에 걸린다. |
+| G-110 | #446 | not-owner #449: 고치려면 #446 V41__create_invoice_view_links.sql의 invoice_view_link 표와 감사 제약을 #449 V44로 옮겨야 해 양성지 님 층을 같이 바꿔야 한다(T-inho brief: 판정이 맞으면 not-owner #449). |
 | C447-011 | #447 | not-owner #447: 양성지 님 층의 시험이라 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다. |
 
 ## 새 지적
@@ -217,7 +223,9 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 ## fixed-above로 둔 것
 
-없음
+- C446-002 (#446): fixed-above #451 e5fca11: 정점 billable-metric-prices/page.tsx가 /pricing으로 redirect해 옛 Section을 쓰는 곳이 없다. 이 층 head에서는 아직 고장이라 층마다 고칠지는 배포 단위 결정 뒤 조율 담당이 정한다
+- C446-006 (#446): fixed-above #447 2ec5d85: VersionedPricingIntegrationTest의 최신_단가_보관, 최신_요금제_보관 시험(정점 178-209행)이 겹친 달의 최신 버전 선택을 잡는다. 이 층에는 그 시험이 없다
+- C446-010 (#446): fixed-above #451 e5fca11: 정점 pricing/page.tsx 37행이 선택한 미터 하나의 단가 이력만 부른다. 이 층 head는 미터마다 부른다
 
 ## 마지막 실화면 점검
 

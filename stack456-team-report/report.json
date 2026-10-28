@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:06:29+09:00",
+  "updated_at": "2026-10-28T23:22:43+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4397,14 +4397,36 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "line_type 5종은 ChargeService가 맨 문자열로 만들고 InvoiceEmailService label이 같은 맨 문자열로 다시 가르며, model의 기본값 per_unit도 CreatePriceRateRequest와 PriceRateService 두 곳에서 따로 채운다. 같은 저장소의 다른 도메인 값은 엔티티 상수(PaymentAttempt.PENDING 등)와 응답 DTO의 @Schema(allowableValues)로 openapi.yaml에 enum 목록을 내는데(SessionOrganization.status), line_type과 model 응답 필드는 type: string뿐이고 요청 model도 pattern만 있고 enum이 없다. frontend README는 openapi.yaml을 API 계약의 정본이라 하지만 프론트 타입은 계약에 없는 값 목록을 손으로 적어 두었다. 미터 aggregation도 enum이 없어 관례가 완전히 하나는 아니지만, 같은 #446 안에서 값 목록이 생산부, 소비부, 기본값, 계약에 갈라져 있는 것은 눈으로 확인된다. 고치려면 엔티티 2개, 서비스 3개, DTO 5개와 openapi.yaml을 바꿔야 해 유지보수 분류의 두 파일 한도를 넘으므로 needs-decision이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:146,153,163,197,199 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/service/InvoiceEmailService.java:72-75 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:40-42 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:109 @ da90aac",
+        "backend/openapi.yaml:5266-5267 @ da90aac",
+        "backend/openapi.yaml:5534-5535 @ da90aac",
+        "backend/openapi.yaml:6180-6181 @ da90aac",
+        "backend/openapi.yaml:4731-4732 @ da90aac",
+        "backend/openapi.yaml:5080-5082 @ da90aac",
+        "backend/openapi.yaml:6204-6211 @ da90aac",
+        "backend/src/main/java/com/meterengine/payment/entity/PaymentAttempt.java:14-16 @ da90aac",
+        "backend/src/main/java/com/meterengine/payment/dto/PaymentAttemptResponse.java:17-19 @ da90aac",
+        "frontend/README.md:9 @ da90aac",
+        "frontend/src/lib/api/billing.ts:36 @ da90aac",
+        "frontend/src/lib/api/pricing.ts:9 @ da90aac",
+        "backend/openapi.yaml:4756-4757 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/service/InvoiceEmailService.java:73-76 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 내는 변경(엔티티 2개, 서비스 3개, DTO 5개, openapi.yaml)을 #446에서 할지, 미터 aggregation처럼 문자열로 둘지."
     },
     {
       "id": "Ck3-446-04",
@@ -4453,56 +4475,115 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "main의 PriceRateService는 price_rate 감사 행의 target_id에 미터 code를 남기고(시험도 BILLABLE_METRIC_CODE를 단정), #446 커밋 614d3bc4는 같은 target_type에 단가 버전 UUID를 남기도록 바꿨다(시험도 priceRateId로 고침). audit_log는 V25 트리거로 UPDATE와 DELETE가 막혀 배포 DB에 이미 쌓인 code 행은 그대로 남고, 이 층에는 옛 행을 옮기는 마이그레이션이 없어 한 target_type 안에 두 의미가 섞인다. 정점의 운영자 감사 화면은 '대상 ID'로 검색하라고 안내하고 AuditLogQueryService는 target_id와 detail의 request_id, route만 찾으므로, 미터 code로 검색하면 배포 전 단가 변경만 나오고 배포 뒤 변경은 빠진다. UUID로 바꾼 것은 작성자가 시험까지 고친 의도된 변경이고 price_plan과도 맞으므로, code로 되돌리기, 새 마이그레이션으로 옛 행 정리, target_type 이름 바꾸기, #448 검색에 detail.billable_metric_code 추가 중 무엇을 할지는 결정이 필요하다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:130-131 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:92-93 @ f088399454",
+        "backend/src/test/java/com/meterengine/audit/AuditLogIntegrationTest.java:109-110 @ da90aac",
+        "backend/src/test/java/com/meterengine/audit/AuditLogIntegrationTest.java:102,109 @ f088399454",
+        "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:28-44 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:96-97 @ da90aac",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:75-97 @ 8dd028a",
+        "frontend/src/components/workspace/AuditScreen.tsx:59,74 @ 8dd028a",
+        "커밋 614d3bc4"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "단가 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 README 설명이나 감사 검색(detail.billable_metric_code)으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다."
     },
     {
       "id": "Ck3-446-08",
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "da90aac에서 DraftInvoiceLine의 8인자, 6인자 보조 생성자(61-99행)와 InvoiceLineResponse의 같은 두 생성자(42-80행)는 line_type을 per_unit, 분모를 1로 채우고, BillableMetricPricePriceRate의 2인자 생성자(18-20행)는 effective_from을 2000-01로 채운다. git grep으로 보면 운영 코드에도 시험에도 이 생성자를 부르는 곳이 없다. 호출부는 DraftInvoiceService 99행, InvoiceService 105행, BillableMetricPriceService 90행뿐이고 셋 다 정규 생성자를 쓴다. 이 생성자들은 614d3bc(#446)가 처음 넣을 때부터 부르는 곳이 없었고, 이 레코드들을 역직렬화하는 곳도 없다. DimensionCharge의 보조 생성자는 ChargeService 203행 surcharge와 DraftInvoiceServiceTest가 쓰므로 죽은 코드가 아니어서 이 지적에서 뺀다. 제목의 시작 월 기본값까지 지우려면 DTO 파일 셋을 바꿔야 해서, 유지보수 분류의 두 파일 상한을 넘으므로 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/invoice/dto/DraftInvoiceResponse.java:61-99 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/dto/InvoiceResponse.java:42-80 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/BillableMetricPricePriceRate.java:18-20 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java:99-109 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:105-115 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:90-98 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:202-205 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/BillableMetricPricePriceRate.java:20-22 @ 8dd028a",
+        "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:267-277 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "#446에서 운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 두 파일 상한의 예외), 아니면 지적 위치인 DraftInvoiceResponse만 지울지 정한다."
     },
     {
       "id": "Ck3-446-09",
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "naming.md 37행은 읽기 동사를 find(없을 수 있음)와 get(없으면 예외)으로 가르는데, #446이 더한 OrganizationService.find(UUID)는 get(UUID)을 불러 도입사가 없으면 NotFoundException을 던지므로 뜻이 get이다(커밋 614d3bc4). 서비스 공개 메서드는 한 낱말이어야 한다는 ArchUnit 규칙과 같은 인수의 기존 get(UUID) 때문에 이 클래스 안에서는 get으로 바꿀 수 없고, 컨트롤러 메서드 findSupplier도 도메인 서비스 동사 규칙에 묶여 이름을 바꾸면 operationId findSupplier가 바뀐다. find가 Optional을 돌려주게 하는 2파일 수정은 컨트롤러에서 NotFoundException을 던지는 곳이 하나도 없는 지금 계층 관례를 깬다. update 쪽은 공급자 정보 저장이라 규칙의 저장 update에 맞고, 뜻이 겹치는 원인은 main(#418)의 상태 전이 update가 도메인 동사를 쓰지 않은 데 있어 이 층 몫이 아니다. 고치려면 SupplierService 분리나 operationId 변경처럼 공개 이름과 파일 셋 이상(서비스, 컨트롤러, openapi.yaml)을 바꿔야 해 정할 일로 둔다.",
+      "evidence": [
+        "docs/contributing/naming.md:37 @ da90aac",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationService.java:68-71 @ da90aac",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationService.java:31-36 @ da90aac",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationService.java:49,74 @ da90aac",
+        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:42-56 @ da90aac",
+        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:59-79 @ da90aac",
+        "backend/src/main/java/com/meterengine/organization/controller/CurrentOrganizationController.java:42-43 @ da90aac",
+        "backend/openapi.yaml:2561 @ da90aac",
+        "커밋 614d3bc4",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationService.java:75,101 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "OrganizationService.find(UUID)가 없으면 예외를 던져 naming.md의 get 뜻인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지 정한다."
     },
     {
       "id": "Ck3-446-10",
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "V36 1행은 V2가 만든 (organization_id, billable_metric_code, dimension_values) 기본 키를 지우고, 3행은 기본 키를 id로 바꾼다. 43-48행은 customer_id IS NULL 또는 IS NOT NULL 조건이 붙은 부분 유일 인덱스만 만든다. 단가를 읽는 경로는 모두 PriceRateRepository에서 organization_id만 거는 조회다(ChargeService 청구서 계산, PriceRateService 목록과 생성과 삭제, BillableMetricPriceService). PostgreSQL은 WHERE가 인덱스 조건을 함의할 때만 부분 인덱스를 쓰므로, organization_id 조건만으로는 두 부분 인덱스를 어느 것도 쓰지 못하고 순차 스캔 뒤 정렬하게 된다. 정점에서도 V43과 V48은 부분 조건을 더해 같은 인덱스를 다시 만들 뿐이고 조건 없는 인덱스는 없으며, 23b1844e가 바꾼 쿼리에도 customer_id 조건이 없어 문제가 그대로다. 행 수가 적어 영향은 low이고, V36을 고치지 않으려면 새 V__ 파일이 있어야 하므로 needs-new-migration으로 둔다. EXPLAIN 재현은 메인 세션이 한다. 메인 세션이 da90aac로 띄운 DB에서 enable_seqscan=off로도 Seq Scan이 나오는 것을 보았다(쓸 수 있는 인덱스가 없다).",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V2__split_price_policy_from_billable_metric.sql:19 @ da90aac",
+        "backend/src/main/resources/db/migration/V8__name_organization_fk_and_pk_constraints.sql:14 @ da90aac",
+        "backend/src/main/resources/db/migration/V36__version_price_rates.sql:1,3 @ da90aac",
+        "backend/src/main/resources/db/migration/V36__version_price_rates.sql:43-48 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/repository/PriceRateRepository.java:10-14 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:55-56 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:208-211 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/repository/PriceRateRepository.java:20-26 @ 8dd028a",
+        "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:22-27 @ 8dd028a",
+        "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:124-127 @ 8dd028a",
+        "SET enable_seqscan=off 뒤 EXPLAIN SELECT * FROM price_rate WHERE organization_id = ... ORDER BY billable_metric_code: 실패 Seq Scan on price_rate (실화면 DB, da90aac 마이그레이션)"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "blocked_reason": "needs-new-migration: price_rate에 부분 조건이 없는 도입사 인덱스가 있어야 한다. 필요한 SQL은 CREATE INDEX price_rate_organization_index ON price_rate (organization_id, billable_metric_code); 이다. V36 안에 넣어 고치는 길은 do-not-touch Ck3-446-01에 걸린다."
     },
     {
       "id": "D-120",
@@ -4621,14 +4702,31 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "층 head da90aac에서 V36 CHECK가 graduated, volume 단가의 unit_price를 NULL로 강제하고 BillableMetricPriceService.toResponse가 그 값을 그대로 내보내며 전역 NON_NULL 설정도 없어 응답에 unit_price: null이 실린다. 옛 화면은 lib/api/billable-metric-prices.ts:13에서 unit_price를 number로 두고 BillableMetricPricesSection.tsx:22에서 formatKrw를 부르며, formatDecimal은 null !== 0과 Math.abs(null)=0 < 기준 때문에 null.toExponential로 가서 TypeError를 낸다. 같은 층의 /pricing 화면(PricingWorkspace.tsx:121)으로 누진, 총량 단가를 등록할 수 있고 page.tsx는 그대로 남아 직접 URL로 열리므로 실패 경로는 남아 있다. 같은 층의 새 화면은 lib/api/pricing.ts:8에서 number | null로 두고 PricingWorkspace.tsx:86에서 null을 구간 수로 바꿔 보여 주어, 같은 응답을 두 곳이 다르게 다룬다. 다만 정점에서는 #451 e5fca11이 page.tsx를 /pricing redirect로 바꿔 Section을 가져다 쓰는 곳이 없으므로, common-brief 7절 4번(위층이 이미 고쳤으면 이 층에서 고치지 않고 already-fixed, fixed-above로 둔다)에 따라 상태를 already-fixed로 제안한다. 층마다 따로 고칠지는 박성종 님이 fixed-above 표시로 다시 보며, 고치기로 하면 아래 fix_hint대로 한다.",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V36__version_price_rates.sql:40-42 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:89-92 @ da90aac",
+        "frontend/src/lib/api/billable-metric-prices.ts:13 @ da90aac",
+        "frontend/src/components/billable-metric-prices/BillableMetricPricesSection.tsx:22 @ da90aac",
+        "frontend/src/lib/format.ts:42-44 @ da90aac",
+        "frontend/src/lib/format.ts:52-53 @ da90aac",
+        "frontend/src/app/(console)/billable-metric-prices/page.tsx:28-34 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:121 @ da90aac",
+        "frontend/src/lib/api/pricing.ts:8 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:86 @ da90aac",
+        "frontend/src/app/(console)/billable-metric-prices/page.tsx:16 @ 8dd028a",
+        "커밋 e5fca11f6b07e170ba0430a605b0e76c758a4519"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "top_head": "fixed-above #451 e5fca11: 정점 billable-metric-prices/page.tsx가 /pricing으로 redirect해 옛 Section을 쓰는 곳이 없다. 이 층 head에서는 아직 고장이라 층마다 고칠지는 배포 단위 결정 뒤 조율 담당이 정한다"
     },
     {
       "id": "C446-003",
@@ -4663,14 +4761,27 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "층 head da90aac의 ChargeService.calculate는 겹친 단가를 merge 비교(effective_from이 큰 쪽)로, 요금제를 effective_from 내림차순 putIfAbsent로 고르고, PriceRateService.create와 PricePlanService.create는 이전 무기한 버전을 닫지 않아 다음 달 가격 변경은 늘 같은 달에 두 버전이 겹친다. 그런데 이 층 시험은 겹친 달의 금액을 보지 않는다. 미래_버전 시험은 종료 월로 끊어 겹치지 않고, 기존_조합_삭제 시험은 이번 달 버전을 지우고 2000-01 버전을 닫은 뒤에만 금액을 보며, ChargeServiceTest의 단가는 모두 2000-01 한 버전이고 요금제 저장소는 스텁하지 않는다. 그래서 merge 비교나 요금제 정렬을 뒤집어도 #446 시험은 모두 통과하므로 지적은 이 층에서 맞다. 다만 #447 커밋 2ec5d85가 VersionedPricingIntegrationTest에 최신_단가_보관(이번 달 2000)과 최신_요금제_보관(이번 달 1200) 시험을 더해 정점에서는 겹친 달 선택 규칙이 잡히므로, common-brief 7절 4번(위층이 이미 고쳤으면 이 층에서 고치지 않고 already-fixed와 fixed-above로 둔다)에 따라 already-fixed로 제안한다. 층별로 따로 고치기로 정하면 fix_hint의 시험을 이 층에 더한다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:64-75 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:98-127 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:73-93 @ da90aac",
+        "backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:112-119 @ da90aac",
+        "backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:162-181 @ da90aac",
+        "backend/src/test/java/com/meterengine/pricing/service/ChargeServiceTest.java:451-455 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:51-63 @ da90aac",
+        "backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:178-209 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "top_head": "fixed-above #447 2ec5d85: VersionedPricingIntegrationTest의 최신_단가_보관, 최신_요금제_보관 시험(정점 178-209행)이 겹친 달의 최신 버전 선택을 잡는다. 이 층에는 그 시험이 없다"
     },
     {
       "id": "C446-008",
@@ -4705,14 +4816,30 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "층 head da90aac의 pricing/page.tsx 29행이 billable_metrics 전체에 listPriceRates(metric.code, customerId, \"all\")를 Promise.all로 부르지만, PricingWorkspace.tsx 82행은 histories[selectedCode] 하나만 그리고 histories를 쓰는 곳은 이 줄뿐이다. 반박을 위해 캐시를 찾았으나 serverFetch는 cache 태그를 버리고 transport.ts 102행에서 cache: \"no-store\"로 매번 백엔드를 부르며, 미터 버튼은 36행 router.replace로 searchParams를 읽는 서버 컴포넌트를 다시 렌더해 고정 6회와 미터 수 N회 호출이 반복된다. 백엔드 PriceRateService.list는 rates(organizationId)로 조직 단가 전체를 읽고 메모리에서 걸러 호출마다 비용이 단가 총량에 비례한다. c27b229 뒤 이 층에서 두 파일을 바꾼 커밋은 없고 #450 head d8afec0도 같지만, #451 커밋 e5fca11f가 page.tsx를 선택 미터 하나만 조회하도록 바꿔 정점 8dd028a 37행에서 해소됐다. common-brief 7절 4번(위층이 이미 고쳤으면 이 층에서 고치지 않고 already-fixed, top_head에 fixed-above)에 따라 suggested_status를 already-fixed로 두었고, 이 층 head에는 실패 경로가 남아 있어 verdict는 confirmed다.",
+      "evidence": [
+        "frontend/src/app/(console)/pricing/page.tsx:29 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:82 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:36 @ da90aac",
+        "frontend/src/app/(console)/pricing/page.tsx:15 @ da90aac",
+        "frontend/src/lib/api/transport.ts:102 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:69-73 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:208-210 @ da90aac",
+        "frontend/src/app/(console)/pricing/page.tsx:29 @ d8afec0",
+        "커밋 e5fca11f",
+        "frontend/src/app/(console)/pricing/page.tsx:37 @ ec1c164",
+        "frontend/src/app/(console)/pricing/page.tsx:37 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "top_head": "fixed-above #451 e5fca11: 정점 pricing/page.tsx 37행이 선택한 미터 하나의 단가 이력만 부른다. 이 층 head는 미터마다 부른다"
     },
     {
       "id": "C446-011",
@@ -4833,14 +4960,29 @@
       ],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "층 head da90aac의 V41__create_invoice_view_links.sql은 1-2행에서 #446이 쓰는 invoice.display_number(Invoice.java:17-18)를 더하고, 4-22행에서 invoice_view_link 표와 인덱스를, 24-26행에서 audit_log_actor_type_check에 'invoice_view_link'를 더한다. 이 파일은 #446 커밋 614d3bc4에서 들어왔지만 표를 매핑하는 InvoiceViewLink 엔티티와 행위자 'invoice_view_link'로 감사를 쓰는 InvoiceViewLinkService는 #449 커밋 c9a86c4c에서 생기고, da90aac의 backend/src/main에는 #442에서 온 ErrorCode 말고 쓰는 곳이 없다. ddl-auto=validate라 매핑 없는 표를 CI가 잡지 않고, #449는 이미 V44에서 ALTER TABLE invoice_view_link로 열을 따로 더하고 있어 지적한 형태가 그대로 생겼다. 정점에서도 V41 내용은 같고(c5c3b286 #447는 이름만 정렬), 런타임 오류는 없어 심각도는 낮다. 묶인 G-173도 같은 끝 상태이며, 그 원문의 INVOICE_VIEW_LINK_NOT_FOUND와 FE actor_type은 #446이 아니라 #442(ErrorCode.java:32 @ 643ae66)에서 들어온 것이라 그 부분만 틀렸다.",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql:4-26 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/entity/Invoice.java:17-18 @ da90aac",
+        "backend/src/main/resources/application.properties:5 @ da90aac",
+        "backend/src/test/java/com/meterengine/global/SchemaConstraintTest.java:461 @ da90aac",
+        "커밋 614d3bc4",
+        "커밋 c9a86c4c",
+        "backend/src/main/java/com/meterengine/invoiceview/entity/InvoiceViewLink.java:9-10 @ 66a4a78",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:187 @ 66a4a78",
+        "backend/src/main/resources/db/migration/V44__allow_customer_payment_retry.sql:1 @ 66a4a78",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:32 @ 643ae66"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "blocked_reason": "not-owner #449: 고치려면 #446 V41__create_invoice_view_links.sql의 invoice_view_link 표와 감사 제약을 #449 V44로 옮겨야 해 양성지 님 층을 같이 바꿔야 한다(T-inho brief: 판정이 맞으면 not-owner #449)."
     },
     {
       "id": "G-174",
