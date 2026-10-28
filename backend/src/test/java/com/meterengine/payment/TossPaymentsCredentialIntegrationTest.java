@@ -144,6 +144,27 @@ class TossPaymentsCredentialIntegrationTest {
   }
 
   @Test
+  void 시크릿_키에_콜론이나_공백이나_ASCII_밖_문자가_있으면_400이고_토스를_부르지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    for (String secretKey : List.of("test_sk_zXLk:KEyp", "test_sk_zXLk KEyp", "test_sk_zXLk가나")) {
+      assertThat(updateCredential(organizationId, "test", TEST_CLIENT_KEY, secretKey))
+          .hasStatus(400)
+          .bodyJson()
+          .isStrictlyEqualTo(
+              """
+              {
+                "code": "invalid_toss_payments_credential", "message": "%s",
+                "errors": [{"field": "secret_key", "message": "시크릿 키에는 콜론, 공백, ASCII 밖 문자를 쓸 수 없습니다"}]
+              }
+              """
+                  .formatted(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL.getMessage()));
+    }
+    verifyNoInteractions(tossPaymentsClient);
+    assertThat(countCredentials(organizationId)).isZero();
+  }
+
+  @Test
   void 토스가_401로_거절하면_secret_key를_errors에_싣고_토스_문구와_키를_되비추지_않는다() {
     UUID organizationId = insertOrganization();
     tossAnswers(new TossPaymentsResult.Rejected<>(401, "UNAUTHORIZED_KEY", "인증되지 않은 시크릿 키"));

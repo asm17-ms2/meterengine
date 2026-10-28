@@ -35,6 +35,7 @@ public class TossPaymentsCredentialService {
   private static final String CLIENT_KEY_INFIX = "_ck_";
   private static final String SECRET_KEY_INFIX = "_sk_";
   private static final String KEY_PREFIX_MESSAGE = "%s 모드의 키는 %s 뒤에 값이 이어져야 합니다";
+  private static final String SECRET_KEY_CHARACTER_MESSAGE = "시크릿 키에는 콜론, 공백, ASCII 밖 문자를 쓸 수 없습니다";
   private static final String SECRET_KEY_REJECTED_MESSAGE = "토스페이먼츠가 받지 않는 시크릿 키입니다";
 
   private final TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
@@ -119,6 +120,8 @@ public class TossPaymentsCredentialService {
     String secretKeyPrefix = mode + SECRET_KEY_INFIX;
     if (!hasValueAfterPrefix(request.secretKey(), secretKeyPrefix)) {
       errors.add(new FieldError("secret_key", KEY_PREFIX_MESSAGE.formatted(mode, secretKeyPrefix)));
+    } else if (!fitsBasicAuth(request.secretKey())) {
+      errors.add(new FieldError("secret_key", SECRET_KEY_CHARACTER_MESSAGE));
     }
     if (!errors.isEmpty()) {
       throw new InvalidRequestException(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL, errors);
@@ -127,6 +130,11 @@ public class TossPaymentsCredentialService {
 
   private static boolean hasValueAfterPrefix(String key, String prefix) {
     return key.length() > prefix.length() && key.startsWith(prefix);
+  }
+
+  // 시크릿 키는 Basic 인증 사용자 이름으로 보내므로 콜론과 ISO-8859-1 밖 문자를 쓰면 헤더를 만들지 못한다.
+  private static boolean fitsBasicAuth(String key) {
+    return key.chars().allMatch(c -> c > 0x20 && c < 0x7f && c != ':');
   }
 
   private void verify(String secretKey) {

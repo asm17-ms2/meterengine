@@ -89,7 +89,7 @@ public class TossPaymentsCredentialController {
         description =
             """
             code=validation_error: 경로의 mode가 test나 live가 아니거나, client_key나 secret_key가 비었거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있거나.
-            code=invalid_toss_payments_credential: 키가 mode에 맞는 접두사로 시작하지 않거나, 토스페이먼츠가 시크릿 키를 거절했다. 어느 필드가 거절됐는지는 errors에 있다.
+            code=invalid_toss_payments_credential: 키가 mode에 맞는 접두사로 시작하지 않거나, 시크릿 키에 콜론, 공백, ASCII 밖 문자가 있거나, 토스페이먼츠가 시크릿 키를 거절했다. 어느 필드가 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
         responseCode = "503",
