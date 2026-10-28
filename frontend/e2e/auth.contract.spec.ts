@@ -25,7 +25,7 @@ test("public health, gated routes, expired session and return URL", async ({ pag
   }
   await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
   await page.goto("/customers");
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired&returnTo=%2Fcustomers$/);
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
@@ -45,6 +45,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   await page.getByRole("button", { name: "가입 신청", exact: true }).click();
   await expect(page).toHaveURL(/\/pending$/);
   await expect(page.getByRole("heading", { level: 1, name: "가입 신청을 접수했습니다", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "가입 절차" }).locator('li[aria-current="step"]')).toContainText("운영자 승인");
   await expect(page.getByText("승인 여부는 운영자에게 확인하세요")).toHaveCount(0);
   await page.reload();
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
@@ -70,7 +71,7 @@ test("tenant actions recheck session after revocation, independently of route la
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
   await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
 });
@@ -119,7 +120,7 @@ test("a server action after the session cookie disappears goes to login instead 
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
   await page.context().clearCookies();
   await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
@@ -145,7 +146,7 @@ test("a workspace action still follows the login redirect after its session is r
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
 test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
@@ -223,6 +224,21 @@ test("the operator user list sends the active organizations once instead of once
   expect(payload).toContain("66666666-6666-4666-8666-000000000000");
   const perUserReferences = payload.split(":props:organizations:").length - 1;
   expect(perUserReferences).toBeLessThan(100);
+});
+
+test("the operator's own card keeps both actions on the same top edge when only one shows a disabled reason", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/users");
+  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
+  const attach = card.getByRole("button", { name: "도입사 소속 연결", exact: true });
+  const remove = card.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
+  await expect(attach).toBeEnabled();
+  await expect(remove).toBeDisabled();
+  const attachBox = (await attach.boundingBox())!;
+  const removeBox = (await remove.boundingBox())!;
+  expect(Math.abs(attachBox.y - removeBox.y)).toBeLessThanOrEqual(0.5);
 });
 
 test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
@@ -362,6 +378,53 @@ test("signup with a blank name asks for that name instead of a length limit", as
   await expect(page.getByText("255자 이내", { exact: false })).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string }) => call.path === "/v1/signups")).toBe(false);
+});
+
+test("a dangerous row action is a quiet link and its final confirmation carries the weight", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("폐기할 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await page.reload();
+  const trigger = page.locator(".workspace-desktop-table").getByRole("button", { name: "키 폐기", exact: true });
+  await expect(trigger).toHaveClass(/ant-btn-link/);
+  await expect(trigger).toHaveClass(/ant-btn-dangerous/);
+  await trigger.click();
+  const confirm = page.getByRole("dialog").locator("button.ant-btn-dangerous[type=submit]");
+  await expect(confirm).toHaveClass(/ant-btn-primary/);
+});
+
+test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/organizations");
+  await expect(page).toHaveURL(/\/admin\/organizations/);
+  await page.goto("/admin/organizations?status=all");
+  await expect(page.getByRole("link", { name: "승인 대기" })).toBeVisible();
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths).toContain("/v1/organizations?status=pending");
+  expect(paths).toContain("/v1/organizations");
+});
+
+test("a disabled operator action explains itself through its description", async ({ page }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  const button = page.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription(/.+/);
+});
+
+test("a missing required field is reported inline like other form errors", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("값을 입력하세요.").first()).toBeVisible();
+  await expect(dialog.getByLabel(/^키 이름/)).toHaveAttribute("aria-invalid", "true");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/api-keys" && call.method === "POST")).toBe(false);
 });
 
 test("operator actions recheck current role after demotion", async ({ page, request }) => {

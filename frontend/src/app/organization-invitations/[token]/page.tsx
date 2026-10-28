@@ -23,7 +23,7 @@ export default async function OrganizationInvitationPage({ params }: { params: P
   const sessionToken = await readSessionToken();
   const current = sessionToken ? await requestApi<SessionResponse>("/v1/sessions/current", { token: sessionToken }) : null;
   const isMatchingAccount = current?.ok && current.data.user_account.email.toLowerCase() === invitation.email.toLowerCase();
-  return <AuthFrame variant="join" title={`${invitation.organization_name}에 참여`} description={`${invitation.email} 계정의 사용자로 초대됐습니다.`}>
+  return <AuthFrame variant="join" currentStep={1} title={`${invitation.organization_name}에 참여`} description={`${invitation.email} 계정의 사용자로 초대됐습니다.`}>
     <p>참여 권한: {scopeSummary(invitation.scopes)}</p>
     <p className="field-hint">초대는 {formatKstDateTime(invitation.expires_at)} KST까지 한 번 수락할 수 있습니다.</p>
     {isMatchingAccount && current?.ok && current.data.consent_required ? <div className="workspace-form"><p>이 계정은 이용 안내 확인이 필요합니다. 동의를 마치면 초대 수락을 계속합니다.</p><form action={reviewConsentsForInvitation}><input type="hidden" name="token" value={token} /><button type="submit" className="month-apply">이용 안내 확인하고 초대 계속</button></form></div>
