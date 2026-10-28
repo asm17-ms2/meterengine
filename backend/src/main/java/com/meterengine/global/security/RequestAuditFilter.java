@@ -22,8 +22,7 @@ import org.springframework.web.util.UrlPathHelper;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
   static final String AUDITED_ATTRIBUTE = RequestAuditFilter.class.getName() + ".audited";
-  private static final List<String> UUID_VARIABLES =
-      List.of("delivery_id", "id", "organization_id");
+  static final List<String> UUID_VARIABLES = List.of("delivery_id", "id", "organization_id");
   private static final Pattern UUID_VALUE =
       Pattern.compile(
           "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
