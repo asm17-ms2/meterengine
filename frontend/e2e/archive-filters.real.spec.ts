@@ -178,6 +178,25 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
     });
 
+    await test.step("인보이스와 이벤트 필터 선택지에 보관한 고객과 미터의 이벤트 타입을 남김", async () => {
+      const filterOptions = async (label: string, text: string) => {
+        const combobox = page.getByRole("combobox", { name: label, exact: true });
+        await expect(page.locator(".ant-select").filter({ has: combobox }).locator(".anticon-loading")).toHaveCount(0);
+        await combobox.click();
+        await combobox.fill(text);
+        return page.locator(".ant-select-dropdown:visible .ant-select-item-option");
+      };
+      for (const path of ["/invoices", "/events"]) {
+        await page.goto(path);
+        const customers = await filterOptions("고객", suffix);
+        await expect(customers.filter({ hasText: `${archivedName} (보관됨)` })).toHaveCount(1);
+        await expect(customers.filter({ hasText: activeName })).toHaveCount(1);
+      }
+      const eventTypes = await filterOptions("type", suffix);
+      await expect(eventTypes.filter({ hasText: archivedMetricCode })).toHaveCount(1);
+      await expect(eventTypes.filter({ hasText: activeMetricCode })).toHaveCount(1);
+    });
+
     await test.step("요금제, 단가와 미터 필터를 서로 독립적으로 유지", async () => {
       await page.goto(`/pricing?month=${currentMonth}&metric=${activeMetricCode}`);
       const plans = page.locator("details").filter({ has: page.locator("summary").filter({ hasText: "요금제 변경 이력" }) });
