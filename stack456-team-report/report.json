@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:19:56+09:00",
+  "updated_at": "2026-10-28T17:21:07+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "9cd9421",
+    "feat/account-permissions": "36f7e74",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -475,14 +475,32 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "permissions.ts 14-23행의 권한 집합, 31행 createCustomer 분기, workspace-actions.ts 35행 대표관리자 목록과 39-52행 case에 작업 이름이 따로 있고 operation이 string이라 어긋나도 잡히지 않는다. 실제로 #447 8babc3d의 customers/page.tsx는 createCustomer를 쓰지만 그 head의 workspace-actions.ts에 case가 없다. 정점 permissions.ts는 이 층과 같다. 권한 표 한 곳에서 작업 이름을 내보내고 화면과 액션을 대조하는 시험을 더했다(파일 permissions.ts 하나와 시험).",
+      "evidence": [
+        "frontend/src/lib/auth/permissions.ts:14-23,29-33 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:35,39-52 @ 72e8718",
+        "frontend/src/components/workspace/ActionPanel.tsx:29,134 @ 72e8718",
+        "frontend/src/app/(console)/customers/page.tsx:17 @ 8babc3d",
+        "every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS'"
+      ],
+      "commits": [
+        "36f7e7427516"
+      ],
+      "tests": [
+        "e2e/workspace-operations.test.mjs 두 시험: 고치기 전 실패(목록 없음), 고친 뒤 통과",
+        "node --test e2e/*.test.mjs 6건 통과, typecheck 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "업무 작업 이름 목록과 화면, 액션 대조 시험",
+      "propagation_note": "반영하면 새 시험이 위층 head에서 실패한다: #444부터 #446까지 integrations/[id]/page.tsx의 restoreWebhookEndpoint, #447부터 #450까지 customers/page.tsx의 createCustomer에 workspace-actions.ts case가 없다(#451 e5fca11이 createCustomer case를 더한다). 각 층 담당이 그 층 workspace-actions.ts에 case를 더하거나 패널을 case가 생기는 층으로 옮긴다. #447, #449는 T-yang 몫이고 #444, #446, #448, #450은 다른 담당 몫이다."
     },
     {
       "id": "G-045",
@@ -5869,6 +5887,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 6 ℹ pass 6 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  23 passed (12.4s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.341s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -5971,6 +6045,11 @@
       "branch": "feat/account-permissions",
       "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
       "at": "2026-10-28T17:18:16+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "36f7e7427516fdc1dac8282dc111f1fc22c8c59f",
+      "at": "2026-10-28T17:21:07+09:00"
     }
   ],
   "usage_log": [],
