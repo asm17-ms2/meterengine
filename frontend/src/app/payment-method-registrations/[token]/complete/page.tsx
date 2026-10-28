@@ -12,7 +12,8 @@ export default async function RegistrationCompletePage({ params }: { params: Pro
   const registration = !isSuccess && isValidRegistrationToken(token)
     ? await requestApi<PaymentMethodRegistrationResponse>(`/v1/payment-method-registrations/${encodeURIComponent(token)}`)
     : null;
-  const title = isSuccess ? "카드를 등록했습니다" : outcome?.status === "canceled" ? "카드 등록을 취소했습니다" : "카드 등록을 완료하지 못했습니다";
+  const isUnknown = !outcome || outcome.status === "unavailable";
+  const title = isSuccess ? "카드를 등록했습니다" : outcome?.status === "canceled" ? "카드 등록을 취소했습니다" : isUnknown ? "카드 등록 결과를 확인하지 못했습니다" : "카드 등록을 완료하지 못했습니다";
   return <RegistrationFrame title={title} organizationName={outcome?.organizationName}>
     <div className={styles.outcome} role="status">
       {isSuccess ? <>
