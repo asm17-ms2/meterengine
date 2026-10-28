@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,17 +70,19 @@ public class OrganizationAccountService implements OrganizationAccounts {
     SignupService.validatePassword(password);
     UserAccount user = newUser(email, name, password);
     user.requireConsent();
-    return person(save(user));
+    return person(userAccountRepository.saveAndFlush(user));
   }
 
   @Override
   @Transactional
   public OrganizationPerson register(
       String email, String name, String password, List<MembershipConsent> consents) {
+    if (userAccountRepository.findByEmailIgnoreCase(email).isPresent())
+      throw new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS);
     List<SignupConsent> accepted =
         consents.stream().map(c -> new SignupConsent(c.document(), c.documentVersion())).toList();
     SignupService.validate(password, accepted);
-    UserAccount user = save(newUser(email, name, password));
+    UserAccount user = userAccountRepository.saveAndFlush(newUser(email, name, password));
     for (SignupConsent consent : accepted)
       consentRepository.save(
           new Consent(
@@ -97,17 +98,6 @@ public class OrganizationAccountService implements OrganizationAccounts {
   @Transactional
   public void revoke(UUID organizationId, UUID userAccountId, OffsetDateTime revokedAt) {
     userSessionRepository.detachMembership(organizationId, userAccountId, revokedAt);
-  }
-
-  private UserAccount save(UserAccount user) {
-    try {
-      return userAccountRepository.saveAndFlush(user);
-    } catch (DataIntegrityViolationException exception) {
-      if (String.valueOf(exception.getMostSpecificCause().getMessage())
-          .contains("user_account_email_unique"))
-        throw new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS);
-      throw exception;
-    }
   }
 
   private UserAccount newUser(String email, String name, String password) {

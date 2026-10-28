@@ -40,7 +40,8 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   } else {
     const name = String(data.get("name") ?? "").trim();
     password = String(data.get("password") ?? "");
-    if (!name || name.length > 255) return { message: "이름을 255자 이내로 입력하세요." };
+    if (!name) return { message: "이름을 입력하세요." };
+    if (name.length > 255) return { message: "이름은 255자 이내로 입력하세요." };
     if (password.length < 8 || new TextEncoder().encode(password).length > 72) return { message: "비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력하세요." };
     if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "두 안내를 읽고 필수 동의에 체크하세요." };
     body = { name, password, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) };

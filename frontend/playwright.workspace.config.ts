@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
@@ -7,7 +8,7 @@ if (!existsSync(join(__dirname, "e2e", "workspace.contract.spec.ts"))) throw new
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "workspace.contract.spec.ts",
-  outputDir: process.env.WORKSPACE_CONTRACT_OUTPUT_DIR ?? "/private/tmp/meterengine-orchestration-0696/workspace-contract-results",
+  outputDir: process.env.WORKSPACE_CONTRACT_OUTPUT_DIR ?? join(tmpdir(), "meterengine-workspace-contract-results"),
   timeout: 45_000,
   expect: { timeout: 10_000 },
   workers: 1,
