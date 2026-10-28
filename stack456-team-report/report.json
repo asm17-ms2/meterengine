@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:42:27+09:00",
+  "updated_at": "2026-10-28T22:46:56+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "ad5872e"
+    "fix/s456-445-t-yang": "b74ebeb"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3617,15 +3617,32 @@
       "id": "C445-003",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "PaymentAttemptService.prepare(367-376행)는 같은 모드의 NOT_FOUND_PAYMENT 실패를 최신인지 따지지 않고 모으고, create(94-103행)는 그중 하나라도 7일 창을 넘거나 키가 바뀌면 조회 없이 409를 던진다. 재시도는 최신 실패에만 새 시도를 만들어 더 새 시도가 있는 NOT_FOUND는 이미 미청구로 확인된 것이다. 정점은 판정을 PaymentRetryPolicy.isUnconfirmable로 옮겼지만 같은 규칙이다. 최신이 아닌 NOT_FOUND에는 7일 창을 걸지 않게 했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:94-103,367-376 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:101-105,121-128 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryPolicy.java:50-57 @ 0fe7d2a",
+        "수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패면_7일이_지나도_다시_조회해_새로_승인한다: 실패 [HTTP status code] expected: 201 but was: 409"
+      ],
+      "commits": [
+        "b74ebebc691b"
+      ],
+      "tests": [
+        "PaymentAttemptIntegrationTest 새 시험 둘: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "differs: #449 c9a86c4가 판정을 PaymentRetryPolicy.isUnconfirmable로 옮겨 create와 PaymentRetryEligibilityService에서 쓴다",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "더 새 시도가 있는 NOT_FOUND 실패의 7일 창 제외",
+      "propagation_note": "#449(c9a86c4)와 #453(23b1844)에서 같은 규칙을 맞춘다. 정점 PaymentAttemptService.create의 isUnconfirmable 호출(150행)과 PaymentRetryEligibilityService(106행)도 최신 시도가 아닌 NOT_FOUND에는 7일 창을 걸지 않게 한다. #449는 T-yang 층이다."
     },
     {
       "id": "C445-004",
@@ -9159,6 +9176,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9481,6 +9538,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
       "at": "2026-10-28T22:38:53+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
+      "at": "2026-10-28T22:46:56+09:00"
     }
   ],
   "usage_log": [],
