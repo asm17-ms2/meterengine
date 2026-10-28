@@ -19,7 +19,7 @@ export default async function MembersPage() {
     const id = { name: "id", label: "", type: "hidden" as const, value: member.user_account_id };
     actions[member.user_account_id] = [
       ...(member.organization_role !== "owner" ? [{ title: "권한 변경", operation: "updateMemberScopes", description: `${member.name} (${member.email})의 이 도입사 업무 권한을 변경합니다. 다음 요청부터 적용되며 다른 도입사의 권한은 바뀌지 않습니다.`, fields: [id, scopeField(member.scopes)], label: "권한 저장" }] : []),
-      { title: "역할 변경", operation: "updateMemberRole", description: `${member.name} (${member.email})의 대표관리자로 지정하거나 전체 관리자로 변경합니다. 두 역할 모두 이 도입사 업무 권한이 전체 관리(조회, 수집 포함)로 바뀌고 지금 권한은 남지 않습니다. 마지막 대표관리자의 권한은 없앨 수 없습니다.`, fields: [id, { name: "organization_role", label: "도입사 역할", value: member.organization_role === "member" ? "" : member.organization_role, options: [{ value: "owner", label: "대표관리자: 사용자와 초대 관리 포함" }, { value: "admin", label: "관리자: 전체 관리 권한으로 과금 업무 운영" }] }], label: "역할 변경" },
+      { title: "역할 변경", operation: "updateMemberRole", description: `${member.name} (${member.email})의 도입사 역할을 대표관리자 또는 관리자로 바꿉니다. 두 역할 모두 이 도입사 업무 권한이 전체 관리(조회, 수집 포함)로 바뀌고 지금 권한은 남지 않습니다. 마지막 대표관리자는 다른 역할로 바꿀 수 없습니다.`, fields: [id, { name: "organization_role", label: "도입사 역할", value: member.organization_role === "member" ? "" : member.organization_role, options: [{ value: "owner", label: "대표관리자: 사용자와 초대 관리 포함" }, { value: "admin", label: "관리자: 전체 관리 권한으로 과금 업무 운영" }] }], label: "역할 변경" },
       { title: "소속 보관", operation: "archiveMember", description: `${member.name} (${member.email})의 이 도입사 접근을 중단합니다. 기존 업무와 감사 기록은 남습니다. 마지막 대표관리자는 보관할 수 없습니다.`, fields: [id], label: "접근 중단하고 보관", isDanger: true },
     ];
   }
