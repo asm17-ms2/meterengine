@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T21:16:34+09:00",
+  "updated_at": "2026-10-28T21:20:31+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "fb8329e",
+    "feat/account-permissions": "643ae66",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -319,14 +319,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "AuthFrame.tsx 11행은 네 변형의 단계 목록을 고정으로 그리고 현재 단계를 표시하지 않아, 승인 대기와 동의 화면도 첫 단계처럼 보인다. 정점도 같다. currentStep을 받아 현재 단계에 aria-current와 클래스를 달고 각 화면이 단계를 넘기게 했다.",
+      "evidence": [
+        "frontend/src/components/auth/AuthFrame.tsx:11 @ 72e8718",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 72e8718",
+        "frontend/src/components/auth/AuthFrame.tsx:11 @ 0fe7d2a",
+        "signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Locator getByRole('complementary', { name: '가입 절차' }).locator('li[aria-current=\"step\"]') toContainText 운영자 승인 실패"
+      ],
+      "commits": [
+        "643ae664599c"
+      ],
+      "tests": [
+        "auth.contract.spec.ts signup 시험에 더한 현재 단계 단언: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 38건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same f671a4f",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "인증 프레임 현재 단계 표시",
+      "propagation_note": "단계 강조 모양(is-current, is-done)은 #443 globals.css의 onboarding-steps 규칙에 더할 수 있다(문인호 님 층)."
     },
     {
       "id": "D-061",
@@ -8761,6 +8778,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 16 ℹ pass 16 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  38 passed (18.0s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.320s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9068,6 +9141,11 @@
       "branch": "feat/account-permissions",
       "sha": "fb8329e460852600c06bb7e6f993dd097a90cc0c",
       "at": "2026-10-28T21:11:57+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
+      "at": "2026-10-28T21:20:30+09:00"
     }
   ],
   "usage_log": [],
