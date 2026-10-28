@@ -61,12 +61,12 @@ export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록�
   const visibleRows = serverPaged ? rows : rows.slice((currentPage - 1) * 20, currentPage * 20);
   const keyOf = (row: Record<string, unknown>) => String(row[rowKey]);
   return <>
-    <div ref={tableRef} className="workspace-desktop-table"><Table dataSource={rows} rowKey={keyOf} pagination={!serverPaged && rows.length > 20 ? { current: currentPage, pageSize: 20, showSizeChanger: false, onChange: setPage } : false} scroll={{ x: "max-content" }} locale={{ emptyText: <Empty description={empty} /> }} columns={[
+    <div ref={tableRef} className="workspace-desktop-table"><Table dataSource={rows} rowKey={keyOf} pagination={!serverPaged && rows.length > 20 ? { current: currentPage, pageSize: 20, showSizeChanger: false, onChange: setPage } : false} scroll={{ x: "max-content" }} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} /> }} columns={[
       ...columns.map(column => ({ title: column.label, key: column.key, dataIndex: column.key, align: column.isMoney || column.isNumber ? "right" as const : undefined, render: (value: unknown, row: Record<string, unknown>) => <CellValue value={value} column={column} row={row} /> })),
       ...(hasActions ? [{ title: "작업", key: "actions", fixed: "end" as const, render: (_: unknown, row: Record<string, unknown>) => <RowActions actions={rowActions[keyOf(row)] ?? []} /> }] : []),
     ]} /></div>
     <div className="workspace-mobile-records">
-      {visibleRows.length === 0 ? <Empty description={empty} /> : visibleRows.map(row => <article key={keyOf(row)} className="workspace-mobile-record"><h3><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></h3><dl>{columns.slice(1).map(column => <div key={column.key}><dt>{column.label}</dt><dd><CellValue value={row[column.key]} column={column} row={row} /></dd></div>)}</dl>{hasActions && <RowActions actions={rowActions[keyOf(row)] ?? []} />}</article>)}
+      {visibleRows.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} /> : visibleRows.map(row => <article key={keyOf(row)} className="workspace-mobile-record"><h3><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></h3><dl>{columns.slice(1).map(column => <div key={column.key}><dt>{column.label}</dt><dd><CellValue value={row[column.key]} column={column} row={row} /></dd></div>)}</dl>{hasActions && <RowActions actions={rowActions[keyOf(row)] ?? []} />}</article>)}
       {!serverPaged && <Pagination size="small" current={currentPage} total={rows.length} pageSize={20} showSizeChanger={false} hideOnSinglePage onChange={setPage} />}
     </div>
   </>;

@@ -289,6 +289,12 @@ test("the sign-in frame starts its headings with the page h1", async ({ page }) 
   }
 });
 
+test("an empty workspace table uses the small empty illustration", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.locator(".workspace-desktop-table .ant-empty-normal")).toHaveCount(1);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
