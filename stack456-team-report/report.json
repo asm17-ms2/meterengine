@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:34:52+09:00",
+  "updated_at": "2026-10-29T00:37:31+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,8 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15"
+    "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+    "fix/s456-448-t-inho": "1164c203e59b54c7eb704b71c130c9555b87e4fc"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -5438,15 +5439,47 @@
       "id": "C448-001",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "재현 경로가 이 층 head에 그대로 있다. 운영자가 도입사 X에 소속되면(POST /v1/organizations/{id}/members는 대상 사용자의 역할을 보지 않고, 역할 변경도 소속을 지우지 않는다) SessionService가 X로 세션을 만들어 principal.organizationId가 X가 된다. 운영자 콘솔은 같은 세션 토큰으로 @OperatorAccess 경로를 부르고 RequestAuditFilter가 그 principal을 그대로 넘겨 RequestAuditService 50행이 organization_id=X, target_id=Y로 행을 남긴다. 업무 감사(OrganizationMemberService, UserAccountService)는 대상 도입사나 null로 귀속을 바로잡는데 요청 감사만 어긋나고, GET /v1/audit-logs는 organization_id로만 걸러 X의 read 구성원과 read 키가 Y의 ID, 역할 변경 대상 사용자 ID, 운영 감사 조회 이력을 본다. 기본 운영자는 소속이 없어 소속이 생긴 운영자에게만 생기므로 medium이 맞고, 정점에서도 환경 헤더 없는 운영자 요청이 legacy 행(environment_id null)으로 남아 legacy 키와 legacy 화면에 보인다. RequestAuditFilter가 처리한 핸들러에 @OperatorAccess가 있으면 도입사를 비운 주체로 요청 감사를 남긴다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationController.java:130,132 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationMemberService.java:59-61 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/account/service/UserAccountService.java:82,84 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:107-112 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:284-294 @ 6431cefb",
+        "frontend/src/lib/api/operator.ts:12 @ 6431cefb",
+        "frontend/src/app/admin/actions.ts:59 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationController.java:86-87 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:23-24 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:69-78 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:36-37,50 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationMemberService.java:83-88 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:27-31 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:54-55 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:36-37,52 @ b5506b61",
+        "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:67-71 @ b5506b61",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:55-61 @ b5506b61",
+        "frontend/src/lib/api/operator.ts:12 @ b5506b61",
+        "도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다",
+        "커밋 1164c203e59b54c7eb704b71c130c9555b87e4fc"
+      ],
+      "commits": [
+        "1164c203e59b54c7eb704b71c130c9555b87e4fc"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.audit.*' --tests 'com.meterengine.global.security.RequestAuditFilterTest': 고치기 전 새 시험 실패, 고친 뒤 통과"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": true,
+      "top_head": "changed: 정점 RequestAuditService.java 52행도 주체의 도입사를 쓰고 #453 23b1844가 environment_id를 더했다",
+      "propagation_note": "#450 8bb17c3이 RequestAuditFilter에 REQUEST_ID_ATTRIBUTE를, #453 23b1844가 요청 감사에 environment_id를 더했다. 반영 때 record 호출의 attributedActor를 남기고, 도입사를 비운 운영자 행의 environment_id도 비는지 그 층에서 확인한다.",
+      "summary": "운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다"
     },
     {
       "id": "G-095",
@@ -7971,6 +8004,20 @@
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "1164c203e59b54c7eb704b71c130c9555b87e4fc",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "1164c203e59b54c7eb704b71c130c9555b87e4fc",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-446-t-inho",
       "sha": "e4da2fa08839ee39905aa9f51bc584c626e368f3",
@@ -10896,6 +10943,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
       "at": "2026-10-29T00:09:57+09:00"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "1164c203e59b54c7eb704b71c130c9555b87e4fc",
+      "at": "2026-10-29T00:37:11+09:00"
     }
   ],
   "usage_log": [],
@@ -10927,7 +10979,8 @@
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
     "444": "https://github.com/asm17-ms2/meterengine/pull/466",
-    "446": "https://github.com/asm17-ms2/meterengine/pull/468"
+    "446": "https://github.com/asm17-ms2/meterengine/pull/468",
+    "448": "https://github.com/asm17-ms2/meterengine/pull/469"
   },
   "final_checks": [
     {

@@ -1,8 +1,8 @@
-미완료 210건, 결과: 끝 상태 162/372건 (fixed 110, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e)
+미완료 209건, 결과: 끝 상태 163/372건 (fixed 111, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 1번(마지막 1164c20)
 정할 것: 38건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T00:34:52+09:00
+상태: running, 갱신 2026-10-29T00:37:31+09:00
 
 ## 층별 상태
 
@@ -11,7 +11,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
 | #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
-| #448 | feat/request-audit | 24 | 0 | 1 | 1 | 5 | 0 | 17 |
+| #448 | feat/request-audit | 24 | 1 | 1 | 1 | 5 | 0 | 16 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -129,6 +129,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-120 | #446 | 8804e65 | 작성 중인 미터 폼을 Esc, 바깥 클릭, 취소로 닫기 전에 묻는다 | a meter form with input asks before Escape throws it away: 실패 Expected "작성 중인 미터를 버리고 닫을까요?" Received "" (확인 없이 닫힘) |
 | X-091 | #446 | 1574c86 | 미터 폼의 숫자 입력에서 영어 이름의 증감 버튼을 뺀다 | meter number inputs do not expose English stepper buttons: 실패 Expected 0 Received 2 (Increase Value, Decrease Value) |
 | D-119 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| C448-001 | #448 | 1164c20 | 운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다 | 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다 |
 
 ## 정할 것
 
@@ -249,6 +250,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - Ck3-446-06 (#446): 정점에서는 서비스 검사가 107행으로 옮겨져 있다. 반영 때 PriceRateService.create 첫 줄의 isValidPricing 검사를 남기고 뒤쪽의 invalid("model") 줄은 지운 상태를 택한다. DTO의 @AssertTrue를 지운 것도 남긴다.
 - D-120 (#446): 반영 때 onCancel과 취소 버튼이 close()를 부르는 것을 남긴다.
 - D-119 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
+- C448-001 (#448): #450 8bb17c3이 RequestAuditFilter에 REQUEST_ID_ATTRIBUTE를, #453 23b1844가 요청 감사에 environment_id를 더했다. 반영 때 record 호출의 attributedActor를 남기고, 도입사를 비운 운영자 행의 environment_id도 비는지 그 층에서 확인한다.
 
 ## fixed-above로 둔 것
 
