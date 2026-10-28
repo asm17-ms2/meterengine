@@ -1,14 +1,14 @@
-미완료 297건, 결과: 끝 상태 75/372건 (fixed 58, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 22번(마지막 b6d0822)
+미완료 295건, 결과: 끝 상태 77/372건 (fixed 60, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 23번(마지막 24c970f)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T18:38:17+09:00
+상태: running, 갱신 2026-10-28T18:40:48+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 58 | 1 | 0 | 16 | 0 | 17 |
+| #443 | fix/s456-443-t-inho | 92 | 60 | 1 | 0 | 16 | 0 | 15 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -57,6 +57,8 @@ push: fix/s456-443-t-inho 22번(마지막 b6d0822)
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
 | X-058 | #443 | f07a01f | 도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다 | a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝) |
 | X-079 | #443 | abb155d | 그룹 제목 선택자의 구체성을 올려 24px 시작선과 11px 글자를 적용했다 | sidebar group titles start on the same line as the sidebar label: 실패 Expected "24px" Received "16px" (padding-inline-start) |
+| D-074 | #443 | 24c970f | body에 word-break: keep-all과 overflow-wrap: break-word를 두었다 | Korean text in the console wraps between words: 실패 Expected "keep-all" Received "normal" |
+| X-098 | #443 | 24c970f | body에 word-break: keep-all과 overflow-wrap: break-word를 두었다 | Korean text in the console wraps between words: 실패 Expected "keep-all" Received "normal" |
 | D-138 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
 | D-178 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
 | X-059 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
