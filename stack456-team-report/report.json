@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:56:44+09:00",
+  "updated_at": "2026-10-28T23:58:44+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "d5ae20021b1e2d5a05db0354da188b744b1b5897"
+    "fix/s456-446-t-inho": "b22fd8d874399c19bcab7f64ea0998c34853af94"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4581,15 +4581,34 @@
       "id": "Ck3-446-04",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "da90aac의 DELETE /v1/billable-metrics/{code}/price-rates 설명은 조합 하나의 단가를 지운다고 하고, 204 설명은 '지웠다', 404 설명은 '그 조합의 단가가 없다'라고 한다. 그런데 614d3bc4에서 서비스 동작이 바뀌어 지금은 customer_id가 없는 공통 단가 가운데 이번 달에 적용 중인 버전만 고른다. 이번 달에 시작한 버전만 지우고, 그 전에 시작한 버전은 effective_until을 이번 달로 닫아 남기며, 고객 단가와 미래 버전은 건드리지 않는다. 이번 달 적용 중인 공통 단가가 없으면 고객 단가나 미래 버전이 있어도 404를 낸다. AuditLogIntegrationTest가 과거 시작 단가에 DELETE를 보내면 204와 price_rate_closed가 남는 것을 단정하므로 문서와 코드가 어긋난 것이 분명하다. 생성물 openapi.yaml도 같은 낡은 설명을 싣고 있다. DELETE 설명, 204, 404, 파라미터 설명을 이번 달 적용 중인 공통 단가만 끝내는(이번 달 시작은 삭제, 그 전은 이번 달로 닫음) 실제 동작으로 고쳤다. 경로, 파라미터 이름, operationId는 그대로다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java:85-92 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java:108 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:164-187 @ da90aac",
+        "backend/src/test/java/com/meterengine/audit/AuditLogIntegrationTest.java:140-149 @ da90aac",
+        "backend/openapi.yaml:608-627 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java:87-94 @ 8dd028a",
+        "커밋 b22fd8d874399c19bcab7f64ea0998c34853af94"
+      ],
+      "commits": [
+        "b22fd8d874399c19bcab7f64ea0998c34853af94"
+      ],
+      "tests": [
+        "문서 변경이라 시험으로 실패를 볼 수 없다. 적은 동작을 PriceRateService.java 159-191행(공통 단가, 이번 달 적용 중, 이번 달 시작은 삭제, 그 전은 close(current))과 AuditLogIntegrationTest의 price_rate_closed 단정에 대조했고, ./gradlew build로 다시 만든 openapi.yaml을 같이 넣었다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": false,
+      "top_head": "changed: #447 2ec5d85가 이 DELETE를 보관 동작으로 바꾸며 summary와 description을 다시 썼다",
+      "propagation_note": "위층 반영 때 이 설명이 충돌하면 #447 2ec5d85의 보관 동작 설명을 택하고 openapi.yaml은 그 층에서 다시 만든다.",
+      "summary": "조합별 단가 DELETE 설명을 이번 달 공통 단가를 끝내는 실제 동작에 맞춘다"
     },
     {
       "id": "Ck3-446-05",
@@ -7803,6 +7822,51 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (27.3s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.1s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "d5ae20021b1e2d5a05db0354da188b744b1b5897",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10523,6 +10587,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "d5ae20021b1e2d5a05db0354da188b744b1b5897",
       "at": "2026-10-28T23:53:36+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
+      "at": "2026-10-28T23:58:28+09:00"
     }
   ],
   "usage_log": [],
