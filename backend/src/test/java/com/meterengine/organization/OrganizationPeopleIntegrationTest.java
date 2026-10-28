@@ -420,6 +420,55 @@ class OrganizationPeopleIntegrationTest {
         .isEqualTo(1);
   }
 
+  @Test
+  void 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다() {
+    String email = UUID.randomUUID() + "@example.com";
+    MvcTestResult issued =
+        post(
+            "/v1/organization/invitations",
+            owner,
+            Map.of("email", email, "scopes", List.of("admin")));
+    assertThat(issued).hasStatus(201);
+    String pending = JsonPath.read(body(issued), "$.token");
+    MvcTestResult accepted =
+        post(
+            "/v1/organization-invitations/" + invite(email) + "/accept",
+            null,
+            Map.of("name", "보관 사용자", "password", PASSWORD, "consents", CONSENTS));
+    assertThat(accepted).hasStatus(201);
+    UUID userId = UUID.fromString(JsonPath.read(body(accepted), "$.user_account_id"));
+    assertThat(
+            mvc.delete()
+                .uri("/v1/organization/members/" + userId)
+                .header(AUTHORIZATION, owner)
+                .exchange())
+        .hasStatus(204);
+    entityManager.clear();
+    assertThat(post("/v1/sessions", null, Map.of("email", email, "password", PASSWORD)))
+        .hasStatus(403)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("organization_not_active");
+    assertThat(mvc.get().uri("/v1/organization-invitations/" + pending).exchange())
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("invitation_unavailable");
+    assertThat(
+            post(
+                "/v1/organization-invitations/" + pending + "/accept",
+                null,
+                Map.of("name", "보관 사용자", "password", PASSWORD, "consents", CONSENTS)))
+        .hasStatus(409);
+    assertThat(
+            mvc.get().uri("/v1/organization/invitations").header(AUTHORIZATION, owner).exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.invitations[?(@.email == '" + email + "')].status")
+        .asArray()
+        .containsExactlyInAnyOrder("revoked", "accepted");
+  }
+
   private int acceptAfter(CountDownLatch start, String path) {
     await(start);
     return post(path, null, Map.of("name", "동시 초대", "password", PASSWORD, "consents", CONSENTS))
