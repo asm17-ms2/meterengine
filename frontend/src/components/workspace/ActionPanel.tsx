@@ -10,6 +10,7 @@ import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/work
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { createRequestId } from "@/lib/request-id";
+import { fieldValidationMessage } from "@/lib/field-validation";
 import { operationResultCopy } from "@/lib/workspace-operation-results";
 
 export type WorkspaceField = {
@@ -79,6 +80,10 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     const nextErrors: Record<string, string> = {};
     for (const field of fields) {
       if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = "하나 이상 선택하세요.";
+      if (field.type === "hidden" || field.isMultiple) continue;
+      const control = event.currentTarget.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${CSS.escape(`${formId}-${field.name}`)}`);
+      const message = control ? fieldValidationMessage(control.validity, { ...field, isSelect: Boolean(field.options) }) : undefined;
+      if (message) nextErrors[field.name] = message;
     }
     setClientErrors(nextErrors);
     if (Object.keys(nextErrors).length) { requestAnimationFrame(() => summaryRef.current?.focus()); return; }
@@ -100,7 +105,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
 
   const isLocked = Boolean(state.secret || state.registrationPath || state.isUnconfirmed || state.isConfirmedFailure);
   const submitButton = <Button form={formId} type="primary" danger={isDanger} htmlType="submit" loading={isPending} disabled={isLocked}>{label ?? title}</Button>;
-  const form = <form id={formId} ref={formRef} onSubmit={submit} onChange={event => { setIsDirty(true); const target = event.nativeEvent.target; const name = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.name : ""; setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))); setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] })); }} className="workspace-form" aria-busy={isPending}>
+  const form = <form id={formId} ref={formRef} noValidate onSubmit={submit} onChange={event => { setIsDirty(true); const target = event.nativeEvent.target; const name = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.name : ""; setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))); setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] })); }} className="workspace-form" aria-busy={isPending}>
     <input type="hidden" name="operation" value={operation} />
     <input type="hidden" name="organization_id" value={mutationScope.organizationId} />
     {requestId && <input type="hidden" name="request_id" value={requestId} />}

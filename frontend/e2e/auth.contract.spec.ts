@@ -399,6 +399,18 @@ test("a disabled operator action explains itself through its description", async
   await expect(button).toHaveAccessibleDescription(/.+/);
 });
 
+test("a missing required field is reported inline like other form errors", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("값을 입력하세요.").first()).toBeVisible();
+  await expect(dialog.getByLabel(/^키 이름/)).toHaveAttribute("aria-invalid", "true");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/api-keys" && call.method === "POST")).toBe(false);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
