@@ -1,0 +1,863 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "login",
+    "path": "/login",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/login-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"signup\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/login-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"signup\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/login-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"signup\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "signup",
+    "path": "/signup",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/signup-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"login\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/signup-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"login\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/signup-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 3,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "button > span",
+              "a[href$=\"login\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "pending",
+    "path": "/pending",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pending",
+        "title": "가입 신청 접수 | MeterEngine",
+        "h1": "가입 신청을 접수했습니다",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/pending-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 2,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".primary-link"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pending",
+        "title": "가입 신청 접수 | MeterEngine",
+        "h1": "가입 신청을 접수했습니다",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/pending-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 2,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".primary-link"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pending",
+        "title": "가입 신청 접수 | MeterEngine",
+        "h1": "가입 신청을 접수했습니다",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/pending-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 2,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".primary-link"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "members",
+    "path": "/members",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/members-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 15,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/members-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 15,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/members-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 15,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "integrations",
+    "path": "/integrations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "API 키와 통보 | MeterEngine",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/integrations-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 21,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "API 키와 통보 | MeterEngine",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/integrations-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 21,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "API 키와 통보 | MeterEngine",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/integrations-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 21,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "customers",
+    "path": "/customers",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/customers-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 30,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "a[aria-current=\"page\"]",
+              "div[title=\"사용량에서 수납까지\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/customers-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 30,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "a[aria-current=\"page\"]",
+              "div[title=\"사용량에서 수납까지\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/customers-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 20,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "a[aria-current=\"page\"]",
+              "div[title=\"사용량에서 수납까지\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "billable-metrics",
+    "path": "/billable-metrics",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/billable-metrics-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 38,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/billable-metrics-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 38,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": null,
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/billable-metrics-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 22,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          },
+          {
+            "id": "page-has-heading-one",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Page should contain a level-one heading",
+            "targets": [
+              "html"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin/organizations",
+    "reducedMotion": null,
+    "name": "admin-organizations",
+    "path": "/admin/organizations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-organizations-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 11,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".operator-nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[aria-current=\"page\"][href$=\"organizations\"]",
+              "a[href$=\"users\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-organizations-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 11,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".operator-nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[aria-current=\"page\"][href$=\"organizations\"]",
+              "a[href$=\"users\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-organizations-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 11,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              ".operator-nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[aria-current=\"page\"][href$=\"organizations\"]",
+              "a[href$=\"users\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin/organizations",
+    "reducedMotion": null,
+    "name": "admin-users",
+    "path": "/admin/users",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-users-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 12,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[href$=\"organizations\"]:nth-child(2)",
+              "a[aria-current=\"page\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-users-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 12,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[href$=\"organizations\"]:nth-child(2)",
+              "a[aria-current=\"page\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/final-442/admin-users-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 12,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".wordmark",
+              "nav > a[href$=\"organizations\"]:nth-child(1)",
+              "a[href$=\"organizations\"]:nth-child(2)",
+              "a[aria-current=\"page\"]",
+              "a[href$=\"organizations\"]:nth-child(4)"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  }
+]

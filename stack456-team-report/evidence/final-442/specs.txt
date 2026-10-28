@@ -1,0 +1,1 @@
+auth: 통과 3/3 (signup, approval, login, tenant actions and isolation, logout / operator without organization / role promotion and demotion), sha 643ae664599c

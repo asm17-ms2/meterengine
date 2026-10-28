@@ -1,15 +1,11 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-28T21:20:31+09:00",
+  "updated_at": "2026-10-28T21:26:04+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
-  "current": {
-    "id": "D-060",
-    "step": "report",
-    "branch": "feat/account-permissions"
-  },
+  "current": null,
   "finished_ids": [
     "C442-004",
     "C442-005",
@@ -388,13 +384,9 @@
     }
   },
   "live_env": {
-    "running": true,
-    "layer": 442,
-    "pids": [
-      63872,
-      64033,
-      65167
-    ],
-    "container": "meterengine-0696-e2e"
+    "running": false,
+    "layer": null,
+    "pids": [],
+    "container": null
   }
 }
