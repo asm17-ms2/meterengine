@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { requestApi, toDisplayMessage } from "@/lib/api/transport";
 import { clearSession, readSessionToken, requireSession } from "@/lib/auth/session";
 import type { ActionState, SessionResponse } from "@/lib/auth/types";
 import { workspaceHref } from "@/lib/workspace-href";
+import { expiredLoginHref } from "@/lib/auth/navigation";
 
 export async function logoutAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   void _prev;
@@ -28,7 +30,7 @@ export async function switchOrganizationAction(_prev: ActionState, data: FormDat
     method: "PUT", token: await readSessionToken(), body: { organization_id: id },
   });
   if (!result.ok) {
-    if (result.error.status === 401) redirect("/login?reason=expired");
+    if (result.error.status === 401) redirect(expiredLoginHref((await headers()).get("x-meterengine-current-path")));
     return { message: toDisplayMessage(result.error) };
   }
   revalidatePath("/", "layout");
