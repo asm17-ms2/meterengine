@@ -17,9 +17,7 @@
 .summary dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .consent { margin: 0; padding: 18px; border: 1px solid #dce1eb; border-radius: 8px; min-width: 0; }
 .consent legend { padding: 0 6px; font-size: 14px; font-weight: 650; }
-.consent details { font-size: 13px; margin-bottom: 18px; }
-.consent summary { cursor: pointer; color: #48339a; }
-.consent details p { margin: 14px 0 0; color: #5a6578; }
+.terms { margin: 0 0 18px; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: #5a6578; }
 .note { margin: 0; color: #5a6578; font-size: 12px; line-height: 1.7; }
 .outcome { display: grid; gap: 20px; }
 .outcome p { margin: 0; }
