@@ -142,8 +142,11 @@ public class OrganizationPeopleService {
     lockOwner(principal, organizationId);
     OrganizationMember member = member(organizationId, userId);
     protectOwner(member, null);
-    organizationAccounts.revoke(organizationId, userId, now());
-    member.revoke(now());
+    OffsetDateTime now = now();
+    organizationAccounts.revoke(organizationId, userId, now);
+    member.revoke(now);
+    organizationInvitationRepository.revokePending(
+        organizationId, organizationAccounts.get(userId).email(), now);
     organizationMemberRepository.flush();
     record(principal, organizationId, "organization_member_archived", "user_account", userId);
   }

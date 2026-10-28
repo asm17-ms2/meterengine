@@ -23,7 +23,8 @@ export async function createOperatorAction(_previous: CreateOperatorState, data:
   const email = typeof data.get("email") === "string" ? String(data.get("email")).trim() : "";
   const password = typeof data.get("password") === "string" ? String(data.get("password")) : "";
   const fieldErrors: Partial<Record<CreateOperatorField, string>> = {};
-  if (!name || name.length > 255) fieldErrors.name = "이름을 255자 이내로 입력하세요.";
+  if (!name) fieldErrors.name = "이름을 입력하세요.";
+  else if (name.length > 255) fieldErrors.name = "이름은 255자 이내로 입력하세요.";
   if (email.length > 254 || !/^\S+@\S+\.\S+$/.test(email)) fieldErrors.email = "올바른 이메일 주소를 입력하세요.";
   if (password.length < 8 || password.length > 72 || new TextEncoder().encode(password).length > 72) fieldErrors.password = "비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력하세요.";
   if (Object.keys(fieldErrors).length) return { message: "입력한 내용을 확인하세요.", fieldErrors };
