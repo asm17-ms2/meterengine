@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:18:26+09:00",
+  "updated_at": "2026-10-29T00:19:29+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4945,7 +4945,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "H3-B2",
@@ -4959,7 +4959,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "Nk3-002",
@@ -4973,7 +4973,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-018",
@@ -4987,7 +4987,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-002",
@@ -5032,7 +5032,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-005",
@@ -5046,7 +5046,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-006",
@@ -5087,7 +5087,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-009",
@@ -5101,7 +5101,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-010",
@@ -5145,7 +5145,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-012",
@@ -5159,7 +5159,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C446-013",
@@ -5173,7 +5173,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "D-115",
@@ -5187,7 +5187,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "D-142",
@@ -5201,7 +5201,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "D-146",
@@ -5215,7 +5215,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "D-230",
@@ -5229,7 +5229,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "G-107",
@@ -5243,7 +5243,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "G-110",
@@ -5288,7 +5288,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "Nk3-001",
@@ -5302,7 +5302,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "Nk3-003",
@@ -5316,7 +5316,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-036",
@@ -5333,7 +5333,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-052",
@@ -5347,7 +5347,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-067",
@@ -5363,7 +5363,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-077",
@@ -5377,7 +5377,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "X-102",
@@ -5391,7 +5391,7 @@
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "판정 Workflow 결과(.s456-work/judge/446/results.json, da90aac)는 있고, 메인 세션 대조와 수정은 #446 동기화 충돌(C446-001, evidence/sync-conflict/446)이 풀린 뒤 이어 한다"
     },
     {
       "id": "C447-011",
