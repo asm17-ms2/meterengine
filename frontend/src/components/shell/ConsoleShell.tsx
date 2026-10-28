@@ -60,7 +60,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="업무 메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />
         <Link href={workspaceHref("/customers", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
         <span className="workspace-divider" />
-        <Link href="/organizations" className="organization-link" title={organizationLabel}>{organizationLabel}<DownOutlined aria-hidden="true" /></Link>
+        <Link href="/organizations" className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span><DownOutlined aria-hidden="true" /></Link>
       </div>
       <div className="workspace-user">{canManage && <GuideModeToggle />}{isOperator && <Link href="/admin/organizations">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}{organizationRole ? ` / ${ORGANIZATION_ROLE_LABELS[organizationRole]}` : ""}</span><span className="workspace-scope">{scopeLabel}</span><Button type="text" size="small" icon={<ReloadOutlined aria-hidden="true" />} loading={isRefreshing} onClick={() => startRefresh(() => router.refresh())} title="현재 도입사의 권한을 다시 조회합니다">권한 새로 조회</Button><LogoutButton /></div>
     </header>

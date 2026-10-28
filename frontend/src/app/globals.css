@@ -307,6 +307,7 @@ input, textarea { caret-color: var(--blue); }
 @media(max-width:767px) { .audit-summary { padding-left: 40px; }.audit-summary::before { left: 18px; top: 24px; } }
 
 .wordmark { font-family: "Avenir Next", "Segoe UI", sans-serif; }
+.organization-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.organization-link .anticon { flex: none; }
 .workspace-json, pre, code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
 .finance-flow strong { font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; letter-spacing: -.025em; }
 .organization-link { max-width: min(30vw, 480px); white-space: nowrap; }

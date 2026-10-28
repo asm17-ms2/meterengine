@@ -398,3 +398,13 @@ test("a link inside a sentence keeps its underline", async ({ page }) => {
     await expect(page.locator(".auth-switch a")).toHaveCSS("text-decoration-line", "underline");
   }
 });
+
+test("a long organization name is cut with an ellipsis and keeps the header icon inside the link", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const link = page.locator(".organization-link");
+  const linkBox = (await link.boundingBox())!;
+  const iconBox = (await link.locator(".anticon").boundingBox())!;
+  expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(linkBox.x + linkBox.width + 0.5);
+});
