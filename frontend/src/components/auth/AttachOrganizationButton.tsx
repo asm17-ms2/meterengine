@@ -6,7 +6,8 @@ import { attachOrganizationAction } from "@/app/admin/actions";
 import { ACCESS_SCOPE_OPTIONS } from "@/lib/auth/permissions";
 import type { ActionState, SessionOrganization } from "@/lib/auth/types";
 
-export function AttachOrganizationButton({ userId, userLabel, organizations }: { userId: string; userLabel: string; organizations: SessionOrganization[] }) {
+export function AttachOrganizationButton({ userId, userLabel, organizations: activeOrganizations, memberOrganizationIds }: { userId: string; userLabel: string; organizations: SessionOrganization[]; memberOrganizationIds: string[] }) {
+  const organizations = activeOrganizations.filter(organization => !memberOrganizationIds.includes(organization.id));
   const { message } = App.useApp();
   const [isOpen, setIsOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
