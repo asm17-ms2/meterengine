@@ -1,14 +1,14 @@
-미완료 301건, 결과: 끝 상태 71/372건 (fixed 54, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 20번(마지막 d337ba0)
+미완료 298건, 결과: 끝 상태 74/372건 (fixed 57, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 21번(마지막 90d920f)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T18:30:09+09:00
+상태: running, 갱신 2026-10-28T18:32:12+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 54 | 1 | 0 | 16 | 0 | 21 |
+| #443 | fix/s456-443-t-inho | 92 | 57 | 1 | 0 | 16 | 0 | 18 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -59,6 +59,9 @@ push: fix/s456-443-t-inho 20번(마지막 d337ba0)
 | D-138 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
 | D-178 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
 | X-059 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
+| D-021 | #443 | 90d920f | 사이드바 하단 링크 문구를 메뉴 이름 'API 키와 통보'로 맞췄다 | the sidebar calls the integrations screen by its menu name: 실패 Expected "API 키와 통보" Received "서버 연동 설정" |
+| D-145 | #443 | 90d920f | 사이드바 하단 링크 문구를 메뉴 이름 'API 키와 통보'로 맞췄다 | the sidebar calls the integrations screen by its menu name: 실패 Expected "API 키와 통보" Received "서버 연동 설정" |
+| D-220 | #443 | 90d920f | 사이드바 하단 링크 문구를 메뉴 이름 'API 키와 통보'로 맞췄다 | the sidebar calls the integrations screen by its menu name: 실패 Expected "API 키와 통보" Received "서버 연동 설정" |
 | X-063 | #443 | 5147f0c | 도입사 링크의 펼침 아이콘을 전환 아이콘으로 바꿨다 | 없음(보이는 아이콘만 바뀌어 시험으로 잡을 수 없다. evidence/X-063 before, after 캡처(/customers 1440, 390)) |
 | G-077 | #443 | 47e14c8 | 역할 라벨 정본 ORGANIZATION_ROLE_LABELS를 두고 헤더가 그것을 쓴다 | organization roles have one label definition that matches the member list: 실패 actual undefined, expected { owner: '대표관리자', admin: '관리자', member: '일반 사용자' } |
 | D-020 | #443 | 38f991c | 권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다 | the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found |
@@ -125,6 +128,9 @@ push: fix/s456-443-t-inho 20번(마지막 d337ba0)
 - D-080 (#443): #451 (console)/overview/page.tsx 22행의 순수납액 div에 className="is-settled"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.
 - G-087 (#443): #452 29a78d0이 README 29, 135, 140행을 고쳐 위층 반영 때 겹친다. 겹치는 줄은 #452 문장을 택하되 136행 '시스템 글꼴' 문구는 #452 C452-010 몫이다. 31-32행과 112행(개발 모드 스위치, antd Layout 틀)은 G-081에서 고친다.
 - G-083 (#443): ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.
+- D-021 (#443): #451 events/page.tsx 38행 수집 로그 탭 이름은 X-071이 맡는다. #444 integrations/[id]/page.tsx 17행 뒤로 가기 '연동 설정으로'는 'API 키와 통보로'로 위층에서 맞춘다. #450 UsageQuality '처리 결과 통보 연결'은 동작 링크라 그대로 둔다.
+- D-145 (#443): #451 events/page.tsx 38행 수집 로그 탭 이름은 X-071이 맡는다. #444 integrations/[id]/page.tsx 17행 뒤로 가기 '연동 설정으로'는 'API 키와 통보로'로 위층에서 맞춘다. #450 UsageQuality '처리 결과 통보 연결'은 동작 링크라 그대로 둔다.
+- D-220 (#443): #451 events/page.tsx 38행 수집 로그 탭 이름은 X-071이 맡는다. #444 integrations/[id]/page.tsx 17행 뒤로 가기 '연동 설정으로'는 'API 키와 통보로'로 위층에서 맞춘다. #450 UsageQuality '처리 결과 통보 연결'은 동작 링크라 그대로 둔다.
 - G-077 (#443): WorkspaceView.tsx STATUS_LABELS의 owner, admin, member는 셋째 파일이라 그대로 두었고 값은 같다. 이 정의로 바꿀지는 후속에서 정한다. '전용' 접미는 셸 안 scopeLabel 한 곳에서 만든다(38f991c).
 - D-020 (#443): #453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.
 - D-038 (#443): #453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.
