@@ -1,12 +1,12 @@
-미완료 193건, 결과: 끝 상태 135/328건 (fixed 92, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 55개(마지막 6ae4ec0)
+미완료 192건, 결과: 끝 상태 136/328건 (fixed 93, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 56개(마지막 0451016)
 정할 것: 31건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 92 | 1 | 7 | 32 | 3 | 8 |
+| #442 | 143 | 93 | 1 | 7 | 32 | 3 | 7 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -38,6 +38,7 @@ push: feat/account-permissions 55개(마지막 6ae4ec0)
 | G-069 | #442 | eb01be8 | randomUUID 없는 환경의 요청 키 대체 | a request id is a version 4 UUID even without crypto.randomUUID: 실패 ERR_MODULE_NOT_FOUND request-id.ts |
 | X-032 | #442 | 32a3356 | 새 계정용 초대에서 현재 로그인 상태 안내 | a new-account invitation opened while signed in as someone else says who is signed in: 실패 Error: expect(locator).toContainText failed, Locator: getByRole('statu |
 | X-034 | #442 | b7e5d38 | 가입 신청 접수 안내 | signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole |
+| X-040 | #442 | 0451016 | 위험 행 버튼 link, 확정 버튼 primary | a dangerous row action is a quiet link and its final confirmation carries the weight: 실패 Error: expect(locator).toHaveClass(expected) failed, Expected pattern:  |
 | X-055 | #442 | 0b31ea4 | 범위 밖 정수 입력을 필드 오류로 | a whole number outside its range names the field instead of blaming JSON: 실패 SyntaxError: does not provide an export named 'InputFieldError' |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
 | X-066 | #442 | 4b992f3 | 작업별 성공 안내 문구 | each workspace action that shows a toast says what it did: 실패 ERR_MODULE_NOT_FOUND workspace-action-feedback.ts |

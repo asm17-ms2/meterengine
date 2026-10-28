@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:31:00+09:00",
+  "updated_at": "2026-10-28T20:34:21+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "6ae4ec0",
+    "feat/account-permissions": "0451016",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -991,14 +991,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ActionPanel.tsx 87행 확정 버튼은 위험 작업이면 type default에 danger라 기본 무게이고, 137행 트리거는 표 행에서도 danger 기본 버튼이라 행의 빨간 테두리가 확정 버튼보다 강하다. 정점도 같다. 확정 버튼을 primary로, 공용 표 행 트리거를 작은 link 버튼으로 바꿨다.",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:87,137 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:43-45 @ 72e8718",
+        "a dangerous row action is a quiet link and its final confirmation carries the weight: 실패 Error: expect(locator).toHaveClass(expected) failed, Expected pattern: /ant-btn-link/"
+      ],
+      "commits": [
+        "045101673831"
+      ],
+      "tests": [
+        "auth.contract.spec.ts a dangerous row action is a quiet link and its final confirmation carries the weight: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 35건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "위험 행 버튼 link, 확정 버튼 primary"
     },
     {
       "id": "X-055",
@@ -8336,6 +8351,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 15 ℹ pass 15 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  35 passed (17.3s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.319s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8613,6 +8684,11 @@
       "branch": "feat/account-permissions",
       "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
       "at": "2026-10-28T20:27:07+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "045101673831eeb579634433d9543b1443559d7e",
+      "at": "2026-10-28T20:34:21+09:00"
     }
   ],
   "usage_log": [],
