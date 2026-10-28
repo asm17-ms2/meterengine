@@ -1,12 +1,12 @@
-미완료 265건, 결과: 끝 상태 64/328건 (fixed 30, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 12개(마지막 65fc925)
+미완료 264건, 결과: 끝 상태 65/328건 (fixed 31, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 13개(마지막 eb3e1bc)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 30 | 1 | 7 | 23 | 3 | 79 |
+| #442 | 143 | 31 | 1 | 7 | 23 | 3 | 78 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -46,6 +46,7 @@ push: feat/account-permissions 12개(마지막 65fc925)
 | X-015 | #442 | b3cbfd8 | 쿠키 없는 서버 액션을 proxy가 넘기고 로그인 만료로 안내 | a server action after the session cookie disappears goes to login instead of the error screen: 실패 Expected pattern /login?reason=expired$, Received /customers?o |
 | X-016 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
 | X-019 | #442 | 322afb1 | 사이드바 Menu tabIndex -1 복구 | the sidebar menu list is not a separate tab stop: 실패 Expected "-1", Received "0" |
+| X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 
 ## 정할 것
@@ -145,6 +146,7 @@ push: feat/account-permissions 12개(마지막 65fc925)
 | X-015 | #442 | 정점 proxy.ts는 4ace811(#445), c9a86c4(#449)가 공개 경로를 늘리고 23b1844(#453)가 환경 검사와 x-meterengine-environment 헤더를 더해 쿠키 검사가 16행으로 내려갔다. 반영 때 같은 조건(&& !request.headers.has("next-action"))을 그 쿠키 검사에 붙인다. 통과한 액션 요청도 requestHeaders를 실어 환경 헤더가 유지된다. session.ts 19행은 정점까지 같다. |
 | X-016 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |
 | X-019 | #442 | 위층 커밋들이 NavMenu.tsx의 NAV_GROUPS와 Menu 줄을 바꿨다. 반영 때 정점 Menu 요소에 tabIndex={-1}이 남았는지 본다. |
+| X-021 | #442 | 위층 WorkspaceTable 호출부는 label을 넘기지 않아도 스크롤 영역이 포커스를 받는다. 이름 있는 region이 필요하면 각 층이 label을 넘긴다. |
 | X-025 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | X-046 | #442 | 통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다. |
 | X-057 | #442 | WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다. |
