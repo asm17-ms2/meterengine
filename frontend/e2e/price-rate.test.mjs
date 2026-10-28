@@ -14,6 +14,6 @@ test("a price that charges nothing is recognized so the editor can ask before sa
 });
 
 test("the price editor does not prefill unit prices with zero", () => {
-  assert.doesNotMatch(editor, /name="unit_price"[^>]*defaultValue="0"/);
-  assert.doesNotMatch(editor, /unitPrice:"0"/);
+  assert.doesNotMatch(editor, /name="unit_price"[^>]*defaultValue=\{?\s*"0"/);
+  assert.doesNotMatch(editor, /unitPrice:\s*"0"/);
 });
