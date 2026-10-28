@@ -95,6 +95,9 @@ docker build -t meterengine-backend .
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
+- `CRYPTO_ENCRYPTION_KEY`는 운영 기본값이 없는 필수 값이다. 토스페이먼츠 시크릿 키, 빌링키, 웹훅 서명 비밀값을 DB에 AES-GCM으로 암호화하는 키로, 32바이트를 base64로 준다. `local` 프로파일만 개발용 값을 쓴다. 값을 바꾸면 이미 저장한 암호문을 풀지 못해 결제와 카드 등록이 실패하고, 웹훅 전송은 `secret_unavailable`로 실패한다. 배포 값은 `deploy/README.md`의 `crypto-encryption-key`다.
+- `meterengine.webhook.enabled`(기본 true)를 false로 두면 웹훅 발송 작업과 그 작업 등록만 멈춘다. 엔드포인트 등록, 시험 통보, 통보 적재는 계속되고, 다시 켜면 쌓인 전송을 차례로 보낸다.
+- `meterengine.webhook.allow-private-network`(기본 false)를 true로 두면 http와 사설망 주소로도 통보를 보낸다. `local` 프로파일과 시험만 켠다.
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
 
 ## 인증
@@ -269,17 +272,28 @@ unset SESSION
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI, 시계, 인자 리졸버 등록 | 없음 |
+| `global.crypto` | 비밀값 암호화 변환기와 키 설정, 로그에 남길 비밀값 가림 | 없음 |
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
 - `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽는다(`payment` -> `invoice`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`).
 - 인증은 키와 세션 검증을 `apikey`, `account`에, 도입사 상태를 `organization`에 묻는다(`global.security` -> `apikey`, `account`, `organization`). 로그인, 가입, 사용자 목록, 부트스트랩은 도입사를 `organization`에서 읽거나 넣고, 부트스트랩은 콘솔 키를 `apikey`에 넣는다(`account` -> `organization`, `apikey`). 소속 추가는 사용자를 확인한다(`organization` -> `account`).
+- 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다.
+
+### 웹훅
+
+- 엔드포인트는 도입사의 환경마다 10개까지 등록한다. 서명 비밀값(`whsec_`)은 등록 응답에만 나온다.
+- 통보는 `webhook-id`, `webhook-timestamp`, `webhook-signature` 헤더와 `User-Agent: MeterEngine-Webhooks/1.0`을 싣는다. 수신 측 방화벽의 허용 목록에는 이 User-Agent를 쓴다.
+- 발송 작업은 30초마다 돌고 한 번에 최대 100건, 15초까지 보낸다. 시도마다 전송을 2분 선점한다.
+- 실패하면 1분, 5분, 30분, 2시간, 8시간 뒤 다시 보내 모두 6번 시도한다. 성공(2xx), 6번 소진, 막힌 주소(`blocked_address`), 발송을 끄거나 지운 엔드포인트(`endpoint_disabled`)에서 끝난다.
+- 실패로 끝난 전송은 수동 재시도(`POST /v1/webhook-endpoints/{id}/deliveries/{delivery_id}/retries`)로 같은 `webhook-id`를 다시 보낸다.
 
 ### 마이그레이션
 
 - 파일은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다.
 - `R__seed.sql`은 반복 마이그레이션이라 파일 내용이 바뀌면 다시 적용된다. 데모가 쓰는 도입사, 고객, 미터, 가격을 이 파일이 정한다.
 - 로컬 계정과 키는 `src/main/resources/db/local/R__local_credentials.sql`이 넣는다. 이 로케이션은 `local` 프로파일(`application-local.properties`)에서만 읽는다.
+- `create_webhook_tables` 마이그레이션은 `webhook_event`와 `webhook_delivery_attempt`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 통보와 시도 기록은 고치거나 지우지 않는다.
 - 이미 적용된 `V__` 파일은 주석만 고쳐도 체크섬이 바뀌어 그 DB의 기동이 실패한다. 아래 "문제 해결" 참조.
 - V41은 기존 인보이스에도 고유한 표시 번호를 부여하고, 조회 링크의 토큰 해시, 만료와 폐기, 발급 당시 결제 모드를 저장한다. 공개 조회 감사는 토큰 대신 링크 ID를 행위자로 남긴다.
 - V44는 링크의 고객 결제 재시도 권한을 추가한다. 기존 링크와 옵션을 생략한 새 링크는 모두 조회만 허용한다.

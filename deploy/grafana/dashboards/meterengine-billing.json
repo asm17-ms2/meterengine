@@ -457,7 +457,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds)",
+          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds[26h]))",
           "legendFormat": "{{job_name}}"
         }
       ],
