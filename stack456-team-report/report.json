@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:26:34+09:00",
+  "updated_at": "2026-10-28T17:27:46+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "cc3de5338d5ab3490fdd2e3c4e4084963746e961"
+    "fix/s456-443-t-inho": "e72b5f211e8b393dcb2758ba75e691de52a4064f"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -412,29 +412,69 @@
       "id": "G-074",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "루트 frontend/src/app/error.tsx는 #443 커밋 f671a4f가 새로 만든 파일로, props를 받지 않고 고정 문구만 그려 error.digest를 버린다. 같은 저장소의 (console)/error.tsx는 error를 받아 digest를 부제에 붙인다. Next의 세그먼트 error.tsx는 같은 세그먼트 layout의 예외를 잡지 못하므로 (console)/layout.tsx의 requireTenantSession이나 admin/layout.tsx의 requireOperator가 세션 조회 실패(401, 403 외 상태)로 던진 예외는 루트 경계로 올라간다. proxy.ts는 쿠키 유무만 보고 세션을 조회하지 않아 이 경로를 막는 곳이 없고, 정점까지 이 파일을 바꾼 위층 커밋도 없다. 다만 reset 대신 window.location.reload()를 쓰는 점은 서버 컴포넌트 오류에서 reset만으로는 다시 요청하지 않아 취향 차이로 보며, 고칠 것은 digest 표시다.",
+      "evidence": [
+        "frontend/src/app/error.tsx:6-7 @ 0f1d1bf",
+        "frontend/src/app/(console)/error.tsx:11,18 @ 0f1d1bf",
+        "frontend/src/app/(console)/layout.tsx:7 @ 0f1d1bf",
+        "frontend/src/app/admin/layout.tsx:5 @ 0f1d1bf",
+        "frontend/src/lib/auth/session.ts:21-23 @ 0f1d1bf",
+        "frontend/src/app/error.tsx:6-7 @ 0fe7d2a",
+        "the root error page shows the error digest so a report can be matched with the server log: 실패 Expected pattern /\\([0-9A-Za-z]+\\)/ Received '화면을 불러오지 못했습니다서버 연결과 로그인 상태를 확인한 뒤 다시 시도하세요.다시 시도로그인 화면으로'",
+        "커밋 e72b5f211e8b393dcb2758ba75e691de52a4064f"
+      ],
+      "commits": [
+        "e72b5f211e8b393dcb2758ba75e691de52a4064f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the root error page shows the error digest so a report can be matched with the server log'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf의 error.tsx가 0f1d1bf와 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "루트 error.tsx가 digest를 안내 문단에 붙인다"
     },
     {
       "id": "G-086",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "G-074와 원인이 같다. 루트 error.tsx가 error prop을 받지 않아 /admin, 콘솔 layout, 로그인 전 화면, 초대 화면의 서버 오류에서 digest가 화면에 나오지 않고, 운영 빌드에서는 오류 메시지가 가려지므로 사용자 신고와 서버 로그의 digest 줄을 이을 값이 사라진다. 세션 조회가 401, 403 외 상태로 실패하면 session.ts가 예외를 던지고 그 예외가 layout에서 나 세그먼트 경계를 건너 루트 경계로 온다. 정점에서도 파일이 같고 오류 경계는 이 파일과 (console)/error.tsx 둘뿐이라 위층의 결제수단 등록, 청구서 링크 화면도 이 화면으로 떨어진다. 고객용 화면에 로그인 안내를 빼는 별도 경계는 그 화면이 들어오는 위층 몫이라 이 층 수정 범위에 넣지 않는다.",
+      "evidence": [
+        "frontend/src/app/error.tsx:6-7 @ 0f1d1bf",
+        "frontend/src/app/(console)/error.tsx:18 @ 0f1d1bf",
+        "frontend/src/lib/auth/session.ts:21-23 @ 0f1d1bf",
+        "frontend/src/app/admin/layout.tsx:5 @ 0f1d1bf",
+        "frontend/src/app/error.tsx:6-7 @ 0fe7d2a",
+        "the root error page shows the error digest so a report can be matched with the server log: 실패 Expected pattern /\\([0-9A-Za-z]+\\)/ Received '화면을 불러오지 못했습니다서버 연결과 로그인 상태를 확인한 뒤 다시 시도하세요.다시 시도로그인 화면으로'",
+        "커밋 e72b5f211e8b393dcb2758ba75e691de52a4064f"
+      ],
+      "commits": [
+        "e72b5f211e8b393dcb2758ba75e691de52a4064f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the root error page shows the error digest so a report can be matched with the server log'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf의 error.tsx가 0f1d1bf와 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "위층의 고객용 경로(#445 payment-method-registrations, #449 invoice-links)도 이 루트 오류 화면으로 떨어지고 '로그인 화면으로' 링크를 보인다. 고객용 화면에 맞는 별도 오류 경계나 문구는 그 화면이 있는 층에서 정한다.",
+      "summary": "루트 error.tsx가 digest를 안내 문단에 붙인다"
     },
     {
       "id": "D-011",
@@ -5767,6 +5807,43 @@
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
       "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "22 passed (12.1s)"
     }
   ],
   "pushes": [
@@ -5799,6 +5876,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
       "at": "2026-10-28T17:25:28+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "at": "2026-10-28T17:27:30+09:00"
     }
   ],
   "usage_log": [],
