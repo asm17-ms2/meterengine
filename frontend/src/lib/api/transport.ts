@@ -1,6 +1,7 @@
 import "server-only";
 
 import { config } from "@/lib/config";
+import { describeTransportFailure } from "@/lib/api/transport-failure";
 
 export type FieldError = {
   field: string;
@@ -85,6 +86,7 @@ export async function requestApi<T>(
   options: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; token?: string; timeoutMs?: number; idempotencyKey?: string; isEmptyResponse?: boolean; clientIp?: string; environment?: "test" | "live"; ifMatch?: string; responseType?: "text"; organizationId?: string } = {},
 ): Promise<Result<T>> {
   let response: Response;
+  const startedAt = Date.now();
   try {
     response = await fetch(new URL(path, config.apiBaseUrl), {
       method: options.method ?? "GET",
@@ -102,8 +104,8 @@ export async function requestApi<T>(
       redirect: "error",
       signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
     });
-  } catch {
-    return { ok: false, error: { status: 0, code: "network_error", message: "서버에 연결하지 못했습니다. 잠시 후 다시 시도하세요." } };
+  } catch (cause) {
+    return { ok: false, error: describeTransportFailure(cause, options.method ?? "GET", path, Date.now() - startedAt) };
   }
   if (!response.ok) return { ok: false, error: await toApiError(response) };
   if (options.responseType === "text") {

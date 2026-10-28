@@ -7,6 +7,7 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
+import { InputFieldError, readWholeNumber, successMessage } from "@/app/(console)/workspace-action-feedback";
 
 export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
 
@@ -17,10 +18,8 @@ function text(data: FormData, key: string) {
 
 function optional(data: FormData, key: string) { return text(data, key) || undefined; }
 function identifier(data: FormData, key = "id") { return encodeURIComponent(text(data, key)); }
-function amount(data: FormData, key: string) {
-  const value = text(data, key);
-  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new Error("금액은 0 이상의 정수로 입력하세요.");
-  return Number(value);
+function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_INTEGER, message = "0 이상 9,007,199,254,740,991 이하의 정수로 입력하세요." } = {}) {
+  return readWholeNumber(text(data, key), key, { min, max, message });
 }
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
@@ -32,9 +31,6 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const operation = text(data, "operation");
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   if (!text(data, "organization_id") || text(data, "organization_id") !== session.organization?.id) return { message: "열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요." };
-  if (["createMember", "updateMemberRole", "archiveMember", "createOrganizationInvitation", "revokeOrganizationInvitation"].includes(operation) && session.organization_role !== "owner") {
-    return { message: "사용자와 초대 관리는 대표관리자만 할 수 있습니다." };
-  }
   try {
     switch (operation) {
       case "createMember": path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password: typeof data.get("password") === "string" ? data.get("password") : "", scopes: data.getAll("scopes") }; break;
@@ -55,7 +51,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "deleteCustomer": path = `/v1/customers/${identifier(data)}`; method = "DELETE"; break;
       case "createApiKey":
         path = "/v1/api-keys";
-        body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute") : null };
+        body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute", { min: 1, max: 2147483647, message: "분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요." }) : null };
         break;
       case "deleteApiKey": path = `/v1/api-keys/${identifier(data)}`; method = "DELETE"; break;
       case "updateApiKeyScopes": path = `/v1/api-keys/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
@@ -86,8 +82,9 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "finalizeInvoices": path = `/v1/invoices?month=${encodeURIComponent(text(data, "month"))}`; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
-  } catch {
-    return { message: "입력 형식을 확인하세요. 금액은 0 이상의 정수, 조합과 구간은 올바른 JSON이어야 합니다." };
+  } catch (error) {
+    if (error instanceof InputFieldError) return { message: "입력한 내용을 확인하세요.", fieldErrors: { [error.field]: error.message } };
+    return { message: "입력한 값을 처리하지 못했습니다. 입력값을 확인한 뒤 다시 시도하세요." };
   }
   if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
@@ -112,7 +109,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
   return {
-    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : "처리했습니다.",
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,

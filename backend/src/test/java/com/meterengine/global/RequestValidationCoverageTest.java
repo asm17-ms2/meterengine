@@ -18,6 +18,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.groups.Default;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -120,8 +121,9 @@ class RequestValidationCoverageTest {
             .filter(RequestValidationCoverageTest::isListOfRequestRecord)
             .filter(
                 component ->
-                    !(backingField(component).isAnnotationPresent(NotEmpty.class)
-                            || isPricingTiers(component))
+                    !(requiresNonEmpty(component)
+                            || isPricingTiers(component)
+                            || isInvitationConsents(component))
                         || !validatesElements(component)
                         || !forbidsNullElements(component))
             .map(RequestValidationCoverageTest::describe)
@@ -154,7 +156,7 @@ class RequestValidationCoverageTest {
             .<String>mapMulti(
                 (component, problem) -> {
                   if (!isListOfString(component)
-                      || !backingField(component).isAnnotationPresent(NotEmpty.class)
+                      || !requiresNonEmpty(component)
                       || !guardsText(component)
                       || !forbidsNullElements(component)
                       || !restrictsToScopes(component)) {
@@ -406,6 +408,23 @@ class RequestValidationCoverageTest {
   private static boolean isPricingTiers(RecordComponent component) {
     return component.getDeclaringRecord().getSimpleName().equals("CreatePriceRateRequest")
         && component.getName().equals("tiers");
+  }
+
+  // 새 계정 분기에서 서비스가 빈 동의를 거절한다. 짝 시험은 OrganizationPeopleIntegrationTest에 있다.
+  private static boolean isInvitationConsents(RecordComponent component) {
+    return component
+            .getDeclaringRecord()
+            .getSimpleName()
+            .equals("AcceptOrganizationInvitationRequest")
+        && component.getName().equals("consents");
+  }
+
+  private static boolean requiresNonEmpty(RecordComponent component) {
+    return Stream.of(backingField(component).getAnnotationsByType(NotEmpty.class))
+        .anyMatch(
+            notEmpty ->
+                notEmpty.groups().length == 0
+                    || List.of(notEmpty.groups()).contains(Default.class));
   }
 
   @Test

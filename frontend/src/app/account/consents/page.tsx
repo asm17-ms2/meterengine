@@ -15,5 +15,5 @@ export default async function AccountConsentsPage({ searchParams }: { searchPara
   const query = await searchParams;
   const returnTo = workspaceHref(safeReturnPath(query.returnTo, isOperator), session.organization ? new URLSearchParams({ organization_id: session.organization.id }) : "");
   if (!session.consent_required) redirect(returnTo);
-  return <AuthFrame variant={isOperator ? "operator" : "join"} title="계정 이용 안내 확인" description={`${session.user_account.name} (${session.user_account.email}) 계정의 이용 안내를 확인하세요.`}><AccountConsentForm returnTo={returnTo} isOperator={isOperator} /><LogoutButton /></AuthFrame>;
+  return <AuthFrame variant={isOperator ? "operator" : "join"} title="계정 이용 안내 확인" description={`${session.user_account.name} (${session.user_account.email}) 계정의 이용 안내를 확인하세요.`}><AccountConsentForm returnTo={returnTo} isOperator={isOperator} /><div className="access-actions"><LogoutButton /></div></AuthFrame>;
 }

@@ -5,9 +5,9 @@ import { useActionState } from "react";
 import { logoutAction, switchOrganizationAction } from "@/app/session-actions";
 import { ORGANIZATION_STATUS_LABELS, type SessionResponse } from "@/lib/auth/types";
 
-export function LogoutButton() {
+export function LogoutButton({ returnTo }: { returnTo?: string }) {
   const [state, action, isPending] = useActionState(logoutAction, {});
-  return <form action={action}><Button htmlType="submit" loading={isPending}>로그아웃</Button>{state.message && <p role="alert">{state.message}</p>}</form>;
+  return <form action={action}>{returnTo && <input type="hidden" name="returnTo" value={returnTo} />}<Button htmlType="submit" loading={isPending}>로그아웃</Button>{state.message && <p role="alert">{state.message}</p>}</form>;
 }
 
 export function OrganizationPicker({ session }: { session: SessionResponse }) {
