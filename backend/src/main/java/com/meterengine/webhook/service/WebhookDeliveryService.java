@@ -93,6 +93,7 @@ public class WebhookDeliveryService {
   }
 
   public ScheduledJobResult deliver() {
+    countExpiredLeases();
     int processed = 0;
     int skipped = 0;
     int failed = 0;
@@ -149,6 +150,17 @@ public class WebhookDeliveryService {
         webhookClient.send(
             claim.url(), claim.webhookEventId().toString(), timestamp, signature, claim.payload()),
         Tally.PROCESSED);
+  }
+
+  private void countExpiredLeases() {
+    int expired = webhookDeliveryRepository.expireLeases();
+    if (expired == 0) {
+      return;
+    }
+    meterRegistry
+        .counter("meterengine.webhook.delivery", "result", "failed", "reason", "lease_expired")
+        .increment(expired);
+    logger.warn("{} webhook deliveries failed because their last attempt lease expired", expired);
   }
 
   private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {

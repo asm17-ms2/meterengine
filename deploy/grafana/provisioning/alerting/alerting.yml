@@ -363,7 +363,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
-      # 재시도 상한까지 보내지 못해 포기한 웹훅이 생겼다. 도입사가 이벤트를 받지 못했다.
+      # 실패로 끝나 더는 보내지 않는 웹훅이 생겼다(재시도 상한, 선점 만료, 막힌 주소). 도입사가 이벤트를 받지 못했다.
       # 예약 작업 실패와 같은 이유로 15분 안에 새로 생긴 시계열도 센다.
       - uid: webhook-delivery-failed
         title: 웹훅 전송 실패
@@ -372,7 +372,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 재시도 상한까지 보내지 못한 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
+          summary: 실패로 끝난 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }

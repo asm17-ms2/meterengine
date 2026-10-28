@@ -23,6 +23,7 @@ import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import com.meterengine.webhook.service.WebhookEventService;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -438,6 +439,20 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET attempt_count = 6, last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() - interval '1 second', claim_token = gen_random_uuid() WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    double before = leaseExpiredCount();
+
+    webhookDeliveryService.deliver();
+
+    assertThat(leaseExpiredCount() - before).isGreaterThanOrEqualTo(1);
+  }
+
+  @Test
   void 비밀값을_풀지_못한_전송은_secret_unavailable_시도로_남기고_재시도_간격을_따른다() {
     String stored =
         jdbcTemplate.queryForObject(
@@ -508,6 +523,15 @@ class WebhookIntegrationTest {
     webhookDeliveryService.deliver();
     assertThat(received).hasSize(1);
     return eventId;
+  }
+
+  private double leaseExpiredCount() {
+    Counter counter =
+        meterRegistry
+            .find("meterengine.webhook.delivery")
+            .tags("result", "failed", "reason", "lease_expired")
+            .counter();
+    return counter == null ? 0 : counter.count();
   }
 
   private void pullNextAttempt(UUID eventId) {
