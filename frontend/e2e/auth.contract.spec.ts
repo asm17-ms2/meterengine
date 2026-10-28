@@ -110,6 +110,19 @@ test("an issued secret is shown first and closing before copying asks for confir
   await expect(dialog).toHaveCount(0);
 });
 
+test("a server action after the session cookie disappears goes to login instead of the error screen", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
+  await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
+  await page.context().clearCookies();
+  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
