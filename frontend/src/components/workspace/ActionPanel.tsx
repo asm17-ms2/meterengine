@@ -4,6 +4,7 @@
 import { Alert, App, Button, Checkbox, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
@@ -35,12 +36,20 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
   const [copyResult, setCopyResult] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
   const [dismissedErrors, setDismissedErrors] = useState<{ state: WorkspaceActionState; names: string[] }>({ state: {}, names: [] });
   const [state, action, isPending] = useActionState<WorkspaceActionState, FormData>(async (previous, data) => {
-    const result = await workspaceAction(previous, data);
+    let result: WorkspaceActionState;
+    try {
+      result = await workspaceAction(previous, data);
+    } catch (error) {
+      unstable_rethrow(error);
+      return { message: "요청 결과를 확인하지 못했습니다. 목록을 새로 조회해 반영됐는지 확인한 뒤 다시 시도하세요." };
+    }
     if (result.isSuccess) {
       setIsDirty(false);
       if (!result.secret && !result.registrationPath && !isInline) {
@@ -54,6 +63,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   const visibleMessage = state.fieldErrors && Object.keys(state.fieldErrors).length > 0 && Object.keys(errors).length === 0 ? undefined : state.message;
 
   useEffect(() => {
+    if (state.secret || state.registrationPath) { resultRef.current?.focus(); return; }
     if (!state.message || state.isSuccess) return;
     const invalid = Object.keys(state.fieldErrors ?? {});
     if (invalid.length === 1) formRef.current?.querySelector<HTMLElement>(`[data-field="${CSS.escape(invalid[0])}"]`)?.focus();
@@ -75,11 +85,12 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   function close() {
     if (isPending) return;
     if (isDirty && !window.confirm("작성 중인 내용을 버리고 닫을까요?")) return;
+    if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없습니다. 복사하지 않고 닫을까요?")) return;
     onClose?.();
   }
 
   async function copy(value: string) {
-    try { await navigator.clipboard.writeText(value); setCopyResult("복사했습니다."); }
+    try { await navigator.clipboard.writeText(value); setCopyResult("복사했습니다."); setIsCopied(true); }
     catch { setCopyResult("복사하지 못했습니다. 표시된 값을 선택해 직접 복사하세요."); }
   }
 
@@ -91,6 +102,9 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {requestId && <input type="hidden" name="request_id" value={requestId} />}
     {description && <p className="muted">{description}</p>}
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
+    {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
+    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer">{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
+    {copyResult && <p role="status" className="field-hint">{copyResult}</p>}
     <fieldset disabled={isPending || isLocked}>
       {fields.map(field => {
         if (field.type === "hidden") return <input key={field.name} type="hidden" name={field.name} value={field.value ?? ""} />;
@@ -118,9 +132,6 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     </fieldset>
     {state.isConfirmedFailure && onNewRequest && <Button onClick={onNewRequest}>{operation === "createPaymentCancellation" ? "새 취소 요청" : "새 요청"}</Button>}
     {state.isUnconfirmed && <a href="">결제와 취소 내역 새로 조회</a>}
-    {state.secret && <div className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
-    {state.registrationPath && <div className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer">{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
-    {copyResult && <p role="status" className="field-hint">{copyResult}</p>}
     {isInline && submitButton}
   </form>;
   if (isInline) return form;
@@ -131,10 +142,12 @@ export function ActionPanel(props: ActionPanelProps) {
   const access = useTenantAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [requestId, setRequestId] = useState("");
+  const triggerId = useId();
+  const restoreFocus = () => requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={() => setIsOpen(false)} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); }} />}
+    <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
+    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={() => { setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }

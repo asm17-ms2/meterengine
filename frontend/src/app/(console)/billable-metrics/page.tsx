@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { BillableMetricsLoading } from "@/components/billable-metrics/BillableMetricsLoading";
@@ -7,6 +8,8 @@ import { CAPABILITIES } from "@/lib/api/capabilities";
 import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = { title: "미터" };
 
 export default async function BillableMetricsPage({
   searchParams,
