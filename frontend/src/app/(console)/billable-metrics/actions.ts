@@ -5,6 +5,7 @@ import { requireTenantSession } from "@/lib/auth/session";
 import { hasScope } from "@/lib/auth/permissions";
 
 import {
+  billableMetricFailureMessage,
   type BillableMetricDeleteState,
   type BillableMetricField,
   type BillableMetricFormState,
@@ -132,7 +133,7 @@ function toFailureState(error: ApiError): BillableMetricFormState {
   if (Object.keys(fieldErrors).length > 0) {
     return { status: "invalid", fieldErrors };
   }
-  return { status: "failed", message: toDisplayMessage(error) };
+  return { status: "failed", message: billableMetricFailureMessage(error.code, toDisplayMessage(error)) };
 }
 
 export async function createBillableMetricAction(
