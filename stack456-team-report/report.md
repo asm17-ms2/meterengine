@@ -1,12 +1,12 @@
-미완료 220건, 결과: 끝 상태 108/328건 (fixed 66, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 41개(마지막 d2b69cf)
+미완료 217건, 결과: 끝 상태 111/328건 (fixed 69, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 42개(마지막 b7e5d38)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 66 | 1 | 7 | 31 | 3 | 35 |
+| #442 | 143 | 69 | 1 | 7 | 31 | 3 | 32 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -30,6 +30,7 @@ push: feat/account-permissions 41개(마지막 d2b69cf)
 | G-042 | #442 | 36f7e74 | 업무 작업 이름 목록과 화면, 액션 대조 시험 | every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS' |
 | G-045 | #442 | b84cf7a | WorkspaceError를 기존 ErrorAlert로 모음 | a workspace load failure offers an in-place retry button: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole('button', { name: '다시 시도' }) |
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
+| X-034 | #442 | b7e5d38 | 가입 신청 접수 안내 | signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
 | C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
