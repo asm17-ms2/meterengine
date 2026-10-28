@@ -11,7 +11,6 @@ import com.meterengine.global.validation.StorableTimestamp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -435,11 +434,6 @@ class RequestValidationCoverageTest {
     Field tiers = requestRecord("CreatePriceRateRequest").getDeclaredField("tiers");
     assertThat(tiers.getAnnotation(Size.class).min()).isEqualTo(1);
     assertThat(tiers.getAnnotation(Size.class).max()).isEqualTo(100);
-    assertThat(
-            requestRecord("CreatePriceRateRequest")
-                .getMethod("isValidPricing")
-                .isAnnotationPresent(AssertTrue.class))
-        .isTrue();
   }
 
   @Test

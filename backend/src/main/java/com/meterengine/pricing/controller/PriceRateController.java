@@ -60,7 +60,7 @@ public class PriceRateController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, effective_until이 시작 월보다 뒤가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
             code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
@@ -85,11 +85,13 @@ public class PriceRateController {
       summary = "단가 조합 보관",
       description =
           """
-          미터에서 속성 값 조합의 현재 단가를 보관하고 다음 달부터 효력을 중단한다. dimension_values는 JSON 객체 문자열이고,
-          빈 객체 {}는 기본 단가다. 현재 월 계산과 버전 이력, 미래 예약은 유지한다.
+          미터에서 속성 값 조합 하나의 공통 단가(customer_id 없음) 가운데 이번 달(Asia/Seoul)에 적용 중인
+          버전을 보관하고 다음 달부터 효력을 중단한다. 현재 월 계산과 버전 이력, 미래 예약은 유지하고 고객 단가는
+          그대로 둔다. dimension_values는 JSON 객체 문자열이고, 빈 객체 {}는 기본 단가다. 같은 조합인지는
+          키 순서와 상관없이 본다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
+    @ApiResponse(responseCode = "204", description = "이번 달 적용 중인 버전을 보관했다. 본문 없음"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -105,12 +107,12 @@ public class PriceRateController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=price_rate_not_found: 그 미터에 그 조합의 단가가 없다")
+        description = "code=price_rate_not_found: 그 미터에 이번 달 적용 중인 그 조합의 공통 단가가 없다")
   })
   public void deletePriceRate(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가를 지울 미터의 code.") @PathVariable @StorableText String code,
-      @Parameter(description = "지울 조합. JSON 객체 문자열이다.")
+      @Parameter(description = "단가를 끝낼 미터의 code.") @PathVariable @StorableText String code,
+      @Parameter(description = "끝낼 조합. JSON 객체 문자열이다.")
           @RequestParam("dimension_values")
           @StorableText
           String dimensionValues) {
