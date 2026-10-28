@@ -183,6 +183,16 @@ test("a workspace load failure offers an in-place retry button", async ({ page, 
   await expect(page.getByRole("link", { name: "다시 시도", exact: true })).toHaveCount(0);
 });
 
+test("a forbidden workspace load says so without a retry", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { fail: { "/v1/api-keys": 403 } } });
+  await page.reload();
+  await expect(page.getByText("조회 권한이 없습니다").first()).toBeVisible();
+  await expect(page.getByText("데이터를 불러오지 못했습니다")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
