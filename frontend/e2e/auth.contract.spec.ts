@@ -196,6 +196,18 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
   await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
 });
 
+test("a meter form with input asks before Escape throws it away", async ({ page }) => {
+  await login(page, "member@contract.local", "/billable-metrics");
+  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 미터");
+  let asked = "";
+  page.once("dialog", prompt => { asked = prompt.message(); void prompt.dismiss(); });
+  await page.keyboard.press("Escape");
+  await expect.poll(() => asked).toBe("작성 중인 미터를 버리고 닫을까요?");
+  await expect(dialog).toBeVisible();
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

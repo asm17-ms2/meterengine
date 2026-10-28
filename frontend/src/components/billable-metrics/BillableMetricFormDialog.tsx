@@ -141,6 +141,9 @@ export function BillableMetricFormDialog({
   };
 
   const submitForm = () => form.submit();
+  const close = () => {
+    if (!isPending && (!form.isFieldsTouched() || window.confirm("작성 중인 미터를 버리고 닫을까요?"))) onClose();
+  };
 
   return (
     <Modal
@@ -150,12 +153,12 @@ export function BillableMetricFormDialog({
       style={{ top: 24 }}
       styles={{ body: { maxHeight: "calc(100dvh - 180px)", overflowY: "auto", paddingInlineEnd: 4 } }}
       title={isEdit ? "미터 수정" : "미터 등록"}
-      onCancel={isPending ? undefined : onClose}
+      onCancel={isPending ? undefined : close}
       keyboard={!isPending}
       mask={{ closable: !isPending }}
       closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
       footer={[
-        <Button key="cancel" disabled={isPending} onClick={onClose}>
+        <Button key="cancel" disabled={isPending} onClick={close}>
           취소
         </Button>,
         <Button key="submit" type="primary" loading={isPending} onClick={submitForm}>
