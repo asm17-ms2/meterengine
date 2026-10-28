@@ -1,12 +1,12 @@
-미완료 214건, 결과: 끝 상태 114/328건 (fixed 72, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 44개(마지막 32a3356)
+미완료 213건, 결과: 끝 상태 115/328건 (fixed 73, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 45개(마지막 0b601c9)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 72 | 1 | 7 | 31 | 3 | 29 |
+| #442 | 143 | 73 | 1 | 7 | 31 | 3 | 28 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -20,6 +20,7 @@ push: feat/account-permissions 44개(마지막 32a3356)
 | C442-005 | #442 | 88f0ab2 | frontend test:unit 스크립트 | pnpm test:unit: 실패 ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL Command "test:unit" not found |
 | C442-011 | #442 | 9679307 | 새 계정 초대 수락에 남은 세션을 싣지 않음 | accepting an invitation as a new account does not send a stale session: 실패 toHaveURL Received /organization-invitations/me_invite_..., 알림 '인증 정보가 올바르지 않습니다.' |
 | C442-012 | #442 | 9cd9421 | 재로그인 돌아갈 주소의 도입사로 세션 전환 | logging in to a return path of another member organization opens that organization: 실패 Expected 0, Received 1 (도입사 선택이 바뀌었습니다) |
+| C442-013 | #442 | 0b601c9 | 초대 화면 로그아웃 뒤 같은 초대로 복귀 | logging out on an invitation keeps the invitation open: 실패 toHaveURL Expected /organization-invitations/me_invite_ContractExisting..., Received /login |
 | C442-014 | #442 | 07f5a83 | Playwright 설정의 고정 임시 경로 제거 | 없음(설정 변경: git grep -n 'meterengine-orchestration\|/tmp\|/private/tmp' 두 설정 파일이 고친 뒤 비었다. typecheck, lint 통과. playwright --lis) |
 | C442-021 | #442 | 0699a0b | 운영자 생성 거절 감사 검사를 actor_id 기준으로 | 다른_생성이_먼저_이메일을_점유하면_기다린_운영자_생성은_409이고_기존_계정은_그대로다: 실패 AssertionFailedError: expected: 0 but was: 1 (감사 기록 선행 변이) |
 | C442-023 | #442 | 6028b62 | NotEmpty 가드를 기본 그룹 검증만 세게 | 신규_초대를_빈_동의로_수락하면_400이고_계정과_수락을_남기지_않는다: 실패 AssertionFailedError: [HTTP status code] expected: 400 but was: 201 (동의 검사 제거 변이) |
@@ -143,6 +144,7 @@ push: feat/account-permissions 44개(마지막 32a3356)
 | C442-005 | #442 | #453 G-189가 같은 줄을 같은 자리에 더하므로 글자를 맞췄다. #449, #453에서 따로 고치지 않는다. CI에 단계를 더하는 일은 G-187(needs-decision)에 남는다. |
 | C442-011 | #442 | 정점까지 48행이 같아 그대로 올라간다. 위층 e5fca11이 61행 수락 뒤 이동을 /overview로 바꿨으므로, 반영 뒤 이 계약 시험의 기대 경로(expectTenantUrl /customers)를 /overview로 맞춘다. 정점 auth.contract.spec.ts는 /customers와 /overview를 모두 받는 꼴을 쓴다. |
 | C442-012 | #442 | 정점 (public)/actions.ts는 a39db70이 clientIp를 더해 로그인 요청 줄이 달라졌다. 반영 때 saveSession 뒤의 destination 계산을 이 커밋의 꼴로 맞춘다. 23b1844가 proxy.ts에 environment 검사를 더했지만 이 수정과 겹치지 않는다. |
+| C442-013 | #442 | 정점 session-actions.ts는 e5fca11이 switchOrganizationAction만 바꿔 logoutAction은 같다. 반영 때 logoutAction의 returnTo 처리와 LogoutButton prop을 남긴다. |
 | C442-021 | #442 | 80a3ef1이 OperatorAccountIntegrationTest의 다른 줄을 바꿨다. 반영 때 195-200행 검사가 actor_id 기준으로 남았는지 본다. |
 | G-001 | #442 | 가입 경로의 조회와 저장 사이 경합은 이제 409가 아니라 500이다(error-handling.md 규칙). 정점까지 이 파일을 바꾼 위층 커밋은 없다. |
 | G-006 | #442 | 23b1844 등 위층 커밋이 같은 컨트롤러에 environment 관련 변경을 했다면 반영 때 @ApiResponses 블록을 남긴다. openapi.yaml은 각 층 빌드가 다시 만든다. |

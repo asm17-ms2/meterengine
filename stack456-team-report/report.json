@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:16:30+09:00",
+  "updated_at": "2026-10-28T19:18:54+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "32a3356",
+    "feat/account-permissions": "0b601c9",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -168,14 +168,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "초대 화면(page.tsx 30행)의 LogoutButton은 logoutAction이 언제나 /login으로 보내 초대 주소를 잃게 한다. 정점도 같다. 로그아웃 액션이 검증한 초대 주소 returnTo를 받게 하고 초대 화면 버튼이 그 주소를 넘기게 했다. 로그아웃 실패 시 쿠키를 남기는 동작은 X-104 결정 대기라 바꾸지 않았다.",
+      "evidence": [
+        "frontend/src/app/organization-invitations/[token]/page.tsx:30 @ 72e8718",
+        "frontend/src/app/session-actions.ts:10-21 @ 72e8718",
+        "frontend/src/components/auth/SessionControls.tsx:8-11 @ 72e8718",
+        "logging out on an invitation keeps the invitation open: 실패 toHaveURL Expected /organization-invitations/me_invite_ContractExisting..., Received /login"
+      ],
+      "commits": [
+        "0b601c945f2a"
+      ],
+      "tests": [
+        "auth.contract.spec.ts logging out on an invitation keeps the invitation open: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 31건 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same e5fca11",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "초대 화면 로그아웃 뒤 같은 초대로 복귀",
+      "propagation_note": "정점 session-actions.ts는 e5fca11이 switchOrganizationAction만 바꿔 logoutAction은 같다. 반영 때 logoutAction의 returnTo 처리와 LogoutButton prop을 남긴다."
     },
     {
       "id": "C442-014",
@@ -7527,6 +7544,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  31 passed (15.4s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.318s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7749,6 +7822,11 @@
       "branch": "feat/account-permissions",
       "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
       "at": "2026-10-28T19:13:05+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
+      "at": "2026-10-28T19:18:54+09:00"
     }
   ],
   "usage_log": [],
