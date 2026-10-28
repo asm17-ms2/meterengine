@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:58:41+09:00",
+  "updated_at": "2026-10-28T23:00:51+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "f67bc41246d4187125de061f9f09c9246d57a8fb"
+    "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4274,30 +4274,39 @@
       "id": "U5-B1",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "층 head에서 슬롯을 진 인스턴스는 insertIfAbsent가 0이면 곧바로 findLastSucceededFinishedAt을 읽는데, 이긴 쪽 행은 끝날 때까지 'running'이고 조회는 'succeeded'만 보므로 같은 시각 cron에서는 어제 성공만 게이지에 남는다. 그 뒤 메모리 값을 다시 읽는 곳은 register와 다음 슬롯을 질 때뿐이다. deploy.sh는 전환 뒤 DRAIN 5초를 기다려 이전 색을 stop하고, Prometheus는 두 색을 정적 대상으로 긁는다. 그래서 이긴 이전 색의 시리즈가 사라지면 alerting.yml 263행 식이 남은 색의 어제 값만 보고 90000을 넘겨 약 23시간 울린다. 하루 주기 호출부는 #444 head에는 없고 #445(PaymentJobScheduler, 04:00)와 #450(UnbilledUsageNotificationConfig, 09:00)에서 생긴다. 다만 원인 코드(59aad79, 문인호 님 커밋)와 그 두 작업을 가리키는 경보식이 이 층에 있어 여기서 고친다. 막는 검사는 찾지 못했고, 단위 시험 59-69행은 건너뛰는 순간 DB에 상대의 이번 성공이 이미 있다고 스텁해서 실제로는 일어나지 않는 순서만 본다.",
+      "reason": "층 head에서 슬롯을 진 인스턴스는 insertIfAbsent가 0이면 곧바로 findLastSucceededFinishedAt을 읽는데, 이긴 쪽 행은 끝날 때까지 'running'이고 조회는 'succeeded'만 보므로 같은 시각 cron에서는 어제 성공만 게이지에 남는다. 그 뒤 메모리 값을 다시 읽는 곳은 register와 다음 슬롯을 질 때뿐이다. deploy.sh는 전환 뒤 DRAIN 5초를 기다려 이전 색을 stop하고, Prometheus는 두 색을 정적 대상으로 긁는다. 그래서 이긴 이전 색의 시리즈가 사라지면 alerting.yml 263행 식이 남은 색의 어제 값만 보고 90000을 넘겨 약 23시간 울린다. 하루 주기 호출부는 #444 head에는 없고 #445(PaymentJobScheduler, 04:00)와 #450(UnbilledUsageNotificationConfig, 09:00)에서 생긴다. 다만 원인 코드(59aad79, 문인호 님 커밋)와 그 두 작업을 가리키는 경보식이 이 층에 있어 여기서 고친다. 막는 검사는 찾지 못했고, 단위 시험 59-69행은 건너뛰는 순간 DB에 상대의 이번 성공이 이미 있다고 스텁해서 실제로는 일어나지 않는 순서만 본다. scheduled-job-missed-day 경보 식의 첫 항을 max_over_time(...[26h])로 바꿔 배포로 사라진 색의 마지막 값까지 보게 했고, 대시보드의 마지막 성공 뒤 경과 패널도 같은 식으로 맞췄다. 게이지는 시각이라 시리즈마다 오르기만 해 26시간 창 최댓값이 가장 최근 성공이다. deploy/README.md 477행 설명(마지막 성공 뒤 25시간)은 그대로 맞다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:49-51 @ 178e19e",
-        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:71-75 @ 178e19e",
-        "backend/src/main/java/com/meterengine/scheduling/repository/ScheduledJobRunRepository.java:20,29 @ 178e19e",
-        "deploy/grafana/provisioning/alerting/alerting.yml:263,275 @ 178e19e",
-        "deploy/grafana/dashboards/meterengine-billing.json:460 @ 178e19e",
-        "deploy/deploy.sh:538-542 @ 178e19e",
-        "deploy/prometheus/prometheus.yml:20 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:49-51 @ f3855f4",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:71-75 @ f3855f4",
+        "backend/src/main/java/com/meterengine/scheduling/repository/ScheduledJobRunRepository.java:20,29 @ f3855f4",
+        "deploy/grafana/provisioning/alerting/alerting.yml:263,275 @ f3855f4",
+        "deploy/grafana/dashboards/meterengine-billing.json:460 @ f3855f4",
+        "deploy/deploy.sh:538-542 @ f3855f4",
+        "deploy/prometheus/prometheus.yml:20 @ f3855f4",
         "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ 508beb5",
         "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:35-41 @ 508beb5",
-        "backend/src/test/java/com/meterengine/scheduling/service/ScheduledJobRunServiceTest.java:59-69 @ 178e19e"
+        "backend/src/test/java/com/meterengine/scheduling/service/ScheduledJobRunServiceTest.java:59-69 @ f3855f4",
+        "커밋 c0a9f4a02595f979304f0a6c24115efcf5462cc2"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c0a9f4a02595f979304f0a6c24115efcf5462cc2"
+      ],
+      "tests": [
+        "Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시간 30분에 사라진 blue, 어제 값만 든 green)를 넣어 2시간 시점 값을 비교했다: 고치기 전 식 93600초(경보 임계 90000 초과), 고친 뒤 식 3600초, 26시간 성공이 없는 작업은 고친 뒤에도 93600초. 입력과 결과는 evidence/U5-B1/promtool-*",
+        "alerting.yml YAML 파싱과 대시보드 JSON 파싱(static), deploy 단위 시험 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "same: 정점 alerting.yml의 scheduled-job-missed-day 식도 max_over_time 없이 남은 시리즈만 본다. 같은 파일을 바꾼 위층 커밋은 경보 규칙 추가(#445 결제 규칙 등)",
+      "propagation_note": "alerting.yml scheduled-job-missed-day 식과 meterengine-billing.json 마지막 성공 패널 식이 바뀐다. 위층에서 같은 줄이 충돌하면 max_over_time(...[26h]) 형태를 남긴다. 코드로 게이지를 다시 읽는 방안(ScheduledJobRunService)은 넣지 않았다.",
+      "summary": "하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다"
     },
     {
       "id": "X-014",
@@ -7443,6 +7452,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "static",
+      "command": "python3 -m json.tool 'deploy/grafana/dashboards/meterengine-billing.json' >/dev/null; ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.587s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "55 passed (24.3s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.1s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 14 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9825,6 +9894,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
       "at": "2026-10-28T22:56:21+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+      "at": "2026-10-28T23:00:20+09:00"
     }
   ],
   "usage_log": [],

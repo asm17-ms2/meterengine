@@ -1,15 +1,15 @@
-미완료 242건, 결과: 끝 상태 130/372건 (fixed 97, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 13번(마지막 f67bc41)
+미완료 241건, 결과: 끝 상태 131/372건 (fixed 98, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a)
 정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T22:58:41+09:00
+상태: running, 갱신 2026-10-28T23:00:51+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 22 | 0 | 4 | 11 | 1 | 2 |
+| #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -116,6 +116,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 13번(�
 | D-226 | #444 | ce5041c | 운영 현황 예약 작업 표가 과금 제외 사용량 통보 작업을 이름으로 보인다 | every scheduled job the operations API lists has a label on the operations screen: 실패 unbilled_usage_report has no label in JOB_LABELS |
 | G-152 | #444 | 815f525 | backend README에 웹훅 발송과 암호화 키, 운영 현황을 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 값을 WebhookDeliveryRepository.java 21-22, 43, 71-75행(재시도 간격, 6회, 2분 선점, 종결 조건), WebhookDelive) |
 | U14-B1 | #444 | f67bc41 | 마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다 | 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0 |
+| U5-B1 | #444 | c0a9f4a | 하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다 | 없음(Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시) |
 
 ## 정할 것
 
@@ -211,6 +212,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 13번(�
 - D-226 (#444): 새 시험 scheduled-job-labels.test.mjs는 OperationsService의 작업 목록과 WorkspaceView의 JOB_LABELS를 맞대 본다. #445부터 정점까지 작업 목록은 이 층과 같다. 반영 때 JOB_LABELS 줄이 충돌하면 unbilled_usage_report 항목을 남겨야 위층에서도 이 시험이 통과한다.
 - G-152 (#444): 위층(#450 notification, #453 23b1844 CRYPTO_ENCRYPTION_KEY 표 행)이 같은 README의 구조 표와 설정 절을 바꿨다. 반영 때 구조 표의 webhook, dashboard 행이 겹치면 위층 행(webhook, notification 합친 행)을 남기고 이 층의 global.crypto 행과 의존 방향 문장을 더한다. 설정 절의 CRYPTO_ENCRYPTION_KEY는 위층 표 행과 이 층 문장을 하나로 합친다(위층은 토스 키와 빌링키, 이 층은 웹훅 비밀값과 secret_unavailable). #450부터는 meterengine.webhook.enabled=false가 미청구 통보 작업도 멈추는지 그 층 기준으로 맞춘다.
 - U14-B1 (#444): #453 23b1844가 WebhookDeliveryRepository.claim과 UPDATE 문에 environment_scope_id를 더했다. 반영 때 claim 앞의 lease_expired UPDATE는 expireLeases()로 옮긴 채 두고(환경 조건 없이 전역으로 끝내는 동작은 같다), 정점 deploy/README.md 495행의 경보 표 문장을 이 층 문장으로 맞춘다.
+- U5-B1 (#444): alerting.yml scheduled-job-missed-day 식과 meterengine-billing.json 마지막 성공 패널 식이 바뀐다. 위층에서 같은 줄이 충돌하면 max_over_time(...[26h]) 형태를 남긴다. 코드로 게이지를 다시 읽는 방안(ScheduledJobRunService)은 넣지 않았다.
 
 ## fixed-above로 둔 것
 
