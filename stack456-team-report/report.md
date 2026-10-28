@@ -1,5 +1,5 @@
-미완료 140건, 결과: 끝 상태 188/328건 (fixed 135, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 14개(마지막 c76428e)
+미완료 139건, 결과: 끝 상태 189/328건 (fixed 136, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 14�
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 35 | 0 | 9 | 1 | 0 | 23 |
+| #445 | 68 | 36 | 0 | 9 | 1 | 0 | 22 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -113,6 +113,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 14�
 | X-009 | #445 | 6d9f804 | 수납 상태 이름 한 벌로 | each invoice payment status has one name used by both the list and the detail: 실패 ERR_MODULE_NOT_FOUND invoice-payment-status.ts |
 | X-031 | #445 | 3a60ae1 | 카드 자동결제 안내 펼침과 금액 변동 안내 | 없음(보이는 변경: 실화면에서 카드 등록 화면을 1440, 390 폭으로 고치기 전과 뒤 캡처(evidence/X-031/before, after). 고친 뒤 안내 세 문장이 펼쳐져 있고 axe, 콘솔 오류, 가로 넘침은) |
 | X-049 | #445 | c46e4fa | 결과 미확인 완료 화면 제목 | 없음(보이는 변경: 결과 쿠키 없이 완료 화면을 1440, 390 폭으로 고치기 전과 뒤 캡처(evidence/X-049/before, after). h1이 '카드 등록을 완료하지 못했습니다'에서 '카드 등록 결과를 확인) |
+| X-087 | #445 | 3a5b72a | 카드 등록 오류 알림의 role 중첩 | 없음(lint, build 통과; 실화면 카드 등록 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after)에서 axe, 콘솔 오류, 가로 넘침이 늘지 않음. 오류 알림은 토) |
 | C445-002 | #445 | ad5872e | 결제 설정과 토스 키 변경의 키 모드 검사 | test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 200 |
 | C445-005 | #445 | ab25813 | 카드 등록 링크 생성의 키 모드 검사 | API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | Ck2-016 | #445 | fdf3b2c | 예약 작업 스레드 수를 작업 수 이상으로 | 예약_스레드_풀은_예약_작업_수_이상이다: 실패 Expecting actual: 2 to be greater than or equal to: 4 |

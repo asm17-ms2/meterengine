@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T01:16:10+09:00",
+  "updated_at": "2026-10-29T01:20:27+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "c76428e"
+    "fix/s456-445-t-yang": "22dfb35"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4399,15 +4399,28 @@
       "id": "X-087",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "CardRegistration은 role=alert인 antd Alert(error)를 다시 role=alert div로 감싸 알림이 겹친다. 정점도 같다. 바깥 div를 없앴다.",
+      "evidence": [
+        "frontend/src/components/payment-registration/CardRegistration.tsx:71 @ b10f8c7"
+      ],
+      "commits": [
+        "3a5b72a4b446"
+      ],
+      "tests": [
+        "lint, build 통과",
+        "실화면 카드 등록 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after)에서 axe, 콘솔 오류, 가로 넘침이 늘지 않음. 오류 알림은 토스 SDK 실패 때만 보여 캡처에는 없다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드 등록 오류 알림의 role 중첩"
     },
     {
       "id": "X-100",
@@ -10005,6 +10018,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 28 ℹ pass 28 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  60 passed (22.4s) "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts --grep-invert 'real Spring: operator without organization can manage the platform'",
+      "detail": "  2 passed (4.7s) rc=0, 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -10387,6 +10448,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
       "at": "2026-10-29T00:53:46+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "at": "2026-10-29T01:20:26+09:00"
     }
   ],
   "usage_log": [],
