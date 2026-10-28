@@ -1,0 +1,4 @@
+쓰이지 않는 선택자 삭제 전후 화소 비교(screens.mjs 19개 라우트, 1440x900과 390x844, 삭제 전 18be9f0 빌드와 삭제 뒤 빌드)
+같음 32장
+다름 6장: billing, events, usage의 desktop과 mobile, 다른 영역은 '계산 시각', '조회 시각' 글자뿐
+지운 선택자의 사용처: 층 head와 정점 b8abfdf의 frontend/src(globals.css 제외)에서 git grep 0건(console-content, tenant-identity, tenant-header-actions, tenant-user, tenant-header, workspace-grid-wide, setup-state)
