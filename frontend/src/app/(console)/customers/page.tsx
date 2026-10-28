@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { listCustomers } from "@/lib/api/customers";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { readListQuery } from "@/lib/list-query";
@@ -8,6 +9,8 @@ import { ListPagination } from "@/components/screen/ListPagination";
 import { ResourceSearchControls } from "@/components/screen/ResourceSearchControls";
 import { CsvDownload } from "@/components/screen/CsvDownload";
 import { readMonth } from "@/lib/month";
+
+export const metadata: Metadata = { title: "고객" };
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
