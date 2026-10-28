@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:33:43+09:00",
+  "updated_at": "2026-10-28T17:35:05+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "ff89f04",
+    "feat/account-permissions": "646a22e",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -2984,14 +2984,28 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "OrganizationPeopleService.invite는 같은 이메일의 대기 중 초대를 취소하지 않고 새 초대를 저장해 이전 링크도 48시간 유효하다. members/page.tsx 초대 링크 만들기 설명은 이를 알리지 않는다. 정점도 같다. 설명에 이전 링크가 유효하다는 안내와 취소 방법을 더했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:168-192 @ 72e8718",
+        "frontend/src/app/(console)/members/page.tsx:33 @ 72e8718",
+        "frontend/src/app/(console)/members/page.tsx:37 @ 0fe7d2a"
+      ],
+      "commits": [
+        "646a22e996a2"
+      ],
+      "tests": [
+        "보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 2ec5d85 15692f8",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "초대 재발급 시 이전 링크 유효 안내"
     },
     {
       "id": "X-104",
@@ -6243,6 +6257,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  25 passed (12.5s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.325s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6370,6 +6440,11 @@
       "branch": "feat/account-permissions",
       "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
       "at": "2026-10-28T17:32:39+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
+      "at": "2026-10-28T17:35:05+09:00"
     }
   ],
   "usage_log": [],
