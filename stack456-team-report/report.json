@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:48:00+09:00",
+  "updated_at": "2026-10-28T22:49:56+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb"
+    "fix/s456-444-t-inho": "815f525976818a852756ab05e69095dda47fd357"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4193,42 +4193,45 @@
         "G-142"
       ],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "층 head f3855f4의 backend/README.md에는 웹훅, 암호화 키, 운영 조회 내용이 하나도 없다. #444가 더한 webhook, dashboard, global.crypto 패키지가 구조 표(232-248행)에 없다. 설정 절(84-92행)은 DB 변수만 적고, 운영 기본값 없이 필수인 CRYPTO_ENCRYPTION_KEY를 빠뜨렸다(CryptoProperties 9행 @NotBlank, 기본값은 local 프로파일에만 있다). 재시도 간격 60/300/1800/7200/28800초와 모두 6회, 2분 임대, 종결 조건, meterengine.webhook.enabled, create_webhook_tables의 append-only 트리거는 README, openapi.yaml, 화면 어디에도 없다. documents.md 17-18행의 README 점검이 마이그레이션과 컨트롤러를 바꾸면 이 README를 보라고 정한다. 키 교체 위험은 deploy/README.md 401행이 웹훅 비밀값까지 적어 줄지만, WEBHOOK_ENABLED 별칭(#445 4ace811)과 토스 키, 빌링키가 든 CRYPTO 행(#453 23b1844)은 위층 것이라 이 층에서는 meterengine.webhook.enabled와 웹훅 비밀값만 적는다. 묶인 G-142(meterengine.webhook.enabled 범위가 README에 없다): WebhookDeliveryConfig 13-16행 @ f3855f4는 meterengine.webhook.enabled(값이 없으면 true)로만 켜진다. false면 발송 작업과 28-31행 register()가 사라지지만, 엔드포인트 API와 통보 적재 경로에는 조건이 없다. 이 층 README에는 이 플래그도 scheduling.enabled도 없어서 끄는 범위를 알 수 없다. 경보가 울리지 않는 것은 SchedulingConfig 8-9행의 scheduling.enabled로 끈 작업도 같아서 저장소에서 일관된 방식이다. WEBHOOK_ENABLED 별칭(#445 4ace811)과 미청구 통보까지 같이 꺼지는 것(#450)은 이 층에 없다. 남는 결함은 플래그 범위를 적지 않은 것뿐이고 G-152와 원인이 같아 같은 README 수정으로 끝난다.",
+      "reason": "층 head f3855f4의 backend/README.md에는 웹훅, 암호화 키, 운영 조회 내용이 하나도 없다. #444가 더한 webhook, dashboard, global.crypto 패키지가 구조 표(232-248행)에 없다. 설정 절(84-92행)은 DB 변수만 적고, 운영 기본값 없이 필수인 CRYPTO_ENCRYPTION_KEY를 빠뜨렸다(CryptoProperties 9행 @NotBlank, 기본값은 local 프로파일에만 있다). 재시도 간격 60/300/1800/7200/28800초와 모두 6회, 2분 임대, 종결 조건, meterengine.webhook.enabled, create_webhook_tables의 append-only 트리거는 README, openapi.yaml, 화면 어디에도 없다. documents.md 17-18행의 README 점검이 마이그레이션과 컨트롤러를 바꾸면 이 README를 보라고 정한다. 키 교체 위험은 deploy/README.md 401행이 웹훅 비밀값까지 적어 줄지만, WEBHOOK_ENABLED 별칭(#445 4ace811)과 토스 키, 빌링키가 든 CRYPTO 행(#453 23b1844)은 위층 것이라 이 층에서는 meterengine.webhook.enabled와 웹훅 비밀값만 적는다. backend README에 설정(CRYPTO_ENCRYPTION_KEY, meterengine.webhook.enabled 범위, allow-private-network), 구조 표(webhook, dashboard, global.crypto)와 의존 방향, 웹훅 절(등록 한도, 헤더와 User-Agent, 발송 주기, 재시도와 종결, 수동 재시도), create_webhook_tables 수정 금지 트리거를 적었다. 묶인 G-142(meterengine.webhook.enabled 범위)도 같은 커밋으로 끝났다.",
       "evidence": [
         "backend/README.md:232-248 @ f3855f4",
         "backend/README.md:250 @ f3855f4",
         "backend/README.md:84-92 @ f3855f4",
-        "backend/src/main/java/com/meterengine/global/crypto/CryptoProperties.java:9 @ 178e19e",
-        "backend/src/main/resources/application-local.properties:3 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:118,128 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:21-22 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:43 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-75 @ 178e19e",
-        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:57-68 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:13-16 @ 178e19e",
-        "docs/contributing/documents.md:17-18 @ 178e19e",
-        "deploy/README.md:401 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/crypto/CryptoProperties.java:9 @ f3855f4",
+        "backend/src/main/resources/application-local.properties:3 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:118,128 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:21-22 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:43 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-75 @ f3855f4",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:57-68 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:13-16 @ f3855f4",
+        "docs/contributing/documents.md:17-18 @ f3855f4",
+        "deploy/README.md:401 @ f3855f4",
         "backend/README.md:304 @ b8abfdf",
         "backend/README.md:311,314 @ b8abfdf",
         "커밋 23b1844",
         "커밋 4ace811",
-        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:28-31 @ 178e19e",
-        "backend/src/main/java/com/meterengine/scheduling/config/SchedulingConfig.java:8-9 @ 178e19e",
-        "backend/src/main/resources/application.properties:44 @ b8abfdf",
-        "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:15-18 @ b8abfdf",
-        "backend/README.md:311 @ b8abfdf"
+        "커밋 815f525976818a852756ab05e69095dda47fd357"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "815f525976818a852756ab05e69095dda47fd357"
+      ],
+      "tests": [
+        "문서 변경이라 시험으로 실패를 볼 수 없다. 적은 값을 WebhookDeliveryRepository.java 21-22, 43, 71-75행(재시도 간격, 6회, 2분 선점, 종결 조건), WebhookDeliveryService.java(100건, 15초), WebhookDeliveryConfig.java 13-16, 33행(enabled 조건, 30초), WebhookEndpointService(10개), CryptoProperties.java 9행과 EncryptedStringConverter.java 25-26행(32바이트 AES-GCM), V28 트리거와 대조했다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "same: 정점 backend/README.md에도 webhook 패키지 행은 있으나(#453 23b1844가 CRYPTO 행을 더함) 이 층 README에는 없었다. 같은 파일을 바꾼 위층 커밋이 여럿이다",
+      "propagation_note": "#445 4ace811이 WEBHOOK_ENABLED 별칭을, #453 23b1844가 CRYPTO_ENCRYPTION_KEY 설명(토스 키, 빌링키 포함)과 구조 표 행을 더한다. 반영 때 설정 절과 구조 표가 충돌하면 위층 문장을 기준으로 이 층의 웹훅 절, User-Agent, 수정 금지 트리거 문장을 합친다. #450부터는 meterengine.webhook.enabled=false가 미청구 통보 작업도 멈추는지 그 층 기준으로 맞춘다.",
+      "summary": "backend README에 웹훅 발송과 암호화 키, 운영 현황을 적는다"
     },
     {
       "id": "U14-B1",
@@ -7431,6 +7434,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.605s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "55 passed (25.1s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.0s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 14 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9683,6 +9746,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
       "at": "2026-10-28T22:45:26+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "815f525976818a852756ab05e69095dda47fd357",
+      "at": "2026-10-28T22:49:40+09:00"
     }
   ],
   "usage_log": [],
