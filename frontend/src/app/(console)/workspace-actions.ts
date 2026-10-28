@@ -7,7 +7,7 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
-import { InputFieldError, readWholeNumber, successMessage } from "@/app/(console)/workspace-action-feedback";
+import { InputFieldError, readWholeNumber, successMessage, unconfirmedMessage } from "@/app/(console)/workspace-action-feedback";
 
 export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
 
@@ -77,7 +77,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   });
   if (!result.ok) {
     if (isPaymentRequest && (result.error.status === 0 || result.error.code === "malformed_response" || result.error.code === "payment_result_unconfirmed" || result.error.code === "payment_cancellation_in_progress"))
-      return { isUnconfirmed: true, message: "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요." };
+      return { isUnconfirmed: true, message: unconfirmedMessage(operation) };
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");

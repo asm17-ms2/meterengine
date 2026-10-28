@@ -11,6 +11,14 @@ export function successMessage(operation: string): string {
   return SUCCESS_MESSAGES[operation] ?? "처리했습니다.";
 }
 
+const UNCONFIRMED_MESSAGES: Partial<Record<string, string>> = {
+  updateTossPaymentsCredential: "토스 키 저장 결과를 확인하지 못했습니다. 이 화면을 새로 조회해 토스페이먼츠 연동 목록의 저장 시각을 확인하고, 바뀌지 않았으면 다시 저장하세요.",
+};
+
+export function unconfirmedMessage(operation: string): string {
+  return UNCONFIRMED_MESSAGES[operation] ?? "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.";
+}
+
 export class InputFieldError extends Error {
   readonly field: string;
 
