@@ -259,6 +259,16 @@ test("a required choice group error reads without a broken particle", async ({ p
   await expect(dialog.getByText("을 하나 이상", { exact: false })).toHaveCount(0);
 });
 
+test("a one-time link that opens in a new tab says so", async ({ page }) => {
+  await login(page, "member@contract.local", "/members");
+  await expectTenantUrl(page, "/members");
+  await page.getByRole("button", { name: "초대 링크 만들기", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^초대할 이메일|^이메일/).fill("invitee@contract.local");
+  await dialog.getByRole("button", { name: "초대 링크 발급", exact: true }).click();
+  await expect(dialog.getByRole("link", { name: "초대 링크 열기", exact: true })).toHaveAccessibleDescription("새 탭에서 열립니다.");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

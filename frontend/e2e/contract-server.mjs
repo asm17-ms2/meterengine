@@ -80,6 +80,7 @@ const server = createServer(async (req, res) => {
       else result = { status: 200, body: { customers } };
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
+    else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };
     else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: [] } };
     else if (path === "/v1/api-keys" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), label: body.label, mode: body.mode, scopes: body.scopes, last_four: "0000", secret: "me_live_ContractSecretValue0000000000" } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
