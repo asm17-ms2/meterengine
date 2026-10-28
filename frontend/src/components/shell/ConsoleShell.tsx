@@ -12,7 +12,7 @@ import { NavMenu } from "@/components/shell/NavMenu";
 import { GuideModeToggle, useGuideMode } from "@/components/shell/GuideMode";
 import { workspaceHref } from "@/lib/workspace-href";
 import { TenantAccessProvider } from "@/components/auth/TenantAccess";
-import { hasScope, scopeSummary, type OrganizationRole } from "@/lib/auth/permissions";
+import { hasScope, ORGANIZATION_ROLE_LABELS, scopeSummary, type OrganizationRole } from "@/lib/auth/permissions";
 
 
 const WORKFLOW = [
@@ -62,7 +62,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
         <span className="workspace-divider" />
         <Link href="/organizations" className="organization-link" title={organizationLabel}>{organizationLabel}<DownOutlined aria-hidden="true" /></Link>
       </div>
-      <div className="workspace-user">{canManage && <GuideModeToggle />}{isOperator && <Link href="/admin/organizations">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}{organizationRole ? ` / ${organizationRole === "owner" ? "대표관리자" : organizationRole === "admin" ? "관리자" : "사용자"}` : ""}</span><span className="workspace-scope">{scopeLabel}</span><Button type="text" size="small" icon={<ReloadOutlined aria-hidden="true" />} loading={isRefreshing} onClick={() => startRefresh(() => router.refresh())} title="현재 도입사의 권한을 다시 조회합니다">권한 새로 조회</Button><LogoutButton /></div>
+      <div className="workspace-user">{canManage && <GuideModeToggle />}{isOperator && <Link href="/admin/organizations">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}{organizationRole ? ` / ${ORGANIZATION_ROLE_LABELS[organizationRole]}` : ""}</span><span className="workspace-scope">{scopeLabel}</span><Button type="text" size="small" icon={<ReloadOutlined aria-hidden="true" />} loading={isRefreshing} onClick={() => startRefresh(() => router.refresh())} title="현재 도입사의 권한을 다시 조회합니다">권한 새로 조회</Button><LogoutButton /></div>
     </header>
     <aside className="workspace-sidebar"><div className="workspace-sidebar-label">도입사 업무</div><NavMenu /><div className="workspace-sidebar-note">{canRead ? <Link href={workspaceHref("/integrations", search)}>서버 연동 설정</Link> : <Link href="/organizations">도입사 선택</Link>}<p>사람의 관리 권한과 API 키의 권한은 별도로 관리합니다.</p></div></aside>
     <main id="main-content" className="workspace-main">
