@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:33:51+09:00",
+  "updated_at": "2026-10-28T18:36:07+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "90d920f2b69153435f80b3c193ed01cd2a1c17cb"
+    "fix/s456-443-t-inho": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1273,15 +1273,37 @@
       "id": "X-078",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:43의 h1은 clamp(26px, 3vw, 34px)이고 52행의 .auth-intro h2는 clamp(28px, 3vw, 42px)라, 옆 패널이 보이는 900px 초과 폭(106행) 어디서든 패널 h2가 폼 h1보다 작지 않고 1133px부터는 더 크며 1440px에서는 42px 대 34px가 된다. AuthFrame.tsx:10이 aside 안의 h2를, 13행이 main의 과업 제목 h1을 그리므로 CSS와 마크업 줄만으로 위계가 뒤집힌 것이 정해진다. 위층은 globals.css와 AuthFrame.tsx를 한 번도 바꾸지 않았고, 이 줄을 들인 커밋 f671a4f의 의도도 일관된 정보 위계라 기록된 반대 결정이 없다. 지적의 카드 등록 부분(registration.module.css:8의 h2 최대 30px, 12행 h1 최대 28px)은 4ace811로 #445에서 처음 들어온 파일이라 이 층 담당이 아니며 propagation_note로만 넘긴다.",
+      "evidence": [
+        "frontend/src/app/globals.css:43 @ 0f1d1bf",
+        "frontend/src/app/globals.css:52 @ 0f1d1bf",
+        "frontend/src/app/globals.css:106 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 0f1d1bf",
+        "frontend/src/app/globals.css:43,52 @ 0fe7d2a",
+        "frontend/src/components/payment-registration/registration.module.css:8,12 @ 0fe7d2a",
+        "커밋 f671a4f5ec2298702835adc63a880c8eb38e3011",
+        "the login side panel title is smaller than the task title: 실패 Expected < 34 Received 42 (1440px 패널 h2)",
+        "커밋 b6d082242cd00afc4b4b0aa2b6705e50354ef2f7"
+      ],
+      "commits": [
+        "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the login side panel title is smaller than the task title'; evidence/X-078 before, after 캡처(1440, 1000)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf globals.css 51행과 AuthFrame.tsx가 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "카드 등록 화면 registration.module.css 8, 12행(#445 4ace811)의 context h2(최대 30px)도 panel h1(최대 28px)보다 커서, #445에서 h2를 h1보다 작게 맞춘다.",
+      "summary": "옆 패널 h2를 clamp(22px, 1.8vw, 26px)로 낮춰 과업 제목보다 작게 했다"
     },
     {
       "id": "G-080",
@@ -7186,6 +7208,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "37 passed (18.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "38 passed (18.0s)"
     }
   ],
   "pushes": [
@@ -7293,6 +7353,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
       "at": "2026-10-28T18:32:00+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "at": "2026-10-28T18:35:48+09:00"
     }
   ],
   "usage_log": [],
