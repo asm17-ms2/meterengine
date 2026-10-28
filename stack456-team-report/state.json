@@ -1,13 +1,13 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T01:12:27+09:00",
+  "updated_at": "2026-10-29T01:16:06+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
-    "id": "Nk1-003",
-    "step": "check",
+    "id": "X-045",
+    "step": "fix",
     "branch": "fix/s456-448-t-inho"
   },
   "finished_ids": [
@@ -188,6 +188,7 @@
     "D-214",
     "G-100",
     "Nk1-002",
+    "Nk1-003",
     "NT-inho-001",
     "NT-inho-002",
     "NT-inho-003",
@@ -222,7 +223,6 @@
     "D-205",
     "X-077",
     "X-102",
-    "Nk1-003",
     "X-045",
     "Ck3-450-01",
     "Ck3-450-02",
@@ -410,11 +410,9 @@
       ]
     },
     "fix/s456-448-t-inho": {
-      "origin_sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "origin_sha": "c2991efa4b67cab50ff8558254237490512d7077",
       "local_sha": "c2991efa4b67cab50ff8558254237490512d7077",
-      "unpushed": [
-        "c2991efa4b67cab50ff8558254237490512d7077"
-      ]
+      "unpushed": []
     }
   },
   "usage": {

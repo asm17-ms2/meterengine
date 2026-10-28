@@ -1,8 +1,8 @@
-미완료 195건, 결과: 끝 상태 177/372건 (fixed 125, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 7번(마지막 df3caf7)
+미완료 194건, 결과: 끝 상태 178/372건 (fixed 126, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 8번(마지막 c2991ef)
 정할 것: 39건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T01:12:27+09:00
+상태: running, 갱신 2026-10-29T01:16:06+09:00
 
 ## 층별 상태
 
@@ -11,7 +11,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
 | #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
-| #448 | feat/request-audit | 24 | 15 | 1 | 1 | 5 | 0 | 2 |
+| #448 | feat/request-audit | 24 | 16 | 1 | 1 | 5 | 0 | 1 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -137,6 +137,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | GA-B1 | #448 | b0bf0b1 | 요청 감사가 퍼센트 인코딩한 경로도 디코딩해 /v1 요청으로 본다 | 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다: 실패 Wanted but not invoked |
 | X-007 | #448 | 6d30dca | 감사 기록 화면에 빠진 행동 이름 15개를 더하고 남기지 않는 행동은 조건에서 뺀다 | every audit action the backend records has a label on the audit screen: 실패 SyntaxError: does not provide an export named 'AUDIT_ACTIONS' (실화면 요약 줄에 payment_sett |
 | Nk1-002 | #448 | df3caf7 | v1 경로 변수가 요청 감사 대상인지 대상에서 뺀 이름인지 시험으로 강제한다 | 없음(이 층 라우트 변수(code, delivery_id, id, mode, organization_id, token)는 모두 분류돼 있어 고치기 전에 실패하는 시험을 만들 수 없다. 새 RequestAuditTarget) |
+| Nk1-003 | #448 | c2991ef | 요청 감사가 감사 행을 AuditLogService로 남기고 익명 행위자를 AuditActor에서 만든다 | 없음(동작이 같은 리팩터링이라 고치기 전에 실패하는 시험을 쓸 수 없다. ./gradlew test --tests 'com.meterengine.audit.*' --tests 'com.meterengine.global.s) |
 
 ## 정할 것
 
@@ -267,6 +268,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - GA-B1 (#448): #450부터 RequestAuditFilter가 REQUEST_ID_ATTRIBUTE를 넣는다. 반영 때 shouldNotFilter의 isApiRequest와 JsonRequestRejectedHandler의 RequestAuditFilter.isApiRequest 호출을 남긴다. isIngestion은 그대로다.
 - X-007 (#448): #453 23b1844가 AuditScreen.tsx import 줄을 바꿨다. 반영 때 @/lib/audit에서 AUDIT_ACTIONS, AUDIT_ACTION_OPTIONS, AUDIT_ACTOR_TYPES, auditActorLabel을 가져오는 줄을 남기고 AuditScreen 안의 ACTIONS 블록은 지운 쪽을 택한다. 새 시험은 #449부터 정점까지의 백엔드 행동도 모두 통과한다.
 - Nk1-002 (#448): #449 반영 때 이 가드 시험이 {view_link_id}로 실패한다. #449에서 RequestAuditFilter.UUID_VARIABLES의 id 앞에 view_link_id를 더해야 폐기 요청 행의 target_id가 링크 id가 되고 시험이 통과한다.
+- Nk1-003 (#448): #453 반영 때 RequestAuditService는 AuditLogService.record를 부르는 모양을 남기고, 요청 감사의 environment_id를 principal에서 넘길 수 있게 AuditLogService에 environmentId를 받는 record 오버로드를 더하거나 BusinessEnvironmentContext와 principal 값이 같은지 그 층에서 맞춘다.
 
 ## fixed-above로 둔 것
 

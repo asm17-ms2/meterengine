@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T01:12:27+09:00",
+  "updated_at": "2026-10-29T01:16:06+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -25,7 +25,7 @@
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
     "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
-    "fix/s456-448-t-inho": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6"
+    "fix/s456-448-t-inho": "c2991efa4b67cab50ff8558254237490512d7077"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -5929,15 +5929,38 @@
       "id": "Nk1-003",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head 6431cefb에서 RequestAuditService.java 46-56행은 AuditLogService.java 49-59행과 같은 AuditLog 생성(새 UUID, OffsetDateTime.now(), 행위자 세 값, JSON 직렬화)을 다시 쓴다. AuditLogService.record(AuditActor, ...)는 같은 패키지의 public 메서드이고 트랜잭션 표시가 없어 REQUIRES_NEW 안에서 불러도 같은 행이 나온다. 37행은 AuditActor 팩토리(system, from, userAccount) 밖에서 new AuditActor(\"anonymous\", null, null)를 만든다. 정점 b5506b6에서는 #453 커밋 23b1844e가 두 기록기에 environment_id를 따로 더해 실제로 갈라졌다(요청 감사는 principal.environmentId(), AuditLogService는 BusinessEnvironmentContext). bc7e538 뒤 이 층에서 audit 패키지를 바꾼 커밋은 없다. 다만 원문의 실패 경로 중 필터가 다시 던져 500이 된다는 부분은 이 층 head에서 틀리다(RequestAuditFilter 79-82행이 잡아 지표와 로그만 남긴다). 고칠 파일은 RequestAuditService와 AuditActor 둘이라 유지보수 수정 범위 안이다. AuditActor.anonymous()를 두고 RequestAuditService가 AuditLogService.record로 행을 남긴다(파일 둘). REQUIRES_NEW와 필터 실패 처리는 그대로다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:46-56 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogService.java:43-60 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:37 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditActor.java:8-20 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:44-45,59 @ b5506b61",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogService.java:61 @ b5506b61",
+        "커밋 23b1844e",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:203,244 @ b5506b61",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:79-82 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:218-219 @ 6431cefb",
+        "커밋 c2991efa4b67cab50ff8558254237490512d7077"
+      ],
+      "commits": [
+        "c2991efa4b67cab50ff8558254237490512d7077"
+      ],
+      "tests": [
+        "동작이 같은 리팩터링이라 고치기 전에 실패하는 시험을 쓸 수 없다. ./gradlew test --tests 'com.meterengine.audit.*' --tests 'com.meterengine.global.security.*'가 고친 뒤에도 그대로 통과(익명과 주체 있는 요청 감사 행 단정 포함)하고 전체 ./gradlew build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": false,
+      "top_head": "changed: 정점에서도 중복이 남았고 #453 23b1844가 두 기록기에 environment_id를 따로 더했다(요청 감사는 principal.environmentId(), AuditLogService는 BusinessEnvironmentContext)",
+      "propagation_note": "#453 반영 때 RequestAuditService는 AuditLogService.record를 부르는 모양을 남기고, 요청 감사의 environment_id를 principal에서 넘길 수 있게 AuditLogService에 environmentId를 받는 record 오버로드를 더하거나 BusinessEnvironmentContext와 principal 값이 같은지 그 층에서 맞춘다.",
+      "summary": "요청 감사가 감사 행을 AuditLogService로 남기고 익명 행위자를 AuditActor에서 만든다"
     },
     {
       "id": "X-045",
@@ -8204,6 +8227,51 @@
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (28.9s)"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (9.0s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
@@ -11448,6 +11516,11 @@
       "branch": "fix/s456-448-t-inho",
       "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
       "at": "2026-10-29T01:10:12+09:00"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "c2991efa4b67cab50ff8558254237490512d7077",
+      "at": "2026-10-29T01:15:51+09:00"
     }
   ],
   "usage_log": [],
