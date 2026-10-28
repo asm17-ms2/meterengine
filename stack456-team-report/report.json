@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:31:23+09:00",
+  "updated_at": "2026-10-28T17:32:37+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+    "fix/s456-443-t-inho": "fabaca16ab332c4fce0526f87615b56198f9bab6"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -767,15 +767,37 @@
       "id": "X-048",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head에서 html의 scroll-padding-top은 88px(모바일 128px)인데, sticky 표 머리글은 top 68px(모바일 112px)에 붙고 antd medium 크기라 높이가 약 47px이다. Shift+Tab으로 화면 위쪽 요소에 포커스가 가면 브라우저가 그 요소의 위 끝을 88px에 맞추고, 그 자리는 표 머리글 띠(68px부터 약 115px) 안이다. 높이 17에서 19px인 펼치기 버튼(ExpandIcon)은 통째로 가려져 WCAG 2.4.11(AA) 위반이 되고, 이벤트 표의 행 링크(Typography.Link)도 일부 가려진다. 표 본문의 포커스 요소에 scroll-margin-top을 주는 규칙은 층 head와 정점 어디에도 없고(scroll-margin은 .form-feedback과 소개 화면 섹션에만 있다), 이를 확인하는 시험도 없다. globals.css는 0f1d1bf 뒤로 이 층에서도 위층에서도 바뀌지 않았다. 문제의 줄은 #443 커밋 f671a4f가 들였다(#442에는 sticky 표만 있고 이 scroll-padding 줄은 없다).",
+      "evidence": [
+        "frontend/src/app/globals.css:163 @ 0f1d1bf",
+        "frontend/src/app/globals.css:287-289 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/invoices/InvoicesTable.tsx:215-219 @ 0f1d1bf",
+        "frontend/src/components/table/ExpandIcon.tsx:26-30 @ 0f1d1bf",
+        "frontend/src/components/billing/BillingTable.tsx:258-262 @ 0f1d1bf",
+        "frontend/src/components/events/EventsTable.tsx:57-59 @ 0f1d1bf",
+        "frontend/src/app/globals.css:163 @ 0fe7d2a",
+        "frontend/src/app/globals.css:287-289 @ 0fe7d2a",
+        "커밋 fabaca16ab332c4fce0526f87615b56198f9bab6"
+      ],
+      "commits": [
+        "fabaca16ab332c4fce0526f87615b56198f9bab6"
+      ],
+      "tests": [
+        "커밋하지 않은 측정 스크립트 .s456-work/verify-x048.mjs: 1280x420 /customers에서 끝 행부터 Shift+Tab, 포커스 요소 위 끝 - 고정 머리글 아래 끝. 고치기 전 -27px(가려짐), 고친 뒤 +12px. 결과는 evidence/X-048/measure.txt"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (globals.css 287-288행 sticky holder 규칙이 정점 b8abfdf에서도 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "표 본문 링크와 버튼에 scroll-margin-top 56px를 주어 역방향 Tab 때 고정 머리글 아래로 내려오게 했다"
     },
     {
       "id": "D-191",
@@ -5946,6 +5968,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "24 passed (12.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.5s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "24 passed (12.9s)"
     }
   ],
   "pushes": [
@@ -5988,6 +6047,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
       "at": "2026-10-28T17:30:05+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "at": "2026-10-28T17:32:23+09:00"
     }
   ],
   "usage_log": [],
