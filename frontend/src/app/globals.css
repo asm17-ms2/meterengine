@@ -114,7 +114,7 @@ p { line-height: 1.7; }
   .tenant-header-actions a[href="/admin"] { display: inline; }
 }
 :root { --ink: #202b40; --muted: #5a6578; --line: #dce1eb; --blue: #5746ad; --paper: #fff; --canvas: #f3f5f9; }
-.workspace-shell { display: grid; grid-template-columns: 228px minmax(0, 1fr); grid-template-rows: 68px 1fr; min-height: 100dvh; }
+.workspace-shell { display: grid; grid-template-columns: 228px minmax(0, 1fr); grid-template-rows: var(--workspace-header-height) 1fr; min-height: 100dvh; }
 .workspace-header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; background: #fff; border-bottom: 1px solid #dce1eb; position: sticky; top: 0; z-index: 30; }
 .workspace-brand, .workspace-user { display: flex; align-items: center; gap: 24px; min-width: 0; }
 .workspace-brand .wordmark { display: flex; gap: 10px; align-items: center; font-size: 21px; letter-spacing: -.055em; }
@@ -159,7 +159,7 @@ a { color: #51409c; }
 @media(max-width: 767px) { .workspace-header .mobile-menu { display: inline-flex; } }
 
 :root { --control-border: #7c8799; --muted: #5a6578; --focus: #5746ad; }
-html { scroll-padding-top: 88px; }
+html { scroll-padding-top: calc(var(--workspace-header-height) + 20px); }
 ::selection { background: #ded8f6; color: #202b40; }
 input, textarea { caret-color: var(--blue); }
 .workspace-content { gap: 28px; }
@@ -285,7 +285,7 @@ input, textarea { caret-color: var(--blue); }
 @media(max-width: 600px) { .event-filter-fields > .event-filter-grid, .event-filter-grid, .event-range-grid { grid-template-columns: 1fr; }.event-search { grid-column: auto; }.event-period-toolbar { gap: 12px; }.event-period-choice, .event-period-shortcuts { flex: 1 1 100%; }.event-period-choice label, .event-period-shortcuts .ant-btn { flex: 1; justify-content: center; }.event-range-grid > label:first-child { max-width: none; } }
 :root { --workspace-header-height: 68px; }
 .ant-table-sticky-holder { top: var(--workspace-header-height) !important; }
-@media(max-width:767px) { :root { --workspace-header-height: 112px; }html { scroll-padding-top: 128px; } }
+@media(max-width:767px) { :root { --workspace-header-height: 112px; } }
 .archive-filter { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 7px; background: #f6f7fb; align-self: flex-start; }
 .archive-filter a { padding: 7px 14px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px; }
 .archive-filter a[aria-current=page] { background: white; color: #48339a; box-shadow: 0 1px 3px #202b401a; font-weight: 650; }

@@ -4,7 +4,7 @@ import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search"
 
 import { Button, Drawer } from "antd";
 import { DownOutlined, MenuOutlined } from "@ant-design/icons";
-import { Suspense, useLayoutEffect, useState } from "react";
+import { Suspense, useLayoutEffect, useRef, useState } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { LogoutButton } from "@/components/auth/SessionControls";
@@ -25,6 +25,7 @@ type Props = { organizationId: string; organizationLabel: string; userLabel: str
 function ShellContent({ organizationId, organizationLabel, userLabel, isOperator, organizationRole, scopes, children }: Props) {
   const router = useRouter();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const search = useWorkspaceSearch().toString();
   useLayoutEffect(() => {
@@ -34,11 +35,19 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
     current.searchParams.delete("_rsc");
     window.history.replaceState(null, "", current.pathname + current.search + current.hash);
   }, [organizationId, pathname, search]);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--workspace-header-height", `${Math.round(header.getBoundingClientRect().height)}px`));
+    observer.observe(header);
+    return () => { observer.disconnect(); root.style.removeProperty("--workspace-header-height"); };
+  }, []);
   const { isGuideMode } = useGuideMode();
   const canRead = hasScope(scopes, "read");
   const canManage = hasScope(scopes, "admin");
   return <div className="workspace-shell">
-    <header className="workspace-header">
+    <header ref={headerRef} className="workspace-header">
       <div className="workspace-brand">
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="업무 메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />
         <Link href={workspaceHref("/customers", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>

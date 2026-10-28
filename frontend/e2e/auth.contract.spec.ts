@@ -298,3 +298,16 @@ test("the root error page shows the error digest so a report can be matched with
   await expect(main.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
   await expect(main).toContainText(/\([0-9A-Za-z]+\)/);
 });
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }]) {
+  test(`the header height variable matches the real header at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await login(page);
+    await expectTenantUrl(page, "/customers");
+    await expect.poll(() => page.evaluate(() => {
+      const header = document.querySelector(".workspace-header")!.getBoundingClientRect().height;
+      const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
+      return Math.abs(header - variable) <= 1;
+    })).toBe(true);
+  });
+}
