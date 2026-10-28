@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:29:07+09:00",
+  "updated_at": "2026-10-28T17:30:23+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "d26d695",
+    "feat/account-permissions": "1dcdc54",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -748,14 +748,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ActionPanel.tsx 122행의 발급 링크는 target=_blank로 새 탭에서 열리지만 링크 문구나 설명에 이를 알리는 내용이 없다. 정점도 같다. 새 탭 안내를 두고 aria-describedby로 이었다.",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:122 @ 72e8718",
+        "frontend/src/components/workspace/ActionPanel.tsx:126 @ 0fe7d2a",
+        "a one-time link that opens in a new tab says so: 실패 Expected \"새 탭에서 열립니다.\", Received \"\""
+      ],
+      "commits": [
+        "1dcdc540f532"
+      ],
+      "tests": [
+        "auth.contract.spec.ts a one-time link that opens in a new tab says so: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 25건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "새 탭 링크 안내",
+      "propagation_note": "정점 명세 people.real.spec.ts와 mvp.real.spec.ts는 링크를 getByRole('link', { name, exact: true })로 찾아 이름이 그대로라 영향이 없다."
     },
     {
       "id": "X-066",
@@ -6087,6 +6103,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  25 passed (13.3s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.0s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.306s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6204,6 +6276,11 @@
       "branch": "feat/account-permissions",
       "sha": "d26d69553a065ea51ecb0e63c943a1e9597a4974",
       "at": "2026-10-28T17:27:11+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
+      "at": "2026-10-28T17:30:23+09:00"
     }
   ],
   "usage_log": [],
