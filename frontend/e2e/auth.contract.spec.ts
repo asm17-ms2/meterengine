@@ -226,6 +226,21 @@ test("the operator user list sends the active organizations once instead of once
   expect(perUserReferences).toBeLessThan(100);
 });
 
+test("the operator's own card keeps both actions on the same top edge when only one shows a disabled reason", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/users");
+  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
+  const attach = card.getByRole("button", { name: "도입사 소속 연결", exact: true });
+  const remove = card.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
+  await expect(attach).toBeEnabled();
+  await expect(remove).toBeDisabled();
+  const attachBox = (await attach.boundingBox())!;
+  const removeBox = (await remove.boundingBox())!;
+  expect(Math.abs(attachBox.y - removeBox.y)).toBeLessThanOrEqual(0.5);
+});
+
 test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
   await page.context().addCookies([{ name: "me_session", value: "stale-session", url: "http://localhost:33148" }]);
   await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
