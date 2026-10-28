@@ -187,6 +187,31 @@ class PaymentAttemptRepositoryTest {
         .doesNotContain(excludedAttempt, removedWithoutCardAttempt, oldNotFoundAttempt);
   }
 
+  @Test
+  void findRetryCandidates는_활성이_아닌_도입사의_실패를_돌려주지_않는다() {
+    Fixture active = insertFixture();
+    UUID activeAttempt = insertFailedAttempt(active, "REJECT_CARD_COMPANY");
+    Fixture suspended = insertFixture();
+    UUID suspendedAttempt = insertFailedAttempt(suspended, "REJECT_CARD_COMPANY");
+    jdbcTemplate.update(
+        "UPDATE organization SET status = 'suspended' WHERE id = ?", suspended.organizationId());
+
+    List<UUID> candidateIds =
+        paymentAttemptRepository
+            .findRetryCandidates(
+                OffsetDateTime.now(),
+                Integer.MAX_VALUE,
+                Set.of("INVALID_CARD_EXPIRATION"),
+                "ALREADY_REMOVED_BILLING_KEY",
+                "NOT_FOUND_PAYMENT",
+                OffsetDateTime.now().minusDays(7))
+            .stream()
+            .map(PaymentRetryCandidateProjection::getId)
+            .toList();
+
+    assertThat(candidateIds).contains(activeAttempt).doesNotContain(suspendedAttempt);
+  }
+
   private UUID insertFailedAttempt(Fixture fixture, String failureCode) {
     return insertFailedAttempt(fixture, failureCode, LONG_AGO);
   }

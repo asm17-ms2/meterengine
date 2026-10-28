@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
@@ -140,6 +141,27 @@ class TossPaymentsCredentialIntegrationTest {
                 .formatted(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL.getMessage()));
     assertThat(result).bodyText().doesNotContain(liveSecretKey).doesNotContain(TEST_CLIENT_KEY);
     verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void 시크릿_키에_콜론이나_공백이나_ASCII_밖_문자가_있으면_400이고_토스를_부르지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    for (String secretKey : List.of("test_sk_zXLk:KEyp", "test_sk_zXLk KEyp", "test_sk_zXLk가나")) {
+      assertThat(updateCredential(organizationId, "test", TEST_CLIENT_KEY, secretKey))
+          .hasStatus(400)
+          .bodyJson()
+          .isStrictlyEqualTo(
+              """
+              {
+                "code": "invalid_toss_payments_credential", "message": "%s",
+                "errors": [{"field": "secret_key", "message": "시크릿 키에는 콜론, 공백, ASCII 밖 문자를 쓸 수 없습니다"}]
+              }
+              """
+                  .formatted(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL.getMessage()));
+    }
+    verifyNoInteractions(tossPaymentsClient);
+    assertThat(countCredentials(organizationId)).isZero();
   }
 
   @Test
@@ -299,6 +321,38 @@ class TossPaymentsCredentialIntegrationTest {
   }
 
   @Test
+  void admin_API_키로는_키와_같은_모드의_키도_저장할_수_없고_403이며_토스를_부르지_않고_저장된_키는_그대로다() {
+    UUID organizationId = insertOrganization();
+    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+    assertThat(updateCredential(organizationId, "test", TEST_CLIENT_KEY, TEST_SECRET_KEY))
+        .hasStatus(200);
+    assertThat(
+            updateCredential(
+                organizationId, "live", "live_ck_live0000", "live_sk_live00000000LIVE"))
+        .hasStatus(200);
+    Map<String, Map<String, Object>> saved =
+        Map.of(
+            "test", credentialRow(organizationId, "test"),
+            "live", credentialRow(organizationId, "live"));
+
+    for (String keyMode : List.of("test", "live")) {
+      assertError(
+          updateCredential(
+              apiKey(organizationId, keyMode),
+              keyMode,
+              keyMode + "_ck_other0000",
+              keyMode + "_sk_other0000OTHR"),
+          403,
+          ErrorCode.PERMISSION_DENIED);
+      assertThat(credentialRow(organizationId, keyMode)).isEqualTo(saved.get(keyMode));
+    }
+
+    verify(tossPaymentsClient).findPaymentByOrderId(eq(TEST_SECRET_KEY), any());
+    verify(tossPaymentsClient).findPaymentByOrderId(eq("live_sk_live00000000LIVE"), any());
+    verifyNoMoreInteractions(tossPaymentsClient);
+  }
+
+  @Test
   void 모드_경로가_test나_live가_아니면_400_validation_error이고_토스를_부르지_않는다() {
     UUID organizationId = insertOrganization();
 
@@ -371,7 +425,18 @@ class TossPaymentsCredentialIntegrationTest {
 
   private MvcTestResult updateCredential(
       UUID organizationId, String mode, String clientKey, String secretKey) {
-    return withOrganization(mvc.put().uri("/v1/toss-payments-credentials/" + mode), organizationId)
+    return updateCredential(
+        TestCredentials.issueMemberSession(jdbcTemplate, organizationId),
+        mode,
+        clientKey,
+        secretKey);
+  }
+
+  private MvcTestResult updateCredential(
+      String authorization, String mode, String clientKey, String secretKey) {
+    return mvc.put()
+        .uri("/v1/toss-payments-credentials/" + mode)
+        .header("Authorization", authorization)
         .contentType(MediaType.APPLICATION_JSON)
         .content(
             """
@@ -379,6 +444,10 @@ class TossPaymentsCredentialIntegrationTest {
             """
                 .formatted(clientKey, secretKey))
         .exchange();
+  }
+
+  private String apiKey(UUID organizationId, String mode) {
+    return TestCredentials.issueApiKey(jdbcTemplate, organizationId, mode);
   }
 
   private MvcTestResult listCredentials(UUID organizationId) {

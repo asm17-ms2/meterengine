@@ -40,7 +40,11 @@ public class PaymentSettingService {
   }
 
   @Transactional
-  public PaymentSettingResponse update(UUID organizationId, String mode) {
+  public PaymentSettingResponse update(UUID organizationId, String mode, String principalMode) {
+    if (principalMode != null
+        && (!principalMode.equals(mode) || !principalMode.equals(findMode(organizationId)))) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
     if (PaymentSetting.LIVE.equals(mode)
         && tossPaymentsCredentialRepository
             .findById(new TossPaymentsCredentialId(organizationId, PaymentSetting.LIVE))
