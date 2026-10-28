@@ -349,6 +349,21 @@ test("an out-of-range rate limit is reported on that field", async ({ page }) =>
   await expect(dialog.getByText("JSON", { exact: false })).toHaveCount(0);
 });
 
+test("signup with a blank name asks for that name instead of a length limit", async ({ page, request }) => {
+  await page.goto("/signup");
+  await page.getByLabel("도입사 이름", { exact: true }).fill("   ");
+  await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
+  await page.getByLabel("이메일", { exact: true }).fill("blank@contract.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("checkbox").nth(0).check();
+  await page.getByRole("checkbox").nth(1).check();
+  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await expect(page.getByText("도입사 이름을 입력하세요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("255자 이내", { exact: false })).toHaveCount(0);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string }) => call.path === "/v1/signups")).toBe(false);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
