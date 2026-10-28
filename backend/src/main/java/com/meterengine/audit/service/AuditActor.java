@@ -11,12 +11,18 @@ public record AuditActor(String type, UUID id, UUID organizationId) {
 
   private static final String SYSTEM_TYPE = "system";
 
+  private static final String ANONYMOUS_TYPE = "anonymous";
+
   public static AuditActor system() {
     return system(null);
   }
 
   public static AuditActor system(UUID organizationId) {
     return new AuditActor(SYSTEM_TYPE, null, organizationId);
+  }
+
+  public static AuditActor anonymous() {
+    return new AuditActor(ANONYMOUS_TYPE, null, null);
   }
 
   public static AuditActor from(AuthenticatedPrincipal principal) {
