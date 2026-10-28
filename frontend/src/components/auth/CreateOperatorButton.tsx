@@ -72,7 +72,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
           return <div className="workspace-field" key={field.name}>
             <label htmlFor={id}>{field.label}<span className="required-label"> (필수)</span></label>
             <input id={id} name={field.name} type={field.type} autoComplete={field.autoComplete} maxLength={field.maxLength} minLength={field.name === "password" ? 8 : undefined} required aria-invalid={Boolean(error)} aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined} spellCheck={field.name === "email" ? false : undefined} />
-            {hintId && <small className="field-hint" id={hintId}>8자 이상, UTF-8 기준 72바이트 이하.</small>}
+            {hintId && <small className="field-hint" id={hintId}>8자 이상 72자 이하. 한글은 1자를 3자로 계산합니다.</small>}
             {error && <small className="field-error" id={errorId}>{error}</small>}
           </div>;
         })}
