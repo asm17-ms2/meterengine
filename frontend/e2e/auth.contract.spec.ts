@@ -161,6 +161,18 @@ test("the sidebar lists the meter screen and marks it as the current place", asy
   await expect(nav.locator(".ant-menu-item-selected")).toHaveText("미터");
 });
 
+test("each screen has its own document title", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page).toHaveTitle("로그인 | MeterEngine");
+  await page.goto("/signup");
+  await expect(page).toHaveTitle("도입사 가입 신청 | MeterEngine");
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page).toHaveTitle("고객 | MeterEngine");
+  await page.getByRole("navigation", { name: "도입사 업무" }).getByRole("link", { name: "미터", exact: true }).click();
+  await expect(page).toHaveTitle("미터 | MeterEngine");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

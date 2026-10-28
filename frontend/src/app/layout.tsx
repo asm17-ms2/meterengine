@@ -5,7 +5,7 @@ import { AppProviders } from "@/components/shell/AppProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MeterEngine 관리자 콘솔",
+  title: { default: "MeterEngine 관리자 콘솔", template: "%s | MeterEngine" },
   description: "사용량 이벤트와 고객별 집계를 확인하는 도입사 운영자 화면",
 };
 

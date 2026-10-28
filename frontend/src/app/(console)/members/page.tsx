@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable, type WorkspaceRowActions } from "@/components/workspace/WorkspaceView";
@@ -5,6 +6,8 @@ import { listOrganizationInvitations, listOrganizationMembers } from "@/lib/api/
 import { requireTenantSession } from "@/lib/auth/session";
 import { hasScope } from "@/lib/auth/permissions";
 import { scopeField } from "@/lib/auth/scope-fields";
+
+export const metadata: Metadata = { title: "사용자 관리" };
 
 export default async function MembersPage() {
   const session = await requireTenantSession();
