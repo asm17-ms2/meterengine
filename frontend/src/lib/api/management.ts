@@ -1,20 +1,21 @@
 import "server-only";
 
 import { workspaceFetch } from "@/lib/api/workspace";
+import type { OrganizationRole } from "@/lib/auth/permissions";
 import type { ArchiveStatus } from "@/lib/list-query";
 
-export type OrganizationMember = {
+export type ManagedMemberResponse = {
   user_account_id: string;
   email: string;
   name: string;
-  organization_role: "owner" | "admin" | "member";
+  organization_role: OrganizationRole;
   scopes: string[];
   status: "active" | "archived";
   created_at: string;
   revoked_at: string | null;
 };
 
-export type OrganizationInvitation = {
+export type OrganizationInvitationResponse = {
   scopes: string[];
   id: string;
   email: string;
@@ -40,9 +41,9 @@ export type AuditLog = {
 export type AuditLogsResponse = { audit_logs: AuditLog[]; total: number; page: number; size: number };
 
 export function listOrganizationMembers(status: ArchiveStatus = "all") {
-  return workspaceFetch<{ members: OrganizationMember[] }>("/v1/organization/members", { status });
+  return workspaceFetch<{ members: ManagedMemberResponse[] }>("/v1/organization/members", { status });
 }
 
 export function listOrganizationInvitations() {
-  return workspaceFetch<{ invitations: OrganizationInvitation[] }>("/v1/organization/invitations");
+  return workspaceFetch<{ invitations: OrganizationInvitationResponse[] }>("/v1/organization/invitations");
 }
