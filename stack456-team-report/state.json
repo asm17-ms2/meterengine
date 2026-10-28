@@ -1,13 +1,13 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-28T16:38:45+09:00",
+  "updated_at": "2026-10-28T16:39:28+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "D-012",
-    "step": "check",
+    "step": "report",
     "branch": "feat/account-permissions"
   },
   "finished_ids": [
@@ -22,10 +22,12 @@
     "C442-016",
     "C442-017",
     "D-003",
+    "D-012",
     "D-026",
     "D-031",
     "D-049",
     "D-066",
+    "D-090",
     "D-091",
     "D-127",
     "D-128",
@@ -60,6 +62,7 @@
     "X-004",
     "X-008",
     "X-015",
+    "X-016",
     "X-019",
     "X-025",
     "X-046",
@@ -129,7 +132,6 @@
     "C442-010",
     "C442-018",
     "D-006",
-    "D-012",
     "D-017",
     "D-029",
     "D-043",
@@ -137,7 +139,6 @@
     "D-059",
     "D-078",
     "D-086",
-    "D-090",
     "D-184",
     "D-227",
     "D-256",
@@ -151,7 +152,6 @@
     "G-068",
     "G-096",
     "G-160",
-    "X-016",
     "X-020",
     "X-021",
     "X-072",
@@ -345,7 +345,7 @@
   "since_report_push": 0,
   "branches": {
     "feat/account-permissions": {
-      "origin_sha": "212b604",
+      "origin_sha": "db2d22d",
       "local_sha": "db2d22d",
       "unpushed": []
     },
