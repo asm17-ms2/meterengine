@@ -47,6 +47,6 @@ USER node
 
 EXPOSE 3000
 
-# METERENGINE_API_BASE_URL, METERENGINE_API_KEY, METERENGINE_ORGANIZATION_ID, METERENGINE_ORGANIZATION_NAME은 이미지에 굽지 않고 런타임 환경변수로 받는다.
+# METERENGINE_API_BASE_URL은 이미지에 굽지 않고 런타임 환경변수로 받는다.
 # 주지 않으면 src/lib/config.ts의 로컬 개발용 기본값으로 떨어진다.
 CMD ["node", "server.js"]
