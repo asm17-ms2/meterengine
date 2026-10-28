@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:37:47+09:00",
+  "updated_at": "2026-10-28T17:39:11+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+    "fix/s456-443-t-inho": "47e14c8e665218da0718e4d0c6ad707e335afcce"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1590,15 +1590,37 @@
       "id": "G-077",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head의 헤더는 ConsoleShell.tsx 48행에서 역할을 인라인 삼항식으로 바꿔 member를 '사용자'로 쓰고, 사용자 관리 표는 members/page.tsx 36행의 organization_role 열(isStatus)이 WorkspaceView.tsx 19행 STATUS_LABELS를 거쳐 member를 '일반 사용자'로 보여, 같은 역할을 두 곳이 다르게 부른다. 같은 48행에 '전용' 조건식이 aria-label과 보이는 글자에 두 번 복사돼 있어 한쪽만 고치면 접근성 이름과 글자가 갈라진다. 헤더 라벨은 #443 커밋 f671a4f가 넣은 것이라 이 층 몫이고, 이를 막는 공용 라벨 정의나 기록된 결정은 찾지 못했다. 정점 0fe7d2a에서도 ConsoleShell.tsx 53행과 WorkspaceView.tsx 19행이 같다. 다만 원문 제안처럼 '전용'을 scopeSummary 안으로 옮기면 초대 화면의 '참여 권한' 문구까지 바뀌므로, '전용'은 셸 안의 변수 하나로 모으는 편이 맞다. '전용' 조건식 중복은 38f991c에서 scopeLabel 하나로 모였다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:19,32 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:36 @ 0f1d1bf",
+        "frontend/src/lib/auth/permissions.ts:2,41-45 @ 0f1d1bf",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:27 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "frontend/src/components/workspace/WorkspaceView.tsx:19 @ 0fe7d2a",
+        "organization roles have one label definition that matches the member list: 실패 actual undefined, expected { owner: '대표관리자', admin: '관리자', member: '일반 사용자' }",
+        "커밋 47e14c8e665218da0718e4d0c6ad707e335afcce"
+      ],
+      "commits": [
+        "47e14c8e665218da0718e4d0c6ad707e335afcce"
+      ],
+      "tests": [
+        "e2e/permissions.test.mjs 'organization roles have one label definition that matches the member list'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행 삼항식과 WorkspaceView.tsx STATUS_LABELS가 그대로다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "WorkspaceView.tsx STATUS_LABELS의 owner, admin, member는 셋째 파일이라 그대로 두었고 값은 같다. 이 정의로 바꿀지는 후속에서 정한다. '전용' 접미는 셸 안 scopeLabel 한 곳에서 만든다(38f991c).",
+      "summary": "역할 라벨 정본 ORGANIZATION_ROLE_LABELS를 두고 헤더가 그것을 쓴다"
     },
     {
       "id": "D-020",
@@ -2165,15 +2187,41 @@
       "id": "G-046",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "이 층 head에서 도입사 역할 member가 두 곳에서 다르게 보인다. 사용자 관리 표는 organization_role 열을 statusLabels 없이 isStatus로 그려 WorkspaceView STATUS_LABELS의 '일반 사용자'가 나오고(members/page.tsx:36, WorkspaceView.tsx:19,32), 상단 셸은 #443 커밋 f671a4f가 넣은 삼항식으로 '사용자'를 낸다(ConsoleShell.tsx:48). permissions.ts에는 OrganizationRole 타입만 있고 라벨 정본이 없으며, 이 문구를 고정하는 시험도 없어 막는 근거를 찾지 못했다. 웹훅 pending이 '결과 확인 중'으로 보이는 부분은 이 층에 없고 #444 80a3ef1의 integrations/[id]/page.tsx:26에서 시작하며 그 문구를 고정한 e2e는 #453 23b1844다. 키 이름 분기와 ingest, 도입사 상태 라벨은 앞선 판정대로 이번 범위가 아니다. 판정 중 git fetch를 한 번 실행했고 그 사이 원격 참조가 9de0e1e(층), b8abfdf(정점)로 움직였는데 9de0e1e에도 같은 코드가 남아 있다(ConsoleShell.tsx:48).",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceView.tsx:18-19 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:32 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:36 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/lib/auth/permissions.ts:2 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 9de0e1e",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "frontend/src/components/workspace/WorkspaceView.tsx:18-19 @ 0fe7d2a",
+        "frontend/src/app/(console)/members/page.tsx:40 @ 0fe7d2a",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ 0fe7d2a",
+        "frontend/e2e/workspace.contract.spec.ts:122 @ 0fe7d2a",
+        "organization roles have one label definition that matches the member list: 실패 actual undefined, expected { owner: '대표관리자', admin: '관리자', member: '일반 사용자' }",
+        "커밋 47e14c8e665218da0718e4d0c6ad707e335afcce"
+      ],
+      "commits": [
+        "47e14c8e665218da0718e4d0c6ad707e335afcce"
+      ],
+      "tests": [
+        "e2e/permissions.test.mjs 'organization roles have one label definition that matches the member list'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행 삼항식과 WorkspaceView.tsx STATUS_LABELS가 그대로다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "웹훅 pending이 '결과 확인 중'으로 보이는 부분은 #444 integrations/[id]/page.tsx 26행 statusLabels에서 시작하고 그 문구를 고정한 e2e는 #453 workspace.contract.spec.ts 122행이다. #443 수정 범위 밖이라 위층에서 맞춘다.",
+      "summary": "역할 라벨 정본 ORGANIZATION_ROLE_LABELS를 두고 헤더가 그것을 쓴다"
     },
     {
       "id": "U1-B1",
@@ -6215,6 +6263,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "25 passed (13.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "25 passed (13.0s)"
     }
   ],
   "pushes": [
@@ -6267,6 +6353,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
       "at": "2026-10-28T17:36:01+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "at": "2026-10-28T17:38:54+09:00"
     }
   ],
   "usage_log": [],
