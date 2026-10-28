@@ -1,9 +1,11 @@
+import type { OrganizationRole } from "@/lib/auth/permissions";
+
 export type OrganizationStatus = "pending" | "active" | "rejected" | "suspended";
 export type SessionOrganization = { id: string; name: string; status: OrganizationStatus };
 export type SessionUserAccount = { id: string; email: string; name: string; role: "member" | "operator" };
 export type SessionResponse = {
   user_account: SessionUserAccount;
-  organization_role?: "owner" | "admin" | "member" | null;
+  organization_role?: OrganizationRole | null;
   scopes: string[];
   consent_required?: boolean;
   organization: SessionOrganization | null;
