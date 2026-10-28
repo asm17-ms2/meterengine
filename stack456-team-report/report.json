@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:08:36+09:00",
+  "updated_at": "2026-10-28T18:10:34+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "cd1a0fa4152e994b82b8207647553a839af22be1"
+    "fix/s456-443-t-inho": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1180,15 +1180,38 @@
       "id": "L-001",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "머리글의 도입사 링크는 ConsoleShell.tsx:46에서 이름을 감싸지 않은 글자로 두고 바로 뒤에 DownOutlined를 붙인다. globals.css:125가 이 링크를 display: flex로 만들기 때문에 같은 줄의 text-overflow: ellipsis는 효과가 없다(flex 컨테이너는 블록 컨테이너가 아니다). 316행의 white-space: nowrap 때문에 이름은 줄어들지 않는 익명 flex 항목이 된다. 390px에서는 317행 max-width가 calc(100vw - 225px), 곧 165px이므로 12px 글자 기준으로 이름이 약 141px를 넘으면 아이콘이 overflow: hidden 경계 밖으로 밀려 오른쪽 끝에서 잘린다. 시드의 '데모 도입사'는 짧아서 재현되지 않고, 'MVP 도입사 <13자리 숫자>'처럼 실화면 명세가 만드는 이름이나 255자까지 받는 가입 이름에서 나타난다. 320px X-058과 원인이 같아 한 커밋에서 같이 고치는 것이 맞다. 정점도 같은 CSS와 마크업이다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:46 @ 0f1d1bf",
+        "frontend/src/app/globals.css:125 @ 0f1d1bf",
+        "frontend/src/app/globals.css:316-317 @ 0f1d1bf",
+        "backend/src/main/java/com/meterengine/organization/entity/Organization.java:27 @ 0f1d1bf",
+        "backend/src/main/resources/db/local/R__local_credentials.sql:2 @ 0f1d1bf",
+        "frontend/e2e/mvp.real.spec.ts:30,33 @ 0fe7d2a",
+        "frontend/src/components/shell/ConsoleShell.tsx:51 @ 0fe7d2a",
+        "frontend/src/app/globals.css:125 @ 0fe7d2a",
+        "frontend/src/app/globals.css:316-317 @ 0fe7d2a",
+        "a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝)",
+        "커밋 f07a01f591c5b1f912e9b4e333e073ba92dc7ac1"
+      ],
+      "commits": [
+        "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'a long organization name is cut with an ellipsis and keeps the header icon inside the link'; evidence/X-058 before, after 캡처(320, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf globals.css 123, 312-313행과 ConsoleShell.tsx 51행 링크 마크업이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다"
     },
     {
       "id": "D-083",
@@ -1587,15 +1610,37 @@
       "id": "X-058",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 .organization-link는 globals.css:125에서 display: flex이면서 text-overflow: ellipsis를 걸지만, ConsoleShell.tsx:46이 이름을 텍스트 노드로 바로 넣어 익명 flex 항목이 되므로 상속되지 않는 overflow, text-overflow가 그 항목에 걸리지 않는다. 316-317행의 white-space: nowrap 때문에 익명 항목의 최소 폭이 이름 전체 폭이 되고, 215행의 min-width: 0은 링크에만 걸려 있어 이름이 줄지 않는다. 그래서 모바일에서 max-width: calc(100vw - 225px)를 넘는 이름은 링크의 overflow: hidden에 글자 중간에서 잘리고 뒤의 DownOutlined는 상자 밖으로 밀려 보이지 않는다. 168행 overflow-wrap: anywhere도 nowrap 아래에서는 효과가 없고, 이를 막는 다른 규칙이나 시험은 층 head와 정점 어디에도 없다. 다만 모바일 Drawer 제목(ConsoleShell.tsx:55)과 title 속성에 전체 이름이 있어 WCAG 1.4.10 정보 손실과 결제 오조작 시나리오는 과장이고, 남는 것은 말줄임이 없고 펼침 아이콘이 사라지는 표시 결함이다. 정점에서도 CSS는 같고 마크업만 51행으로 옮겨졌다.",
+      "evidence": [
+        "frontend/src/app/globals.css:125 @ 0f1d1bf",
+        "frontend/src/app/globals.css:215 @ 0f1d1bf",
+        "frontend/src/app/globals.css:316-317 @ 0f1d1bf",
+        "frontend/src/app/globals.css:168 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:46 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:55 @ 0f1d1bf",
+        "frontend/src/app/globals.css:125,316-317 @ 0fe7d2a",
+        "frontend/src/components/shell/ConsoleShell.tsx:51 @ 0fe7d2a",
+        "a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝)",
+        "커밋 f07a01f591c5b1f912e9b4e333e073ba92dc7ac1"
+      ],
+      "commits": [
+        "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'a long organization name is cut with an ellipsis and keeps the header icon inside the link'; evidence/X-058 before, after 캡처(320, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf globals.css 123, 312-313행과 ConsoleShell.tsx 51행 링크 마크업이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다"
     },
     {
       "id": "X-079",
@@ -6739,6 +6784,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "33 passed (16.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "34 passed (17.2s)"
     }
   ],
   "pushes": [
@@ -6816,6 +6899,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
       "at": "2026-10-28T18:06:44+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "at": "2026-10-28T18:10:09+09:00"
     }
   ],
   "usage_log": [],
