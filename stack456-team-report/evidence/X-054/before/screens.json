@@ -1,0 +1,103 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "notfound",
+    "path": "/organization-invitations/abc/def",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 404,
+        "navError": null,
+        "finalPath": "/organization-invitations/abc/def",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "404",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-054/before/notfound-desktop.png",
+        "consoleErrors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "violations": [
+          {
+            "id": "landmark-one-main",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Document should have one main landmark",
+            "targets": [
+              "html"
+            ]
+          },
+          {
+            "id": "region",
+            "impact": "moderate",
+            "nodes": 3,
+            "help": "All page content should be contained by landmarks",
+            "targets": [
+              "a",
+              "h1",
+              ".css-eofgey > div > div > div"
+            ]
+          },
+          {
+            "id": "skip-link",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "The skip-link target should exist and be focusable",
+            "targets": [
+              "a"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 404,
+        "navError": null,
+        "finalPath": "/organization-invitations/abc/def",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "404",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-054/before/notfound-mobile.png",
+        "consoleErrors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "violations": [
+          {
+            "id": "landmark-one-main",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Document should have one main landmark",
+            "targets": [
+              "html"
+            ]
+          },
+          {
+            "id": "region",
+            "impact": "moderate",
+            "nodes": 3,
+            "help": "All page content should be contained by landmarks",
+            "targets": [
+              "a",
+              "h1",
+              ".css-eofgey > div > div > div"
+            ]
+          },
+          {
+            "id": "skip-link",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "The skip-link target should exist and be focusable",
+            "targets": [
+              "a"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  }
+]
