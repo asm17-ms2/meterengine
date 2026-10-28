@@ -282,6 +282,13 @@ test("an API key without a rate limit is listed as unlimited", async ({ page }) 
   await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("무제한");
 });
 
+test("the sign-in frame starts its headings with the page h1", async ({ page }) => {
+  for (const path of ["/login", "/signup"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.querySelector("h1, h2, h3, h4, h5, h6")?.tagName)).toBe("H1");
+  }
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
