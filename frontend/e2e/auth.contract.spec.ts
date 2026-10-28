@@ -336,6 +336,19 @@ test("signup and invitation show the same required consent block", async ({ page
   expect(names[1]).toEqual(names[0]);
 });
 
+test("an out-of-range rate limit is reported on that field", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("큰 한도 키");
+  await dialog.getByLabel(/^분당 요청 한도/).evaluate(input => input.removeAttribute("max"));
+  await dialog.getByLabel(/^분당 요청 한도/).fill("2147483648");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요.").first()).toBeVisible();
+  await expect(dialog.getByText("JSON", { exact: false })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

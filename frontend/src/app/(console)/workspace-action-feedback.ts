@@ -10,3 +10,18 @@ const SUCCESS_MESSAGES: Partial<Record<string, string>> = {
 export function successMessage(operation: string): string {
   return SUCCESS_MESSAGES[operation] ?? "처리했습니다.";
 }
+
+export class InputFieldError extends Error {
+  readonly field: string;
+
+  constructor(field: string, message: string) {
+    super(message);
+    this.field = field;
+  }
+}
+
+export function readWholeNumber(value: string, field: string, { min, max, message }: { min: number; max: number; message: string }): number {
+  const number = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(number) || number < min || number > max) throw new InputFieldError(field, message);
+  return number;
+}

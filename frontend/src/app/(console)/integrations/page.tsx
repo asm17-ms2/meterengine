@@ -23,7 +23,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         { name: "label", label: "키 이름", placeholder: "고객 포털 조회 서버", maxLength: 255 },
         ...([{ name: "mode", label: "기존 키 구분", value: "live", hint: "test와 live는 키 구분만 나타내며 두 키 모두 같은 데이터를 다룹니다.", options: [{ value: "live", label: "기존 운영 키 (live)" }, { value: "test", label: "기존 테스트 키 (test)" }] }]),
         scopeField(["read"], "API 권한"),
-        { name: "rate_limit_per_minute", label: "분당 요청 한도", type: "number", min: 1, isOptional: true, hint: "비우면 무제한입니다. 1 이상의 정수로 입력하세요. 요청을 여러 서버가 나눠 처리하면 서버마다 따로 세어 실제 허용량이 입력값보다 많을 수 있습니다." },
+        { name: "rate_limit_per_minute", label: "분당 요청 한도", type: "number", min: 1, max: 2147483647, isOptional: true, hint: "비우면 무제한입니다. 1 이상의 정수로 입력하세요. 요청을 여러 서버가 나눠 처리하면 서버마다 따로 세어 실제 허용량이 입력값보다 많을 수 있습니다." },
         { name: "replaced_api_key_id", label: "교체할 기존 키", isOptional: true, options: activeKeys.ok ? activeKeys.data.api_keys.map(key => ({ value: key.id, label: `${key.label} (...${key.last_four})` })) : [], hint: "선택하면 기존 키는 교체 유예 시간이 지난 뒤 만료됩니다. 새 키를 서버에 적용한 뒤 기존 키의 만료 시각을 확인하세요." },
       ]} /></div>
       <form><label>API 키 상태<select name="key_status" defaultValue={keyStatus}>{KEY_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><button>조회</button></form>

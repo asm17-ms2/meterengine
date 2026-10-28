@@ -7,7 +7,7 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
-import { successMessage } from "@/app/(console)/workspace-action-feedback";
+import { InputFieldError, readWholeNumber, successMessage } from "@/app/(console)/workspace-action-feedback";
 
 export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
 
@@ -18,10 +18,8 @@ function text(data: FormData, key: string) {
 
 function optional(data: FormData, key: string) { return text(data, key) || undefined; }
 function identifier(data: FormData, key = "id") { return encodeURIComponent(text(data, key)); }
-function amount(data: FormData, key: string) {
-  const value = text(data, key);
-  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new Error("금액은 0 이상의 정수로 입력하세요.");
-  return Number(value);
+function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_INTEGER, message = "0 이상 9,007,199,254,740,991 이하의 정수로 입력하세요." } = {}) {
+  return readWholeNumber(text(data, key), key, { min, max, message });
 }
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
@@ -43,14 +41,15 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
       case "createApiKey":
         path = "/v1/api-keys";
-        body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute") : null };
+        body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute", { min: 1, max: 2147483647, message: "분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요." }) : null };
         break;
       case "deleteApiKey": path = `/v1/api-keys/${identifier(data)}`; method = "DELETE"; break;
       case "updateApiKeyScopes": path = `/v1/api-keys/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
-  } catch {
-    return { message: "입력 형식을 확인하세요. 금액은 0 이상의 정수, 조합과 구간은 올바른 JSON이어야 합니다." };
+  } catch (error) {
+    if (error instanceof InputFieldError) return { message: "입력한 내용을 확인하세요.", fieldErrors: { [error.field]: error.message } };
+    return { message: "입력한 값을 처리하지 못했습니다. 입력값을 확인한 뒤 다시 시도하세요." };
   }
   if (false && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = false;
