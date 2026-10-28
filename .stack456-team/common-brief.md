@@ -321,13 +321,15 @@ checks에는 아래 kind로 적는다. check-report는 이 세션 커밋이 바�
 - 백엔드 빌드는 Testcontainers로 PostgreSQL을 띄우므로 Docker가 켜져 있어야 한다.
 - 그 층에 명세가 없는 화면 변경은 7절 2번의 고치기 전과 뒤 캡처를 evidence와 tests에 남기고, screen을 `not-applicable`로 적은 뒤 frontend, frontend-unit이 통과하면 push한다. `not-applicable`은 아래 "돌리지 못한 검사"가 아니다.
 
-넘길 때 head에서 이미 실패하는 시험이다(코드로 확인했고 실행하지는 않았다).
+넘길 때 head에서 이미 실패하는 시험이다. auth는 코드로만 확인했고, archive-filters는 실화면 환경에서 돌려 확인했다.
 
 | 명세와 시험 | 실패하는 층 | 까닭 | 고치는 항목 |
 | --- | --- | --- | --- |
 | `auth.real.spec.ts`의 `real Spring: operator without organization can manage the platform` | #444부터 #452까지 | 101, 108행은 `/admin/organizations$`를 기대하는데 #444부터 운영자 착지가 `/admin`이다(`frontend/src/lib/auth/navigation.ts` 4행) | #444 U1-B1 |
+| `archive-filters.real.spec.ts`의 `보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다` | #447부터 #450까지 | #447이 #451 화면을 기준으로 쓴 명세다. 조건 적용으로 제출하는 관리 상태 선택 상자, 고객 목록 서버 페이지, 고객 상세 카드 필터를 기대하는데 #447부터 #450까지의 화면에는 없다 | 없음. 박성종 님이 이 명세를 #451로 옮긴다 |
 
 - 그 층에서는 이 시험을 11절 6번 명령에 `--grep-invert '<시험 이름>'`을 붙여 빼고 돌리고, checks detail에 뺀 시험 이름을 적는다. 고치는 항목의 층에서는 그 항목을 고친 뒤부터 빼지 않는다.
+- `archive-filters.real.spec.ts`는 시험이 하나뿐이라 빼면 돌릴 시험이 없다. #447부터 #450까지는 이 파일을 돌리지 않는다. checks에는 result `not-applicable`, detail `10절로 뺌`으로 적고, 마지막 실화면 점검의 specs.txt에는 `archive-filters: 10절로 뺌`이라 적는다. 이 명세만 다루던 화면을 바꿨으면 그 층에 명세가 없는 것으로 보고 위 `not-applicable` 규칙을 따른다.
 - 이 표에 없는 실패는 아래대로 다룬다. 검사가 실패하면 바꾸지 않은 head에서 같은 검사를 돌린다. 거기서도 실패하면 이 변경 탓이 아니므로 12절대로 멈춘다. 거기서 통과하면 변경을 고친다.
 
 ```bash
