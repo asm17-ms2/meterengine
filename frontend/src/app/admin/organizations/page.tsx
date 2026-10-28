@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "가입 승인과 도입사" };
 export default async function AdminOrganizationsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const query = await searchParams;
   const status = query.status && ["all", ...Object.keys(ORGANIZATION_STATUS_LABELS)].includes(query.status) ? query.status : "pending";
-  const [organizations, users] = await Promise.all([listOrganizations(), listUserAccounts()]);
+  const [organizations, users] = await Promise.all([listOrganizations(status === "all" ? undefined : status as OrganizationStatus), listUserAccounts()]);
   return <><header className="page-heading"><p className="eyebrow">운영자 업무</p><h1>가입 승인과 도입사</h1><p className="muted">신청한 도입사와 담당자를 확인하고 가입을 승인하거나 거절하세요.</p></header>
     <nav className="status-tabs" aria-label="도입사 상태"><Link href="?status=pending" aria-current={status === "pending" ? "page" : undefined}>승인 대기</Link><Link href="?status=all" aria-current={status === "all" ? "page" : undefined}>전체 도입사</Link>{(["active", "rejected", "suspended"] as OrganizationStatus[]).map(value => <Link key={value} href={`?status=${value}`} aria-current={status === value ? "page" : undefined}>{ORGANIZATION_STATUS_LABELS[value]}</Link>)}</nav>
     {!organizations.ok ? <div role="alert" className="failure-note"><p>{toDisplayMessage(organizations.error)}</p><Link href={`/admin/organizations?status=${status}`}>목록 다시 조회</Link></div> : <>

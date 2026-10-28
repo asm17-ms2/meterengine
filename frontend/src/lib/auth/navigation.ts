@@ -24,3 +24,8 @@ export function withoutOrganizationId(path: string): string {
   url.searchParams.delete("organization_id");
   return url.pathname + url.search;
 }
+
+export function expiredLoginHref(raw: string | null): string {
+  const path = typeof raw === "string" ? safeReturnPath(raw, true) : null;
+  return path && path === raw ? `/login?reason=expired&returnTo=${encodeURIComponent(path)}` : "/login?reason=expired";
+}
