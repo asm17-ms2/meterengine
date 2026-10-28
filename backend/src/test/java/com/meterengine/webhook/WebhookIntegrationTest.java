@@ -298,6 +298,15 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 전송기록_목록을_엔드포인트별_최신순으로_읽는_색인이_있다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE tablename = 'webhook_delivery' AND indexname = 'webhook_delivery_endpoint_created_at'",
+                String.class))
+        .endsWith("(organization_id, webhook_endpoint_id, created_at DESC, id DESC)");
+  }
+
+  @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
