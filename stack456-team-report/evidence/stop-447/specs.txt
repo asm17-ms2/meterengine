@@ -1,0 +1,3 @@
+archive-filters: 실패 1/1 at 2734417(fix/s456-447-t-yang 로컬, push 전) 단계 '고객 검색어와 월을 유지하며 세 관리 상태 조회'에서 getByRole('combobox', { name: '관리 상태' })를 찾지 못함
+archive-filters: 실패 1/1 at 5371d1e(origin/feat/resource-archive, 바꾸지 않은 head) 같은 단계에서 고객 표 행 수 단언(toHaveCount)이 어긋남
+까닭(코드로 본 것): 5371d1e의 /customers는 관리 상태를 ArchiveFilter(링크 nav, frontend/src/components/workspace/ArchiveFilter.tsx)로 그리는데 명세(frontend/e2e/archive-filters.real.spec.ts 28-30, 154-176행)는 같은 이름의 combobox를 기대한다. common-brief 10절 '이미 실패하는 시험' 표에 없는 실패다.

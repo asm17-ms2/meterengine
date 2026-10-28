@@ -1,0 +1,351 @@
+[
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "billable-metrics",
+    "path": "/billable-metrics",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": "미터",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billable-metrics-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": "미터",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billable-metrics-w1024.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": "미터",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billable-metrics-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "pricing",
+    "path": "/pricing",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pricing",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "무엇에 얼마를 청구할까요",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/pricing-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".ant-table-expanded-row-fixed"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pricing",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "무엇에 얼마를 청구할까요",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/pricing-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".ant-table-expanded-row-fixed"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pricing",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "무엇에 얼마를 청구할까요",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/pricing-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".ant-table-expanded-row-fixed"
+            ]
+          },
+          {
+            "id": "scrollable-region-focusable",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Scrollable region must have keyboard access",
+            "targets": [
+              ".ant-table-empty > .ant-table-container > .ant-table-content"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "invoices",
+    "path": "/invoices?month=2026-09",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoices",
+        "title": "확정 인보이스 | MeterEngine",
+        "h1": "인보이스 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/invoices-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoices",
+        "title": "확정 인보이스 | MeterEngine",
+        "h1": "인보이스 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/invoices-w1024.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoices",
+        "title": "확정 인보이스 | MeterEngine",
+        "h1": "인보이스 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/invoices-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "events",
+    "path": "/events",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/events",
+        "title": "수집 로그 | MeterEngine",
+        "h1": "이벤트 로그",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/events-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/events",
+        "title": "수집 로그 | MeterEngine",
+        "h1": "이벤트 로그",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/events-w1024.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/events",
+        "title": "수집 로그 | MeterEngine",
+        "h1": "이벤트 로그",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/events-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "usage",
+    "path": "/usage",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/usage",
+        "title": "사용량 | MeterEngine",
+        "h1": "사용량 집계 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/usage-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/usage",
+        "title": "사용량 | MeterEngine",
+        "h1": "사용량 집계 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/usage-w1024.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/usage",
+        "title": "사용량 | MeterEngine",
+        "h1": "사용량 집계 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/usage-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "heading-order",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Heading levels should only increase by one",
+            "targets": [
+              "article:nth-child(1) > h3"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "billing",
+    "path": "/billing?month=2026-09",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billing",
+        "title": "청구 검토 | MeterEngine",
+        "h1": "청구 예정액 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billing-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billing",
+        "title": "청구 검토 | MeterEngine",
+        "h1": "청구 예정액 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billing-w1024.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billing",
+        "title": "청구 검토 | MeterEngine",
+        "h1": "청구 예정액 - 2026년 9월",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/fe-447/after/billing-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]
