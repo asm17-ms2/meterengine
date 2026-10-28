@@ -58,6 +58,25 @@ class RecordingBackend:
         self.server.server_close()
 
 
+class PriceQueryTest(unittest.TestCase):
+    CUSTOMER_ID = "4f9d8c2e-1b7a-4c3d-9e5f-2a6b8c0d1e3f"
+
+    def backend(self):
+        made = RecordingBackend(body={})
+        self.addCleanup(made.close)
+        return made
+
+    def test_요금제_이력을_달과_고객으로_좁혀_조회한다(self):
+        backend = self.backend()
+        ApiClient(backend.base_url, LIVE_KEY).get_price_plans("2026-08", self.CUSTOMER_ID)
+        self.assertEqual(backend.requests[0][1], "/v1/price-plans?month=2026-08&customer_id=" + self.CUSTOMER_ID)
+
+    def test_미터별_가격을_달과_고객으로_좁혀_조회한다(self):
+        backend = self.backend()
+        ApiClient(backend.base_url, LIVE_KEY).get_billable_metric_prices("2026-08", self.CUSTOMER_ID)
+        self.assertEqual(backend.requests[0][1], "/v1/billable-metric-prices?month=2026-08&customer_id=" + self.CUSTOMER_ID)
+
+
 class AuthorizationHeaderTest(unittest.TestCase):
     def backend(self, status=200, body=None):
         made = RecordingBackend(status, body)
