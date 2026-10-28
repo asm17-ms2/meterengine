@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:44:20+09:00",
+  "updated_at": "2026-10-28T20:47:58+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "193978f",
+    "feat/account-permissions": "50a9a03",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -2922,14 +2922,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "operator.ts 15행 listOrganizations는 상태 없이 GET /v1/organizations를 부르고, admin/actions.ts 55행 가입 승인 확인과 admin/organizations/page.tsx 10행 목록 화면이 전체 목록을 받아 프론트에서 거른다. 백엔드 OrganizationController는 status 파라미터로 거를 수 있다. 정점도 같다. 상태를 넘기게 했다.",
+      "evidence": [
+        "frontend/src/lib/api/operator.ts:15 @ 72e8718",
+        "frontend/src/app/admin/actions.ts:55 @ 72e8718",
+        "frontend/src/app/admin/organizations/page.tsx:10 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationController.java:80-83 @ 72e8718",
+        "the operator organization list asks the backend for the selected status: 실패 Expected value \"/v1/organizations?status=pending\", Received [\"/v1/organizations\", ...]"
+      ],
+      "commits": [
+        "50a9a038d82f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts the operator organization list asks the backend for the selected status: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 36건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "운영자 도입사 조회에 status 필터"
     },
     {
       "id": "G-063",
@@ -8470,6 +8487,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 15 ℹ pass 15 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  36 passed (16.6s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.326s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8757,6 +8830,11 @@
       "branch": "feat/account-permissions",
       "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
       "at": "2026-10-28T20:40:21+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "50a9a038d82fe2fe85997bedb9ec2483e0a26656",
+      "at": "2026-10-28T20:47:58+09:00"
     }
   ],
   "usage_log": [],
