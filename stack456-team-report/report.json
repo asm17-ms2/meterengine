@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:03:54+09:00",
+  "updated_at": "2026-10-28T22:07:44+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -7289,6 +7289,67 @@
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.618s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "53 passed (23.9s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.8s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "fail",
+      "detail": "BUILD FAILED in 1m 6s "
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "e0254a3fc4c534a293a5b9069c645b9b14d0d28c",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-444-t-inho",
       "sha": "c5fb0e01b4b6eebcf9b11ebbd8d883f5169abee1",
