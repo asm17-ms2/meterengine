@@ -408,3 +408,11 @@ test("a long organization name is cut with an ellipsis and keeps the header icon
   const iconBox = (await link.locator(".anticon").boundingBox())!;
   expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(linkBox.x + linkBox.width + 0.5);
 });
+
+test("sidebar group titles start on the same line as the sidebar label", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const title = page.locator(".workspace-sidebar .ant-menu-item-group-title").first();
+  await expect(title).toHaveCSS("padding-inline-start", "24px");
+  await expect(title).toHaveCSS("font-size", "11px");
+});
