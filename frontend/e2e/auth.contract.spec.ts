@@ -223,6 +223,19 @@ test("the operator user list sends the active organizations once instead of once
   expect(perUserReferences).toBeLessThan(100);
 });
 
+test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
+  await page.context().addCookies([{ name: "me_session", value: "stale-session", url: "http://localhost:33148" }]);
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await page.getByLabel(/^이름/).fill("초대 받은 사용자");
+  await page.getByLabel(/^비밀번호/).fill("invited-password");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
+  await page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+  await expectTenantUrl(page, "/customers");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const accept = calls.find((call: { path: string; method: string }) => call.path.endsWith("/accept") && call.method === "POST");
+  expect(accept.hasAuthorization).toBe(false);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

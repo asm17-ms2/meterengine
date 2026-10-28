@@ -42,7 +42,7 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
     else if (path === "/v1/sessions" && req.method === "POST") {
       if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
-      else if (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password") result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
+      else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else {
         const role = body.email.startsWith("operator") ? "operator" : "member";
         const created = { user_account: { id: "44444444-4444-4444-8444-444444444444", email: body.email, name: role === "operator" ? "테스트 운영자" : "테스트 사용자", role }, organization: role === "operator" ? null : organizations[0], organization_role: role === "operator" ? null : "owner", scopes: role === "operator" ? [] : ["admin"], organizations: role === "operator" ? [] : organizations, expires_at: expiresAt() };
@@ -50,6 +50,10 @@ const server = createServer(async (req, res) => {
         sessions.set(issued, created);
         result = { status: 201, body: { token: issued, user_account: created.user_account, organization: created.organization, organization_role: created.organization_role, scopes: created.scopes, expires_at: created.expires_at } };
       }
+    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: "invited@contract.local", expires_at: expiresAt(), account_exists: false, scopes: ["read"] } };
+    else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}\/accept$/.test(path) && req.method === "POST") {
+      if (req.headers.authorization && !session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
+      else result = { status: 201, body: { user_account_id: "88888888-8888-4888-8888-888888888888", organization_id: organizations[0].id } };
     } else if (!session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
     else if (path === "/v1/sessions/current" && req.method === "GET") result = { status: 200, body: session };
     else if (path === "/v1/sessions/current" && req.method === "DELETE") { sessions.delete(token); result = { status: 204 }; }
