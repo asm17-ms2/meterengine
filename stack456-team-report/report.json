@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:38:54+09:00",
+  "updated_at": "2026-10-28T23:40:48+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+    "fix/s456-446-t-inho": "61d521686d65530831f8c992432ac5ac7c53db9e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4465,15 +4465,42 @@
       "id": "D-109",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "#446(614d3bc)이 미터 대화상자 본문을 maxHeight calc(100dvh - 180px)와 overflowY auto로 스크롤하게 바꿨고, 저장 버튼은 고정 footer에 있는데 서버 실패 Alert는 본문 맨 끝, 코드 Descriptions와 하단 안내 문단 아래에 남았다. 실패 상태에서 그 Alert로 포커스를 옮기거나 스크롤하는 코드가 없다. 반면 같은 스크롤 대화상자인 ActionPanel, CreateOperatorButton, PricingWorkspace는 실패 피드백을 tabIndex -1 래퍼에 두고 상태가 바뀌면 포커스해 보이게 하므로 같은 패턴이 이 파일에서만 갈라졌다. 수정 모드 안내도 계산 미리보기 아래(300-302행)에 있고, 집계 함수만 바꿔도 서비스가 BILLABLE_METRIC_HAS_EVENTS를 던지며 actions.ts가 toDisplayMessage로 'event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다'라는 API 필드명과 삭제를 말하는 백엔드 문구를 그대로 보인다. 정점 8dd028a에서도 본문 스크롤(157행), 실패 Alert(334행), 안내 위치(308-310행), toFailureState가 그대로다. 저장 실패 안내를 폼 위로 옮겨 실패하면 포커스하고, 수정 모드 안내를 이름 입력 위로 올렸으며, billable_metric_has_events를 화면 문구로 바꾼다.",
+      "evidence": [
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:149 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:326-334 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:300-302 @ da90aac",
+        "frontend/src/components/workspace/ActionPanel.tsx:70,105 @ da90aac",
+        "frontend/src/components/auth/CreateOperatorButton.tsx:37,64 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:109,124 @ da90aac",
+        "frontend/src/app/(console)/billable-metrics/actions.ts:135 @ da90aac",
+        "frontend/src/lib/api/transport.ts:23-28 @ da90aac",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:55-56 @ da90aac",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:118-120 @ da90aac",
+        "커밋 614d3bc4",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:157,334 @ 8dd028a",
+        "changing the calculation of a meter with events says what can still change instead of API field names: 실패 SyntaxError: does not provide an export named 'billableMetricFailureMessage'",
+        "커밋 61d521686d65530831f8c992432ac5ac7c53db9e"
+      ],
+      "commits": [
+        "61d521686d65530831f8c992432ac5ac7c53db9e"
+      ],
+      "tests": [
+        "node --test e2e/billable-metric-feedback.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "실화면(.s456-work/probe-d109.mjs, 데모 도입사에 이벤트 한 건을 넣고 '입력 토큰'의 집계 함수를 최댓값으로 바꿔 저장): 고치기 전 실패 안내가 1440x900 화면 밖 y=1258에 서버 문구로 뜨고 포커스 없음, 고친 뒤 대화상자 맨 위 y=76에 화면 문구로 뜨고 포커스를 받음. 캡처는 evidence/D-109/before, after"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 BillableMetricFormDialog.tsx도 본문 스크롤(157행)과 맨 끝 실패 안내(334행), 미리보기 아래 수정 모드 안내(308-310행), toFailureState(136행)가 그대로다. 같은 파일을 바꾼 위층 커밋 e5fca11(#451), 2ec5d85(#447)",
+      "propagation_note": "#451 e5fca11이 같은 대화상자의 submit과 actions.ts를 바꿨다. 반영 때 실패 안내는 폼 위 failureRef 자리에, 수정 모드 안내는 이름 입력 위에 두고, toFailureState의 billableMetricFailureMessage 호출을 남긴다.",
+      "summary": "미터 저장 실패를 대화상자 맨 위에 보이고 포커스하며 화면 문구로 알린다"
     },
     {
       "id": "Ck3-446-02",
@@ -7711,6 +7738,44 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "58 passed (26.5s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.0s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10252,6 +10317,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
       "at": "2026-10-28T23:33:51+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
+      "at": "2026-10-28T23:40:32+09:00"
     }
   ],
   "usage_log": [],
