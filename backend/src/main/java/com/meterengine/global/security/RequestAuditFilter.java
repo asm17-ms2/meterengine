@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
@@ -69,7 +70,9 @@ public class RequestAuditFilter extends OncePerRequestFilter {
       Object actor = request.getAttribute(ApiCredentialAuthenticationFilter.PRINCIPAL_ATTRIBUTE);
       try {
         requestAuditRecorder.record(
-            actor instanceof AuthenticatedPrincipal principal ? principal : null,
+            actor instanceof AuthenticatedPrincipal principal
+                ? attributedActor(request, principal)
+                : null,
             request.getMethod(),
             route,
             status,
@@ -81,6 +84,23 @@ public class RequestAuditFilter extends OncePerRequestFilter {
         logger.error("Request audit failed request_id=" + requestId, exception);
       }
     }
+  }
+
+  // 운영자 전용 경로는 플랫폼 전체를 다루므로 운영자 세션이 고른 도입사에 요청 감사를 남기지 않는다.
+  private static AuthenticatedPrincipal attributedActor(
+      HttpServletRequest request, AuthenticatedPrincipal principal) {
+    if (!(request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
+            instanceof HandlerMethod handler)
+        || !handler.hasMethodAnnotation(OperatorAccess.class)) return principal;
+    return new AuthenticatedPrincipal(
+        principal.kind(),
+        null,
+        principal.apiKeyId(),
+        principal.userAccountId(),
+        principal.userSessionId(),
+        principal.mode(),
+        principal.role(),
+        principal.scopes());
   }
 
   // 수집은 요청이 많아 요청마다 감사 행을 동기로 쓰면 지연과 DB 쓰기가 크게 늘어 감사에서 뺀다.
