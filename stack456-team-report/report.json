@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T00:13:10+09:00",
+  "updated_at": "2026-10-29T00:22:21+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -9700,6 +9700,54 @@
     {
       "branch": "fix/s456-445-t-yang",
       "sha": "62fb032837edf99b0f7ce61c81ea3acd7991d988",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 25 ℹ pass 25 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  60 passed (22.8s) "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
+      "kind": "screen",
+      "result": "not-run",
+      "command": "실화면 명세",
+      "detail": "실화면 환경 동기화 실패"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "318ee02cde9b7f131cf6ee835669522551ce9455",
       "kind": "forbidden-chars",
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",

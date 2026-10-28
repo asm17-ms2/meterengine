@@ -171,6 +171,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 11�
 
 | 브랜치 | sha | kind | 까닭 |
 | --- | --- | --- | --- |
+| fix/s456-445-t-yang | 318ee02 | screen | 실화면 환경 동기화 실패 |
 
 ## 위층 반영 때 볼 것
 
