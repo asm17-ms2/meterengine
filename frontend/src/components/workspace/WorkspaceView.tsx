@@ -20,7 +20,7 @@ export type WorkspaceRowActions = Record<string, ActionPanelProps[]>;
 const STATUS_LABELS: Record<string, string> = {
   paid: "수납 완료", partially_canceled: "부분 취소", canceled: "전액 취소", unpaid: "결제 전", pending: "결과 확인 중", failed: "실패", done: "완료", active: "사용 중", archived: "보관됨", accepted: "수락 완료", expired: "만료", invited: "초대 중", revoked: "폐기", retry: "재시도 대기", waiting: "발송 대기", succeeded: "정상", running: "실행 중", not_required: "결제 불필요", suspended: "이용 정지", rejected: "거절", success: "성공", member: "일반 사용자", operator: "플랫폼 운영자", owner: "대표관리자", admin: "관리자",
 };
-const JOB_LABELS: Record<string, string> = { payment_attempt_confirmation: "결제 결과 확인", payment_reconciliation: "결제 내역 대조", payment_retry: "실패 결제 재시도", webhook_delivery: "결과 통보 발송", invoice_email: "청구 안내 메일" };
+const JOB_LABELS: Record<string, string> = { payment_attempt_confirmation: "결제 결과 확인", payment_reconciliation: "결제 내역 대조", payment_retry: "실패 결제 재시도", webhook_delivery: "결과 통보 발송", unbilled_usage_report: "과금 제외 사용량 통보", invoice_email: "청구 안내 메일" };
 const NUMBER = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 12 });
 
 function CellValue({ value, column, row }: { value: unknown; column: WorkspaceColumn; row: Record<string, unknown> }) {

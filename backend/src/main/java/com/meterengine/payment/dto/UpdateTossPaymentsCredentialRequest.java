@@ -23,7 +23,7 @@ public record UpdateTossPaymentsCredentialRequest(
     return "UpdateTossPaymentsCredentialRequest[clientKey="
         + clientKey
         + ", secretKey="
-        + SecretMask.lastFour(secretKey)
+        + SecretMask.mask(secretKey)
         + "]";
   }
 }

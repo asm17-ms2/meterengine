@@ -59,7 +59,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
         body = { url: text(data, "url"), event_types: data.getAll("event_types") };
         break;
       case "deleteWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "DELETE"; break;
-      case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true" }; break;
+      case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true", description: optional(data, "description")?.replace(/\r\n/g, "\n") ?? null }; break;
       case "testWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/test-events`; break;
       case "retryWebhookDelivery": path = `/v1/webhook-endpoints/${identifier(data)}/deliveries/${identifier(data, "delivery_id")}/retries`; break;
       case "createPricePlan":
