@@ -152,6 +152,7 @@ class AuditQueryAndRequestIntegrationTest {
             Map.of("sort", "random"),
             Map.of("action", "Customer"),
             Map.of("from", "2026-99-99"),
+            Map.of("to", "+300000-01-01T00:00:00Z"),
             Map.of("from", "2026-10-02", "to", "2026-10-01"))) {
       var request = mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, read);
       invalid.forEach(request::queryParam);
