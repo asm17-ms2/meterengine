@@ -1,12 +1,12 @@
-미완료 190건, 결과: 끝 상태 138/328건 (fixed 95, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 58개(마지막 50a9a03)
+미완료 189건, 결과: 끝 상태 139/328건 (fixed 96, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 59개(마지막 a87832f)
 정할 것: 31건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 95 | 1 | 7 | 32 | 3 | 5 |
+| #442 | 143 | 96 | 1 | 7 | 32 | 3 | 4 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -33,6 +33,7 @@ push: feat/account-permissions 58개(마지막 50a9a03)
 | G-006 | #442 | d2b69cf | 사용자와 초대 API 오류 code 문서화 | 공개_경로인_초대_수락은_403_404_409_오류_code를_ErrorResponse로_문서화한다: 실패 AssertionFailedError: [403 응답 ...] expected: "#/components/schemas/ErrorResponse" but was: "" |
 | G-042 | #442 | 36f7e74 | 업무 작업 이름 목록과 화면, 액션 대조 시험 | every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS' |
 | G-045 | #442 | b84cf7a | WorkspaceError를 기존 ErrorAlert로 모음 | a workspace load failure offers an in-place retry button: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole('button', { name: '다시 시도' }) |
+| G-052 | #442 | a87832f | 사용자와 초대 응답 타입 이름을 백엔드 스키마에 맞춤 | 없음(타입 변경: typecheck, lint, build 통과) |
 | G-058 | #442 | 6ae4ec0 | 결과 문구를 작업별 표로 | result labels come from the operation, not from response fields: 실패 ERR_MODULE_NOT_FOUND workspace-operation-results.ts |
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
 | G-069 | #442 | eb01be8 | randomUUID 없는 환경의 요청 키 대체 | a request id is a version 4 UUID even without crypto.randomUUID: 실패 ERR_MODULE_NOT_FOUND request-id.ts |
@@ -169,6 +170,7 @@ push: feat/account-permissions 58개(마지막 50a9a03)
 | G-042 | #442 | 반영하면 새 시험이 위층 head에서 실패한다: #444부터 #446까지 integrations/[id]/page.tsx의 restoreWebhookEndpoint, #447부터 #450까지 customers/page.tsx의 createCustomer에 workspace-actions.ts case가 없다(#451 e5fca11이 createCustomer case를 더한다). 각 층 담당이 그 층 workspace-actions.ts에 case를 더하거나 패널을 case가 생기는 층으로 옮긴다. #447, #449는 T-yang 몫이고 #444, #446, #448, #450은 다른 담당 몫이다. |
 | G-045 | #442 | 정점에서 WorkspaceError를 쓰는 16개 파일은 모두 message만 넘겨 그대로 컴파일된다. 위층 명세에 '다시 시도' 링크를 찾는 곳은 없다(정점 e2e 검색). WorkspaceTable과 WorkspaceHeader를 기존 부품과 합칠지는 남은 결정이다. |
 | G-050 | #442 | 정점 0fe7d2a에서 같은 검사가 (public)/actions.ts:41, admin/actions.ts:28, organization-invitations/[token]/actions.ts:44에 있고 createMember는 workspace-actions.ts:45로 옮겨 있다. #442에서 고치면 위층 merge 때 (public)/actions.ts(a39db70이 호출 제한을 더함)와 workspace-actions.ts(80a3ef1 이후 여러 층이 case를 더함)에서 충돌을 맞춰야 한다. |
+| G-052 | #442 | 정점에서 OrganizationMember, OrganizationInvitation 이름을 쓰는 곳은 management.ts뿐이다. #448 15692f8이 management.ts의 감사 로그 타입을 바꿨으니 반영 때 그 부분과 겹치지 않는지 본다. AuditLog, AuditLogsResponse를 ListAuditLogsResponse 등으로 맞출지는 #448 담당이 본다. |
 | G-056 | #442 | 정점까지 정규식과 쿠키 줄은 그대로다. e5fca11(#451)이 continue/page.tsx의 이웃 줄(링크 대상)만 바꿔서, 모으기로 하면 위층을 다시 쌓을 때 작은 충돌이 날 수 있다. 백엔드 OrganizationInvitationController.java 36, 45행의 @Pattern과 SecureTokens.generate("me_invite_")가 같은 형식에 묶여 있다. |
 | G-058 | #442 | #453 workspace.contract.spec.ts 75행과 101행은 취소 작업의 '결제와 취소 내역 새로 조회', '새 취소 요청'을 찾고 문구 표가 같은 값을 준다. 위층에서 isUnconfirmed를 돌려주는 다른 작업(#445 updateTossPaymentsCredential 등)이 결제 문구를 원하면 그 층에서 COPY에 더한다. |
 | G-065 | #442 | 정점 transport.ts 111-112행 catch가 같은 글자라 그대로 옮겨진다. e5fca11(#451)과 a39db70(#454)이 근처 줄을 바꿨지만 겹치지 않는다. H2-S1(#453)의 옛 백엔드 조합 호환은 이 수정 밖이다. |
