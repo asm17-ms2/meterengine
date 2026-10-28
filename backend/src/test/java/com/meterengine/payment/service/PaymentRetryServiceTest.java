@@ -177,6 +177,40 @@ class PaymentRetryServiceTest {
   }
 
   @Test
+  void 후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다() throws Exception {
+    Organization organization = organization(true);
+    UUID invoiceId = invoice(organization);
+    UUID failedAttemptId =
+        failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
+    CountDownLatch lookupEntered = new CountDownLatch(1);
+    CountDownLatch lookupReleased = new CountDownLatch(1);
+    when(tossPaymentsClient.findPaymentByOrderId(
+            organization.secretKey(), failedAttemptId.toString()))
+        .thenAnswer(
+            invocation -> {
+              lookupEntered.countDown();
+              if (!lookupReleased.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("주문 조회 응답을 풀어 주지 않았다");
+              }
+              return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
+            });
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<PaymentJobResult> retried = executor.submit(paymentRetryService::retry);
+      assertThat(lookupEntered.await(10, TimeUnit.SECONDS)).isTrue();
+
+      failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofMinutes(1));
+      lookupReleased.countDown();
+      retried.get(10, TimeUnit.SECONDS);
+    } finally {
+      lookupReleased.countDown();
+      executor.shutdownNow();
+    }
+
+    assertNotRetried(organization, invoiceId, 2);
+  }
+
+  @Test
   void 재시도_간격이_지나지_않았으면_새_시도를_만들지_않는다() {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
