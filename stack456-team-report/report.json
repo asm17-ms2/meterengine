@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T01:29:19+09:00",
+  "updated_at": "2026-10-29T01:42:15+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -5205,14 +5205,25 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e의 PricePlanService.list(50-67행)는 month가 있으면 effective_from과 effective_until만 보고, 기본값 status=active로 보관 버전을 뺀다. ChargeService(71-77행)는 applies 또는 stops인 가장 늦은 버전을 고르고, applies가 아니면 지운다. 그래서 V1(기한 없음)과 다음 달부터 보관한 V2가 있으면, 이번 달 조회는 청구가 쓰는 V2 대신 V1을 첫 항목으로 돌려준다. 다음 달 조회도 청구에 없는 V1을 첫 항목으로 돌려준다. 이 층의 demo verify(189-205행)는 그 첫 항목을 그 달 요금제로 써서 기대 금액이 청구와 어긋나고, 콘솔 activePlan(PricingWorkspace 25행)도 stops를 모른다. 정점 0fe7d2a에서도 list(51-73행)와 activePlan(36행)이 같다. 고치려면 month와 status를 함께 줄 때의 API 계약을 정해야 한다. 정점의 SDK 계약 시험은 month와 status=archived를 함께 보내는 쓰임을 두고 있고, 바뀌는 곳도 PricePlanService, 선택 규칙 공유, 컨트롤러 설명과 openapi.yaml, 콘솔 화면에 걸친다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:50-67 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:71-77 @ 5371d1e",
+        "demo/csvdemo/verify_cmd.py:189-205 @ 5371d1e",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:25,50 @ 5371d1e",
+        "demo/sdk/src/read-contract.test.ts:146 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "정점의 list에는 BusinessEnvironmentContext로 listScoped를 쓰는 갈래가 더해졌다(0fe7d2a PricePlanService.java 56-59행). 정한 선택 규칙은 두 출처에 모두 걸어야 한다. 정점 activePlan은 0fe7d2a PricingWorkspace.tsx 36행, demo verify는 0fe7d2a verify_cmd.py 197-213행이다.",
+      "question": "GET /v1/price-plans에 month를 주면, status와 상관없이 그 달 청구에 적용되는 요금제 버전 하나만 돌려주도록 계약을 바꿀지 정해야 합니다. 바꾸지 않는다면 지금처럼 그 달에 걸친 이력을 status로 걸러 돌려주고, demo verify와 콘솔이 status=all 목록에서 보관 가림을 포함한 청구 규칙으로 직접 고르게 합니다."
     },
     {
       "id": "U19-B1",
@@ -5233,126 +5244,223 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "등록 실패 경로는 이 층 5371d1e에서 이미 막혀 있다. 넘길 때 head 뒤 박성종 님 커밋 03574b9가 workspace-actions.ts:42에 createCustomer case를 더했고, workspace-operations.test.mjs가 화면이 쓰는 작업마다 case가 있는지 검사한다. 남은 경로는 실제로 있다. 5371d1e의 customers/page.tsx:22는 archived_at이 있는 행에만 restoreCustomer를 달고, updateCustomer case도 고객 상세 화면도 없어 사용 중 고객을 콘솔에서 수정하거나 보관할 수 없다. page.tsx:20의 외부 고객 ID 입력과 멱등 안내는 external_id가 없는 CreateCustomerRequest가 받지 않는다. 정점 0fe7d2a에서는 #451 e5fca11의 customers/[id]/page.tsx:40,46이 수정과 보관 패널을 주고 #450 8bb17c3이 external_id 멱등 등록을 더해 위층에서 고쳐졌으므로 이 층에서는 고치지 않는다. 쓰이지 않는 CustomersSection 등 옛 파일은 정점에도 남지만 D-245, G-183이 따로 다루고, #447부터 #450까지를 따로 배포할 때 진입점이 비는 문제는 배포 단위 결정 Q4에 달렸다.",
+      "evidence": [
+        "frontend/src/app/(console)/customers/page.tsx:20,22 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:12-20 @ 5371d1e",
+        "커밋 03574b9",
+        "frontend/src/app/(console)/customers/[id]/page.tsx:40,46 @ 0fe7d2a",
+        "커밋 e5fca11"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "위층에서 바꿀 것은 없다. 고객 상세 화면(customers/[id]/page.tsx)과 workspace-actions.ts의 updateCustomer case는 #451 e5fca11이 더하고, CreateCustomerRequest의 external_id와 같은 external_id 재요청 시 기존 고객 반환은 #450 8bb17c3이 더한다. 이 층의 createCustomer case(03574b9)는 #451이 더하는 줄과 같다.",
+      "top_head": "fixed-above #451 e5fca11"
     },
     {
       "id": "Ck3-447-02",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "PriceRate의 applies와 stops(72-83행)는 PricePlan의 applies와 stops(59-70행)와 본문이 같다. ChargeService(54-70행)와 BillableMetricPriceService(57-73행)는 같은 단가 버전 선택 규칙(가장 늦은 effective_from으로 merge한 뒤 applies가 아니면 제거)을 따로 갖고 있다. 요금제 선택은 ChargeService(71-77행)와 콘솔 activePlan(PricingWorkspace 25행)에 따로 있고, 둘은 이미 갈라졌다(Nk3-006). C447-002를 고칠 때도 stops 두 벌을 같이 바꿔야 해서, 사본이 어긋날 위험이 실제로 있다. 하나로 모으려면 시험을 빼고도 PriceRate, PricePlan, ChargeService, BillableMetricPriceService를 함께 바꿔야 한다. 이는 유지보수 분류의 파일 셋 이상 기준에 걸리고, 정점 0fe7d2a도 같다(PriceRate 81-86행, PricePlan 68-73행).",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:72-83 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java:59-70 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:54-77 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:57-73 @ 5371d1e",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:25 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "정점에서는 23b1844가 같은 파일에 환경 분리를 더했지만, 사본의 본문은 같다(0fe7d2a ChargeService.java 61-84행, BillableMetricPriceService.java 68-80행). 모으면 #453의 listScoped 갈래도 같은 부품을 거치게 맞춘다.",
+      "question": "단가와 요금제의 보관 효력 판정(applies, stops)과 버전 선택 규칙을 공용 부품 하나로 모을지 정해야 합니다. 모으면 PriceRate, PricePlan, ChargeService, BillableMetricPriceService를 함께 바꾸고, Nk3-006의 요금제 조회도 그 부품을 쓰게 합니다."
     },
     {
       "id": "Ck3-447-03",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e의 PaymentArchiveRepository.methods와 credentials가 이력 행을 응답 DTO 생성자로 직접 만듭니다. 이때 rs.getObject의 OffsetDateTime(pgjdbc는 UTC 오프셋으로 준다)을 그대로 넣어 PaymentMethodResponse.from과 TossPaymentsCredentialResponse.from이 하는 KST 변환을 건너뛰고, 그래서 status가 archived나 all이면 컨트롤러 설명 'authenticated_at은 KST(+09:00)', 'verified_at과 updated_at은 KST'와 달리 이력 행만 +00:00으로 나옵니다. 서비스는 customer_id나 mode 순 목록 뒤에 retired_at 내림차순 이력을 덧붙여 'customer_id 오름차순', 'mode 오름차순' 설명과도 어긋나고, 교체 때 부르는 method(), credential()이 coalesce(archived_at, clock_timestamp())로 보관 시각을 채워 덮어쓴 키와 카드가 보관으로 보입니다. BusinessArchiveIntegrationTest는 건수만 보고 시각대와 순서를 막는 시험은 없으며, 정점 0fe7d2a도 23b1844가 환경 조건만 더했을 뿐 같습니다. 분류가 layering이고 최소 수정이 저장소와 두 서비스 세 파일에 걸치며, 교체 이력을 보관으로 볼지는 API 의미 결정이라 needs-decision으로 둡니다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:58-71 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/dto/PaymentMethodResponse.java:29-32 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/controller/PaymentMethodController.java:72-73 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java:62-71 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:36,50 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "#453 23b1844가 같은 저장소의 methods(), credentials()에 environment_id 조건을 더하고 billing_key_history 삽입에 credential_updated_at, credentialVersions()를 더했다. #447에서 고치면 #453으로 넘길 때 환경 조건을 유지해야 하고, 정점의 호출부 PaymentMethodService.java:76, TossPaymentsCredentialService.java:80 @ 0fe7d2a도 같은 매핑과 정렬을 따른다. 반환 형을 바꾸면 정점의 PaymentArchiveConcurrencyTest.java:76,116이 저장소 methods(), credentials()를 직접 부르므로 같이 맞춘다.",
+      "question": "#447에서 결제 이력 목록을 저장소가 아니라 DTO from(KST 변환)과 서비스의 문서대로 정렬로 만들도록 저장소와 두 서비스를 고칠지, 컨트롤러 설명을 이력 행 순서에 맞게 고칠지, 그리고 교체로 물러난 키와 카드를 보관 목록에 보관으로 보일지 정합니다."
     },
     {
       "id": "Ck3-447-04",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "V43의 active_from, inactive_from, active_until, archived_from에 V36, V37 같은 YYYY-MM CHECK가 없고 archived_at과 archived_from의 쌍 제약도 없는 것은 사실이지만, 이 열을 쓰는 곳이 모두 그 불변식을 지킨다. PriceRate, PricePlan, BillableMetric의 archive는 보관 시각과 보관 월을 한 번에 채우고 restore는 함께 비우며, 보관 월은 서비스가 YearMonth.toString()이나 기존 effective_from으로만 만든다. R__seed도 두 열을 coalesce로 함께 채우고 to_char 'YYYY-MM'을 쓰며, 요청 DTO에는 archived_from 입력이 없고 정점 0fe7d2a까지 이 열을 쓰는 네이티브 SQL이나 뒤 마이그레이션도 없다. 따라서 앱과 마이그레이션 경로에서 잘못된 값이 들어가는 실패 경로가 없고, DB 제약을 더 거는 것은 방어 깊이에 대한 취향 차이만 남는다(docs/contributing에 DB 형식 CHECK를 요구하는 조항도 없다).",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:62-70 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java:49-57 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:186-190 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:235-236 @ 5371d1e",
+        "backend/src/main/resources/db/migration/R__seed.sql:62-63 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "same 없음"
     },
     {
       "id": "Ck3-447-05",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e에서 미터는 보관할 때 다음 달을 inactive_from 열과 감사 detail 키 inactive_from에 담고(BillableMetric.java:65-66, BillableMetricService.java:196), 단가와 요금제는 같은 방식으로 정한 보관 효력 월을 archived_from으로 불러(PriceRate.java:51-52) naming.md 원칙의 같은 개념에 같은 낱말 조항에 어긋난다. 미터 집계 판정(BillableMetricUsageService.java:72-77)은 archivedAt, activeFrom, billable_metric_period만 보므로 inactive_from이 응답, 화면, 감사 기록에만 쓰인다는 뒷부분도 사실이다. 다만 판정에 쓰지 않는 것은 기간 표를 정본으로 둔 설계라 계산이 틀리는 경로는 없고, 이름 불일치만 남는다. 맞추려면 V43이 만든 DB 열(내용 변경과 새 V__ 추가 모두 금지), API 응답 필드 inactive_from, 감사 detail 키, 프론트 타입 같은 공개 이름을 바꿔야 하므로 needs-decision이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/metric/entity/BillableMetric.java:65-66 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:51-52 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:196 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:72-77 @ 5371d1e",
+        "docs/contributing/naming.md:14 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "정점 0fe7d2a에서도 미터는 inactive_from, 단가와 요금제는 archived_from이다. 이름을 바꾸기로 하면 위층 사용처를 함께 맞춘다: backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:20,36,50,68, backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:172,342(열 이름을 그대로 두면 rs.getString만 유지), BillableMetricService.java:217 감사 키, frontend/src/lib/api/billable-metrics.ts:20,30, frontend/src/app/(console)/billable-metrics/state.ts:17, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:45, BillableMetricsTable.tsx:124, 시험 BusinessArchiveIntegrationTest.java:131, BillableMetricServiceTest.java:305, 그리고 backend/openapi.yaml 재생성.",
+      "question": "미터 보관 효력 월의 공개 이름(API 응답 필드와 감사 detail 키 inactive_from)을 단가와 요금제의 archived_from으로 맞출지, 맞춘다면 V43이 만든 DB 열 inactive_from은 그대로 두고 API와 감사 키만 바꿀지 정한다."
     },
     {
       "id": "Ck3-447-06",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e에서 CustomerRepository의 findByOrganizationIdAndIdIn(33줄)과 existsWithPricing(35-39줄)은 main과 test 어디에서도 부르지 않습니다. 2ec5d85가 삭제를 보관으로 바꾸면서 남긴 선언입니다. PricePlanService와 PriceRateService는 @Transactional(readOnly = true)를 호출처 없는 3인자 list에만 달았고, 컨트롤러(PricePlanController:58, PriceRateController:128)와 BusinessArchiveIntegrationTest가 부르는 4인자 list에는 달지 않았습니다. open-in-view=false지만 두 엔티티에 지연 연관이 없어 실패는 나지 않고, 고객 확인과 목록 조회가 한 읽기 트랜잭션으로 묶이지 않는 정리 문제입니다. 정점 0fe7d2a도 같고 고치려면 CustomerRepository와 두 서비스까지 세 파일을 바꿔야 해서 dead-code 분류 규칙에 따라 needs-decision으로 둡니다. 외부 ID 조회 findByOrganizationIdAndExternalIdOrderByNameAscIdAsc는 #450 CustomerRegistrationService가 쓰므로 Ck3-447-07 범위로 남깁니다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/customer/repository/CustomerRepository.java:33-39 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:45-52 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:66-73 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:58 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java:128 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "#451 e5fca11이 findByOrganizationIdAndIdIn을 environment_id IS NULL 조건의 @Query로 바꿔 두었습니다(0fe7d2a CustomerRepository.java:50-53). 그래서 위층 merge에서 충돌이 나고, 위층에서도 그 선언을 같이 지워야 합니다. existsWithPricing은 0fe7d2a CustomerRepository.java:90에 그대로 있고 사용처가 없습니다. 두 서비스의 4인자 list는 0fe7d2a PricePlanService.java:51, PriceRateService.java:77에 같은 모양으로 있어 annotation만 맞추면 됩니다.",
+      "question": "CustomerRepository에서 호출처 없는 existsWithPricing과 findByOrganizationIdAndIdIn을 지우고, PricePlanService와 PriceRateService의 읽기 트랜잭션을 실제로 호출되는 4인자 list로 옮기는 세 파일 정리를 #447에서 할지 정합니다."
     },
     {
       "id": "Ck3-447-07",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e에서 V42가 customer.external_id 열과 유일 인덱스를 만들고 Customer와 CustomerResponse가 그 값을 읽어 응답에 내보내지만, CreateCustomerRequest에 external_id가 없고 CustomerService.create도 생성자에 값을 넘기지 않아 #447에는 값을 쓰는 경로가 없다(CustomerRepository의 external_id 조회 메서드도 쓰는 곳이 없다). 그래서 고객 등록 패널과 조율 담당 커밋 03574b9의 createCustomer 본문이 보내는 external_id는 조용히 버려지고 응답과 목록에는 늘 null이 보이며, 쓰는 경로는 #450의 8bb17c3(7b1d1e5 CreateCustomerRequest:21-22)에서야 생긴다. 고치려면 V42와 응답 필드, 화면 입력을 #450으로 옮기거나(층 옮기기이고 #453의 V45가 V42 인덱스를 지운다) #450의 등록 경로를 #447로 앞당겨야 해서, DB 열이나 DTO 필드와 파일 셋 이상을 바꾸는 구조 결정이 필요하다. 화면 본문에서 external_id를 빼는 안은 03574b9의 의도를 거스른다.",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V42__add_customer_external_id.sql:1-3 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:12-20 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:48-50 @ 5371d1e",
+        "frontend/src/app/(console)/workspace-actions.ts:42 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:21-22 @ 7b1d1e5"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "앞당기는 안이면 #450 8bb17c3의 CustomerRegistrationService, CustomerRegistrationRepository(ON CONFLICT 멱등 등록)와 CreateCustomerRequest가 충돌하므로 #450에서 그 등록 경로로 합친다(#450은 T-yang 담당이 아니다). V42를 옮기거나 지우는 안은 #453 V45__create_organization_environments.sql:37-39가 customer_organization_external_id_unique를 지우므로 쓸 수 없다. 정점 사용처: CustomerController, CustomerRegistrationService, CustomerRegistrationRepository, CustomerRepository, query 패키지(WorkspaceQueryRepository, WorkspaceQueryService, SearchParameters), event 저장소(EventRepository, EventIssueRepository), frontend customers 화면과 workspace-actions.ts, ResourceSearchControls.tsx, lib/api/customers.ts, demo/bridge/state.py, demo/core/api_client.py, demo/sdk.",
+      "question": "#447의 외부 고객 ID(V42, Customer.externalId, CustomerResponse.external_id, 고객 등록 패널 입력)를 쓰는 경로 없이 둔 채 #450에서 완성되는 것으로 받아들일지, #450 8bb17c3의 external_id 등록 경로를 #447로 앞당길지 정한다."
     },
     {
       "id": "Ck3-447-08",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "CustomerService.delete는 HTTP DELETE 연산(deleteCustomer)을 받는 서비스 메서드다. naming.md 37줄은 저장 동사로 delete를 두고, 기본 가이드(3줄)인 Google AIP도 되돌릴 수 있는 삭제를 Delete 메서드로 부른다. 스택 전 main의 ApiKeyService.delete도 행을 지우지 않고 apiKey.revoke로 상태만 바꾼다. 이 층의 미터, 요금제, 단가, 웹훅 엔드포인트 보관도 모두 서비스 delete에서 엔티티 archive를 부르는 같은 꼴이라, 같은 개념에 같은 낱말을 쓰라는 원칙(14줄)도 층 안에서 지켜진다. #442의 revoke, remove는 컨트롤러 연산 이름(revokeOrganizationInvitation, removeOrganizationMember)과 같은 낱말이라 서비스 동사를 API 연산에 맞추는 같은 규칙이고, 남는 것은 보관을 저장 delete로 볼지 상태 전이 도메인 동사로 볼지의 취향 차이다(정점 0fe7d2a도 이름이 같다).",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:65,72-74 @ 5371d1e",
+        "docs/contributing/naming.md:3,14,37 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:108-119 @ f088399",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:178,190 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:210,214,289,293 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "same 15692f8 e5fca11 23b1844"
     },
     {
       "id": "Ck3-447-09",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "키 버전을 고르는 본체는 TossPaymentsCredentialService.historical(87-92행) 하나지만, 결제의 기준 시각을 골라 historical을 부르는 일은 확인 둘, 취소, 웹훅 네 곳에 따로 있고, 취소를 다루는 PaymentCancellationService 278-285행과 PaymentAttemptConfirmationService 175-182행은 시도 조회까지 같은 8줄이다. 정점에서는 23b1844(#453)가 기준 시각을 credentialUpdatedAt 우선으로 바꾸면서 같은 삼항식을 호출부마다 복사했고 결제와 재시도는 active와 갈라져, 규칙을 바꿀 때 호출부마다 손으로 옮겨야 한다는 점이 드러났다. 다만 #447에서는 네 곳이 같은 시도의 requestedAt을 넘겨 확인과 취소가 다른 키를 쓰는 경로는 아직 없다. 고치려면 서비스에 시도 단위 메서드를 두고 호출부 세 파일(취소, 확인, 웹훅)을 바꿔야 해 유지보수 분류의 파일 셋 이상에 걸린다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:87-92 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:278-285 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:175-182 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsWebhookService.java:71-73 @ 5371d1e",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "모으기로 하면 정점에서는 credentialUpdatedAt ?: requestedAt(카드 등록은 createdAt) 선택까지 그 메서드로 옮기고, git grep -n 'tossPaymentsCredentialService.historical(' 0fe7d2a가 보이는 PaymentAttemptConfirmationService 118,192, TossPaymentsWebhookService 82, PaymentCancellationService 288, PaymentAttemptService 143,192-196, PaymentRetryService 115-122, PaymentRetryEligibilityService 78,98, PaymentMethodRegistrationService 147,162를 맞춘다. #453 G-103 diff가 PaymentRetryService, PaymentAttemptService, PaymentMethodRegistrationService의 같은 호출부를 바꾸므로 그 뒤에 한다.",
+      "question": "결제별 키 버전 선택(기준 시각 고르기와 historical 호출)을 TossPaymentsCredentialService의 시도 단위 메서드 하나로 모으는 일을 #447에서 호출부 세 파일까지 바꿔 할지, 기준 시각이 credentialUpdatedAt으로 바뀌는 #453에서 G-103 수정과 함께 할지 정한다."
     },
     {
       "id": "Ck3-447-10",
@@ -5387,14 +5495,25 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "#446(c27b229)까지는 취소, 확인, 웹훅이 현재 키(find)를 썼고 키 저장은 옛 키를 남기지 않고 덮어썼다. #447은 이 셋을 historical로 바꿔 현재 키의 updated_at이 결제 시각보다 뒤면 이력 표만 보는데(TossPaymentsCredentialService 89-91행), V43은 이력 표를 빈 채로 만들고 옛 키는 이미 덮어써져 채울 값도 없다. 그래서 #445가 먼저 배포된 동안 키를 바꾼 도입사의 그 전 결제는 취소가 toss_payments_credential_missing으로 실패하고(PaymentCancellationService 286-294행), 확인은 계속 건너뛰어 pending으로 남는다. 이 창은 main 머지마다 배포하는 cd.yml 아래에서 층마다 머지할 때만 생기고 한 번에 머지하면 V31과 V43이 같이 들어가 생기지 않으므로, 넣을지는 Q4(배포 단위)에 달린 호환 수정이다. 정점도 historical이 같고 V48이 payment_attempt.credential_updated_at을 채우지 않아 기존 결제는 requestedAt으로 같은 길을 탄다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:89-91 @ 5371d1e",
+        "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:40-42 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:286-294 @ 5371d1e",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:278-279 @ c27b229",
+        ".github/workflows/cd.yml:12-14 @ 5371d1e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "정점 TossPaymentsCredentialService.historical(90-95행)도 같은 줄을 고친다. #453 G-103 diff는 historical()에 archived_at 조건을 넣지 않기로 했으니 이 대체와 겹치지 않는다.",
+      "question": "Q4에서 층마다 배포하기로 하면, #447 이전에 바뀐 키로 한 결제를 위해 historical()이 덮는 이력이 없을 때 현재 키로 돌아가게(#446 동작) 할지 정한다."
     },
     {
       "id": "Ck3-447-13",
@@ -5471,28 +5590,50 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e에서 /customers 화면은 2ec5d85(#447)로 ActionPanel과 WorkspaceTable을 쓰고, components/customers의 7개 파일과 그 다이얼로그만 부르는 customers/actions.ts, state.ts는 서로만 참조해 바깥 참조가 없다. 그래서 고객 등록 폼이 ActionPanel과 CustomerFormDialog 두 벌로 남은 것은 맞다. 정점 0fe7d2a에서도 같은 파일이 참조 없이 남아 있고, #451의 e5fca11이 이 죽은 파일을 계속 고쳤으며 같은 커밋이 /billable-metric-prices를 /pricing redirect로 바꿔 가격 쪽 6개 파일도 그때부터 죽는다. 고치려면 #447에서만 9개 파일을 지워야 하고 가격 쪽 삭제는 담당이 아닌 #451 몫이며, frontend/README.md 135행은 아직 antd Form과 actions.ts를 쓰기 폼 방식으로 적고 있어 어느 쪽을 정본으로 둘지 정해지지 않았다. 파일 셋 이상에 걸친 삭제이고 위층 e5fca11 수정과 수정, 삭제 충돌이 나므로 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/app/(console)/customers/page.tsx:20 @ 5371d1e",
+        "frontend/src/components/customers/CustomersScreen.tsx:120,124 @ 5371d1e",
+        "frontend/src/components/customers/CustomerFormDialog.tsx:55,65 @ 5371d1e",
+        "frontend/README.md:135 @ 5371d1e",
+        "커밋 e5fca11"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "0fe7d2a에서 CustomersSection, CustomersScreen, CustomersFrame, CustomersLoading, CustomersTable, CustomerFormDialog, CustomerDeleteDialog, createCustomerAction, updateCustomerAction, deleteCustomerAction을 git grep하면 components/customers 안과 customers/actions.ts 정의 말고 사용처가 없다. #447에서 지우면 #451 e5fca11이 바꾼 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts와 위층 merge에서 수정, 삭제 충돌이 나므로 위층에서는 삭제 쪽을 택한다. 가격 쪽 BillableMetricPricesSection, Screen, Frame, Loading, Table, PriceRateFormDialog와 billable-metric-prices/actions.ts, state.ts는 #451(e5fca11 redirect)부터 참조가 0이라 #451에서 지운다. lib/api/customers.ts의 create, update, deleteCustomer 정리는 같은 묶음 G-183과 겹친다.",
+      "question": "#447에서 쓰이지 않게 된 antd 고객 파일 7개와 customers/actions.ts, state.ts, #451에서 쓰이지 않게 된 antd 가격 파일 6개와 billable-metric-prices/actions.ts, state.ts를 지우고 README의 antd 쓰기 폼 설명을 고칠지, 지운다면 #447과 #451 층마다 지울지 정점에서 한 번에 지울지 정한다."
     },
     {
       "id": "G-183",
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "5371d1e의 customers/page.tsx는 2ec5d85부터 WorkspaceTable과 ActionPanel만 쓰고, components/customers 7개 파일과 customers/actions.ts, state.ts, lib/api/customers.ts의 create/update/deleteCustomer는 그 묶음 밖 어디서도 import되지 않는다. 실제 고객 변경은 workspace-actions.ts의 createCustomer, deleteCustomer 분기가 맡아 같은 변경 경로가 두 곳으로 갈라져 있고, customer_has_events 매핑은 쓰이지 않는 사본에만 있으므로 지적은 맞다. 정점 0fe7d2a에서도 이 파일들은 쓰이지 않은 채 남아 있으며, #451의 e5fca11(박성종 님)이 오히려 이 파일들을 고쳤다. 고치려면 시험과 README를 빼고 10개 파일을 지우거나 바꿔야 해 유지보수 분류 기준으로 needs-decision이고, #447에서 지우면 위층 e5fca11과 수정/삭제 충돌이 난다. 지적의 billable-metric-prices 부분과 unit_price 타입은 #451(17cc788)에서 페이지가 리다이렉트로 바뀐 뒤의 일이라 #447 범위가 아니다.",
+      "evidence": [
+        "frontend/src/app/(console)/customers/page.tsx:1-7 @ 5371d1e",
+        "frontend/src/app/(console)/customers/actions.ts:109-136 @ 5371d1e",
+        "frontend/src/app/(console)/workspace-actions.ts:42,50 @ 5371d1e",
+        "frontend/src/lib/api/customers.ts:48-73 @ 5371d1e",
+        "커밋 e5fca11"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "5371d1e",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "0fe7d2a에서 git grep으로 components/customers와 customers/actions를 import하는 곳은 그 묶음 밖에 없다. 다만 #451 커밋 e5fca11이 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts, lib/api/customers.ts를 고쳤으므로 #447에서 지우면 #448부터 위로 옮길 때 #451에서 수정/삭제 충돌이 나고, #451에서 같은 파일을 지워 풀어야 한다. billable-metric-prices의 BillableMetricPricesSection, Loading, actions.ts와 lib/api/billable-metric-prices.ts unit_price 타입은 #451(17cc788) 페이지 리다이렉트 뒤에 쓰이지 않게 되므로 #451 담당 몫이다.",
+      "question": "#447 고객 화면 교체 뒤 쓰이지 않는 components/customers 7개 파일, customers/actions.ts, state.ts와 lib/api/customers.ts의 create/update/deleteCustomer를 지울지, 지운다면 이 파일들을 고친 #451 e5fca11과의 충돌을 어느 층에서 누가 풀지 정한다."
     },
     {
       "id": "X-011",

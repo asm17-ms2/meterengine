@@ -1,6 +1,6 @@
-미완료 117건, 결과: 끝 상태 211/328건 (fixed 158, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+미완료 104건, 결과: 끝 상태 224/328건 (fixed 158, refuted 3, already-fixed 17(그중 fixed-above 12), needs-decision 43, blocked 3(그중 no-evidence 0))
 push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35)
-정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
+정할 것: 42건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
@@ -8,7 +8,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
-| #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
+| #447 | 35 | 0 | 2 | 1 | 10 | 0 | 22 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
 | #453 | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
@@ -176,6 +176,16 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-046 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | X-104 | #442 | 로그아웃 요청이 401 밖의 이유(네트워크, 시간 초과, 5xx)로 실패했을 때 지금처럼 쿠키를 남겨 다시 시도하게 할지(계약 시험 logout keeps the session after a revocation failure가 이 동작을 고정한다), 쿠키를 먼저 지우고 서버 세션 종료를 확인하지 못했다고 알릴지 정한다. |
 | Ck2-017 | #445 | 실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다. |
+| Nk3-006 | #447 | GET /v1/price-plans에 month를 주면, status와 상관없이 그 달 청구에 적용되는 요금제 버전 하나만 돌려주도록 계약을 바꿀지 정해야 합니다. 바꾸지 않는다면 지금처럼 그 달에 걸친 이력을 status로 걸러 돌려주고, demo verify와 콘솔이 status=all 목록에서 보관 가림을 포함한 청구 규칙으로 직접 고르게 합니다. |
+| Ck3-447-02 | #447 | 단가와 요금제의 보관 효력 판정(applies, stops)과 버전 선택 규칙을 공용 부품 하나로 모을지 정해야 합니다. 모으면 PriceRate, PricePlan, ChargeService, BillableMetricPriceService를 함께 바꾸고, Nk3-006의 요금제 조회도 그 부품을 쓰게 합니다. |
+| Ck3-447-03 | #447 | #447에서 결제 이력 목록을 저장소가 아니라 DTO from(KST 변환)과 서비스의 문서대로 정렬로 만들도록 저장소와 두 서비스를 고칠지, 컨트롤러 설명을 이력 행 순서에 맞게 고칠지, 그리고 교체로 물러난 키와 카드를 보관 목록에 보관으로 보일지 정합니다. |
+| Ck3-447-05 | #447 | 미터 보관 효력 월의 공개 이름(API 응답 필드와 감사 detail 키 inactive_from)을 단가와 요금제의 archived_from으로 맞출지, 맞춘다면 V43이 만든 DB 열 inactive_from은 그대로 두고 API와 감사 키만 바꿀지 정한다. |
+| Ck3-447-06 | #447 | CustomerRepository에서 호출처 없는 existsWithPricing과 findByOrganizationIdAndIdIn을 지우고, PricePlanService와 PriceRateService의 읽기 트랜잭션을 실제로 호출되는 4인자 list로 옮기는 세 파일 정리를 #447에서 할지 정합니다. |
+| Ck3-447-07 | #447 | #447의 외부 고객 ID(V42, Customer.externalId, CustomerResponse.external_id, 고객 등록 패널 입력)를 쓰는 경로 없이 둔 채 #450에서 완성되는 것으로 받아들일지, #450 8bb17c3의 external_id 등록 경로를 #447로 앞당길지 정한다. |
+| Ck3-447-09 | #447 | 결제별 키 버전 선택(기준 시각 고르기와 historical 호출)을 TossPaymentsCredentialService의 시도 단위 메서드 하나로 모으는 일을 #447에서 호출부 세 파일까지 바꿔 할지, 기준 시각이 credentialUpdatedAt으로 바뀌는 #453에서 G-103 수정과 함께 할지 정한다. |
+| Ck3-447-12 | #447 | Q4에서 층마다 배포하기로 하면, #447 이전에 바뀐 키로 한 결제를 위해 historical()이 덮는 이력이 없을 때 현재 키로 돌아가게(#446 동작) 할지 정한다. |
+| D-245 | #447 | #447에서 쓰이지 않게 된 antd 고객 파일 7개와 customers/actions.ts, state.ts, #451에서 쓰이지 않게 된 antd 가격 파일 6개와 billable-metric-prices/actions.ts, state.ts를 지우고 README의 antd 쓰기 폼 설명을 고칠지, 지운다면 #447과 #451 층마다 지울지 정점에서 한 번에 지울지 정한다. |
+| G-183 | #447 | #447 고객 화면 교체 뒤 쓰이지 않는 components/customers 7개 파일, customers/actions.ts, state.ts와 lib/api/customers.ts의 create/update/deleteCustomer를 지울지, 지운다면 이 파일들을 고친 #451 e5fca11과의 충돌을 어느 층에서 누가 풀지 정한다. |
 
 ## 막힌 것
 
@@ -310,6 +320,17 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-212 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | X-006 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | X-086 | #445 | 위층에서 메일 발송을 붙이면 이 문구를 다시 바꾼다. |
+| Nk3-006 | #447 | 정점의 list에는 BusinessEnvironmentContext로 listScoped를 쓰는 갈래가 더해졌다(0fe7d2a PricePlanService.java 56-59행). 정한 선택 규칙은 두 출처에 모두 걸어야 한다. 정점 activePlan은 0fe7d2a PricingWorkspace.tsx 36행, demo verify는 0fe7d2a verify_cmd.py 197-213행이다. |
+| C447-001 | #447 | 위층에서 바꿀 것은 없다. 고객 상세 화면(customers/[id]/page.tsx)과 workspace-actions.ts의 updateCustomer case는 #451 e5fca11이 더하고, CreateCustomerRequest의 external_id와 같은 external_id 재요청 시 기존 고객 반환은 #450 8bb17c3이 더한다. 이 층의 createCustomer case(03574b9)는 #451이 더하는 줄과 같다. |
+| Ck3-447-02 | #447 | 정점에서는 23b1844가 같은 파일에 환경 분리를 더했지만, 사본의 본문은 같다(0fe7d2a ChargeService.java 61-84행, BillableMetricPriceService.java 68-80행). 모으면 #453의 listScoped 갈래도 같은 부품을 거치게 맞춘다. |
+| Ck3-447-03 | #447 | #453 23b1844가 같은 저장소의 methods(), credentials()에 environment_id 조건을 더하고 billing_key_history 삽입에 credential_updated_at, credentialVersions()를 더했다. #447에서 고치면 #453으로 넘길 때 환경 조건을 유지해야 하고, 정점의 호출부 PaymentMethodService.java:76, TossPaymentsCredentialService.java:80 @ 0fe7d2a도 같은 매핑과 정렬을 따른다. 반환 형을 바꾸면 정점의 PaymentArchiveConcurrencyTest.java:76,116이 저장소 methods(), credentials()를 직접 부르므로 같이 맞춘다. |
+| Ck3-447-05 | #447 | 정점 0fe7d2a에서도 미터는 inactive_from, 단가와 요금제는 archived_from이다. 이름을 바꾸기로 하면 위층 사용처를 함께 맞춘다: backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:20,36,50,68, backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:172,342(열 이름을 그대로 두면 rs.getString만 유지), BillableMetricService.java:217 감사 키, frontend/src/lib/api/billable-metrics.ts:20,30, frontend/src/app/(console)/billable-metrics/state.ts:17, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:45, BillableMetricsTable.tsx:124, 시험 BusinessArchiveIntegrationTest.java:131, BillableMetricServiceTest.java:305, 그리고 backend/openapi.yaml 재생성. |
+| Ck3-447-06 | #447 | #451 e5fca11이 findByOrganizationIdAndIdIn을 environment_id IS NULL 조건의 @Query로 바꿔 두었습니다(0fe7d2a CustomerRepository.java:50-53). 그래서 위층 merge에서 충돌이 나고, 위층에서도 그 선언을 같이 지워야 합니다. existsWithPricing은 0fe7d2a CustomerRepository.java:90에 그대로 있고 사용처가 없습니다. 두 서비스의 4인자 list는 0fe7d2a PricePlanService.java:51, PriceRateService.java:77에 같은 모양으로 있어 annotation만 맞추면 됩니다. |
+| Ck3-447-07 | #447 | 앞당기는 안이면 #450 8bb17c3의 CustomerRegistrationService, CustomerRegistrationRepository(ON CONFLICT 멱등 등록)와 CreateCustomerRequest가 충돌하므로 #450에서 그 등록 경로로 합친다(#450은 T-yang 담당이 아니다). V42를 옮기거나 지우는 안은 #453 V45__create_organization_environments.sql:37-39가 customer_organization_external_id_unique를 지우므로 쓸 수 없다. 정점 사용처: CustomerController, CustomerRegistrationService, CustomerRegistrationRepository, CustomerRepository, query 패키지(WorkspaceQueryRepository, WorkspaceQueryService, SearchParameters), event 저장소(EventRepository, EventIssueRepository), frontend customers 화면과 workspace-actions.ts, ResourceSearchControls.tsx, lib/api/customers.ts, demo/bridge/state.py, demo/core/api_client.py, demo/sdk. |
+| Ck3-447-09 | #447 | 모으기로 하면 정점에서는 credentialUpdatedAt ?: requestedAt(카드 등록은 createdAt) 선택까지 그 메서드로 옮기고, git grep -n 'tossPaymentsCredentialService.historical(' 0fe7d2a가 보이는 PaymentAttemptConfirmationService 118,192, TossPaymentsWebhookService 82, PaymentCancellationService 288, PaymentAttemptService 143,192-196, PaymentRetryService 115-122, PaymentRetryEligibilityService 78,98, PaymentMethodRegistrationService 147,162를 맞춘다. #453 G-103 diff가 PaymentRetryService, PaymentAttemptService, PaymentMethodRegistrationService의 같은 호출부를 바꾸므로 그 뒤에 한다. |
+| Ck3-447-12 | #447 | 정점 TossPaymentsCredentialService.historical(90-95행)도 같은 줄을 고친다. #453 G-103 diff는 historical()에 archived_at 조건을 넣지 않기로 했으니 이 대체와 겹치지 않는다. |
+| D-245 | #447 | 0fe7d2a에서 CustomersSection, CustomersScreen, CustomersFrame, CustomersLoading, CustomersTable, CustomerFormDialog, CustomerDeleteDialog, createCustomerAction, updateCustomerAction, deleteCustomerAction을 git grep하면 components/customers 안과 customers/actions.ts 정의 말고 사용처가 없다. #447에서 지우면 #451 e5fca11이 바꾼 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts와 위층 merge에서 수정, 삭제 충돌이 나므로 위층에서는 삭제 쪽을 택한다. 가격 쪽 BillableMetricPricesSection, Screen, Frame, Loading, Table, PriceRateFormDialog와 billable-metric-prices/actions.ts, state.ts는 #451(e5fca11 redirect)부터 참조가 0이라 #451에서 지운다. lib/api/customers.ts의 create, update, deleteCustomer 정리는 같은 묶음 G-183과 겹친다. |
+| G-183 | #447 | 0fe7d2a에서 git grep으로 components/customers와 customers/actions를 import하는 곳은 그 묶음 밖에 없다. 다만 #451 커밋 e5fca11이 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts, lib/api/customers.ts를 고쳤으므로 #447에서 지우면 #448부터 위로 옮길 때 #451에서 수정/삭제 충돌이 나고, #451에서 같은 파일을 지워 풀어야 한다. billable-metric-prices의 BillableMetricPricesSection, Loading, actions.ts와 lib/api/billable-metric-prices.ts unit_price 타입은 #451(17cc788) 페이지 리다이렉트 뒤에 쓰이지 않게 되므로 #451 담당 몫이다. |
 | NT-yang-001 | #442 | #443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다. |
 
 ## fixed-above로 둔 것
@@ -326,6 +347,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C445-006 | #445 | fixed-above #449 c9a86c4 |
 | C445-009 | #445 | fixed-above #447 2ec5d85 |
 | C445-018 | #445 | fixed-above #451 e5fca11 |
+| C447-001 | #447 | fixed-above #451 e5fca11 |
 
 ## 마지막 실화면 점검
 
