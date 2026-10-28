@@ -416,3 +416,12 @@ test("sidebar group titles start on the same line as the sidebar label", async (
   await expect(title).toHaveCSS("padding-inline-start", "24px");
   await expect(title).toHaveCSS("font-size", "11px");
 });
+
+test("the guide toggle keeps a name that says what it does instead of a pressed state", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "시연 안내 보기", exact: true }).click();
+  const toggles = page.getByRole("button", { name: "업무 화면으로", exact: true });
+  await expect(toggles).toHaveCount(2);
+  for (const toggle of await toggles.all()) await expect(toggle).not.toHaveAttribute("aria-pressed");
+});
