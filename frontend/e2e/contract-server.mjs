@@ -10,6 +10,8 @@ let requests = [];
 let outage = false;
 let customers = [];
 let failures = {};
+let bulk = false;
+const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
 
@@ -24,7 +26,8 @@ const server = createServer(async (req, res) => {
   let result;
   if (path === "/health") result = { status: 200, body: {} };
   else if (path === "/__control" && req.method === "POST") {
-    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; }
+    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; }
+    if (typeof body.bulk === "boolean") bulk = body.bulk;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
@@ -39,7 +42,7 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
     else if (path === "/v1/sessions" && req.method === "POST") {
       if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
-      else if (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password") result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
+      else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else {
         const role = body.email.startsWith("operator") ? "operator" : "member";
         const created = { user_account: { id: "44444444-4444-4444-8444-444444444444", email: body.email, name: role === "operator" ? "테스트 운영자" : "테스트 사용자", role }, organization: role === "operator" ? null : organizations[0], organization_role: role === "operator" ? null : "owner", scopes: role === "operator" ? [] : ["admin"], organizations: role === "operator" ? [] : organizations, expires_at: expiresAt() };
@@ -47,6 +50,10 @@ const server = createServer(async (req, res) => {
         sessions.set(issued, created);
         result = { status: 201, body: { token: issued, user_account: created.user_account, organization: created.organization, organization_role: created.organization_role, scopes: created.scopes, expires_at: created.expires_at } };
       }
+    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: "invited@contract.local", expires_at: expiresAt(), account_exists: false, scopes: ["read"] } };
+    else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}\/accept$/.test(path) && req.method === "POST") {
+      if (req.headers.authorization && !session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
+      else result = { status: 201, body: { user_account_id: "88888888-8888-4888-8888-888888888888", organization_id: organizations[0].id } };
     } else if (!session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
     else if (path === "/v1/sessions/current" && req.method === "GET") result = { status: 200, body: session };
     else if (path === "/v1/sessions/current" && req.method === "DELETE") { sessions.delete(token); result = { status: 204 }; }
@@ -56,8 +63,8 @@ const server = createServer(async (req, res) => {
       else { session.organization = org; result = { status: 200, body: session }; }
     } else if (path.startsWith("/v1/organizations") || path.startsWith("/v1/user-accounts")) {
       if (session.user_account.role !== "operator") result = failure(403, "permission_denied", "접근 권한이 없습니다.");
-      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: [] } };
-      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }] } };
+      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", created_at: new Date().toISOString() })) : [] } };
+      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
       else result = { status: 200, body: {} };
     } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
     else if (path === "/v1/customers/search") {
@@ -75,6 +82,7 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
     else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: [] } };
     else if (path === "/v1/api-keys" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), label: body.label, mode: body.mode, scopes: body.scopes, last_four: "0000", secret: "me_live_ContractSecretValue0000000000" } };
+    else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [] } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
   }
   res.writeHead(result.status, { "Content-Type": "application/json" });

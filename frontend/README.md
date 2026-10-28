@@ -28,7 +28,8 @@ pnpm dev
 
 - http://localhost:3000 의 `/`는 로그인 여부와 관계없이 서비스 소개를 보여 준다.
 - 다른 기계에서 이 dev 서버를 볼 수 있다 (`next.config.ts`의 `allowedDevOrigins`).
-- 기존 목록의 개발 상태 검사는 `?state=empty`, `?state=loading`, `?state=error`로 한다.
+- 개발 모드에서는 기존 목록의 상태를 `?state=empty`, `?state=loading`, `?state=error`로 바꿔 본다. 프로덕션 빌드에서는 무시된다.
+- 로그인 세션이 없으면 `src/proxy.ts`가 공개 화면(서비스 소개, 로그인, 가입, 고객 조회 링크 등) 밖의 경로를 로그인 화면으로 보낸다.
 
 조회 조건은 다음 쿼리스트링으로 받는다.
 
@@ -110,8 +111,14 @@ docker run -p 3000:3000 \
 
 | 경로 | 내용 |
 | --- | --- |
-| `src/app/(public)/`, `src/app/admin/`, `src/app/organizations/` | 가입, 로그인과 승인 안내, 운영자 가입 승인과 역할 변경, 도입사 전환 |
 | `src/app/(console)/` | 라우트. 화면마다 `page.tsx`, 쓰기 화면은 `actions.ts`, `state.ts` |
+| `src/app/(public)/` | 로그인, 가입 신청, 승인 안내 화면과 그 Server Action |
+| `src/app/organizations/` | 소속 도입사 선택과 전환 |
+| `src/app/account/` | 첫 로그인 때 계정 이용 안내 확인 |
+| `src/app/organization-invitations/` | 초대 링크 확인과 수락 |
+| `src/app/admin/` | 플랫폼 운영자 화면 |
+| `src/proxy.ts` | 세션 쿠키가 없으면 공개 화면 밖의 경로를 로그인으로 보내고, 현재 경로와 화면의 도입사를 서버에 넘긴다 |
+| `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
 | `src/components/shell/` | antd Layout 틀, 메뉴, 개발 모드 스위치, 테마와 로케일을 거는 `AppProviders` |
@@ -159,10 +166,17 @@ docker run -p 3000:3000 \
 | `/billing`, `/invoices` | 단가 없는 조합과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
 | `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
 | `/invoice-links` | 로그인 없이 확정 청구와 결제 상태 확인. 별도 허용된 링크에서 실패 결제의 금액을 확인한 뒤 등록 카드로 직접 재시도. 링크 원문은 URL fragment로 받고 주소창에서 제거하며 현재 탭의 sessionStorage에만 보존 |
-| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 폐기, 웹훅 등록과 발송 이력, 시험 통보와 실패 재전송 |
+| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 시험 통보와 실패 재전송 |
+| `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/settings` | 환경별 공급자와 토스 키, 기존 데이터의 결제 모드 설정 |
-| `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 가입 승인과 사용자 권한 관리 |
+| `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 가입 승인, 사용자 권한과 소속 연결 관리 |
 | `/payment-method-registrations/{token}` | 일회용 링크 확인과 동의, 토스 카드 인증, 등록 결과 확인 |
+| `/login` | 로그인. 계정 역할에 따라 도입사 업무나 플랫폼 운영 화면으로 간다 |
+| `/signup` | 도입사 가입 신청과 필수 동의 |
+| `/pending` | 가입 신청 뒤 승인 안내 |
+| `/organizations` | 소속 도입사 선택과 전환 |
+| `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
+| `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
 - API 키의 분당 한도는 양수 또는 무제한으로 정한다. 유한 한도는 인스턴스별이다.
