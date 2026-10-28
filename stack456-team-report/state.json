@@ -1,7 +1,7 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-28T17:16:33+09:00",
+  "updated_at": "2026-10-28T17:17:06+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
@@ -390,9 +390,9 @@
   "branches": {
     "fix/s456-443-t-inho": {
       "origin_sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "local_sha": "8a884485693339de361814e95f317258ad8c322f",
+      "local_sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
       "unpushed": [
-        "8a884485693339de361814e95f317258ad8c322f"
+        "ee07130326131afca1b9374477bd48afc6e8bd1d"
       ]
     }
   },
