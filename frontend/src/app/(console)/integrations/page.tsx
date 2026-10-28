@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { readEnvironment } from "@/lib/environment";
 import { scopeField } from "@/lib/auth/scope-fields";
@@ -12,6 +13,8 @@ export type ApiKeyResponse = { id: string; label: string; mode: string; scopes: 
 type WebhookEndpointResponse = { id: string; url: string; event_types: string[]; enabled: boolean; created_at: string; archived_at?: string | null };
 const WEBHOOK_TYPES = [{ value: "payment_succeeded", label: "결제 성공" }, { value: "payment_failed", label: "결제 실패" }, { value: "payment_canceled", label: "결제 취소" }, { value: "unbilled_usage_detected", label: "과금 제외 사용량" }, { value: "webhook_test", label: "시험 통보" }];
 const KEY_STATUS_OPTIONS = [{ value: "active", label: "사용 중" }, { value: "revoked", label: "폐기됨" }, { value: "expired", label: "만료됨" }, { value: "all", label: "전체" }];
+
+export const metadata: Metadata = { title: "API 키와 통보" };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
