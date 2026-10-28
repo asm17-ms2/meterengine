@@ -1,8 +1,8 @@
 {
   "package": "T-inho",
   "owner": "문인호",
-  "status": "running",
-  "updated_at": "2026-10-28T19:47:24+09:00",
+  "status": "stopped",
+  "updated_at": "2026-10-28T19:51:17+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -3117,13 +3117,13 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
+      "verdict": "confirmed",
       "reason": "",
       "evidence": [],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "left": "고침 커밋 235ebf1(fix/s456-444-t-inho, 로컬). auth.real.spec.ts 101, 108행 기대 URL을 /admin$로 바꿨고 고치기 전 운영자 시험 실패, 고친 뒤 3개 통과를 봤다. 바꾸지 않은 head의 frontend-unit 실패(NT-inho-002)로 push를 멈췄다."
     },
     {
       "id": "Ck2-001",
@@ -6729,9 +6729,69 @@
       "tests": [],
       "behavior_change": false,
       "question": "헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다."
+    },
+    {
+      "id": "NT-inho-002",
+      "merged_ids": [],
+      "layer": 444,
+      "branch": "feat/webhook-jobs",
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "title": "반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음)",
+      "reason": "#442 36f7e74가 더한 workspace-operations.test.mjs가 f3855f4 반영으로 #444에 들어왔다. #444 integrations/[id]/page.tsx 20행이 operation restoreWebhookEndpoint를 쓰지만 #444 workspace-actions.ts에는 그 분기가 없고, 백엔드에도 웹훅 수신 주소 복원 API가 없다. 정점에서는 workspace-actions.ts 59행에 분기가 있다. archived_at이 있을 때만 그리는 패널이라 #444 실행 중 화면에는 나오지 않지만, frontend-unit 검사가 바꾸지 않은 head에서 실패해 #444 push가 막힌다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:20 @ f3855f4",
+        "frontend/e2e/workspace-operations.test.mjs:19 @ f3855f4",
+        "frontend/src/app/(console)/workspace-actions.ts:59 @ b8abfdf",
+        "every workspace panel operation is a known permission and has a workspace action case: 실패 restoreWebhookEndpoint has no case in workspace-actions.ts (바꾸지 않은 f3855f4)"
+      ],
+      "commits": [],
+      "tests": [
+        "바꾸지 않은 origin/feat/webhook-jobs(f3855f4) 워크트리에서 node --test 'e2e/*.test.mjs': pass 5, fail 1"
+      ],
+      "behavior_change": false,
+      "question": "#444 integrations/[id]/page.tsx 20행의 '수신 주소 복원' 패널(operation restoreWebhookEndpoint)은 백엔드 복원 API와 workspace-actions.ts 분기가 #447부터 있어, #442에서 반영된 workspace-operations.test.mjs가 바꾸지 않은 #444 head(f3855f4)에서 실패한다. 이 패널을 #444에서 빼고 #447로 옮길지, 시험이 #444에서 이 작업을 건너뛰게 할지 정해야 한다."
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "23 passed (14.0s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "fail",
+      "detail": "ℹ pass 5 ℹ fail 1"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-443-t-inho",
       "sha": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
@@ -8209,7 +8269,8 @@
     "2026-10-28T17:07+09:00 사람 지시로 push 방식을 바꿨다. 이 시각부터 맡은 feat 브랜치에 직접 push하지 않고, 층마다 origin/feat/<브랜치>를 base로 만든 fix/s456-<PR 번호>-t-inho 후속 브랜치에 push하며, 그 층 첫 push 때 base가 feat 브랜치인 PR을 연다(Draft 아님, merge하지 않음). origin/feat/<브랜치>가 움직이면 후속 브랜치에 merge한다. 바꾸기 전에 feat 브랜치에 push한 커밋은 없다. state.json branches에는 후속 브랜치를 적는다.",
     "후속 브랜치에서 고친 항목은 report.json의 branch를 후속 브랜치로 적고 layer는 원래 PR 번호를 둔다. check-report.mjs는 후속 브랜치를 스택 목록에 두지 않아 후속 브랜치 push마다 '이 세션 커밋을 읽지 못했다' 오류를 낸다. 넘기기 도구가 바뀔 때까지 이 오류만 빼고, 같은 기준(push한 sha의 kind별 통과 기록, 커밋과 항목, push 기록 대응)을 .s456-work의 보조 검사로 확인한 뒤 보고를 push한다.",
     "2026-10-28T17:55+09:00 사람 지시: 이 뒤 커밋 메시지에 Co-Authored-By 줄을 넣지 않고 새로 여는 PR 본문 끝에 Generated with Claude Code 줄을 넣지 않는다. 이미 push한 3ec2f28, 0dfdbd3과 #465 본문은 그대로 둔다.",
-    "PR #465에 조율 담당 댓글(2026-10-28 17:53 KST): #443 작업을 마치고 다른 층으로 넘어갈 때 조율 담당이 #465를 feat/product-design에 merge하고, 그 전까지 이 브랜치에 push하라는 안내와 0fc4894를 받으라는 요청. 0fc4894는 93491f9로 받았다."
+    "PR #465에 조율 담당 댓글(2026-10-28 17:53 KST): #443 작업을 마치고 다른 층으로 넘어갈 때 조율 담당이 #465를 feat/product-design에 merge하고, 그 전까지 이 브랜치에 push하라는 안내와 0fc4894를 받으라는 요청. 0fc4894는 93491f9로 받았다.",
+    "2026-10-28 #444 시작에서 멈춤: 바꾸지 않은 #444 head(f3855f4)에서 frontend-unit이 실패한다(NT-inho-002). common-brief 10절, 12절대로 전체를 멈췄다. #444 U1-B1 커밋 235ebf1은 fix/s456-444-t-inho에 로컬로만 있고 push하지 않았다(frontend-unit 말고는 통과)."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465"
@@ -8222,5 +8283,6 @@
       "total": 1,
       "screens": "고친 화면 66건 after 대비 콘솔 오류, 넘침, axe 증가 없음"
     }
-  ]
+  ],
+  "usage_note": "사용량 도구가 없어 수치를 남기지 못했다(사람이 /usage로 지켜본다). #443 한 층에 판정 Workflow 1회(에이전트 44개, 하위 에이전트 토큰 약 406만)와 커밋 33개 각각의 10절 검사, 마지막 실화면 점검을 썼다. 남은 7개 층은 항목이 280건이라 #443과 비슷한 비율이면 이보다 약 3배가 더 든다고 본다(추정)."
 }

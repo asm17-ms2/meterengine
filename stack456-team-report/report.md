@@ -1,8 +1,8 @@
 미완료 280건, 결과: 끝 상태 92/372건 (fixed 75, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
-정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
+정할 것: 18건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001, NT-inho-002). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T19:47:24+09:00
+상태: stopped, 갱신 2026-10-28T19:51:17+09:00
 
 ## 층별 상태
 
@@ -119,6 +119,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
 | G-078 | #443 | LinkButton과 ScopedLink의 href 변환을 공용 훅으로 합치고 ConsoleShell의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 정리(#442 NavMenu 23행의 같은 패턴 포함 여부까지)를 #443에서 할지 정한다. |
 | D-237 | #443 | 화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker prop과 admin 화면의 .page-heading을 없애고, ActionPanel(#442)에 버튼 type을 두어 제목 줄 생성 행동을 primary로 통일할지 정한다. |
 | NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
+| NT-inho-002 | #444 | #444 integrations/[id]/page.tsx 20행의 '수신 주소 복원' 패널(operation restoreWebhookEndpoint)은 백엔드 복원 API와 workspace-actions.ts 분기가 #447부터 있어, #442에서 반영된 workspace-operations.test.mjs가 바꾸지 않은 #444 head(f3855f4)에서 실패한다. 이 패널을 #444에서 빼고 #447로 옮길지, 시험이 #444에서 이 작업을 건너뛰게 할지 정해야 한다. |
 
 ## 막힌 것
 
@@ -130,6 +131,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
 | NT-inho-001 | #443 | needs-decision | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
+| NT-inho-002 | #444 | needs-decision | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
 
 ## 돌리지 못한 검사
 
@@ -181,7 +183,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
 
 ## 사용량
 
-사용량 도구가 없다. 사람이 /usage로 지켜보고 상한(5시간, 주간 70%) 즈음이면 멈추라고 알려 준다.
+사용량 도구가 없어 수치를 남기지 못했다(사람이 /usage로 지켜본다). #443 한 층에 판정 Workflow 1회(에이전트 44개, 하위 에이전트 토큰 약 406만)와 커밋 33개 각각의 10절 검사, 마지막 실화면 점검을 썼다. 남은 7개 층은 항목이 280건이라 #443과 비슷한 비율이면 이보다 약 3배가 더 든다고 본다(추정).
 
 ## 메모
 
@@ -190,3 +192,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
 - 후속 브랜치에서 고친 항목은 report.json의 branch를 후속 브랜치로 적고 layer는 원래 PR 번호를 둔다. check-report.mjs는 후속 브랜치를 스택 목록에 두지 않아 후속 브랜치 push마다 '이 세션 커밋을 읽지 못했다' 오류를 낸다. 넘기기 도구가 바뀔 때까지 이 오류만 빼고, 같은 기준(push한 sha의 kind별 통과 기록, 커밋과 항목, push 기록 대응)을 .s456-work의 보조 검사로 확인한 뒤 보고를 push한다.
 - 2026-10-28T17:55+09:00 사람 지시: 이 뒤 커밋 메시지에 Co-Authored-By 줄을 넣지 않고 새로 여는 PR 본문 끝에 Generated with Claude Code 줄을 넣지 않는다. 이미 push한 3ec2f28, 0dfdbd3과 #465 본문은 그대로 둔다.
 - PR #465에 조율 담당 댓글(2026-10-28 17:53 KST): #443 작업을 마치고 다른 층으로 넘어갈 때 조율 담당이 #465를 feat/product-design에 merge하고, 그 전까지 이 브랜치에 push하라는 안내와 0fc4894를 받으라는 요청. 0fc4894는 93491f9로 받았다.
+- 2026-10-28 #444 시작에서 멈춤: 바꾸지 않은 #444 head(f3855f4)에서 frontend-unit이 실패한다(NT-inho-002). common-brief 10절, 12절대로 전체를 멈췄다. #444 U1-B1 커밋 235ebf1은 fix/s456-444-t-inho에 로컬로만 있고 push하지 않았다(frontend-unit 말고는 통과).
