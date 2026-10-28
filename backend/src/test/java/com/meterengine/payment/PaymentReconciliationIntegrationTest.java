@@ -853,6 +853,86 @@ class PaymentReconciliationIntegrationTest {
     assertThat(mismatchRows(organization)).isEmpty();
   }
 
+  @Test
+  void 거래_목록에_없는_완료_취소도_재조회한_결제의_cancels에_있으면_누락으로_남기지_않고_금액만_비교한다() {
+    Organization organization = organization();
+    UUID attemptId = doneAttempt(organization, 13200, "2026-10-20T10:00:03+09:00");
+    doneCancellation(organization, attemptId, 3000, "tx_late_cancel", "2026-10-25T10:00:03+09:00");
+    doneCancellation(organization, attemptId, 2000, "tx_late_amount", "2026-10-25T11:00:03+09:00");
+    doneCancellation(
+        organization, attemptId, 1000, "tx_cancel_missing", "2026-10-25T12:00:03+09:00");
+    stubPages(organization, List.of());
+    when(tossPaymentsClient.findPayment(organization.secretKey(), paymentKey(attemptId)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                new TossPaymentsPayment(
+                    paymentKey(attemptId),
+                    ORDER_ID_PREFIX + attemptId,
+                    "PARTIAL_CANCELED",
+                    13200,
+                    8700,
+                    List.of(
+                        new TossPaymentsPayment.Cancel(
+                            "tx_late_cancel",
+                            3000,
+                            OffsetDateTime.parse("2026-10-24T20:00:00+09:00"),
+                            "DONE"),
+                        new TossPaymentsPayment.Cancel(
+                            "tx_late_amount",
+                            1500,
+                            OffsetDateTime.parse("2026-10-24T21:00:00+09:00"),
+                            "DONE")))));
+    Map<String, Double> before = mismatchCounts();
+
+    reconcile(SLOT, 1, 0, 0);
+
+    assertThat(mismatchRows(organization))
+        .extracting(
+            row -> row.get("kind"),
+            row -> row.get("order_id"),
+            row -> row.get("payment_key"),
+            row -> row.get("transaction_key"),
+            row -> row.get("meterengine_amount"),
+            row -> row.get("toss_payments_amount"))
+        .containsExactlyInAnyOrder(
+            tuple(
+                "amount_mismatch",
+                attemptId.toString(),
+                paymentKey(attemptId),
+                "tx_late_amount",
+                2000L,
+                1500L),
+            tuple(
+                "missing_in_toss_payments",
+                attemptId.toString(),
+                paymentKey(attemptId),
+                "tx_cancel_missing",
+                1000L,
+                null));
+    assertThat(deltas(before))
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of(
+                "missing_in_meterengine", 0.0,
+                "missing_in_toss_payments", 1.0,
+                "amount_mismatch", 1.0,
+                "status_mismatch", 0.0));
+  }
+
+  @Test
+  void 거래_목록에_없는_완료_취소의_결제_재조회가_불확실하면_failed이고_누락으로_남기지_않는다() {
+    Organization organization = organization();
+    UUID attemptId = doneAttempt(organization, 13200, "2026-10-20T10:00:03+09:00");
+    doneCancellation(
+        organization, attemptId, 3000, "tx_cancel_unknown", "2026-10-25T10:00:03+09:00");
+    stubPages(organization, List.of());
+    when(tossPaymentsClient.findPayment(organization.secretKey(), paymentKey(attemptId)))
+        .thenReturn(new TossPaymentsResult.Unknown<>("응답 없음"));
+
+    reconcile(SLOT, 0, 0, 1);
+
+    assertThat(mismatchRows(organization)).isEmpty();
+  }
+
   private void stubPayment(
       Organization organization, UUID attemptId, String orderId, String status, long amount) {
     when(tossPaymentsClient.findPayment(organization.secretKey(), paymentKey(attemptId)))

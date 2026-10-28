@@ -2,6 +2,7 @@ package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.validation.StorableText;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +43,7 @@ public class PaymentMethodRegistrationController {
           고객이 카드를 등록할 일회용 링크를 만든다. 본문은 받지 않는다.
           token은 이 응답에만 실린다. 서버는 token 원문을 저장하지 않으므로 다시 조회할 수 없다.
           링크는 지금 결제 모드로 만들고 24시간 뒤 만료된다. 카드 등록에 한 번 쓰면 다시 쓸 수 없다.
+          API 키로 부르면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면 409다.
           expires_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -65,12 +68,17 @@ public class PaymentMethodRegistrationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다")
+        description =
+            """
+            code=payment_mode_mismatch: API 키의 모드가 지금 결제 모드와 다르다.
+            code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
+            """)
   })
   public PaymentMethodRegistrationResponse createPaymentMethodRegistration(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Parameter(description = "카드를 등록할 고객의 id.") @PathVariable UUID id) {
-    return paymentMethodRegistrationService.create(organizationId, id);
+    return paymentMethodRegistrationService.create(organizationId, id, principal.mode());
   }
 
   @GetMapping("/v1/payment-method-registrations/{token}")
