@@ -203,6 +203,17 @@ test("webhook delivery history names event types, delivery states and failure re
   for (const raw of ["payment_failed", "webhook_test", "connection_error", "blocked_address", "결과 확인 중"]) await expect(table.getByText(raw, { exact: true })).toHaveCount(0);
 });
 
+test("saving a webhook endpoint keeps its existing description", async ({ page, request }) => {
+  await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
+  await page.getByRole("button", { name: "수신 주소와 통보 수정", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "수신 주소와 통보 수정", exact: true }).click();
+  await expect.poll(async () => {
+    const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+    const update = calls.find((call: { path: string; method: string }) => call.method === "PUT" && call.path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}`);
+    return update ? update.description ?? "설명 없이 보냄" : "보내지 않음";
+  }).toBe("운영 알림 수신기");
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
