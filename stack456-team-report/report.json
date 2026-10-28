@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:40:26+09:00",
+  "updated_at": "2026-10-28T19:43:09+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "4b992f3",
+    "feat/account-permissions": "0b31ea4",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -948,14 +948,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "workspace-actions.ts 21-25행 amount는 안전 정수만 보고 상한을 모르며, 52-54행 catch는 모든 입력 오류를 '금액은 0 이상의 정수, 조합과 구간은 올바른 JSON' 문구로 바꿔 필드를 알려 주지 않는다. integrations 분당 요청 한도에는 max가 없어 백엔드 정수 범위를 넘는 값이 나간다. 정점도 같다. 범위와 필드를 아는 정수 읽기와 필드 오류를 두었다.",
+      "evidence": [
+        "frontend/src/app/(console)/workspace-actions.ts:21-25,52-54 @ 72e8718",
+        "frontend/src/app/(console)/integrations/page.tsx:23 @ 72e8718",
+        "a whole number outside its range names the field instead of blaming JSON: 실패 SyntaxError: does not provide an export named 'InputFieldError'"
+      ],
+      "commits": [
+        "0b31ea44f620"
+      ],
+      "tests": [
+        "e2e/workspace-action-feedback.test.mjs a whole number outside its range names the field instead of blaming JSON: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts an out-of-range rate limit is reported on that field 통과",
+        "pnpm test:unit 11건, auth.contract.spec.ts 33건 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same 80a3ef1 4ace811 614d3bc 2ec5d85 e5fca11 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "범위 밖 정수 입력을 필드 오류로",
+      "propagation_note": "위층 amount 호출(결제 금액 등)은 기본 범위(0 이상 안전 정수)로 그대로 동작한다. 위층 catch에 JSON 조합과 구간 입력이 생기면(#446 요금제) 그 층에서 JSON 오류를 InputFieldError로 바꿔 필드를 알린다."
     },
     {
       "id": "X-061",
@@ -7816,6 +7833,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 11 ℹ pass 11 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  33 passed (15.1s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.8s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.315s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8058,6 +8131,11 @@
       "branch": "feat/account-permissions",
       "sha": "4b992f3ecb5445b8de2c19236ca20038b239036d",
       "at": "2026-10-28T19:36:47+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
+      "at": "2026-10-28T19:43:09+09:00"
     }
   ],
   "usage_log": [],

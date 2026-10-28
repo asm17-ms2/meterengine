@@ -1,12 +1,12 @@
-미완료 203건, 결과: 끝 상태 125/328건 (fixed 83, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 48개(마지막 4b992f3)
+미완료 202건, 결과: 끝 상태 126/328건 (fixed 84, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 49개(마지막 0b31ea4)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 83 | 1 | 7 | 31 | 3 | 18 |
+| #442 | 143 | 84 | 1 | 7 | 31 | 3 | 17 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -35,6 +35,7 @@ push: feat/account-permissions 48개(마지막 4b992f3)
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
 | X-032 | #442 | 32a3356 | 새 계정용 초대에서 현재 로그인 상태 안내 | a new-account invitation opened while signed in as someone else says who is signed in: 실패 Error: expect(locator).toContainText failed, Locator: getByRole('statu |
 | X-034 | #442 | b7e5d38 | 가입 신청 접수 안내 | signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole |
+| X-055 | #442 | 0b31ea4 | 범위 밖 정수 입력을 필드 오류로 | a whole number outside its range names the field instead of blaming JSON: 실패 SyntaxError: does not provide an export named 'InputFieldError' |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
 | X-066 | #442 | 4b992f3 | 작업별 성공 안내 문구 | each workspace action that shows a toast says what it did: 실패 ERR_MODULE_NOT_FOUND workspace-action-feedback.ts |
 | X-084 | #442 | 7842944 | 초대, 동의 화면 보조 동작 access-actions 묶음 | 없음(보이는 변경: 이 층에는 access-actions 스타일이 없어 화면 차이가 없다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 간격은 #443 이상에서 ) |
@@ -161,6 +162,7 @@ push: feat/account-permissions 48개(마지막 4b992f3)
 | G-056 | #442 | 정점까지 정규식과 쿠키 줄은 그대로다. e5fca11(#451)이 continue/page.tsx의 이웃 줄(링크 대상)만 바꿔서, 모으기로 하면 위층을 다시 쌓을 때 작은 충돌이 날 수 있다. 백엔드 OrganizationInvitationController.java 36, 45행의 @Pattern과 SecureTokens.generate("me_invite_")가 같은 형식에 묶여 있다. |
 | G-065 | #442 | 정점 transport.ts 111-112행 catch가 같은 글자라 그대로 옮겨진다. e5fca11(#451)과 a39db70(#454)이 근처 줄을 바꿨지만 겹치지 않는다. H2-S1(#453)의 옛 백엔드 조합 호환은 이 수정 밖이다. |
 | G-067 | #442 | CONSENT_VERSION 상수는 정점 0fe7d2a의 real e2e 여러 곳(aggregation, archive-filters, customer-payment-retry, environment-cycle, events 등 frontend/e2e/*.real.spec.ts)에서 가입 요청의 판으로 쓰인다. 상수를 없애거나 서버에서 받게 바꾸면 그 파일들도 같이 고쳐야 한다. 결제 수단 등록의 consent_document_version(CreateBillingKeyRequest, #445 이후)도 같은 방식으로 판을 그대로 받는다. |
+| X-055 | #442 | 위층 amount 호출(결제 금액 등)은 기본 범위(0 이상 안전 정수)로 그대로 동작한다. 위층 catch에 JSON 조합과 구간 입력이 생기면(#446 요금제) 그 층에서 JSON 오류를 InputFieldError로 바꿔 필드를 알린다. |
 | X-061 | #442 | 정점 명세 people.real.spec.ts와 mvp.real.spec.ts는 링크를 getByRole('link', { name, exact: true })로 찾아 이름이 그대로라 영향이 없다. |
 | X-066 | #442 | 위층에서 더한 작업(결제, 웹훅, 고객 등)은 맵에 없어 '처리했습니다.'로 남는다. 각 층이 원하면 SUCCESS_MESSAGES에 문구를 더한다. #453 mvp.real.spec.ts 106행과 environment-cycle.real.spec.ts 72행은 updateSupplier라 영향이 없다. |
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
