@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:03:41+09:00",
+  "updated_at": "2026-10-28T23:06:29+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4964,14 +4964,14 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "open",
+      "status": "blocked",
       "verdict": "not-judged",
-      "reason": "",
+      "reason": "#447 feat/resource-archive는 양성지 님 층이다. #446 C446-013과 같은 시험, 같은 원인이라 T-inho 패키지에 들어 있지만 T-inho brief대로 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다.",
       "evidence": [],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "blocked_reason": "not-owner #447: 양성지 님 층의 시험이라 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다."
     },
     {
       "id": "G-092",

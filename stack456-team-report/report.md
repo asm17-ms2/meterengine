@@ -1,8 +1,8 @@
-미완료 241건, 결과: 끝 상태 131/372건 (fixed 98, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+미완료 240건, 결과: 끝 상태 132/372건 (fixed 98, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 2(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a)
 정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T23:03:41+09:00
+상태: running, 갱신 2026-10-28T23:06:29+09:00
 
 ## 층별 상태
 
@@ -16,7 +16,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
 | #455 | feat/rds-auto-stop | 12 | 0 | 0 | 0 | 0 | 0 | 12 |
-| #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 
 ## 고친 것
 
@@ -157,6 +157,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | id | 층 | 까닭 |
 | --- | --- | --- |
 | Ck2-014 | #444 | not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다. |
+| C447-011 | #447 | not-owner #447: 양성지 님 층의 시험이라 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다. |
 
 ## 새 지적
 

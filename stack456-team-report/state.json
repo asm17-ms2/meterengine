@@ -1,14 +1,14 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-28T23:03:41+09:00",
+  "updated_at": "2026-10-28T23:06:29+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
-    "id": "U5-B1",
-    "step": "report",
-    "branch": "fix/s456-444-t-inho"
+    "id": "C446-001",
+    "step": "judge",
+    "branch": "fix/s456-446-t-inho"
   },
   "finished_ids": [
     "C443-000",
@@ -142,6 +142,7 @@
     "G-142",
     "U14-B1",
     "U5-B1",
+    "C447-011",
     "NT-inho-001",
     "NT-inho-002",
     "NT-inho-003"
@@ -198,7 +199,6 @@
     "D-205",
     "X-077",
     "X-102",
-    "C447-011",
     "G-092",
     "C448-001",
     "G-095",
@@ -400,6 +400,11 @@
       "origin_sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
       "local_sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
       "unpushed": []
+    },
+    "fix/s456-446-t-inho": {
+      "origin_sha": "",
+      "local_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+      "unpushed": []
     }
   },
   "usage": {
@@ -415,13 +420,9 @@
     }
   },
   "live_env": {
-    "running": true,
-    "layer": 444,
-    "pids": [
-      26013,
-      26035,
-      26088
-    ],
-    "container": "meterengine-0696-e2e"
+    "running": false,
+    "layer": null,
+    "pids": [],
+    "container": null
   }
 }
