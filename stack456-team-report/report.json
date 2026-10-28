@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:47:54+09:00",
+  "updated_at": "2026-10-28T18:50:35+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "a8024e03151fb03d762fc56bc534826526ad1105"
+    "fix/s456-443-t-inho": "45fde1759f76d6b5ae419459b985097601995581"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -2757,15 +2757,39 @@
       "id": "D-165",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 ActionPanel 모달 본문이 overflowY auto와 padding \"4px 4px 4px 0\"을 쓰고, #443 커밋 f671a4f가 더한 전역 규칙이 input, select에 outline 3px, offset 4px를 주어 링이 요소 밖 4-7px에 그려진다. 폼 fieldset은 padding 0, margin 0이고 입력은 width 100%라 입력 왼쪽 변이 본문 padding 상자 왼쪽에 붙으므로, 스크롤 영역이 자르는 padding 상자 밖의 왼쪽 링(여유 0)과 오른쪽 링(여유 4px)이 통째로 보이지 않는다. 이 규칙을 덮어쓰는 outline 규칙이나 .ant-modal-body 규칙, 이를 확인하는 e2e는 층 head와 정점 어디에도 없다. 넘길 때 뒤로 이 층 브랜치가 9de0e1e까지 움직였지만 138행에 같은 padding이 남아 있고, 같은 padding은 같은 브랜치의 CreateOperatorButton, AttachOrganizationButton에도 있으며 ReviewAction은 padding 0이다. todo대로 같은 브랜치의 CreateOperatorButton, AttachOrganizationButton, ReviewAction 사본도 같은 값으로 맞췄다(G-049가 막는 것은 공용 모달 통합이다).",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/app/globals.css:145 @ 0f1d1bf",
+        "frontend/src/components/workspace/ActionPanel.tsx:138 @ 9de0e1e",
+        "frontend/src/components/workspace/ActionPanel.tsx:131 @ 0fe7d2a",
+        "frontend/src/components/auth/CreateOperatorButton.tsx:52 @ 0f1d1bf",
+        "frontend/src/components/auth/AttachOrganizationButton.tsx:43 @ 0f1d1bf",
+        "frontend/src/components/auth/ReviewAction.tsx:13 @ 0f1d1bf",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:114 @ c27b229",
+        "a focused field in a workspace dialog keeps its whole focus ring inside the dialog body: 실패 Expected >= 7 Received 0 (본문 안쪽 왼쪽 여유)",
+        "커밋 45fde1759f76d6b5ae419459b985097601995581"
+      ],
+      "commits": [
+        "45fde1759f76d6b5ae419459b985097601995581"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'a focused field in a workspace dialog keeps its whole focus ring inside the dialog body'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ActionPanel.tsx 131행에 같은 padding이 있고 위층 23b1844 #453은 줄만 옮겼다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#446부터 있는 PricingWorkspace.tsx(c27b229 114행)의 대화상자 본문도 같은 padding이라, 그 층에서 padding 8, marginInline -8로 맞춘다.",
+      "summary": "업무 대화상자 네 사본의 본문을 padding 8, 좌우 margin -8로 바꿔 포커스 테두리 여유를 두었다"
     },
     {
       "id": "G-046",
@@ -7379,6 +7403,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "40 passed (19.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "41 passed (19.7s)"
     }
   ],
   "pushes": [
@@ -7501,6 +7563,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
       "at": "2026-10-28T18:45:21+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "at": "2026-10-28T18:50:20+09:00"
     }
   ],
   "usage_log": [],
