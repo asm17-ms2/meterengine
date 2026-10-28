@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:10:47+09:00",
+  "updated_at": "2026-10-28T19:13:05+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "b931df4",
+    "feat/account-permissions": "32a3356",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -840,14 +840,28 @@
       ],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "organization-invitations/[token]/page.tsx 31행은 account_exists가 false면 세션 확인 결과와 관계없이 InvitationForm만 그려, 다른 계정으로 로그인한 사용자에게 현재 로그인과 수락 뒤 로그인 전환을 알리지 않는다. 기존 계정 분기(30행)는 현재 로그인을 상태 문구로 보인다. 정점도 같다. 새 계정 분기에도 상태 안내와 로그아웃 버튼을 더했다. 묶인 D-095도 같은 분기다.",
+      "evidence": [
+        "frontend/src/app/organization-invitations/[token]/page.tsx:24,30-31 @ 72e8718",
+        "a new-account invitation opened while signed in as someone else says who is signed in: 실패 Error: expect(locator).toContainText failed, Locator: getByRole('status').filter({ hasText: 'member@contract.local' })"
+      ],
+      "commits": [
+        "32a33562fdc3"
+      ],
+      "tests": [
+        "auth.contract.spec.ts a new-account invitation opened while signed in as someone else says who is signed in: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 30건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "새 계정용 초대에서 현재 로그인 상태 안내"
     },
     {
       "id": "X-034",
@@ -7457,6 +7471,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  30 passed (14.5s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.315s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7674,6 +7744,11 @@
       "branch": "feat/account-permissions",
       "sha": "b931df4efcf0083f512ba3a1d12fa86f86afaf33",
       "at": "2026-10-28T19:08:08+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "32a33562fdc3c22e88c26f6990dd2524a72241e7",
+      "at": "2026-10-28T19:13:05+09:00"
     }
   ],
   "usage_log": [],
