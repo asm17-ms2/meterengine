@@ -215,6 +215,28 @@ class PaymentMethodRegistrationIntegrationTest {
   }
 
   @Test
+  void 정지된_도입사의_링크는_조회도_발급도_404이고_토스를_부르지_않으며_재개하면_다시_조회된다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    String token = createToken(organizationId, customerId);
+    tossIssues(issued(BILLING_KEY, "61", "43301234****123*"));
+
+    assertThat(updateOrganizationStatus(organizationId, "suspended")).hasStatus(200);
+
+    assertError(getRegistration(token), 404, ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
+    assertError(
+        createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION),
+        404,
+        ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
+    verifyNoInteractions(tossPaymentsClient);
+    assertThat(countBillingKeys(customerId)).isZero();
+
+    assertThat(updateOrganizationStatus(organizationId, "active")).hasStatus(200);
+    assertThat(getRegistration(token)).hasStatus(200);
+  }
+
+  @Test
   void 빌링키를_발급하면_201이고_암호문과_동의_기록이_남고_같은_링크는_다시_쓸_수_없다() {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);
@@ -539,6 +561,15 @@ class PaymentMethodRegistrationIntegrationTest {
             {"auth_key": "%s", "customer_key": "%s", "consent_document_version": "%s"}
             """
                 .formatted(authKey, customerKey, consentDocumentVersion))
+        .exchange();
+  }
+
+  private MvcTestResult updateOrganizationStatus(UUID organizationId, String status) {
+    return mvc.put()
+        .uri("/v1/organizations/{id}/status", organizationId)
+        .header("Authorization", TestCredentials.issueOperatorSession(jdbcTemplate))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"status\": \"%s\"}".formatted(status))
         .exchange();
   }
 

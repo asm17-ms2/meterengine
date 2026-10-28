@@ -5,6 +5,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.payment.dto.PaymentMethodRegistrationResponse;
 import com.meterengine.payment.entity.PaymentMethodRegistration;
@@ -98,6 +99,7 @@ public class PaymentMethodRegistrationService {
   PaymentMethodRegistration findUsable(String token) {
     return paymentMethodRegistrationRepository
         .findByTokenHashAndUsedAtIsNullAndExpiresAtAfter(hash(token), OffsetDateTime.now())
+        .filter(registration -> isActive(registration.getOrganizationId()))
         .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND));
   }
 
@@ -105,6 +107,13 @@ public class PaymentMethodRegistrationService {
     return tossPaymentsCredentialService
         .find(organizationId, mode)
         .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
+  }
+
+  private boolean isActive(UUID organizationId) {
+    return organizationRepository
+        .findById(organizationId)
+        .filter(organization -> Organization.ACTIVE.equals(organization.getStatus()))
+        .isPresent();
   }
 
   private String organizationName(UUID organizationId) {
