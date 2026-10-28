@@ -79,12 +79,15 @@ public class PriceRateService {
   @Transactional
   public PriceRateResponse create(
       UUID organizationId, String code, CreatePriceRateRequest request) {
+    if (!request.isValidPricing())
+      throw new InvalidRequestException(
+          ErrorCode.VALIDATION_ERROR,
+          List.of(new FieldError("model", "요금 모델에 맞는 단가와 마지막 한도 없는 오름차순 구간이 필요합니다")));
     BillableMetric metric =
         billableMetricRepository
             .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
     validate(request.dimensionValues(), metric.getDimensionProperties());
-    if (!request.isValidPricing()) throw invalid("model", "요금 모델에 맞는 단가와 구간이 필요합니다");
     YearMonth current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
     YearMonth start = request.effectiveFrom() == null ? current : request.effectiveFrom();
     if (start.isBefore(current))
