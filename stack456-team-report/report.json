@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:13:58+09:00",
+  "updated_at": "2026-10-28T17:15:14+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9"
+    "fix/s456-443-t-inho": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -113,29 +113,68 @@
       "id": "D-024",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 .workspace-sidebar는 position: sticky, top: 68px, align-self: start에 min-height만 있고 max-height와 overflow가 없다. 117행 grid의 2행이 1fr라 sticky가 문서 끝까지 위에 붙어 있으므로, 사이드바가 (뷰포트 높이 - 68px)보다 길면 아래쪽은 본문 끝 근처까지 스크롤해야 올라온다. 이 층 0f1d1bf의 NavMenu.tsx:11-15는 항목 7개라 사이드바 높이가 약 766px로 추정된다. 그래서 1440x900(남는 높이 832px)에서는 다 보이고, 768px 높이에서는 하단 안내 문단이, 720px 높이에서는 '서버 연동 설정' 링크가 가려진다. 지적 원문의 1440x900 실패(14개 항목, 1128px)는 정점 0fe7d2a NavMenu.tsx:11-16에서 그대로 재현되고, globals.css는 0f1d1bf부터 정점까지 바뀌지 않았다. 원인 줄이 이 층에 있고 CSS 한 줄로 고칠 수 있어 이 층에서 고친다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:50 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-15 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "frontend/src/components/shell/AppProviders.tsx:17,19 @ 0f1d1bf",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "X-010",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "NavMenu.tsx:23 @ 0f1d1bf의 메뉴 링크와 ConsoleShell.tsx:50의 '서버 연동 설정' 링크는 Tab으로 포커스되지만, 이 링크들을 담은 .workspace-sidebar(globals.css:127)는 높이 제한과 자체 스크롤이 없는 sticky다. 브라우저가 포커스된 링크를 보이려고 문서를 스크롤해도 sticky 상자는 grid 영역(117행, 2행 1fr)의 끝에 닿기 전까지 top 68px에 머물러 링크가 같은 화면 위치에 남는다. 그래서 링크가 뷰포트 아래에 있으면 포커스 표시가 보이지 않는다(WCAG 2.4.11). 이 층 0f1d1bf는 항목 7개, 사이드바 약 766px로 추정돼 1440x900에서는 문제가 없고, 720px 높이에서는 '서버 연동 설정' 포커스가 화면 밖이다. 정점 0fe7d2a(NavMenu.tsx:11-16, 14개 항목)에서는 앞선 검증의 재현대로 1440x900에서도 '감사 기록' 포커스가 scrollY 2655일 때 top 964px로 화면 밖에 있다. 원인이 D-024와 같은 CSS 줄이라 함께 고친다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:23 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:50 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "X-001",
@@ -384,71 +423,163 @@
       "id": "D-002",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 sticky 사이드바에는 max-height와 overflow가 없고, 117행 grid 2행이 1fr라 문서 끝 근처까지 스크롤해야 사이드바 아래쪽이 올라온다. 지적이 든 1440x900의 '관리와 기록' 그룹(사용자 관리, 감사 기록)이 가려지는 일은 정점 0fe7d2a NavMenu.tsx:11-16의 14개 항목(약 1127px)에서 재현된다. 이 층 0f1d1bf는 NavMenu.tsx:11-15에 7개 항목뿐이라 약 766px로 추정되고, 1440x900에서는 다 보이지만 768px 이하 높이에서는 하단 안내와 '서버 연동 설정' 링크가 가려진다. 원인 줄은 이 층에 있고 globals.css는 정점까지 같다. 제안의 Menu 토큰 축소는 정점의 항목 수에서는 768px 높이에 다 넣지 못하므로 보조 수단일 뿐이고, 사이드바 자체 스크롤이 본 수정이다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-15 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0f1d1bf",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "D-048",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 .workspace-sidebar는 sticky, top 68px이고 max-height와 overflow가 없으며, ConsoleShell.tsx:50에서 메뉴 뒤에 '서버 연동 설정' 안내가 붙는다. 117행 grid 2행이 1fr라 사이드바가 뷰포트보다 길면 본문 끝 근처까지 스크롤해야 안내가 올라온다. 이 층 0f1d1bf(항목 7개, 약 766px 추정)에서는 720px 높이에서 '서버 연동 설정'이 가려지고, 정점 0fe7d2a(NavMenu.tsx:11-16, 14개 항목)에서는 1440x900에서도 사용자 관리, 감사 기록, 서버 연동 설정이 가려진다. globals.css는 정점까지 같으니 이 층의 CSS 한 줄 수정으로 고친다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:50 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "D-064",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 sticky 사이드바는 자체 스크롤이 없고 117행 grid 2행이 1fr라, 사이드바가 뷰포트보다 길면 그 차이만큼 본문 끝을 스크롤해야 아래쪽이 보인다. AppProviders.tsx:17,19는 controlHeight 38에 Menu itemHeight를 바꾸지 않아 항목 간격이 약 52px다. 지적의 1440x900 수치(사용자 관리 y 969, 사이드바 1127px)는 정점 0fe7d2a NavMenu.tsx:11-16의 14개 항목에서 나온 것이다. 이 층 0f1d1bf는 NavMenu.tsx:11-15에 7개 항목이라 약 766px로 추정돼 768px 이하 높이에서만 하단 안내와 링크가 가려진다. 원인 CSS가 이 층에 있고 정점까지 같은 파일이라 이 층에서 고친다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:17,19 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-15 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "D-235",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 .workspace-sidebar는 sticky, top: 68px에 max-height와 overflow가 없고, 287행에 --workspace-header-height: 68px 변수가 있는데도 top과 min-height에 68px를 직접 적었다. 117행 grid 2행이 1fr라 사이드바가 뷰포트보다 길면 페이지 끝까지 내려야 아래 메뉴가 올라온다. 지적의 /usage 1440x900 실패는 정점 0fe7d2a NavMenu.tsx:11-16의 14개 항목에서 재현되고, 이 층 0f1d1bf의 7개 항목(약 766px 추정)에서는 768px 이하 높이에서 하단 안내와 링크가 가려진다. top을 변수로 바꾸는 것은 같은 줄의 같은 수정에 들어간다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:287 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "D-249",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css:127 @ 0f1d1bf의 sticky 사이드바는 min-height만 있고 max-height와 overflow가 없다. 이 사이드바는 box-sizing이 content-box라 min-height 832px에 padding-top 28px가 더해져, 1440x900에서도 늘 뷰포트보다 28px 길다. 117행 grid 2행이 1fr라 사이드바 위를 휠로 굴려도 사이드바만 움직이지 않고 문서가 스크롤되며, 아래쪽은 페이지 끝에서야 올라온다. 지적의 인보이스 화면 실패는 정점 0fe7d2a NavMenu.tsx:11-16의 14개 항목에서 재현되고, 이 층 0f1d1bf(7개 항목, 약 766px 추정)에서는 800px 안팎 높이에서 하단 안내와 '서버 연동 설정' 링크가 가려진다. 제안처럼 min-height를 남긴 채 max-height만 더하면 content-box 때문에 아래가 28px 넘치므로 border-box와 함께 고친다. 메인 세션이 9de0e1e에서 127행을 다시 보았고 212b604가 메뉴를 하나 더해 사이드바가 더 길다. 계약 명세로 1280x720 재현(아래 끝 886.9px).",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/app/globals.css:131 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:11-16 @ 0fe7d2a",
+        "the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝)",
+        "커밋 0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "commits": [
+        "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the sidebar fits a short screen and scrolls by itself so its last link stays visible'; evidence/D-024 before, after 1280x720, 1440x900 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 127행이 정점 b8abfdf에서도 같고 위층에서 이 파일을 바꾼 커밋이 없다. 위층 NavMenu 항목 추가로 정점에서는 더 길어진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤"
     },
     {
       "id": "X-048",
@@ -5244,6 +5375,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "18 passed (11.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "19 passed (11.3s)"
     }
   ],
   "pushes": [
@@ -5251,6 +5419,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
       "at": "2026-10-28T17:12:06+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "at": "2026-10-28T17:14:56+09:00"
     }
   ],
   "usage_log": [],
