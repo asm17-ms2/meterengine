@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:33:07+09:00",
+  "updated_at": "2026-10-28T18:35:20+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "9fff495",
+    "feat/account-permissions": "00794cc",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -397,14 +397,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "OrganizationAccountService의 private save는 DataIntegrityViolationException을 잡아 원인 메시지의 user_account_email_unique 문자열로 409를 만들고, register는 저장 전 조회 없이 이에 기댄다. docs/contributing/error-handling.md는 이 예외를 서비스와 핸들러 모두 잡지 않고 경합도 500으로 두게 한다. 정점도 같다. register에 create와 같은 저장 전 조회를 두고 catch를 지웠다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:79,102-110 @ 72e8718",
+        "docs/contributing/error-handling.md:32,36 @ 72e8718",
+        "이미_있는_이메일로_가입하면_저장하지_않고_409_예외다: 실패 Expecting actual throwable to be an instance of: ConflictException but was: NullPointerException"
+      ],
+      "commits": [
+        "00794cc85c08"
+      ],
+      "tests": [
+        "OrganizationAccountServiceTest 이미_있는_이메일로_가입하면_저장하지_않고_409_예외다 외 2건: 고치기 전 실패, 고친 뒤 통과",
+        "OrganizationPeopleIntegrationTest 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "가입 이메일 중복을 저장 전 조회로, 제약 이름 비교 제거",
+      "propagation_note": "가입 경로의 조회와 저장 사이 경합은 이제 409가 아니라 500이다(error-handling.md 규칙). 정점까지 이 파일을 바꾼 위층 커밋은 없다."
     },
     {
       "id": "G-005",
@@ -7060,6 +7076,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.339s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7247,6 +7311,11 @@
       "branch": "feat/account-permissions",
       "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
       "at": "2026-10-28T18:22:29+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "00794cc85c08e492a85e6d3402d33d2e07bc60e6",
+      "at": "2026-10-28T18:35:19+09:00"
     }
   ],
   "usage_log": [],
