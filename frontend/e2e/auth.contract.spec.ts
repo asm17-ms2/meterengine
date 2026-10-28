@@ -320,3 +320,10 @@ test("the header shows the access scope apart from a refresh button that confirm
   await refresh.click();
   await expect(page.getByText("권한을 다시 조회했습니다.", { exact: true })).toBeVisible();
 });
+
+test("an unchecked antd checkbox has a visible border", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const unchecked = page.getByRole("dialog").locator(".ant-checkbox:not(.ant-checkbox-checked)").first();
+  await expect(unchecked).toHaveCSS("border-top-color", "rgb(124, 135, 153)");
+});
