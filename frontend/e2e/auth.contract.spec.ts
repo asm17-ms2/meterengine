@@ -288,3 +288,13 @@ test("an unknown address shows a Korean not-found page with a main landmark and 
   await expect(page.locator("main#main-content")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "홈으로", exact: true })).toHaveAttribute("href", "/");
 });
+
+test("the root error page shows the error digest so a report can be matched with the server log", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
+  await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
+  await expect(main).toContainText(/\([0-9A-Za-z]+\)/);
+});
