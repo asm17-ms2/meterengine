@@ -19,6 +19,13 @@ export function unconfirmedMessage(operation: string): string {
   return UNCONFIRMED_MESSAGES[operation] ?? "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.";
 }
 
+export function staleCancellationMessage(operation: string, code?: string): string | undefined {
+  if (operation !== "createPaymentCancellation") return undefined;
+  if (code === "payment_cancellation_idempotency_conflict") return unconfirmedMessage(operation);
+  if (code === "payment_attempt_fully_canceled" || code === "payment_cancellation_amount_exceeded") return "다른 취소가 먼저 처리되어 화면의 잔액이 최신이 아닙니다. 이번 요청은 처리되지 않았습니다. 결제와 취소 내역을 새로 조회한 뒤 다시 요청하세요.";
+  return undefined;
+}
+
 export class InputFieldError extends Error {
   readonly field: string;
 

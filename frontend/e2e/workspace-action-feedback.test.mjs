@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { InputFieldError, readWholeNumber, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
+import { InputFieldError, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
 import { operationResultCopy } from "../src/lib/workspace-operation-results.ts";
 
 test("each workspace action that shows a toast says what it did", () => {
@@ -30,4 +30,14 @@ test("an unconfirmed Toss key save points at the saved time, not at payment hist
     assert.equal(unconfirmedMessage(operation), "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.");
     assert.equal(operationResultCopy(operation).refreshLabel, "결제와 취소 내역 새로 조회");
   }
+});
+
+test("a cancellation rejected because another cancellation came first asks to refresh instead of retrying", () => {
+  for (const code of ["payment_attempt_fully_canceled", "payment_cancellation_amount_exceeded"]) {
+    assert.match(staleCancellationMessage("createPaymentCancellation", code), /화면의 잔액이 최신이 아닙니다/);
+  }
+  assert.equal(staleCancellationMessage("createPaymentCancellation", "payment_cancellation_idempotency_conflict"), unconfirmedMessage("createPaymentCancellation"));
+  assert.equal(staleCancellationMessage("createPaymentAttempt", "payment_attempt_fully_canceled"), undefined);
+  assert.equal(staleCancellationMessage("createPaymentCancellation", "validation_failed"), undefined);
+  assert.equal(staleCancellationMessage("createPaymentCancellation", undefined), undefined);
 });
