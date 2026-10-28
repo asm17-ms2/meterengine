@@ -73,6 +73,116 @@ test("tenant actions recheck session after revocation, independently of route la
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
 });
 
+test("closing a workspace dialog returns focus to its trigger", async ({ page }) => {
+  await login(page, "member@contract.local", "/members");
+  const trigger = page.getByRole("button", { name: "초대 링크 만들기", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.getByRole("dialog").getByRole("button", { name: "닫기", exact: true }).last().click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
+
+test("an issued secret is shown first and closing before copying asks for confirmation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("계약 시험 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const result = dialog.locator(".secret-result");
+  await expect(result).toBeFocused();
+  await expect(result).toBeInViewport();
+  let isAsked = false;
+  page.once("dialog", async confirm => { isAsked = true; await confirm.dismiss(); });
+  await page.keyboard.press("Escape");
+  await expect.poll(() => isAsked).toBe(true);
+  await expect(dialog).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await expect(dialog.getByRole("status")).toHaveText("복사했습니다.");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
+test("a server action after the session cookie disappears goes to login instead of the error screen", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
+  await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
+  await page.context().clearCookies();
+  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
+});
+
+test("a workspace action that throws keeps the dialog and its input", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("장애 중 발급");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("요청 결과를 확인하지 못했습니다", { exact: false })).toBeVisible();
+  await expect(dialog.getByLabel(/^키 이름/)).toHaveValue("장애 중 발급");
+  await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
+});
+
+test("a workspace action still follows the login redirect after its session is revoked", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("폐기 뒤 발급");
+  const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
+  await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+});
+
+test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.getByRole("navigation", { name: "도입사 업무" }).getByRole("menu")).toHaveAttribute("tabindex", "-1");
+});
+
+test("the sidebar lists the meter screen and marks it as the current place", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const nav = page.getByRole("navigation", { name: "도입사 업무" });
+  await nav.getByRole("link", { name: "미터", exact: true }).click();
+  await expectTenantUrl(page, "/billable-metrics");
+  await expect(nav.locator(".ant-menu-item-selected")).toHaveText("미터");
+});
+
+test("each screen has its own document title", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page).toHaveTitle("로그인 | MeterEngine");
+  await page.goto("/signup");
+  await expect(page).toHaveTitle("도입사 가입 신청 | MeterEngine");
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page).toHaveTitle("고객 | MeterEngine");
+  await page.getByRole("navigation", { name: "도입사 업무" }).getByRole("link", { name: "미터", exact: true }).click();
+  await expect(page).toHaveTitle("미터 | MeterEngine");
+});
+
+test("a workspace load failure offers an in-place retry button", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/members");
+  await expectTenantUrl(page, "/members");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { fail: { "/v1/organization/members": 500 } } });
+  await page.reload();
+  await expect(page.getByText("데이터를 불러오지 못했습니다").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
