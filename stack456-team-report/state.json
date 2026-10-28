@@ -1,13 +1,13 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-29T00:30:10+09:00",
+  "updated_at": "2026-10-29T00:34:48+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "G-102",
-    "step": "check",
+    "step": "report",
     "branch": "fix/s456-445-t-yang"
   },
   "finished_ids": [
@@ -170,6 +170,7 @@
     "D-183",
     "G-097",
     "G-098",
+    "G-102",
     "X-009",
     "D-005",
     "D-131",
@@ -214,7 +215,6 @@
     "D-238",
     "D-248",
     "D-255",
-    "G-102",
     "G-180",
     "X-029",
     "X-051",
@@ -375,7 +375,7 @@
       "unpushed": []
     },
     "fix/s456-445-t-yang": {
-      "origin_sha": "79de3d6",
+      "origin_sha": "6d5fad4",
       "local_sha": "6d5fad4",
       "unpushed": []
     }
