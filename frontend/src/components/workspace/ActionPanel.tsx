@@ -10,7 +10,7 @@ import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/work
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { createRequestId } from "@/lib/request-id";
-import { fieldValidationMessage } from "@/lib/field-validation";
+import { DEFAULT_NUMBER_MIN, fieldValidationMessage } from "@/lib/field-validation";
 import { operationResultCopy } from "@/lib/workspace-operation-results";
 
 export type WorkspaceField = {
@@ -133,7 +133,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
           <label htmlFor={id}>{field.label}{field.isOptional ? <small> (선택)</small> : <span className="required-label"> (필수)</span>}</label>
           {field.options ? <select {...common} defaultValue={field.value}><option value="">선택하세요</option>{field.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
             : field.type === "textarea" ? <textarea {...common} rows={4} defaultValue={field.value} placeholder={field.placeholder} maxLength={field.maxLength} />
-              : <input {...common} type={field.type ?? "text"} defaultValue={field.type === "password" ? undefined : field.value} placeholder={field.placeholder} autoComplete={field.autoComplete ?? (field.type === "password" ? "new-password" : field.type === "email" ? "email" : "off")} spellCheck={field.type === "email" || field.type === "url" ? false : undefined} step={field.type === "number" ? field.step ?? 1 : undefined} min={field.type === "number" ? field.min ?? 0 : undefined} max={field.max} maxLength={field.maxLength} />}
+              : <input {...common} type={field.type ?? "text"} defaultValue={field.type === "password" ? undefined : field.value} placeholder={field.placeholder} autoComplete={field.autoComplete ?? (field.type === "password" ? "new-password" : field.type === "email" ? "email" : "off")} spellCheck={field.type === "email" || field.type === "url" ? false : undefined} step={field.type === "number" ? field.step ?? 1 : undefined} min={field.type === "number" ? field.min ?? DEFAULT_NUMBER_MIN : undefined} max={field.max} maxLength={field.maxLength} />}
           {field.hint && <small className="field-hint" id={hintId}>{field.hint}</small>}
           {error && <small id={errorId} className="field-error">{error}</small>}
         </div>;
