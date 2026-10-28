@@ -485,6 +485,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
     await page.setViewportSize(viewport);
     await login(page);
     await expectTenantUrl(page, "/customers");
+    await expect(page.locator(".workspace-header")).toBeVisible();
     await expect.poll(() => page.evaluate(() => {
       const header = document.querySelector(".workspace-header")!.getBoundingClientRect().height;
       const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
