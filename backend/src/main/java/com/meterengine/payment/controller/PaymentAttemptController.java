@@ -84,6 +84,7 @@ public class PaymentAttemptController {
             code=invoice_amount_zero: 인보이스의 total_amount가 0원이다.
             code=toss_payments_credential_missing: 결제 모드의 토스페이먼츠 키가 없다.
             code=payment_method_missing: 인보이스의 고객이 결제 모드로 등록한 카드가 없다.
+            code=payment_mode_mismatch: API 키의 모드가 도입사의 결제 모드와 다르다.
             """)
   })
   public PaymentAttemptResponse createPaymentAttempt(

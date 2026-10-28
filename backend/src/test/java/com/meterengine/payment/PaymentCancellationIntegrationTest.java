@@ -459,7 +459,7 @@ class PaymentCancellationIntegrationTest {
   }
 
   @Test
-  void 같은_시도에_동시에_부분_취소하면_취소는_하나이고_나머지는_409나_500이다() throws Exception {
+  void 같은_시도에_동시에_부분_취소하면_취소는_하나이고_나머지는_409_in_progress다() throws Exception {
     Paid paid = paidAttempt();
     CountDownLatch tossCalled = new CountDownLatch(1);
     CountDownLatch tossResponds = new CountDownLatch(1);
@@ -473,25 +473,23 @@ class PaymentCancellationIntegrationTest {
     CountDownLatch start = new CountDownLatch(1);
     ExecutorService executor = Executors.newFixedThreadPool(2);
     try {
-      CompletionService<Integer> requests = new ExecutorCompletionService<>(executor);
+      CompletionService<MvcTestResult> requests = new ExecutorCompletionService<>(executor);
       for (int i = 0; i < 2; i++) {
         requests.submit(
             () -> {
               start.await();
-              return createCancellation(paid, "{\"amount\": 3000, \"reason\": \"고객 요청\"}")
-                  .getResponse()
-                  .getStatus();
+              return createCancellation(paid, "{\"amount\": 3000, \"reason\": \"고객 요청\"}");
             });
       }
       start.countDown();
 
       assertThat(tossCalled.await(10, TimeUnit.SECONDS)).isTrue();
-      int loser = requests.poll(10, TimeUnit.SECONDS).get();
+      MvcTestResult loser = requests.poll(10, TimeUnit.SECONDS).get();
       tossResponds.countDown();
-      int winner = requests.poll(10, TimeUnit.SECONDS).get();
+      MvcTestResult winner = requests.poll(10, TimeUnit.SECONDS).get();
 
-      assertThat(loser).isIn(409, 500);
-      assertThat(winner).isEqualTo(201);
+      assertError(loser, 409, ErrorCode.PAYMENT_CANCELLATION_IN_PROGRESS);
+      assertThat(winner).hasStatus(201);
     } finally {
       tossResponds.countDown();
       executor.shutdownNow();
