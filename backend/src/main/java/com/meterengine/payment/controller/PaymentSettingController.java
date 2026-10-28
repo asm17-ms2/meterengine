@@ -1,9 +1,10 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.PaymentSettingResponse;
 import com.meterengine.payment.dto.UpdatePaymentSettingRequest;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,13 +59,14 @@ public class PaymentSettingController {
   }
 
   @PutMapping
-  @AdminAccess
+  @MemberAdminAccess
   @Operation(
       summary = "결제 모드 변경",
       description =
           """
           기존 범위의 결제 모드를 바꾼다. live로 바꾸려면 live 키가 먼저 저장돼 있어야 한다.
           test/live 환경은 선택한 환경과 같은 mode만 받는다. 다른 mode는 payment_mode_mismatch로 거절한다.
+          로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
           updated_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -86,7 +89,8 @@ public class PaymentSettingController {
   })
   public PaymentSettingResponse updatePaymentSetting(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Valid @RequestBody UpdatePaymentSettingRequest request) {
-    return paymentSettingService.update(organizationId, request.mode());
+    return paymentSettingService.update(organizationId, request.mode(), principal.mode());
   }
 }

@@ -158,6 +158,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
                  attempts.attempt_count AS "attemptCount",
                  bk.authenticated_at AS "billingKeyAuthenticatedAt"
           FROM payment_attempt a
+          JOIN organization o ON o.id = a.organization_id
           LEFT JOIN payment_setting s ON s.organization_id = a.organization_id
           LEFT JOIN billing_key bk
             ON bk.organization_id = a.organization_id
@@ -173,6 +174,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
               AND c.environment_id IS NOT DISTINCT FROM a.environment_id
           ) attempts
           WHERE a.status = 'failed'
+            AND o.status = 'active'
             AND (a.environment_id IS NOT NULL OR a.mode = coalesce(s.mode, 'test'))
             AND a.completed_at <= :completedBefore
             AND attempts.attempt_count < :maxAttempts

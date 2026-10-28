@@ -35,7 +35,7 @@ test("동의 뒤 토스 인증과 서버 발급을 거쳐 성공하며 새로고
   await expect(page.getByRole("heading", { name: "카드를 등록했습니다" })).toBeVisible();
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls).toHaveLength(1);
-  expect(calls[0].body).toEqual({ auth_key: "fixture-auth-key", customer_key: "9a85005e-e1f2-40cd-a6a8-cb3ee3d643a1", consent_document_version: "2026-10-26" });
+  expect(calls[0].body).toEqual({ auth_key: "fixture-auth-key", customer_key: "9a85005e-e1f2-40cd-a6a8-cb3ee3d643a1", consent_document_version: "2026-10-28" });
   expect(calls[0].hasAuthorization).toBe(false);
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain("fixture-auth-key");

@@ -17,7 +17,7 @@ export default async function PaymentMethodRegistrationPage({ params }: { params
         : "등록 링크가 만료되었거나 이미 사용되었습니다. 링크를 보낸 담당자에게 새 카드 등록 링크를 요청해 주세요."}</p>
     </RegistrationFrame>;
   }
-  return <RegistrationFrame title="결제에 사용할 카드를 등록해 주세요" organizationName={registration.data.organization_name}>
+  return <RegistrationFrame title="결제에 사용할 카드를 등록해 주세요" organizationName={registration.data.organization_name} currentStep={1}>
     <CardRegistration token={token} registration={registration.data} />
   </RegistrationFrame>;
 }

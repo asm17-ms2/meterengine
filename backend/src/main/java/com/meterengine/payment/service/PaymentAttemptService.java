@@ -137,18 +137,7 @@ public class PaymentAttemptService {
               return checked;
             });
     for (PaymentAttempt attempt : creation.uncertainAttempts()) {
-      Optional<TossPaymentsCredential> original =
-          attempt.getEnvironmentId() == null && attempt.getCredentialUpdatedAt() == null
-              ? Optional.of(creation.credential())
-              : tossPaymentsCredentialService.historical(
-                  attempt.getOrganizationId(),
-                  attempt.getMode(),
-                  attempt.getCredentialUpdatedAt() == null
-                      ? attempt.getRequestedAt()
-                      : attempt.getCredentialUpdatedAt());
-      if (original.isEmpty()
-          || PaymentRetryPolicy.isUnconfirmable(attempt, original.get().getUpdatedAt(), now())
-          || !isUncharged(attempt.getId(), attempt.getRequestedAt().toInstant(), original.get())) {
+      if (!isConfirmedUncharged(creation, attempt)) {
         throw new ConflictException(ErrorCode.PAYMENT_RESULT_UNCONFIRMED);
       }
     }
@@ -303,7 +292,7 @@ public class PaymentAttemptService {
       return false;
     }
     paymentMetrics.countAttempt(mode, PaymentAttempt.FAILED);
-    if (attemptCount.get() >= paymentProperties.retryMaxAttempts()) {
+    if (attemptCount.get() == paymentProperties.retryMaxAttempts()) {
       paymentMetrics.countRetryExhausted(mode);
     }
     return true;
@@ -454,6 +443,27 @@ public class PaymentAttemptService {
     return false;
   }
 
+  // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 그 시도의 키로 물을 수 없으면 다시 묻지 않는다.
+  private boolean isConfirmedUncharged(PaymentCreation creation, PaymentAttempt attempt) {
+    Optional<TossPaymentsCredential> original =
+        attempt.getEnvironmentId() == null && attempt.getCredentialUpdatedAt() == null
+            ? Optional.of(creation.credential())
+            : tossPaymentsCredentialService.historical(
+                attempt.getOrganizationId(),
+                attempt.getMode(),
+                attempt.getCredentialUpdatedAt() == null
+                    ? attempt.getRequestedAt()
+                    : attempt.getCredentialUpdatedAt());
+    if (!attempt.getId().equals(creation.latestAttemptId())) {
+      return original.isEmpty()
+          || !original.get().getUpdatedAt().isBefore(attempt.getRequestedAt())
+          || isUncharged(attempt.getId(), attempt.getRequestedAt().toInstant(), original.get());
+    }
+    return original.isPresent()
+        && !PaymentRetryPolicy.isUnconfirmable(attempt, original.get().getUpdatedAt(), now())
+        && isUncharged(attempt.getId(), attempt.getRequestedAt().toInstant(), original.get());
+  }
+
   private PaymentCreation prepare(
       UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
     Invoice invoice =
@@ -479,23 +489,28 @@ public class PaymentAttemptService {
     if (paymentAttemptRepository.findActive(organizationId, invoiceId, mode).isPresent()) {
       throw new ConflictException(ErrorCode.INVOICE_ALREADY_PAID);
     }
-    List<PaymentAttempt> uncertainAttempts =
+    List<PaymentAttempt> attempts =
         paymentAttemptRepository
             .findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(organizationId, invoiceId)
             .stream()
             .filter(attempt -> mode.equals(attempt.getMode()))
+            .toList();
+    List<PaymentAttempt> uncertainAttempts =
+        attempts.stream()
             .filter(attempt -> PaymentAttempt.FAILED.equals(attempt.getStatus()))
             .filter(
                 attempt ->
                     TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(attempt.getFailureCode()))
             .toList();
+    UUID latestAttemptId = attempts.isEmpty() ? null : attempts.getFirst().getId();
     return new PaymentCreation(
         invoice,
         mode,
         credential,
         uncertainAttempts,
         paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
-            organizationId, invoiceId, mode));
+            organizationId, invoiceId, mode),
+        latestAttemptId);
   }
 
   private PaymentAttempt insertPending(
@@ -548,7 +563,8 @@ public class PaymentAttemptService {
       String mode,
       TossPaymentsCredential credential,
       List<PaymentAttempt> uncertainAttempts,
-      long attemptCount) {
+      long attemptCount,
+      UUID latestAttemptId) {
 
     private Set<UUID> uncertainAttemptIds() {
       return Set.copyOf(uncertainAttempts.stream().map(PaymentAttempt::getId).toList());

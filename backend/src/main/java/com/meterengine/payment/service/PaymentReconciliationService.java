@@ -492,18 +492,83 @@ public class PaymentReconciliationService {
       for (PaymentCancellation cancellation : cancellations) {
         if (!matchedCancellationIds.contains(cancellation.getId())
             && window.contains(cancellation.getCompletedAt())) {
-          mismatches.add(
-              new Mismatch(
-                  PaymentReconciliationMismatch.MISSING_IN_TOSS_PAYMENTS,
-                  cancellation.getPaymentAttemptId().toString(),
-                  paymentKeyOf(cancellation),
-                  cancellation.getTransactionKey(),
-                  cancellation.getAmount(),
-                  null,
-                  cancellation.getCompletedAt()));
+          complete &= confirmMissingCancellation(cancellation, credential);
         }
       }
       return complete;
+    }
+
+    private boolean confirmMissingCancellation(
+        PaymentCancellation cancellation, TossPaymentsCredential credential) {
+      String paymentKey = paymentKeyOf(cancellation);
+      if (paymentKey == null) {
+        addFromCancellation(
+            cancellation, null, PaymentReconciliationMismatch.MISSING_IN_TOSS_PAYMENTS, null);
+        return true;
+      }
+      return switch (tossPaymentsClient.findPayment(credential.getSecretKey(), paymentKey)) {
+        case TossPaymentsResult.Success<TossPaymentsPayment> found -> {
+          Optional<TossPaymentsPayment.Cancel> cancel =
+              found.value().cancels().stream()
+                  .filter(each -> cancellation.getTransactionKey().equals(each.transactionKey()))
+                  .findFirst();
+          if (cancel.isEmpty()) {
+            addFromCancellation(
+                cancellation,
+                paymentKey,
+                PaymentReconciliationMismatch.MISSING_IN_TOSS_PAYMENTS,
+                null);
+          } else if (cancel.get().cancelAmount() != cancellation.getAmount()) {
+            addFromCancellation(
+                cancellation,
+                paymentKey,
+                PaymentReconciliationMismatch.AMOUNT_MISMATCH,
+                cancel.get().cancelAmount());
+          }
+          yield true;
+        }
+        case TossPaymentsResult.Rejected<TossPaymentsPayment> notFound
+            when TossPaymentsFailureCode.isNotFoundPayment(notFound) -> {
+          addFromCancellation(
+              cancellation,
+              paymentKey,
+              PaymentReconciliationMismatch.MISSING_IN_TOSS_PAYMENTS,
+              null);
+          yield true;
+        }
+        case TossPaymentsResult.Rejected<TossPaymentsPayment> rejected -> {
+          logger.warn(
+              "toss payments payment lookup inconclusive during reconciliation:"
+                  + " cancellation_id={}, mode={}, status={}, code={}",
+              cancellation.getId(),
+              mode,
+              rejected.status(),
+              rejected.code());
+          yield false;
+        }
+        case TossPaymentsResult.Unknown<TossPaymentsPayment> unknown -> {
+          logger.warn(
+              "toss payments payment lookup result unknown during reconciliation:"
+                  + " cancellation_id={}, mode={}, reason={}",
+              cancellation.getId(),
+              mode,
+              unknown.reason());
+          yield false;
+        }
+      };
+    }
+
+    private void addFromCancellation(
+        PaymentCancellation cancellation, String paymentKey, String kind, Long tossPaymentsAmount) {
+      mismatches.add(
+          new Mismatch(
+              kind,
+              cancellation.getPaymentAttemptId().toString(),
+              paymentKey,
+              cancellation.getTransactionKey(),
+              cancellation.getAmount(),
+              tossPaymentsAmount,
+              cancellation.getCompletedAt()));
     }
 
     private boolean confirmMissingAttempt(
