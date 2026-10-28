@@ -1,14 +1,14 @@
-미완료 281건, 결과: 끝 상태 91/372건 (fixed 74, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 32번(마지막 4455641)
+미완료 280건, 결과: 끝 상태 92/372건 (fixed 75, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T19:35:58+09:00
+상태: running, 갱신 2026-10-28T19:38:19+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 74 | 1 | 0 | 16 | 0 | 1 |
+| #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -83,6 +83,7 @@ push: fix/s456-443-t-inho 32번(마지막 4455641)
 | D-167 | #443 | 38f991c | 권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다 | the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found |
 | D-229 | #443 | 38f991c | 권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다 | the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found |
 | X-062 | #443 | 38f991c | 권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다 | the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found |
+| G-081 | #443 | b99d2ef | 렌더되지 않는 DevStateSwitch와 쓰이지 않는 Layout 토큰을 지우고 README shell 설명을 맞췄다 | 없음(화면 동작이 바뀌지 않는 죽은 코드 정리라 실패하는 시험이 없다. git grep -n 'DevStateSwitch\|headerPadding' -- frontend 결과 없음, b99d2ef의 10절 lint, b) |
 | D-036 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-053 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-079 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
