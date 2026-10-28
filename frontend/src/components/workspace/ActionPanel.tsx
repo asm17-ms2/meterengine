@@ -4,6 +4,7 @@
 import { Alert, App, Button, Checkbox, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
@@ -42,7 +43,13 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   const [isCopied, setIsCopied] = useState(false);
   const [dismissedErrors, setDismissedErrors] = useState<{ state: WorkspaceActionState; names: string[] }>({ state: {}, names: [] });
   const [state, action, isPending] = useActionState<WorkspaceActionState, FormData>(async (previous, data) => {
-    const result = await workspaceAction(previous, data);
+    let result: WorkspaceActionState;
+    try {
+      result = await workspaceAction(previous, data);
+    } catch (error) {
+      unstable_rethrow(error);
+      return { message: "요청 결과를 확인하지 못했습니다. 목록을 새로 조회해 반영됐는지 확인한 뒤 다시 시도하세요." };
+    }
     if (result.isSuccess) {
       setIsDirty(false);
       if (!result.secret && !result.registrationPath && !isInline) {

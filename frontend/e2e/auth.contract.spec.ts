@@ -123,6 +123,29 @@ test("a server action after the session cookie disappears goes to login instead 
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
 });
 
+test("a workspace action that throws keeps the dialog and its input", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("장애 중 발급");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("요청 결과를 확인하지 못했습니다", { exact: false })).toBeVisible();
+  await expect(dialog.getByLabel(/^키 이름/)).toHaveValue("장애 중 발급");
+  await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
+});
+
+test("a workspace action still follows the login redirect after its session is revoked", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("폐기 뒤 발급");
+  const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
+  await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
