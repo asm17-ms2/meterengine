@@ -245,6 +245,7 @@ groups:
                 - evaluator: { type: gt, params: [1800] }
 
       # 하루 한 번 도는 작업은 정해진 시각에서 1시간이 지나도록 그날 성공이 없으면 울린다.
+      # 슬롯을 이긴 색이 배포로 멈춰 그 시리즈가 사라져도 26시간 안의 가장 최근 성공을 본다.
       - uid: scheduled-job-missed-day
         title: 예약 작업 미실행 (하루 주기)
         condition: C
@@ -260,7 +261,7 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}))
+                (time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}[26h])))
                 or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
                 + scalar(time() - max(process_start_time_seconds{job="backend"})))
               instant: true
