@@ -31,3 +31,11 @@ test("membership roles and platform operator never substitute for assigned scope
   assert.equal(canPerformWorkspaceOperation(["admin"], "owner", "updateMemberScopes"), true);
 });
 
+
+test("owner-only workspace operations need the owner role with admin scope", () => {
+  for (const operation of ["createMember", "updateMemberRole", "updateMemberScopes", "archiveMember", "createOrganizationInvitation", "revokeOrganizationInvitation"]) {
+    assert.equal(canPerformWorkspaceOperation(["admin"], "owner", operation), true);
+    for (const role of ["admin", "member", null]) assert.equal(canPerformWorkspaceOperation(["admin"], role, operation), false);
+    assert.equal(canPerformWorkspaceOperation(["read", "ingest"], "owner", operation), false);
+  }
+});

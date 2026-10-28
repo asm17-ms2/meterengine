@@ -32,9 +32,6 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const operation = text(data, "operation");
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   if (!text(data, "organization_id") || text(data, "organization_id") !== session.organization?.id) return { message: "열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요." };
-  if (["createMember", "updateMemberRole", "archiveMember", "createOrganizationInvitation", "revokeOrganizationInvitation"].includes(operation) && session.organization_role !== "owner") {
-    return { message: "사용자와 초대 관리는 대표관리자만 할 수 있습니다." };
-  }
   try {
     switch (operation) {
       case "createMember": path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password: typeof data.get("password") === "string" ? data.get("password") : "", scopes: data.getAll("scopes") }; break;
