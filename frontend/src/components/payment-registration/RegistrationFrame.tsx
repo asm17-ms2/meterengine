@@ -7,7 +7,7 @@ export function RegistrationFrame({ title, organizationName, children }: { title
     <main id="main-content" className={styles.main}>
       <aside className={styles.context}>
         <p className={styles.eyebrow}>{organizationName ?? "사용량 기반 서비스"}</p>
-        <h2>서비스 이용료를<br /> 결제할 카드입니다.</h2>
+        <p className={styles.headline}>서비스 이용료를<br /> 결제할 카드입니다.</p>
         <p>카드 정보는 토스페이먼츠에서 입력하고 인증합니다.</p>
         <ol className={styles.steps} aria-label="카드 등록 절차"><li>자동결제 동의</li><li>토스 카드 인증</li><li>등록 결과 확인</li></ol>
       </aside>

@@ -5,8 +5,8 @@
 .main { display: grid; grid-template-columns: minmax(240px, 2fr) minmax(360px, 3fr); max-width: 1040px; margin: 56px auto 32px; background: white; border: 1px solid #dce1eb; border-radius: 14px; overflow: hidden; }
 .context { padding: 42px 32px; background: #eeeafb; border-right: 1px solid #dce1eb; }
 .eyebrow { color: #48339a; font-weight: 650; font-size: 14px; margin-bottom: 32px; overflow-wrap: anywhere; }
-.context h2 { font-size: clamp(23px, 2.4vw, 30px); letter-spacing: -.04em; line-height: 1.5; margin-bottom: 20px; }
-.context p:not(.eyebrow) { color: #5a6578; font-size: 14px; }
+.context .headline { font-size: clamp(23px, 2.4vw, 30px); font-weight: 700; letter-spacing: -.04em; line-height: 1.5; margin-bottom: 20px; }
+.context p:not(.eyebrow):not(.headline) { color: #5a6578; font-size: 14px; }
 .steps { margin: 48px 0 0; padding-left: 20px; display: grid; gap: 20px; font-size: 13px; color: #48339a; }
 .panel { padding: 42px 40px; min-width: 0; }
 .panel h1 { font-size: clamp(23px, 2.2vw, 28px); line-height: 1.45; margin-bottom: 28px; }
@@ -24,4 +24,4 @@
 .retry { display: inline-flex; width: fit-content; padding: 11px 20px; border-radius: 6px; background: #5746ad; color: white; text-decoration: none; font-size: 14px; font-weight: 600; }
 .retry:hover { background: #48339a; color: white; }
 .footer { text-align: center; max-width: 1040px; padding: 0 0 32px; margin: 0 auto; color: #5a6578; font-size: 12px; line-height: 1.7; }
-@media (max-width: 760px) { .page { padding: 0 16px; }.brand { min-height: 70px; }.main { grid-template-columns: 1fr; margin-top: 24px; }.context { padding: 22px 24px; border-right: 0; border-bottom: 1px solid #dce1eb; }.eyebrow { margin-bottom: 8px; }.context h2 { font-size: 23px; margin: 0; }.context h2 br { display: none; }.context p:not(.eyebrow), .steps { display: none; }.panel { padding: 28px 24px; }.summary div { grid-template-columns: 100px minmax(0,1fr); gap: 8px; } }
+@media (max-width: 760px) { .page { padding: 0 16px; }.brand { min-height: 70px; }.main { grid-template-columns: 1fr; margin-top: 24px; }.context { padding: 22px 24px; border-right: 0; border-bottom: 1px solid #dce1eb; }.eyebrow { margin-bottom: 8px; }.context .headline { font-size: 23px; margin: 0; }.context .headline br { display: none; }.context p:not(.eyebrow):not(.headline), .steps { display: none; }.panel { padding: 28px 24px; }.summary div { grid-template-columns: 100px minmax(0,1fr); gap: 8px; } }
