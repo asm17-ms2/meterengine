@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:09:26+09:00",
+  "updated_at": "2026-10-28T17:11:08+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5160,7 +5160,29 @@
     }
   ],
   "new_findings": [],
-  "checks": [],
+  "checks": [
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    }
+  ],
   "pushes": [],
   "usage_log": [],
   "local_db_recreate": [],
