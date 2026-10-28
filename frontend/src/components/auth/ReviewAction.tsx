@@ -10,7 +10,7 @@ export function ReviewAction({ id, label, target, value, kind, disabledReason }:
   const isDanger = value === "rejected" || kind === "role";
   return <>
     <Button danger={isDanger} disabled={Boolean(disabledReason)} onClick={() => setIsOpen(true)}>{label}</Button>{disabledReason && <p className="field-hint">{disabledReason}</p>}
-    <Modal className="workspace-dialog" width="min(560px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 200px)", overflowY: "auto" } }} title={`${label} 확인`} open={isOpen} onCancel={() => setIsOpen(false)} footer={null} closable={!isPending} mask={{ closable: !isPending }} keyboard={!isPending}>
+    <Modal className="workspace-dialog" width="min(560px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 200px)", overflowY: "auto", padding: 8, marginInline: -8 } }} title={`${label} 확인`} open={isOpen} onCancel={() => setIsOpen(false)} footer={null} closable={!isPending} mask={{ closable: !isPending }} keyboard={!isPending}>
       <p><strong>{target}</strong></p>
       <p>{kind === "signup" ? (value === "active" ? "승인하면 이 도입사의 사용자가 로그인할 수 있습니다." : "거절한 가입은 다시 승인할 수 없습니다.") : (value === "operator" ? "플랫폼 운영자는 모든 도입사의 가입과 플랫폼 권한을 관리할 수 있습니다. 도입사 내부의 관리자 추가와는 별개입니다." : "플랫폼 운영 화면 접근 권한을 없앱니다. 기존 도입사 소속이 있으면 유지되며, 소속이 없으면 도입사 업무에도 접근할 수 없습니다.")}</p>
       <form action={action}>

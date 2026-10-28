@@ -45,6 +45,11 @@ class OperatorAccountCreateConcurrencyTest {
         MockMvcTester.from(
             webApplicationContext, builder -> builder.apply(springSecurity()).build());
     String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
+    UUID operatorId =
+        jdbcTemplate.queryForObject(
+            "SELECT user_account_id FROM user_session WHERE token_hash = sha256(convert_to(?, 'UTF8'))",
+            UUID.class,
+            TestCredentials.rawKeyOf(operator));
     UUID firstId = UUID.randomUUID();
     String email = firstId + "@example.com";
     String firstHash = passwordEncoder.encode("first-account-password");
@@ -103,9 +108,9 @@ class OperatorAccountCreateConcurrencyTest {
         .isEqualTo(1);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM audit_log WHERE action='user_account_created' AND target_id=?",
+                "SELECT count(*) FROM audit_log WHERE action='user_account_created' AND actor_id=?",
                 Integer.class,
-                firstId.toString()))
+                operatorId))
         .isZero();
   }
 }

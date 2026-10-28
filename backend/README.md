@@ -100,7 +100,7 @@ docker build -t meterengine-backend .
 ## 인증
 
 - `/v1` 요청은 `Authorization: Bearer <값>`으로 인증한다. 값은 API 키(`me_live_`, `me_test_`)나 로그인 세션 토큰(`me_session_`)이고, 도입사는 키나 세션이 정한다.
-- 로그인과 가입, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
+- 로그인과 가입, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
 - 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리)이며 `admin`은 나머지를 포함한다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
 - API 키는 로그인 관리 권한으로 발급, 폐기와 스코프를 변경한다. 조회 세션은 메타데이터만 읽고 API 키 자체는 키 관리 API를 부를 수 없다. 키의 권한 변경은 같은 원문으로 다음 요청부터 반영하며, 폐기하거나 만료된 키는 변경할 수 없다. 원문, 수명, 모드와 레이트 한도는 유지한다.
@@ -219,7 +219,7 @@ unset SESSION
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
-- 로그인과 가입 신청을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
+- 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
 ### 오류 응답
@@ -239,7 +239,7 @@ unset SESSION
 - `errors`는 400에만 실리고 비면 나가지 않는다. `field`는 도입사가 보낸 이름이다.
 - 인증, 권한, 한도 오류도 같은 형식이다.
   - 401 `authentication_required`: Authorization 헤더가 없다. `invalid_credentials`: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다. 로그인 실패도 같다. 401에는 `WWW-Authenticate: Bearer`가 붙는다.
-  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다.
+  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다.
   - 429 `rate_limit_exceeded`: API 키의 분당 요청 한도를 넘었다. `Retry-After` 헤더의 초만큼 기다린 뒤 다시 보낸다.
 - 한도는 키마다 인스턴스별로 센다. 발급 시 `rate_limit_per_minute`를 양수로 지정하고, 생략하거나 null이면 무제한이다. 로그인 세션은 세지 않는다.
 - code 값의 정본은 `ErrorCode` enum이고 목록은 `openapi.yaml`이 낸다.
