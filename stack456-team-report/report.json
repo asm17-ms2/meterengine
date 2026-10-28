@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:29:29+09:00",
+  "updated_at": "2026-10-28T19:31:27+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -1014,7 +1014,7 @@
       "reason": "초대 수락 화면의 '도입사 선택으로' 링크와 계정 동의 화면의 LogoutButton이 감싸는 요소 없이 제출 버튼 뒤에 붙어 있고, 도입사 선택 화면(organizations/page.tsx 14행)은 같은 보조 동작을 access-actions로 감싼다. 정점에서 #443 globals.css가 access-actions에 간격을 준다. 두 보조 동작을 같은 묶음으로 감쌌다. 체크박스 13px 부분은 D-232 커밋이 맞췄다.",
       "evidence": [
         "frontend/src/app/organization-invitations/[token]/page.tsx:32 @ 72e8718",
-        "frontend/src/app/account/consents/page.tsx:18 @ 72e8718",
+        "frontend/src/app/account/consents/page.tsx:15 @ 72e8718",
         "frontend/src/app/organizations/page.tsx:11 @ 72e8718",
         "커밋 99fb1049d1c5"
       ],
