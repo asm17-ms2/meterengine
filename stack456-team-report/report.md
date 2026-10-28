@@ -1,12 +1,12 @@
-미완료 272건, 결과: 끝 상태 57/328건 (fixed 23, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 8개(마지막 db2d22d)
+미완료 268건, 결과: 끝 상태 61/328건 (fixed 27, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 9개(마지막 35e43ac)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 23 | 1 | 7 | 23 | 3 | 86 |
+| #442 | 143 | 27 | 1 | 7 | 23 | 3 | 82 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -18,8 +18,10 @@ push: feat/account-permissions 8개(마지막 db2d22d)
 | id | 층 | 커밋 | 설명 | 고치기 전 실패한 시험 |
 | --- | --- | --- | --- | --- |
 | D-003 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
+| D-006 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-012 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
 | D-026 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
+| D-029 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-031 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | D-049 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-066 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -30,8 +32,10 @@ push: feat/account-permissions 8개(마지막 db2d22d)
 | D-150 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-154 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | D-172 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
+| D-184 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-189 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-250 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
+| D-256 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-258 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | X-000 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | X-004 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
@@ -100,7 +104,9 @@ push: feat/account-permissions 8개(마지막 db2d22d)
 | G-067 | #442 | CONSENT_VERSION 상수는 정점 0fe7d2a의 real e2e 여러 곳(aggregation, archive-filters, customer-payment-retry, environment-cycle, events 등 frontend/e2e/*.real.spec.ts)에서 가입 요청의 판으로 쓰인다. 상수를 없애거나 서버에서 받게 바꾸면 그 파일들도 같이 고쳐야 한다. 결제 수단 등록의 consent_document_version(CreateBillingKeyRequest, #445 이후)도 같은 방식으로 판을 그대로 받는다. |
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
 | C442-017 | #442 | #442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다. |
+| D-006 | #442 | #445부터 MonthFilter를 쓰는 화면(수납과 취소)에 그대로 적용된다. 23b1844가 WorkspaceHeader.tsx를 바꿨지만 15행 입력과는 겹치지 않는다. |
 | D-012 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |
+| D-029 | #442 | #445부터 MonthFilter를 쓰는 화면(수납과 취소)에 그대로 적용된다. 23b1844가 WorkspaceHeader.tsx를 바꿨지만 15행 입력과는 겹치지 않는다. |
 | D-031 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | D-090 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |
 | D-127 | #442 | 복사하지 않고 닫으면 확인 창이 뜬다. Playwright는 확인 창을 기본으로 거절하므로 #453 23b1844가 더한 명세가 반영 뒤 실패한다: workspace.contract.spec.ts 39-42행 closeDialog(비밀값 표시 뒤 X로 닫음, 153행과 168행 호출), mvp.real.spec.ts 128행과 136행 Escape, people.real.spec.ts 135행 닫기. 반영 때 닫기 앞에 page.once("dialog", d => d.accept())를 두거나 복사 버튼을 먼저 누르게 맞춘다. #453은 T-yang 층이라 그 차례에 함께 본다. 정점 ActionPanel.tsx는 23b1844가 environment 숨은 입력만 더해 같은 수정이 맞는다. |
@@ -110,7 +116,9 @@ push: feat/account-permissions 8개(마지막 db2d22d)
 | D-170 | #442 | 통일하면 #442 WorkspaceHeader.tsx와 MonthPicker.tsx(#451 e5fca11이 onChange 모드를 따로 더해 충돌), #446 PricingWorkspace.tsx:187, #450 event-issues/page.tsx:38, event-rejections/page.tsx:28, #451 EventFilters.tsx:158을 바꾼다. EventFilters를 바꾸면 events.real.spec.ts:127,240의 getByLabel('조회 월').fill도 맞춰야 한다. |
 | D-172 | #442 | 같은 언마운트 구조가 main에서 온 BillableMetricsScreen(closeForm, closeDelete)과 InvoiceFinalizeDialog에도 있고, #451 e5fca11의 RoutedEventDetail에도 있다. 스택이 들인 ActionPanel만 이 층에서 고쳤다. 정점 ActionPanel.tsx 141-142행은 23b1844가 environment 숨은 입력만 더해 같은 수정이 그대로 맞는다. |
 | D-179 | #442 | 하기로 정하면 #442 NavMenu.tsx와 globals.css에 목록 마크업과 스타일을 넣는다. 그다음 #443(f671a4f)에서는 AppProviders.tsx 19행의 Menu 토큰과 globals.css 129-130행의 .ant-menu 규칙을 새 클래스로 옮겨야 한다. 정점 ConsoleShell.tsx 55행 사이드바와 60행 Drawer가 같은 NavMenu를 쓰므로 Drawer 안의 onNavigate 닫힘도 링크 onClick으로 옮긴다. |
+| D-184 | #442 | #445부터 MonthFilter를 쓰는 화면(수납과 취소)에 그대로 적용된다. 23b1844가 WorkspaceHeader.tsx를 바꿨지만 15행 입력과는 겹치지 않는다. |
 | D-236 | #442 | 정점에는 ResourceSearchControls.tsx:107이 hidden input 방식의 MonthPicker를 이미 쓴다(#451 e5fca11). #442에서 MonthFilter를 그 방식으로 바꾸려면 MonthPicker.tsx에 같은 onChange 모드를 더해야 해 #451과 충돌하므로, 결정 뒤 #451 위에서 MonthFilter만 바꾸는 편이 충돌이 적다. |
+| D-256 | #442 | #445부터 MonthFilter를 쓰는 화면(수납과 취소)에 그대로 적용된다. 23b1844가 WorkspaceHeader.tsx를 바꿨지만 15행 입력과는 겹치지 않는다. |
 | D-258 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | G-010 | #442 | 정점 0fe7d2a에서 SignupService.validate 호출은 OrganizationAccountService.java:83과 SessionConsentService.java:42 두 곳뿐이고 consentRepository 저장도 SignupService.java:90, OrganizationAccountService.java:86, SessionConsentService.java:44 그대로라 #442에서 고치면 위층은 merge로 그대로 따라간다. InvitationConsentRequest는 AcceptOrganizationInvitationRequest.java:13 @ 0fe7d2a에서만 쓰인다. |
 | G-011 | #442 | 정점 0fe7d2a에서 NewAccount는 AcceptOrganizationInvitationRequest.java 13-14행에만 있고 위층 사용처가 없다. 72e8718..0fe7d2a 사이에 세 DTO, OrganizationPeopleService, UserAccount를 바꾼 커밋이 없어 #442에서 고치면 위층은 머지로 따라온다. openapi.yaml은 그룹 제약을 반영하지 않아 NewAccount를 지워도 바뀌지 않는다. |
