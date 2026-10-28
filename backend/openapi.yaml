@@ -4433,10 +4433,11 @@ paths:
     get:
       description: |
         customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
-        month를 주면 그 달에 적용되는 버전만, 생략하면 모든 버전 이력을 돌려준다. 시작 월 내림차순이다.
+        month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
       operationId: listPricePlans
       parameters:
-      - description: "이 달(yyyy-MM, KST)에 적용되는 버전만 고른다. 생략하면 모든 버전 이력이다."
+      - description: "이 달(yyyy-MM, KST)이 시작 월부터 종료 월 전까지에 드는 버전만 고른다. 보관 여부는 이 값과\
+          \ 상관없이 status로 고른다. 생략하면 기간으로 거르지 않는다."
         example: 2026-08
         in: query
         name: month
