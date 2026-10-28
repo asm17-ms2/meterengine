@@ -280,3 +280,11 @@ test("an antd button shows a focus ring in the brand color", async ({ page }) =>
   await expect(button).toBeFocused();
   await expect(button).toHaveCSS("outline-color", "rgb(87, 70, 173)");
 });
+
+test("an unknown address shows a Korean not-found page with a main landmark and a way back", async ({ page }) => {
+  const response = await page.goto("/organization-invitations/abc/def");
+  expect(response!.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1, name: "페이지를 찾을 수 없습니다" })).toBeVisible();
+  await expect(page.locator("main#main-content")).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "홈으로", exact: true })).toHaveAttribute("href", "/");
+});
