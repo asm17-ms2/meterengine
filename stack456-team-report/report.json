@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T21:52:01+09:00",
+  "updated_at": "2026-10-28T21:55:14+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "de7565bfc6d1c35bae2321d3027ae4abb8691774"
+    "fix/s456-444-t-inho": "02b14f4f1a0e4254df43d6d1014cec544b3fa197"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3155,24 +3155,32 @@
       "id": "Ck2-001",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "WebhookClient는 소켓에 요청 줄과 헤더를 직접 써서 보내고, 113-126행이 만드는 헤더는 Host, Content-Type, Content-Length, webhook-id, webhook-timestamp, webhook-signature, Connection뿐이라 User-Agent가 실리지 않는다. java.net.http나 RestClient를 거치지 않으므로 기본 User-Agent를 붙여 줄 층도 없고, webhook 패키지와 backend, deploy 어디에도 User-Agent를 넣는 코드나 프록시 설정이 없다(git grep 결과 없음). 수신 측 WAF가 User-Agent 없는 요청을 403으로 막으면 131-132행에서 unexpected_status가 되어 재시도 끝에 failed로 끝난다. WebhookClientTest의 HTTPS 시험(144-147행)도 헤더를 webhook-id까지만 확인해 이 빠짐을 잡지 못한다. 정점 b8abfdf와 origin/feat/rds-auto-stop의 WebhookClient는 층 head와 diff가 비어 있어 같다.",
+      "reason": "WebhookClient는 소켓에 요청 줄과 헤더를 직접 써서 보내고, 113-126행이 만드는 헤더는 Host, Content-Type, Content-Length, webhook-id, webhook-timestamp, webhook-signature, Connection뿐이라 User-Agent가 실리지 않는다. java.net.http나 RestClient를 거치지 않으므로 기본 User-Agent를 붙여 줄 층도 없고, webhook 패키지와 backend, deploy 어디에도 User-Agent를 넣는 코드나 프록시 설정이 없다(git grep 결과 없음). 수신 측 WAF가 User-Agent 없는 요청을 403으로 막으면 131-132행에서 unexpected_status가 되어 재시도 끝에 failed로 끝난다. WebhookClientTest의 HTTPS 시험(144-147행)도 헤더를 webhook-id까지만 확인해 이 빠짐을 잡지 못한다. 정점 b8abfdf와 origin/feat/rds-auto-stop의 WebhookClient는 층 head와 diff가 비어 있어 같다. WebhookClient가 Host 다음 줄에 User-Agent: MeterEngine-Webhooks/1.0을 싣는다. 수신 측 허용 목록용 값은 G-152의 backend README 웹훅 문단에 적는다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:131-132 @ 178e19e",
-        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:144-147 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ b8abfdf"
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:131-132 @ f3855f4",
+        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:144-147 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ b8abfdf",
+        "요청에_수신_서버가_발신자를_알아볼_User_Agent를_싣는다: 실패 Expecting actual \"POST /hook HTTP/1.1 Host: 127.0.0.1:63777 Content-Type: application/json ...\" to contain \"User-Agent: MeterEngine-Webhooks/1.0\"",
+        "커밋 02b14f4f1a0e4254df43d6d1014cec544b3fa197"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "02b14f4f1a0e4254df43d6d1014cec544b3fa197"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.webhook.client.WebhookClientTest': 고치기 전 새 시험 1개 실패, 고친 뒤 5개 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점 origin/feat/rds-auto-stop의 WebhookClient.java가 이 층과 같다(위층 커밋 없음)",
+      "summary": "웹훅 요청에 User-Agent 헤더를 싣는다"
     },
     {
       "id": "Ck2-002",
@@ -7274,6 +7282,51 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "53 passed (23.7s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.4s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "de7565bfc6d1c35bae2321d3027ae4abb8691774",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -8845,6 +8898,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "de7565bfc6d1c35bae2321d3027ae4abb8691774",
       "at": "2026-10-28T21:45:26+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "02b14f4f1a0e4254df43d6d1014cec544b3fa197",
+      "at": "2026-10-28T21:54:37+09:00"
     }
   ],
   "usage_log": [],
@@ -8859,7 +8917,8 @@
     "2026-10-28T21:36:06+09:00 재시작: 조율 담당이 NT-inho-002를 4222fbd로 풀었다(origin/feat/webhook-jobs 178e19e). 바꾸지 않은 178e19e에서 frontend(lint, build), frontend-unit(13 통과), 계약 명세(53 통과)가 통과해 #444를 이어 간다. 시작 점검을 다시 돌려 모두 통과했다(push 확인은 feat/webhook-jobs dry-run).",
     "2026-10-28T21:36:06+09:00 PR #465는 조율 담당이 feat/product-design에 merge했다(85de660, 2026-10-28T12:27:53Z). origin의 fix/s456-443-t-inho는 지워졌다. #443 push 33건은 85de660을 통해 origin에 있다. 보조 검사는 report.json fix_merges의 머지 커밋으로 이 push들을 확인한다.",
     "2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다.",
-    "2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다."
+    "2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다.",
+    "2026-10-28T21:55:14+09:00 #444 중간 push의 screen 검사(auth 실화면, 계약 명세)는 층에서 띄운 실화면 환경을 쓴다. 백엔드를 바꾼 커밋 뒤에는 backend-restart로 그 HEAD의 백엔드를 다시 띄우고, V__를 고친 커밋 뒤에는 DB부터 다시 만든다. Ck2-001 push(02b14f4)의 auth 실화면 검사는 de7565b에서 띄운 백엔드로 돌렸다(바뀐 곳은 웹훅 발송 헤더뿐이라 인증 화면과 관계없다)."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
