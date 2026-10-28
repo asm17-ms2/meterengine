@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:28:54+09:00",
+  "updated_at": "2026-10-28T23:29:41+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -10143,7 +10143,7 @@
     "2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다.",
     "2026-10-28T21:55:14+09:00 #444 중간 push의 screen 검사(auth 실화면, 계약 명세)는 층에서 띄운 실화면 환경을 쓴다. 백엔드를 바꾼 커밋 뒤에는 backend-restart로 그 HEAD의 백엔드를 다시 띄우고, V__를 고친 커밋 뒤에는 DB부터 다시 만든다. Ck2-001 push(02b14f4)의 auth 실화면 검사는 de7565b에서 띄운 백엔드로 돌렸다(바뀐 곳은 웹훅 발송 헤더뿐이라 인증 화면과 관계없다).",
     "2026-10-28T23:03:41+09:00 #444 마지막 실화면 점검 통과: c0a9f4a에서 DB부터 새로 띄워 auth.real 3개 통과(뺀 시험 없음), 고친 화면 4건 증가 없음. #444에서 끝 상태가 없는 것은 G-144(T-inho brief대로 #450 차례에 고친다)뿐이다.",
-    "2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 정점 origin/feat/rds-auto-stop은 이 재시작 뒤 줄곧 8dd028a였다."
+    "2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 이 항목들을 판정하고 정점과 대조할 때 origin/feat/rds-auto-stop은 8dd028a였다(2026-10-29 들어 65d4150으로 움직였다). 이 뒤 fixed 기록은 그때의 정점 sha를 쓴다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
