@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:20:22+09:00",
+  "updated_at": "2026-10-28T18:22:29+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "6028b62",
+    "feat/account-permissions": "9fff495",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -274,14 +274,28 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "UserAccountServiceTest는 UserAccountRepository를 목 객체로 바꿔 findOperatorsForUpdate의 PESSIMISTIC_WRITE 잠금이 실제로 두 하향을 줄 세우는지 확인하지 못한다. 정점에도 이를 보는 통합 시험이 없다. 실제 DB 연결 두 개로 잠금 대기와 409를 보는 시험을 더했다. 운영 코드는 바꾸지 않았다.",
+      "evidence": [
+        "backend/src/test/java/com/meterengine/account/service/UserAccountServiceTest.java:24 @ 72e8718",
+        "다른_운영자를_먼저_내리는_중이면_기다린_자기_하향은_409이고_역할은_그대로다: 실패 java.lang.AssertionError: Expecting code to raise a throwable (@Lock 제거 변이)"
+      ],
+      "commits": [
+        "9fff4957d4ec"
+      ],
+      "tests": [
+        "findOperatorsForUpdate의 @Lock을 뺀 임시 변이에서 새 시험 실패, 되돌린 뒤 통과",
+        "LastOperatorDemotionConcurrencyTest 1건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "마지막 운영자 보호 행 잠금 동시성 시험"
     },
     {
       "id": "D-060",
@@ -6988,6 +7002,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.335s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7170,6 +7232,11 @@
       "branch": "feat/account-permissions",
       "sha": "6028b62b9a5ad7a260c15af5090ad17758163197",
       "at": "2026-10-28T18:18:56+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9fff4957d4ec8f8847da0073fca7461e686d942d",
+      "at": "2026-10-28T18:22:29+09:00"
     }
   ],
   "usage_log": [],
