@@ -236,6 +236,17 @@ test("accepting an invitation as a new account does not send a stale session", a
   expect(accept.hasAuthorization).toBe(false);
 });
 
+test("logging in to a return path of another member organization opens that organization", async ({ page }) => {
+  const other = "22222222-2222-4222-8222-222222222222";
+  await login(page, "member@contract.local", `/customers?organization_id=${other}&q=abc`);
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === other && url.searchParams.get("q") === "abc");
+  await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
+  await page.context().clearCookies();
+  await login(page, "member@contract.local", "/customers?organization_id=99999999-9999-4999-8999-999999999999&q=abc");
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === ORGANIZATION_ID && url.searchParams.get("q") === "abc");
+  await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
