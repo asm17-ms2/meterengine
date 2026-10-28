@@ -21,7 +21,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     <section className="workspace-panel">
       <div className="workspace-heading"><div><h2>서버 연동 키</h2><p className="field-hint">API 키는 서버의 권한입니다. 사람의 관리 권한은 사용자 관리에서 정합니다.</p></div><ActionPanel title="API 키 발급" operation="createApiKey" description="원문은 발급 직후 한 번만 표시됩니다. 도입사 서버의 비밀 저장소에 보관하세요." fields={[
         { name: "label", label: "키 이름", placeholder: "고객 포털 조회 서버", maxLength: 255 },
-        ...([{ name: "mode", label: "기존 키 구분", value: "live", hint: "기존 데이터 환경의 키입니다. 여기서 test/live 구분은 데이터 격리를 뜻하지 않습니다. 격리된 키는 위의 업무 환경을 전환해 발급하세요.", options: [{ value: "live", label: "기존 운영 키 (live)" }, { value: "test", label: "기존 테스트 키 (test)" }] }]),
+        ...([{ name: "mode", label: "기존 키 구분", value: "live", hint: "test와 live는 키 구분만 나타내며 두 키 모두 같은 데이터를 다룹니다.", options: [{ value: "live", label: "기존 운영 키 (live)" }, { value: "test", label: "기존 테스트 키 (test)" }] }]),
         scopeField(["read"], "API 권한"),
         { name: "rate_limit_per_minute", label: "분당 요청 한도", type: "number", min: 1, isOptional: true, hint: "비우면 무제한입니다. 1 이상의 정수로 입력하며 백엔드 인스턴스별로 적용합니다." },
         { name: "replaced_api_key_id", label: "교체할 기존 키", isOptional: true, options: activeKeys.ok ? activeKeys.data.api_keys.map(key => ({ value: key.id, label: `${key.label} (...${key.last_four})` })) : [], hint: "선택하면 기존 키는 교체 유예 시간이 지난 뒤 만료됩니다. 새 키를 서버에 적용한 뒤 기존 키의 만료 시각을 확인하세요." },
