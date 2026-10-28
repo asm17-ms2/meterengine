@@ -11,6 +11,7 @@ let outage = false;
 let customers = [];
 let failures = {};
 let bulk = false;
+let apiKeys = [];
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
@@ -26,7 +27,7 @@ const server = createServer(async (req, res) => {
   let result;
   if (path === "/health") result = { status: 200, body: {} };
   else if (path === "/__control" && req.method === "POST") {
-    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; }
+    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
@@ -50,7 +51,7 @@ const server = createServer(async (req, res) => {
         sessions.set(issued, created);
         result = { status: 201, body: { token: issued, user_account: created.user_account, organization: created.organization, organization_role: created.organization_role, scopes: created.scopes, expires_at: created.expires_at } };
       }
-    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: "invited@contract.local", expires_at: expiresAt(), account_exists: false, scopes: ["read"] } };
+    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: path.includes("Existing") ? "existing@contract.local" : "invited@contract.local", expires_at: expiresAt(), account_exists: path.includes("Existing"), scopes: ["read"] } };
     else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}\/accept$/.test(path) && req.method === "POST") {
       if (req.headers.authorization && !session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else result = { status: 201, body: { user_account_id: "88888888-8888-4888-8888-888888888888", organization_id: organizations[0].id } };
@@ -80,8 +81,13 @@ const server = createServer(async (req, res) => {
       else result = { status: 200, body: { customers } };
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
-    else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: [] } };
-    else if (path === "/v1/api-keys" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), label: body.label, mode: body.mode, scopes: body.scopes, last_four: "0000", secret: "me_live_ContractSecretValue0000000000" } };
+    else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };
+    else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: apiKeys } };
+    else if (path === "/v1/api-keys" && req.method === "POST") {
+      const key = { id: crypto.randomUUID(), label: body.label, mode: body.mode, scopes: body.scopes, last_four: "0000", expires_at: null, revoked_at: null, rate_limit_per_minute: body.rate_limit_per_minute ?? null, status: "active" };
+      apiKeys.push(key);
+      result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
+    }
     else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [] } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
   }
