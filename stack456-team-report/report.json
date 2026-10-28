@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:29:35+09:00",
+  "updated_at": "2026-10-28T19:32:50+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "18be9f0631c3a1bca9700d6a23865573e5e156e7"
+    "fix/s456-443-t-inho": "4455641855343d61b1300f5a1a240116044b99c5"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1604,15 +1604,38 @@
       "id": "G-076",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css에서 .console-content(26-34행), .tenant-identity, .tenant-header-actions, .tenant-user(82-85, 106-107행), !important가 걸린 .tenant-header 미디어 블록(110-115행), .workspace-grid-wide(143, 149행), .setup-state와 .setup-state.is-complete(147행)는 층 head와 정점 모두에서 저장소 전체 git grep 사용처가 0건이다. 다만 동적 className도 찾아본 결과, 원문이 끝까지 쓰이지 않는다고 한 .workspace-environment-live는 정점 EnvironmentSwitch.tsx:15의 템플릿 `workspace-environment-${environment}`가 'live' 값으로 만들어 쓰므로 그 부분은 틀렸다. event-*, audit-*, archive-filter 같은 나머지 40여 개는 이 층에서 쓰이지 않지만 위층 화면이 쓰고 있다. 또 CSS Modules에 두라는 README 규칙은 #452(29a78d0)가 넣은 것이라 이 층 README 130행('프로젝트 CSS는 globals.css뿐')과 어긋나지 않는다. 그래서 이 층에서 고칠 것은 정점까지 아무도 쓰지 않는 선택자를 지우는 것뿐이고, 바뀌는 파일은 globals.css 하나다. globals.css는 0f1d1bf 뒤에도, 위층에서도 바뀐 적이 없다. .workspace-environment-live는 정점 EnvironmentSwitch.tsx 15행 템플릿이 쓰므로 남겼다. 위층만 쓰는 선택자도 남겼다.",
+      "evidence": [
+        "frontend/src/app/globals.css:26-34 @ 0f1d1bf",
+        "frontend/src/app/globals.css:82-85 @ 0f1d1bf",
+        "frontend/src/app/globals.css:106-107 @ 0f1d1bf",
+        "frontend/src/app/globals.css:110-115 @ 0f1d1bf",
+        "frontend/src/app/globals.css:143,149 @ 0f1d1bf",
+        "frontend/src/app/globals.css:147 @ 0f1d1bf",
+        "frontend/src/components/workspace/EnvironmentSwitch.tsx:15 @ 0fe7d2a",
+        "frontend/src/lib/environment.ts:1 @ 0fe7d2a",
+        "frontend/README.md:130 @ 0f1d1bf",
+        "frontend/README.md:135 @ 0fe7d2a",
+        "커밋 4455641855343d61b1300f5a1a240116044b99c5"
+      ],
+      "commits": [
+        "4455641855343d61b1300f5a1a240116044b99c5"
+      ],
+      "tests": [
+        "쓰지 않는 CSS 삭제라 실패하는 시험이 없다. 지운 선택자는 층 head와 정점 b8abfdf frontend/src(globals.css 제외)에서 git grep 0건. 삭제 전후 19개 라우트 화소 비교에서 캡처 시각 글자 말고 같음(evidence/G-076/pixel-compare.txt)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css에 같은 선택자가 남아 있고 위층에서 이 파일을 바꾼 커밋이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "어디에서도 쓰지 않는 선택자(.console-content, .tenant-*, .workspace-grid-wide, .setup-state)를 지웠다"
     },
     {
       "id": "C443-002",
@@ -7904,6 +7927,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "42 passed (19.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (22.3s)"
     }
   ],
   "pushes": [
@@ -8061,6 +8122,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
       "at": "2026-10-28T19:23:55+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "at": "2026-10-28T19:32:37+09:00"
     }
   ],
   "usage_log": [],

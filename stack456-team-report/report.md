@@ -1,14 +1,14 @@
-미완료 282건, 결과: 끝 상태 90/372건 (fixed 73, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 31번(마지막 18be9f0)
+미완료 281건, 결과: 끝 상태 91/372건 (fixed 74, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 32번(마지막 4455641)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T19:29:35+09:00
+상태: running, 갱신 2026-10-28T19:32:50+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 73 | 1 | 0 | 16 | 0 | 2 |
+| #443 | fix/s456-443-t-inho | 92 | 74 | 1 | 0 | 16 | 0 | 1 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -60,6 +60,7 @@ push: fix/s456-443-t-inho 31번(마지막 18be9f0)
 | D-097 | #443 | c002716 | .month-apply에 hover, 누름, 비활성 상태를 주었다 | 없음(보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가) |
 | D-240 | #443 | c002716 | .month-apply에 hover, 누름, 비활성 상태를 주었다 | 없음(보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가) |
 | D-081 | #443 | 18be9f0 | .operator-content를 flex column, gap 28px로 두었다 | 없음(보이는 간격만 바뀌어 시험으로 잡을 수 없다. evidence/D-081 before, after 캡처(admin-organizations, admin-users 1440, 390)) |
+| G-076 | #443 | 4455641 | 어디에서도 쓰지 않는 선택자(.console-content, .tenant-*, .workspace-grid-wide, .setup-state)를 지웠다 | 없음(쓰지 않는 CSS 삭제라 실패하는 시험이 없다. 지운 선택자는 층 head와 정점 b8abfdf frontend/src(globals.css 제외)에서 git grep 0건. 삭제 전후 19개 라우트 화소 비교에서 ) |
 | C443-001 | #443 | 55ce723 | 스켈레톤을 aria-hidden div로 감싸고 상태 영역에서 aria-busy, aria-label을 뺐다 | 없음(개발 서버 /customers?state=loading의 상태 영역 접근성 트리(.s456-work/verify-skeleton.mjs): 고치기 전 status 이름 '데이터를 불러오고 있습니다' 안에 list와 ) |
 | G-087 | #443 | cc3de53 | README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다 | 없음(문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조; 글꼴 버전: PretendardVaria) |
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
