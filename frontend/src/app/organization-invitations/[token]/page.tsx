@@ -29,6 +29,6 @@ export default async function OrganizationInvitationPage({ params }: { params: P
     {isMatchingAccount && current?.ok && current.data.consent_required ? <div className="workspace-form"><p>이 계정은 이용 안내 확인이 필요합니다. 동의를 마치면 초대 수락을 계속합니다.</p><form action={reviewConsentsForInvitation}><input type="hidden" name="token" value={token} /><button type="submit" className="month-apply">이용 안내 확인하고 초대 계속</button></form></div>
       : invitation.account_exists && !isMatchingAccount ? <div className="workspace-form"><p>초대한 이메일의 기존 계정으로 로그인하면 이 초대를 수락할 수 있습니다.</p>{current?.ok && <><p role="status">현재 로그인: {current.data.user_account.email}</p><LogoutButton /></>}<form action={signInForInvitation}><input type="hidden" name="token" value={token} /><button type="submit" className="month-apply">해당 계정으로 로그인</button></form></div>
       : <InvitationForm token={token} accountExists={invitation.account_exists} />}
-    <Link href="/organizations">도입사 선택으로</Link>
+    {current?.ok && <Link href="/organizations">도입사 선택으로</Link>}
   </AuthFrame>;
 }

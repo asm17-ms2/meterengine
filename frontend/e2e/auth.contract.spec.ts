@@ -297,6 +297,12 @@ test("an empty workspace table uses the small empty illustration", async ({ page
   await expect(page.locator(".workspace-desktop-table .ant-empty-normal")).toHaveCount(1);
 });
 
+test("an invitation opened without a session does not offer the organization picker", async ({ page }) => {
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await expect(page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "도입사 선택으로", exact: true })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
