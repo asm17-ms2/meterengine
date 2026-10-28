@@ -1,12 +1,12 @@
-미완료 235건, 결과: 끝 상태 93/328건 (fixed 52, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 30개(마지막 1e6c5df)
+미완료 234건, 결과: 끝 상태 94/328건 (fixed 53, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 31개(마지막 4aa624a)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 52 | 1 | 7 | 30 | 3 | 50 |
+| #442 | 143 | 53 | 1 | 7 | 30 | 3 | 49 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -52,6 +52,7 @@ push: feat/account-permissions 30개(마지막 1e6c5df)
 | D-250 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-256 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-258 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
+| G-016 | #442 | 4aa624a | 닿지 않는 대표관리자 전용 분기 제거 | 없음(닿지 않는 분기를 지우는 것이라 고치기 전 실패 시험이 없다. e2e/permissions.test.mjs owner-only workspace operations need the owner role with adm) |
 | G-040 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
 | G-066 | #442 | e4b7522 | 운영자 사용자 화면의 도입사 목록 곱 렌더 제거 | the operator user list sends the active organizations once instead of once per user: 실패 Expected < 100, Received 930 |
 | G-068 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
@@ -165,6 +166,7 @@ push: feat/account-permissions 30개(마지막 1e6c5df)
 | G-011 | #442 | 정점 0fe7d2a에서 NewAccount는 AcceptOrganizationInvitationRequest.java 13-14행에만 있고 위층 사용처가 없다. 72e8718..0fe7d2a 사이에 세 DTO, OrganizationPeopleService, UserAccount를 바꾼 커밋이 없어 #442에서 고치면 위층은 머지로 따라온다. openapi.yaml은 그룹 제약을 반영하지 않아 NewAccount를 지워도 바뀌지 않는다. |
 | G-012 | #442 | 이름을 맞추기로 정하면 위층 사용처도 같이 바꾼다: OrganizationPeopleService.java:72,178,275,327,338, SessionService.java:175,265,274, OrganizationMemberRepository.java:15,21,28, OrganizationMemberService.java:66,78, frontend/src/app/(console)/members/page.tsx:40, frontend/src/lib/api/management.ts:14,25 (모두 @ 0fe7d2a), 그리고 backend/openapi.yaml. 초대 링크(InvoiceViewLinks.tsx:87, invoice-view-links.ts:5)와 API 키, 세션, 초대의 revoked_at은 되돌릴 수 없는 폐기라 그대로 둔다. |
 | G-013 | #442 | 정점 0fe7d2a에서도 OrganizationAccounts.java:20, OrganizationAccountService.java:98-99, UserSessionRepository.java:25, OrganizationPeopleService.java:145, 304-320이 그대로이고 git grep으로 본 사용처는 이 네 파일뿐이며 시험에서 이 이름을 부르는 곳이 없다. #442에서 이름을 바꾸면 위층은 merge로 그대로 따라오고 따로 맞출 호출부가 없다. |
+| G-016 | #442 | 정점 workspace-actions.ts 40행에 같은 분기가 남아 있다. 위층 커밋들이 이 파일을 바꿨으니 반영 때 그 분기를 지운다. |
 | G-017 | #442 | ApiKeySecretResponse 9인자 생성자를 지우면 #453 23b1844가 같은 생성자 본문을 고쳐 반영 merge에서 충돌하므로 #453에서 그 생성자를 함께 지우고 0fe7d2a의 ApiKeyIntegrationTest.java 126행 호출을 11인자로 바꾼다. ApiKeyService.list(UUID), create 5인자와 나머지 짧은 오버로드는 git grep 0fe7d2a에서 부르는 곳이 없어 위층 빌드는 깨지지 않는다. SessionService와 SessionServiceTest는 정점까지 바뀐 커밋이 없어 그대로 따라간다. |
 | G-018 | #442 | code를 옮기는 안: #442에서 지운 뒤 위로 반영하면 아래 층에서 컴파일이 깨진다. 각 층이 상수를 다시 더해야 한다. #444는 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED. #445는 토스와 결제 code 16개. #446은 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND. #447은 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT. #449는 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE. #450은 EVENT_NOT_FOUND. #442의 frontend/src/app/(console)/workspace-actions.ts:67은 payment_result_unconfirmed, payment_cancellation_in_progress를 문자열로 비교하므로 함께 볼지 정한다. CUSTOMER_HAS_PRICING은 정점에서도 openapi.yaml:8456과 ErrorCode.java:86에만 있다. 구역만 맞추는 안: #450의 8bb17c3이 ORGANIZATION_NOT_ACTIVE 뒤에 ENVIRONMENT_MISMATCH를, 409 구역 머리에 RESOURCE_VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ENVIRONMENT_NOT_READY를 더했다. 그래서 CONSENT_REQUIRED는 ORGANIZATION_NOT_ACTIVE 앞에, API_KEY_UNAVAILABLE은 409 구역 끝에 둬야 반영 merge 충돌이 줄어든다. 위층마다 openapi.yaml enum 순서가 바뀌므로 반영한 뒤 각 층에서 openapi.yaml을 다시 만든다. |
 | G-019 | #442 | 정점에서는 V41__create_invoice_view_links가 actor_type 검사에 invoice_view_link를 더하고, AuditLogController가 anonymous 필터를 받는다. V26에서 audit 변경을 빼려면 #448 이후 층의 이 사용처도 같이 맞춰야 한다. |
