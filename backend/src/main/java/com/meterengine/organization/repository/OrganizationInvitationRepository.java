@@ -2,11 +2,13 @@ package com.meterengine.organization.repository;
 
 import com.meterengine.organization.entity.OrganizationInvitation;
 import jakarta.persistence.LockModeType;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +34,14 @@ public interface OrganizationInvitationRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT i FROM OrganizationInvitation i WHERE i.id=:id")
   Optional<OrganizationInvitation> findForUpdateById(@Param("id") UUID id);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "UPDATE OrganizationInvitation i SET i.revokedAt=:now WHERE i.organizationId=:org AND"
+          + " lower(i.email)=lower(:email) AND i.acceptedAt IS NULL AND i.revokedAt IS NULL AND"
+          + " i.expiresAt>:now")
+  void revokePending(
+      @Param("org") UUID organizationId,
+      @Param("email") String email,
+      @Param("now") OffsetDateTime now);
 }

@@ -194,9 +194,9 @@ class OperatorAccountIntegrationTest {
         .isEqualTo(membership);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM audit_log WHERE action='user_account_created' AND target_id=?",
+                "SELECT count(*) FROM audit_log WHERE action='user_account_created' AND actor_id=?",
                 Integer.class,
-                id.toString()))
+                userAccountId(operator)))
         .isZero();
   }
 
