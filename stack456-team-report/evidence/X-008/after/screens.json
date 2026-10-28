@@ -1,0 +1,195 @@
+[
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "members",
+    "path": "/members",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/members-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 13,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/members-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 13,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/members-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 13,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          },
+          {
+            "id": "scrollable-region-focusable",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Scrollable region must have keyboard access",
+            "targets": [
+              ".ant-table-empty > .ant-table-container > .ant-table-content"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "integrations",
+    "path": "/integrations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/integrations-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 17,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "w1024",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/integrations-w1024.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 17,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-008/after/integrations-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 17,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              "header > a:nth-child(1)",
+              "a[href$=\"organizations\"]",
+              "div[title=\"워크스페이스\"]",
+              "div[title=\"사용량에서 수납까지\"]",
+              "div[title=\"과금과 연동\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  }
+]
