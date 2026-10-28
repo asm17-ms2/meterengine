@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T15:40:20+09:00",
+  "updated_at": "2026-10-28T16:10:42+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -40,14 +40,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 tenantRequest(client.ts:13-16)는 세션 도입사의 scope만 확인하고, proxy.ts:8-9가 화면 URL의 organization_id로 만든 헤더를 그대로 실어 보낸다. 이 층의 backend/src/main에는 X-MeterEngine-Organization-Id를 읽는 코드가 없고 CurrentOrganizationIdArgumentResolver:47은 principal.organizationId()만 쓰며, billing/actions.ts:19도 도입사를 비교하지 않고 finalizeInvoices를 부른다. 그래서 다른 탭에서 B로 바꾼 뒤 A 화면의 변경 요청이 B에 적용되는 경로가 이 층에 남아 있다. 정점에서는 #453 커밋 23b1844가 BusinessEnvironmentInterceptor.java:32-44에서 헤더와 세션 도입사가 다르면 403 PERMISSION_DENIED를 내고 WebConfig.java:28-30이 /v1/**에 등록해 막으므로, 이 층에서는 고치지 않고 위층 수정으로 둔다.",
+      "evidence": [
+        "frontend/src/lib/api/client.ts:13-16 @ 72e8718",
+        "frontend/src/proxy.ts:8-9 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/CurrentOrganizationIdArgumentResolver.java:47 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:32-44 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #453 23b1844",
+      "propagation_note": "#442부터 #452까지는 같은 경로가 열려 있다. 정점 client.ts:18은 여전히 헤더를 그대로 실어 보내며 백엔드 인터셉터가 막는 구조다."
     },
     {
       "id": "C442-005",
@@ -325,14 +336,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718의 OrganizationPeopleService.invitations()는 초대 목록을 읽는 메서드인데, docs/contributing/naming.md 37행 서비스 메서드 동사 표는 읽기를 list, find, get으로 정해 이를 어긴다. MemberNamingConventionTest 56행이 서비스 메서드를 소문자 한 낱말로 묶고 같은 서비스의 list(principal, organizationId)가 이미 소속 목록에 쓰여서 listInvitations도 list도 쓸 수 없고, 정점 0fe7d2a에서도 같은 코드가 남아 있다. 지적의 다른 부분인 소속 생성과 복원 중복(OrganizationMemberService.create 50~89행과 accept 271~283행)은 두 파일에서 눈으로 보이지만, 앞선 검증대로 지금 결과 차이는 없다. 규칙을 지키는 수정은 초대 메서드를 새 OrganizationInvitationService로 옮기는 것이고, 새 서비스, OrganizationPeopleService, OrganizationPeopleController, OrganizationInvitationController 넷을 바꿔 유지보수 분류의 파일 셋 이상 기준에 걸린다. 쓰지 않는 2인자 list를 지우고 invitations를 list로 바꾸는 두 파일 안도 있으나, 인자 수만 다른 list가 소속과 초대를 따로 돌려주게 되어 지적이 짚은 오버로드 문제를 키운다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:151-160 @ 72e8718",
+        "docs/contributing/naming.md:37 @ 72e8718",
+        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:56 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:106-114 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:152 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "초대 메서드(invitations, invite, revoke, preview, accept)를 새 OrganizationInvitationService로 옮겨 목록 읽기를 list로 부를지(파일 넷), 아니면 쓰지 않는 2인자 list를 지우고 invitations를 인자 수만 다른 list로 바꿀지, 아니면 그대로 둘지 정한다.",
+      "propagation_note": "정점 0fe7d2a에서 invitations 사용처는 OrganizationPeopleController.java:115 하나뿐이고 OrganizationPeopleService는 위층에서 바뀌지 않았다. 컨트롤러는 23b1844가 두 줄 바꿨으니 서비스를 옮기면 위층 컨트롤러의 호출과 주입 필드도 같이 맞춘다."
     },
     {
       "id": "G-020",
@@ -353,14 +375,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "docs/contributing/naming.md 41줄은 URL 경로를 'kebab-case 복수 명사, 동사 없음'으로 정했다. 그런데 72e8718의 OrganizationInvitationController 38줄은 @PostMapping(\"/accept\")라는 동사 세그먼트를 쓰고, SecurityConfig 61줄의 permitAll 매처와 프론트 actions.ts 48줄의 호출도 같은 경로를 쓴다. 정점 0fe7d2a에서도 같은 경로가 그대로 남았고, #449 이후에는 /revoke, /lookup, /export, /search 같은 동사 경로가 더 생겨 이 층에서만 고쳐서는 규칙 정합이 끝나지 않는다. 고치려면 공개 API 경로를 바꾸고 백엔드 컨트롤러, SecurityConfig, openapi.yaml, 프론트 호출, 두 통합 시험 클래스에 걸쳐 바꿔야 하므로 판정 규칙 4에 따라 결정 대기로 둔다.",
+      "evidence": [
+        "docs/contributing/naming.md:41 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:38 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:61 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:48 @ 72e8718",
+        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:75,87 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "초대 수락 경로 POST /v1/organization-invitations/{token}/accept를 명사 하위 리소스(/acceptance)로 바꾸고 위층의 /revoke, /lookup, /export, /search 동사 경로도 같은 기준으로 맞출지, 아니면 naming.md에 상태 전이 동사 경로를 예외로 적을지 정한다.",
+      "propagation_note": "바꾸기로 하면 #442에서 OrganizationInvitationController.java의 @PostMapping, SecurityConfig.java permitAll 매처, OrganizationPeopleIntegrationTest와 UserPermissionsIntegrationTest의 경로, frontend/src/app/organization-invitations/[token]/actions.ts의 `${path}/accept`, backend/openapi.yaml을 함께 고친다. 위층에서는 #448의 backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:222 @ 0fe7d2a와 각 층의 openapi.yaml 재생성이 필요하다. 다른 동사 경로는 EventController.java:212, EventExportController.java:38, EventIssueController.java:34, EventRejectionController.java:34, InvoiceViewLinkController.java:75,87, WorkspaceQueryController.java:46,101 @ 0fe7d2a다."
     },
     {
       "id": "G-039",
@@ -411,14 +444,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 비밀번호 8자와 72바이트 검사, 이름 255자, 이메일 정규식이 admin/actions.ts:26-28, (public)/actions.ts:37-39, 초대 actions.ts:43-44에 따로 복사되어 있고, 같은 규칙인 workspace-actions.ts:40 createMember는 사전 검사 없이 백엔드로 보낸다. 앞선 판정대로 72자 검사 누락과 동의 payload 분기는 실제 동작 차이가 없고(동의는 lib/auth/consents.ts 하나에서 나온다), 갈라진 복사와 createMember 누락만 남는다. 정점 0fe7d2a에서도 같은 줄이 그대로 있어 위층이 고치지 않았다. 분류가 maintainability이고 공용 모듈 하나에 모으려면 새 규칙 모듈과 서버 액션 넷(admin, public, 초대, workspace-actions)을 바꿔야 해서 common-brief 7절의 유지보수 두 파일 상한을 넘으므로 needs-decision으로 둔다. createMember 사전 검사만 따로 떼면 한 파일 수정이라 별도 버그로 고칠 수 있다.",
+      "evidence": [
+        "frontend/src/app/admin/actions.ts:26-28 @ 72e8718",
+        "frontend/src/app/(public)/actions.ts:37-39 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:43-44 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:40 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:45 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "비밀번호, 이름, 이메일 검사를 D-103이 만드는 frontend/src/components/auth/credential-rules.ts로 모으려고 서버 액션 네 파일(admin, (public), 초대, workspace-actions)을 함께 바꿀지, 아니면 workspace-actions.ts createMember 사전 검사만 더하고 복사는 그대로 둘지.",
+      "propagation_note": "정점 0fe7d2a에서 같은 검사가 (public)/actions.ts:41, admin/actions.ts:28, organization-invitations/[token]/actions.ts:44에 있고 createMember는 workspace-actions.ts:45로 옮겨 있다. #442에서 고치면 위층 merge 때 (public)/actions.ts(a39db70이 호출 제한을 더함)와 workspace-actions.ts(80a3ef1 이후 여러 층이 case를 더함)에서 충돌을 맞춰야 한다."
     },
     {
       "id": "G-052",
@@ -439,14 +483,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 정규식 /^me_invite_[A-Za-z0-9]{32}$/이 actions.ts 17, 24, 31행, [token]/page.tsx 19행, continue/page.tsx 11행 다섯 곳에 있고, me_invitation_flow 쿠키 이름과 옵션이 actions.ts 18, 25, 50행에, 이름만 continue/page.tsx 10행에 따로 있어 복사는 맞다. 지금 다섯 곳의 글자는 서로 같고 정점 0fe7d2a도 같아서 현재 실패 경로는 없고, 위험은 형식이나 path, maxAge를 바꿀 때만 생긴다. 이 지적을 고치려면 세 화면 파일(actions.ts, [token]/page.tsx, continue/page.tsx)을 모두 바꾸고 공용 파일을 하나 더해야 해서 common-brief 유지보수 분류의 파일 둘 상한을 넘으므로 needs-decision이다. 또 쿠키 이름을 공용 상수로 모으는 부분은 brief의 건드리지 않을 id G-055(+G-070, Q7)가 막아 둔 변경과 겹친다.",
+      "evidence": [
+        "frontend/src/app/organization-invitations/[token]/actions.ts:17-18,24-25,31,50 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:19 @ 72e8718",
+        "frontend/src/app/organization-invitations/continue/page.tsx:10-11 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:17-18,24-25,31,50 @ 0fe7d2a",
+        "frontend/src/app/organization-invitations/continue/page.tsx:10-11 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "초대 토큰 형식 검사와 me_invitation_flow 쿠키 설정, 삭제를 초대 화면 공용 모듈 하나로 모을지(새 파일 하나와 세 화면 파일을 바꾸고, 쿠키 이름 상수화는 Q7 G-055와 겹친다) 정한다.",
+      "propagation_note": "정점까지 정규식과 쿠키 줄은 그대로다. e5fca11(#451)이 continue/page.tsx의 이웃 줄(링크 대상)만 바꿔서, 모으기로 하면 위층을 다시 쌓을 때 작은 충돌이 날 수 있다. 백엔드 OrganizationInvitationController.java 36, 45행의 @Pattern과 SecureTokens.generate(\"me_invite_\")가 같은 형식에 묶여 있다."
     },
     {
       "id": "G-058",
@@ -481,14 +536,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 동의 판은 consents.ts 1행의 FE 상수 하나뿐이다. 백엔드 CreateSignupConsentRequest는 비어 있지 않은 255자 이하 문자열이면 받고, SignupService.validate는 문서 종류만 본다. consent_required는 판과 무관한 boolean이며 SessionConsentService.accept는 이 값이 false이면 바로 돌아가므로, 상수만 올려서는 기존 사용자에게 다시 동의를 받을 길이 없다. 고치려면 백엔드 설정에 현재 판을 두고, 가입, 초대 수락, 세션 동의의 검증과 세션 응답의 consent_required 계산을 바꾸고, 판을 내려 주는 공개 API 필드를 더해야 한다. 이는 main부터 있던 '화면이 보여 준 판을 그대로 싣는다' 계약을 뒤집고 파일 셋 이상과 openapi.yaml이 바뀌는 일이며, 정식 약관 전에 운영 가입을 열지도 함께 정해야 한다. 정점 0fe7d2a에서도 이 파일들은 그대로이고 바꾼 위층 커밋은 없다.",
+      "evidence": [
+        "frontend/src/lib/auth/consents.ts:1 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/dto/CreateSignupConsentRequest.java:17-20 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:37 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:117-124 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/entity/UserAccount.java:105-115 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "동의 문서의 현재 판을 백엔드가 관리하도록 바꿔서 판이 다른 가입이나 동의 요청을 400으로 막고 consent_required를 '현재 판 동의 없음'으로 계산할지, 그리고 정식 약관이 정해지기 전에 운영 도메인에서 가입을 열어 둘지 정한다.",
+      "propagation_note": "CONSENT_VERSION 상수는 정점 0fe7d2a의 real e2e 여러 곳(aggregation, archive-filters, customer-payment-retry, environment-cycle, events 등 frontend/e2e/*.real.spec.ts)에서 가입 요청의 판으로 쓰인다. 상수를 없애거나 서버에서 받게 바꾸면 그 파일들도 같이 고쳐야 한다. 결제 수단 등록의 consent_document_version(CreateBillingKeyRequest, #445 이후)도 같은 방식으로 판을 그대로 받는다."
     },
     {
       "id": "G-069",
@@ -673,28 +739,50 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:68-75 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/ApiCredentialAuthenticationFilter.java:67-72 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:248-254 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:173-179 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/BootstrapService.java:171 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "관리자나 운영자가 정한 초기 비밀번호를 본인이 바꾸게 할지(첫 동의 단계에서 바꾸게 하거나 새 마이그레이션으로 변경 강제 열을 둔다), 도입사의 계정 직접 생성을 없애고 초대만 남길지, 지금대로 둘지 정한다."
     },
     {
       "id": "C442-003",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:34-35 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:22 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:255-282 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:34-37 @ 0fe7d2a",
+        "커밋 a39db70",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:22,38 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:255-269 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #454 a39db70"
     },
     {
       "id": "C442-009",
@@ -729,28 +817,50 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "72e8718의 NavMenu.tsx 11-15줄 NAV_GROUPS에는 main(f088399의 13-14줄)에 있던 미터와 가격 항목이 없다. 두 화면으로 들어오는 링크는 가격 화면 안의 BillableMetricPricesScreen.tsx 91줄 하나뿐이고, ConsoleShell 머리말과 다른 화면 링크도 두 경로를 가리키지 않는다. 그래서 #442부터 #445까지는 콘솔에서 두 화면에 갈 수 없다. #446 614d3bc가 사이드바에 요금 설계(/pricing)를 넣고 그 화면 머리말에 과금 미터 관리 링크(정점 pricing/page.tsx 47줄)를 두었다. 정점에서는 단가 등록과 미터 화면 모두에 갈 수 있으므로 fixed-above로 둔다. 같은 묶음 D-031 등의 수정으로 이 층에 미터 항목이 들어가면 미터 화면 진입은 이 층에서도 풀리고, 가격 화면 진입만 #446 전까지 남는다.",
+      "evidence": [
+        "frontend/src/components/shell/NavMenu.tsx:11-15 @ 72e8718",
+        "frontend/src/components/billable-metric-prices/BillableMetricPricesScreen.tsx:91 @ 72e8718",
+        "frontend/src/components/shell/NavMenu.tsx:14 @ 0fe7d2a",
+        "frontend/src/app/(console)/pricing/page.tsx:47 @ 0fe7d2a",
+        "커밋 614d3bc"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #446 614d3bc",
+      "propagation_note": "fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다."
     },
     {
       "id": "C442-017",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "72e8718의 WorkspaceTable은 55행의 workspace-desktop-table 표와 59~62행의 workspace-mobile-records 카드 목록을 조건 없이 함께 그리고, 카드마다 hasActions일 때 RowActions를 붙여 /members와 /integrations의 행 버튼이 두 벌 생긴다. 이 층에서 불러오는 CSS는 layout.tsx 5행의 globals.css 하나뿐이고, 그 파일(1~34행)에는 두 클래스를 숨기는 규칙이 없으며 git grep으로도 WorkspaceView.tsx 밖의 사용처가 나오지 않는다. 숨기는 규칙은 #443 커밋 f671a4f가 globals.css 221행(카드 기본 숨김)과 767px 미디어 쿼리 240~241행(표 숨김, 카드 표시)으로 들였고, 정점 0fe7d2a에도 그대로 남아 있다. 72e8718..0fe7d2a 사이에 WorkspaceView.tsx를 바꾼 커밋은 없어 정점에서는 표와 카드 중 하나만 보이므로 이 층에서는 고치지 않고 fixed-above로 둔다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceView.tsx:55-62 @ 72e8718",
+        "frontend/src/app/globals.css:26-34 @ 72e8718",
+        "frontend/src/app/layout.tsx:5 @ 72e8718",
+        "frontend/src/app/globals.css:221,240-241 @ 0fe7d2a",
+        "커밋 f671a4f"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #443 f671a4f",
+      "propagation_note": "#442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다."
     },
     {
       "id": "C442-018",
@@ -1023,14 +1133,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "같은 월 선택이 MonthFilter의 네이티브 type=month와 네이티브 '조회' 버튼(WorkspaceHeader.tsx:15 @ 72e8718), MonthPicker의 antd DatePicker YYYY-MM(MonthPicker.tsx:51-61 @ 72e8718)으로 갈라져 있고, #445 수납과 취소(payments/page.tsx:15-16 @ 54bb1d5)부터 옆 탭의 청구 검토, 인보이스와 다르게 보인다. 적용과 초기화 문구도 정점 AuditScreen.tsx:65의 '조건으로 조회', '조건 초기화'와 EmptyState.tsx:11의 '필터 초기화'로 갈린다. 이 층의 MonthPicker는 query, capabilities를 받아 바로 이동만 해(MonthPicker.tsx:17-35) 폼 제출용으로 쓰려면 MonthPicker를 고쳐야 하고, 문구 통일은 #448 등 T-inho 층 파일까지 셋 이상에 걸친다. 콘솔 전체의 컨트롤과 문구 한 벌을 정하는 일이라 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
+        "frontend/src/components/screen/MonthPicker.tsx:17-35,51-61 @ 72e8718",
+        "frontend/src/app/(console)/payments/page.tsx:15-16 @ 54bb1d5",
+        "frontend/src/components/workspace/AuditScreen.tsx:65 @ 0fe7d2a",
+        "frontend/src/components/screen/EmptyState.tsx:11 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
+      "propagation_note": "통일하면 #442는 WorkspaceHeader.tsx MonthFilter와 MonthPicker.tsx를 바꾸는데, #451 e5fca11이 MonthPicker.tsx에 onChange, id, label을 따로 더해 반영 merge에서 충돌한다. 위층은 AuditScreen.tsx:65(#448), EventFilters.tsx:182(#451), event-issues/page.tsx:43, event-rejections/page.tsx:33(#450), EmptyState.tsx:11 기본값을 맞춘다."
     },
     {
       "id": "D-150",
@@ -1065,14 +1186,24 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 월 선택 구현이 WorkspaceHeader.tsx:15의 네이티브 type=month(라벨 '청구 월')와 MonthPicker.tsx:51-61의 antd DatePicker(aria-label '조회 기간')로 갈라져 있다. 정점에서는 event-issues/page.tsx:38 '대상 월', PricingWorkspace.tsx:187 '적용 시작 월' 같은 네이티브 입력과 라벨이 더 늘었다. MonthFilter가 MonthPicker를 쓰려면 이 층 MonthPicker가 query, capabilities로 바로 이동만 하는 구조(MonthPicker.tsx:17-35)를 바꿔야 하고, 라벨 통일은 #446, #450, #451(T-inho 층) 파일까지 셋 이상에 걸친다. 어느 라벨로 맞출지도 화면 뜻을 정하는 결정이라 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
+        "frontend/src/components/screen/MonthPicker.tsx:17-35,51-61 @ 72e8718",
+        "frontend/src/app/(console)/event-issues/page.tsx:38 @ 0fe7d2a",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:187 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
+      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx와 MonthPicker.tsx(#451 e5fca11이 onChange 모드를 따로 더해 충돌), #446 PricingWorkspace.tsx:187, #450 event-issues/page.tsx:38, event-rejections/page.tsx:28, #451 EventFilters.tsx:158을 바꾼다. EventFilters를 바꾸면 events.real.spec.ts:127,240의 getByLabel('조회 월').fill도 맞춰야 한다."
     },
     {
       "id": "D-172",
@@ -1093,14 +1224,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718 NavMenu.tsx 5행과 23행은 사이드바 페이지 이동 링크를 antd Menu의 항목 label로 넣는다. 잠금 파일이 고정한 @rc-component/menu 1.5.0의 lib/Menu.js는 ul에 role menu와 기본값 tabIndex 0을, lib/MenuItem.js는 li에 role menuitem을 붙인다. 그래서 링크 목록이 앱 메뉴로 노출되고, menuitem 안에 a가 중첩되며, ul이 Tab 정지가 된다. 이 가운데 Tab 정지는 X-019 수정(tabIndex={-1} 복원)으로 풀린다. 지적이 든 globals.css 39행의 [tabindex] 외곽선은 #443(f671a4f)에서 생겼다. 남는 role menu 의미 구조는 main(f088399)에서도 같았다. 이를 고치려면 Menu를 nav, ul, li, a 링크 목록으로 바꿔야 하는데, 그러면 #443 디자인 커밋이 넣은 Menu 테마 토큰과 .ant-menu 스타일이 듣지 않게 된다. 이 둘을 CSS로 옮기는 일은 담당이 아닌 층까지 걸친 구조 변경이다.",
+      "evidence": [
+        "frontend/src/components/shell/NavMenu.tsx:5,23 @ 72e8718",
+        "frontend/src/components/shell/NavMenu.tsx:3,25-42 @ f088399",
+        "frontend/pnpm-lock.yaml:601 @ 72e8718",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0fe7d2a",
+        "frontend/src/app/globals.css:129-130 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "사이드바를 antd Menu 대신 nav 안 그룹 제목과 ul, li, a 링크 목록(aria-current만 유지)으로 바꾸고, #443의 Menu 테마 토큰(itemSelectedBg 등)과 .ant-menu 스타일을 CSS로 옮겨 모양을 지킬지 정한다.",
+      "propagation_note": "하기로 정하면 #442 NavMenu.tsx와 globals.css에 목록 마크업과 스타일을 넣는다. 그다음 #443(f671a4f)에서는 AppProviders.tsx 19행의 Menu 토큰과 globals.css 129-130행의 .ant-menu 규칙을 새 클래스로 옮겨야 한다. 정점 ConsoleShell.tsx 55행 사이드바와 60행 Drawer가 같은 NavMenu를 쓰므로 Drawer 안의 onNavigate 닫힘도 링크 onClick으로 옮긴다."
     },
     {
       "id": "D-184",
@@ -1149,14 +1291,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 MonthFilter는 네이티브 type=month와 별도 '조회' 버튼(WorkspaceHeader.tsx:15), MonthPicker는 antd DatePicker YYYY-MM에 '조회 기간' 라벨(MonthPicker.tsx:51-61)로 갈라져 있다. #445에서 수납과 취소(payments/page.tsx:15-16 @ 54bb1d5)는 MonthFilter를, 옆 탭 인보이스(invoices/page.tsx:48-51 @ 54bb1d5)는 ListControls의 MonthPicker를 써서 탭을 옮기면 라벨, 표시 형식, 적용 방식이 바뀐다. 정점에서는 ResourceSearchControls.tsx:107의 '조회 기간'/'적용 월'까지 더해졌다. 통일하려면 MonthPicker 폼 모드와 #446, #450, #451(T-inho 층) 화면까지 셋 이상의 파일과 라벨 결정이 필요해 needs-decision이다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
+        "frontend/src/components/screen/MonthPicker.tsx:51-61 @ 72e8718",
+        "frontend/src/app/(console)/payments/page.tsx:15-16 @ 54bb1d5",
+        "frontend/src/app/(console)/invoices/page.tsx:48-51 @ 54bb1d5",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
+      "propagation_note": "정점에는 ResourceSearchControls.tsx:107이 hidden input 방식의 MonthPicker를 이미 쓴다(#451 e5fca11). #442에서 MonthFilter를 그 방식으로 바꾸려면 MonthPicker.tsx에 같은 onChange 모드를 더해야 해 #451과 충돌하므로, 결정 뒤 #451 위에서 MonthFilter만 바꾸는 편이 충돌이 적다."
     },
     {
       "id": "D-250",
@@ -1219,56 +1372,100 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 SessionConsentService.accept는 동의 검증만 쓰려고 SignupService.validate(\"\", accepted)를 부르고, Consent 행을 만드는 반복이 SignupService.create(MICROS 절삭), OrganizationAccountService.register(절삭), SessionConsentService.accept(절삭 없음, java.util.UUID 정규 이름)에 갈라져 있어 같은 코드가 세 곳에서 어긋난 것이 눈으로 확인된다. InvitationConsentRequest도 CreateSignupConsentRequest와 달리 Consent.DOCUMENT_PATTERN, DOCUMENT_VERSION_MAX_LENGTH 대신 리터럴과 255를 쓰고 @Schema가 없다. 다만 지금 validatePassword는 최대 바이트만 보므로 빈 문자열이 통과해 현재 실패 경로는 없고, organization 패키지는 72e8718에서 account를 하나도 import하지 않아 Consent 상수를 직접 참조하면 의존 방향이 뒤집힌다. 지적대로 검증과 저장을 한 컴포넌트로 모으려면 SignupService, OrganizationAccountService, SessionConsentService 세 파일 이상을 바꿔야 해서 유지보수 분류 규칙상 needs-decision이다. 정점 0fe7d2a에서도 다섯 파일 모두 72e8718..0fe7d2a 사이 커밋이 없어 같다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:42-50 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:110-124 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:90-100 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:83-92 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/dto/InvitationConsentRequest.java:9-12 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "필수 동의 검증과 Consent 저장을 account 쪽 한 컴포넌트로 모아 SignupService, OrganizationAccountService, SessionConsentService 세 경로가 부르게 할지(InvitationConsentRequest의 리터럴은 organization이 account를 import하지 않는 방향을 지키려면 상수를 organization.api로 옮겨야 한다), 아니면 이번 스택에서는 고치지 않을지 정한다.",
+      "propagation_note": "정점 0fe7d2a에서 SignupService.validate 호출은 OrganizationAccountService.java:83과 SessionConsentService.java:42 두 곳뿐이고 consentRepository 저장도 SignupService.java:90, OrganizationAccountService.java:86, SessionConsentService.java:44 그대로라 #442에서 고치면 위층은 merge로 그대로 따라간다. InvitationConsentRequest는 AcceptOrganizationInvitationRequest.java:13 @ 0fe7d2a에서만 쓰인다."
     },
     {
       "id": "G-011",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 CreateManagedMemberRequest 15~17행과 CreateOrganizationInvitationRequest 15행, AcceptOrganizationInvitationRequest 11~12행은 이메일 패턴, 254, 255, 8, 72를 리터럴로 쓰고 EMAIL_FORMAT_MESSAGE를 빼서, UserAccount 상수를 쓰는 CreateUserAccountRequest와 규칙이 갈라져 있고 GlobalExceptionHandler가 getDefaultMessage를 그대로 내므로 이메일 형식 오류 문구도 경로마다 다르다. NewAccount 그룹은 git grep으로 정의와 선언 두 줄에만 나오고 그 그룹으로 검증하는 곳이 없어 동작하지 않으며, OrganizationPeopleService 256~262행이 길이 8을 리터럴로 다시 검사한다. 빈 동의 목록은 SignupService.validate가 막아 지금 실패 경로는 없고 규칙이 어긋날 수 있는 유지보수 문제다. organization 패키지는 account를 하나도 import하지 않는 한 방향 구조(OrganizationAccounts 포트)라 UserAccount 상수를 바로 쓰면 역방향 의존이 생기고, 수정안대로 global.validation 조합 제약으로 옮기면 새 제약 파일과 DTO 다섯 개, 서비스까지 셋 이상의 파일이 바뀌어 needs-decision이다. 정점 0fe7d2a에서도 세 DTO와 서비스 줄이 같고 72e8718..0fe7d2a 사이에 이 파일들을 바꾼 커밋이 없다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/dto/CreateManagedMemberRequest.java:15-17 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/dto/CreateUserAccountRequest.java:13,16,19 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/entity/UserAccount.java:21-27 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/dto/AcceptOrganizationInvitationRequest.java:11-14 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:256-262 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "organization이 account를 import하지 않는 지금 의존 방향을 지키면서 계정 이메일, 이름, 비밀번호 규칙을 global.validation 조합 제약으로 옮겨 account와 organization DTO 다섯 곳과 OrganizationPeopleService가 함께 쓰게 할지 정한다.",
+      "propagation_note": "정점 0fe7d2a에서 NewAccount는 AcceptOrganizationInvitationRequest.java 13-14행에만 있고 위층 사용처가 없다. 72e8718..0fe7d2a 사이에 세 DTO, OrganizationPeopleService, UserAccount를 바꾼 커밋이 없어 #442에서 고치면 위층은 머지로 따라온다. openapi.yaml은 그룹 제약을 반영하지 않아 NewAccount를 지워도 바뀌지 않는다."
     },
     {
       "id": "G-012",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 같은 소속 보관 동작을 DB 열과 엔티티는 revoked_at(V26:36), 응답 status는 archived, 감사 action은 organization_member_archived, 서비스 메서드는 remove, 컨트롤러 요약은 '소속 제거', 프론트 operation은 archiveMember로 서로 다르게 부르며, 이는 naming.md 14줄 '같은 개념에 같은 낱말' 조항에 어긋난다. 같은 JSON 키 revoked_at이 members/page.tsx:36에서는 '보관 시각', integrations/page.tsx:27에서는 되돌릴 수 없는 '폐기 시각'으로 쓰여 화면 코드에서도 뜻이 갈린다. 정점 0fe7d2a에서도 ManagedMemberResponse.java:17,26과 엔티티의 revoke(), restore()가 그대로이고, #447이 다른 보관 자원에 archived_at 열(V43)을 쓰므로 어긋남이 남아 있다. 다만 정점의 OrganizationPeopleService.java:72가 보관 필터를 getRevokedAt에 직접 잇기 때문에 원문의 '보관 필터에서 소속만 빠진다'는 실패는 지금 일어나지 않고 이름 문제만 남는다. 고치는 중심인 열 이름 변경은 V26 변경이나 새 V__ 파일이 필요해 막히고, DB를 빼고 남는 수정(JSON 필드 revoked_at, operationId removeOrganizationMember, 서비스 remove)도 공개 이름 변경이며 파일 셋 이상에 걸쳐 그것만으로도 needs-decision 대상이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/dto/ManagedMemberResponse.java:17,26 @ 72e8718",
+        "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql:36 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:141,148 @ 72e8718",
+        "frontend/src/app/(console)/members/page.tsx:36 @ 72e8718",
+        "docs/contributing/naming.md:14 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "blocked_reason": "do-not-touch G-031 V26__organization_people_and_invitations: 소속 보관 열 revoked_at(V26:36)을 archived_at으로 맞추려면 V26 내용이나 새 V__ 파일이 필요하다. 열 이름은 공개 이름이기도 하다",
+      "propagation_note": "이름을 맞추기로 정하면 위층 사용처도 같이 바꾼다: OrganizationPeopleService.java:72,178,275,327,338, SessionService.java:175,265,274, OrganizationMemberRepository.java:15,21,28, OrganizationMemberService.java:66,78, frontend/src/app/(console)/members/page.tsx:40, frontend/src/lib/api/management.ts:14,25 (모두 @ 0fe7d2a), 그리고 backend/openapi.yaml. 초대 링크(InvoiceViewLinks.tsx:87, invoice-view-links.ts:5)와 API 키, 세션, 초대의 revoked_at은 되돌릴 수 없는 폐기라 그대로 둔다."
     },
     {
       "id": "G-013",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 OrganizationAccounts.revoke(20행)는 UserSessionRepository.detachMembership(21-28행)만 부르고, 그 쿼리는 세션의 organization_id를 비우며 revoked_at을 채워 세션을 끝내는데, 두 이름 어디에도 세션이 없고 같은 일을 층마다 revoke와 detachMembership으로 다르게 부른다. 호출부 OrganizationPeopleService 145-146행은 organizationAccounts.revoke 다음에 member.revoke가 와서 서로 다른 대상(세션, 소속)에 같은 동사를 쓰므로 docs/contributing/naming.md 원칙 13-14행(호출부만 보고 대상을 안다, 다른 개념에 다른 낱말)에 어긋나는 것이 눈으로 보인다. 다만 원문 failure_scenario의 호출 삭제는 OrganizationPeopleIntegrationTest 282-283행이 보관 뒤 /v1/sessions/current 401을 확인해 잡으므로 실제 회귀 위험은 낮고, lockOwner와 requireMember의 boolean 인자는 규칙 조항보다 취향에 가깝다. 정점 0fe7d2a에서도 네 파일이 같고 72e8718..0fe7d2a 사이 이 파일을 바꾼 커밋이 없다. 고치려면 시험을 빼고 OrganizationAccounts, OrganizationAccountService, OrganizationPeopleService, UserSessionRepository 네 파일의 이름을 바꿔야 해서 유지보수 분류 셋 이상 규칙에 따라 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/api/OrganizationAccounts.java:20 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/repository/UserSessionRepository.java:21-28 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:145-146 @ 72e8718",
+        "docs/contributing/naming.md:13-14 @ 72e8718",
+        "backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java:282-283 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "#442에서 OrganizationAccounts.revoke와 UserSessionRepository.detachMembership을 세션 폐기를 드러내는 이름(revokeSessions 등)으로 바꾸고 requireMember, activeOrganization의 boolean 인자를 메서드로 나누는 본문 파일 4개 이름 정리를 할지, 담당자 판단으로 두고 넘어갈지 정한다.",
+      "propagation_note": "정점 0fe7d2a에서도 OrganizationAccounts.java:20, OrganizationAccountService.java:98-99, UserSessionRepository.java:25, OrganizationPeopleService.java:145, 304-320이 그대로이고 git grep으로 본 사용처는 이 네 파일뿐이며 시험에서 이 이름을 부르는 곳이 없다. #442에서 이름을 바꾸면 위층은 merge로 그대로 따라오고 따로 맞출 호출부가 없다."
     },
     {
       "id": "G-016",
@@ -1289,42 +1486,75 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 72e8718과 정점 0fe7d2a 모두에서 CurrentSession 4인자, 5인자 생성자, ApiKeyService.list(UUID)와 create 5인자, OrganizationMemberService.create 3인자, OrganizationPeopleService.list 2인자와 invite 3인자, 요청 DTO 네 개의 짧은 생성자, OrganizationInvitation 6인자 생성자(7인자 안의 위임 말고는)를 부르는 곳이 없고, 호출부는 모두 전체 인자판(SessionService 145, 238행, ApiKeyController 103행, OrganizationController 174행, OrganizationPeopleController 56, 124행)만 쓴다. 남은 오버로드의 기본값도 갈라져 OrganizationInvitation 6인자는 필드 기본값 ADMIN을, CreateOrganizationInvitationRequest 1인자와 invite 3인자는 READ를, CurrentSession 4인자는 역할 null과 빈 스코프를 넣는다. SessionService 8인자 생성자는 SessionServiceTest 65행만 부르며 초대 저장소에 null을 넘기고, 운영 코드 115행이 그 null을 분기해 단위 시험은 초대 분기를 거치지 못한다. 다만 원문의 '@Autowired가 빠지면 조용히 403'은 생성자가 둘이면 기동 실패로 드러나 근거가 없고, 판정은 유지보수 근거로만 한다. 지적대로 지우면 시험을 빼고 11개 파일이 바뀌어 common-brief 6절 5번의 유지보수 분류 두 파일 상한을 넘으므로 needs-decision이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/account/service/CurrentSession.java:16-31 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:115-117 @ 72e8718",
+        "backend/src/test/java/com/meterengine/account/service/SessionServiceTest.java:65-73 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/entity/OrganizationInvitation.java:28-57 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/dto/CreateOrganizationInvitationRequest.java:20-26 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "#442에서 아무도 부르지 않는 오버로드와 생성자를 11개 파일(CurrentSession, SessionService, ApiKeyService, OrganizationMemberService, OrganizationPeopleService, 요청 DTO 넷, OrganizationInvitation, ApiKeySecretResponse)에서 한 번에 지울지, CurrentSession과 SessionService의 null 분기 둘만 지울지, 그대로 둘지 정한다.",
+      "propagation_note": "ApiKeySecretResponse 9인자 생성자를 지우면 #453 23b1844가 같은 생성자 본문을 고쳐 반영 merge에서 충돌하므로 #453에서 그 생성자를 함께 지우고 0fe7d2a의 ApiKeyIntegrationTest.java 126행 호출을 11인자로 바꾼다. ApiKeyService.list(UUID), create 5인자와 나머지 짧은 오버로드는 git grep 0fe7d2a에서 부르는 곳이 없어 위층 빌드는 깨지지 않는다. SessionService와 SessionServiceTest는 정점까지 바뀐 커밋이 없어 그대로 따라간다."
     },
     {
       "id": "G-018",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718의 ErrorCode.java에는 INVALID_TOSS_PAYMENTS_CREDENTIAL, PAYMENT_*, WEBHOOK_*, PRICE_PLAN_* 등 상수 33개가 있는데, git grep으로 찾아 보면 ErrorCode.java 밖의 backend 소스와 시험 어디에서도 쓰이지 않는다. 그런데도 openapi.yaml 오류 code enum에는 그대로 실린다. 이 code를 처음 던지는 층은 #444, #445, #446, #447, #449, #450이고, CUSTOMER_HAS_PRICING은 정점에서도 쓰는 곳이 없다. 구역 주석도 코드와 어긋난다: '// 404 Not Found' 구역의 API_KEY_UNAVAILABLE은 CONFLICT이고, 409 구역 뒤쪽에 FORBIDDEN인 CONSENT_REQUIRED, NOT_FOUND인 INVITATION_NOT_FOUND, PRICE_PLAN_NOT_FOUND, WEBHOOK_ENDPOINT_NOT_FOUND, BAD_REQUEST인 INVALID_WEBHOOK_*가 놓여 있으며, 정점 0fe7d2a도 같다. 수정안대로 각 code를 던지는 PR로 옮기려면 담당이 아닌 #444, #446, #450을 포함한 일곱 층의 ErrorCode.java와 openapi.yaml을 바꿔야 하고 #442에서만 지우면 위층 빌드가 깨진다. 유지보수 분류에서 파일 셋 이상에 걸친 구조 변경이므로 needs-decision이고, 구역 자리 맞추기만은 #442의 두 파일로 끝나 fix_plan에 적었다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:14-16 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:26,35 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:79-94 @ 72e8718",
+        "backend/openapi.yaml:2970-3039 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:85-94 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "ErrorCode에서 #442가 쓰지 않는 위층 code 33개를 각각 처음 던지는 층(#444, #445, #446, #447, #449, #450)으로 옮기고 아무 층도 쓰지 않는 CUSTOMER_HAS_PRICING은 지울지, 아니면 #442에 모아 둔 채 HttpStatus 구역 자리만 #442에서 맞출지 정한다.",
+      "propagation_note": "code를 옮기는 안: #442에서 지운 뒤 위로 반영하면 아래 층에서 컴파일이 깨진다. 각 층이 상수를 다시 더해야 한다. #444는 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED. #445는 토스와 결제 code 16개. #446은 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND. #447은 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT. #449는 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE. #450은 EVENT_NOT_FOUND. #442의 frontend/src/app/(console)/workspace-actions.ts:67은 payment_result_unconfirmed, payment_cancellation_in_progress를 문자열로 비교하므로 함께 볼지 정한다. CUSTOMER_HAS_PRICING은 정점에서도 openapi.yaml:8456과 ErrorCode.java:86에만 있다. 구역만 맞추는 안: #450의 8bb17c3이 ORGANIZATION_NOT_ACTIVE 뒤에 ENVIRONMENT_MISMATCH를, 409 구역 머리에 RESOURCE_VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ENVIRONMENT_NOT_READY를 더했다. 그래서 CONSENT_REQUIRED는 ORGANIZATION_NOT_ACTIVE 앞에, API_KEY_UNAVAILABLE은 409 구역 끝에 둬야 반영 merge 충돌이 줄어든다. 위층마다 openapi.yaml enum 순서가 바뀌므로 반영한 뒤 각 층에서 openapi.yaml을 다시 만든다."
     },
     {
       "id": "G-019",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "72e8718의 V26은 34행에서 audit_log_occurred_id_index를 만들고, 37~43행에서 audit_log_organization_fk를 지우고 actor_type에 anonymous를 허용한다. 그런데 이 층의 AuditActor는 user_account, api_key, system 세 행위자만 만들고, 이 층 main 코드에는 anonymous 행위자도, occurred_at과 id로 감사 행을 정렬하는 조회도 없다. anonymous 행위자는 #448 bc7e538의 RequestAuditService에서, occurredAt과 id 정렬은 AuditLogQueryService에서 처음 쓰여 지적대로 위층 기능의 스키마가 #442 마이그레이션에 들어 있다. 정점 0fe7d2a에서도 V26과 AuditActor는 72e8718과 내용이 같다. 고치려면 V26 내용을 바꾸고 #448에 새 V__ 파일을 더해야 하는데, 둘 다 금지된 변경이라 blocked로 둔다.",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql:34 @ 72e8718",
+        "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql:37-43 @ 72e8718",
+        "backend/src/main/java/com/meterengine/audit/service/AuditActor.java:8-12 @ 72e8718",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:37 @ bc7e538",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:105 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "blocked_reason": "do-not-touch G-031 G-032 V26__organization_people_and_invitations: 감사 인덱스와 anonymous 행위자 변경을 #448로 옮기려면 V26 내용을 바꾸고 #448에 새 V__ 파일을 더해야 한다",
+      "propagation_note": "정점에서는 V41__create_invoice_view_links가 actor_type 검사에 invoice_view_link를 더하고, AuditLogController가 anonymous 필터를 받는다. V26에서 audit 변경을 빼려면 #448 이후 층의 이 사용처도 같이 맞춰야 한다."
     },
     {
       "id": "G-022",
@@ -1345,28 +1575,50 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "두 파서는 같은 코드가 갈라진 것이 아니라 값 집합이 다른 두 필터다. ArchiveStatus는 archived_at 하나로 active, archived, all을 고르고, API 키 상태는 revoked_at과 expires_at에서 계산한 active, revoked, expired이며 ApiKeyResponse.status로도 나가므로 한 enum으로 합칠 수 없다. 72e8718에서 null은 어느 파서에도 닿지 않는다. ApiKeyController와 OrganizationPeopleController가 둘 다 defaultValue \"all\"을 주고 인자 없는 list 오버로드도 \"all\"을 넘기며, ApiKeyIntegrationTest가 상태별 결과, 생략 시 전체 4건, 알 수 없는 값의 400을 확인한다. 정점에서 parse의 null 기본값 active는 보관 자원 컨트롤러들의 defaultValue \"active\"(CustomerController 등 7곳)와 맞고 목록마다 생략 시 뜻은 컨트롤러 기본값과 설명이 정하므로, 남는 것은 API 키 상태를 enum으로 둘지 문자열 switch로 둘지의 취향 차이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/validation/ArchiveStatus.java:14-23 @ 72e8718",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:62-77 @ 72e8718",
+        "backend/src/main/java/com/meterengine/apikey/controller/ApiKeyController.java:59-65 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:49-56 @ 72e8718",
+        "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:78 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "same 23b1844"
     },
     {
       "id": "G-029",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:34-35 @ 72e8718",
+        "deploy/caddy/Caddyfile:4-7 @ 72e8718",
+        "deploy/deploy.sh:16 @ 72e8718",
+        "deploy/caddy/Caddyfile:5-13 @ 0fe7d2a",
+        "커밋 a39db70",
+        "deploy/caddy/Caddyfile:4-7,38-40 @ 72e8718",
+        "deploy/caddy/Caddyfile:8-9,47-48 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #454 a39db70"
     },
     {
       "id": "G-030",
@@ -1387,28 +1639,50 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 CreateOrganizationMemberRequest는 scopes를 생략하면 read로 채우고, OrganizationMemberService는 owner가 없는 도입사일 때만 owner와 admin으로 올린다. 그래서 대표관리자가 있는 도입사에서 README 176행대로 소속시킨 운영자는 read만 받는다. 세션 권한은 SessionService.scopesOf가 소속 scopes에서 가져오고 POST /v1/api-keys는 @MemberAdminAccess(SCOPE_admin)이므로 4단계가 403 permission_denied로 실패한다. 104행의 'API 키 관리는 로그인 세션만, 사용자 관리는 operator 세션만'도 코드와 어긋난다. 정점에서는 #453 커밋 23b1844가 3단계에 scopes admin을 넣고 인증 절과 V27 설명을 고쳤으며 0fe7d2a의 104-105행과 196행에 그대로 있지만, #443부터 #452 head까지는 같은 고장이 남아 있다. 원문의 frontend/README.md 설정 표와 화면 표 부분은 G-040, G-068에서 판정하고(변수 줄은 G-039 범위), V26 설명은 G-175에서 판정한다.",
+      "evidence": [
+        "backend/README.md:104,176 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/dto/CreateOrganizationMemberRequest.java:16-24 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/MemberAdminAccess.java:13 @ 72e8718",
+        "backend/README.md:104-105,196 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #453 23b1844",
+      "propagation_note": "fixed-above: #443부터 #452까지의 head(0f1d1bf에서 2aa2be2까지)의 backend/README.md 운영 키 발급 3단계는 아직 scopes 없이 소속시키고, 인증 절 104행도 옛 문장이다. #453 f014e03부터 고쳐져 있다. 층마다 따로 고칠지는 배포 단위 결정 뒤 박성종 님이 정한다. 이 층에서 같은 줄을 고치면 23b1844와 같은 내용이어야 #453 반영 때 충돌이 나지 않는다."
     },
     {
       "id": "G-038",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718의 ErrorCode.java에는 #442 백엔드 코드가 한 번도 던지지 않는 위층 code 33개(토스와 결제 14-16행, 69-76행, 110행, 웹훅과 요금제 77-87행 등)가 있고, git grep으로 backend/src와 frontend/src에서 ErrorCode.java 밖의 사용처가 0건임을 확인했다. 이 값들은 오류 code의 정본을 openapi.yaml이 낸다는 error-handling.md 'code' 절에 따라 openapi.yaml 2964-3039행 enum으로 계약에 나가므로 문서와 코드가 어긋난다. workspace-actions.ts 57-62행, 73행, 75행, 80행에는 if (false && ...), const isPaymentRequest = false, if (false) redirect(...) 같은 상수 false 분기가 눈으로 보이고, 정점 0fe7d2a 98행에서는 같은 자리에 실제 조건이 들어와 있어 위층 기능의 자리 표시임이 드러난다. 고치려면 ErrorCode.java, openapi.yaml, workspace-actions.ts 세 파일을 바꿔야 하고, ErrorCode는 #443~#449에서 바뀌지 않아 #442에서 지우면 위로 반영할 때 #444, #445, #446, #447, #449, #450 빌드가 깨지므로 각 층(비담당 #444 #446 #450 포함)이 code를 다시 더해야 해서 needs-decision으로 둔다. 같은 ErrorCode 부분을 G-018이 따로 지적하지만 G-038은 workspace-actions.ts 죽은 분기까지 포함한다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:14-16 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:69-87 @ 72e8718",
+        "backend/openapi.yaml:2970,3025 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:57-62 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:98 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "#442에 미리 들어온 위층 오류 code 33개와 workspace-actions.ts의 상수 false 분기를 #442에서 지우고 #444, #445, #446, #447, #449, #450이 각자 code와 분기를 다시 더하게 할지, 스택을 한 번에 머지하는 전제(Q4)로 보고 그대로 둘지 정한다.",
+      "propagation_note": "ErrorCode.java는 72e8718..0fe7d2a 사이에 8bb17c3(#450)만 바꾸므로 #442에서 지운 줄이 #443~#449로 그대로 반영되어 사용처가 있는 층의 빌드가 깨진다. 지운다면 다시 더할 층은 #444 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED; #445 INVALID_TOSS_PAYMENTS_CREDENTIAL, PAYMENT_METHOD_REJECTED, TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE, PAYMENT_METHOD_NOT_FOUND, PAYMENT_METHOD_REGISTRATION_NOT_FOUND, PAYMENT_ATTEMPT_NOT_FOUND, PAYMENT_RESULT_UNCONFIRMED, TOSS_PAYMENTS_CREDENTIAL_MISSING, PAYMENT_METHOD_MISSING, PAYMENT_MODE_MISMATCH, PAYMENT_ATTEMPT_NOT_CANCELABLE, PAYMENT_ATTEMPT_FULLY_CANCELED, PAYMENT_CANCELLATION_AMOUNT_EXCEEDED, PAYMENT_CANCELLATION_IN_PROGRESS, PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT, TOSS_PAYMENTS_UNAVAILABLE; #446 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND; #447 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT; #449 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE; #450 EVENT_NOT_FOUND이고 각 층 openapi.yaml을 다시 만든다. CUSTOMER_HAS_PRICING은 정점에서도 쓰이지 않는다. workspace-actions.ts는 80a3ef1(#444), 4ace811(#445), 614d3bc(#446), 2ec5d85(#447), 8bb17c3(#450), e5fca11(#451)이 false 자리를 실제 조건으로 바꿨으므로 #442에서 줄을 지우면 이 층들에 반영 충돌이 나고, 각 층이 자기 operation 조건 줄을 다시 넣어야 한다."
     },
     {
       "id": "G-040",
@@ -1429,56 +1703,100 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 frontend/README.md 161행은 화면이 부르는 백엔드 오퍼레이션이 src/lib/api/에 있다고 적지만, origin/main에는 lib/api 밖 /v1/ 리터럴이 없고 이 층에는 9개 파일에 29개가 있어 문서와 코드가 어긋난다. 같은 PUT /v1/sessions/current/organization을 session-actions.ts 27-33행은 401이면 /login?reason=expired로 보내고 초대 actions.ts 58-59행은 모든 실패를 수락 완료 안내로 돌려, 같은 호출의 처리가 두 곳에서 갈라졌다(GET /v1/sessions/current도 session.ts 20행과 초대 page.tsx 24행에 따로 있다). 다만 초대 쪽은 방금 수락에 쓴 토큰이나 새로 만든 토큰이라 401이 나기 어려워 실제 동작 결함보다는 유지보수 문제다. 정점 0fe7d2a에서 인용한 줄은 그대로이고 lib/api 밖 리터럴은 31개 파일 97개로 늘었으며, README 161행은 #452 커밋 29a78d0이 지웠다. 고치려면 lib/api 함수로 모으며 session.ts, 초대 page와 actions, session-actions, admin/actions 등 셋 넘는 파일을 바꿔야 하는 유지보수 분류라 needs-decision이다.",
+      "evidence": [
+        "frontend/README.md:161 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:58-59 @ 72e8718",
+        "frontend/src/app/session-actions.ts:27-33 @ 72e8718",
+        "frontend/src/lib/auth/session.ts:20 @ 72e8718",
+        "커밋 29a78d0"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "src/lib/api 밖 백엔드 경로 리터럴(층 29개, 정점 97개)을 operationId 이름의 lib/api 함수로 모으고 401 처리를 한 곳에 둘지, 지금 구조를 인정하고 #442 README 161행만 고칠지(#452 29a78d0은 이 줄을 이미 지웠다) 정한다.",
+      "propagation_note": "모으기로 하면 정점 0fe7d2a의 사용처는 git grep '\"/v1/\\|`/v1/' 0fe7d2a -- frontend/src ':!frontend/src/lib/api'로 31개 파일이 나오고, 그중 sessions/current는 account/consents/actions.ts:15, organization-invitations/[token]/actions.ts:58, organization-invitations/[token]/page.tsx:24, session-actions.ts:15,27, lib/auth/session.ts:20이다. #444 이후 층의 workspace-actions.ts(35개), exports/[resource]/route.ts(7개), payments/[id]/page.tsx(5개) 등 다른 사람 층 파일도 걸린다. README만 고치기로 하면 #442의 161행을 고치고 #452는 29a78d0에서 이미 지웠으니 위층 merge 때 충돌만 맞추면 된다."
     },
     {
       "id": "G-054",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718의 ConsoleShell.tsx 9행은 DevStateSwitch와 layout-sizes를 가져오지 않고, git grep으로 보면 DevStateSwitch, SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE와 이 PR이 새로 만든 TenantScope(TenantAccess.tsx 21행), WorkspaceOperations는 72e8718과 정점 0fe7d2a 모두 자기 정의 밖에서 쓰는 곳이 없다. frontend/README.md 31행은 개발 모드에서 사이드바 하단에 표 상태 스위치가 뜬다고 적고 lib/api 오류 문구도 그 스위치를 가리키지만 셸은 그것을 그리지 않아 문서와 코드가 어긋난다. 고치려면 DevStateSwitch.tsx, layout-sizes.ts, TenantAccess.tsx, WorkspaceView.tsx 네 파일(오류 문구까지 맞추면 더 많다)을 바꿔야 해 유지보수 분류의 두 파일 상한을 넘고, 스위치를 지울지 셸에 되살릴지도 정해야 하므로 needs-decision이다. HEADER_HEIGHT와 .workspace-header 높이가 어긋나는 부분은 72e8718에 그 CSS가 없고 #443 f671a4f가 만든 것이라 이 층 원인이 아니다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:9 @ 72e8718",
+        "frontend/src/components/shell/DevStateSwitch.tsx:14 @ 72e8718",
+        "frontend/src/components/shell/layout-sizes.ts:2-4 @ 72e8718",
+        "frontend/README.md:31-32 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:66 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "#442에서 쓰이지 않는 DevStateSwitch.tsx, layout-sizes의 SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE, TenantScope, WorkspaceOperations를 네 파일에 걸쳐 지우고 README와 lib/api 오류 문구의 표 상태 스위치 안내를 고칠지, 아니면 표 상태 스위치를 셸에 되살릴지.",
+      "propagation_note": "정점 0fe7d2a에서도 DevStateSwitch, TenantScope, WorkspaceOperations, SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE는 정의 밖 사용처가 없다(git grep). #443 f671a4f가 DevStateSwitch.tsx를 고쳤으므로 #442에서 지우면 위층으로 merge할 때 수정 대 삭제 충돌이 난다. 정점 frontend/README.md 117행의 개발 모드 스위치 설명과 lib/api 7개 파일(billable-metric-prices, billable-metrics, billing, customers, events, invoices, usage)의 오류 문구도 함께 맞춘다. HEADER_HEIGHT(64)와 정점 globals.css 117행 grid-template-rows 68px, 225행 min-height 68px의 불일치는 #443에서 맞춘다."
     },
     {
       "id": "G-057",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 workspaceHref는 옵션이 없으면 month와 customer_id를 이어받고(workspace-href.ts:11은 inheritFilters가 false일 때만 멈춘다), 그 함수를 감싼 ScopedLink는 같은 이름의 inheritFilters를 false로 기본 지정해 반대로 동작한다. 그래서 NavMenu.tsx:23은 ScopedLink에 workspaceHref(item.href, search)를 다시 넣어 두 번 적용하고, 정점에서는 ConsoleShell.tsx:49가 ScopedLink 안에서 { inheritFilters: false }를 중복 명시하며 #443 f671a4f의 LinkButton이 같은 기본값과 로직을 복사했다. 지금은 호출부마다 의도한 주소가 나와 실패 경로는 없지만, 같은 옵션의 기본값이 두 파일에서 갈라진 것은 코드로 보인다. 기본값을 하나로 맞추면 공용 함수 workspaceHref의 계약이 바뀌어 정점의 ConsoleShell.tsx:57 진행 순서 링크, NavMenu, workspace-href.test.mjs:54-59처럼 기본 상속에 기대는 위층(#443, #451, #453) 호출부와 시험이 함께 바뀌므로, 파일 셋 이상과 여러 층에 걸친 변경이라 어느 기본값으로 맞출지 정해야 한다.",
+      "evidence": [
+        "frontend/src/components/workspace/ScopedLink.tsx:10,14 @ 72e8718",
+        "frontend/src/lib/workspace-href.ts:4,11 @ 72e8718",
+        "frontend/src/components/shell/NavMenu.tsx:23 @ 72e8718",
+        "frontend/src/components/shell/ConsoleShell.tsx:49,57 @ 0fe7d2a",
+        "frontend/src/components/screen/LinkButton.tsx:12,18 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "workspaceHref의 inheritFilters 기본값을 ScopedLink, LinkButton과 같은 상속 안 함으로 바꾸고, 기본 상속에 기대는 위층 호출부(NavMenu, ConsoleShell 진행 순서 링크, workspace-href.test.mjs)에 inheritFilters: true를 명시하게 할지.",
+      "propagation_note": "상속 안 함으로 맞추면 #442에서는 workspace-href.ts:11을 inheritFilters !== true일 때 멈추게 하고 NavMenu.tsx:23을 <Link inheritFilters href={item.href}>로 바꾼다(그 밖의 #442 호출부는 organization_id만 담은 source라 결과가 같다). 위층에서는 NavMenu.tsx:24(0fe7d2a)를 같은 꼴로, ConsoleShell.tsx:57 WORKFLOW 링크(/usage, /pricing, /billing, /payments)에 inheritFilters: true를 넣고 :49의 중복 { inheritFilters: false }를 빼며, workspace-href.test.mjs:54-59(#453 23b1844)에 inheritFilters: true를 명시해야 한다. LinkButton.tsx(#443 f671a4f)는 이미 기본값 false라 동작은 맞고 ScopedLink 로직 복사본 정리는 #443 몫이다."
     },
     {
       "id": "G-059",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 운영자 도입사 목록은 신청일을 toLocaleString('ko-KR')로 그려 '2026. 10. 27. 오후 3:04:05'가 되고, 같은 콘솔의 다른 시각은 format.ts formatKstDateTime의 '2026-10-27 15:04:05' 형식이다(node로 두 출력을 확인했다). workspace-href.ts 15행은 month.ts formatKstMonth와 같은 sv-SE, Asia/Seoul 월 계산을 다시 하고, WorkspaceView.tsx 23, 30행은 formatDecimal(10자리, 아주 작은 값은 지수 표기)과 다른 12자리 NumberFormat에 '원'을 직접 붙여 같은 일이 두 곳 이상에서 갈라져 있다. 세 파일 모두 #442(d4f1714)가 만들었고 정점 0fe7d2a에서도 그대로이며, 막는 시험이나 기록된 결정은 없다. 유지보수 분류인데 고치려면 시험과 README를 뺀 파일 셋(page.tsx, workspace-href.ts, WorkspaceView.tsx)을 바꿔야 하고 WorkspaceTable 숫자, 금액 표시 자릿수가 바뀌므로 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/app/admin/organizations/page.tsx:16 @ 72e8718",
+        "frontend/src/lib/format.ts:22-54 @ 72e8718",
+        "frontend/src/lib/workspace-href.ts:15 @ 72e8718",
+        "frontend/src/lib/month.ts:10-18 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:23,30 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "#442에서 도입사 목록 신청일, workspace-href 월 계산, WorkspaceTable 숫자와 금액 표기의 세 파일을 formatKstDateTime, formatKstMonth, formatDecimal과 formatKrw로 모을지(WorkspaceTable 소수 자릿수가 12에서 10으로 줄어 보이는 값이 바뀐다) 정한다.",
+      "propagation_note": "정점에서 workspace-href.ts의 같은 계산은 e5fca11(#451)로 17행으로 밀렸을 뿐 같다. 같은 sv-SE 월 계산 사본이 #446(614d3bc)의 frontend/src/app/(console)/pricing/page.tsx:20, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:30에도 있고, 정점 payments/[id]/page.tsx는 72행 formatKrw(10자리)와 115행 WorkspaceTable isMoney(12자리)를 한 화면에 함께 쓴다. #442에서 WorkspaceView를 formatKrw, formatDecimal로 바꾸면 위층 isMoney 열은 따로 고칠 필요 없이 맞춰지고, #446 사본은 그 층에서 formatKstMonth로 바꾼다."
     },
     {
       "id": "G-060",
@@ -1499,14 +1817,26 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "frontend/src/app/organization-invitations/[token]/actions.ts:32,48 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:34-35 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:192 @ 72e8718",
+        "deploy/caddy/Caddyfile:47-52 @ 0fe7d2a",
+        "커밋 a39db70",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:20 @ 72e8718",
+        "deploy/caddy/Caddyfile:47-48 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #454 a39db70"
     },
     {
       "id": "G-066",
@@ -1569,14 +1899,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718의 ci.yml frontend 잡은 pnpm install, lint, build만 돌리고, 이 층이 더한 node 단위 시험 permissions.test.mjs와 대역 서버로 도는 Playwright 계약 명세 auth.contract.spec.ts(package.json test:e2e:contract)를 부르는 단계가 없다. 틀렸다고 보려고 cd.yml과 다른 워크플로를 찾았지만 cd.yml은 이미지 빌드와 배포만 하고, workflows README도 ci.yml을 backend 빌드와 테스트, frontend lint와 빌드로만 적어 제외 근거나 대신 돌리는 곳이 없다. 정점 0fe7d2a에서도 ci.yml은 72e8718..0fe7d2a 사이에 바뀐 커밋이 없어 같고, 그 사이 위층이 더한 계약 명세, demo, deploy/tests, rds-auto-stop terraform 시험도 필수 체크에서 돌지 않는다. 고치려면 .github/workflows/ci.yml에 잡을 더해야 하고 이는 팀 전체에 거는 제약이라 Discussion 합의 대상이므로 needs-decision으로 둔다.",
+      "evidence": [
+        ".github/workflows/ci.yml:79-81 @ 72e8718",
+        ".github/workflows/ci.yml:79-81 @ 0fe7d2a",
+        "frontend/e2e/permissions.test.mjs:1-5 @ 72e8718",
+        "frontend/playwright.config.ts:18-23 @ 72e8718",
+        "docs/contributing/pull-request.md:7 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다).",
+      "propagation_note": "ci.yml은 #442부터 #455까지 바뀌지 않았다. 합의되면 ci.yml 한 곳에 잡을 더하면 되고, 정점 기준 대상은 frontend/e2e/*.test.mjs, contract 프로젝트 3종(auth, payment, workspace 설정), demo의 pnpm과 python 시험, deploy/tests, measurements/terraform/modules/rds-auto-stop/tests다. paths-filter에 demo, deploy, measurements를 더하고 workflows README 표도 같이 고친다."
     },
     {
       "id": "X-000",
@@ -1709,28 +2050,50 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "정점 0fe7d2a에서 월 라벨은 '청구 월'(WorkspaceHeader.tsx:16), '조회 기간'/'적용 월'(ResourceSearchControls.tsx:107), '조회 월'(EventFilters.tsx:158), '대상 월'(event-issues/page.tsx:38)로 갈리고, 적용 버튼도 '조회', '조건 적용'(ResourceSearchControls.tsx:124), '이 조건으로 조회'(EventFilters.tsx:182), '조건으로 조회'(AuditScreen.tsx:65), '진단 조회'(event-issues/page.tsx:43)로 갈린다. 컨트롤도 네이티브 month와 antd MonthPicker 두 가지라 지적이 맞다. 이 층 몫은 MonthFilter 하나지만, 통일에는 #446, #448, #450, #451(T-inho 층) 파일과 MonthPicker 폼 모드가 함께 바뀌어 셋 이상의 파일과 문구 결정이 필요하다. 그래서 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:16 @ 0fe7d2a",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:107,124 @ 0fe7d2a",
+        "frontend/src/components/events/EventFilters.tsx:158,182 @ 0fe7d2a",
+        "frontend/src/components/workspace/AuditScreen.tsx:65 @ 0fe7d2a",
+        "frontend/src/app/(console)/event-issues/page.tsx:38,43 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
+      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다."
     },
     {
       "id": "X-057",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 WorkspaceTable을 부르는 화면은 integrations와 members 둘뿐이고, 두 화면 모두 표 앞에 h2를 둔다(integrations/page.tsx:19, members/page.tsx:36-37). 그래서 이 층에서는 WorkspaceView.tsx:60의 카드 h3가 h1 바로 뒤에 오지 않는다. 건너뜀은 위층에서 생긴다. h2 없이 WorkspaceTable을 부르는 화면(#444 integrations/[id], #445 payments, #447 customers, #450 event-issues와 event-rejections)과, 카드 h3나 level 5 소제목을 새로 들인 #446 BillingTable, InvoicesTable, UsageTable, BillableMetricFormDialog, #451 EventsTable이다. 정점 customers/page.tsx:19,25에서 h1 '고객' 다음에 카드 h3가 오는 것도 그대로 확인했다. EventDetailDrawer의 level 5는 main 코드 그대로다. AuthFrame.tsx:10의 h1 앞 h2는 axe heading-order가 첫 제목과 수준 낮춤을 문제 삼지 않고 지적의 axe 근거에도 인증 화면이 없어서 취향 차이로 본다. 결론적으로 지적은 정점에서 맞지만 #442에서 고칠 줄은 없고, 건너뜀이 처음 생기는 #444부터 각 층의 화면을 고쳐야 한다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceView.tsx:60 @ 72e8718",
+        "frontend/src/app/(console)/integrations/page.tsx:19,27 @ 72e8718",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:17,26 @ 81651ed",
+        "frontend/src/app/(console)/customers/page.tsx:19,25 @ 0fe7d2a",
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "blocked_reason": "not-owner #444: #442의 두 화면(integrations, members)은 표 앞에 h2를 둬 카드 h3가 건너뛰지 않는다. h2 없이 WorkspaceTable을 처음 부르는 화면은 #444 integrations/[id]이고 같은 건너뜀은 #445 #446 #447 #450 #451 화면에서 생긴다. 지적의 AuthFrame 부분은 원인이 달라 NT-yang-001로 떼어 냈다",
+      "propagation_note": "WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다."
     },
     {
       "id": "X-072",
@@ -1765,14 +2128,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "frontend/src/app/session-actions.ts:15-18 @ 72e8718",
+        "frontend/src/lib/api/transport.ts:102-107 @ 72e8718",
+        "frontend/src/lib/auth/session.ts:51-53 @ 72e8718",
+        "frontend/e2e/auth.contract.spec.ts:99-105 @ 72e8718",
+        "frontend/e2e/auth.contract.spec.ts:99-105 @ 0fe7d2a",
+        "frontend/src/app/session-actions.ts:13-18 @ 72e8718",
+        "frontend/src/lib/auth/session.ts:46-53 @ 72e8718",
+        "frontend/e2e/auth.contract.spec.ts:99-111 @ 72e8718",
+        "frontend/e2e/auth.contract.spec.ts:99-113 @ 0fe7d2a",
+        "frontend/src/app/session-actions.ts:13-18 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "로그아웃 요청이 401 밖의 이유(네트워크, 시간 초과, 5xx)로 실패했을 때 지금처럼 쿠키를 남겨 다시 시도하게 할지(계약 시험 logout keeps the session after a revocation failure가 이 동작을 고정한다), 쿠키를 먼저 지우고 서버 세션 종료를 확인하지 못했다고 알릴지 정한다."
     },
     {
       "id": "C445-003",
@@ -3835,7 +4213,30 @@
       "left": "시작 전"
     }
   ],
-  "new_findings": [],
+  "new_findings": [
+    {
+      "id": "NT-yang-001",
+      "merged_ids": [],
+      "layer": 442,
+      "branch": "feat/account-permissions",
+      "status": "open",
+      "verdict": "confirmed",
+      "title": "인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄)",
+      "reason": "X-057의 AuthFrame 부분은 원인이 달라 따로 둔다. AuthFrame.tsx 10행 auth-intro의 보조 문구가 h2이고 13행 h1이 그 뒤에 와서 로그인, 가입, 초대 화면에서 제목 수준 순서가 거꾸로다. 이 컴포넌트는 #442 d4f1714에서 생겼고 정점도 같다.",
+      "evidence": [
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 72e8718",
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 0fe7d2a"
+      ],
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "left": "수정 전"
+    }
+  ],
   "checks": [],
   "pushes": [],
   "usage_log": [],
