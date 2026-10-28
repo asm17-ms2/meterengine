@@ -208,6 +208,14 @@ test("a meter form with input asks before Escape throws it away", async ({ page 
   await expect(dialog).toBeVisible();
 });
 
+test("meter number inputs do not expose English stepper buttons", async ({ page }) => {
+  await login(page, "member@contract.local", "/billable-metrics");
+  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await expect(dialog.getByLabel("과금 단위 크기")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

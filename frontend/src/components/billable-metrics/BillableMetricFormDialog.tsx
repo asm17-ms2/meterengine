@@ -257,7 +257,7 @@ export function BillableMetricFormDialog({
           preserve={false}
           extra="예: 95는 P95, 50은 중앙값입니다."
           rules={[{ required: true, type: "number", min: 0, max: 100, message: "백분위는 0부터 100 사이의 숫자로 입력하세요" }]}
-        ><InputNumber min={0} max={100} style={{ width: "100%" }} /></Form.Item> : null}
+        ><InputNumber controls={false} min={0} max={100} style={{ width: "100%" }} /></Form.Item> : null}
         {aggregation !== "count" ? (
         <Form.Item
           name="targetProperty"
@@ -302,14 +302,14 @@ export function BillableMetricFormDialog({
           { required: true, message: "과금 단위 크기를 입력하세요" },
           { validator: (_, value) => typeof value === "number" && Number.isFinite(value) && value > 0 ? Promise.resolve() : Promise.reject(new Error("과금 단위 크기는 0보다 커야 합니다")) },
         ]}>
-          <InputNumber min={0} style={{ width: "100%" }} />
+          <InputNumber controls={false} min={0} style={{ width: "100%" }} />
         </Form.Item>
         <Flex gap={16} wrap>
           <Form.Item name="roundingMode" label="반올림 방식" style={{ flex: "1 1 240px" }}>
             <Select options={METRIC_ROUNDING_OPTIONS} onChange={(value) => { if (value === "none") form.setFieldValue("roundingPrecision", 0); }} />
           </Form.Item>
           {roundingMode !== "none" ? <Form.Item name="roundingPrecision" label="소수 자릿수" extra="0이면 정수로 만듭니다." style={{ flex: "1 1 180px" }} rules={[{ required: true, type: "integer", min: 0, max: 12, message: "소수 자릿수는 0부터 12 사이의 정수로 입력하세요" }]}>
-            <InputNumber min={0} max={12} precision={0} style={{ width: "100%" }} />
+            <InputNumber controls={false} min={0} max={12} precision={0} style={{ width: "100%" }} />
           </Form.Item> : null}
         </Flex>
         <Alert type="info" title="계산 미리보기" description={<>
