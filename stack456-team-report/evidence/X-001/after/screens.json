@@ -16,10 +16,8 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/before/login-desktop.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/after/login-desktop.png",
+        "consoleErrors": [],
         "violations": [
           {
             "id": "link-in-text-block",
@@ -41,10 +39,8 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/before/login-mobile.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/after/login-mobile.png",
+        "consoleErrors": [],
         "violations": [
           {
             "id": "link-in-text-block",
@@ -77,10 +73,8 @@
         "title": "고객 | MeterEngine",
         "h1": "고객",
         "horizontalOverflow": false,
-        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/before/customers-desktop.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/after/customers-desktop.png",
+        "consoleErrors": [],
         "violations": [],
         "axeError": null
       },
@@ -92,10 +86,8 @@
         "title": "고객 | MeterEngine",
         "h1": "고객",
         "horizontalOverflow": false,
-        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/before/customers-mobile.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/X-001/after/customers-mobile.png",
+        "consoleErrors": [],
         "violations": [],
         "axeError": null
       }

@@ -17,9 +17,7 @@
         "h1": "고객",
         "horizontalOverflow": false,
         "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-024/after/customers-1280x720.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "consoleErrors": [],
         "violations": [],
         "axeError": null
       },
@@ -32,9 +30,7 @@
         "h1": "고객",
         "horizontalOverflow": false,
         "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-024/after/customers-1440x900.png",
-        "consoleErrors": [
-          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
-        ],
+        "consoleErrors": [],
         "violations": [],
         "axeError": null
       }

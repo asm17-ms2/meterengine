@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:19:24+09:00",
+  "updated_at": "2026-10-28T17:20:47+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f"
+    "fix/s456-443-t-inho": "ee07130326131afca1b9374477bd48afc6e8bd1d"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -180,15 +180,39 @@
       "id": "X-001",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "AppProviders.tsx:12는 colorPrimary #5746ad만 정하고 colorPrimaryBorder를 두지 않는다. 설치된 antd 6.6.7의 theme.getDesignToken으로 계산하면 #c1bad4이고, 대비는 흰 배경 1.87, #f3f5f9 1.71, #eeeafb 1.58이다. antd genFocusOutline이 이 값으로 3px outline을 만들고 Button, Checkbox, Pagination, Menu와 App 리셋의 a:focus-visible이 이를 쓴다. AppProviders.tsx:22의 App div가 layout.tsx:30-32에서 모든 화면을 감싸므로 antd 규칙(.ant-btn:not(:disabled):focus-visible 0,3,0, :where(.css-hash) a:focus-visible 0,1,1)이 globals.css:39의 :where(...):focus-visible(0,1,0)을 이기고, App 밖의 skip-link(layout.tsx:29)만 파란 링이 된다. 그래서 /login 로그인 버튼(AuthForm.tsx:23), 사이드바 메뉴 링크(NavMenu.tsx:23), 목록 페이지 번호(ListPagination.tsx:4)로 Tab하면 1.87:1 링만 보이고 globals.css:162의 --focus와도 색이 갈린다. 이 줄은 #443 커밋 f671a4f가 들였고 9de0e1e와 정점까지 두 파일 모두 바뀌지 않았으며, 포커스 색을 단언하는 시험이나 이를 덮는 CSS는 없다. 메인 세션이 9de0e1e에서 AppProviders.tsx 12행을 다시 보고 계약 명세로 재현했다(outline rgb(193, 186, 212)). colorPrimaryBorder의 다른 소비처(slider, upload dragger, date picker preset, color=primary light active)는 이 층 화면에서 쓰지 않는다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:29-32 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:23 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:23 @ 0f1d1bf",
+        "frontend/src/components/screen/ListPagination.tsx:4 @ 0f1d1bf",
+        "커밋 f671a4f",
+        "an antd button shows a focus ring in the brand color: 실패 Expected \"rgb(87, 70, 173)\" Received \"rgb(193, 186, 212)\"",
+        "커밋 ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "commits": [
+        "ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'an antd button shows a focus ring in the brand color'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (AppProviders.tsx 12행이 정점 b8abfdf에서도 같고 위층에서 이 토큰을 바꾼 커밋이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다"
     },
     {
       "id": "X-042",
@@ -641,29 +665,65 @@
       "id": "D-151",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "X-001과 원인이 같다. AppProviders.tsx:12에서 파생된 colorPrimaryBorder #c1bad4가 antd Button, Pagination, Checkbox 포커스 outline으로 쓰이고 흰 배경 1.87, #eeeafb 1.58로 3:1에 못 미친다. 원문의 globals.css:39 특이도 0이라는 설명은 정확히는 :focus-visible 때문에 (0,1,0)이지만, antd 버튼 선택자(0,3,0)에 지는 결론은 같다. 목록 페이지 번호는 ListPagination.tsx:4의 antd Pagination이라 원문 재현 경로대로 Tab 시 연한 링만 보인다. 정점까지 AppProviders.tsx와 globals.css를 바꾼 커밋이 없다. 메인 세션이 9de0e1e에서 AppProviders.tsx 12행을 다시 보고 계약 명세로 재현했다(outline rgb(193, 186, 212)). colorPrimaryBorder의 다른 소비처(slider, upload dragger, date picker preset, color=primary light active)는 이 층 화면에서 쓰지 않는다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/components/screen/ListPagination.tsx:4 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ 0f1d1bf",
+        "an antd button shows a focus ring in the brand color: 실패 Expected \"rgb(87, 70, 173)\" Received \"rgb(193, 186, 212)\"",
+        "커밋 ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "commits": [
+        "ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'an antd button shows a focus ring in the brand color'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (AppProviders.tsx 12행이 정점 b8abfdf에서도 같고 위층에서 이 토큰을 바꾼 커밋이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다"
     },
     {
       "id": "D-174",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "X-001과 원인이 같다. colorPrimary #5746ad(AppProviders.tsx:12)에서 파생된 #c1bad4가 genFocusOutline으로 Button, Checkbox, Pagination, Menu와 Modal 닫기 버튼에 쓰여 1.87:1이다. 다만 원문 재현의 링크에서는 진한 파란 링이 보인다는 부분은 틀렸다. App 리셋 스타일이 App 안의 a에도 같은 연한 링을 주고(AppProviders.tsx:22가 layout.tsx:30-32에서 전체를 감쌈), 파란 링은 App 밖의 skip-link(layout.tsx:29)에만 남는다. 핵심 결론은 그대로라 확인으로 둔다. 메인 세션이 9de0e1e에서 AppProviders.tsx 12행을 다시 보고 계약 명세로 재현했다(outline rgb(193, 186, 212)). colorPrimaryBorder의 다른 소비처(slider, upload dragger, date picker preset, color=primary light active)는 이 층 화면에서 쓰지 않는다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:29-32 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "an antd button shows a focus ring in the brand color: 실패 Expected \"rgb(87, 70, 173)\" Received \"rgb(193, 186, 212)\"",
+        "커밋 ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "commits": [
+        "ee07130326131afca1b9374477bd48afc6e8bd1d"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'an antd button shows a focus ring in the brand color'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (AppProviders.tsx 12행이 정점 b8abfdf에서도 같고 위층에서 이 토큰을 바꾼 커밋이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "테마 토큰 colorPrimaryBorder를 #5746ad로 두어 antd 포커스 테두리 대비를 7.28:1로 올렸다"
     },
     {
       "id": "D-009",
@@ -5449,6 +5509,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "20 passed (11.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "20 passed (11.4s)"
     }
   ],
   "pushes": [
@@ -5461,6 +5558,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
       "at": "2026-10-28T17:14:56+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "at": "2026-10-28T17:20:16+09:00"
     }
   ],
   "usage_log": [],
