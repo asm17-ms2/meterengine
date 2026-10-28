@@ -3,6 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 const FIXTURE_URL = "http://127.0.0.1:38148";
 const LOGIN_PASSWORD = "contract-password";
 const ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
+const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 
 async function expectTenantUrl(page: Page, pathname: string) {
   await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
@@ -193,6 +194,13 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
   await expect(page.getByText("조회 권한이 없습니다").first()).toBeVisible();
   await expect(page.getByText("데이터를 불러오지 못했습니다")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
+test("webhook delivery history names event types, delivery states and failure reasons", async ({ page }) => {
+  await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
+  const table = page.locator(".workspace-desktop-table");
+  for (const label of ["결제 실패", "시험 통보", "재시도 대기", "발송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
+  for (const raw of ["payment_failed", "webhook_test", "connection_error", "blocked_address", "결과 확인 중"]) await expect(table.getByText(raw, { exact: true })).toHaveCount(0);
 });
 
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
