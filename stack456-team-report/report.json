@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:20:08+09:00",
+  "updated_at": "2026-10-28T22:22:08+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "ed25d3e43d59e42d724018abd40364763c15787b"
+    "fix/s456-444-t-inho": "1fc88c386b0e5c4414d4021470c55945e0cef130"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3407,128 +3407,165 @@
       "id": "D-044",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "층 head의 발송 내역 표(page.tsx:26)는 종류 열을 type 그대로, 실패 사유를 failure_reason 그대로 그리고, 다시 보내기 설명도 `${delivery.type}`를 쓴다. 같은 파일 8행에 EVENT_TYPES 라벨이 있고 목록 화면(integrations/page.tsx:39)은 같은 값을 라벨로 바꿔 보여 주어 두 곳이 갈라져 있다. 상태 열은 statusLabels가 없어 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나오는데, 백엔드에서 pending은 종료되지 않은 실패의 재시도 예정(WebhookDeliveryRepository.java:76)이고 소개 화면(page.tsx:51)은 이 문구를 결제 상태로 쓴다. 정점에서도 page.tsx는 바뀌지 않았고, 고치는 곳은 page.tsx 한 파일이며 C444-001의 '발송 일시 중지' 문구는 건드리지 않는다.",
+      "reason": "층 head의 발송 내역 표(page.tsx:26)는 종류 열을 type 그대로, 실패 사유를 failure_reason 그대로 그리고, 다시 보내기 설명도 `${delivery.type}`를 쓴다. 같은 파일 8행에 EVENT_TYPES 라벨이 있고 목록 화면(integrations/page.tsx:39)은 같은 값을 라벨로 바꿔 보여 주어 두 곳이 갈라져 있다. 상태 열은 statusLabels가 없어 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나오는데, 백엔드에서 pending은 종료되지 않은 실패의 재시도 예정(WebhookDeliveryRepository.java:76)이고 소개 화면(page.tsx:51)은 이 문구를 결제 상태로 쓴다. 정점에서도 page.tsx는 바뀌지 않았고, 고치는 곳은 page.tsx 한 파일이며 C444-001의 '발송 일시 중지' 문구는 건드리지 않는다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
         "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "frontend/src/app/page.tsx:51 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
-        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "D-088",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열과 다시 보내기 설명은 원시 type을, 상태 열은 statusLabels 없이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34)을 쓰며, 실패 사유도 원문 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면(integrations/page.tsx:39)의 라벨 변환이 있는데 이 표만 쓰지 않아 두 곳이 갈라져 있다. 백엔드 pending은 재시도 예정 상태(WebhookDeliveryRepository.java:76)라 결제용 문구와 뜻이 어긋난다. 정점에서도 같은 코드다.",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열과 다시 보내기 설명은 원시 type을, 상태 열은 statusLabels 없이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34)을 쓰며, 실패 사유도 원문 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면(integrations/page.tsx:39)의 라벨 변환이 있는데 이 표만 쓰지 않아 두 곳이 갈라져 있다. 백엔드 pending은 재시도 예정 상태(WebhookDeliveryRepository.java:76)라 결제용 문구와 뜻이 어긋난다. 정점에서도 같은 코드다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
         "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
-        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "D-195",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 전송 표가 type과 failure_reason 원문을 그대로 그리고, 상태는 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 같은 파일 8행에 EVENT_TYPES 라벨이 있어 갈라진 두 곳이 분명하고, 백엔드 pending은 재시도 예정이다(WebhookDeliveryRepository.java:76). 정점에서도 바뀌지 않았다.",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 전송 표가 type과 failure_reason 원문을 그대로 그리고, 상태는 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 같은 파일 8행에 EVENT_TYPES 라벨이 있어 갈라진 두 곳이 분명하고, 백엔드 pending은 재시도 예정이다(WebhookDeliveryRepository.java:76). 정점에서도 바뀌지 않았다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "D-252",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이다. 백엔드는 종료되지 않은 실패를 pending으로 두고 다음 시도 시각을 잡는데(WebhookDeliveryRepository.java:71-76), 표는 statusLabels 없이 공용 STATUS_LABELS를 써 '결과 확인 중'으로 보이고 종류 열은 원시 type이다(page.tsx:26, 같은 파일 8행 EVENT_TYPES 미사용). 제안 중 마지막 응답 코드는 이미 '수신 응답' 열(response_status)이 있어 따로 더할 것이 없고, 상태 라벨과 종류 라벨만 고치면 된다. 정점에서도 같은 코드다.",
+      "reason": "D-044와 같은 원인이다. 백엔드는 종료되지 않은 실패를 pending으로 두고 다음 시도 시각을 잡는데(WebhookDeliveryRepository.java:71-76), 표는 statusLabels 없이 공용 STATUS_LABELS를 써 '결과 확인 중'으로 보이고 종류 열은 원시 type이다(page.tsx:26, 같은 파일 8행 EVENT_TYPES 미사용). 제안 중 마지막 응답 코드는 이미 '수신 응답' 열(response_status)이 있어 따로 더할 것이 없고, 상태 라벨과 종류 라벨만 고치면 된다. 정점에서도 같은 코드다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "X-028",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이다. 상세 표(page.tsx:26)의 상태 열이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34의 warning 태그)을 쓰고, 종류와 실패 사유, 다시 보내기 설명이 원시 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면 라벨 변환(integrations/page.tsx:39)이 있어 갈라진 곳이 분명하다. 목록에 최근 실패 신호를 보이는 부분은 응답에 새 필드가 있어야 해 이 묶음의 수정 범위가 아니고, 상세 표는 page.tsx 한 파일로 고칠 수 있다.",
+      "reason": "D-044와 같은 원인이다. 상세 표(page.tsx:26)의 상태 열이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34의 warning 태그)을 쓰고, 종류와 실패 사유, 다시 보내기 설명이 원시 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면 라벨 변환(integrations/page.tsx:39)이 있어 갈라진 곳이 분명하다. 목록에 최근 실패 신호를 보이는 부분은 응답에 새 필드가 있어야 해 이 묶음의 수정 범위가 아니고, 상세 표는 page.tsx 한 파일로 고칠 수 있다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
         "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
-        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "D-045",
@@ -3926,52 +3963,68 @@
       "id": "D-035",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열이 type을 그대로 쓰고 같은 파일 8행 EVENT_TYPES를 쓰지 않으며, 상태 열은 결제용 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 백엔드에서 연결 실패 후 다음 시도를 기다리는 건은 pending이다(WebhookDeliveryRepository.java:71-76). 이 줄은 #444의 80a3ef1이 들였고 정점에서도 같다.",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열이 type을 그대로 쓰고 같은 파일 8행 EVENT_TYPES를 쓰지 않으며, 상태 열은 결제용 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 백엔드에서 연결 실패 후 다음 시도를 기다리는 건은 pending이다(WebhookDeliveryRepository.java:71-76). 이 줄은 #444의 80a3ef1이 들였고 정점에서도 같다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
         "커밋 80a3ef1",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "D-157",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "D-044와 같은 원인이고 실패 사유 원문 표시에 무게를 둔 지적이다. 층 head page.tsx:26은 type과 failure_reason을 그대로 그리고, 백엔드 실패 사유는 timeout, connection_error, unexpected_status, blocked_address(WebhookClient.java), endpoint_disabled(WebhookDeliveryService.java:111), lease_expired(WebhookDeliveryRepository.java:32) 여섯 값으로 고정이라 번역 표를 둘 수 있다. pending도 공용 STATUS_LABELS의 '결과 확인 중'으로 나온다(WorkspaceView.tsx:21). 정점에서도 같은 코드다.",
+      "reason": "D-044와 같은 원인이고 실패 사유 원문 표시에 무게를 둔 지적이다. 층 head page.tsx:26은 type과 failure_reason을 그대로 그리고, 백엔드 실패 사유는 timeout, connection_error, unexpected_status, blocked_address(WebhookClient.java), endpoint_disabled(WebhookDeliveryService.java:111), lease_expired(WebhookDeliveryRepository.java:32) 여섯 값으로 고정이라 번역 표를 둘 수 있다. pending도 공용 STATUS_LABELS의 '결과 확인 중'으로 나온다(WorkspaceView.tsx:21). 정점에서도 같은 코드다. 발송 내역 표의 종류 열과 다시 보내기 설명은 통보 종류 이름표를, 상태 열은 발송 대기(시도 전), 재시도 대기, 발송 완료, 발송 실패를, 실패 사유 열은 일곱 사유의 우리말 이름(모르는 값은 원문)을 보인다. 같은 원인의 D-044, D-088, D-195, D-252, X-028, D-035, D-157을 한 커밋으로 고쳤다. 목록에 수신 주소별 최근 실패를 보이는 일(X-028 일부)은 API 필드가 필요해 D-045(needs-decision)와 같다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:62,66,68,132,135,137,139 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:111 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:62,66,68,132,135,137,139 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:111 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
-        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+        "webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) element(s) not found (표에 payment_failed, 결과 확인 중, connection_error가 보였다)",
+        "커밋 1fc88c386b0e5c4414d4021470c55945e0cef130"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1fc88c386b0e5c4414d4021470c55945e0cef130"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'webhook delivery history': 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /integrations/<id>를 evidence/D-044/before, after로 찍었다(webhook_test, 결과 확인 중, connection_error에서 시험 통보, 재시도 대기, 연결 실패로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
+      "summary": "웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다"
     },
     {
       "id": "C444-008",
@@ -7332,6 +7385,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.614s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "54 passed (24.5s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.4s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9194,6 +9307,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "ed25d3e43d59e42d724018abd40364763c15787b",
       "at": "2026-10-28T22:15:34+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "1fc88c386b0e5c4414d4021470c55945e0cef130",
+      "at": "2026-10-28T22:21:46+09:00"
     }
   ],
   "usage_log": [],
