@@ -1,0 +1,39 @@
+[
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin",
+    "path": "/admin",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "서비스 운영 현황",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-226/after/admin-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "서비스 운영 현황",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-226/after/admin-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]
