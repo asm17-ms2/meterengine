@@ -285,6 +285,7 @@ input, textarea { caret-color: var(--blue); }
 @media(max-width: 600px) { .event-filter-fields > .event-filter-grid, .event-filter-grid, .event-range-grid { grid-template-columns: 1fr; }.event-search { grid-column: auto; }.event-period-toolbar { gap: 12px; }.event-period-choice, .event-period-shortcuts { flex: 1 1 100%; }.event-period-choice label, .event-period-shortcuts .ant-btn { flex: 1; justify-content: center; }.event-range-grid > label:first-child { max-width: none; } }
 :root { --workspace-header-height: 68px; }
 .ant-table-sticky-holder { top: var(--workspace-header-height) !important; }
+.ant-table-tbody :is(a, button) { scroll-margin-top: 56px; }
 @media(max-width:767px) { :root { --workspace-header-height: 112px; } }
 .archive-filter { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 7px; background: #f6f7fb; align-self: flex-start; }
 .archive-filter a { padding: 7px 14px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px; }
