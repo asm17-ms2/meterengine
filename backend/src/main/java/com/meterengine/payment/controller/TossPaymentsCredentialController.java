@@ -1,6 +1,7 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.MemberAdminAccess;
