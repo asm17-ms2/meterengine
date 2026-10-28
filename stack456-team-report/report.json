@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T16:36:55+09:00",
+  "updated_at": "2026-10-28T17:04:49+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -58,14 +58,30 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "재현 경로를 줄 단위로 따라갔다. 0f1d1bf의 layout.tsx 8-14행은 localFont에 preload를 주지 않아 next 16.2.12(package.json 20행)의 기본값 preload = true가 적용되고, 루트 레이아웃이라 27행 html 아래 모든 경로의 head에 2,057,688바이트(blob 49c54b5) 글꼴 preload가 붙는다. globals.css 154행 body와 AppProviders.tsx 17행 antd 토큰이 var(--font-pretendard)를 쓰므로 preload를 꺼도 첫 렌더에서 같은 2MB를 받고, next.config.ts와 Caddyfile에 이를 줄이는 설정은 없다. 이 층의 첫 방문 경로는 소개, 로그인, 가입, 초대 링크이고, 지적이 든 카드 등록(4ace811, #445)과 청구서 링크(c9a86c4, #449)는 위층에서 생기며 0fe7d2a의 두 layout이 children만 돌려줘 같은 preload를 받는다. 11.6초, 87% 같은 수치는 저장소 밖 lab 측정이라 메인 세션이 다시 재야 하고, 원인 줄은 f671a4f(#443)가 들였으며 넘길 때 head 뒤 9de0e1e까지 바뀐 것은 metadata title 한 줄뿐이다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:27 @ 0f1d1bf",
+        "frontend/package.json:20 @ 0f1d1bf",
+        "frontend/src/app/globals.css:154 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/next.config.ts:3-9 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a",
+        "커밋 f671a4f"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
     },
     {
       "id": "D-024",
@@ -128,42 +144,78 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "X-012와 같은 원인이다. 0f1d1bf의 layout.tsx 8-14행이 preload 옵션 없이 단일 2,057,688바이트 파일을 localFont로 부르고, next 16.2.12(package.json 20행)의 기본값이 preload true라 루트 레이아웃 아래 모든 응답에 preload 링크가 붙는다. 지적한 공개 화면은 이 층에 없고 카드 등록은 #445(4ace811), 청구서 링크는 #449(c9a86c4)에서 생기지만, 0fe7d2a의 두 layout이 metadata만 두고 children을 그대로 돌려줘 같은 preload를 받는다. body(globals.css 154행)가 이 글꼴을 쓰므로 제안 중 preload: false만으로는 전송량이 줄지 않고 원인은 전체 글리프 파일의 크기다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/package.json:20 @ 0f1d1bf",
+        "frontend/src/app/globals.css:154 @ 0f1d1bf",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a",
+        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
     },
     {
       "id": "G-075",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "preload 부분은 X-012와 같은 경로로 확인했다(layout.tsx 8-14행 preload 생략, next 16.2.12 기본값 true, 27행 루트 html, globals.css 154행 body 사용). 버전과 출처 부분도 맞다. OFL.txt는 저작권자와 GitHub 저장소만 적고 버전이 없으며, 0f1d1bf의 README.md 135행은 오히려 '글꼴은 시스템 글꼴이다. 웹폰트를 받지 않는다'라고 적어 layout.tsx와 어긋난다. 파일 버전은 woff2 머리의 fontRevision 0x4f1a로 1.309(Pretendard 1.3.9)임을 읽을 수 있지만 저장소 어디에도 기록되어 있지 않다. 원인과 수정이 같은 커밋에 들어가므로 묶음에서 떼지 않는다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다. 버전과 출처 기록 부분은 README 점검 묶음(G-073) 커밋에서 frontend/README.md에 적는다.",
+      "evidence": [
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:27 @ 0f1d1bf",
+        "frontend/src/app/globals.css:154 @ 0f1d1bf",
+        "frontend/README.md:135 @ 0f1d1bf",
+        "frontend/src/app/fonts/OFL.txt:1-2 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
     },
     {
       "id": "G-085",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "X-012와 같은 원인이다. next/font/local은 subset을 만들지 않고 0f1d1bf의 layout.tsx 8-14행이 한글 전체 글리프 단일 파일을 preload 생략(next 16.2.12 기본값 true)으로 불러 루트 레이아웃 아래 모든 HTML에 preload가 붙는다. 지적대로 deploy/caddy/Caddyfile에는 encode나 캐시 설정이 없고 header 줄(32, 47행)만 있으나, woff2는 이미 압축된 형식이라 encode를 더해도 전송량은 그대로라 원인은 파일 크기다. 정점 0fe7d2a에서도 layout.tsx 8-14행과 글꼴 파일이 같고 공개 경로 layout은 children만 돌려준다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/package.json:20 @ 0f1d1bf",
+        "deploy/caddy/Caddyfile:32,47 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
     },
     {
       "id": "X-054",
@@ -226,28 +278,53 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "#443 head의 모바일 헤더는 globals.css 225행이 height: auto로 풀고 227-229행이 줄바꿈과 width 100%를 걸어 브랜드 줄과 버튼 줄(230행 min-height 36px)로 최소 두 줄이 되며, 118행 sticky가 그대로라 패딩까지 약 99px가 늘 화면 위에 남는다. 운영자는 ConsoleShell.tsx 48행의 플랫폼 운영 링크가 231행으로 다시 보여 세 줄(약 145px)이 된다. 지적이 잰 160px 세 줄은 23b1844(#453)가 헤더에 업무 환경 select를 더한 정점 화면이라 #443 수치와는 다르다. 어떤 조작을 Drawer(55행, NavMenu만 있음)로 옮길지나 모바일 sticky를 풀지는 화면 설계 결정이고 #453의 EnvironmentSwitch 자리와도 걸려 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/app/globals.css:118 @ 0f1d1bf",
+        "frontend/src/app/globals.css:225-231 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:55 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다."
     },
     {
       "id": "D-065",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "globals.css 227-229행이 767px 이하에서 헤더를 줄바꿈하고 브랜드와 workspace-user를 각각 width 100%로 두어, #443에서도 브랜드 줄과 버튼 줄이 쌓인 채 118행 sticky로 남는다(관리자 약 99px, 운영자는 48행 플랫폼 운영 링크로 세 줄 약 145px). 메뉴 Drawer(ConsoleShell.tsx 55행)에는 NavMenu만 있다는 지적도 맞다. 다만 지적의 업무 환경 select와 약 106px 환경 안내, 첫 레코드 y 850 수치는 23b1844(#453)가 더한 것이라 정점 화면 기준이다. 289행 112px, 128px 불일치는 D-153, X-047 수정이 덮고, 남는 헤더 크기와 조작 배치는 설계 결정이라 needs-decision이다.",
+      "evidence": [
+        "frontend/src/app/globals.css:118 @ 0f1d1bf",
+        "frontend/src/app/globals.css:227-231 @ 0f1d1bf",
+        "frontend/src/app/globals.css:289 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:55 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다."
     },
     {
       "id": "D-153",
@@ -506,14 +583,30 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 AppProviders.tsx:17의 colorText #202b40, colorTextSecondary #5a6578, colorBorder #dce1eb, colorBgLayout #f3f5f9가 globals.css:116의 --ink, --muted, --line, --canvas와 같은 값으로 따로 적혀 있고, globals.css에는 #5746ad 11회, #5a6578 10회, #dce1eb 9회가 리터럴로 더 있다. HomePage.module.css:1의 --home-muted #535f73은 globals.css:116 --muted #5a6578과 이미 값이 갈라졌다. 입력 테두리는 AppProviders.tsx:19 컴포넌트 토큰과 globals.css:222 .ant-input 덮어쓰기, placeholder는 AppProviders.tsx:17과 globals.css:223으로 두 번 정하며, 이는 README.md:131의 '바꾸는 값은 AppProviders.tsx에만 둔다'와 어긋난다. 글꼴 스택도 layout.tsx:13, AppProviders.tsx:17, globals.css:144, 148, 154, 315에 복제돼 있다. G-071은 globals.css 안의 캐스케이드 덮어쓰기이고 이 항목은 파일 사이에 기준값이 없는 문제라 원인과 수정 범위가 달라 떼어 냈고, 한 곳에서 만들려면 파일 셋 이상을 바꾸는 구조 변경이라 needs-decision이다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:1 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162,222 @ 0f1d1bf",
+        "frontend/src/app/globals.css:223 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:13 @ 0f1d1bf",
+        "frontend/src/app/globals.css:144,154 @ 0f1d1bf",
+        "frontend/src/app/globals.css:148,315 @ 0f1d1bf",
+        "frontend/README.md:131 @ 0f1d1bf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "색과 글꼴 값을 TS 모듈 하나에 모아 AppProviders 테마와 :root CSS 변수를 함께 만들고 globals.css, HomePage.module.css는 var()만 쓰게 바꿀지(새 파일과 AppProviders.tsx, layout.tsx, globals.css, HomePage.module.css에 걸친 구조 변경, 박성종 님 f671a4f 디자인), 지금 복제를 둘지 정한다."
     },
     {
       "id": "L-001",
@@ -604,14 +697,28 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css:141이 .workspace-kicker에 글꼴과 색을 주고, 같은 커밋 f671a4f(#443)가 넣은 170행이 display: none으로 덮어 141행은 효과가 없다. WorkspaceHeader.tsx:6은 kicker가 있으면 이 클래스의 span을 그리고, 이 층에서는 integrations/page.tsx:17과 members/page.tsx:29가 값을 넘기지만 display: none이라 화면과 접근성 트리 어디에도 나오지 않는다. 반박하려고 두 sha의 globals.css에서 이 span을 다시 보이게 하는 선택자나 다른 CSS 파일, e2e 시험의 kicker 문구 의존을 찾았으나 없었다. 정점 0fe7d2a도 141, 170행이 같고 호출부는 12개 파일 14곳으로 늘었다. 고치려면 prop과 호출부 인자, 두 규칙을 지우는 쪽은 이 층에서만 시험 밖 파일 4개를 바꿔야 해 유지보수 분류의 두 파일 한도를 넘고, 170행을 지워 문구를 보이는 쪽은 박성종 님 커밋 f671a4f의 디자인 선택을 뒤집는 결정이다. 같은 kicker 삭제를 제안한 D-237(제목 컴포넌트 통일)과 함께 정하는 것이 맞다.",
+      "evidence": [
+        "frontend/src/app/globals.css:141 @ 0f1d1bf",
+        "frontend/src/app/globals.css:170 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:5-6 @ 0f1d1bf",
+        "frontend/src/app/(console)/integrations/page.tsx:17 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:29 @ 0f1d1bf",
+        "frontend/src/app/globals.css:141,170 @ 0fe7d2a",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6-7 @ 0fe7d2a",
+        "커밋 f671a4f"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "WorkspaceHeader의 kicker를 화면에 보이게 할지(globals.css:170 삭제, f671a4f 디자인 되돌림) 아니면 kicker prop과 호출부 인자, .workspace-kicker 두 규칙을 지울지(이 층 4개 파일, 정점 12개 호출 파일)를 D-237과 함께 정한다."
     },
     {
       "id": "D-080",
@@ -702,14 +809,26 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "X-012와 같은 원인이다. f671a4f(#443)가 2,057,688바이트 PretendardVariable.woff2를 더하고 0f1d1bf의 layout.tsx 8-14행에서 preload 없이 선언해 next 16.2.12 기본값 true로 모든 경로 head에 preload가 붙는다. globals.css 154행과 AppProviders.tsx 17행이 이 글꼴을 쓰므로 실제로 내려받고, display swap이라 표시는 막히지 않지만 첫 방문 전송량은 그대로다. 정점 0fe7d2a에서도 같은 줄이고 공개 카드 등록과 청구서 layout은 children만 돌려준다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/src/app/globals.css:154 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/package.json:20 @ 0f1d1bf",
+        "커밋 f671a4f",
+        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
     },
     {
       "id": "C443-001",
@@ -730,14 +849,27 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "취향 차이. 규칙 문서(docs/contributing/)에는 placeholder 형식 조항이 없고, 이 층 콘솔 입력은 모두 '예:' 없이 예시 값만 placeholder로 쓴다(PriceRateFormDialog의 claude-opus-5와 0.5, CustomerFormDialog의 billing@example.com, API 키 발급의 '고객 포털 조회 서버'). 갈라진 곳이 없으니 이 대화상자만 '예:'를 붙이면 오히려 불일치가 되고, 콘솔 전체 문구 관례를 바꾸는 일이 된다. 색도 값(#202b40)과 placeholder(#5a6578)를 따로 정했다. 두 색의 명도 대비는 약 2.4:1이고, placeholder는 흰 바탕 대비 약 5.9:1로 WCAG 1.4.3 기준을 넘긴다(f671a4f에서 넣은 테마). 지적한 실패 경로도 코드, 이름, 이벤트 타입의 required 규칙이 그 칸에 바로 오류 문구를 띄워 막으므로, 빈 값이 저장되거나 데이터를 잃는 일은 없다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162 @ 0f1d1bf",
+        "frontend/src/app/globals.css:223 @ 0f1d1bf",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:153,157,167,171,179,182 @ 0f1d1bf",
+        "frontend/src/components/billable-metric-prices/PriceRateFormDialog.tsx:108,122 @ 0f1d1bf",
+        "frontend/src/components/customers/CustomerFormDialog.tsx:165 @ 0f1d1bf",
+        "frontend/src/app/(console)/integrations/page.tsx:20 @ 0f1d1bf",
+        "커밋 f671a4f"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      }
     },
     {
       "id": "G-087",
@@ -758,28 +890,51 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "118행 .workspace-header는 모든 폭에서 sticky이고, 767px 이하 227-229행이 브랜드와 workspace-user를 따로 한 줄씩 차지하게 해 #443에서도 약 99px(운영자는 48행 링크로 세 줄 약 145px)가 계속 화면 위를 덮는다. 289행 112px가 실제 높이와 다르다는 점도 맞다. 지적의 약 160px, 19% 수치는 23b1844(#453)가 업무 환경 select를 더한 정점 화면 기준이다. sticky를 풀지, 조작을 Drawer로 옮길지는 설계 결정이라 needs-decision이고, 변수 불일치는 D-153 수정이 덮는다.",
+      "evidence": [
+        "frontend/src/app/globals.css:118 @ 0f1d1bf",
+        "frontend/src/app/globals.css:227-229 @ 0f1d1bf",
+        "frontend/src/app/globals.css:289 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다."
     },
     {
       "id": "D-055",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "모바일 머리글에 시연 안내, 권한 새로 조회, 로그아웃이 227-230행 규칙으로 두세 줄로 쌓이고, 289행은 변수 112px와 scroll-padding 128px로 고정해 실제 높이(#443 관리자 약 99px, 운영자 약 145px)와 맞지 않는다. CustomersTable.tsx 128행처럼 모바일에서도 sticky 표가 그대로 그려져 표 머리 위치가 어긋난다. 환경 선택이 더해진 약 160px 수치는 23b1844(#453) 뒤 정점 화면 기준이다. 표 머리와 앵커 위치 불일치는 D-153, X-047과 같은 원인이라 그 수정이 덮고, 남는 머리글 크기와 64px 한 줄 배치는 D-011과 같은 설계 결정이다.",
+      "evidence": [
+        "frontend/src/app/globals.css:227-230 @ 0f1d1bf",
+        "frontend/src/app/globals.css:287-289 @ 0f1d1bf",
+        "frontend/src/components/customers/CustomersTable.tsx:128 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:55 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다."
     },
     {
       "id": "G-083",
@@ -1164,56 +1319,117 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css는 :root를 36, 116, 153, 162행에서 정의하고 36행의 색 값은 color-scheme을 빼고 모두 116행에 덮이며, .workspace-content gap(139행을 166행이 덮음)과 .organization-link(125, 215, 316행)도 뒤에서 다시 덮인다. 같은 역할 값도 갈라져 있다: 오류 빨강은 globals.css:177 #b72c3c, :188 #a92334, AppProviders.tsx:12 #c23d4b이고, 연보라 배경은 globals.css:136, 146, 203, 267, 322와 AppProviders.tsx:13에 서로 다른 값이다. README.md:135는 '시스템 글꼴, 웹폰트를 받지 않는다'인데 layout.tsx:8-14는 로컬 Pretendard를 받는다. 원문의 리터럴 횟수와 pricing.module.css(2행이 1행을 덮음, #446), PublicInvoiceView .testNotice(#449), 카드 등록 화면(#445)은 위층 것이고 이 층 globals.css에는 #5746ad 11회, #5a6578 10회가 있다. 제안한 수정은 토큰 이름 변경과 TS 상수 도입, 여러 층의 안내 상자 통합이라 파일 셋 이상 구조 변경이고 디자인 결정이 필요하다.",
+      "evidence": [
+        "frontend/src/app/globals.css:36,116 @ 0f1d1bf",
+        "frontend/src/app/globals.css:153,162 @ 0f1d1bf",
+        "frontend/src/app/globals.css:139,166 @ 0f1d1bf",
+        "frontend/src/app/globals.css:125,215 @ 0f1d1bf",
+        "frontend/src/app/globals.css:316 @ 0f1d1bf",
+        "frontend/src/app/globals.css:177,188 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12,13 @ 0f1d1bf",
+        "frontend/src/app/globals.css:136,203 @ 0f1d1bf",
+        "frontend/src/app/globals.css:267,322 @ 0f1d1bf",
+        "frontend/README.md:135 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/README.md:136,140 @ 0fe7d2a",
+        "frontend/src/components/pricing/pricing.module.css:1-2 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "색 토큰을 역할 이름(--color-primary, --color-text-secondary 등)으로 다시 짓고 TS 상수 하나에서 antd 테마와 CSS 변수를 함께 만들며 테스트 환경 안내 상자를 한 컴포넌트로 묶을지(#443, #445, #446, #449 파일에 걸친 구조 변경) 정한다."
     },
     {
       "id": "D-022",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "이 층 head에서 워드마크는 세 가지로 갈려 있다. 콘솔 셸은 막대 아이콘(meter-mark)을 붙이고, 로그인과 가입(AuthFrame), 플랫폼 운영(OperatorShell), 도입사 선택 화면은 아이콘 없는 글자만 쓰며, 소개 화면은 별도 CSS 모듈의 .brand/.mark로 따로 그린다. globals.css 313행과 HomePage.module.css 4행, 61행은 Avenir Next를 지정하지만 layout.tsx는 Pretendard만 next/font/local로 불러오므로 Avenir Next가 없는 운영체제에서는 Segoe UI나 기본 sans-serif로 바뀐다. 원문이 든 카드 등록(RegistrationFrame)과 청구서 조회(PublicInvoiceView)는 이 층에 없고 #445(4ace811), #449(c9a86c4)가 들였다. 고치려면 브랜드 글꼴 선택과 인증, 운영 화면의 아이콘 표시 여부라는 디자인 결정이 필요하고, 이 층에서만 공용 컴포넌트 파일과 ConsoleShell, AuthFrame, OperatorShell, organizations/page.tsx, page.tsx, globals.css, HomePage.module.css까지 셋을 훨씬 넘는 파일을 바꿔야 한다. 소개 화면의 브랜드 줄은 Q8(소개 화면 문구)과는 관계가 없다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:44 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthFrame.tsx:9 @ 0f1d1bf",
+        "frontend/src/components/shell/OperatorShell.tsx:9 @ 0f1d1bf",
+        "frontend/src/app/organizations/page.tsx:8 @ 0f1d1bf",
+        "frontend/src/app/page.tsx:20 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:4-8 @ 0f1d1bf",
+        "frontend/src/app/globals.css:313 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
+        "frontend/src/components/payment-registration/registration.module.css:3 @ 0fe7d2a",
+        "frontend/src/components/invoice-links/PublicInvoiceView.tsx:111 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "워드마크를 공용 컴포넌트 하나로 묶을 때 글꼴을 이미 번들한 Pretendard로 통일할지 브랜드 글꼴을 따로 번들할지, 그리고 로그인, 가입, 도입사 선택, 플랫폼 운영 화면에도 막대 아이콘을 붙일지 정해야 한다."
     },
     {
       "id": "G-084",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "막대 세 개 로고 마크 마크업이 page.tsx 20행과 ConsoleShell.tsx 44행에 그대로 복제돼 있고, 스타일도 HomePage.module.css .mark(5-8행, 폭 6px, 높이 17/27/22px, 간격 4px)와 globals.css .meter-mark(121-123행, 폭 5px, 높이 14/23/19px, 간격 3px)로 따로 정의돼 있다. Avenir Next 글꼴 스택도 HomePage.module.css 4행, 61행과 globals.css 313행에 따로 있다. 다만 두 마크는 헤더 글자 크기(24px, 21px)에 맞춰 대체로 비례 축소한 것이라 막대 비율 차이 자체는 근소하다. 중복을 없애려면 새 BrandMark 컴포넌트와 page.tsx, ConsoleShell.tsx, HomePage.module.css, globals.css를 함께 바꿔야 해 유지보수 수정 한도인 두 파일을 넘고, 두 크기 중 어느 쪽을 기준으로 할지도 정해야 한다. 원인은 D-022와 같다(공용 브랜드 컴포넌트 부재).",
+      "evidence": [
+        "frontend/src/app/page.tsx:20 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:44 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:5-8 @ 0f1d1bf",
+        "frontend/src/app/globals.css:121-123 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:4,61 @ 0f1d1bf",
+        "frontend/src/app/globals.css:313 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:49 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(6px, 27px)과 콘솔(5px, 23px) 중 어느 비율을 기준으로 할지 정해야 한다."
     },
     {
       "id": "G-078",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "LinkButton.tsx 17-18행은 ScopedLink.tsx 11-14행의 상대 경로 처리와 workspaceHref 호출을 그대로 옮긴 코드이고 둘 다 #443 커밋 f671a4f와 d4f1714에서 왔다. ConsoleShell.tsx 44, 50, 52행은 workspaceHref로 만든 href를 ScopedLink(별칭 Link)에 다시 넘기며, workspace-href.ts 11행은 inheritFilters가 정확히 false일 때만 상속을 끊으므로 50, 52행은 바깥 ScopedLink의 기본값 false와 달리 안쪽 호출 때문에 month, customer_id를 상속한다. 두 번째 호출은 이미 붙은 값을 덮지 않아 지금 동작은 같으므로 실패 경로가 아닌 유지보수 지적으로 확인했다. 정점에서도 LinkButton, ScopedLink는 위층 변경이 없고 ConsoleShell은 49, 55, 57행에 같은 중첩 호출이 남아 있다. 고치려면 ScopedLink.tsx, LinkButton.tsx, ConsoleShell.tsx 세 파일을 바꿔야 하고 같은 중첩 패턴이 #442에서 온 NavMenu.tsx 23행에도 있어 common-brief 6절 5번에 따라 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/components/screen/LinkButton.tsx:17-18 @ 0f1d1bf",
+        "frontend/src/components/workspace/ScopedLink.tsx:11-14 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:44,50,52 @ 0f1d1bf",
+        "frontend/src/lib/workspace-href.ts:11 @ 0f1d1bf",
+        "frontend/src/components/shell/NavMenu.tsx:23 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:49,55,57 @ 0fe7d2a",
+        "frontend/src/components/screen/LinkButton.tsx:18 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "LinkButton과 ScopedLink의 href 변환을 공용 훅으로 합치고 ConsoleShell의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 정리(#442 NavMenu 23행의 같은 패턴 포함 여부까지)를 #443에서 할지 정한다."
     },
     {
       "id": "D-075",
@@ -1234,14 +1450,30 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "제목 구현이 셋이라는 지적은 이 층에서 맞다. ScreenHeader(ScreenHeader.tsx:20), WorkspaceHeader(WorkspaceHeader.tsx:6), admin의 .page-heading(admin/organizations/page.tsx:11, admin/users/page.tsx:11)이 따로 있고, 넘긴 kicker(integrations/page.tsx:17, members/page.tsx:29)는 globals.css:170에서 숨는데 admin의 eyebrow는 보인다. 크기 차이 부분은 D-075 수정으로 함께 풀리지만, 버튼 위계는 원인이 다르다. ActionPanel 트리거 기본 버튼(ActionPanel.tsx:137)은 #442 코드이고, 이 층의 고객 등록은 primary(CustomersScreen.tsx:63)이며 고객 등록이 기본 버튼이 되는 것은 #447 2ec5d85가 customers 화면을 WorkspaceHeader와 ActionPanel로 바꾼 뒤다. 남은 수정은 헤더 통합, admin 헤더 교체, kicker 제거(정점 14개 파일), ActionPanel API 추가로 파일 셋 이상에 걸친 구조 변경과 디자인 결정이라 needs-decision이다.",
+      "evidence": [
+        "frontend/src/components/screen/ScreenHeader.tsx:20 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ 0f1d1bf",
+        "frontend/src/app/admin/organizations/page.tsx:11 @ 0f1d1bf",
+        "frontend/src/app/admin/users/page.tsx:11 @ 0f1d1bf",
+        "frontend/src/app/globals.css:170 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:29 @ 0f1d1bf",
+        "frontend/src/components/workspace/ActionPanel.tsx:137 @ 0f1d1bf",
+        "frontend/src/components/customers/CustomersScreen.tsx:63 @ 0f1d1bf",
+        "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:62 @ 0f1d1bf",
+        "frontend/src/app/(console)/customers/page.tsx:19 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "question": "화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker prop과 admin 화면의 .page-heading을 없애고, ActionPanel(#442)에 버튼 type을 두어 제목 줄 생성 행동을 primary로 통일할지 정한다."
     },
     {
       "id": "G-079",

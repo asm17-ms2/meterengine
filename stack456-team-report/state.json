@@ -1,28 +1,44 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-28T16:36:55+09:00",
+  "updated_at": "2026-10-28T17:04:49+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
-  "current": null,
-  "finished_ids": [],
+  "current": {
+    "id": "C443-000",
+    "step": "fix",
+    "branch": "feat/product-design"
+  },
+  "finished_ids": [
+    "X-012",
+    "D-071",
+    "G-075",
+    "G-085",
+    "D-011",
+    "D-065",
+    "G-072",
+    "G-080",
+    "C443-002",
+    "X-090",
+    "D-039",
+    "D-055",
+    "D-244",
+    "D-022",
+    "G-084",
+    "G-078",
+    "D-237"
+  ],
   "open_ids": [
     "C443-000",
-    "X-012",
     "D-024",
     "X-010",
     "X-001",
     "X-042",
-    "D-071",
-    "G-075",
-    "G-085",
     "X-054",
     "G-073",
     "G-074",
     "G-086",
-    "D-011",
-    "D-065",
     "D-153",
     "X-047",
     "D-002",
@@ -41,26 +57,20 @@
     "D-233",
     "X-043",
     "G-071",
-    "G-072",
     "L-001",
     "D-083",
     "X-076",
     "D-082",
     "X-073",
     "X-078",
-    "G-080",
     "D-080",
     "D-084",
     "D-097",
     "D-240",
     "D-081",
     "G-076",
-    "C443-002",
     "C443-001",
-    "X-090",
     "G-087",
-    "D-039",
-    "D-055",
     "G-083",
     "X-058",
     "X-079",
@@ -88,12 +98,7 @@
     "D-098",
     "D-169",
     "D-260",
-    "D-244",
-    "D-022",
-    "G-084",
-    "G-078",
     "D-075",
-    "D-237",
     "G-079",
     "X-070",
     "X-017",
@@ -384,43 +389,43 @@
   "since_report_push": 0,
   "branches": {
     "feat/product-design": {
-      "origin_sha": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
-      "local_sha": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
+      "origin_sha": "9de0e1e7c4190724a6983e4e6b90982aa3084480",
+      "local_sha": "9de0e1e7c4190724a6983e4e6b90982aa3084480",
       "unpushed": []
     },
     "feat/webhook-jobs": {
-      "origin_sha": "81651ede279e5809de4ff11ab9c9595fc6f30592",
-      "local_sha": "81651ede279e5809de4ff11ab9c9595fc6f30592",
+      "origin_sha": "2180cd24566b984e69eb2f57640877743eaa8108",
+      "local_sha": "2180cd24566b984e69eb2f57640877743eaa8108",
       "unpushed": []
     },
     "feat/pricing-aggregation": {
-      "origin_sha": "c27b229c4ceb15a49a7a0eac4bef8da96c6936a6",
-      "local_sha": "c27b229c4ceb15a49a7a0eac4bef8da96c6936a6",
+      "origin_sha": "5eed5527d384af12ee7a468d7e59b22410ac5a47",
+      "local_sha": "5eed5527d384af12ee7a468d7e59b22410ac5a47",
       "unpushed": []
     },
     "feat/request-audit": {
-      "origin_sha": "bc7e5383fb0ece34db4d9fe631927db6d56e8ffa",
-      "local_sha": "bc7e5383fb0ece34db4d9fe631927db6d56e8ffa",
+      "origin_sha": "e660a0e1dbfd5b0e8efd77f8aa70b6f4e7947aaf",
+      "local_sha": "e660a0e1dbfd5b0e8efd77f8aa70b6f4e7947aaf",
       "unpushed": []
     },
     "feat/event-ingestion": {
-      "origin_sha": "7b1d1e593d76e41dd32804f76bdbe01b47d1063e",
-      "local_sha": "7b1d1e593d76e41dd32804f76bdbe01b47d1063e",
+      "origin_sha": "3b7c4e359c423421aa8f867726fd01b06a0927a7",
+      "local_sha": "3b7c4e359c423421aa8f867726fd01b06a0927a7",
       "unpushed": []
     },
     "feat/billing-queries": {
-      "origin_sha": "17cc7888e358b948b445e1b56340e69d4a0743d1",
-      "local_sha": "17cc7888e358b948b445e1b56340e69d4a0743d1",
+      "origin_sha": "256bbc00c61177f54f71a70c46a25d2e2761cb50",
+      "local_sha": "256bbc00c61177f54f71a70c46a25d2e2761cb50",
       "unpushed": []
     },
     "feat/auth-rate-limit": {
-      "origin_sha": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
-      "local_sha": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
+      "origin_sha": "9aa5ec7a83f80ca6f566e9830ef673ad41ba4f3b",
+      "local_sha": "9aa5ec7a83f80ca6f566e9830ef673ad41ba4f3b",
       "unpushed": []
     },
     "feat/rds-auto-stop": {
-      "origin_sha": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-      "local_sha": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
+      "origin_sha": "b8abfdfe15aa24185c69297a7e327c7010643301",
+      "local_sha": "b8abfdfe15aa24185c69297a7e327c7010643301",
       "unpushed": []
     }
   },
@@ -437,9 +442,12 @@
     }
   },
   "live_env": {
-    "running": false,
-    "layer": null,
-    "pids": [],
-    "container": null
+    "running": true,
+    "layer": 443,
+    "pids": [
+      20904,
+      21054
+    ],
+    "container": "meterengine-0696-e2e"
   }
 }
