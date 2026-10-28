@@ -1,12 +1,12 @@
-미완료 225건, 결과: 끝 상태 103/328건 (fixed 62, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+미완료 224건, 결과: 끝 상태 104/328건 (fixed 62, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
 push: feat/account-permissions 37개(마지막 9fff495)
-정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
+정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 62 | 1 | 7 | 30 | 3 | 40 |
+| #442 | 143 | 62 | 1 | 7 | 31 | 3 | 39 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -78,6 +78,7 @@ push: feat/account-permissions 37개(마지막 9fff495)
 
 | id | 층 | 질문 |
 | --- | --- | --- |
+| G-008 | #442 | OrganizationPeopleService 안의 응답 레코드 셋(IssuedInvitation, InvitationPreview, AcceptedInvitation)을 organization.dto의 *Response 레코드로 옮겨 OpenAPI 스키마 이름을 바꿀지(파일 여섯 개, 공개 스키마 이름 변경) 정한다. |
 | G-009 | #442 | 초대 메서드(invitations, invite, revoke, preview, accept)를 새 OrganizationInvitationService로 옮겨 목록 읽기를 list로 부를지(파일 넷), 아니면 쓰지 않는 2인자 list를 지우고 invitations를 인자 수만 다른 list로 바꿀지, 아니면 그대로 둘지 정한다. |
 | G-027 | #442 | 초대 수락 경로 POST /v1/organization-invitations/{token}/accept를 명사 하위 리소스(/acceptance)로 바꾸고 위층의 /revoke, /lookup, /export, /search 동사 경로도 같은 기준으로 맞출지, 아니면 naming.md에 상태 전이 동사 경로를 예외로 적을지 정한다. |
 | G-039 | #442 | 롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다. |

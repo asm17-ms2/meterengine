@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:22:29+09:00",
+  "updated_at": "2026-10-28T18:24:12+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -439,14 +439,24 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "72e8718에서 OrganizationPeopleService가 IssuedInvitation, InvitationPreview, AcceptedInvitation을 서비스 안 중첩 레코드로 두고 Jackson 어노테이션을 FQN으로 달며, 두 컨트롤러가 이 레코드를 그대로 HTTP 응답 타입으로 돌려준다. 그래서 openapi.yaml 응답 스키마 이름이 이 셋이 되어 naming.md 39행의 응답 DTO 꼴(<리소스>Response)을 벗어난다. 서비스가 요청 DTO를 받고 응답 DTO를 돌려주는 계층 부분은 main 관례와 같아 지적하지 않고 이름 부분만 맞다고 본다. JSON 본문은 같아서 실행 결함은 없고, 정점 0fe7d2a도 같으며 위층 23b1844는 두 컨트롤러에 @EnvironmentReady만 더했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:368-384 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:120 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:33,42 @ 72e8718",
+        "backend/openapi.yaml:2410,3139,3203 @ 72e8718",
+        "docs/contributing/naming.md:39 @ 72e8718"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "OrganizationPeopleService 안의 응답 레코드 셋(IssuedInvitation, InvitationPreview, AcceptedInvitation)을 organization.dto의 *Response 레코드로 옮겨 OpenAPI 스키마 이름을 바꿀지(파일 여섯 개, 공개 스키마 이름 변경) 정한다."
     },
     {
       "id": "G-009",
