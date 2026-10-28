@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:34:43+09:00",
+  "updated_at": "2026-10-28T22:37:42+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "a4a366074e264dc4e3a5d4ba89684cd680cff372"
+    "fix/s456-444-t-inho": "40089ce0efeca90c4761107a019473ad542b1214"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3876,27 +3876,36 @@
       "id": "Ck2-013",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "f3855f4의 SecretMask.lastFour(12-20행)는 null이면 null, 9자 미만이면 \"****\", 그 밖에는 \"****\"와 끝 네 글자를 돌려준다. main에서 온 SecureTokens.lastFour(54-57행)는 원문 끝 네 글자를 그대로 돌려주는데, 두 주석 모두 로그에 원문 대신 남길 값이라고 적고 있다. 같은 이름이 다른 결과를 내므로 naming.md 13-14행의 '읽는 자리에서 답이 나온다', '다른 개념에 다른 낱말' 조항에 어긋나 confirmed로 본다. 반박할 근거를 찾아봤지만 SecretMask를 다루는 시험이 없고 #444 안에는 호출부도 없으며, 정점 b8abfdf까지 두 파일을 바꾼 위층 커밋도 없다. 동작이 다른 것 자체는 입력 차이(고정 길이로 만드는 API 키와 길이를 모르는 외부 비밀값)로 설명되므로 고칠 대상은 이름이다. 이 층에서는 SecretMask.java 한 파일만 바꾸면 되지만, #445(f382376)의 세 파일이 이 이름을 부르고 있어 반영할 때 같이 바꿔야 한다. 처음 쓰는 #445로 옮기는 것은 PR 나누기라 손대지 않으므로, 새 이름과 모을 자리를 정하는 needs-decision으로 둔다.",
+      "reason": "f3855f4의 SecretMask.lastFour(12-20행)는 null이면 null, 9자 미만이면 \"****\", 그 밖에는 \"****\"와 끝 네 글자를 돌려준다. main에서 온 SecureTokens.lastFour(54-57행)는 원문 끝 네 글자를 그대로 돌려주는데, 두 주석 모두 로그에 원문 대신 남길 값이라고 적고 있다. 같은 이름이 다른 결과를 내므로 naming.md 13-14행의 '읽는 자리에서 답이 나온다', '다른 개념에 다른 낱말' 조항에 어긋나 confirmed로 본다. 반박할 근거를 찾아봤지만 SecretMask를 다루는 시험이 없고 #444 안에는 호출부도 없으며, 정점 b8abfdf까지 두 파일을 바꾼 위층 커밋도 없다. 동작이 다른 것 자체는 입력 차이(고정 길이로 만드는 API 키와 길이를 모르는 외부 비밀값)로 설명되므로 고칠 대상은 이름이다. 이 층에서는 SecretMask.java 한 파일만 바꾸면 되지만, #445(f382376)의 세 파일이 이 이름을 부르고 있어 반영할 때 같이 바꿔야 한다. 처음 쓰는 #445로 옮기는 것은 PR 나누기라 손대지 않으므로, 새 이름과 모을 자리를 정하는 needs-decision으로 둔다. SecretMask.lastFour를 mask로 바꿨다(#444에는 호출부가 없어 SecretMask.java 한 파일). 6절 유지보수 기준(파일 둘까지)에 들어 needs-decision 대신 고치고 #445 호출부는 propagation_note에 적었다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/global/crypto/SecretMask.java:12-20 @ 178e19e",
-        "backend/src/main/java/com/meterengine/global/security/SecureTokens.java:54-57 @ 178e19e",
-        "docs/contributing/naming.md:13-14 @ 178e19e",
-        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:137 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/crypto/SecretMask.java:12-20 @ f3855f4",
+        "backend/src/main/java/com/meterengine/global/security/SecureTokens.java:54-57 @ f3855f4",
+        "docs/contributing/naming.md:13-14 @ f3855f4",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:137 @ f3855f4",
         "backend/src/main/java/com/meterengine/payment/client/TossPaymentsBilling.java:13 @ f382376",
         "backend/src/main/java/com/meterengine/payment/dto/UpdateTossPaymentsCredentialRequest.java:26 @ f382376",
-        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:198,210 @ f382376"
+        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:198,210 @ f382376",
+        "SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다)",
+        "커밋 40089ce0efeca90c4761107a019473ad542b1214"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "40089ce0efeca90c4761107a019473ad542b1214"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.global.crypto.SecretMaskTest': 고치기 전 컴파일 실패, 고친 뒤 통과(9자 이상은 ****와 끝 네 자, 8자 이하는 ****). 동작은 고치기 전과 같다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점 SecretMask.java도 lastFour다(이 파일을 바꾼 위층 커밋 없음)",
+      "propagation_note": "이름을 바꿔 위층 반영 merge 뒤 #445부터 컴파일이 깨진다. 반영 때 #445 f382376의 TossPaymentsBilling.java 13행, UpdateTossPaymentsCredentialRequest.java 26행, BillingKeyService.java의 SecretMask.lastFour 두 곳(정점 230, 248행)을 SecretMask.mask로 바꾼다. 동작은 같다.",
+      "summary": "SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다"
     },
     {
       "id": "Ck2-014",
@@ -7405,6 +7414,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.625s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "54 passed (24.6s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.5s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "a4a366074e264dc4e3a5d4ba89684cd680cff372",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9462,6 +9531,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "a4a366074e264dc4e3a5d4ba89684cd680cff372",
       "at": "2026-10-28T22:32:57+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "40089ce0efeca90c4761107a019473ad542b1214",
+      "at": "2026-10-28T22:37:24+09:00"
     }
   ],
   "usage_log": [],

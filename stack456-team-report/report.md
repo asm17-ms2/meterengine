@@ -1,15 +1,15 @@
-미완료 250건, 결과: 끝 상태 122/372건 (fixed 89, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 8번(마지막 a4a3660)
+미완료 249건, 결과: 끝 상태 123/372건 (fixed 90, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 9번(마지막 40089ce)
 정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T22:34:43+09:00
+상태: running, 갱신 2026-10-28T22:37:42+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 14 | 0 | 4 | 11 | 1 | 10 |
+| #444 | fix/s456-444-t-inho | 40 | 15 | 0 | 4 | 11 | 1 | 9 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -109,6 +109,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 8번(마
 | X-028 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | Ck2-006 | #444 | 37556b4 | 웹훅 전송 기록 목록을 받치는 색인을 둔다 | 전송기록_목록을_엔드포인트별_최신순으로_읽는_색인이_있다: 실패 EmptyResultDataAccessException: Incorrect result size: expected 1, actual 0 |
 | Ck2-008 | #444 | a4a3660 | openapi.yaml이 웹훅 통보 종류의 최소 개수와 받는 값을 적는다 | 웹훅_엔드포인트_요청의_통보_종류는_하나_이상이고_서버가_받는_값만_적는다: 실패 [CreateWebhookEndpointRequest] expected: 1 but was: 0 |
+| Ck2-013 | #444 | 40089ce | SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다 | SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다) |
 | D-035 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-157 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 
@@ -201,6 +202,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 8번(마
 - Ck2-003 (#444): WebhookDeliveryRepository.backlog() 조회는 도입사와 환경을 가리지 않는 전역 집계라 #453 23b1844의 environment_scope_id 조건을 더하지 않는다. alerting.yml 끝의 webhook-delivery-backlog 규칙과 deploy/README.md 경보 표의 '웹훅 발송 적체' 행은 위층에서 같은 자리에 줄이 더해졌으면 둘 다 둔다.
 - Ck2-006 (#444): #453부터 findByEndpoint와 countByEndpoint가 environment_scope_id 조건을 더한다(V48, 조율 담당 몫 파일). 이 색인의 앞부분(organization_id, webhook_endpoint_id)으로 범위를 좁힌 뒤 environment_scope_id는 걸러 읽는다. 환경까지 넣은 색인이 필요하면 V48 쪽 결정으로 넘긴다. V28 체크섬이 바뀌어 이 파일을 적용한 로컬 볼륨은 다시 만들어야 기동한다.
 - Ck2-008 (#444): openapi.yaml의 CreateWebhookEndpointRequest, UpdateWebhookEndpointRequest event_types에 enum과 minItems 1이 생긴다. 위층 반영 때 openapi.yaml이 충돌하면 그 층에서 ./gradlew build로 다시 만든다.
+- Ck2-013 (#444): 이름을 바꿔 위층 반영 merge 뒤 #445부터 컴파일이 깨진다. 반영 때 #445 f382376의 TossPaymentsBilling.java 13행, UpdateTossPaymentsCredentialRequest.java 26행, BillingKeyService.java의 SecretMask.lastFour 두 곳(정점 230, 248행)을 SecretMask.mask로 바꾼다. 동작은 같다.
 
 ## fixed-above로 둔 것
 
