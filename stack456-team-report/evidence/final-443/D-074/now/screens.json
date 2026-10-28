@@ -1,0 +1,150 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "signup",
+    "path": "/signup",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/signup-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/signup-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "customers",
+    "path": "/customers",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/customers-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/customers-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "billing",
+    "path": "/billing",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billing",
+        "title": "청구 검토 | MeterEngine",
+        "h1": "청구 예정액 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/billing-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billing",
+        "title": "청구 검토 | MeterEngine",
+        "h1": "청구 예정액 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/billing-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "members",
+    "path": "/members",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/members-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-074/now/members-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]

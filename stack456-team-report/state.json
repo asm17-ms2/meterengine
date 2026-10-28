@@ -1,13 +1,13 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-28T19:38:19+09:00",
+  "updated_at": "2026-10-28T19:43:46+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "final-443",
-    "step": "check",
+    "step": "report",
     "branch": "fix/s456-443-t-inho"
   },
   "finished_ids": [

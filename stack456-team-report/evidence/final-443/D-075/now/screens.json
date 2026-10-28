@@ -1,0 +1,113 @@
+[
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "customers",
+    "path": "/customers",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/customers-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/customers-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "members",
+    "path": "/members",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/members-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/members-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "usage",
+    "path": "/usage",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/usage",
+        "title": "사용량 | MeterEngine",
+        "h1": "사용량 집계 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/usage-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/usage",
+        "title": "사용량 | MeterEngine",
+        "h1": "사용량 집계 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/D-075/now/usage-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "notfound",
+    "path": "/organization-invitations/abc/def",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 404,
+        "navError": null,
+        "finalPath": "/organization-invitations/abc/def",
+        "title": "페이지를 찾을 수 없음 | MeterEngine",
+        "h1": "페이지를 찾을 수 없습니다",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/X-054/now/notfound-desktop.png",
+        "consoleErrors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 404,
+        "navError": null,
+        "finalPath": "/organization-invitations/abc/def",
+        "title": "페이지를 찾을 수 없음 | MeterEngine",
+        "h1": "페이지를 찾을 수 없습니다",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/X-054/now/notfound-mobile.png",
+        "consoleErrors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]

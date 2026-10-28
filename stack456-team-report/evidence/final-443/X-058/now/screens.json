@@ -1,0 +1,39 @@
+[
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "customers",
+    "path": "/customers",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "320x700",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/X-058/now/customers-320x700.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "390x844",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/final-443/X-058/now/customers-390x844.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]
