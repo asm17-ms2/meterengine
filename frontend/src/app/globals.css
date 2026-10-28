@@ -33,9 +33,8 @@ button {
   }
 }
 
-:root { color-scheme: light; --ink: #141414; --muted: #535f70; --line: #dbe2ec; --blue: #1677ff; --paper: #fff; --canvas: #f5f7fa; }
-body { color: var(--ink); background: var(--canvas); }
-a { color: #0958d9; text-underline-offset: 4px; }
+:root { color-scheme: light; --ink: #202b40; --muted: #5a6578; --line: #dce1eb; --blue: #5746ad; --paper: #fff; --canvas: #f3f5f9; --control-border: #7c8799; --focus: #5746ad; }
+a { text-underline-offset: 4px; }
 :where(a, button, input, select, summary, [tabindex]):focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .skip-link { position: fixed; left: 16px; top: -80px; padding: 12px 20px; background: white; z-index: 2000; }
 .skip-link:focus { top: 16px; }
@@ -113,7 +112,6 @@ p { line-height: 1.7; }
   .tenant-header-actions { width: 100%; justify-content: flex-end; }
   .tenant-header-actions a[href="/admin"] { display: inline; }
 }
-:root { --ink: #202b40; --muted: #5a6578; --line: #dce1eb; --blue: #5746ad; --paper: #fff; --canvas: #f3f5f9; }
 .workspace-shell { display: grid; grid-template-columns: 228px minmax(0, 1fr); grid-template-rows: var(--workspace-header-height) 1fr; min-height: 100dvh; }
 .workspace-header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; background: #fff; border-bottom: 1px solid #dce1eb; position: sticky; top: 0; z-index: 30; }
 .workspace-brand, .workspace-user { display: flex; align-items: center; gap: 24px; min-width: 0; }
@@ -136,7 +134,7 @@ p { line-height: 1.7; }
 .workflow-nav a[aria-current=page] { border-color: #5746ad; color: #48339a; background: #eeeafb; border-radius: 5px 5px 0 0; }
 .workflow-index { font: 14px "SFMono-Regular", Consolas, monospace; color: #8993a7; }
 .workflow-nav small { display: block; font-size: 10px; margin-bottom: 3px; }.workflow-nav strong { font-size: 13px; }
-.workspace-content { max-width: 1450px; padding: 32px 38px 70px; display: flex; flex-direction: column; gap: 24px; }
+.workspace-content { max-width: 1450px; padding: 32px 38px 70px; display: flex; flex-direction: column; gap: 28px; }
 .workspace-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; flex-wrap: wrap; }.workspace-heading h1 { margin: 6px 0 10px; }.workspace-heading p { color: #5a6578; margin: 0; max-width: 650px; }
 .workspace-kicker { text-transform: uppercase; font: 11px "SFMono-Regular", Consolas, monospace; letter-spacing: .14em; color: #5746ad; }
 .workspace-panel { padding: 26px; background: #fff; border: 1px solid #dce1eb; border-radius: 9px; min-width: 0; }.workspace-panel h2 { font-size: 17px; margin-bottom: 18px; letter-spacing: -.02em; }.workspace-panel h3 { font-size: 14px; }
@@ -144,12 +142,11 @@ p { line-height: 1.7; }
 .finance-flow { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); background: #fff; border: 1px solid #dce1eb; border-radius: 9px; overflow: hidden; }.finance-flow > div { padding: 28px 24px; border-right: 1px solid #e7eaf1; }.finance-flow > div:last-child { border: 0; }.finance-flow > .is-settled { background: #f0f8f7; }.finance-flow span { display: block; color: #5a6578; font-size: 12px; }.finance-flow strong { display: block; margin: 14px 0 10px; font: 600 clamp(21px,2vw,31px) var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; letter-spacing: -.05em; }.finance-flow small { color: #78839a; }
 .workspace-form { display: flex; flex-direction: column; gap: 18px; }.workspace-form fieldset { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr; gap: 18px; min-width: 0; }.workspace-field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 550; }.workspace-field small { font-weight: 400; }.workspace-field input, .workspace-field textarea, .workspace-field select { min-width: 0; box-sizing: border-box; width: 100%; border: 1px solid #d4dbe7; padding: 10px 12px; border-radius: 5px; color: #202b40; background: #fff; font-weight: 400; }.workspace-field select[multiple] { min-height: 110px; }.workspace-form > .ant-btn { align-self: start; }.workspace-form .ant-alert { overflow-wrap: anywhere; }
 .workspace-actions { display: flex; flex-wrap: wrap; gap: 8px; }.secret-result { padding: 18px; border: 1px solid #b5a8ec; border-radius: 6px; background: #f7f4ff; overflow-wrap: anywhere; }.secret-result code { display: block; padding: 14px 0; }.secret-result a { display: block; margin: 10px 0; }
-.setup-list { list-style: none; padding: 0; margin: 0; }.setup-list li { padding: 17px 0; border-bottom: 1px solid #edf0f5; display: flex; gap: 14px; align-items: center; }.setup-list li:last-child { border: 0; }.setup-state { flex: none; width: 22px; height: 22px; border: 1px solid #ccd3e1; border-radius: 50%; display: grid; place-items: center; font-size: 11px; color: #78839a; }.setup-state.is-complete { color: #087f75; background: #e1f3ef; border-color: #a4d3ca; }.setup-list a { margin-left: auto; white-space: nowrap; font-size: 12px; }.setup-list strong { display: block; font-size: 13px; margin-bottom: 4px; }.setup-list p { margin: 0; color: #78839a; font-size: 12px; line-height: 1.5; }
-.workspace-tabs { display: flex; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid #dce1eb; padding-bottom: 12px; }.workspace-tabs a { text-decoration: none; font-size: 13px; color: #5a6578; }.workspace-tabs a[aria-current=page] { color: #5746ad; font-weight: 700; }.numeric { font-variant-numeric: tabular-nums; font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }.detail-strip { display: flex; flex-wrap: wrap; gap: 30px; }.detail-strip dt { color: #78839a; font-size: 11px; margin-bottom: 7px; }.detail-strip dd { margin: 0; font-weight: 600; }.mobile-menu { display: none; }
+.setup-list { list-style: none; padding: 0; margin: 0; }.setup-list li { padding: 17px 0; border-bottom: 1px solid #edf0f5; display: flex; gap: 14px; align-items: center; }.setup-list li:last-child { border: 0; }.setup-state { flex: none; width: 22px; height: 22px; border: 1px solid #ccd3e1; border-radius: 50%; display: grid; place-items: center; font-size: 11px; color: #78839a; }.setup-state.is-complete { color: #087f75; background: #e1f3ef; border-color: #a4d3ca; }.setup-list a { margin-left: auto; white-space: nowrap; font-size: 12px; }.setup-list strong { display: block; font-size: 13px; margin-bottom: 4px; }.setup-list p { margin: 0; line-height: 1.5; }
+.workspace-tabs { display: flex; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid #dce1eb; padding-bottom: 12px; }.workspace-tabs a { text-decoration: none; font-size: 13px; color: #5a6578; }.workspace-tabs a[aria-current=page] { color: #5746ad; font-weight: 700; }.numeric { font-variant-numeric: tabular-nums; font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }.detail-strip { display: flex; flex-wrap: wrap; gap: 30px; }.detail-strip dt { margin-bottom: 7px; }.detail-strip dd { margin: 0; font-weight: 600; }
 @media(max-width: 1100px) { .workspace-shell { grid-template-columns: 200px minmax(0,1fr); }.workspace-content { padding: 24px; }.workflow-nav { padding: 20px 24px 0; }.workspace-grid-wide { grid-template-columns: 1fr; }.finance-flow > div { padding: 24px 16px; }.workspace-user > .workspace-user-name { display:none; } }
-@media(max-width: 767px) { .workspace-shell { display: block; }.workspace-header { height: 64px; padding: 0 14px; gap: 10px; }.workspace-sidebar { display:none; }.mobile-menu { display: inline-flex; }.workspace-brand { gap: 10px; }.workspace-brand .wordmark { font-size: 17px; }.workspace-brand .workspace-divider, .workspace-user > a { display:none; }.organization-link { max-width: 120px; font-size: 12px; }.workspace-user { gap:0; }.workspace-user .ant-btn { font-size: 11px; padding: 0 8px; }.workflow-nav { padding: 16px 12px 0; gap: 4px; }.workflow-nav a { padding: 8px 4px; gap: 5px; }.workflow-nav strong { font-size: 11px; }.workflow-nav small { display:none; }.workspace-content { padding: 24px 16px 50px; gap:20px; }.workspace-grid { grid-template-columns:1fr; }.finance-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }.finance-flow > div { border-bottom: 1px solid #e7eaf1; padding:20px; }.finance-flow strong { font-size: 24px; }.workspace-panel { padding:20px; }.workspace-heading h1 { font-size: 27px; }.setup-list a { font-size:11px; } }
+@media(max-width: 767px) { .workspace-shell { display: block; }.workspace-header { height: 64px; padding: 0 14px; gap: 10px; }.workspace-sidebar { display:none; }.workspace-brand { gap: 10px; }.workspace-brand .wordmark { font-size: 17px; }.workspace-brand .workspace-divider, .workspace-user > a { display:none; }.organization-link { max-width: 120px; font-size: 12px; }.workspace-user { gap:0; }.workspace-user .ant-btn { font-size: 11px; padding: 0 8px; }.workflow-nav { padding: 16px 12px 0; gap: 4px; }.workflow-nav a { padding: 8px 4px; gap: 5px; }.workflow-nav strong { font-size: 11px; }.workflow-nav small { display:none; }.workspace-grid { grid-template-columns:1fr; }.finance-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }.finance-flow > div { border-bottom: 1px solid #e7eaf1; padding:20px; }.finance-flow strong { font-size: 24px; }.workspace-panel { padding:20px; }.workspace-heading h1 { font-size: 27px; }.setup-list a { font-size:11px; } }
 
-:root { --ink: #202b40; --muted: #5a6578; --line: #dce1eb; --blue: #5746ad; --paper: #fff; --canvas: #f3f5f9; }
 body { color: var(--ink); background: var(--canvas); font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
 a { color: #51409c; }
 .month-apply { border:1px solid #d4dbe7; border-radius:5px; background:#fff; padding:8px 16px; align-self:end; min-height:39px; cursor:pointer; }
@@ -158,11 +155,9 @@ a { color: #51409c; }
 .workspace-header .mobile-menu { display: none; }
 @media(max-width: 767px) { .workspace-header .mobile-menu { display: inline-flex; } }
 
-:root { --control-border: #7c8799; --muted: #5a6578; --focus: #5746ad; }
 html { scroll-padding-top: calc(var(--workspace-header-height) + 20px); }
 ::selection { background: #ded8f6; color: #202b40; }
 input, textarea { caret-color: var(--blue); }
-.workspace-content { gap: 28px; }
 .workspace-heading > div { min-width: 0; max-width: 100%; }
 .workspace-heading h1, .workspace-heading p, .setup-list li > div, .setup-list strong, .organization-link, .detail-strip dd { overflow-wrap: anywhere; }
 .workspace-heading h1 { letter-spacing: -.03em; text-wrap: balance; }
