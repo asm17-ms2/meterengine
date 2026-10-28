@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T01:06:48+09:00",
+  "updated_at": "2026-10-29T01:10:29+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -25,7 +25,7 @@
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
     "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
-    "fix/s456-448-t-inho": "6d30dca63f13bddb1a8adcaf8f70650a960c7a23"
+    "fix/s456-448-t-inho": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -5895,15 +5895,35 @@
       "id": "Nk1-002",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head 6431cefb에서도 target()은 UUID_VARIABLES 세 이름만 보고 대상을 고르고, 실제 라우트의 경로 변수가 이 목록과 맞는지 확인하는 시험은 어디에도 없다(RequestMappingHandlerMapping을 쓰는 시험이 층 head와 정점 모두 없음). 정점에서 #449 c9a86c4c가 더한 /v1/invoices/{id}/view-links/{view_link_id}/revoke의 view_link_id는 목록 밖이라 폐기 요청 행의 target_id가 링크가 아닌 인보이스 ID로 남으니, 목록과 컨트롤러가 갈라진 것이 두 줄로 확인된다. 반면 {code}를 요청 감사에 남기지 않는 것은 AuditTargetIntegrationTest:127,161과 RequestAuditFilterTest:85가 단정하는 의도된 결정이라 이 부분은 맞지 않는 지적이고 바꾸지 않는다. #448 head의 라우트 변수(code, delivery_id, id, mode, organization_id, token)는 모두 허용, 제외, 모드 중 하나로 이미 분류돼 있어 이 층의 고칠 것은 동작 변경 없이 분류를 강제하는 가드 시험 하나다. 등록된 /v1 라우트의 경로 변수가 모두 UUID_VARIABLES나 뺀다고 정한 이름(code, token, mode)에 드는지 단정하는 가드 시험을 더하고 UUID_VARIABLES를 패키지 공개로 두었다. {code}를 감사 대상에서 빼는 것은 기존 시험이 단정하는 의도라 그대로다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:23-24 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:96-100 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:25-26 @ b5506b6",
+        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:75,81 @ b5506b6",
+        "backend/src/test/java/com/meterengine/audit/AuditTargetIntegrationTest.java:127,161 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/global/security/RequestAuditFilterTest.java:85 @ 6431cefb",
+        "커밋 c9a86c4c",
+        "커밋 df3caf7be7b4531e4ae4e2806d5e0c6df57195d6"
+      ],
+      "commits": [
+        "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6"
+      ],
+      "tests": [
+        "이 층 라우트 변수(code, delivery_id, id, mode, organization_id, token)는 모두 분류돼 있어 고치기 전에 실패하는 시험을 만들 수 없다. 새 RequestAuditTargetCoverageTest가 통과하고, 제외 목록에서 code를 잠시 빼면 Expecting empty but was: [\"code\"]로 실패하는 것을 보고 되돌렸다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": false,
+      "top_head": "same: 정점 RequestAuditFilter의 UUID_VARIABLES와 target()이 그대로다. #449 c9a86c4c가 더한 {view_link_id}가 목록 밖이다",
+      "propagation_note": "#449 반영 때 이 가드 시험이 {view_link_id}로 실패한다. #449에서 RequestAuditFilter.UUID_VARIABLES의 id 앞에 view_link_id를 더해야 폐기 요청 행의 target_id가 링크 id가 되고 시험이 통과한다.",
+      "summary": "v1 경로 변수가 요청 감사 대상인지 대상에서 뺀 이름인지 시험으로 강제한다"
     },
     {
       "id": "Nk1-003",
@@ -8184,6 +8204,51 @@
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (28.8s)"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (8.2s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "6d30dca63f13bddb1a8adcaf8f70650a960c7a23",
@@ -11378,6 +11443,11 @@
       "branch": "fix/s456-448-t-inho",
       "sha": "6d30dca63f13bddb1a8adcaf8f70650a960c7a23",
       "at": "2026-10-29T01:04:31+09:00"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "df3caf7be7b4531e4ae4e2806d5e0c6df57195d6",
+      "at": "2026-10-29T01:10:12+09:00"
     }
   ],
   "usage_log": [],
