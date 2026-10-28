@@ -28,8 +28,8 @@ export default function Home() {
           <div className={styles.actions}><Link href="/signup" className={styles.primaryAction}>도입사 가입 신청</Link><Link href="/login" className={styles.secondaryAction}>기존 계정 로그인</Link></div>
           <p className={styles.applicationNote}>가입 신청 후 운영자 승인을 거쳐 도입사 업무를 시작합니다.</p>
         </div>
-        <div className={styles.trace} aria-label="같은 고객과 청구 월로 이어지는 확인 항목">
-          <div className={styles.traceHeader}><strong>한 고객, 한 청구 월</strong><span>무엇을 확인하나요</span></div>
+        <div className={styles.trace} role="group" aria-labelledby="home-trace-title">
+          <div className={styles.traceHeader}><strong id="home-trace-title">한 고객, 한 청구 월</strong><span>무엇을 확인하나요</span></div>
           <dl>
             <div><dt>사용량</dt><dd>고객과 연결된 이벤트와 집계 수량</dd></div>
             <div><dt>요금</dt><dd>그 달에 적용되는 미터별 단가와 기본료</dd></div>
