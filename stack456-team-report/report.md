@@ -1,12 +1,12 @@
-미완료 230건, 결과: 끝 상태 98/328건 (fixed 57, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 32개(마지막 07f5a83)
+미완료 229건, 결과: 끝 상태 99/328건 (fixed 58, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 33개(마지막 09d27a3)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 57 | 1 | 7 | 30 | 3 | 45 |
+| #442 | 143 | 58 | 1 | 7 | 30 | 3 | 44 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -66,6 +66,7 @@ push: feat/account-permissions 32개(마지막 07f5a83)
 | X-020 | #442 | 50d7032 | 복사 결과 상태 영역을 미리 둠 | copy results are announced through a status region that is already present: 실패 Expected 1, Received 0 |
 | X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
+| X-072 | #442 | 09d27a3 | 표 빈 상태 작은 삽화 | an empty workspace table uses the small empty illustration: 실패 Expected 1, Received 0 |
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
