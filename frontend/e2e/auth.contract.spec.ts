@@ -25,7 +25,7 @@ test("public health, gated routes, expired session and return URL", async ({ pag
   }
   await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
   await page.goto("/customers");
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired&returnTo=%2Fcustomers$/);
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
@@ -70,7 +70,7 @@ test("tenant actions recheck session after revocation, independently of route la
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
   await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
 });
@@ -119,7 +119,7 @@ test("a server action after the session cookie disappears goes to login instead 
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
   await page.context().clearCookies();
   await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   await expect(page.getByText("화면을 그리지 못했습니다")).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
@@ -145,7 +145,7 @@ test("a workspace action still follows the login redirect after its session is r
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
 test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
