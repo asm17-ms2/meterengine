@@ -319,6 +319,23 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 요금_모델에_맞지_않는_단가는_요청에_있는_model_필드로_거절된다() {
+    String admin = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
+    assertThat(
+            mvc.post()
+                .uri("/v1/billable-metrics/tokens/price-rates")
+                .header(AUTHORIZATION, admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"dimension_values\":{},\"model\":\"graduated\",\"unit_price\":1,\"tiers\":[{\"up_to\":null,\"unit_price\":1}]}")
+                .exchange())
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .isEqualTo("model");
+  }
+
+  @Test
   void 잘못된_구간과_종료월은_저장_전에_거절된다() {
     String admin = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
     for (String body :
