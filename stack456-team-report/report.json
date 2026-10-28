@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:43:09+09:00",
+  "updated_at": "2026-10-28T19:45:18+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -952,7 +952,7 @@
       "verdict": "confirmed",
       "reason": "workspace-actions.ts 21-25행 amount는 안전 정수만 보고 상한을 모르며, 52-54행 catch는 모든 입력 오류를 '금액은 0 이상의 정수, 조합과 구간은 올바른 JSON' 문구로 바꿔 필드를 알려 주지 않는다. integrations 분당 요청 한도에는 max가 없어 백엔드 정수 범위를 넘는 값이 나간다. 정점도 같다. 범위와 필드를 아는 정수 읽기와 필드 오류를 두었다.",
       "evidence": [
-        "frontend/src/app/(console)/workspace-actions.ts:21-25,52-54 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:20-24,54-56 @ 72e8718",
         "frontend/src/app/(console)/integrations/page.tsx:23 @ 72e8718",
         "a whole number outside its range names the field instead of blaming JSON: 실패 SyntaxError: does not provide an export named 'InputFieldError'"
       ],
