@@ -1,0 +1,1 @@
+{"colorLinkHover":"#9c8fc7","linkHoverOnWhite":"2.93","colorTextTertiary":"rgba(0,0,0,0.45)","fix":{"linkHover":"#48339a","linkHoverOnWhite":"9.48","descriptionsLabel":"#5a6578","labelOnWhite":"5.89","checkbox":"#7c8799","checkboxOnWhite":"3.63","checkboxBefore":"1.31"}}
