@@ -1,15 +1,16 @@
 "use client";
 
-import { Empty, Pagination, Table, Tag } from "antd";
+import { Alert, Empty, Pagination, Table, Tag } from "antd";
 import { ErrorAlert } from "@/components/screen/ErrorAlert";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActionPanel, type ActionPanelProps } from "@/components/workspace/ActionPanel";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { formatKstDateTime } from "@/lib/format";
 
 export function WorkspaceError({ message, status }: { message: string; status?: number }) {
+  if (status === 403 || status === 404) return <Alert showIcon type="error" title={status === 403 ? "조회 권한이 없습니다" : "찾을 수 없습니다"} description={message} />;
   return <ErrorAlert title="데이터를 불러오지 못했습니다" message={status && status > 0 ? `${message} (${status})` : message} />;
 }
 
@@ -45,15 +46,22 @@ function RowActions({ actions }: { actions: ActionPanelProps[] }) {
   return <div className="workspace-row-actions">{actions.map((action, index) => <ActionPanel key={`${action.operation}-${index}`} {...action} />)}</div>;
 }
 
-export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록된 항목이 없습니다.", rowActions = {}, serverPaged = false }: { rows: Record<string, unknown>[]; columns: WorkspaceColumn[]; rowKey?: string; empty?: string; rowActions?: WorkspaceRowActions; serverPaged?: boolean }) {
+export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록된 항목이 없습니다.", rowActions = {}, serverPaged = false, label }: { rows: Record<string, unknown>[]; columns: WorkspaceColumn[]; rowKey?: string; empty?: string; rowActions?: WorkspaceRowActions; serverPaged?: boolean; label?: string }) {
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const scroller = tableRef.current?.querySelector<HTMLElement>(".ant-table-content");
+    if (!scroller) return;
+    scroller.tabIndex = 0;
+    if (label) { scroller.setAttribute("role", "region"); scroller.setAttribute("aria-label", label); }
+  });
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / 20)));
   const access = useTenantAccess();
   const hasActions = Object.values(rowActions).some(actions => actions.some(action => canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, action.operation)));
   const visibleRows = serverPaged ? rows : rows.slice((currentPage - 1) * 20, currentPage * 20);
   const keyOf = (row: Record<string, unknown>) => String(row[rowKey]);
   return <>
-    <div className="workspace-desktop-table"><Table dataSource={rows} rowKey={keyOf} pagination={!serverPaged && rows.length > 20 ? { current: currentPage, pageSize: 20, showSizeChanger: false, onChange: setPage } : false} scroll={{ x: "max-content" }} locale={{ emptyText: <Empty description={empty} /> }} columns={[
+    <div ref={tableRef} className="workspace-desktop-table"><Table dataSource={rows} rowKey={keyOf} pagination={!serverPaged && rows.length > 20 ? { current: currentPage, pageSize: 20, showSizeChanger: false, onChange: setPage } : false} scroll={{ x: "max-content" }} locale={{ emptyText: <Empty description={empty} /> }} columns={[
       ...columns.map(column => ({ title: column.label, key: column.key, dataIndex: column.key, align: column.isMoney || column.isNumber ? "right" as const : undefined, render: (value: unknown, row: Record<string, unknown>) => <CellValue value={value} column={column} row={row} /> })),
       ...(hasActions ? [{ title: "작업", key: "actions", fixed: "end" as const, render: (_: unknown, row: Record<string, unknown>) => <RowActions actions={rowActions[keyOf(row)] ?? []} /> }] : []),
     ]} /></div>
