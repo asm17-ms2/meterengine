@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Empty, Pagination, Table, Tag } from "antd";
+import { Empty, Pagination, Table, Tag } from "antd";
+import { ErrorAlert } from "@/components/screen/ErrorAlert";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { useState } from "react";
 import { ActionPanel, type ActionPanelProps } from "@/components/workspace/ActionPanel";
@@ -8,8 +9,8 @@ import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { formatKstDateTime } from "@/lib/format";
 
-export function WorkspaceError({ message }: { message: string }) {
-  return <Alert showIcon type="error" title="데이터를 불러오지 못했습니다" description={message} action={<a href="">다시 시도</a>} />;
+export function WorkspaceError({ message, status }: { message: string; status?: number }) {
+  return <ErrorAlert title="데이터를 불러오지 못했습니다" message={status && status > 0 ? `${message} (${status})` : message} />;
 }
 
 export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string };
@@ -54,7 +55,7 @@ export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록�
   return <>
     <div className="workspace-desktop-table"><Table dataSource={rows} rowKey={keyOf} pagination={!serverPaged && rows.length > 20 ? { current: currentPage, pageSize: 20, showSizeChanger: false, onChange: setPage } : false} scroll={{ x: "max-content" }} locale={{ emptyText: <Empty description={empty} /> }} columns={[
       ...columns.map(column => ({ title: column.label, key: column.key, dataIndex: column.key, align: column.isMoney || column.isNumber ? "right" as const : undefined, render: (value: unknown, row: Record<string, unknown>) => <CellValue value={value} column={column} row={row} /> })),
-      ...(hasActions ? [{ title: "작업", key: "actions", render: (_: unknown, row: Record<string, unknown>) => <RowActions actions={rowActions[keyOf(row)] ?? []} /> }] : []),
+      ...(hasActions ? [{ title: "작업", key: "actions", fixed: "end" as const, render: (_: unknown, row: Record<string, unknown>) => <RowActions actions={rowActions[keyOf(row)] ?? []} /> }] : []),
     ]} /></div>
     <div className="workspace-mobile-records">
       {visibleRows.length === 0 ? <Empty description={empty} /> : visibleRows.map(row => <article key={keyOf(row)} className="workspace-mobile-record"><h3><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></h3><dl>{columns.slice(1).map(column => <div key={column.key}><dt>{column.label}</dt><dd><CellValue value={row[column.key]} column={column} row={row} /></dd></div>)}</dl>{hasActions && <RowActions actions={rowActions[keyOf(row)] ?? []} />}</article>)}

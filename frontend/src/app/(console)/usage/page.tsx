@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CsvDownload } from "@/components/screen/CsvDownload";
 import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
@@ -22,6 +23,8 @@ import { readListQuery } from "@/lib/list-query";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const USAGE_CAPABILITIES = CAPABILITIES.aggregateBillableMetricUsages;
+
+export const metadata: Metadata = { title: "사용량" };
 
 export default async function UsagePage({
   searchParams,

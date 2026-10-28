@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthFrame } from "@/components/auth/AuthFrame";
 import { AccountConsentForm } from "@/components/auth/AccountConsentForm";
@@ -5,6 +6,8 @@ import { LogoutButton } from "@/components/auth/SessionControls";
 import { requireSession } from "@/lib/auth/session";
 import { safeReturnPath } from "@/lib/auth/navigation";
 import { workspaceHref } from "@/lib/workspace-href";
+
+export const metadata: Metadata = { title: "계정 이용 안내 확인" };
 
 export default async function AccountConsentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await requireSession();

@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireTenantSession } from "@/lib/auth/session";
 import { workspaceHref } from "@/lib/workspace-href";
+
+export const metadata: Metadata = { title: "가격" };
 
 export default async function BillableMetricPricesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;

@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ReviewAction } from "@/components/auth/ReviewAction";
 import { AttachOrganizationButton } from "@/components/auth/AttachOrganizationButton";
 import { CreateOperatorButton } from "@/components/auth/CreateOperatorButton";
 import { listOrganizations, listUserAccounts } from "@/lib/api/operator";
 import { toDisplayMessage } from "@/lib/api/transport";
+
+export const metadata: Metadata = { title: "사용자와 플랫폼 권한" };
 
 export default async function AdminUsersPage() {
   const [users, organizations] = await Promise.all([listUserAccounts(), listOrganizations()]);
