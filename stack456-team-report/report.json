@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:34:58+09:00",
+  "updated_at": "2026-10-28T17:36:43+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "fabaca16ab332c4fce0526f87615b56198f9bab6"
+    "fix/s456-443-t-inho": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -803,15 +803,35 @@
       "id": "D-191",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 ConsoleShell.tsx 48행은 type='text' 버튼 글자에 scopeSummary 결과(상태)와 '/ 권한 새로 조회'(동작)를 이어 붙이고, 바로 앞 span은 같은 ' / ' 형식의 정적 문구다. 그래서 마크업만 보고도 상태와 동작이 한 컨트롤에 섞여 있다는 것이 정해진다. 틀렸다고 볼 근거로 title과 aria-label을 봤지만 둘 다 같은 합친 이름을 쓰고, 권한 범위를 따로 보여 주는 요소가 없다. 정점 0fe7d2a의 53행도 같다. 이 지적에 함께 적힌 역할 용어('사용자'와 WorkspaceView.tsx 19행의 '일반 사용자')는 G-077 묶음에서, 모바일 헤더 높이와 600px 이하 접기는 shell-layout/header-height 묶음에서 따로 판정하므로 이 묶음 수정에는 넣지 않는다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/lib/auth/permissions.ts:41-45 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "frontend/e2e/permissions.real.spec.ts:284,379 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-173",
@@ -1584,99 +1604,233 @@
       "id": "D-020",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행 버튼은 permissions.ts 41-45행 scopeSummary가 돌려주는 상태 값('전체 관리', '조회', '권한 없음')과 동작 이름을 한 라벨에 넣고, onClick은 router.refresh()뿐이다. 바로 왼쪽 span이 같은 ' / ' 구분의 정적 문구라 마크업만으로 상태 표시와 눌리는 컨트롤이 구분되지 않는다. 같은 화면 묶음의 다른 새로 조회 컨트롤(ActionPanel.tsx 120행 '결제와 취소 내역 새로 조회')은 동작만 이름으로 쓴다. title과 aria-label에 동작 이름이 있지만 상태가 버튼 이름에 섞인 점은 그대로이고, 정점 53행도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/lib/auth/permissions.ts:41-45 @ 0f1d1bf",
+        "frontend/src/components/workspace/ActionPanel.tsx:120 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-038",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행 text 버튼에 scopeSummary와 '/ 권한 새로 조회'가 슬래시로 붙어 있고, 옆 span의 '이름 / 역할'도 같은 슬래시 형식의 정적 문구라 마크업만으로 상태와 동작이 섞인 것이 정해진다. globals.css 149행이 1100px 이하에서 '.workspace-user > span'을 숨기므로 그 폭에서는 사용자 이름과 역할이 사라지고 이 버튼만 남는다는 지적도 맞다. 이 버튼은 #442에는 없고 #443 f671a4f에서 들어왔다. 정점 0fe7d2a의 53행과 149행도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/app/globals.css:149 @ 0f1d1bf",
+        "커밋 f671a4f5ec2298702835adc63a880c8eb38e3011",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "frontend/src/app/globals.css:149 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-058",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "버튼 부분은 묶음 대표와 같은 원인으로 맞다. 48행 버튼 글자가 scopeSummary(현재 상태)와 '권한 새로 조회'(동작)를 슬래시로 잇고, 누르면 router.refresh()만 불러 권한이 그대로면 화면에 변화가 없다. 같은 지적의 '시연' 문구(GuideMode.tsx 34행 '시연 안내 보기', ConsoleShell.tsx 52행 aria-label '시연 안내')가 실제 도입사 관리자에게 보인다는 것도 코드로는 맞지만, 안내를 시연용으로 둘지는 제품 문구 결정이라 이 묶음 수정에 넣지 않는다. Q8은 소개 화면의 환경 분리 문구라 이 문구에는 걸리지 않는다. 같은 지적의 '시연' 문구는 제품 문구 결정이라 새 지적 NT-inho-001(needs-decision)로 따로 두었다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:52 @ 0f1d1bf",
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-137",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행 버튼은 type='text' size='small'에 권한 요약과 동작 이름을 함께 넣었고 onClick은 router.refresh()만 부른다. 틀렸다고 보이려 새로 조회가 실제로 권한을 다시 읽는지 봤는데 layout.tsx 7, 11행과 session.ts 17-26행이 /v1/sessions/current를 다시 불러 기능은 동작한다. 그러나 loading 표시나 완료 안내가 없고 저장소에 전역 진행 표시도 없어, 권한이 그대로면 눌렀는지조차 화면으로 알 수 없다. 정점 53행도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/app/(console)/layout.tsx:7,11 @ 0f1d1bf",
+        "frontend/src/lib/auth/session.ts:17-26 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ 0f1d1bf",
+        "frontend/README.md:134 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-167",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행 text Button 하나가 권한 요약 표시와 새로 조회 동작을 같이 맡고, 클릭은 router.refresh()만 부른다. 새로 조회 자체는 layout.tsx가 세션을 다시 불러 권한을 갱신하지만, loading이나 완료 표시가 없어 권한이 그대로인 경우 결과를 알 수 없다는 점은 마크업만으로 정해진다. 범위 표시를 따로 두는 요소도 없다. 정점 53행도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/app/(console)/layout.tsx:7,11 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "D-229",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행 버튼 글자는 '{권한 요약}{ 전용} / 권한 새로 조회'로, 상태 표시와 동작이 한 버튼 라벨에 붙어 있음이 마크업으로 정해진다. 바로 앞 역할 표시가 member를 '사용자'로 쓰고 WorkspaceView.tsx 19행 STATUS_LABELS는 '일반 사용자'로 쓰는 것도 맞지만, 이 부분은 같은 원인을 다루는 G-077(shell-nav-header/role-labels) 묶음에서 판정하고 고친다. 정점 53행과 WorkspaceView.tsx 19행도 같다. member 역할 이름 맞춤은 G-077, G-046 커밋에서 한다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "X-062",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "48행에서 권한 요약과 새로 조회 동작이 type='text' Button 하나의 라벨로 합쳐져 있고, 옆 span의 '이름 / 역할'과 같은 형식이다. globals.css 149행이 1100px 이하에서 '.workspace-user > span'을 숨겨 그 폭에서는 이 버튼만 남는다. onClick은 router.refresh()뿐이고 loading이나 결과 안내가 없어, 권한이 그대로면 화면이 바뀌지 않는다. 정점 0fe7d2a의 53행과 149행도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/app/globals.css:149 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "frontend/src/app/globals.css:149 @ 0fe7d2a",
+        "the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found",
+        "커밋 38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "commits": [
+        "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header shows the access scope apart from a refresh button that confirms when it finishes'; evidence/D-191 before, after 캡처(1440, 1000, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ConsoleShell.tsx 53행에 합친 버튼이 그대로다. 같은 파일을 바꾼 위층 커밋 80a3ef1 #444, 4ace811 #445, 614d3bc #446, e5fca11 #451, 23b1844 #453)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#453 permissions.real.spec.ts 284, 379행 @ 0fe7d2a가 합친 버튼 이름 '조회 전용, 권한 새로 조회'를 찾는다. 반영 때 범위 표시(.workspace-scope '조회 전용')와 버튼 '권한 새로 조회'로 나눠 맞춘다. 위층 ConsoleShell 53행에는 EnvironmentSwitch가 앞에 더 있다.",
+      "summary": "권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다"
     },
     {
       "id": "G-081",
@@ -6024,6 +6178,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "24 passed (12.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "25 passed (13.2s)"
     }
   ],
   "pushes": [
@@ -6071,6 +6262,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
       "at": "2026-10-28T17:32:23+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "at": "2026-10-28T17:36:01+09:00"
     }
   ],
   "usage_log": [],
