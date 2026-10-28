@@ -9,11 +9,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.webhook.entity.WebhookEventType;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -169,6 +171,20 @@ class OpenApiDocumentTest {
                 .path("$ref")
                 .asText())
         .isEqualTo("#/components/schemas/UserAccountOrganization");
+  }
+
+  @Test
+  void 웹훅_엔드포인트_요청의_통보_종류는_하나_이상이고_서버가_받는_값만_적는다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    List<String> accepted =
+        Arrays.stream(WebhookEventType.values()).map(WebhookEventType::getValue).toList();
+    for (String request : List.of("CreateWebhookEndpointRequest", "UpdateWebhookEndpointRequest")) {
+      JsonNode eventTypes = schemas.path(request).path("properties").path("event_types");
+      assertThat(eventTypes.path("minItems").asInt()).as(request).isOne();
+      List<String> documented = new ArrayList<>();
+      eventTypes.path("items").path("enum").forEach(value -> documented.add(value.asText()));
+      assertThat(documented).as(request).containsExactlyInAnyOrderElementsOf(accepted);
+    }
   }
 
   @Test

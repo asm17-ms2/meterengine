@@ -98,14 +98,14 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
 
 test("real Spring: operator without organization can manage the platform", async ({ page, request }) => {
   await login(page, OPERATOR_EMAIL, OPERATOR_PASSWORD);
-  await expect(page).toHaveURL(/\/admin\/organizations$/);
+  await expect(page).toHaveURL(/\/admin$/);
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   const current = await request.get(`${API_URL}/v1/sessions/current`, { headers: { Authorization: `Bearer ${cookie.value}` } });
   expect((await current.json()).organization).toBeNull();
   await page.getByRole("link", { name: "내 도입사로 이동" }).click();
   await expect(page.getByText("소속된 도입사가 없습니다.", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: "운영자 화면으로" }).click();
-  await expect(page).toHaveURL(/\/admin\/organizations$/);
+  await expect(page).toHaveURL(/\/admin$/);
 
 });
 
