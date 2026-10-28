@@ -42,7 +42,7 @@ function CellValue({ value, column, row }: { value: unknown; column: WorkspaceCo
 }
 
 function RowActions({ actions }: { actions: ActionPanelProps[] }) {
-  return <div className="workspace-row-actions">{actions.map((action, index) => <ActionPanel key={`${action.operation}-${index}`} {...action} />)}</div>;
+  return <div className="workspace-row-actions">{actions.map((action, index) => <ActionPanel key={`${action.operation}-${index}`} {...action} triggerType="link" />)}</div>;
 }
 
 export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록된 항목이 없습니다.", rowActions = {}, serverPaged = false, label }: { rows: Record<string, unknown>[]; columns: WorkspaceColumn[]; rowKey?: string; empty?: string; rowActions?: WorkspaceRowActions; serverPaged?: boolean; label?: string }) {

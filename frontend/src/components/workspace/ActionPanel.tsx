@@ -9,6 +9,9 @@ import { unstable_rethrow } from "next/navigation";
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
+import { createRequestId } from "@/lib/request-id";
+import { DEFAULT_NUMBER_MIN, fieldValidationMessage } from "@/lib/field-validation";
+import { operationResultCopy } from "@/lib/workspace-operation-results";
 
 export type WorkspaceField = {
   name: string;
@@ -27,13 +30,14 @@ export type WorkspaceField = {
   autoComplete?: string;
 };
 
-export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean };
+export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean; triggerType?: "default" | "link" };
 
 function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: (isConfirmedFailure?: boolean) => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
   const tenantAccess = useTenantAccess();
   const [mutationScope] = useState(() => ({ organizationId: tenantAccess?.organizationId ?? "" }));
   const formId = useId();
+  const resultCopy = operationResultCopy(operation);
   const formRef = useRef<HTMLFormElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -76,6 +80,10 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     const nextErrors: Record<string, string> = {};
     for (const field of fields) {
       if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = "하나 이상 선택하세요.";
+      if (field.type === "hidden" || field.isMultiple) continue;
+      const control = event.currentTarget.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${CSS.escape(`${formId}-${field.name}`)}`);
+      const message = control ? fieldValidationMessage(control.validity, { ...field, isSelect: Boolean(field.options) }) : undefined;
+      if (message) nextErrors[field.name] = message;
     }
     setClientErrors(nextErrors);
     if (Object.keys(nextErrors).length) { requestAnimationFrame(() => summaryRef.current?.focus()); return; }
@@ -96,15 +104,15 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   }
 
   const isLocked = Boolean(state.secret || state.registrationPath || state.isUnconfirmed || state.isConfirmedFailure);
-  const submitButton = <Button form={formId} type={isDanger ? "default" : "primary"} danger={isDanger} htmlType="submit" loading={isPending} disabled={isLocked}>{label ?? title}</Button>;
-  const form = <form id={formId} ref={formRef} onSubmit={submit} onChange={event => { setIsDirty(true); const target = event.nativeEvent.target; const name = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.name : ""; setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))); setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] })); }} className="workspace-form" aria-busy={isPending}>
+  const submitButton = <Button form={formId} type="primary" danger={isDanger} htmlType="submit" loading={isPending} disabled={isLocked}>{label ?? title}</Button>;
+  const form = <form id={formId} ref={formRef} noValidate onSubmit={submit} onChange={event => { setIsDirty(true); const target = event.nativeEvent.target; const name = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.name : ""; setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name))); setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] })); }} className="workspace-form" aria-busy={isPending}>
     <input type="hidden" name="operation" value={operation} />
     <input type="hidden" name="organization_id" value={mutationScope.organizationId} />
     {requestId && <input type="hidden" name="request_id" value={requestId} />}
     {description && <p className="muted">{description}</p>}
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
     {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
-    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열립니다.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
+    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{resultCopy.linkNote}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? resultCopy.linkLabel} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열립니다.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? resultCopy.linkLabel} 복사</Button></div>}
     <div role="status">{copyResult && <p className="field-hint">{copyResult}</p>}</div>
     <fieldset disabled={isPending || isLocked}>
       {fields.map(field => {
@@ -125,14 +133,14 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
           <label htmlFor={id}>{field.label}{field.isOptional ? <small> (선택)</small> : <span className="required-label"> (필수)</span>}</label>
           {field.options ? <select {...common} defaultValue={field.value}><option value="">선택하세요</option>{field.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
             : field.type === "textarea" ? <textarea {...common} rows={4} defaultValue={field.value} placeholder={field.placeholder} maxLength={field.maxLength} />
-              : <input {...common} type={field.type ?? "text"} defaultValue={field.type === "password" ? undefined : field.value} placeholder={field.placeholder} autoComplete={field.autoComplete ?? (field.type === "password" ? "new-password" : field.type === "email" ? "email" : "off")} spellCheck={field.type === "email" || field.type === "url" ? false : undefined} step={field.type === "number" ? field.step ?? 1 : undefined} min={field.type === "number" ? field.min ?? 0 : undefined} max={field.max} maxLength={field.maxLength} />}
+              : <input {...common} type={field.type ?? "text"} defaultValue={field.type === "password" ? undefined : field.value} placeholder={field.placeholder} autoComplete={field.autoComplete ?? (field.type === "password" ? "new-password" : field.type === "email" ? "email" : "off")} spellCheck={field.type === "email" || field.type === "url" ? false : undefined} step={field.type === "number" ? field.step ?? 1 : undefined} min={field.type === "number" ? field.min ?? DEFAULT_NUMBER_MIN : undefined} max={field.max} maxLength={field.maxLength} />}
           {field.hint && <small className="field-hint" id={hintId}>{field.hint}</small>}
           {error && <small id={errorId} className="field-error">{error}</small>}
         </div>;
       })}
     </fieldset>
-    {state.isConfirmedFailure && onNewRequest && <Button onClick={onNewRequest}>{operation === "createPaymentCancellation" ? "새 취소 요청" : "새 요청"}</Button>}
-    {state.isUnconfirmed && <a href="">결제와 취소 내역 새로 조회</a>}
+    {state.isConfirmedFailure && onNewRequest && <Button onClick={onNewRequest}>{resultCopy.retryLabel}</Button>}
+    {state.isUnconfirmed && <a href="">{resultCopy.refreshLabel}</a>}
     {isInline && submitButton}
   </form>;
   if (isInline) return form;
@@ -148,7 +156,7 @@ export function ActionPanel(props: ActionPanelProps) {
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
+    <Button id={triggerId} danger={props.isDanger} type={props.triggerType === "link" ? "link" : "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
+    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }
