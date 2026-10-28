@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:24:46+09:00",
+  "updated_at": "2026-10-28T17:25:43+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "cab9f45885b95e44cc397741f067bfc6ce5970d7"
+    "fix/s456-443-t-inho": "cc3de5338d5ab3490fdd2e3c4e4084963746e961"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -369,15 +369,44 @@
       "id": "G-073",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "#443 커밋 f671a4f가 page.tsx를 리다이렉트에서 소개 화면으로 바꾸고, layout.tsx에 로컬 Pretendard를, AppProviders.tsx에 보라 테마 토큰을, HomePage.module.css와 331줄 globals.css를 더했지만 frontend/README.md는 #442 머리(72e8718)와 같아 29, 118, 130, 131, 135행이 코드와 어긋난다. 보라색은 globals.css:116과 HomePage.module.css:1에도 박혀 있어 131행 '바꾸는 값은 AppProviders.tsx에만 둔다'도 틀리고, documents.md:4와 README 점검 표(documents.md:16)를 어긴 것이 문서와 코드 두 줄로 분명하다. 다만 지적이 든 112행(antd Layout 틀, 개발 모드 스위치)과 31행은 #442 d4f1714가 ConsoleShell에서 Layout과 DevStateSwitch를 뺀 탓이라 #442 G-040, G-068 몫이고 이 층에서는 고치지 않는다. 정점은 #452 29a78d0이 29행과 CSS Modules, Pretendard를 반영했으나 136행 '시스템 글꼴'(#452 C452-010)과 123행 globals.css 설명이 남았다.",
+      "evidence": [
+        "frontend/README.md:29 @ 0f1d1bf",
+        "frontend/src/app/page.tsx:17-18 @ 0f1d1bf",
+        "frontend/README.md:118 @ 0f1d1bf",
+        "frontend/README.md:130 @ 0f1d1bf",
+        "frontend/src/app/page.tsx:3 @ 0f1d1bf",
+        "frontend/README.md:131 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:10-19 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:1 @ 0f1d1bf",
+        "frontend/README.md:135 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14,27 @ 0f1d1bf",
+        "docs/contributing/documents.md:4 @ 0f1d1bf",
+        "docs/contributing/documents.md:16 @ 0f1d1bf",
+        "frontend/README.md:123,136,140 @ 0fe7d2a",
+        "커밋 cc3de5338d5ab3490fdd2e3c4e4084963746e961"
+      ],
+      "commits": [
+        "cc3de5338d5ab3490fdd2e3c4e4084963746e961"
+      ],
+      "tests": [
+        "문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조",
+        "글꼴 버전: PretendardVariable.woff2 name 표 nameID 5 'Version 1.309'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "changed: #452 29a78d0이 README 29, 135, 140행을 고쳤다",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#452 29a78d0이 README 29, 135, 140행을 고쳐 위층 반영 때 겹친다. 겹치는 줄은 #452 문장을 택하되 136행 '시스템 글꼴' 문구는 #452 C452-010 몫이다. 31-32행과 112행(개발 모드 스위치, antd Layout 틀)은 G-081에서 고친다.",
+      "summary": "README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다"
     },
     {
       "id": "G-074",
@@ -1158,15 +1187,38 @@
       "id": "G-087",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "G-073과 원인이 같다. #443 f671a4f가 `/`를 소개 화면으로 바꾸고 Pretendard, 보라 테마, HomePage.module.css를 더했는데 README 29, 130, 131, 135행은 리다이렉트, globals.css뿐, antd 기본값, 시스템 글꼴을 그대로 안내한다. documents.md:16은 프론트 화면을 추가하거나 바꾼 PR이 '화면' 표를 보라고 정하는데 0f1d1bf의 화면 표(151-159행)에는 새 `/` 소개 화면이 없다. 정점에서는 #452 29a78d0이 29행을 소개 화면으로 고쳤지만 136행 '시스템 글꼴'이 140행 Pretendard와 충돌하고, 이것은 #452 C452-010 몫이다.",
+      "evidence": [
+        "frontend/README.md:29 @ 0f1d1bf",
+        "frontend/src/app/page.tsx:17-18 @ 0f1d1bf",
+        "frontend/README.md:130,131,135 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:8-14,27 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:10-19 @ 0f1d1bf",
+        "frontend/README.md:149-159 @ 0f1d1bf",
+        "docs/contributing/documents.md:16 @ 0f1d1bf",
+        "frontend/README.md:136,140 @ 0fe7d2a",
+        "커밋 cc3de5338d5ab3490fdd2e3c4e4084963746e961"
+      ],
+      "commits": [
+        "cc3de5338d5ab3490fdd2e3c4e4084963746e961"
+      ],
+      "tests": [
+        "문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조",
+        "글꼴 버전: PretendardVariable.woff2 name 표 nameID 5 'Version 1.309'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "changed: #452 29a78d0이 README 29, 135, 140행을 고쳤다",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "#452 29a78d0이 README 29, 135, 140행을 고쳐 위층 반영 때 겹친다. 겹치는 줄은 #452 문장을 택하되 136행 '시스템 글꼴' 문구는 #452 C452-010 몫이다. 31-32행과 112행(개발 모드 스위치, antd Layout 틀)은 G-081에서 고친다.",
+      "summary": "README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다"
     },
     {
       "id": "D-039",
@@ -5686,6 +5738,35 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "21 passed (11.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
     }
   ],
   "pushes": [
@@ -5713,6 +5794,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
       "at": "2026-10-28T17:24:13+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "at": "2026-10-28T17:25:28+09:00"
     }
   ],
   "usage_log": [],
