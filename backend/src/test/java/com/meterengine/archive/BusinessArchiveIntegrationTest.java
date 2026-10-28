@@ -151,8 +151,20 @@ class BusinessArchiveIntegrationTest {
                 Integer.class,
                 organizationId))
         .isEqualTo(3);
-    assertThatThrownBy(() -> rates.restore(UUID.randomUUID(), "tokens", future.id()))
-        .isInstanceOf(NotFoundException.class);
+    UUID otherOrganizationId =
+        jdbc.queryForObject(
+            "INSERT INTO organization(name) VALUES ('다른 도입사') RETURNING id", UUID.class);
+    assertThatThrownBy(() -> rates.restore(otherOrganizationId, "tokens", future.id()))
+        .isInstanceOfSatisfying(
+            NotFoundException.class,
+            error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_RATE_NOT_FOUND));
+    entityManager.flush();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT archived_at IS NOT NULL FROM price_rate WHERE id = ?",
+                Boolean.class,
+                future.id()))
+        .isTrue();
   }
 
   @Test
