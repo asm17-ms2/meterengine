@@ -58,6 +58,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: API 키 목록 조회
       tags:
       - api-key-controller
@@ -104,6 +105,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -153,6 +155,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -308,6 +311,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -365,6 +369,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -415,6 +420,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -479,6 +485,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "409":
           content:
             application/json:
@@ -532,6 +539,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -580,6 +588,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -646,6 +655,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -721,6 +731,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -787,6 +798,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -855,6 +867,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -913,6 +926,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -969,6 +983,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1019,6 +1034,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1080,6 +1096,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1145,6 +1162,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1192,6 +1210,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1241,6 +1260,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1308,6 +1328,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -1361,6 +1382,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1420,6 +1442,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -1490,6 +1513,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -1553,6 +1577,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1604,6 +1629,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1692,6 +1718,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1780,6 +1807,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -1923,6 +1951,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -1995,6 +2024,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2053,6 +2083,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2102,6 +2133,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2190,6 +2222,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2261,6 +2294,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2339,6 +2373,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2409,6 +2444,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2476,6 +2512,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2536,6 +2573,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2602,6 +2640,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2680,6 +2719,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -2748,6 +2788,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2805,6 +2846,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2862,6 +2904,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -2904,7 +2947,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 운영자 현황 조회
       tags:
       - operations-controller
@@ -2991,7 +3036,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 플랫폼 감사 기록 조회
       tags:
       - audit-log-controller
@@ -3022,6 +3069,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -3055,7 +3103,41 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/InvitationPreview"
-          description: OK
+          description: "초대한 도입사, 초대 이메일, 만료 시각, 수락하면 받을 권한"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: 경로의 token이 me_invite_ 뒤에 영문 대소문자와 숫\
+            자 32자인 형식이 아니다"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invalid_credentials: Authorization 헤더를 실었는데 그 값이 올바르지\
+            \ 않다"
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=organization_not_active: 초대한 도입사가 활성 상태가 아니다.
+            code=consent_required: Authorization 헤더에 실은 세션의 사용자가 필수 안내에 아직 동의하지 않았다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invitation_not_found: 그런 초대 링크가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다"
       security: []
       summary: 초대 링크 확인
       tags:
@@ -3081,7 +3163,47 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/AcceptedInvitation"
-          description: Created
+          description: 수락한 사용자와 소속된 도입사
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: 경로의 token 형식이 틀렸거나, 본문의 값이 형식 또는 길이 규칙을 벗어났다.
+            초대 이메일로 가입한 계정이 없으면 name, password, consents가 모두 있어야 하고,
+            password는 8자 이상이면서 72자와 UTF-8 72바이트 이하, consents는 terms_of_service와 privacy_policy를 한 번씩 담아야 한다.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invalid_credentials: Authorization 헤더를 실었는데 그 값이 올바르지\
+            \ 않다"
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 초대 이메일로 가입한 계정이 있는데 그 사용자의 로그인 세션으로 부르지 않았다.
+            code=consent_required: Authorization 헤더에 실은 세션의 사용자가 필수 안내에 아직 동의하지 않았다.
+            code=organization_not_active: 초대한 도입사가 활성 상태가 아니다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invitation_not_found: 그런 초대 링크가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다.
+            code=organization_member_already_exists: 초대 이메일의 사용자가 이미 그 도입사에 소속돼 있다.
+            code=email_already_exists: 수락을 처리하는 사이에 같은 이메일의 계정이 먼저 만들어졌다.
       security: []
       summary: 본인의 초대 수락
       tags:
@@ -3095,7 +3217,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListOrganizationInvitationsResponse"
-          description: OK
+          description: 도입사 초대 목록
         "401":
           content:
             application/json:
@@ -3112,6 +3234,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 도입사 초대 목록
       tags:
       - organization-people-controller
@@ -3129,7 +3252,15 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/IssuedInvitation"
-          description: Created
+          description: 발급한 초대와 링크 토큰. 토큰 원문은 이 응답에서만 볼 수 있다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나,
+            scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
         "401":
           content:
             application/json:
@@ -3146,6 +3277,14 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=organization_member_already_exists: 그 이메일의 사용자가 이미 세션\
+            \ 도입사에 소속돼 있다"
       summary: 도입사 초대 링크 발급
       tags:
       - organization-people-controller
@@ -3161,7 +3300,13 @@ paths:
           format: uuid
       responses:
         "204":
-          description: No Content
+          description: 취소했다. 본문 없음
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: 경로의 UUID 형식이 틀렸다"
         "401":
           content:
             application/json:
@@ -3178,6 +3323,19 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invitation_not_found: 세션 도입사에 그런 초대가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다"
       summary: 도입사 초대 취소
       tags:
       - organization-people-controller
@@ -3202,7 +3360,14 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListManagedMembersResponse"
-          description: OK
+          description: 도입사 사용자 목록
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: status가 active, archived, all 가운데 하\
+            나가 아니다"
         "401":
           content:
             application/json:
@@ -3219,6 +3384,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 도입사 사용자 목록
       tags:
       - organization-people-controller
@@ -3236,7 +3402,16 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ManagedMemberResponse"
-          description: Created
+          description: 만든 사용자와 소속
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나, name이 비었거나 255자를 넘거나,
+            password가 8자보다 짧거나 72자나 UTF-8 72바이트를 넘거나, scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나,
+            문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
         "401":
           content:
             application/json:
@@ -3253,6 +3428,14 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=email_already_exists: 대소문자를 가리지 않고 같은 이메일로 가입한 사용자가 있\
+            다"
       summary: 하위 관리자 계정 직접 생성
       tags:
       - organization-people-controller
@@ -3268,7 +3451,13 @@ paths:
           format: uuid
       responses:
         "204":
-          description: No Content
+          description: 소속을 보관했다. 본문 없음
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: 경로의 UUID 형식이 틀렸다"
         "401":
           content:
             application/json:
@@ -3285,6 +3474,20 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보\
+            관한 사용자도 같다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=last_owner_required: 마지막 대표관리자의 소속을 제거하려 했다"
       summary: 도입사 사용자 소속 제거
       tags:
       - organization-people-controller
@@ -3310,7 +3513,14 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ManagedMemberResponse"
-          description: OK
+          description: 바뀐 사용자
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: organization_role이 owner나 admin이 아니\
+            거나, 경로의 UUID 형식이 틀렸다"
         "401":
           content:
             application/json:
@@ -3327,6 +3537,21 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보\
+            관한 사용자도 같다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=last_owner_required: 마지막 대표관리자의 organization_role을 owner가\
+            \ 아닌 값으로 바꾸려 했다"
       summary: 도입사 사용자 역할 변경
       tags:
       - organization-people-controller
@@ -3353,7 +3578,14 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ManagedMemberResponse"
-          description: OK
+          description: 바뀐 사용자
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: scopes가 비었거나 ingest, read, admin이 아\
+            닌 값을 담았거나, 경로의 UUID 형식이 틀렸다"
         "401":
           content:
             application/json:
@@ -3370,6 +3602,20 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보\
+            관한 사용자도 같다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=owner_scopes_required: 대표관리자의 scopes에 admin이 없다"
       summary: 도입사 사용자 권한 변경
       tags:
       - organization-people-controller
@@ -3399,6 +3645,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -3447,6 +3694,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -3510,7 +3758,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 도입사 목록 조회
       tags:
       - organization-controller
@@ -3561,7 +3811,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -3629,7 +3881,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -3689,6 +3943,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -3774,6 +4029,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -3960,6 +4216,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4032,6 +4289,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4084,6 +4342,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4142,6 +4401,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "409":
           content:
             application/json:
@@ -4210,6 +4470,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4259,6 +4520,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4306,6 +4568,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4357,6 +4620,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4487,7 +4751,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 로그아웃
       tags:
       - session-controller
@@ -4516,7 +4782,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 현재 세션 조회
       tags:
       - session-controller
@@ -4535,7 +4803,16 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/SessionResponse"
-          description: OK
+          description: 현재 세션. 이미 동의한 사용자면 새로 기록하지 않는다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: consents가 없거나 비었거나, document가 terms_of_service나 privacy_policy가 아니거나,
+            document_version이 비었거나 255자를 넘거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
+            동의가 남은 사용자면 consents에 terms_of_service와 privacy_policy가 한 번씩 있어야 한다.
         "401":
           content:
             application/json:
@@ -4549,7 +4826,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 본인의 필수 안내 동의
       tags:
       - session-consent-controller
@@ -4685,6 +4964,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4732,6 +5012,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4806,6 +5087,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4906,6 +5188,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -4976,6 +5259,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5019,7 +5303,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 사용자 목록 조회
       tags:
       - user-account-controller
@@ -5120,7 +5406,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다."
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "404":
           content:
             application/json:
@@ -5163,6 +5451,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5213,6 +5502,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5260,6 +5550,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5309,6 +5600,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5364,6 +5656,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5437,6 +5730,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5490,6 +5784,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5541,6 +5836,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:
@@ -5595,6 +5891,7 @@ paths:
           description: |
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
         "429":
           content:
             application/json:

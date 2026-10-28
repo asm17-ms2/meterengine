@@ -26,7 +26,7 @@ pnpm install
 pnpm dev
 ```
 
-- http://localhost:3000 에서 열린다. `/`는 `/usage`로 리다이렉트한다.
+- http://localhost:3000 에서 열린다. `/`는 로그인 없이 보는 서비스 소개 화면이다.
 - 다른 기계에서 이 dev 서버를 볼 수 있다 (`next.config.ts`의 `allowedDevOrigins`).
 - 개발 모드에서는 `?state=empty|loading|error`로 표 상태(빈 상태, 로딩, 에러)를 바꿔 본다. 프로덕션 빌드에서는 무시된다.
 - 로그인 세션이 없으면 `src/proxy.ts`가 로그인 화면으로 보낸다.
@@ -113,13 +113,13 @@ docker run -p 3000:3000 \
 | `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
-| `src/components/shell/` | antd Layout 틀, 메뉴, 개발 모드 스위치, 테마와 로케일을 거는 `AppProviders` |
+| `src/components/shell/` | 콘솔과 운영자 셸, 메뉴, 안내 모드, 테마와 로케일을 거는 `AppProviders` |
 | `src/components/screen/` | 화면 공용 조각: 제목 줄, 툴바, 카드, 각주, 빈 상태, 오류, 스켈레톤, 링크 버튼, 월 선택, 검색과 필터, 페이지 |
 | `src/components/table/` | 표 공용 조각: 접기 상태, 조합 칸, 미터 라벨, 숫자 칸, 정렬, 표 공통값 |
 | `src/lib/api/` | 백엔드 호출. `client.ts`가 공용 fetch |
 | `src/lib/config.ts` | 서버 사이드 설정 |
-| `src/app/layout.tsx` | antd 스타일을 SSR HTML에 넣는 `AntdRegistry` |
-| `src/app/globals.css` | 기본 여백, 글꼴 다듬기, 화면 폭에 따른 본문 여백 |
+| `src/app/layout.tsx` | antd 스타일을 SSR HTML에 넣는 `AntdRegistry`, 로컬 Pretendard 글꼴 변수 |
+| `src/app/globals.css` | 콘솔 셸과 인증 화면의 공통 배치, 색 변수, 화면 폭에 따른 본문 여백 |
 
 화면 컴포넌트의 접미사는 다음과 같다.
 
@@ -131,12 +131,12 @@ docker run -p 3000:3000 \
 
 스타일 규칙은 다음과 같다.
 
-- 화면은 antd 6 컴포넌트로 그린다. 스타일은 antd 런타임 CSS-in-JS가 만들고, 프로젝트 CSS는 `globals.css`뿐이다.
-- 테마는 antd 기본값이다. 바꾸는 값은 `AppProviders.tsx`에만 둔다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
+- 화면은 antd 6 컴포넌트로 그린다. 스타일은 antd 런타임 CSS-in-JS가 만든다. 공통 배치는 `globals.css`, 한 페이지에만 쓰는 스타일은 같은 폴더의 CSS Modules(예: `HomePage.module.css`)에 둔다.
+- 테마는 보라색 강조다. antd 토큰은 `AppProviders.tsx`에 두고, 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
 - antd는 `"use client"` 파일에서만 import한다. Server Component는 직렬화할 수 있는 prop만 넘겨 그 래퍼를 그린다.
 - 쓰기 폼은 antd Form의 `onFinish`에서 `actions.ts`의 Server Action(`useActionState`)을 부른다. Form rules의 문구는 서버 검증 문구와 같게 둔다.
 - 페이지를 옮기는 버튼은 `LinkButton`, 토스트는 `App.useApp()`의 `message`를 쓴다.
-- 글꼴은 시스템 글꼴이다. 웹폰트를 받지 않는다.
+- 본문과 UI는 로컬 Pretendard Variable 1.3.9(https://github.com/orioncactus/pretendard)를 `next/font/local`로 쓴다. 글꼴 파일과 OFL 라이선스는 `src/app/fonts/`에 있다.
 
 ## 목록 화면 능력 표
 
@@ -154,6 +154,7 @@ docker run -p 3000:3000 \
 
 | 경로 | 화면 |
 | --- | --- |
+| `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 신청 링크) |
 | `/events` | 이벤트 로그 (페이지 나누기, 페이지 크기, 고객과 type 필터, 상세 드로어) |
 | `/usage` | 사용량 집계 (고객 행 열 정렬, 고객 그룹 + 미터와 조합별 자식 행. 조합이 여럿인 미터는 소계 줄로 접어 두고 펼치면 조합별 행) |
 | `/billing` | 청구 예정액 (고객 행 열 정렬, 고객 그룹 + 미터와 조합별 라인, 조합이 여럿인 미터는 소계 줄로 접어 둠, 단가 없는 사용량은 고객마다 "기타 (단가 없음)" 줄로 접어 두고 금액에 넣지 않음, 확정 전 고객만, 확인 창을 거쳐 사용량이 있는 고객의 그 달 인보이스 일괄 확정. 확정 대상에 단가 없는 사용량이 있으면 확인 창이 알린다. 확정된 달은 확정 건수와 시각을 안내하고 0원 고객 표는 접어 둔다) |
