@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:31:21+09:00",
+  "updated_at": "2026-10-28T17:32:39+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "1dcdc54",
+    "feat/account-permissions": "ff89f04",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1334,14 +1334,28 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "members/page.tsx 역할 변경 설명은 '...의 대표관리자로 지정하거나'로 목적격 조사가 필요한 자리에 '의'를 쓰고, 선택지(대표관리자, 관리자)와 백엔드가 받는 owner, admin에 없는 '전체 관리자'를 말한다. '전체 관리'는 WorkspaceView SCOPE_LABELS의 업무 권한 이름이라 역할과 권한이 섞인다. 정점 23행도 같다. 설명을 역할 이름에 맞춰 고쳤다.",
+      "evidence": [
+        "frontend/src/app/(console)/members/page.tsx:22 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21 @ 72e8718",
+        "frontend/src/app/(console)/members/page.tsx:23 @ 0fe7d2a"
+      ],
+      "commits": [
+        "ff89f0465a37"
+      ],
+      "tests": [
+        "보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 2ec5d85 15692f8",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "역할 변경 설명 조사와 역할 이름 수정"
     },
     {
       "id": "D-066",
@@ -1784,14 +1798,28 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "members/page.tsx 역할 변경 설명은 '...의 대표관리자로 지정하거나'로 목적격 조사가 필요한 자리에 '의'를 쓰고, 선택지(대표관리자, 관리자)와 백엔드가 받는 owner, admin에 없는 '전체 관리자'를 말한다. '전체 관리'는 WorkspaceView SCOPE_LABELS의 업무 권한 이름이라 역할과 권한이 섞인다. 정점 23행도 같다. 설명을 역할 이름에 맞춰 고쳤다.",
+      "evidence": [
+        "frontend/src/app/(console)/members/page.tsx:22 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21 @ 72e8718",
+        "frontend/src/app/(console)/members/page.tsx:23 @ 0fe7d2a"
+      ],
+      "commits": [
+        "ff89f0465a37"
+      ],
+      "tests": [
+        "보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 2ec5d85 15692f8",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "역할 변경 설명 조사와 역할 이름 수정"
     },
     {
       "id": "D-236",
@@ -6159,6 +6187,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  25 passed (12.6s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.0s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.321s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6281,6 +6365,11 @@
       "branch": "feat/account-permissions",
       "sha": "1dcdc540f532fc3cd51f3b836d9f80a6feb7b8d9",
       "at": "2026-10-28T17:30:23+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "ff89f0465a37e18e292b7ea3a9437c4b0ad2febe",
+      "at": "2026-10-28T17:32:39+09:00"
     }
   ],
   "usage_log": [],

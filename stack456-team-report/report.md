@@ -1,12 +1,12 @@
-미완료 245건, 결과: 끝 상태 84/328건 (fixed 43, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 24개(마지막 1dcdc54)
+미완료 243건, 결과: 끝 상태 86/328건 (fixed 45, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 25개(마지막 ff89f04)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 43 | 1 | 7 | 30 | 3 | 59 |
+| #442 | 143 | 45 | 1 | 7 | 30 | 3 | 57 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -33,6 +33,7 @@ push: feat/account-permissions 24개(마지막 1dcdc54)
 | D-043 | #442 | 07d30c7 | 확정 실패 뒤 닫으면 요청 키 초기화 | 없음(이 층에는 확정 실패를 돌려주는 작업(결제 취소는 #445부터)과 계약 장치(workspace.contract는 #453부터)가 없어 고치기 전 실패 시험을 만들 수 없다. lint, typecheck, build와) |
 | D-049 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-050 | #442 | 65fc925 | 403, 404 조회 실패의 제목과 다시 시도 구분 | a forbidden workspace load says so without a retry: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByText('조회 권한이 없습니다') |
+| D-059 | #442 | ff89f04 | 역할 변경 설명 조사와 역할 이름 수정 | 없음(보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-066 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-086 | #442 | c0171f0 | 역할 변경 시 업무 권한이 전체 관리로 바뀐다고 안내 | 없음(보이는 변경(문구): 대화상자 설명과 관리자 선택지 문구를 백엔드 changeRole 동작과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-090 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
@@ -44,6 +45,7 @@ push: feat/account-permissions 24개(마지막 1dcdc54)
 | D-172 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | D-184 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-189 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
+| D-227 | #442 | ff89f04 | 역할 변경 설명 조사와 역할 이름 수정 | 없음(보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-250 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-256 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-258 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
