@@ -1,0 +1,264 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "login",
+    "path": "/login",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/login-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "link-in-text-block",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Links must be distinguishable without relying on color",
+            "targets": [
+              "a[href$=\"signup\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/login-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "link-in-text-block",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Links must be distinguishable without relying on color",
+            "targets": [
+              "a[href$=\"signup\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "signup",
+    "path": "/signup",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/signup-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "link-in-text-block",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Links must be distinguishable without relying on color",
+            "targets": [
+              "a[href$=\"login\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/signup-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "link-in-text-block",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Links must be distinguishable without relying on color",
+            "targets": [
+              "a[href$=\"login\"]"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "pending",
+    "path": "/pending",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pending",
+        "title": "가입 신청 후 승인 안내 | MeterEngine",
+        "h1": "가입 신청 후 승인 안내",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/pending-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pending",
+        "title": "가입 신청 후 승인 안내 | MeterEngine",
+        "h1": "가입 신청 후 승인 안내",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/pending-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "organizations",
+    "path": "/organizations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/organizations",
+        "title": "도입사 선택 | MeterEngine",
+        "h1": "도입사 선택",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/organizations-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/organizations",
+        "title": "도입사 선택 | MeterEngine",
+        "h1": "도입사 선택",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/organizations-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-organizations",
+    "path": "/admin/organizations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/admin-organizations-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/admin-organizations-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-users",
+    "path": "/admin/users",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/admin-users-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-009/before/admin-users-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]
