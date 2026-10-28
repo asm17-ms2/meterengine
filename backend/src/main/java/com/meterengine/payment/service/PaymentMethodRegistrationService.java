@@ -52,11 +52,20 @@ public class PaymentMethodRegistrationService {
 
   @Transactional
   public PaymentMethodRegistrationResponse create(UUID organizationId, UUID customerId) {
+    return create(organizationId, customerId, null);
+  }
+
+  @Transactional
+  public PaymentMethodRegistrationResponse create(
+      UUID organizationId, UUID customerId, String principalMode) {
     Customer customer =
         customerRepository
             .findByOrganizationIdAndId(organizationId, customerId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
     String mode = paymentSettingService.findMode(organizationId);
+    if (principalMode != null && !principalMode.equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
     TossPaymentsCredential credential = findCredential(organizationId, mode);
     String token = generateToken();
     OffsetDateTime createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);

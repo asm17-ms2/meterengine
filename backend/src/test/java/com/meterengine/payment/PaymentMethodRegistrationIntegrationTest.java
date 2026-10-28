@@ -144,6 +144,32 @@ class PaymentMethodRegistrationIntegrationTest {
   }
 
   @Test
+  void API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "live");
+    jdbcTemplate.update(
+        "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
+        organizationId);
+
+    assertError(
+        createRegistration(
+            TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test"), customerId),
+        409,
+        ErrorCode.PAYMENT_MODE_MISMATCH);
+    assertThat(countRegistrations(customerId)).isZero();
+
+    assertThat(
+            createRegistration(
+                TestCredentials.issueApiKey(jdbcTemplate, organizationId, "live"), customerId))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.mode")
+        .isEqualTo("live");
+    assertThat(countRegistrations(customerId)).isOne();
+  }
+
+  @Test
   void 현재_모드의_키가_없으면_링크를_만들지_않고_409다() {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);
@@ -583,6 +609,13 @@ class PaymentMethodRegistrationIntegrationTest {
     return withOrganization(
             mvc.post().uri("/v1/customers/{id}/payment-method-registrations", customerId),
             organizationId)
+        .exchange();
+  }
+
+  private MvcTestResult createRegistration(String authorization, UUID customerId) {
+    return mvc.post()
+        .uri("/v1/customers/{id}/payment-method-registrations", customerId)
+        .header("Authorization", authorization)
         .exchange();
   }
 
