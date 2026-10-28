@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:34:19+09:00",
+  "updated_at": "2026-10-28T22:38:53+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "3db6a0e"
+    "fix/s456-445-t-yang": "ad5872e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4200,15 +4200,30 @@
       "id": "C445-002",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentSettingService.java:43 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:66 @ b10f8c7",
+        "test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 200"
+      ],
+      "commits": [
+        "ad5872e90c2f"
+      ],
+      "tests": [
+        "PaymentSettingIntegrationTest, TossPaymentsCredentialIntegrationTest 새 시험: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "differs: 정점은 환경 키만 환경 모드로 막는다",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "결제 설정과 토스 키 변경의 키 모드 검사"
     },
     {
       "id": "C445-005",
@@ -9104,6 +9119,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9421,6 +9476,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
       "at": "2026-10-28T22:17:44+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "ad5872e90c2f51e4d9a2c447696f89c7d6c053cd",
+      "at": "2026-10-28T22:38:53+09:00"
     }
   ],
   "usage_log": [],
