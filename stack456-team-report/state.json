@@ -1,13 +1,13 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-28T18:18:56+09:00",
+  "updated_at": "2026-10-28T18:20:22+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
-    "id": "C442-023",
-    "step": "report",
+    "id": "C442-024",
+    "step": "check",
     "branch": "feat/account-permissions"
   },
   "finished_ids": [
@@ -346,7 +346,7 @@
   "branches": {
     "feat/account-permissions": {
       "origin_sha": "6028b62",
-      "local_sha": "6028b62",
+      "local_sha": "9fff495",
       "unpushed": []
     },
     "feat/billing-payments": {
