@@ -1,5 +1,5 @@
-미완료 146건, 결과: 끝 상태 182/328건 (fixed 129, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 13개(마지막 6d5fad4)
+미완료 145건, 결과: 끝 상태 183/328건 (fixed 130, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 14개(마지막 c76428e)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 13�
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 29 | 0 | 9 | 1 | 0 | 29 |
+| #445 | 68 | 30 | 0 | 9 | 1 | 0 | 28 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -99,6 +99,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 13�
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | C445-003 | #445 | b74ebeb | 더 새 시도가 있는 NOT_FOUND 실패의 7일 창 제외 | 수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패면_7일이_지나도_다시_조회해_새로_승인한다: 실패 [HTTP status code] expected: 201 but was: 409 |
 | C445-008 | #445 | 5dc3ac9 | 동시 부분 취소 시험을 409 in_progress로 좁힘 | 같은_시도에_동시에_부분_취소하면_취소는_하나이고_나머지는_409_in_progress다: 실패 expected: 409 but was: 500 (findForUpdate 제거 변이) |
+| C445-010 | #445 | d3dd916 | 웹훅 API 설명의 없는 토큰 인증 | 없음(OpenApiDocumentTest로 openapi.yaml 재생성, 해당 문장만 바뀜; backend build 통과) |
 | C445-013 | #445 | 62fb032 | 짝 없는 완료 취소를 토스 재조회 뒤 누락 기록 | 거래_목록에_없는_완료_취소도_재조회한_결제의_cancels에_있으면_누락으로_남기지_않고_금액만_비교한다: 실패 Expecting actual [("missing_in_toss_payments", ..., "tx_cancel_missing", ...)] |
 | C445-016 | #445 | f84e87e | 재시도 재확인 분기 시험 | 후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다: 실패 Expected size: 2 but was: 3 (재확인 조건 제거 변이) |
 | D-149 | #445 | 6d9f804 | 수납 상태 이름 한 벌로 | each invoice payment status has one name used by both the list and the detail: 실패 ERR_MODULE_NOT_FOUND invoice-payment-status.ts |
@@ -262,6 +263,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 13�
 | C445-004 | #445 | #446부터 #449까지는 54bb1d5의 false 값을 그대로 물려받고, origin/feat/event-ingestion은 이미 listEvents를 sort: true, q: true, range: true로 다시 켜 두었으므로 위층에서 할 일이 없다. |
 | C445-006 | #445 | C445-007(시험 412행 isIn(409, 500))은 #449 feat/customer-invoices에서 좁힌다. #449 head 2fe98d1과 정점 0fe7d2a의 PaymentAttemptIntegrationTest.java:412가 같고, 그 위에서는 23b1844(#453)가 findForUpdate를 lockInvoice로 바꿨을 뿐 잠금 순서는 같다. |
 | C445-009 | #445 | #445 단독 머지 구간에만 남는다. 정점에서도 create의 예외 경로 정리는 없지만 organization 행 잠금으로 PK 경합이 사라져 이 지적의 실패 경로는 막힌다. 정점 시험은 backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java 87-122행이다. |
+| C445-010 | #445 | 정점 0fe7d2a 컨트롤러 36행과 openapi.yaml 6452행에 같은 문장이 있다. 반영 때 openapi.yaml을 다시 만든다. |
 | D-149 | #445 | #451 e5fca11의 인보이스 목록 수납 열(미납, 납부 완료)도 이 모듈 이름으로 맞춘다(문인호 님 층). |
 | G-097 | #445 | #447 2ec5d85와 #453 23b1844가 findUsable과 재시도 후보 조회에 보관과 환경 조건을 더했다. 반영 때 도입사 활성 조건이 남았는지 본다. |
 | G-098 | #445 | #447 2ec5d85가 더한 토스 키 보관 DELETE(정점 TossPaymentsCredentialController 117행)도 @AdminAccess라 그 층에서 같은 세션 전용으로 맞출지 본다(T-yang 층). 정점 실화면 명세는 이 PUT을 세션으로 부른다. |

@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T00:49:07+09:00",
+  "updated_at": "2026-10-29T00:53:46+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "6d5fad4"
+    "fix/s456-445-t-yang": "c76428e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3755,15 +3755,31 @@
       "id": "C445-010",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "TossPaymentsWebhookController의 설명이 일회용 카드 등록 토큰 인증을 적지만 @PublicAccess이고 SecurityConfig가 permitAll로 열며 토큰을 받는 자리가 없다. openapi.yaml에도 같은 문장이 실렸다. 정점도 같다. 설명을 인증하지 않는 공개 API로 고쳤다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/controller/TossPaymentsWebhookController.java:29,34 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:65-69 @ b10f8c7",
+        "backend/openapi.yaml:3478 @ b10f8c7"
+      ],
+      "commits": [
+        "d3dd9164979c"
+      ],
+      "tests": [
+        "OpenApiDocumentTest로 openapi.yaml 재생성, 해당 문장만 바뀜",
+        "backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "웹훅 API 설명의 없는 토큰 인증",
+      "propagation_note": "정점 0fe7d2a 컨트롤러 36행과 openapi.yaml 6452행에 같은 문장이 있다. 반영 때 openapi.yaml을 다시 만든다."
     },
     {
       "id": "C445-011",
@@ -9870,6 +9886,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 25 ℹ pass 25 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -10247,6 +10303,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "6d5fad469013346288cb7b5f070f74bc2a471193",
       "at": "2026-10-29T00:34:48+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "c76428e1960c86b17093f0a8a40c74a281e1b750",
+      "at": "2026-10-29T00:53:46+09:00"
     }
   ],
   "usage_log": [],
