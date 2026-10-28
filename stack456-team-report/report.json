@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:55:42+09:00",
+  "updated_at": "2026-10-29T00:59:25+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -25,7 +25,7 @@
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
     "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
-    "fix/s456-448-t-inho": "d0edd0ffca149a771515b5fbdaa74dabe2c0f77b"
+    "fix/s456-448-t-inho": "b0bf0b12aa43d0195ba41199d0154558bbd61584"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -5803,15 +5803,44 @@
       "id": "GA-B1",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-448-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head 6431cefb의 RequestAuditFilter.shouldNotFilter(43행)는 디코딩하지 않은 getRequestURI 원문으로 /v1/ 접두를 보므로, GET /%761/customers 같은 요청은 필터 전체를 건너뛰어 53행의 X-Request-ID와 71-78행의 감사 기록이 모두 빠진다. SecurityConfig에 방화벽 설정이 없어 기본 StrictHttpFirewall(%25, %2E, %2F, %3B, %5C, %00 등만 막음)이 %76, %31을 통과시키고, anyRequest().authenticated()와 MVC 매핑은 RequestPath를 디코딩한 조각으로 맞춰 /v1/customers 처리기를 그대로 부른다. JsonRequestRejectedHandler 36행도 같은 원문 접두 판정이라 방화벽이 거절한 /%761/customers%3Bx는 익명 400 감사 행을 남기지 않는다. 운영 Caddyfile 46행 handle /v1/*는 디코딩한 경로로 맞추고 원문을 그대로 넘겨 앞단이 막지 않으며, bc7e538 뒤 이 층과 정점 어디에도 이 판정을 고친 커밋이나 인코딩 경로 시험이 없다. 앞선 세 검토가 0fe7d2a에서 RANDOM_PORT로 따로 재현한 결과(200인데 X-Request-ID 없음, 감사 행 0건)와 코드 경로가 맞는다. shouldNotFilter와 JsonRequestRejectedHandler가 UrlPathHelper로 디코딩한 경로로 /v1 요청인지 본다. isIngestion은 T-inho brief대로 그대로 두어, 인코딩한 수집 경로(POST /%761/events)는 이제 감사 행을 남긴다(U6-B3(Q3) 결정 때 다시 볼 동작).",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:42-43 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:53 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:71-78 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:87-89 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/JsonRequestRejectedHandler.java:35-37 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:84-88 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:103-108 @ 6431cefb",
+        "deploy/caddy/Caddyfile:46-50 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:44-45 @ b5506b61",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:55-56 @ b5506b61",
+        "backend/src/main/java/com/meterengine/global/security/JsonRequestRejectedHandler.java:36 @ b5506b61",
+        "backend/src/main/java/com/meterengine/global/security/RequestIdentity.java:26-32 @ b5506b61",
+        "퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다: 실패 Wanted but not invoked",
+        "방화벽이_거절한_퍼센트_인코딩_v1_경로도_익명_400으로_감사한다: 실패 Wanted but not invoked",
+        "퍼센트_인코딩한_v1_경로도_요청식별자와_감사기록을_남긴다: 실패 Expecting not blank but was: null",
+        "커밋 b0bf0b12aa43d0195ba41199d0154558bbd61584"
+      ],
+      "commits": [
+        "b0bf0b12aa43d0195ba41199d0154558bbd61584"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.global.security.*' --tests 'com.meterengine.audit.*': 고치기 전 새 시험 3개 실패, 고친 뒤 통과",
+        "실화면 백엔드에서 고치기 전과 뒤 응답 헤더를 비교했다(기록은 .s456-work/security/GA-B1/)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 RequestAuditFilter.java 45행과 JsonRequestRejectedHandler.java 36행도 원문 접두 판정이다. 같은 파일을 바꾼 위층 커밋 2fe98d1, 1f11f8b(#449), 8bb17c3, ae22acb, 7b1d1e5(#450)",
+      "propagation_note": "#450부터 RequestAuditFilter가 REQUEST_ID_ATTRIBUTE를 넣는다. 반영 때 shouldNotFilter의 isApiRequest와 JsonRequestRejectedHandler의 RequestAuditFilter.isApiRequest 호출을 남긴다. isIngestion은 그대로다.",
+      "summary": "요청 감사가 퍼센트 인코딩한 경로도 디코딩해 /v1 요청으로 본다"
     },
     {
       "id": "X-007",
@@ -8124,6 +8153,51 @@
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (28.1s)"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (8.4s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 24 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "d0edd0ffca149a771515b5fbdaa74dabe2c0f77b",
@@ -11218,6 +11292,11 @@
       "branch": "fix/s456-448-t-inho",
       "sha": "d0edd0ffca149a771515b5fbdaa74dabe2c0f77b",
       "at": "2026-10-29T00:52:16+09:00"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "b0bf0b12aa43d0195ba41199d0154558bbd61584",
+      "at": "2026-10-29T00:59:04+09:00"
     }
   ],
   "usage_log": [],
@@ -11244,7 +11323,8 @@
     "2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 이 항목들을 판정하고 정점과 대조할 때 origin/feat/rds-auto-stop은 8dd028a였다(2026-10-29 들어 65d4150으로 움직였다). 이 뒤 fixed 기록은 그때의 정점 sha를 쓴다.",
     "2026-10-29T00:15:14+09:00 #446 demo 검사: 10절 표가 pnpm 검사를 #447부터로 적어, #446에서는 demo kind를 python3 -m unittest discover로 돌린다. 이 층 demo/package.json에는 build 스크립트가 없어 e4da2fa에서 pnpm -r build가 실패했다(이 변경과 무관, 기록은 checks에 fail로 남김). 같은 커밋에서 corepack pnpm -r --if-present typecheck, lint, test는 모두 통과했다.",
     "2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.",
-    "2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다."
+    "2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.",
+    "2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",

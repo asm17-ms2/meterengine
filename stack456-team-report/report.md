@@ -1,8 +1,8 @@
-미완료 201건, 결과: 끝 상태 171/372건 (fixed 119, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 4번(마지막 d0edd0f)
+미완료 200건, 결과: 끝 상태 172/372건 (fixed 120, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 5번(마지막 b0bf0b1)
 정할 것: 39건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T00:55:42+09:00
+상태: running, 갱신 2026-10-29T00:59:25+09:00
 
 ## 층별 상태
 
@@ -11,7 +11,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
 | #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
-| #448 | feat/request-audit | 24 | 9 | 1 | 1 | 5 | 0 | 8 |
+| #448 | feat/request-audit | 24 | 10 | 1 | 1 | 5 | 0 | 7 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -134,6 +134,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck1-448-01 | #448 | 1003ba5 | 감사 조회의 기간 조건이 저장할 수 없는 연도면 500 대신 400을 낸다 | 감사조회의_잘못된_필터와_기간은_400이다: 실패 [HTTP status code] expected: 400 but was: 500 (to=+300000-01-01T00:00:00Z) |
 | Ck1-448-03 | #448 | d0edd0f | README에 감사 조회 API와 감사 화면, X-Request-ID를 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. AuditLogController의 두 GET 매핑, RequestAuditFilter의 X-Request-ID 헤더와 수집 제외, NavMenu.tsx와 Operator) |
 | D-152 | #448 | 80a3ad0 | 감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다 | an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다) |
+| GA-B1 | #448 | b0bf0b1 | 요청 감사가 퍼센트 인코딩한 경로도 디코딩해 /v1 요청으로 본다 | 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다: 실패 Wanted but not invoked |
 
 ## 정할 것
 
@@ -261,6 +262,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - Ck1-448-01 (#448): 반영 때 AuditLogQueryService.boundary의 연도 범위 검사와 AuditLogController의 from, to 설명, 200과 400 응답을 남기고 openapi.yaml은 그 층에서 다시 만든다.
 - Ck1-448-03 (#448): 반영 때 backend README audit 행과 X-Request-ID 문장을 남긴다. frontend README 화면 표는 #452 29a78d0의 묶인 형식에 맞춰 /admin 행에 /admin/audit을 넣고 /audit 행을 더한다.
 - D-152 (#448): #453 23b1844가 AuditScreen.tsx import 줄을 바꿨다. 반영 때 @/lib/audit import와 auditActorLabel 호출을 남긴다. 정점 people.real.spec.ts와 operator-create.real.spec.ts는 .audit-summary strong과 .audit-detail만 읽어 영향이 없다.
+- GA-B1 (#448): #450부터 RequestAuditFilter가 REQUEST_ID_ATTRIBUTE를 넣는다. 반영 때 shouldNotFilter의 isApiRequest와 JsonRequestRejectedHandler의 RequestAuditFilter.isApiRequest 호출을 남긴다. isIngestion은 그대로다.
 
 ## fixed-above로 둔 것
 
@@ -297,3 +299,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 2026-10-29T00:15:14+09:00 #446 demo 검사: 10절 표가 pnpm 검사를 #447부터로 적어, #446에서는 demo kind를 python3 -m unittest discover로 돌린다. 이 층 demo/package.json에는 build 스크립트가 없어 e4da2fa에서 pnpm -r build가 실패했다(이 변경과 무관, 기록은 checks에 fail로 남김). 같은 커밋에서 corepack pnpm -r --if-present typecheck, lint, test는 모두 통과했다.
 - 2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.
 - 2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.
+- 2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다.
