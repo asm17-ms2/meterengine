@@ -1,13 +1,13 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-28T17:38:11+09:00",
+  "updated_at": "2026-10-28T17:39:35+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "C442-018",
-    "step": "check",
+    "step": "report",
     "branch": "feat/account-permissions"
   },
   "finished_ids": [
@@ -32,6 +32,7 @@
     "C442-010",
     "C442-016",
     "C442-017",
+    "C442-018",
     "D-003",
     "D-006",
     "D-012",
@@ -149,7 +150,6 @@
     "X-101",
     "X-103",
     "C442-009",
-    "C442-018",
     "D-017",
     "D-078",
     "G-016",
@@ -345,7 +345,7 @@
   "since_report_push": 0,
   "branches": {
     "feat/account-permissions": {
-      "origin_sha": "646a22e",
+      "origin_sha": "3f74137",
       "local_sha": "3f74137",
       "unpushed": []
     },

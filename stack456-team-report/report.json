@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:38:11+09:00",
+  "updated_at": "2026-10-28T17:39:35+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "646a22e",
+    "feat/account-permissions": "3f74137",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1028,14 +1028,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "72e8718의 integrations/page.tsx 21행 mode 필드 안내는 위의 업무 환경을 전환해 발급하라고 하지만 이 층에는 환경 전환 요소가 없다. 환경 전환은 #453 23b1844에서 들어오고 정점에서는 이 안내가 environment가 legacy일 때만 나온다. 이 층의 안내를 키 구분 설명으로 바꿨다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/page.tsx:21 @ 72e8718",
+        "frontend/src/app/(console)/integrations/page.tsx:29 @ 0fe7d2a",
+        "커밋 23b1844"
+      ],
+      "commits": [
+        "3f74137584b8"
+      ],
+      "tests": [
+        "보이는 변경(문구): 이 층에 환경 전환 요소가 없는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "differs: 정점은 #453 23b1844에서 이 필드를 environment가 legacy일 때만 그리고 업무 환경 전환이 있어 원래 안내가 맞다",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "없는 업무 환경 전환 안내 제거",
+      "propagation_note": "#453 반영 때 integrations/page.tsx의 mode 필드는 #453 문구(environment === legacy 조건과 업무 환경 전환 안내)를 따른다. #443부터 #452까지는 이 커밋 문구가 맞다."
     },
     {
       "id": "D-003",
@@ -6313,6 +6328,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  25 passed (13.4s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.328s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6445,6 +6516,11 @@
       "branch": "feat/account-permissions",
       "sha": "646a22e996a2f6b453e9cfc0518aa5cf9d5b58ca",
       "at": "2026-10-28T17:35:05+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
+      "at": "2026-10-28T17:39:35+09:00"
     }
   ],
   "usage_log": [],
