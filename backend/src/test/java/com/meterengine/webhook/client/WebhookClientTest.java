@@ -82,6 +82,40 @@ class WebhookClientTest {
   }
 
   @Test
+  void 요청에_수신_서버가_발신자를_알아볼_User_Agent를_싣는다() throws Exception {
+    try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
+        var receiver = Executors.newSingleThreadExecutor();
+        WebhookClient client =
+            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(5))) {
+      var received =
+          receiver.submit(
+              () -> {
+                try (Socket socket = serverSocket.accept()) {
+                  socket.setSoTimeout(5000);
+                  String request = readRequest(socket.getInputStream());
+                  socket
+                      .getOutputStream()
+                      .write(
+                          "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n"
+                              .getBytes(StandardCharsets.US_ASCII));
+                  socket.getOutputStream().flush();
+                  return request;
+                }
+              });
+
+      client.send(
+          "http://127.0.0.1:" + serverSocket.getLocalPort() + "/hook",
+          "event",
+          "1",
+          "v1,signature",
+          "{}");
+
+      assertThat(received.get(5, TimeUnit.SECONDS))
+          .contains("\r\nUser-Agent: MeterEngine-Webhooks/1.0\r\n");
+    }
+  }
+
+  @Test
   void 운영_정책은_전송_시점에_차단_주소면_연결하지_않고_blocked_address로_끝낸다() throws Exception {
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         WebhookClient client =

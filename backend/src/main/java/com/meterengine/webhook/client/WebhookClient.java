@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 public class WebhookClient implements AutoCloseable {
   private static final int CONNECT_TIMEOUT_MS = 5000;
   private static final int READ_TIMEOUT_MS = 10000;
+  private static final String USER_AGENT = "MeterEngine-Webhooks/1.0";
   private final WebhookAddressPolicy webhookAddressPolicy;
   private final Duration requestTimeout;
   private final SSLSocketFactory sslSocketFactory;
@@ -115,6 +116,8 @@ public class WebhookClient implements AutoCloseable {
                 + path
                 + " HTTP/1.1\r\nHost: "
                 + uri.getRawAuthority()
+                + "\r\nUser-Agent: "
+                + USER_AGENT
                 + "\r\nContent-Type: application/json\r\nContent-Length: "
                 + payload.length
                 + "\r\nwebhook-id: "
