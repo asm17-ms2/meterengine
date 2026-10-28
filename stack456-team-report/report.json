@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:46:07+09:00",
+  "updated_at": "2026-10-28T23:48:02+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "8804e65746245b157569e2ed985cc48ff2a262c9"
+    "fix/s456-446-t-inho": "1574c863f02398ddb80fa15bb59a63d873e90ae3"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4747,15 +4747,35 @@
       "id": "X-091",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head da90aac의 BillableMetricFormDialog에는 InputNumber가 셋(백분위 241행, 과금 단위 크기 286행, 소수 자릿수 293행) 있고 모두 controls를 끄지 않았다. 잠금 파일이 고정한 @rc-component/input-number 1.6.2의 es/StepHandler.js 76행은 증감 손잡이를 role=button, aria-label 'Increase Value'/'Decrease Value'로 고정해 그리고, antd 6.6.7 InputNumber는 controls 기본값 true를 그대로 넘기며 ko_KR 로캘에도 이 이름을 바꾸는 항목이 없다. 문서가 lang=\"ko\"라서 한국어 대화상자 안에서 영어 버튼 이름이 읽히는 것이 마크업과 라이브러리 코드로 분명히 정해진다. 반대 근거로 aria-hidden 감싸기나 전역 ConfigProvider의 controls 설정을 찾았지만 없었고, InputNumber는 앱에서 이 파일에만 쓰이며 다른 숫자 입력(PriceRateFormDialog의 inputMode decimal, PricingWorkspace의 네이티브 number)에는 이런 버튼이 없다. 이 줄은 614d3bc(#446)가 들였고 정점 8dd028a에서도 249, 294, 301행이 같다. 백분위 입력도 원인이 같아 같은 수정에 넣는 것이 맞다. 백분위, 과금 단위 크기, 소수 자릿수 InputNumber에 controls={false}를 두어 영어 이름의 증감 손잡이를 뺐다. 화살표 키 증감은 남는다.",
+      "evidence": [
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:241 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:286 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:293 @ da90aac",
+        "frontend/src/app/layout.tsx:27 @ da90aac",
+        "frontend/pnpm-lock.yaml:577 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:249,294,301 @ 8dd028a",
+        "커밋 614d3bc4e5bd3088b8e9cfa699503f46e67e5d94",
+        "meter number inputs do not expose English stepper buttons: 실패 Expected 0 Received 2 (Increase Value, Decrease Value)",
+        "커밋 1574c863f02398ddb80fa15bb59a63d873e90ae3"
+      ],
+      "commits": [
+        "1574c863f02398ddb80fa15bb59a63d873e90ae3"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'English stepper': 고치기 전 실패, 고친 뒤 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 BillableMetricFormDialog.tsx 249, 294, 301행의 InputNumber도 controls를 끄지 않았다(같은 파일을 바꾼 위층 커밋 e5fca11 #451은 이 줄을 건드리지 않음)",
+      "summary": "미터 폼의 숫자 입력에서 영어 이름의 증감 버튼을 뺀다"
     },
     {
       "id": "D-119",
@@ -7758,6 +7778,44 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (27.5s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.5s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10385,6 +10443,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
       "at": "2026-10-28T23:44:10+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "1574c863f02398ddb80fa15bb59a63d873e90ae3",
+      "at": "2026-10-28T23:47:46+09:00"
     }
   ],
   "usage_log": [],
