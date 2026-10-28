@@ -51,7 +51,7 @@ const server = createServer(async (req, res) => {
         sessions.set(issued, created);
         result = { status: 201, body: { token: issued, user_account: created.user_account, organization: created.organization, organization_role: created.organization_role, scopes: created.scopes, expires_at: created.expires_at } };
       }
-    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: "invited@contract.local", expires_at: expiresAt(), account_exists: false, scopes: ["read"] } };
+    } else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(path) && req.method === "GET") result = { status: 200, body: { organization_name: organizations[0].name, email: path.includes("Existing") ? "existing@contract.local" : "invited@contract.local", expires_at: expiresAt(), account_exists: path.includes("Existing"), scopes: ["read"] } };
     else if (/^\/v1\/organization-invitations\/me_invite_[A-Za-z0-9]{32}\/accept$/.test(path) && req.method === "POST") {
       if (req.headers.authorization && !session) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else result = { status: 201, body: { user_account_id: "88888888-8888-4888-8888-888888888888", organization_id: organizations[0].id } };

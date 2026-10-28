@@ -312,6 +312,19 @@ test("a new-account invitation opened while signed in as someone else says who i
   await expect(page.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
 });
 
+test("logging out on an invitation keeps the invitation open", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto("/organization-invitations/me_invite_ContractExisting0000000000000001");
+  await expect(page.getByRole("status").filter({ hasText: "member@contract.local" })).toBeVisible();
+  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page.getByText("member@contract.local")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/organization-invitations\/me_invite_ContractExisting0000000000000001$/);
+  await expect(page.getByRole("button", { name: "해당 계정으로 로그인", exact: true })).toBeVisible();
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/sessions/current" && call.method === "DELETE")).toBe(true);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
