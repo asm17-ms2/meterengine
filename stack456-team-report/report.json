@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:01:44+09:00",
+  "updated_at": "2026-10-28T18:03:37+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+    "fix/s456-443-t-inho": "93491f9cc376f0b04ade93d7656feea512e67a01"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1111,15 +1111,40 @@
       "id": "G-071",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css는 :root를 36, 116, 153, 162행에서 거듭 정의해 36행의 --ink, --muted, --line, --blue, --canvas 값은 모두 116행에 덮인다(color-scheme만 남는다). 같은 선택자를 뒤에서 무조건 다시 덮어 앞 선언이 효과가 없다: .workspace-content gap은 139행 24px와 150행 모바일 20px가 모두 166행 28px에 덮이고, .setup-list p는 147행 색과 크기가 196, 198행에 덮이며, reduced-motion 규칙도 108행과 151행 둘이다. 앞 블록의 antd 파랑 리터럴이 그대로 남아 콘솔 링크 focus 윤곽선은 39행 #0958d9인데 홈 화면은 HomePage.module.css:64의 #5746ad이고, 가입 대기 화면은 74행 var(--blue)(보라)와 76행 #0958d9(파랑)를 한 화면에 함께 쓴다. 다만 159, 160행 .workspace-header .mobile-menu는 antd .ant-btn의 display를 이기려는 높은 명시도 규칙이라 중복이 아니고, 효과 없는 쪽은 148, 150행 .mobile-menu다. 세 파일 모두 정점까지 바뀌지 않았고, 고치는 파일은 globals.css 하나다. globals.css 39행 포커스 색과 파랑 리터럴은 g12(6730d65)에서 먼저 고쳤다.",
+      "evidence": [
+        "frontend/src/app/globals.css:36,116 @ 0f1d1bf",
+        "frontend/src/app/globals.css:153,162 @ 0f1d1bf",
+        "frontend/src/app/globals.css:139,166 @ 0f1d1bf",
+        "frontend/src/app/globals.css:150 @ 0f1d1bf",
+        "frontend/src/app/globals.css:147,196 @ 0f1d1bf",
+        "frontend/src/app/globals.css:108,151 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:64 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74,76 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "frontend/src/app/globals.css:159,160 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:43 @ 0f1d1bf",
+        "커밋 d84372bd2919a35495c6b36770d7e5d9203ab027"
+      ],
+      "commits": [
+        "d84372bd2919a35495c6b36770d7e5d9203ab027"
+      ],
+      "tests": [
+        "보이는 결과가 바뀌지 않는 정리: 정리 전후 18개 라우트 1440x900, 390x844 화소 비교에서 캡처 시각 글자 말고 같음(evidence/G-071/pixel-compare.txt)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css의 :root 네 곳과 덮인 선언이 그대로다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css에서 뒤 규칙에 덮여 효과가 없던 :root, body, a, .workspace-content, .setup-list p, .detail-strip dt, .mobile-menu 재정의를 지웠다"
     },
     {
       "id": "G-072",
@@ -6613,6 +6638,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "26 passed (13.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "32 passed (16.6s)"
     }
   ],
   "pushes": [
@@ -6680,6 +6743,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
       "at": "2026-10-28T17:45:48+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "at": "2026-10-28T18:03:13+09:00"
     }
   ],
   "usage_log": [],
