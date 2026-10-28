@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:47:54+09:00",
+  "updated_at": "2026-10-28T17:49:28+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "88f0ab2",
+    "feat/account-permissions": "1e6c5df",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -5152,22 +5152,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄)",
-      "reason": "X-057의 AuthFrame 부분은 원인이 달라 따로 둔다. AuthFrame.tsx 10행 auth-intro의 보조 문구가 h2이고 13행 h1이 그 뒤에 와서 로그인, 가입, 초대 화면에서 제목 수준 순서가 거꾸로다. 이 컴포넌트는 #442 d4f1714에서 생겼고 정점도 같다.",
+      "reason": "X-057에서 떼어 낸 지적이다. AuthFrame.tsx 10행 auth-intro의 안내 문구가 h2이고 13행 화면 제목 h1이 그 뒤에 와서 로그인, 가입, 초대 화면의 제목 순서가 거꾸로다. 이 컴포넌트는 #442 d4f1714에서 생겼고 정점도 같다. 안내 문구를 문단으로 바꿨다.",
       "evidence": [
         "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 72e8718",
-        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 0fe7d2a"
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 0fe7d2a",
+        "the sign-in frame starts its headings with the page h1: 실패 Expected \"H1\", Received \"H2\""
       ],
       "judged_at": {
         "layer_sha": "72e8718",
         "top_sha": "0fe7d2a"
       },
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1e6c5dff8931"
+      ],
+      "tests": [
+        "auth.contract.spec.ts the sign-in frame starts its headings with the page h1: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 27건 통과"
+      ],
       "behavior_change": false,
-      "left": "수정 전"
+      "fails_without_fix": true,
+      "top_head": "same f671a4f",
+      "summary": "AuthFrame 안내 h2를 문단으로",
+      "propagation_note": "#443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다."
     }
   ],
   "checks": [
@@ -6522,6 +6531,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  27 passed (13.0s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.323s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6669,6 +6734,11 @@
       "branch": "feat/account-permissions",
       "sha": "88f0ab2612ecae4f33242e70978005be21457877",
       "at": "2026-10-28T17:45:47+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "1e6c5dff8931faef37f9607304331dfe0841e8a4",
+      "at": "2026-10-28T17:49:28+09:00"
     }
   ],
   "usage_log": [],

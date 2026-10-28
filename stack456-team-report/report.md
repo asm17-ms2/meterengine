@@ -1,5 +1,5 @@
-미완료 236건, 결과: 끝 상태 93/328건 (fixed 52, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 29개(마지막 88f0ab2)
+미완료 235건, 결과: 끝 상태 93/328건 (fixed 52, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 30개(마지막 1e6c5df)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -65,6 +65,7 @@ push: feat/account-permissions 29개(마지막 88f0ab2)
 | X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
+| NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
 
@@ -112,7 +113,7 @@ push: feat/account-permissions 29개(마지막 88f0ab2)
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
-| NT-yang-001 | #442 | open | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
+| NT-yang-001 | #442 | fixed | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
 
 ## 돌리지 못한 검사
 
@@ -186,6 +187,7 @@ push: feat/account-permissions 29개(마지막 88f0ab2)
 | X-025 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | X-046 | #442 | 통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다. |
 | X-057 | #442 | WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다. |
+| NT-yang-001 | #442 | #443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다. |
 
 ## fixed-above로 둔 것
 
