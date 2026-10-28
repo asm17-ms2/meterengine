@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:53:37+09:00",
+  "updated_at": "2026-10-28T22:56:36+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "815f525976818a852756ab05e69095dda47fd357"
+    "fix/s456-444-t-inho": "f67bc41246d4187125de061f9f09c9246d57a8fb"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4237,29 +4237,38 @@
       "id": "U14-B1",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "층 head f3855f4에서 claim()의 첫 UPDATE가 여섯 번째 시도 선점이 만료된 전송을 status=failed, failure_reason=lease_expired로 끝내고 행 수를 버리며, meterengine.webhook.delivery 카운터는 record() 한 곳에서만 오른다. 웹훅 전송 실패 경보 식은 이 카운터만 보므로 lease_expired 종결은 경보가 울리지 않는데, deploy/README.md 481행은 재시도 상한까지 실패한 웹훅이 endpoint_disabled만 빼고 모두 경보된다고 읽힌다. 반대로 blocked_address는 complete()가 첫 시도에 종결하는데도 식에 들어가 '재시도 상한까지'라는 문구와 맞지 않는다. 기존 통합 시험(마지막_시도_중_선점이_만료된_전송은...)은 상태만 보고 지표를 확인하지 않으며, lease_expired를 경보에서 뺀다는 기록된 결정은 a886852 메시지를 포함해 찾지 못했다. send 예외 경로는 deliver()가 failed로 세어 예약 작업 경보가 울리지만, 완료 전 프로세스 종료 경로는 어떤 경보도 없다(scheduling shutdown await 설정도 없음). 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 UPDATE, 경보 식, README 행이 그대로다.",
+      "reason": "층 head f3855f4에서 claim()의 첫 UPDATE가 여섯 번째 시도 선점이 만료된 전송을 status=failed, failure_reason=lease_expired로 끝내고 행 수를 버리며, meterengine.webhook.delivery 카운터는 record() 한 곳에서만 오른다. 웹훅 전송 실패 경보 식은 이 카운터만 보므로 lease_expired 종결은 경보가 울리지 않는데, deploy/README.md 481행은 재시도 상한까지 실패한 웹훅이 endpoint_disabled만 빼고 모두 경보된다고 읽힌다. 반대로 blocked_address는 complete()가 첫 시도에 종결하는데도 식에 들어가 '재시도 상한까지'라는 문구와 맞지 않는다. 기존 통합 시험(마지막_시도_중_선점이_만료된_전송은...)은 상태만 보고 지표를 확인하지 않으며, lease_expired를 경보에서 뺀다는 기록된 결정은 a886852 메시지를 포함해 찾지 못했다. send 예외 경로는 deliver()가 failed로 세어 예약 작업 경보가 울리지만, 완료 전 프로세스 종료 경로는 어떤 경보도 없다(scheduling shutdown await 설정도 없음). 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 UPDATE, 경보 식, README 행이 그대로다. lease_expired로 끝내는 UPDATE를 claim에서 expireLeases로 떼어 건수를 돌려받고, 발송 작업이 실행마다 먼저 불러 failed, lease_expired 카운터에 더한다(행마다 한 번만 바뀌어 두 색이 함께 돌아도 중복 집계가 없다). 경보 식은 reason!=endpoint_disabled라 그대로 잡는다. deploy/README.md 경보 표와 alerting.yml 설명을 실제 조건에 맞췄다.",
       "evidence": [
-        "deploy/README.md:481 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:31-33 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:137-146 @ 178e19e",
-        "deploy/grafana/provisioning/alerting/alerting.yml:383-384 @ 178e19e",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
-        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:352-368 @ 178e19e",
-        "backend/src/main/resources/application.properties:41 @ 178e19e",
+        "deploy/README.md:481 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:31-33 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:137-146 @ f3855f4",
+        "deploy/grafana/provisioning/alerting/alerting.yml:383-384 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ f3855f4",
+        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:352-368 @ f3855f4",
+        "backend/src/main/resources/application.properties:41 @ f3855f4",
         "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32-34 @ b8abfdf",
-        "deploy/README.md:495 @ b8abfdf"
+        "deploy/README.md:495 @ b8abfdf",
+        "마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0",
+        "커밋 f67bc41246d4187125de061f9f09c9246d57a8fb"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f67bc41246d4187125de061f9f09c9246d57a8fb"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.webhook.*': 고치기 전 새 시험 실패, 고친 뒤 통과. alerting.yml YAML 파싱(static), deploy 단위 시험 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 WebhookDeliveryRepository.claim(32-34행)도 lease_expired 건수를 버리고 deploy/README.md 495행이 같은 문장이다. 같은 파일을 바꾼 위층 커밋은 #453 23b1844",
+      "propagation_note": "#453 23b1844가 WebhookDeliveryRepository.claim과 UPDATE 문에 environment_scope_id를 더했다. 반영 때 claim 앞의 lease_expired UPDATE는 expireLeases()로 옮긴 채 두고(환경 조건 없이 전역으로 끝내는 동작은 같다), 정점 deploy/README.md 495행의 경보 표 문장을 이 층 문장으로 맞춘다.",
+      "summary": "마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다"
     },
     {
       "id": "U5-B1",
@@ -7434,6 +7443,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.601s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "55 passed (24.9s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.6s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 14 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "815f525976818a852756ab05e69095dda47fd357",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9751,6 +9820,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "815f525976818a852756ab05e69095dda47fd357",
       "at": "2026-10-28T22:49:40+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "f67bc41246d4187125de061f9f09c9246d57a8fb",
+      "at": "2026-10-28T22:56:21+09:00"
     }
   ],
   "usage_log": [],
