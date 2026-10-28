@@ -7,15 +7,18 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.webhook.client.WebhookClient;
 import com.meterengine.webhook.dto.ListWebhookDeliveriesResponse;
+import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import com.meterengine.webhook.repository.WebhookDeliveryRepository;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +38,8 @@ public class WebhookDeliveryService {
   private final AuditLogService auditLogService;
   private final MeterRegistry meterRegistry;
   private final LongSupplier nanoTime;
+  private final AtomicLong backlogCount = new AtomicLong();
+  private final AtomicLong backlogAgeSeconds = new AtomicLong();
 
   @Autowired
   WebhookDeliveryService(
@@ -73,9 +78,22 @@ public class WebhookDeliveryService {
     this.auditLogService = auditLogService;
     this.meterRegistry = meterRegistry;
     this.nanoTime = nanoTime;
+    Gauge.builder("meterengine.webhook.delivery.backlog", backlogCount, AtomicLong::get)
+        .register(meterRegistry);
+    Gauge.builder("meterengine.webhook.delivery.backlog.age", backlogAgeSeconds, AtomicLong::get)
+        .baseUnit("seconds")
+        .register(meterRegistry);
+  }
+
+  // 스크레이프 경로에서 DB를 읽지 않도록 발송 작업 틱마다 보낼 때가 지난 대기 전송을 세어 둔다.
+  public void measure() {
+    WebhookBacklog backlog = webhookDeliveryRepository.backlog();
+    backlogCount.set(backlog.dueCount());
+    backlogAgeSeconds.set(backlog.oldestDueAgeSeconds());
   }
 
   public ScheduledJobResult deliver() {
+    countExpiredLeases();
     int processed = 0;
     int skipped = 0;
     int failed = 0;
@@ -132,6 +150,17 @@ public class WebhookDeliveryService {
         webhookClient.send(
             claim.url(), claim.webhookEventId().toString(), timestamp, signature, claim.payload()),
         Tally.PROCESSED);
+  }
+
+  private void countExpiredLeases() {
+    int expired = webhookDeliveryRepository.expireLeases();
+    if (expired == 0) {
+      return;
+    }
+    meterRegistry
+        .counter("meterengine.webhook.delivery", "result", "failed", "reason", "lease_expired")
+        .increment(expired);
+    logger.warn("{} webhook deliveries failed because their last attempt lease expired", expired);
   }
 
   private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {

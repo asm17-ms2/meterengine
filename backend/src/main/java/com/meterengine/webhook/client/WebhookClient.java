@@ -20,13 +20,17 @@ import java.util.concurrent.TimeoutException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class WebhookClient implements AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(WebhookClient.class);
   private static final int CONNECT_TIMEOUT_MS = 5000;
   private static final int READ_TIMEOUT_MS = 10000;
+  private static final String USER_AGENT = "MeterEngine-Webhooks/1.0";
   private final WebhookAddressPolicy webhookAddressPolicy;
   private final Duration requestTimeout;
   private final SSLSocketFactory sslSocketFactory;
@@ -65,6 +69,7 @@ public class WebhookClient implements AutoCloseable {
       Thread.currentThread().interrupt();
       return new WebhookOutcome(null, "connection_error", elapsed(started));
     } catch (ExecutionException exception) {
+      logger.error("Webhook {} could not be sent", id, exception.getCause());
       return new WebhookOutcome(null, "connection_error", elapsed(started));
     }
   }
@@ -115,6 +120,8 @@ public class WebhookClient implements AutoCloseable {
                 + path
                 + " HTTP/1.1\r\nHost: "
                 + uri.getRawAuthority()
+                + "\r\nUser-Agent: "
+                + USER_AGENT
                 + "\r\nContent-Type: application/json\r\nContent-Length: "
                 + payload.length
                 + "\r\nwebhook-id: "
@@ -135,7 +142,11 @@ public class WebhookClient implements AutoCloseable {
       return new WebhookOutcome(null, "blocked_address", elapsed(started));
     } catch (SocketTimeoutException exception) {
       return new WebhookOutcome(null, "timeout", elapsed(started));
-    } catch (IOException | IllegalArgumentException exception) {
+    } catch (IOException exception) {
+      logger.warn("Webhook {} could not be sent: {}", id, exception.toString());
+      return new WebhookOutcome(null, "connection_error", elapsed(started));
+    } catch (IllegalArgumentException exception) {
+      logger.warn("Webhook {} could not be sent: {}", id, exception.getClass().getName());
       return new WebhookOutcome(null, "connection_error", elapsed(started));
     }
   }
