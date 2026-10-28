@@ -354,6 +354,31 @@ class PaymentAttemptIntegrationTest {
   }
 
   @Test
+  void 보관한_카드나_보관한_결제_모드의_키로는_409이고_시도를_남기지_않으며_토스를_부르지_않는다() {
+    Payable archivedCard = payableInvoice("test");
+    jdbcTemplate.update(
+        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ?",
+        archivedCard.organizationId());
+    Payable archivedCredential = payableInvoice("test");
+    jdbcTemplate.update(
+        "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
+        archivedCredential.organizationId());
+
+    assertError(
+        createPaymentAttempt(archivedCard.organizationId(), archivedCard.invoiceId()),
+        409,
+        ErrorCode.PAYMENT_METHOD_MISSING);
+    assertError(
+        createPaymentAttempt(archivedCredential.organizationId(), archivedCredential.invoiceId()),
+        409,
+        ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
+
+    assertThat(countAttempts(archivedCard.invoiceId())).isZero();
+    assertThat(countAttempts(archivedCredential.invoiceId())).isZero();
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
   void test_모드에서_결제한_인보이스도_live_모드로_바꾸면_live_키와_카드로_결제할_수_있다() {
     Payable payable = payableInvoice("test");
     tossReturns(approved(PAYMENT_KEY));
