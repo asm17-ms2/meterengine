@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T00:53:46+09:00",
+  "updated_at": "2026-10-29T01:00:44+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -3785,29 +3785,60 @@
       "id": "C445-011",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "PaymentAttemptService.prepare가 API 키 모드와 결제 모드가 다르면 409 PAYMENT_MODE_MISMATCH를 던지지만 createPaymentAttempt의 409 설명에는 이 코드가 없다. 정점도 같다. 설명에 한 줄을 더했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/controller/PaymentAttemptController.java:73-85 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:352 @ b10f8c7"
+      ],
+      "commits": [
+        "87448f2722d4"
+      ],
+      "tests": [
+        "OpenApiDocumentTest로 openapi.yaml 재생성, 한 줄 추가",
+        "backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "결제 요청 409 설명의 payment_mode_mismatch",
+      "propagation_note": "반영 때 openapi.yaml을 다시 만든다."
     },
     {
       "id": "C445-012",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "checkPrefixes는 접두사와 뒤 값의 존재만 보고, TossPaymentsClient는 시크릿 키를 setBasicAuth 사용자 이름으로 넣는다. 콜론이나 ISO-8859-1 밖 문자가 있으면 헤더를 만들다 IllegalArgumentException이 나 500이 된다. 정점도 같다. 접두사 검사 다음에 콜론, 공백, ASCII 밖 문자를 막아 토스를 부르기 전에 400으로 돌려준다. 토스 키는 영문과 숫자라 정상 키는 막지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:101-118 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/client/TossPaymentsClient.java:199 @ b10f8c7",
+        "시크릿_키에_콜론이나_공백이나_ASCII_밖_문자가_있으면_400이고_토스를_부르지_않는다: 실패 expected: 400 but was: 500"
+      ],
+      "commits": [
+        "2469efb23a6f"
+      ],
+      "tests": [
+        "TossPaymentsCredentialIntegrationTest 새 시험: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same 2ec5d85 23b1844",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "시크릿 키 문자 검사로 500 대신 400",
+      "propagation_note": "반영 때 openapi.yaml을 다시 만든다."
     },
     {
       "id": "C445-013",
@@ -3858,15 +3889,30 @@
       "id": "C445-015",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "markFailed는 인보이스의 시도 수가 retryMaxAttempts 이상이면 countRetryExhausted를 불러, 상한을 넘긴 실패(수동 결제 등)도 매번 센다. 시험 이름은 상한에 이르는 실패에서만 한 번이라는 뜻이다. 정점도 같다. 조건을 같음으로 바꿨다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:229 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java:447 @ b10f8c7",
+        "세_번째_시도가_실패하면_retry_exhausted가_한_번_오르고_상한을_넘긴_실패는_세지_않는다: 실패 expected: 1.0 but was: 2.0"
+      ],
+      "commits": [
+        "576f2004f905"
+      ],
+      "tests": [
+        "PaymentRetryServiceTest 늘린 시험: 고치기 전 실패, 고친 뒤 통과",
+        "PaymentMetricsTest, backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same 2ec5d85 c9a86c4 23b1844",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "retry exhausted 지표의 상한 초과 실패 중복"
     },
     {
       "id": "C445-016",
@@ -3901,15 +3947,32 @@
       "id": "C445-017",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "retry()는 모든 도입사의 후보를 훑고 PaymentJobTally는 실행 한 번의 전체 합계다. payment_attempt는 V14 트리거로 지울 수 없어 다른 시험이 남긴 후보가 매번 skipped에 들어가므로, skippedCount와 processedCount 단언은 자기 후보가 실패로 세여도 통과한다. 정점도 같다. 자기 실패 시도 id의 로그로 결과를 확인하게 했다. 운영 코드는 그대로다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:58-81,129-133 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentJobTally.java:12-22 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java:114,267,281,295,417,443 @ b10f8c7",
+        "건너뜀 분기를 예외로 바꾼 변이에서 고친 PaymentRetryServiceTest: 실패 4건 (고치기 전 시험은 같은 변이에서 23건 통과)"
+      ],
+      "commits": [
+        "c76428e1960c"
+      ],
+      "tests": [
+        "변이 시험: 고치기 전 시험은 못 잡고 고친 시험은 잡음",
+        "원래 코드에서 PaymentRetryServiceTest 23건, backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same f58e1b5",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "재시도 시험 집계 단언이 자기 후보를 확인하지 못함",
+      "propagation_note": "정점에서는 f58e1b5(#453)가 같은 꼴의 skippedCount 단언을 484행에 더했다. 반영 때 그 단언도 assertSkipped로 바꾼다."
     },
     {
       "id": "C445-018",
@@ -4419,15 +4482,31 @@
       "id": "C445-005",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentMethodRegistrationService.java:53-58 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/controller/PaymentMethodRegistrationController.java:35,73 @ b10f8c7",
+        "API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다: 실패 [HTTP status code] expected: 409 but was: 201"
+      ],
+      "commits": [
+        "ab25813273b0"
+      ],
+      "tests": [
+        "PaymentMethodRegistrationIntegrationTest 새 시험: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "differs: 정점은 환경 키만 환경 모드로 막는다",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드 등록 링크 생성의 키 모드 검사",
+      "propagation_note": "위층이 2인자 create를 직접 부르므로 그 오버로드를 남겼다. 반영 때 findMode 뒤의 검사를 남기고 openapi.yaml을 다시 만든다."
     },
     {
       "id": "Ck2-016",
