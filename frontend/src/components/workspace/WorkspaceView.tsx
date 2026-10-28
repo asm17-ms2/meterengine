@@ -6,7 +6,7 @@ import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { useEffect, useRef, useState } from "react";
 import { ActionPanel, type ActionPanelProps } from "@/components/workspace/ActionPanel";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
-import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
+import { canPerformWorkspaceOperation, scopeLabels } from "@/lib/auth/permissions";
 import { formatKstDateTime } from "@/lib/format";
 
 export function WorkspaceError({ message, status }: { message: string; status?: number }) {
@@ -20,7 +20,6 @@ export type WorkspaceRowActions = Record<string, ActionPanelProps[]>;
 const STATUS_LABELS: Record<string, string> = {
   paid: "수납 완료", partially_canceled: "부분 취소", canceled: "전액 취소", unpaid: "결제 전", pending: "결과 확인 중", failed: "실패", done: "완료", active: "사용 중", archived: "보관됨", accepted: "수락 완료", expired: "만료", invited: "초대 중", revoked: "폐기", retry: "재시도 대기", waiting: "발송 대기", succeeded: "정상", running: "실행 중", not_required: "결제 불필요", suspended: "이용 정지", rejected: "거절", success: "성공", member: "일반 사용자", operator: "플랫폼 운영자", owner: "대표관리자", admin: "관리자",
 };
-const SCOPE_LABELS: Record<string, string> = { read: "조회", ingest: "사용량 수집", admin: "전체 관리" };
 const JOB_LABELS: Record<string, string> = { payment_attempt_confirmation: "결제 결과 확인", payment_reconciliation: "결제 내역 대조", payment_retry: "실패 결제 재시도", webhook_delivery: "결과 통보 발송", invoice_email: "청구 안내 메일" };
 const NUMBER = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 12 });
 
@@ -33,7 +32,7 @@ function CellValue({ value, column, row }: { value: unknown; column: WorkspaceCo
   }
   if (column.isStatus) return <Tag color={["paid", "done", "active", "succeeded", "success"].includes(String(value)) ? "success" : ["failed", "rejected"].includes(String(value)) ? "error" : ["pending", "running", "retry"].includes(String(value)) ? "warning" : "default"}>{column.statusLabels?.[String(value)] ?? STATUS_LABELS[String(value)] ?? String(value)}</Tag>;
   if (column.key === "mode") return <Tag color={value === "live" ? "warning" : "default"}>{value === "live" ? column.modeKind === "api" ? "운영 키" : "실결제" : value === "test" ? column.modeKind === "api" ? "테스트 키" : "테스트 결제" : String(value)}</Tag>;
-  if (Array.isArray(value)) return <span className="workspace-cell-list">{value.map(item => column.key === "scopes" ? SCOPE_LABELS[String(item)] ?? String(item) : String(item)).join(", ")}</span>;
+  if (Array.isArray(value)) return <span className="workspace-cell-list">{(column.key === "scopes" ? scopeLabels(value.map(String)) : value.map(String)).join(", ")}</span>;
   if (column.isDate && !Number.isFinite(Date.parse(String(value)))) return <span className="muted">시각 확인 필요</span>;
   if (column.isDate || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value)))) return <time dateTime={String(value)} className="numeric" title={String(value)}>{formatKstDateTime(String(value))} KST</time>;
   if (column.key === "job_name") return <span>{JOB_LABELS[String(value)] ?? String(value)}<small className="field-hint technical-id">{JOB_LABELS[String(value)] ? String(value) : ""}</small></span>;
