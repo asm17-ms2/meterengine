@@ -193,6 +193,12 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
   await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
 });
 
+test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.getByRole("region", { name: "API 키 목록" })).toHaveAttribute("tabindex", "0");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
