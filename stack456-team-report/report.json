@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T23:56:18+09:00",
+  "updated_at": "2026-10-29T00:00:58+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "2bc72d8"
+    "fix/s456-445-t-yang": "5dc3ac9"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3700,15 +3700,31 @@
       "id": "C445-008",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "PaymentCancellationIntegrationTest의 동시 부분 취소 시험(462행)은 493행에서 진 요청을 isIn(409, 500)으로 보고 code를 보지 않아, insertPending의 시도 행 잠금(218-228행)이 빠져 saveAndFlush(240행)가 유일 인덱스 위반 500을 내도 통과한다. 같은 파일에 상태와 code를 함께 보는 assertError(864-870행)가 있다. 정점도 같다. 진 요청을 409 in_progress로 좁혔다.",
+      "evidence": [
+        "backend/src/test/java/com/meterengine/payment/PaymentCancellationIntegrationTest.java:462,493 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:218-228,240 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/PaymentCancellationIntegrationTest.java:864-870 @ b10f8c7",
+        "같은_시도에_동시에_부분_취소하면_취소는_하나이고_나머지는_409_in_progress다: 실패 expected: 409 but was: 500 (findForUpdate 제거 변이)"
+      ],
+      "commits": [
+        "5dc3ac9ba608"
+      ],
+      "tests": [
+        "insertPending의 잠금을 뺀 임시 변이에서 3회 모두 실패, 되돌린 뒤 통과",
+        "PaymentCancellationIntegrationTest 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same c27b229",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "동시 부분 취소 시험을 409 in_progress로 좁힘"
     },
     {
       "id": "C445-009",
@@ -9593,6 +9609,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 24 ℹ pass 24 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9950,6 +10006,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "2bc72d810bb3fc7f367e0a1c8c53592677de5903",
       "at": "2026-10-28T23:52:38+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5dc3ac9ba6085d78706b590c04bde270514c2f9d",
+      "at": "2026-10-29T00:00:58+09:00"
     }
   ],
   "usage_log": [],
