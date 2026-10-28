@@ -244,3 +244,17 @@ test("server action replay on a public route cannot create a customer without a 
   await page.goto("/customers");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
 });
+
+test("with reduced motion a workspace dialog becomes visible and closing it releases the page", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await login(page, "member@contract.local", "/members");
+  const trigger = page.getByRole("button", { name: "초대 링크 만들기", exact: true });
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect.poll(() => page.locator(".ant-modal").evaluate(element => getComputedStyle(element).opacity)).toBe("1");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".ant-modal-wrap")).toBeHidden();
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+});
