@@ -20,6 +20,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -70,6 +71,7 @@ class PaymentMethodRegistrationIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
+  @Autowired private EntityManager entityManager;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
@@ -139,6 +141,32 @@ class PaymentMethodRegistrationIntegrationTest {
         createRegistration(organizationId, otherCustomerId), 404, ErrorCode.CUSTOMER_NOT_FOUND);
 
     assertThat(countRegistrations(otherCustomerId)).isZero();
+  }
+
+  @Test
+  void API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "live");
+    jdbcTemplate.update(
+        "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
+        organizationId);
+
+    assertError(
+        createRegistration(
+            TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test"), customerId),
+        409,
+        ErrorCode.PAYMENT_MODE_MISMATCH);
+    assertThat(countRegistrations(customerId)).isZero();
+
+    assertThat(
+            createRegistration(
+                TestCredentials.issueApiKey(jdbcTemplate, organizationId, "live"), customerId))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.mode")
+        .isEqualTo("live");
+    assertThat(countRegistrations(customerId)).isOne();
   }
 
   @Test
@@ -212,6 +240,28 @@ class PaymentMethodRegistrationIntegrationTest {
         ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
 
     verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void 정지된_도입사의_링크는_조회도_발급도_404이고_토스를_부르지_않으며_재개하면_다시_조회된다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    String token = createToken(organizationId, customerId);
+    tossIssues(issued(BILLING_KEY, "61", "43301234****123*"));
+
+    assertThat(updateOrganizationStatus(organizationId, "suspended")).hasStatus(200);
+
+    assertError(getRegistration(token), 404, ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
+    assertError(
+        createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION),
+        404,
+        ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
+    verifyNoInteractions(tossPaymentsClient);
+    assertThat(countBillingKeys(customerId)).isZero();
+
+    assertThat(updateOrganizationStatus(organizationId, "active")).hasStatus(200);
+    assertThat(getRegistration(token)).hasStatus(200);
   }
 
   @Test
@@ -398,6 +448,55 @@ class PaymentMethodRegistrationIntegrationTest {
   }
 
   @Test
+  void 카드를_등록하거나_바꾸면_도입사_감사_행을_시스템_행위자로_남기고_교체면_이전_카드를_싣는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    String firstToken = createToken(organizationId, customerId);
+    tossIssues(issued(BILLING_KEY, "61", "43301234****123*"));
+    assertThat(
+            createBillingKey(firstToken, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION))
+        .hasStatus(201);
+    String secondToken = createToken(organizationId, customerId);
+    tossIssues(issued(NEW_BILLING_KEY, "41", "53651234****456*"));
+    assertThat(createBillingKey(secondToken, AUTH_KEY, customerId.toString(), "2026-11-01"))
+        .hasStatus(201);
+    entityManager.flush();
+
+    List<Map<String, Object>> rows =
+        jdbcTemplate.queryForList(
+            """
+            SELECT actor_type, actor_id, target_type, target_id, detail::text AS detail
+            FROM audit_log WHERE organization_id = ? AND action = 'payment_method_created'
+            ORDER BY occurred_at
+            """,
+            organizationId);
+
+    assertThat(rows)
+        .hasSize(2)
+        .allSatisfy(
+            row ->
+                assertThat(row)
+                    .containsEntry("actor_type", "system")
+                    .containsEntry("actor_id", null)
+                    .containsEntry("target_type", "payment_method")
+                    .containsEntry("target_id", customerId.toString()));
+    assertThat(detailOf(rows.get(0)))
+        .isEqualTo(
+            Map.of(
+                "mode", "test",
+                "payment_method_registration_id", registrationId(firstToken),
+                "card_number", "43301234****123*"));
+    assertThat(detailOf(rows.get(1)))
+        .isEqualTo(
+            Map.of(
+                "mode", "test",
+                "payment_method_registration_id", registrationId(secondToken),
+                "card_number", "53651234****456*",
+                "replaced_card_number", "43301234****123*"));
+  }
+
+  @Test
   void 발급하는_사이에_링크가_쓰이면_404이고_막_발급한_빌링키를_지우며_기존_카드는_그대로다() {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);
@@ -513,6 +612,13 @@ class PaymentMethodRegistrationIntegrationTest {
         .exchange();
   }
 
+  private MvcTestResult createRegistration(String authorization, UUID customerId) {
+    return mvc.post()
+        .uri("/v1/customers/{id}/payment-method-registrations", customerId)
+        .header("Authorization", authorization)
+        .exchange();
+  }
+
   private String createToken(UUID organizationId, UUID customerId) {
     MvcTestResult created = createRegistration(organizationId, customerId);
     assertThat(created).hasStatus(201);
@@ -539,6 +645,15 @@ class PaymentMethodRegistrationIntegrationTest {
             {"auth_key": "%s", "customer_key": "%s", "consent_document_version": "%s"}
             """
                 .formatted(authKey, customerKey, consentDocumentVersion))
+        .exchange();
+  }
+
+  private MvcTestResult updateOrganizationStatus(UUID organizationId, String status) {
+    return mvc.put()
+        .uri("/v1/organizations/{id}/status", organizationId)
+        .header("Authorization", TestCredentials.issueOperatorSession(jdbcTemplate))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"status\": \"%s\"}".formatted(status))
         .exchange();
   }
 
@@ -569,6 +684,19 @@ class PaymentMethodRegistrationIntegrationTest {
   private Map<String, Object> registrationRow(UUID customerId) {
     return jdbcTemplate.queryForMap(
         "SELECT * FROM payment_method_registration WHERE customer_id = ?", customerId);
+  }
+
+  private String registrationId(String token) {
+    return jdbcTemplate
+        .queryForObject(
+            "SELECT id FROM payment_method_registration WHERE token_hash = ?",
+            UUID.class,
+            sha256(token))
+        .toString();
+  }
+
+  private static Map<String, Object> detailOf(Map<String, Object> auditRow) {
+    return JsonPath.read((String) auditRow.get("detail"), "$");
   }
 
   private int countRegistrations(UUID customerId) {

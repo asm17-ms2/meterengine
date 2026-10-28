@@ -1,5 +1,6 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.crypto.SecretMask;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
@@ -20,7 +21,9 @@ import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.PaymentMethodRegistrationRepository;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +42,7 @@ public class BillingKeyService {
   private final BillingKeyRepository billingKeyRepository;
   private final PaymentArchiveRepository paymentArchiveRepository;
   private final TossPaymentsClient tossPaymentsClient;
+  private final AuditLogService auditLogService;
   private final TransactionTemplate transactionTemplate;
 
   BillingKeyService(
@@ -47,12 +51,14 @@ public class BillingKeyService {
       BillingKeyRepository billingKeyRepository,
       PaymentArchiveRepository paymentArchiveRepository,
       TossPaymentsClient tossPaymentsClient,
+      AuditLogService auditLogService,
       PlatformTransactionManager platformTransactionManager) {
     this.paymentMethodRegistrationService = paymentMethodRegistrationService;
     this.paymentMethodRegistrationRepository = paymentMethodRegistrationRepository;
     this.billingKeyRepository = billingKeyRepository;
     this.paymentArchiveRepository = paymentArchiveRepository;
     this.tossPaymentsClient = tossPaymentsClient;
+    this.auditLogService = auditLogService;
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
 
@@ -130,6 +136,7 @@ public class BillingKeyService {
                 registration.getCustomerId(),
                 registration.getMode()));
     String replacedBillingKey = existing.map(BillingKey::getBillingKey).orElse(null);
+    String replacedCardNumber = existing.map(BillingKey::getCardNumber).orElse(null);
     BillingKey billingKey =
         existing
             .map(
@@ -159,10 +166,21 @@ public class BillingKeyService {
                         authenticatedAt,
                         consentDocumentVersion,
                         consentedAt));
-    return Optional.of(
-        new Replacement(
-            PaymentMethodResponse.from(billingKeyRepository.saveAndFlush(billingKey)),
-            replacedBillingKey));
+    BillingKey saved = billingKeyRepository.saveAndFlush(billingKey);
+    Map<String, Object> detail = new LinkedHashMap<>();
+    detail.put("mode", registration.getMode());
+    detail.put("payment_method_registration_id", registration.getId().toString());
+    detail.put("card_number", saved.getCardNumber());
+    if (replacedCardNumber != null) {
+      detail.put("replaced_card_number", replacedCardNumber);
+    }
+    auditLogService.record(
+        registration.getOrganizationId(),
+        "payment_method_created",
+        "payment_method",
+        registration.getCustomerId().toString(),
+        detail);
+    return Optional.of(new Replacement(PaymentMethodResponse.from(saved), replacedBillingKey));
   }
 
   private void delete(Issuance issuance, String billingKey) {

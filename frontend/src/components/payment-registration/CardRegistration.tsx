@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Alert, Button, Checkbox } from "antd";
 import { prepareRegistration } from "@/app/payment-method-registrations/actions";
 import type { PaymentMethodRegistrationResponse } from "@/app/payment-method-registrations/types";
+import { formatKstDateTime } from "@/lib/format";
 import styles from "./registration.module.css";
 
 type TossPaymentsSdk = (clientKey: string) => {
@@ -25,7 +26,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
   const [isSdkReady, setIsSdkReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const expiresAt = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(registration.expires_at));
+  const expiresAt = formatKstDateTime(registration.expires_at);
 
   async function registerCard() {
     if (!hasConsent || isSubmitting || !window.TossPayments) return;
@@ -59,16 +60,16 @@ export function CardRegistration({ token, registration }: { token: string; regis
     <dl className={styles.summary}>
       <div><dt>서비스 제공자</dt><dd>{registration.organization_name}</dd></div>
       <div><dt>고객명</dt><dd>{registration.customer_name}</dd></div>
-      <div><dt>링크 유효기간</dt><dd>{expiresAt}까지</dd></div>
+      <div><dt>링크 유효기간</dt><dd>{expiresAt} KST까지</dd></div>
     </dl>
     <fieldset className={styles.consent}>
       <legend>자동결제 등록 동의</legend>
-      <details><summary>등록과 결제 안내 보기</summary><p>{registration.organization_name}의 서비스 이용료 결제를 위해 카드를 등록합니다. 이후 청구되는 이용료의 결제에 이 카드가 사용되며, 지금은 카드 등록만 진행합니다. 결제 조건과 카드 변경은 서비스 담당자에게 문의해 주세요.</p></details>
+      <ul className={styles.terms}><li>{registration.organization_name}의 서비스 이용료를 결제할 카드를 등록합니다. 지금은 카드 등록만 진행하며 결제는 일어나지 않습니다.</li><li>이후 청구가 확정되면 사용량에 따라 정해진 이용료를 {registration.organization_name}가 이 카드로 결제합니다. 결제할 때마다 따로 승인하지 않으며, 금액은 청구마다 달라질 수 있습니다.</li><li>자동결제 중단, 카드 변경과 결제 조건은 {registration.organization_name} 담당자에게 요청해 주세요.</li></ul>
       <Checkbox checked={hasConsent} onChange={(event) => setHasConsent(event.target.checked)} disabled={isSubmitting}>
-        [필수] 위 내용을 확인하고 자동결제 카드 등록에 동의합니다.
+        [필수] 위 자동결제 안내를 확인하고 카드 등록에 동의합니다.
       </Checkbox>
     </fieldset>
-    {errorMessage && <div role="alert"><Alert type="error" showIcon title={errorMessage} /></div>}
+    {errorMessage && <Alert type="error" showIcon title={errorMessage} />}
     <Button type="primary" size="large" block disabled={!hasConsent || !isSdkReady} loading={isSubmitting} onClick={registerCard}>
       토스에서 카드 등록하기
     </Button>
