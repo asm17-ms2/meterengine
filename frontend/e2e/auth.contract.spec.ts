@@ -247,6 +247,18 @@ test("logging in to a return path of another member organization opens that orga
   await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
 });
 
+test("a required choice group error reads without a broken particle", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("권한 없는 키");
+  for (const box of await dialog.getByRole("checkbox").all()) await box.uncheck();
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByText("하나 이상 선택하세요.", { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByText("을 하나 이상", { exact: false })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

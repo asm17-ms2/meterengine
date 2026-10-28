@@ -75,7 +75,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     const data = new FormData(event.currentTarget);
     const nextErrors: Record<string, string> = {};
     for (const field of fields) {
-      if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = `${field.label}을 하나 이상 선택하세요.`;
+      if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = "하나 이상 선택하세요.";
     }
     setClientErrors(nextErrors);
     if (Object.keys(nextErrors).length) { requestAnimationFrame(() => summaryRef.current?.focus()); return; }
