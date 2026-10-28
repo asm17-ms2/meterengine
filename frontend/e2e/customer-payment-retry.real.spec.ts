@@ -112,7 +112,9 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
     data.customers[name] = uuid((await response.json()).id);
     await registerCard(request, data, name, secrets);
   }
-  expect((await request.post(`${API_URL}/v1/event-batches`, { headers: readHeaders, data: { events: names.map(name => ({ transaction_id: `customer-retry-${suffix}-${name}`, customer_id: data.customers[name], type: code, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: 10 } })) } })).status()).toBe(200);
+  for (const name of names) {
+    expect((await request.post(`${API_URL}/v1/events`, { headers: readHeaders, data: { transaction_id: `customer-retry-${suffix}-${name}`, customer_id: data.customers[name], type: code, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: 10 } } })).status()).toBe(200);
+  }
   expect((await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers })).status()).toBe(200);
   const response = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers });
   expect(response.status()).toBe(200);
