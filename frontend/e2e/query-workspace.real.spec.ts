@@ -190,6 +190,8 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
+    await dialog.getByLabel("구간 1 단가", { exact: true }).fill("10");
+    await dialog.getByLabel("구간 2 단가", { exact: true }).fill("10");
     const upper = dialog.getByLabel("구간 1 끝 수량", { exact: true });
     await upper.fill("0");
     await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
