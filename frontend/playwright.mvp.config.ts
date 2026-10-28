@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
@@ -13,7 +14,7 @@ if (missingScenarios.length) throw new Error(`MVP E2E 시나리오가 없습니�
 export default defineConfig({
   testDir: "./e2e",
   testMatch: scenarios,
-  outputDir: "/tmp/meterengine-mvp-real-results",
+  outputDir: join(tmpdir(), "meterengine-mvp-real-results"),
   timeout: 180_000,
   expect: { timeout: 10_000 },
   workers: 1,
@@ -22,7 +23,7 @@ export default defineConfig({
   use: { baseURL: "http://localhost:33147", browserName: "chromium", trace: "off", actionTimeout: 15_000, navigationTimeout: 30_000 },
   webServer: [
     ...(process.env.MVP_EXTERNAL_PG_FIXTURE === "1" ? [] : [{ command: "node e2e/toss-server.mjs", url: "http://127.0.0.1:38447/health", reuseExistingServer: false,
-      env: { MVP_PG_STATE_FILE: "/private/tmp/meterengine-orchestration-0696/toss-state.json" } }]),
+      env: { MVP_PG_STATE_FILE: process.env.MVP_PG_STATE_FILE ?? join(tmpdir(), "meterengine-mvp-real", "toss-state.json") } }]),
     {
       command: "node e2e/start-frontend.mjs",
       url: "http://127.0.0.1:33147/health",
