@@ -12,6 +12,7 @@ let customers = [];
 let failures = {};
 let bulk = false;
 let apiKeys = [];
+const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
@@ -37,7 +38,7 @@ const server = createServer(async (req, res) => {
     result = { status: 200, body: {} };
   } else if (path === "/__requests") result = { status: 200, body: requests };
   else {
-    requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents });
+    requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description });
     if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
     else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
@@ -89,6 +90,12 @@ const server = createServer(async (req, res) => {
       result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
     }
     else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [] } };
+    else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "GET") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, description: "운영 알림 수신기", created_at: new Date().toISOString(), archived_at: null } };
+    else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "PUT") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: body.url, event_types: body.event_types, enabled: body.enabled, description: body.description ?? null, created_at: new Date().toISOString(), archived_at: null } };
+    else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}/deliveries` && req.method === "GET") result = { status: 200, body: { total: 2, deliveries: [
+      { id: "99999999-9999-4999-8999-0000000000a1", status: "pending", type: "payment_failed", attempt_count: 3, response_status: null, failure_reason: "connection_error", next_attempt_at: expiresAt(), created_at: new Date().toISOString() },
+      { id: "99999999-9999-4999-8999-0000000000a2", status: "failed", type: "webhook_test", attempt_count: 1, response_status: null, failure_reason: "blocked_address", next_attempt_at: null, created_at: new Date().toISOString() },
+    ] } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
   }
   res.writeHead(result.status, { "Content-Type": "application/json" });

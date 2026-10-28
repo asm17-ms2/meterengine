@@ -227,7 +227,7 @@ public class BillingKeyService {
       return "Issuance[registration="
           + registration
           + ", secretKey="
-          + SecretMask.lastFour(secretKey)
+          + SecretMask.mask(secretKey)
           + "]";
     }
   }
@@ -245,7 +245,7 @@ public class BillingKeyService {
       return "Replacement[paymentMethod="
           + paymentMethod
           + ", replacedBillingKey="
-          + SecretMask.lastFour(replacedBillingKey)
+          + SecretMask.mask(replacedBillingKey)
           + "]";
     }
   }

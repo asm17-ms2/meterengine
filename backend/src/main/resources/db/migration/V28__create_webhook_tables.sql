@@ -40,6 +40,7 @@ CREATE TABLE webhook_delivery (
 );
 
 CREATE INDEX webhook_delivery_pending_next_attempt_at ON webhook_delivery(next_attempt_at) WHERE status = 'pending';
+CREATE INDEX webhook_delivery_endpoint_created_at ON webhook_delivery(organization_id, webhook_endpoint_id, created_at DESC, id DESC);
 
 CREATE TABLE webhook_delivery_attempt (
   id UUID CONSTRAINT webhook_delivery_attempt_pk PRIMARY KEY,
