@@ -7,6 +7,8 @@ import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import { InvoiceViewLinks } from "@/components/workspace/InvoiceViewLinks";
 import type { InvoiceViewLink } from "@/lib/invoice-view-links";
+import { paymentReadiness } from "./card-state";
+import { INVOICE_PAYMENT_STATUS_LABELS } from "@/lib/invoice-payment-status";
 
 type PaymentAttemptResponse = {
   id: string; invoice_id: string; status: string; amount: number;
@@ -17,13 +19,13 @@ type PaymentCancellationResponse = {
 };
 
 const PAYMENT_STATES: Record<string, { label: string; description: string }> = {
-  unpaid: { label: "미청구", description: "등록한 카드로 이 인보이스의 결제를 요청할 수 있습니다." },
-  failed: { label: "결제 실패", description: "실패 사유와 등록 카드를 확인한 뒤 다시 결제를 요청하세요." },
-  pending: { label: "결제 결과 확인 중", description: "진행 중인 결제의 결과가 확인될 때까지 추가로 청구할 수 없습니다. 내역을 새로 조회해 주세요." },
-  paid: { label: "수납 완료", description: "승인된 결제가 있어 이 인보이스로 다시 청구할 수 없습니다." },
-  partially_canceled: { label: "부분 취소", description: "승인된 결제의 일부를 취소했습니다. 취소는 청구액과 별도로 기록하며 재청구는 별도 작업입니다." },
-  canceled: { label: "전액 취소", description: "결제 금액 전부를 취소했습니다. 확정 청구액은 보존되며 재청구는 별도 작업입니다." },
-  not_required: { label: "결제 불필요", description: "청구 금액이 0원이므로 결제할 금액이 없습니다." },
+  unpaid: { label: INVOICE_PAYMENT_STATUS_LABELS.unpaid, description: "등록한 카드로 이 인보이스의 결제를 요청할 수 있습니다." },
+  failed: { label: INVOICE_PAYMENT_STATUS_LABELS.failed, description: "실패 사유와 등록 카드를 확인한 뒤 다시 결제를 요청하세요." },
+  pending: { label: INVOICE_PAYMENT_STATUS_LABELS.pending, description: "진행 중인 결제의 결과가 확인될 때까지 추가로 청구할 수 없습니다. 내역을 새로 조회해 주세요." },
+  paid: { label: INVOICE_PAYMENT_STATUS_LABELS.paid, description: "승인된 결제가 있어 이 인보이스로 다시 청구할 수 없습니다." },
+  partially_canceled: { label: INVOICE_PAYMENT_STATUS_LABELS.partially_canceled, description: "승인된 결제의 일부를 취소했습니다. 취소는 청구액과 별도로 기록하며 재청구는 별도 작업입니다." },
+  canceled: { label: INVOICE_PAYMENT_STATUS_LABELS.canceled, description: "결제 금액 전부를 취소했습니다. 확정 청구액은 보존되며 재청구는 별도 작업입니다." },
+  not_required: { label: INVOICE_PAYMENT_STATUS_LABELS.not_required, description: "청구 금액이 0원이므로 결제할 금액이 없습니다." },
 };
 
 async function CancellationHistory({ attempt }: { attempt: PaymentAttemptResponse }) {
@@ -32,7 +34,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   );
   if (!cancellations.ok) return <section className="workspace-panel">
     <h2>승인 결제 취소</h2>
-    <p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode}</p>
+    <p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode === "test" ? "테스트 결제" : "실결제"}</p>
     <WorkspaceError message={cancellations.error.message} />
     <p className="muted">취소 내역을 확인한 뒤 새로 요청할 수 있습니다.</p>
   </section>;
@@ -48,7 +50,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   const isFullyCanceled = isValidHistory && remainingAmount === 0;
   return <section className="workspace-panel">
     <div className="workspace-heading">
-      <div><h2>승인 결제 취소</h2><p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode}</p></div>
+      <div><h2>승인 결제 취소</h2><p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode === "test" ? "테스트 결제" : "실결제"}</p></div>
       {canCancel && <div className="workspace-actions">
         {remainingAmount > 1 && <ActionPanel title="일부 금액 취소" label="입력한 금액 취소 요청" operation="createPaymentCancellation" isDanger
           description={(attempt.mode === "test" ? "테스트 결제 취소. " : "실결제 취소. ") + "취소할 금액을 직접 입력하세요. 현재 잔액은 " + formatKrw(remainingAmount) + "입니다. 취소 요청은 되돌릴 수 없습니다."}
@@ -86,11 +88,25 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
     workspaceFetch<{ payment_attempts: PaymentAttemptResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/payment-attempts"),
     workspaceFetch<{ invoice_view_links: InvoiceViewLink[] }>("/v1/invoices/" + encodeURIComponent(id) + "/view-links"),
   ]);
-  if (!invoice.ok || !attempts.ok) return <WorkspaceError message={!invoice.ok ? invoice.error.message : !attempts.ok ? attempts.error.message : "조회하지 못했습니다."} />;
+  if (!invoice.ok || !attempts.ok) {
+    const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
+    return <>
+      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"} kicker="도입사 콘솔"
+        description={failure?.status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
+        <Link href="/payments">수납 목록으로</Link>
+      </WorkspaceHeader>
+      <WorkspaceError message={failure?.message ?? "조회하지 못했습니다."} status={failure?.status} />
+    </>;
+  }
   const payments = await workspaceFetch<{ invoice_payments: InvoicePaymentResponse[] }>("/v1/invoice-payments", {
     month: invoice.data.month, customer_id: invoice.data.customer_id,
   });
   const currentPayment = payments.ok ? payments.data.invoice_payments.find(payment => payment.invoice_id === id) : undefined;
+  const [card, keys] = await Promise.all([
+    workspaceFetch<{ card_number: string }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
+    workspaceFetch<{ toss_payments_credentials: { mode: string }[] }>("/v1/toss-payments-credentials"),
+  ]);
+  const readiness = paymentReadiness(currentPayment?.mode, keys, card);
   const state = currentPayment ? PAYMENT_STATES[currentPayment.status] : undefined;
   const canCollect = currentPayment && ["unpaid", "failed"].includes(currentPayment.status);
   return <>
@@ -103,13 +119,17 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
     <section className="workspace-panel">
       <div className="workspace-heading">
         <h2>현재 결제 상태</h2>
-        {canCollect && <ActionPanel title={currentPayment.status === "failed" ? "결제 다시 시도" : "등록 카드로 결제"} operation="createPaymentAttempt"
-          description={(currentPayment?.mode === "test" ? "테스트 결제: " : "실결제: ") + invoice.data.customer_name + "의 " + formatKrw(invoice.data.total_amount) + "을 등록 카드로 청구합니다. 결과가 불확실한 이전 시도는 먼저 조회합니다."}
+        {canCollect && readiness === "card-missing" && <ActionPanel title="카드 등록 링크 만들기" operation="createPaymentMethodRegistration"
+          description={invoice.data.customer_name + "이 결제 모드의 카드를 등록할 수 있는 링크를 만듭니다. 링크를 고객에게 전달하세요."}
+          fields={[{ name: "id", type: "hidden", label: "", value: invoice.data.customer_id }]} />}
+        {canCollect && readiness === "key-missing" && <Link href="/settings">설정에서 토스페이먼츠 키 저장</Link>}
+        {canCollect && (readiness === "usable" || readiness === "unknown") && <ActionPanel title={currentPayment.status === "failed" ? "결제 다시 시도" : "등록 카드로 결제"} operation="createPaymentAttempt"
+          description={(currentPayment?.mode === "test" ? "테스트 결제: " : "실결제: ") + invoice.data.customer_name + "의 " + formatKrw(invoice.data.total_amount) + "을 " + (card.ok ? "등록 카드(" + card.data.card_number + ")로" : "등록 카드로") + " 청구합니다. 결과가 불확실한 이전 시도는 먼저 조회합니다."}
           fields={[{ name: "id", type: "hidden", label: "", value: id }]} />}
       </div>
       {!payments.ok ? <WorkspaceError message={payments.error.message} />
         : !currentPayment || !state ? <WorkspaceError message="현재 결제 상태를 확인하지 못했습니다. 내역을 다시 조회해 주세요." />
-          : <><p role="status"><strong>{currentPayment.mode === "test" ? "테스트 결제" : "실결제"} / {state.label}</strong></p><p className="muted">{state.description}</p></>}
+          : <><p role="status"><strong>{currentPayment.mode === "test" ? "테스트 결제" : "실결제"} / {state.label}</strong></p><p className="muted">{canCollect && readiness === "card-missing" ? "결제 모드에 맞는 등록 카드가 없어 결제를 요청할 수 없습니다. 카드 등록 링크를 만들어 고객에게 전달하세요." : canCollect && readiness === "key-missing" ? "결제 모드의 토스페이먼츠 키가 없어 결제를 요청할 수 없습니다. 설정에서 키를 저장하세요." : state.description}</p></>}
       <h3>결제 시도 기록</h3>
       <WorkspaceTable rows={attempts.data.payment_attempts.map(attempt => ({ ...attempt, requested_at: formatKstDateTime(attempt.requested_at) }))}
         columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "모드" }, { key: "failure_message", label: "실패 사유" }]} />

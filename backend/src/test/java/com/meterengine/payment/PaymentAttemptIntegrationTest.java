@@ -828,6 +828,36 @@ class PaymentAttemptIntegrationTest {
   }
 
   @Test
+  void 수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패면_7일이_지나도_다시_조회해_새로_승인한다() {
+    Payable payable = payableInvoice("test");
+    UUID notFoundAttemptId =
+        insertFailedAttempt(payable, "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
+    insertFailedAttempt(payable, "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusDays(7));
+    lookupReturns(
+        notFoundAttemptId, new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
+    tossReturns(approved(PAYMENT_KEY));
+
+    assertThat(createPaymentAttempt(payable.organizationId(), payable.invoiceId())).hasStatus(201);
+    assertThat(countAttempts(payable.invoiceId())).isEqualTo(3);
+    verify(tossPaymentsClient).findPaymentByOrderId(TEST_SECRET_KEY, notFoundAttemptId.toString());
+    verify(tossPaymentsClient).approveBilling(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  @Test
+  void 수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패_뒤에_키가_바뀌었으면_다시_조회하지_않고_새로_승인한다() {
+    Payable payable = payableInvoice("test");
+    insertFailedAttempt(payable, "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
+    insertFailedAttempt(payable, "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusDays(7));
+    changeCredentialTimestamp(payable.organizationId());
+    tossReturns(approved(PAYMENT_KEY));
+
+    assertThat(createPaymentAttempt(payable.organizationId(), payable.invoiceId())).hasStatus(201);
+    assertThat(countAttempts(payable.invoiceId())).isEqualTo(3);
+    verify(tossPaymentsClient, never()).findPaymentByOrderId(anyString(), anyString());
+    verify(tossPaymentsClient).approveBilling(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  @Test
   void 같은_NOT_FOUND_PAYMENT_실패를_동시에_수동_재조회해도_새_승인은_하나만_한다() throws Exception {
     Payable payable = payableInvoice("test");
     UUID failedAttemptId =
