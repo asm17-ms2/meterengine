@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T16:57:58+09:00",
+  "updated_at": "2026-10-28T16:58:27+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -843,7 +843,7 @@
       "branch": "feat/account-permissions",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
       "evidence": [
         "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
         "frontend/src/lib/config.ts:1-5 @ 72e8718",
@@ -866,8 +866,6 @@
         "layer_sha": "72e8718",
         "top_sha": "0fe7d2a"
       },
-      "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
       "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
     },
     {
@@ -2367,7 +2365,7 @@
       "branch": "feat/account-permissions",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
       "evidence": [
         "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
         "frontend/src/lib/config.ts:1-5 @ 72e8718",
@@ -2390,8 +2388,6 @@
         "layer_sha": "72e8718",
         "top_sha": "0fe7d2a"
       },
-      "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
       "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
     },
     {
@@ -2401,7 +2397,7 @@
       "branch": "feat/account-permissions",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
       "evidence": [
         "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
         "frontend/src/lib/config.ts:1-5 @ 72e8718",
@@ -2424,8 +2420,6 @@
         "layer_sha": "72e8718",
         "top_sha": "0fe7d2a"
       },
-      "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
       "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
     },
     {
