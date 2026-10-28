@@ -1,13 +1,13 @@
-미완료 185건, 결과: 끝 상태 143/328건 (fixed 100, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
+미완료 175건, 결과: 끝 상태 153/328건 (fixed 100, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
 push: feat/account-permissions 62개(마지막 643ae66)
-정할 것: 31건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
+정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
+| #445 | 68 | 0 | 0 | 9 | 1 | 0 | 58 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -134,6 +134,7 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | G-187 | #442 | CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다). |
 | X-046 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | X-104 | #442 | 로그아웃 요청이 401 밖의 이유(네트워크, 시간 초과, 5xx)로 실패했을 때 지금처럼 쿠키를 남겨 다시 시도하게 할지(계약 시험 logout keeps the session after a revocation failure가 이 동작을 고정한다), 쿠키를 먼저 지우고 서버 세션 종료를 확인하지 못했다고 알릴지 정한다. |
+| Ck2-017 | #445 | 실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다. |
 
 ## 막힌 것
 
@@ -237,6 +238,11 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | X-025 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
 | X-046 | #442 | 통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다. |
 | X-057 | #442 | WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다. |
+| C445-004 | #445 | #446부터 #449까지는 54bb1d5의 false 값을 그대로 물려받고, origin/feat/event-ingestion은 이미 listEvents를 sort: true, q: true, range: true로 다시 켜 두었으므로 위층에서 할 일이 없다. |
+| C445-006 | #445 | C445-007(시험 412행 isIn(409, 500))은 #449 feat/customer-invoices에서 좁힌다. #449 head 2fe98d1과 정점 0fe7d2a의 PaymentAttemptIntegrationTest.java:412가 같고, 그 위에서는 23b1844(#453)가 findForUpdate를 lockInvoice로 바꿨을 뿐 잠금 순서는 같다. |
+| C445-009 | #445 | #445 단독 머지 구간에만 남는다. 정점에서도 create의 예외 경로 정리는 없지만 organization 행 잠금으로 PK 경합이 사라져 이 지적의 실패 경로는 막힌다. 정점 시험은 backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java 87-122행이다. |
+| X-075 | #445 | 위층(#446~#455)으로 옮길 때 9dff033의 WorkspaceHeader.tsx 한 줄 변경이 들어가면 정점 payments/[id]/page.tsx:99-100의 '고객으로 이동', '내역 새로 조회'도 한 묶음이 된다. 페이지 쪽에 따로 div.workspace-actions를 더하지 않는다. integrations/[id], members 화면은 이미 자식으로 div.workspace-actions를 넘겨 겹으로 감싸지지만 배치는 같다. |
+| Ck2-017 | #445 | 어느 안을 고르든 #453 23b1844가 PaymentReconciliationService.reconcile을 환경별로 나눴으므로 재실행이나 따라잡기 경로를 #453 head의 환경 구분 코드에도 맞춰야 한다. 슬롯을 cron 예정 시각에서 계산하는 부분은 PaymentJobScheduler.java 한 파일이며 위층에서 이 파일을 바꾼 커밋은 없다. |
 | NT-yang-001 | #442 | #443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다. |
 
 ## fixed-above로 둔 것
@@ -250,6 +256,9 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | G-029 | #442 | fixed-above #454 a39db70 |
 | G-034 | #442 | fixed-above #453 23b1844 |
 | G-063 | #442 | fixed-above #454 a39db70 |
+| C445-006 | #445 | fixed-above #449 c9a86c4 |
+| C445-009 | #445 | fixed-above #447 2ec5d85 |
+| C445-018 | #445 | fixed-above #451 e5fca11 |
 
 ## 마지막 실화면 점검
 

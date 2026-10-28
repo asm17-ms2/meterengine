@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T21:47:19+09:00",
+  "updated_at": "2026-10-28T22:03:35+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -3631,14 +3631,25 @@
       "merged_ids": [],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "리뷰 시점(4ace811)의 capabilities.ts는 listEvents의 sort, q, range와 aggregateBillableMetricUsages, previewDraftInvoice의 customer_id를 true로 켰지만, 박성종 님 커밋 54bb1d5(넘길 때 head 자체)가 이 다섯 플래그를 모두 false로 되돌렸다. 판정 sha b10f8c7의 14-16행도 false 그대로이고, CustomerFilter는 customer_id가 false면 null을 돌려 숨고 useTableSort는 sort가 false면 서버 정렬 쪽 분기를 타지 않는다. 남은 archive: true는 앞선 검토가 화면 영향이 없다고 본 부분이라 이 지적 범위 밖이다. #450 브랜치는 이미 listEvents를 sort, q, range true로 다시 켰고(백엔드 EventController가 sort 등을 받는다), #451이 usage와 draft의 customer_id를 다시 켜므로 위층에 따로 맞출 것이 없다.",
+      "evidence": [
+        "커밋 54bb1d5",
+        "frontend/src/lib/api/capabilities.ts:14-16 @ b10f8c7",
+        "frontend/src/components/screen/CustomerFilter.tsx:39 @ b10f8c7",
+        "frontend/src/components/table/table-sort.ts:86-91 @ b10f8c7",
+        "frontend/src/lib/api/capabilities.ts:21-23 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "#446부터 #449까지는 54bb1d5의 false 값을 그대로 물려받고, origin/feat/event-ingestion은 이미 listEvents를 sort: true, q: true, range: true로 다시 켜 두었으므로 위층에서 할 일이 없다.",
+      "top_head": "differs: 정점은 #450(listEvents sort, q, range)과 #451(usage, draft customer_id)에서 백엔드 지원과 함께 플래그를 다시 켰다"
     },
     {
       "id": "C445-006",
@@ -3647,14 +3658,25 @@
       ],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "b10f8c7의 insertPending(380-408)은 NOT_FOUND_PAYMENT 불확실 시도 행만 findForUpdate로 잠그고(384-386) 인보이스 행은 잠그지 않는다. 그래서 겹친 두 요청이 모두 prepare의 findActive(364)를 지나 savePending의 saveAndFlush(243)에 닿고, 진 쪽은 V30의 부분 유일 인덱스 위반으로 끝난다. GlobalExceptionHandler에는 DataIntegrityViolationException 처리기가 없어 Exception 처리(208)로 500이 되므로 이 층에서는 지적이 맞다. 다만 #449 커밋 c9a86c4가 insertPending 첫머리에 invoiceRepository.findForUpdate를 넣었고 정점 0fe7d2a도 lockInvoice(511)로 먼저 잠근다. 규칙 5에 따라 이 층에서는 고치지 않는다. split: C445-007 정점 PaymentAttemptIntegrationTest.java:412 @ 0fe7d2a가 아직 isIn(409, 500)이라 회귀를 못 잡는다. 잠금이 생기는 #449(c9a86c4 이후, 2fe98d1:412도 같다)에서 진 요청을 409와 $.code invoice_already_paid로 좁혀야 하고, 잠금이 없는 #445에서 좁히면 시험이 실패한다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:380-386 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:364-366 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:208 @ b10f8c7",
+        "커밋 c9a86c4",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:511 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "C445-007(시험 412행 isIn(409, 500))은 #449 feat/customer-invoices에서 좁힌다. #449 head 2fe98d1과 정점 0fe7d2a의 PaymentAttemptIntegrationTest.java:412가 같고, 그 위에서는 23b1844(#453)가 findForUpdate를 lockInvoice로 바꿨을 뿐 잠금 순서는 같다.",
+      "top_head": "fixed-above #449 c9a86c4"
     },
     {
       "id": "C445-008",
@@ -3675,14 +3697,25 @@
       "merged_ids": [],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "층 sha b10f8c7의 BillingKeyService.replace는 markUsed 뒤 잠금 없이 findById로 billing_key를 읽고 새 행을 만들거나 update하므로, 같은 고객과 모드의 서로 다른 등록 링크 두 개가 동시에 끝나면 PK 위반 500이나 덮인 새 키 잔류가 남는다. create는 replace가 Optional.empty일 때만 새 키를 지우고 예외 경로는 정리하지 않는다(69-72행). 54bb1d5 뒤 이 파일을 바꾼 커밋은 없다. 위층 #447 커밋 2ec5d85가 replace 첫 줄에 paymentArchiveRepository.lock(organization 행 FOR UPDATE)을 넣어 정점 0fe7d2a 138행에서 두 replace가 직렬화되고, PaymentArchiveConcurrencyTest가 서로 다른 링크의 동시 재등록을 다룬다. 잠금 뒤에는 PK 경합으로 예외 경로에 갈 일이 없어 이 층에서 고치지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:116-125,152-155 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:61-72 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:138-149 @ 0fe7d2a",
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:26-29 @ 0fe7d2a",
+        "커밋 2ec5d85"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "#445 단독 머지 구간에만 남는다. 정점에서도 create의 예외 경로 정리는 없지만 organization 행 잠금으로 PK 경합이 사라져 이 지적의 실패 경로는 막힌다. 정점 시험은 backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java 87-122행이다.",
+      "top_head": "fixed-above #447 2ec5d85"
     },
     {
       "id": "C445-010",
@@ -3803,14 +3836,24 @@
       "merged_ids": [],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "confirmed",
+      "reason": "b10f8c7에서도 #445가 더한 GET /v1/invoices/{id}(InvoiceController 112행, InvoiceService.get 75행의 findByOrganizationIdAndId)를 부르는 시험은 PaymentAttemptIntegrationTest 620행의 자기 인보이스 200 확인 하나뿐이고, 없는 id나 다른 도입사 인보이스의 404 invoice_not_found와 단건 본문을 보는 시험은 이 층에 없다. 구현은 지금 도입사로 막고 있어 실패가 아니라 회귀를 막는 시험의 공백이다. #451 커밋 e5fca11이 InvoiceGetIntegrationTest를 더해 50행에서 단건과 목록 원소 일치를, 78행에서 없는 인보이스와 다른 도입사 인보이스의 404를 확인하고, 정점 0fe7d2a까지 그대로 남아 있다. 판정 규칙대로 위층이 이미 메운 공백이라 이 층에서는 고치지 않는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:112 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:75 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/PaymentAttemptIntegrationTest.java:618-623 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/invoice/InvoiceGetIntegrationTest.java:50,78 @ 0fe7d2a",
+        "커밋 e5fca11"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-above #451 e5fca11"
     },
     {
       "id": "D-126",
@@ -4078,14 +4121,25 @@
       ],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "넘길 때 head 54bb1d5의 WorkspaceHeader는 children을 .workspace-heading(space-between)에 그대로 넣어 수납 상세의 두 링크가 흩어졌다. 판정 sha b10f8c7에서는 WorkspaceHeader.tsx:6이 children을 div.workspace-actions로 감싸므로 payments/[id]/page.tsx:86-87의 두 링크가 한 묶음으로 오른쪽에 붙는다. 고친 커밋은 #442에 올린 9dff033(양성지 님)이고 #445까지 merge로 들어와 있다. 정점 0fe7d2a의 WorkspaceHeader.tsx:6은 아직 감싸지 않은 옛 코드라 위층 브랜치에 이 커밋이 들어가면 함께 풀린다. 묶인 D-162, D-198도 같은 헤더 children 배치가 원인이다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ b10f8c7",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:84-88 @ b10f8c7",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ 54bb1d5",
+        "커밋 9dff033",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "위층(#446~#455)으로 옮길 때 9dff033의 WorkspaceHeader.tsx 한 줄 변경이 들어가면 정점 payments/[id]/page.tsx:99-100의 '고객으로 이동', '내역 새로 조회'도 한 묶음이 된다. 페이지 쪽에 따로 div.workspace-actions를 더하지 않는다. integrations/[id], members 화면은 이미 자식으로 div.workspace-actions를 넘겨 겹으로 감싸지지만 배치는 같다.",
+      "top_head": "fixed-in-layer 9dff033(#442 양성지 수정이 merge로 들어옴). 정점에는 아직 반영되지 않았다"
     },
     {
       "id": "X-087",
@@ -4120,14 +4174,26 @@
       "merged_ids": [],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다.",
+      "evidence": [
+        "커밋 55955fa",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:214,222 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/PaymentCancellationIntegrationTest.java:83,93 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:221,229 @ 0fe7d2a",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:205 @ 0fe7d2a",
+        "backend/src/main/java/com/meterengine/payment/controller/PaymentCancellationController.java:92,99 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/PaymentCancellationIntegrationTest.java:83-99 @ b10f8c7"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "top_head": "fixed-in-layer 55955fa"
     },
     {
       "id": "C445-002",
@@ -4176,14 +4242,25 @@
       "merged_ids": [],
       "layer": 445,
       "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "reconcile()은 실행 시각과 관계없이 그날 04:00 KST를 슬롯으로 잡고(PaymentJobScheduler.java:65-74), ScheduledJobRunService.run은 그 슬롯 행이 이미 있으면 성공, 실패 상태와 관계없이 작업을 건너뛰며, 대사 창은 슬롯에서만 계산한 고정 하루라 다음 날 실행은 앞날 창을 보지 않는다. 토스 거래 조회가 거절이나 Unknown이면 그 키는 FAILED로만 세고 끝나고, 날짜를 받아 다시 돌리는 API, 명령, 런북은 층 sha와 정점 어디에도 없어 실패를 막는 근거를 찾지 못했다(backend/README와 deploy/README에도 경보 표와 04:00 실행 안내뿐이다). 정점 0fe7d2a의 스케줄러는 같은 코드이고, 대사 서비스와 슬롯 선점을 바꾼 위층 커밋 23b1844, 35e8bf3, 00c3032도 창 계산과 선점 방식은 그대로 두었다. 고치려면 키별 워터마크로 밀린 날을 따라잡기(새 테이블이나 열이 필요해 새 V__ 파일 금지에 걸린다)와 날짜를 받는 운영자 재실행 API 추가(새 공개 API, 권한 범위, openapi.yaml, 런북) 중 하나를 골라야 해서 결정이 필요하다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:47-53 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:83-85 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:124-127 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "propagation_note": "어느 안을 고르든 #453 23b1844가 PaymentReconciliationService.reconcile을 환경별로 나눴으므로 재실행이나 따라잡기 경로를 #453 head의 환경 구분 코드에도 맞춰야 한다. 슬롯을 cron 예정 시각에서 계산하는 부분은 PaymentJobScheduler.java 한 파일이며 위층에서 이 파일을 바꾼 커밋은 없다.",
+      "question": "실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다."
     },
     {
       "id": "D-042",
