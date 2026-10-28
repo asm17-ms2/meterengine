@@ -53,7 +53,7 @@ export async function reviewSignupAction(_prev: ActionState, data: FormData): Pr
   const id = data.get("id");
   const status = data.get("status");
   if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "승인하거나 거절할 도입사를 확인하세요." };
-  const current = await listOrganizations();
+  const current = await listOrganizations("pending");
   if (!current.ok) return { message: toDisplayMessage(current.error) };
   if (!current.data.organizations.some(org => org.id === id && org.status === "pending")) return { message: "승인 대기 중인 도입사가 아닙니다. 목록을 새로고침하세요." };
   const result = await operatorRequest<OrganizationResponse>(`/v1/organizations/${id}/status`, { method: "PUT", body: { status } });

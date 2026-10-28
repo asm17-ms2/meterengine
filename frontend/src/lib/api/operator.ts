@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { requestApi } from "@/lib/api/transport";
 import { readSessionToken, requireOperator } from "@/lib/auth/session";
-import type { OrganizationResponse, UserAccountResponse } from "@/lib/auth/types";
+import type { OrganizationResponse, OrganizationStatus, UserAccountResponse } from "@/lib/auth/types";
 import { expiredLoginHref } from "@/lib/auth/navigation";
 
 export async function operatorRequest<T>(path: string, options: { method?: "GET" | "POST" | "PUT"; body?: unknown } = {}) {
@@ -14,8 +14,8 @@ export async function operatorRequest<T>(path: string, options: { method?: "GET"
   return result;
 }
 
-export function listOrganizations() {
-  return operatorRequest<{ organizations: OrganizationResponse[] }>("/v1/organizations");
+export function listOrganizations(status?: OrganizationStatus) {
+  return operatorRequest<{ organizations: OrganizationResponse[] }>(status ? `/v1/organizations?status=${status}` : "/v1/organizations");
 }
 
 export function listUserAccounts() {

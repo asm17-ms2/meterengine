@@ -381,6 +381,16 @@ test("a dangerous row action is a quiet link and its final confirmation carries 
   await expect(confirm).toHaveClass(/ant-btn-primary/);
 });
 
+test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/organizations");
+  await expect(page).toHaveURL(/\/admin\/organizations/);
+  await page.goto("/admin/organizations?status=all");
+  await expect(page.getByRole("link", { name: "승인 대기" })).toBeVisible();
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths).toContain("/v1/organizations?status=pending");
+  expect(paths).toContain("/v1/organizations");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
