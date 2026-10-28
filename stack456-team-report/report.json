@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T01:23:54+09:00",
+  "updated_at": "2026-10-29T01:29:19+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -10285,6 +10285,22 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts --grep-invert \"real Spring: operator without organization can manage the platform\"",
+      "detail": "마지막 실화면 점검: 2 passed, 뺀 시험 1(10절 이미 실패하는 시험). 새 DB와 22dfb35 빌드"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs (7개 라우트, 1440, 390)와 토스 키 저장 창 캡처",
+      "detail": "마지막 실화면 점검: 콘솔 오류 0, 가로 넘침 없음, axe는 fe-445 after와 같음(수납과 취소 9월 모바일 1, 고치기 전과 같음)"
     }
   ],
   "pushes": [
@@ -10693,6 +10709,13 @@
       "passed": 1,
       "total": 1,
       "screens": "9개 라우트 3개 폭: 콘솔 오류 0, 가로 넘침 없음, axe 위반 늘지 않음"
+    },
+    {
+      "layer": 445,
+      "sha": "22dfb35d6600f9426491ebc6e2b76ca1d6b5bbfe",
+      "passed": 1,
+      "total": 1,
+      "screens": "7개 라우트 2개 폭과 토스 키 저장 창: 콘솔 오류 0, 가로 넘침 없음, axe 위반 늘지 않음"
     }
   ]
 }

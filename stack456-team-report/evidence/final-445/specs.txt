@@ -1,0 +1,1 @@
+auth: 통과 2/2 (signup, approval, login, tenant actions and isolation, logout / role promotion and demotion), 뺀 시험 operator without organization can manage the platform(10절 이미 실패하는 시험), sha 22dfb35d6600
