@@ -119,45 +119,32 @@ class PaymentSettingIntegrationTest {
   }
 
   @Test
-  void live_결제_모드에서_API_키로_test로_바꾸면_키_모드와_상관없이_409_payment_mode_mismatch이고_설정은_live로_남는다() {
+  void admin_API_키로는_키와_같은_모드로도_바꿀_수_없고_403_permission_denied이며_설정은_그대로다() {
     for (String keyMode : List.of("test", "live")) {
       UUID organizationId = insertOrganization();
       insertCredential(organizationId, "live");
-      assertThat(updatePaymentSetting(organizationId, "live")).hasStatus(200);
+      assertThat(updatePaymentSetting(organizationId, keyMode)).hasStatus(200);
+      Map<String, Object> saved = settingRow(organizationId);
 
       assertError(
-          updatePaymentSetting(apiKey(organizationId, keyMode), "test"),
-          409,
-          ErrorCode.PAYMENT_MODE_MISMATCH);
+          updatePaymentSetting(apiKey(organizationId, keyMode), keyMode),
+          403,
+          ErrorCode.PERMISSION_DENIED);
 
-      assertThat(settingMode(organizationId)).isEqualTo("live");
+      assertThat(settingRow(organizationId)).isEqualTo(saved);
     }
   }
 
   @Test
-  void test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다() {
+  void admin_API_키로_설정이_없는_도입사의_모드를_바꾸면_403_permission_denied이고_설정을_남기지_않는다() {
     UUID organizationId = insertOrganization();
-    insertCredential(organizationId, "live");
 
     assertError(
-        updatePaymentSetting(apiKey(organizationId, "test"), "live"),
-        409,
-        ErrorCode.PAYMENT_MODE_MISMATCH);
+        updatePaymentSetting(apiKey(organizationId, "test"), "test"),
+        403,
+        ErrorCode.PERMISSION_DENIED);
 
     assertThat(countSettings(organizationId)).isZero();
-  }
-
-  @Test
-  void API_키의_모드가_요청한_모드와_현재_결제_모드와_같으면_바꾼다() {
-    UUID organizationId = insertOrganization();
-
-    assertThat(updatePaymentSetting(apiKey(organizationId, "test"), "test"))
-        .hasStatus(200)
-        .bodyJson()
-        .extractingPath("$.mode")
-        .isEqualTo("test");
-
-    assertThat(settingMode(organizationId)).isEqualTo("test");
   }
 
   private MvcTestResult getPaymentSetting(UUID organizationId) {
@@ -206,9 +193,9 @@ class PaymentSettingIntegrationTest {
             OffsetDateTime.parse("2026-10-01T00:00:00Z")));
   }
 
-  private String settingMode(UUID organizationId) {
-    return jdbcTemplate.queryForObject(
-        "SELECT mode FROM payment_setting WHERE organization_id = ?", String.class, organizationId);
+  private Map<String, Object> settingRow(UUID organizationId) {
+    return jdbcTemplate.queryForMap(
+        "SELECT * FROM payment_setting WHERE organization_id = ?", organizationId);
   }
 
   private int countSettings(UUID organizationId) {

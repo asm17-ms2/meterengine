@@ -300,37 +300,35 @@ class TossPaymentsCredentialIntegrationTest {
   }
 
   @Test
-  void test_API_키로_live_키를_저장하면_409_payment_mode_mismatch이고_토스를_부르지_않으며_저장된_live_키는_그대로다() {
+  void admin_API_키로는_키와_같은_모드의_키도_저장할_수_없고_403이며_토스를_부르지_않고_저장된_키는_그대로다() {
     UUID organizationId = insertOrganization();
     tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+    assertThat(updateCredential(organizationId, "test", TEST_CLIENT_KEY, TEST_SECRET_KEY))
+        .hasStatus(200);
     assertThat(
             updateCredential(
                 organizationId, "live", "live_ck_live0000", "live_sk_live00000000LIVE"))
         .hasStatus(200);
-    Map<String, Object> saved = credentialRow(organizationId, "live");
+    Map<String, Map<String, Object>> saved =
+        Map.of(
+            "test", credentialRow(organizationId, "test"),
+            "live", credentialRow(organizationId, "live"));
 
-    assertError(
-        updateCredential(
-            apiKey(organizationId, "test"), "live", "live_ck_other0000", "live_sk_other0000OTHR"),
-        409,
-        ErrorCode.PAYMENT_MODE_MISMATCH);
+    for (String keyMode : List.of("test", "live")) {
+      assertError(
+          updateCredential(
+              apiKey(organizationId, keyMode),
+              keyMode,
+              keyMode + "_ck_other0000",
+              keyMode + "_sk_other0000OTHR"),
+          403,
+          ErrorCode.PERMISSION_DENIED);
+      assertThat(credentialRow(organizationId, keyMode)).isEqualTo(saved.get(keyMode));
+    }
 
+    verify(tossPaymentsClient).findPaymentByOrderId(eq(TEST_SECRET_KEY), any());
     verify(tossPaymentsClient).findPaymentByOrderId(eq("live_sk_live00000000LIVE"), any());
     verifyNoMoreInteractions(tossPaymentsClient);
-    assertThat(credentialRow(organizationId, "live")).isEqualTo(saved);
-  }
-
-  @Test
-  void API_키의_모드와_같은_모드의_키는_저장한다() {
-    UUID organizationId = insertOrganization();
-    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
-
-    assertThat(
-            updateCredential(
-                apiKey(organizationId, "test"), "test", TEST_CLIENT_KEY, TEST_SECRET_KEY))
-        .hasStatus(200);
-
-    assertThat(countCredentials(organizationId)).isEqualTo(1);
   }
 
   @Test

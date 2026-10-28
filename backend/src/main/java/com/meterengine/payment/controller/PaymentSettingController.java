@@ -1,9 +1,9 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.PaymentSettingResponse;
 import com.meterengine.payment.dto.UpdatePaymentSettingRequest;
@@ -56,13 +56,13 @@ public class PaymentSettingController {
   }
 
   @PutMapping
-  @AdminAccess
+  @MemberAdminAccess
   @Operation(
       summary = "결제 모드 변경",
       description =
           """
           결제에 쓸 모드를 test나 live로 바꾼다. live로 바꾸려면 live 모드의 토스페이먼츠 키가 먼저 저장돼 있어야 한다.
-          API 키로 부르면 요청한 mode와 현재 결제 모드가 모두 키의 모드와 같아야 하고, 다르면 409다.
+          로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
           updated_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -81,11 +81,7 @@ public class PaymentSettingController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=payment_mode_mismatch: API 키의 모드가 요청한 mode나 현재 결제 모드와 다르다.
-            code=toss_payments_credential_missing: live로 바꾸려는데 live 모드의 토스페이먼츠 키가 없다.
-            """)
+        description = "code=toss_payments_credential_missing: live로 바꾸려는데 live 모드의 토스페이먼츠 키가 없다")
   })
   public PaymentSettingResponse updatePaymentSetting(
       @CurrentOrganizationId UUID organizationId,
