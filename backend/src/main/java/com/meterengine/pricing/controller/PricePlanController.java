@@ -1,5 +1,6 @@
 package com.meterengine.pricing.controller;
 
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
@@ -10,6 +11,11 @@ import com.meterengine.pricing.dto.ListPricePlansResponse;
 import com.meterengine.pricing.dto.PricePlanResponse;
 import com.meterengine.pricing.service.PricePlanService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.time.YearMonth;
 import java.util.UUID;
@@ -48,13 +54,52 @@ public class PricePlanController {
 
   @GetMapping
   @ReadAccess
-  @Operation(summary = "요금제 이력 조회")
+  @Operation(
+      summary = "요금제 이력 조회",
+      description =
+          """
+          customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
+          month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+          """)
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "요금제 버전 목록. 조건에 맞는 것이 없으면 price_plans가 빈 배열이다"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, status가 active, archived, all 중 하나가 아니다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: customer_id가 가리키는 고객이 이 도입사에 없다")
+  })
   public ListPricePlansResponse listPricePlans(
       @CurrentOrganizationId UUID organizationId,
-      @RequestParam(required = false) @FourDigitYear @DateTimeFormat(pattern = "yyyy-MM")
+      @Parameter(
+              description =
+                  "이 달(yyyy-MM, KST)이 시작 월부터 종료 월 전까지에 드는 버전만 고른다. 보관 여부는 이 값과 상관없이 status로 고른다. 생략하면 기간으로 거르지 않는다.",
+              example = "2026-08")
+          @RequestParam(required = false)
+          @FourDigitYear
+          @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month,
-      @RequestParam(name = "customer_id", required = false) UUID customerId,
-      @RequestParam(defaultValue = "active") @StorableText String status) {
+      @Parameter(description = "이 고객의 요금제만 고른다. 생략하면 도입사 공통 요금제만 나온다.")
+          @RequestParam(name = "customer_id", required = false)
+          UUID customerId,
+      @Parameter(
+              description =
+                  "보관 상태로 고른다. 생략하면 active로 보관하지 않은 버전만 나온다. archived는 보관한 버전, all은 둘 다다.")
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
     return pricePlanService.list(organizationId, month, customerId, status);
   }
 

@@ -224,6 +224,26 @@ test("the audit list marks rejected requests and keeps entries compact", async (
   await expect(page.locator(".audit-summary .ant-tag", { hasText: "요청 거절/오류 (403)" })).toHaveCount(1);
 });
 
+test("a meter form with input asks before Escape throws it away", async ({ page }) => {
+  await login(page, "member@contract.local", "/billable-metrics");
+  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 미터");
+  let asked = "";
+  page.once("dialog", prompt => { asked = prompt.message(); void prompt.dismiss(); });
+  await page.keyboard.press("Escape");
+  await expect.poll(() => asked).toBe("작성 중인 미터를 버리고 닫을까요?");
+  await expect(dialog).toBeVisible();
+});
+
+test("meter number inputs do not expose English stepper buttons", async ({ page }) => {
+  await login(page, "member@contract.local", "/billable-metrics");
+  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await expect(dialog.getByLabel("과금 단위 크기")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
