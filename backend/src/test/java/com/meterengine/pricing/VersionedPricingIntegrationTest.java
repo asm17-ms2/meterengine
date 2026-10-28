@@ -132,7 +132,7 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
-  void 지난_월_요금제_등록은_거절하고_삭제해도_지난달_요금제를_보존한다() {
+  void 지난_월_요금제_등록은_거절하고_삭제하면_다음_달부터_뺀다() {
     legacyRate();
     UUID id =
         jdbcTemplate.queryForObject(
@@ -151,7 +151,14 @@ class VersionedPricingIntegrationTest {
             error ->
                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
     pricePlanService.delete(organizationId, id);
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_from FROM price_plan WHERE id=?", String.class, id))
+        .isEqualTo(month.plusMonths(1).toString());
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+    assertThat(amount(month, "100")).isEqualTo(1100);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
   }
 
   @Test
