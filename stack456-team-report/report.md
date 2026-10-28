@@ -1,12 +1,12 @@
-미완료 200건, 결과: 끝 상태 128/328건 (fixed 86, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 51개(마지막 9cab573)
+미완료 199건, 결과: 끝 상태 129/328건 (fixed 87, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 52개(마지막 180d80f)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 86 | 1 | 7 | 31 | 3 | 15 |
+| #442 | 143 | 87 | 1 | 7 | 31 | 3 | 14 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -42,6 +42,7 @@ push: feat/account-permissions 51개(마지막 9cab573)
 | X-095 | #442 | 109526b | 권한 이름과 순서 통일 | scope labels use one name per scope in read, ingest, admin order: 실패 SyntaxError: does not provide an export named 'ACCESS_SCOPE_LABELS' |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
 | X-101 | #442 | 9cab573 | 빈 이름과 길이 초과 안내 분리 | signup with a blank name asks for that name instead of a length limit: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByText('도입사 이름을 입력하세요.') |
+| X-103 | #442 | 180d80f | 만료 로그인 이동에 returnTo | an expired session login keeps a safe return path: 실패 SyntaxError: does not provide an export named 'expiredLoginHref' |
 | C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
 | C442-018 | #442 | 3f74137 | 없는 업무 환경 전환 안내 제거 | 없음(보이는 변경(문구): 이 층에 환경 전환 요소가 없는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-003 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -168,6 +169,7 @@ push: feat/account-permissions 51개(마지막 9cab573)
 | X-061 | #442 | 정점 명세 people.real.spec.ts와 mvp.real.spec.ts는 링크를 getByRole('link', { name, exact: true })로 찾아 이름이 그대로라 영향이 없다. |
 | X-066 | #442 | 위층에서 더한 작업(결제, 웹훅, 고객 등)은 맵에 없어 '처리했습니다.'로 남는다. 각 층이 원하면 SUCCESS_MESSAGES에 문구를 더한다. #453 mvp.real.spec.ts 106행과 environment-cycle.real.spec.ts 72행은 updateSupplier라 영향이 없다. |
 | X-095 | #442 | 정점 명세에 '사용량 수집'을 찾는 곳은 없다. |
+| X-103 | #442 | 위층 session.ts(e5fca11, 80a3ef1)와 client.ts는 requireOperator와 헤더 처리만 바꿨다. 반영 때 네 곳의 만료 이동이 expiredLoginHref로 남았는지 본다. 위층 auth.contract.spec.ts의 같은 단언은 이 층 수정으로 함께 바뀐다. |
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
 | C442-017 | #442 | #442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다. |
 | C442-018 | #442 | #453 반영 때 integrations/page.tsx의 mode 필드는 #453 문구(environment === legacy 조건과 업무 환경 전환 안내)를 따른다. #443부터 #452까지는 이 커밋 문구가 맞다. |

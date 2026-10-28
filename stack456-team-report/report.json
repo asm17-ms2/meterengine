@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:01:24+09:00",
+  "updated_at": "2026-10-28T20:04:24+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "9cab573",
+    "feat/account-permissions": "180d80f",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1163,14 +1163,35 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "session.ts, client.ts, operator.ts, session-actions.ts는 세션 거부 때 /login?reason=expired로만 보내, proxy가 x-meterengine-current-path로 넘긴 현재 경로를 버린다. 다시 로그인하면 기본 화면으로 가 보던 화면을 잃는다. 정점도 같다. 안전한 현재 경로를 returnTo로 붙이는 함수를 두고 네 곳이 쓰게 했다.",
+      "evidence": [
+        "frontend/src/lib/auth/session.ts:22 @ 72e8718",
+        "frontend/src/lib/api/client.ts:17 @ 72e8718",
+        "frontend/src/lib/api/operator.ts:11 @ 72e8718",
+        "frontend/src/app/session-actions.ts:31 @ 72e8718",
+        "frontend/src/proxy.ts:6 @ 72e8718",
+        "an expired session login keeps a safe return path: 실패 SyntaxError: does not provide an export named 'expiredLoginHref'",
+        "public health, gated routes, expired session and return URL: 실패 Received /login?reason=expired"
+      ],
+      "commits": [
+        "180d80f377d1"
+      ],
+      "tests": [
+        "e2e/expired-login-path.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts public health, gated routes, expired session and return URL: 기대 주소를 returnTo로 바꿔 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 13건, auth.contract.spec.ts 34건 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same e5fca11 80a3ef1",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "만료 로그인 이동에 returnTo",
+      "propagation_note": "위층 session.ts(e5fca11, 80a3ef1)와 client.ts는 requireOperator와 헤더 처리만 바꿨다. 반영 때 네 곳의 만료 이동이 expiredLoginHref로 남았는지 본다. 위층 auth.contract.spec.ts의 같은 단언은 이 층 수정으로 함께 바뀐다."
     },
     {
       "id": "C442-002",
@@ -8034,6 +8055,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 13 ℹ pass 13 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  34 passed (16.2s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.316s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8291,6 +8368,11 @@
       "branch": "feat/account-permissions",
       "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
       "at": "2026-10-28T19:57:21+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "180d80f377d1564f6b41be9040e71b219ba3905b",
+      "at": "2026-10-28T20:04:24+09:00"
     }
   ],
   "usage_log": [],
