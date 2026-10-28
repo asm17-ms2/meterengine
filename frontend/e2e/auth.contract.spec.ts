@@ -303,6 +303,15 @@ test("an invitation opened without a session does not offer the organization pic
   await expect(page.getByRole("link", { name: "도입사 선택으로", exact: true })).toHaveCount(0);
 });
 
+test("a new-account invitation opened while signed in as someone else says who is signed in", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  const status = page.getByRole("status").filter({ hasText: "member@contract.local" });
+  await expect(status).toContainText("invited@contract.local");
+  await expect(page.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
