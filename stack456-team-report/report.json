@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:44:33+09:00",
+  "updated_at": "2026-10-28T17:46:39+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
+    "fix/s456-443-t-inho": "6730d65c8e5b019155fc0a180f3e456b174af9c3"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -971,57 +971,141 @@
       "id": "D-009",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css 36-91행 규칙이 #0958d9, #1677ff, #edf4ff, #adc6ef, #e6f0ff를 직접 쓰고, 116행과 153행이 --blue를 #5746ad로 다시 정의하며 AppProviders의 colorPrimary도 #5746ad다. 승인 대기 화면은 같은 화면 안에서 .pending-note 선(74행, var(--blue) 보라)과 .primary-link 배경(76행, 파랑)이 섞이고, 가입 폼은 antd primary 버튼(보라) 옆에 summary(69행)와 체크박스 accent(72행)가 파랑이다. 39행 전역 포커스 링은 #0958d9인데 162행 --focus(#5746ad)를 쓰지 않고, HomePage.module.css 64행은 같은 포커스 링을 #5746ad로 써 두 파일이 갈린다. 아래 층에는 이 규칙이 없고 이 줄을 들인 f671a4f가 #443 커밋이며, 정점 0fe7d2a의 globals.css도 같다. 콘솔 입력 포커스 링 캡처 주장은 antd 컴포넌트 자체 포커스 스타일이 :where보다 우선할 수 있어 여기서는 확인하지 않았고, :root 하나로 합치기는 이 묶음 수정 밖이다.",
+      "evidence": [
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:64 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74,76 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116,153 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12-13 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:22-23 @ 0f1d1bf",
+        "frontend/src/app/globals.css:47,51,55,57,69,72,87,91 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-187",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 .primary-link(76행), .eyebrow(47행), 온보딩 단계 원(57행), .consent-fields summary(69행), 체크박스 accent-color(72행), .operator-badge(87행), 현재 메뉴(91행)가 모두 파랑 리터럴이고 이를 덮는 뒤쪽 규칙이 파일 안에 없다. 같은 파일 116행과 153행은 --blue를 #5746ad로, 155행은 링크를 #51409c로 바꿨고 AppProviders colorPrimary도 #5746ad라 한 화면에 두 강조색이 나온다. 승인 대기 화면은 74행 var(--blue) 선과 76행 파란 버튼이 같은 화면에 있다. 운영자 화면은 OperatorShell의 파란 배지와 현재 메뉴 옆에 antd primary 버튼(운영자 계정 생성, 보라)이 있다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:47,57,69,72,76,87,91 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116,153,155 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "frontend/src/components/shell/OperatorShell.tsx:9 @ 0f1d1bf",
+        "frontend/src/components/auth/CreateOperatorButton.tsx:92 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-233",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css에서 .auth-context 배경(51행), 온보딩 선과 번호(55, 57행), summary(69행), 체크박스 accent(72행), .primary-link(76행), .eyebrow(47행), 운영자 배지(87행), operator-nav와 status-tabs 현재 항목(91행), 전역 포커스 링(39행)이 파랑 리터럴 그대로이고, 116행과 153행은 --blue를 보라로 다시 정의했다. 로그인과 가입 화면은 AuthFrame의 .auth-context와 .onboarding-steps(파랑) 옆에 antd primary 버튼(보라)이 있고, 도입사 선택과 운영자 도입사 화면은 .eyebrow와 .status-tabs를 쓴다. 덧붙여 frontend/README.md 134행은 페이지를 옮기는 버튼에 LinkButton을 쓰라고 하는데 승인 대기 화면은 Link className=primary-link를 쓴다. 가장 작은 수정은 색 리터럴 교체이고, LinkButton 전환은 선택이다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:39,47,51,55,57,69,72,76,87,91 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116,153 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthFrame.tsx:8,11 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:22-23 @ 0f1d1bf",
+        "frontend/src/app/organizations/page.tsx:8 @ 0f1d1bf",
+        "frontend/src/app/admin/organizations/page.tsx:11-12 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12-13 @ 0f1d1bf",
+        "frontend/README.md:134 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "X-043",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 39행 전역 포커스 링, 47행 .eyebrow, 51, 55-57행 인증 왼쪽 패널과 단계 원, 69행 동의 summary, 72행 체크박스 accent, 76행 .primary-link, 87, 91행 운영자 배지와 현재 메뉴가 파랑이고, 162행 --focus(#5746ad)는 파일 안 어디에서도 var(--focus)로 쓰이지 않는다. 가입 폼은 AuthForm 22행 summary와 체크박스가 파랑, 23행 antd primary 버튼이 보라다. 승인 대기는 74행 보라 선 아래 76행 파란 버튼이다. 연보라 바탕 9개를 토큰 2-3개로 합치자는 덧붙인 제안은 파랑 잔존과 원인이 다른 정리라 이 묶음 수정에 넣지 않는다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:39 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162 @ 0f1d1bf",
+        "frontend/src/app/globals.css:47,51,55,57,69,72,76,87,91 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:22-23 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:64 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "G-071",
@@ -1914,85 +1998,195 @@
       "id": "D-036",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "테마 colorPrimary는 AppProviders 12행에서 #5746ad인데 0f1d1bf globals.css 36-107행의 .primary-link(76행), 단계 원(57행), 동의 summary(69행), 체크박스(72행), 운영자 배지와 현재 밑줄(87, 91행), .eyebrow(47행)가 파랑 리터럴이다. 승인 대기 화면은 .pending-note(74행, var(--blue) 보라) 바로 아래 파란 .primary-link가 있어 같은 화면에서 강조색이 둘이다. 39행 포커스 링은 #0958d9이고 162행 --focus는 쓰이지 않는다. :root가 36, 116, 153, 162행에 네 번 있는 것은 사실이지만 합치기는 이 묶음 수정 밖이다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74,76 @ 0f1d1bf",
+        "frontend/src/app/globals.css:47,57,69,72,87,91 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39,162 @ 0f1d1bf",
+        "frontend/src/app/globals.css:36,116,153 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-053",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 39행 :focus-visible 외곽선, 57행 단계 표시, 69행 동의 펼침, 72행 체크박스 accent(#1677ff), 76행 .primary-link가 파랑이고, 같은 가입 폼의 제출 버튼은 antd primary(AppProviders 12행 #5746ad)라 보라다. 홈 CSS 모듈은 포커스 링을 #5746ad로 써(HomePage.module.css 64행) 전역 39행과 갈린다. 다만 38행의 전역 a 색 #0958d9는 155행 a { color: #51409c }가 뒤에서 덮어 실제 링크 색은 보라이므로 이 부분은 맞지 않는다. 나머지 지적은 그대로 남아 있고 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:39,57,69,72,76 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:64 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:22-23 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/app/globals.css:38,155 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-079",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 첫 :root(36행)의 파랑 계열을 하드코딩한 .primary-link(76행), .auth-context(51행), 단계 원(55, 57행), 동의 summary(69행), 체크박스 accent(72행), .eyebrow(47행), 운영자 배지와 탭 밑줄(87, 91행), 전역 focus 윤곽선(39행)이 그대로이고, 116행부터 --blue가 #5746ad, antd primary도 #5746ad다. 승인 대기 화면은 74행 보라 왼쪽 선 아래 76행 파란 버튼, 가입 화면은 69행 파란 summary와 AuthForm 23행 보라 버튼이 한 폼에 있다. 162행 --focus는 정의만 있고 39행은 쓰지 않는다. 36행 첫 :root 삭제는 이 묶음 수정 밖이다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:36 @ 0f1d1bf",
+        "frontend/src/app/globals.css:39,47,51,55,57,69,72,76,87,91 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74,116,162 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:22-23 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-098",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 운영자 화면이 쓰는 .operator-badge(87행), .operator-nav와 .status-tabs 현재 항목(91행), .eyebrow(47행), 전역 포커스 링(39행)이 #0958d9 파랑이고 이를 덮는 규칙이 없다. OperatorShell 9행이 배지와 메뉴를, admin/organizations 11-12행이 eyebrow와 status-tabs를 쓰고, admin/users의 운영자 계정 생성 버튼은 antd primary라 colorPrimary #5746ad 보라다. 콘솔 쪽 현재 탭은 148행 workspace-tabs에서 #5746ad라 운영자와 콘솔의 선택 표시 색이 갈린다. 정점 0fe7d2a에서 OperatorShell은 메뉴 링크만 바뀌었고 class와 globals.css는 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:39,47,87,91 @ 0f1d1bf",
+        "frontend/src/components/shell/OperatorShell.tsx:9 @ 0f1d1bf",
+        "frontend/src/app/admin/organizations/page.tsx:11-12 @ 0f1d1bf",
+        "frontend/src/components/auth/CreateOperatorButton.tsx:92 @ 0f1d1bf",
+        "frontend/src/app/globals.css:148 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-169",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css 51행(.auth-context 배경 #edf4ff), 57행(단계 원 #0958d9, #edf4ff), 91행(운영자 현재 메뉴 #0958d9)이 파랑을 하드코딩하고, AppProviders 12-13행은 colorPrimary #5746ad와 colorInfoBg #f3f0fb, colorInfoBorder #c8bde7을 둔다. 로그인 화면은 AuthFrame의 파란 왼쪽 패널 옆에 AuthForm 23행 보라 primary 버튼이 있고, 로그인 뒤 콘솔과 운영자 화면은 보라 버튼과 파란 메뉴가 섞인다. 이미 정의된 --blue(116, 153행)와 --focus(162행)를 쓰면 되므로 새 변수 없이 고칠 수 있다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:51,57,91 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12-13 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthFrame.tsx:8 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:23 @ 0f1d1bf",
+        "frontend/src/app/globals.css:116,153,162 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-260",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 이 스택(#443 f671a4f)이 더한 인증과 운영자 스타일이 파랑 계열이다: .auth-context(51행), .primary-link(76행), 운영자 탭(91행). 승인 대기 화면 pending/page.tsx 5행의 CTA가 .primary-link라 파랑이고, 같은 화면 .pending-note 선은 var(--blue)라 116행 정의에 따라 보라다. 콘솔 주 버튼은 AppProviders colorPrimary #5746ad, 콘솔 현재 탭은 148행 #5746ad, 홈 포커스는 HomePage.module.css 64행 #5746ad라 인증과 관리자 화면만 파랑으로 갈린다. 아래 층 feat/account-permissions에는 이 규칙이 없다. 정점 0fe7d2a도 같다.",
+      "evidence": [
+        "frontend/src/app/globals.css:51,76,91 @ 0f1d1bf",
+        "frontend/src/app/(public)/pending/page.tsx:5 @ 0f1d1bf",
+        "frontend/src/app/globals.css:74,116,148 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:64 @ 0f1d1bf",
+        "커밋 6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "commits": [
+        "6730d65c8e5b019155fc0a180f3e456b174af9c3"
+      ],
+      "tests": [
+        "보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, admin-users, 1440과 390)로 안내 패널, 단계 표시, 운영자 배지, 현재 탭, 이동 버튼이 보라 테마로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 39-91행이 0f1d1bf와 같다. OperatorShell.tsx는 80a3ef1 #444, 15692f8 #448이 메뉴 링크만 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다"
     },
     {
       "id": "D-244",
@@ -6381,6 +6575,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "26 passed (13.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "26 passed (13.3s)"
     }
   ],
   "pushes": [
@@ -6443,6 +6675,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
       "at": "2026-10-28T17:43:16+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "at": "2026-10-28T17:45:48+09:00"
     }
   ],
   "usage_log": [],
