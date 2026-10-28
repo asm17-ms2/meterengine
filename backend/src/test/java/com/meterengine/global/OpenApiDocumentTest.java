@@ -210,6 +210,31 @@ class OpenApiDocumentTest {
                     .contains("code=consent_required"));
   }
 
+  @Test
+  void 공개_경로인_초대_수락은_403_404_409_오류_code를_ErrorResponse로_문서화한다() {
+    JsonNode responses =
+        root()
+            .path("paths")
+            .path("/v1/organization-invitations/{token}/accept")
+            .path("post")
+            .path("responses");
+
+    assertThat(responses.has("201")).as("초대 수락 응답: %s", responses).isTrue();
+    assertErrorResponse(responses, "403", "code=permission_denied", "code=consent_required");
+    assertErrorResponse(responses, "404", "code=invitation_not_found");
+    assertErrorResponse(
+        responses, "409", "code=invitation_unavailable", "code=organization_member_already_exists");
+  }
+
+  @Test
+  void 소속_제거는_404와_409_오류_code를_ErrorResponse로_문서화한다() {
+    JsonNode responses =
+        root().path("paths").path("/v1/organization/members/{id}").path("delete").path("responses");
+
+    assertErrorResponse(responses, "404", "code=user_account_not_found");
+    assertErrorResponse(responses, "409", "code=last_owner_required");
+  }
+
   // ---------------------------------------------------------------------------
   // 손으로 잡아 준 스키마
   // ---------------------------------------------------------------------------
@@ -419,6 +444,15 @@ class OpenApiDocumentTest {
   }
 
   // ---------------------------------------------------------------------------
+
+  private static void assertErrorResponse(JsonNode responses, String status, String... codes) {
+    JsonNode response = responses.path(status);
+    assertThat(
+            response.path("content").path("application/json").path("schema").path("$ref").asText())
+        .as("%s 응답: %s", status, responses)
+        .isEqualTo("#/components/schemas/ErrorResponse");
+    assertThat(response.path("description").asText()).as("%s 응답 설명", status).contains(codes);
+  }
 
   private void assertSchemaHasField(String schema, String field) {
     assertThat(json())

@@ -100,7 +100,7 @@ docker build -t meterengine-backend .
 ## 인증
 
 - `/v1` 요청은 `Authorization: Bearer <값>`으로 인증한다. 값은 API 키(`me_live_`, `me_test_`)나 로그인 세션 토큰(`me_session_`)이고, 도입사는 키나 세션이 정한다.
-- 인증 없이 부를 수 있는 것은 로그인(`POST /v1/sessions`), 가입 신청(`POST /v1/signups`), `/actuator/health`, `/actuator/prometheus`, API 문서뿐이다.
+- 인증 없이 부를 수 있는 것은 로그인(`POST /v1/sessions`), 가입 신청(`POST /v1/signups`), 초대 확인(`GET /v1/organization-invitations/{token}`)과 수락(`POST /v1/organization-invitations/{token}/accept`), `/actuator/health`, `/actuator/prometheus`, API 문서뿐이다.
 - API 키 관리(`/v1/api-keys`)는 로그인 세션만, 도입사와 사용자 관리는 operator 세션만 할 수 있다.
 - 원문은 발급 응답에만 나오고 다시 볼 수 없다(서버는 해시만 둔다).
 - 키 모드(live, test)는 지금 접두사만 다르고 동작은 같다. test 키도 실제 데이터를 바꾸고 인보이스 확정과 결제 시도를 할 수 있다.
@@ -199,7 +199,7 @@ unset SESSION
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
-- 로그인과 가입 신청을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
+- 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
 ### 오류 응답
