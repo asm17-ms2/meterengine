@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T00:22:21+09:00",
+  "updated_at": "2026-10-29T00:26:28+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "62fb032"
+    "fix/s456-445-t-yang": "79de3d6"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3856,15 +3856,30 @@
       "id": "C445-016",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "PaymentRetryService.insertRetryAttempt는 후보를 읽은 뒤 그 실패가 여전히 최신인지 다시 확인하는데, PaymentRetryServiceTest의 겹침 시험은 두 실행이 같은 후보를 같은 순서로 처리해 이 재확인 분기에 닿지 않는다. 정점은 후보 조회 방식이 바뀌었지만 같은 재확인이 있다. 후보를 읽은 뒤 더 늦은 실패가 생기는 경우를 보는 시험을 더했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:115,123 @ b10f8c7",
+        "backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java:145 @ b10f8c7",
+        "후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다: 실패 Expected size: 2 but was: 3 (재확인 조건 제거 변이)"
+      ],
+      "commits": [
+        "f84e87eb5945"
+      ],
+      "tests": [
+        "insertRetryAttempt 재확인 조건을 뺀 임시 변이에서 새 시험 실패, 되돌린 뒤 통과",
+        "PaymentRetryServiceTest 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "differs: 정점은 retryCandidate 조회가 PaymentRetryEligibilityService로 옮겨졌다",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "재시도 재확인 분기 시험"
     },
     {
       "id": "C445-017",
@@ -9752,6 +9767,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 25 ℹ pass 25 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  60 passed (22.4s) "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts --grep-invert 'real Spring: operator without organization can manage the platform'",
+      "detail": "  2 passed (5.8s) rc=0, 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -10119,6 +10182,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "62fb032837edf99b0f7ce61c81ea3acd7991d988",
       "at": "2026-10-29T00:09:29+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "79de3d63e4af20afb7ddf47b67c6833388d1bb73",
+      "at": "2026-10-29T00:26:28+09:00"
     }
   ],
   "usage_log": [],

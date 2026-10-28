@@ -1,5 +1,5 @@
-미완료 148건, 결과: 끝 상태 180/328건 (fixed 127, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 11개(마지막 62fb032)
+미완료 147건, 결과: 끝 상태 181/328건 (fixed 128, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 12개(마지막 79de3d6)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 11�
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 27 | 0 | 9 | 1 | 0 | 31 |
+| #445 | 68 | 28 | 0 | 9 | 1 | 0 | 30 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -100,6 +100,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 11�
 | C445-003 | #445 | b74ebeb | 더 새 시도가 있는 NOT_FOUND 실패의 7일 창 제외 | 수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패면_7일이_지나도_다시_조회해_새로_승인한다: 실패 [HTTP status code] expected: 201 but was: 409 |
 | C445-008 | #445 | 5dc3ac9 | 동시 부분 취소 시험을 409 in_progress로 좁힘 | 같은_시도에_동시에_부분_취소하면_취소는_하나이고_나머지는_409_in_progress다: 실패 expected: 409 but was: 500 (findForUpdate 제거 변이) |
 | C445-013 | #445 | 62fb032 | 짝 없는 완료 취소를 토스 재조회 뒤 누락 기록 | 거래_목록에_없는_완료_취소도_재조회한_결제의_cancels에_있으면_누락으로_남기지_않고_금액만_비교한다: 실패 Expecting actual [("missing_in_toss_payments", ..., "tx_cancel_missing", ...)] |
+| C445-016 | #445 | f84e87e | 재시도 재확인 분기 시험 | 후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다: 실패 Expected size: 2 but was: 3 (재확인 조건 제거 변이) |
 | D-149 | #445 | 6d9f804 | 수납 상태 이름 한 벌로 | each invoice payment status has one name used by both the list and the detail: 실패 ERR_MODULE_NOT_FOUND invoice-payment-status.ts |
 | G-097 | #445 | 5549e89 | 정지 도입사의 카드 등록 링크와 자동 재결제 중단 | 정지된_도입사의_링크는_조회도_발급도_404이고_토스를_부르지_않으며_재개하면_다시_조회된다: 실패 [HTTP status code] expected: 404 but was: 200 |
 | G-098 | #445 | 2bc72d8 | 토스 키 저장과 결제 모드 변경을 세션 전용으로 | admin_API_키로는_키와_같은_모드의_키도_저장할_수_없고_403이며_토스를_부르지_않고_저장된_키는_그대로다: 실패 [HTTP status code] expected: 403 but was: 200 |
