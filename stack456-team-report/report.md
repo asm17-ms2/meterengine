@@ -2,7 +2,7 @@
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 12번(마지막 815f525)
 정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T22:49:56+09:00
+상태: running, 갱신 2026-10-28T22:50:46+09:00
 
 ## 층별 상태
 
@@ -208,7 +208,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 12번(�
 - Ck2-013 (#444): 이름을 바꿔 위층 반영 merge 뒤 #445부터 컴파일이 깨진다. 반영 때 #445 f382376의 TossPaymentsBilling.java 13행, UpdateTossPaymentsCredentialRequest.java 26행, BillingKeyService.java의 SecretMask.lastFour 두 곳(정점 230, 248행)을 SecretMask.mask로 바꾼다. 동작은 같다.
 - C444-008 (#444): workspace-actions.ts의 updateWebhookEndpoint 줄은 위층(#451 X-050, X-093이 보는 같은 파일)에서도 같은 내용이다. 반영 때 그 줄이 충돌하면 description 필드를 남긴다. integrations/[id]/page.tsx 수정 폼의 숨은 description 필드도 같다.
 - D-226 (#444): 새 시험 scheduled-job-labels.test.mjs는 OperationsService의 작업 목록과 WorkspaceView의 JOB_LABELS를 맞대 본다. #445부터 정점까지 작업 목록은 이 층과 같다. 반영 때 JOB_LABELS 줄이 충돌하면 unbilled_usage_report 항목을 남겨야 위층에서도 이 시험이 통과한다.
-- G-152 (#444): #445 4ace811이 WEBHOOK_ENABLED 별칭을, #453 23b1844가 CRYPTO_ENCRYPTION_KEY 설명(토스 키, 빌링키 포함)과 구조 표 행을 더한다. 반영 때 설정 절과 구조 표가 충돌하면 위층 문장을 기준으로 이 층의 웹훅 절, User-Agent, 수정 금지 트리거 문장을 합친다. #450부터는 meterengine.webhook.enabled=false가 미청구 통보 작업도 멈추는지 그 층 기준으로 맞춘다.
+- G-152 (#444): 위층(#450 notification, #453 23b1844 CRYPTO_ENCRYPTION_KEY 표 행)이 같은 README의 구조 표와 설정 절을 바꿨다. 반영 때 구조 표의 webhook, dashboard 행이 겹치면 위층 행(webhook, notification 합친 행)을 남기고 이 층의 global.crypto 행과 의존 방향 문장을 더한다. 설정 절의 CRYPTO_ENCRYPTION_KEY는 위층 표 행과 이 층 문장을 하나로 합친다(위층은 토스 키와 빌링키, 이 층은 웹훅 비밀값과 secret_unavailable). #450부터는 meterengine.webhook.enabled=false가 미청구 통보 작업도 멈추는지 그 층 기준으로 맞춘다.
 
 ## fixed-above로 둔 것
 
