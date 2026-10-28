@@ -1,0 +1,5 @@
+역방향 Tab 측정(.s456-work/verify-x048.mjs, /customers, 표 안 버튼의 위 끝 - 고정 머리글 아래 끝, 음수면 가려짐)
+고치기 전 57c1ad9: {"width":1280,"height":420,"buttons":10,"worstGapPx":-27}
+고치기 전 57c1ad9: {"width":390,"height":600,"buttons":10,"worstGapPx":12}
+고친 뒤: {"width":1280,"height":420,"buttons":10,"worstGapPx":12}
+고친 뒤: {"width":390,"height":600,"buttons":10,"worstGapPx":12}
