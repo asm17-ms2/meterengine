@@ -1,14 +1,14 @@
-미완료 295건, 결과: 끝 상태 77/372건 (fixed 60, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 23번(마지막 24c970f)
+미완료 294건, 결과: 끝 상태 78/372건 (fixed 61, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 24번(마지막 a8024e0)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T18:43:01+09:00
+상태: running, 갱신 2026-10-28T18:45:34+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 60 | 1 | 0 | 16 | 0 | 15 |
+| #443 | fix/s456-443-t-inho | 92 | 61 | 1 | 0 | 16 | 0 | 14 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -81,6 +81,7 @@ push: fix/s456-443-t-inho 23번(마지막 24c970f)
 | D-169 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-260 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | X-017 | #443 | cd1a0fa | 문단, 입력 안내, 경고 안 링크에 밑줄을 되살렸다 | a link inside a sentence keeps its underline: 실패 Expected "underline" Received "none" |
+| D-107 | #443 | a8024e0 | 소개 화면 예시 묶음을 role=group과 aria-labelledby로 이름 있는 그룹으로 만들었다 | the home trace example is a named group: 실패 getByRole('group', { name: '한 고객, 한 청구 월' }) element(s) not found |
 | G-046 | #443 | 47e14c8 | 역할 라벨 정본 ORGANIZATION_ROLE_LABELS를 두고 헤더가 그것을 쓴다 | organization roles have one label definition that matches the member list: 실패 actual undefined, expected { owner: '대표관리자', admin: '관리자', member: '일반 사용자' } |
 
 ## 정할 것
