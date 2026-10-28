@@ -10,6 +10,8 @@ let requests = [];
 let outage = false;
 let customers = [];
 let failures = {};
+let bulk = false;
+const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
 
@@ -24,7 +26,8 @@ const server = createServer(async (req, res) => {
   let result;
   if (path === "/health") result = { status: 200, body: {} };
   else if (path === "/__control" && req.method === "POST") {
-    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; }
+    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; }
+    if (typeof body.bulk === "boolean") bulk = body.bulk;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
@@ -56,8 +59,8 @@ const server = createServer(async (req, res) => {
       else { session.organization = org; result = { status: 200, body: session }; }
     } else if (path.startsWith("/v1/organizations") || path.startsWith("/v1/user-accounts")) {
       if (session.user_account.role !== "operator") result = failure(403, "permission_denied", "접근 권한이 없습니다.");
-      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: [] } };
-      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }] } };
+      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", created_at: new Date().toISOString() })) : [] } };
+      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
       else result = { status: 200, body: {} };
     } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
     else if (path === "/v1/customers/search") {

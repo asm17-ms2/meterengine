@@ -213,6 +213,16 @@ test("copy results are announced through a status region that is already present
   await expect(dialog.getByRole("status")).toHaveText("복사했습니다.");
 });
 
+test("the operator user list sends the active organizations once instead of once per user", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  const payload = await (await page.request.get("/admin/users", { headers: { RSC: "1" } })).text();
+  expect(payload).toContain("66666666-6666-4666-8666-000000000000");
+  const perUserReferences = payload.split(":props:organizations:").length - 1;
+  expect(perUserReferences).toBeLessThan(100);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
