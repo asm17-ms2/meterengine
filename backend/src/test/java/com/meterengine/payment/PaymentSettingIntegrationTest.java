@@ -13,6 +13,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,15 +118,55 @@ class PaymentSettingIntegrationTest {
     assertThat(countSettings(organizationId)).isZero();
   }
 
+  @Test
+  void admin_API_키로는_키와_같은_모드로도_바꿀_수_없고_403_permission_denied이며_설정은_그대로다() {
+    for (String keyMode : List.of("test", "live")) {
+      UUID organizationId = insertOrganization();
+      insertCredential(organizationId, "live");
+      assertThat(updatePaymentSetting(organizationId, keyMode)).hasStatus(200);
+      Map<String, Object> saved = settingRow(organizationId);
+
+      assertError(
+          updatePaymentSetting(apiKey(organizationId, keyMode), keyMode),
+          403,
+          ErrorCode.PERMISSION_DENIED);
+
+      assertThat(settingRow(organizationId)).isEqualTo(saved);
+    }
+  }
+
+  @Test
+  void admin_API_키로_설정이_없는_도입사의_모드를_바꾸면_403_permission_denied이고_설정을_남기지_않는다() {
+    UUID organizationId = insertOrganization();
+
+    assertError(
+        updatePaymentSetting(apiKey(organizationId, "test"), "test"),
+        403,
+        ErrorCode.PERMISSION_DENIED);
+
+    assertThat(countSettings(organizationId)).isZero();
+  }
+
   private MvcTestResult getPaymentSetting(UUID organizationId) {
     return withOrganization(mvc.get().uri("/v1/payment-setting"), organizationId).exchange();
   }
 
   private MvcTestResult updatePaymentSetting(UUID organizationId, String mode) {
-    return withOrganization(mvc.put().uri("/v1/payment-setting"), organizationId)
+    return updatePaymentSetting(
+        TestCredentials.issueMemberSession(jdbcTemplate, organizationId), mode);
+  }
+
+  private MvcTestResult updatePaymentSetting(String authorization, String mode) {
+    return mvc.put()
+        .uri("/v1/payment-setting")
+        .header("Authorization", authorization)
         .contentType(MediaType.APPLICATION_JSON)
         .content("{\"mode\": \"%s\"}".formatted(mode))
         .exchange();
+  }
+
+  private String apiKey(UUID organizationId, String mode) {
+    return TestCredentials.issueApiKey(jdbcTemplate, organizationId, mode);
   }
 
   private MockMvcTester.MockMvcRequestBuilder withOrganization(
@@ -150,6 +191,11 @@ class PaymentSettingIntegrationTest {
             mode + "_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq",
             mode + "_sk_zXLkKEypNArWmo50nX3lmeaxYG5R",
             OffsetDateTime.parse("2026-10-01T00:00:00Z")));
+  }
+
+  private Map<String, Object> settingRow(UUID organizationId) {
+    return jdbcTemplate.queryForMap(
+        "SELECT * FROM payment_setting WHERE organization_id = ?", organizationId);
   }
 
   private int countSettings(UUID organizationId) {

@@ -18,8 +18,10 @@ import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.entity.BillingKey;
+import com.meterengine.payment.entity.PaymentAttempt;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
+import com.meterengine.payment.repository.PaymentAttemptRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -34,19 +36,25 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @Import(TestcontainersConfiguration.class)
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest
 class PaymentRetryServiceTest {
 
   private static final String CLIENT_KEY = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
   private static final String RETRYABLE_FAILURE_CODE = "REJECT_CARD_COMPANY";
+  private static final String RETRY_FAILED_LOG = "payment retry failed: failed_attempt_id=";
+  private static final String LOOKUP_SKIPPED_LOG = "skipping retry: failed_attempt_id=";
 
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private InvoiceRepository invoiceRepository;
@@ -54,6 +62,8 @@ class PaymentRetryServiceTest {
   @Autowired private BillingKeyRepository billingKeyRepository;
   @Autowired private MeterRegistry meterRegistry;
   @Autowired private PaymentRetryService paymentRetryService;
+  @Autowired private PaymentAttemptService paymentAttemptService;
+  @Autowired private PaymentAttemptRepository paymentAttemptRepository;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
@@ -67,7 +77,7 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void 재시도_간격이_지난_실패_시도는_새_시도와_새_orderId로_다시_승인한다() {
+  void 재시도_간격이_지난_실패_시도는_새_시도와_새_orderId로_다시_승인한다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
@@ -111,7 +121,7 @@ class PaymentRetryServiceTest {
             isNull());
     assertThat(approval.getValue().orderId()).isEqualTo(retriedAttemptId.toString());
     assertThat(idempotencyKey.getValue()).isEqualTo(retriedAttemptId.toString());
-    assertThat(result.processedCount()).isPositive();
+    assertThat(output.getAll()).doesNotContain(RETRY_FAILED_LOG + failedAttemptId);
     assertThat(result.failedCount()).isZero();
   }
 
@@ -174,6 +184,40 @@ class PaymentRetryServiceTest {
     assertThat(attemptRows(invoiceId)).hasSize(2);
     verify(tossPaymentsClient)
         .approveBilling(eq(organization.secretKey()), anyString(), any(), anyString(), any());
+  }
+
+  @Test
+  void 후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다() throws Exception {
+    Organization organization = organization(true);
+    UUID invoiceId = invoice(organization);
+    UUID failedAttemptId =
+        failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
+    CountDownLatch lookupEntered = new CountDownLatch(1);
+    CountDownLatch lookupReleased = new CountDownLatch(1);
+    when(tossPaymentsClient.findPaymentByOrderId(
+            organization.secretKey(), failedAttemptId.toString()))
+        .thenAnswer(
+            invocation -> {
+              lookupEntered.countDown();
+              if (!lookupReleased.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("주문 조회 응답을 풀어 주지 않았다");
+              }
+              return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
+            });
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<PaymentJobResult> retried = executor.submit(paymentRetryService::retry);
+      assertThat(lookupEntered.await(10, TimeUnit.SECONDS)).isTrue();
+
+      failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofMinutes(1));
+      lookupReleased.countDown();
+      retried.get(10, TimeUnit.SECONDS);
+    } finally {
+      lookupReleased.countDown();
+      executor.shutdownNow();
+    }
+
+    assertNotRetried(organization, invoiceId, 2);
   }
 
   @Test
@@ -244,7 +288,7 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void NOT_FOUND_PAYMENT로_실패한_시도의_주문이_토스에_DONE이면_다시_청구하지_않고_skipped로_센다() {
+  void NOT_FOUND_PAYMENT로_실패한_시도의_주문이_토스에_DONE이면_다시_청구하지_않고_skipped로_센다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
@@ -261,38 +305,38 @@ class PaymentRetryServiceTest {
                     13200,
                     List.of())));
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
+    assertSkipped(output, failedAttemptId, LOOKUP_SKIPPED_LOG + failedAttemptId);
   }
 
   @Test
-  void NOT_FOUND_PAYMENT로_실패한_시도의_주문이_토스에_CANCELED면_다시_청구하지_않는다() {
+  void NOT_FOUND_PAYMENT로_실패한_시도의_주문이_토스에_CANCELED면_다시_청구하지_않는다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
         failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
     lookupReturns(organization, failedAttemptId, failedAttemptId.toString(), "CANCELED");
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
+    assertSkipped(output, failedAttemptId, LOOKUP_SKIPPED_LOG + failedAttemptId);
   }
 
   @Test
-  void NOT_FOUND_PAYMENT로_실패한_시도의_주문_조회가_다른_orderId를_주면_다시_청구하지_않는다() {
+  void NOT_FOUND_PAYMENT로_실패한_시도의_주문_조회가_다른_orderId를_주면_다시_청구하지_않는다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
         failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
     lookupReturns(organization, failedAttemptId, UUID.randomUUID().toString(), "ABORTED");
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
+    assertSkipped(output, failedAttemptId, LOOKUP_SKIPPED_LOG + failedAttemptId);
   }
 
   @Test
@@ -334,10 +378,12 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void NOT_FOUND_PAYMENT로_실패한_시도의_주문_조회_결과를_모르거나_404_말고_거절이면_다시_하지_않는다() {
+  void NOT_FOUND_PAYMENT로_실패한_시도의_주문_조회_결과를_모르거나_404_말고_거절이면_다시_하지_않는다(CapturedOutput output) {
     Organization unknownOrganization = organization(true);
     UUID unknownInvoiceId = invoice(unknownOrganization);
-    failedAttempt(unknownOrganization, unknownInvoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
+    UUID unknownAttemptId =
+        failedAttempt(
+            unknownOrganization, unknownInvoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
     Organization rejectedOrganization = organization(true);
     UUID rejectedInvoiceId = invoice(rejectedOrganization);
     UUID rejectedAttemptId =
@@ -351,7 +397,8 @@ class PaymentRetryServiceTest {
 
     assertNotRetried(unknownOrganization, unknownInvoiceId, 1);
     assertNotRetried(rejectedOrganization, rejectedInvoiceId, 1);
-    assertThat(result.skippedCount()).isGreaterThanOrEqualTo(2);
+    assertSkipped(output, unknownAttemptId, LOOKUP_SKIPPED_LOG + unknownAttemptId);
+    assertSkipped(output, rejectedAttemptId, LOOKUP_SKIPPED_LOG + rejectedAttemptId);
     assertThat(result.failedCount()).isZero();
   }
 
@@ -399,7 +446,7 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void NOT_FOUND_PAYMENT로_실패한_시도_뒤에_키가_바뀌었으면_404여도_다시_청구하지_않는다() {
+  void NOT_FOUND_PAYMENT로_실패한_시도_뒤에_키가_바뀌었으면_404여도_다시_청구하지_않는다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
@@ -411,10 +458,10 @@ class PaymentRetryServiceTest {
             organization.secretKey(), failedAttemptId.toString()))
         .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
+    assertSkipped(output, failedAttemptId, LOOKUP_SKIPPED_LOG + failedAttemptId);
   }
 
   @Test
@@ -432,19 +479,25 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void 빌링키가_없으면_새_시도를_만들지_않고_skipped로_센다() {
+  void 빌링키가_없으면_새_시도를_만들지_않고_skipped로_센다(CapturedOutput output) {
     Organization organization = organization(false);
     UUID invoiceId = invoice(organization);
-    failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(25));
+    UUID failedAttemptId =
+        failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(25));
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
+    assertSkipped(
+        output,
+        failedAttemptId,
+        "payment retry skipped: failed_attempt_id="
+            + failedAttemptId
+            + ", mode=test, reason=payment_method_missing");
   }
 
   @Test
-  void 세_번째_시도가_실패하면_retry_exhausted가_오른다() {
+  void 세_번째_시도가_실패하면_retry_exhausted가_한_번_오르고_상한을_넘긴_실패는_세지_않는다() {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(50));
@@ -462,6 +515,21 @@ class PaymentRetryServiceTest {
         .containsEntry("status", "failed")
         .containsEntry("failure_code", RETRYABLE_FAILURE_CODE);
     assertThat(exhaustedCount()).isEqualTo(exhaustedBefore + 1);
+
+    laterAttempt(organization, invoiceId, "pending", Duration.ZERO);
+    PaymentAttempt fourth =
+        paymentAttemptRepository.findById(attemptIdWithStatus(invoiceId, "pending")).orElseThrow();
+    assertThat(paymentAttemptService.markFailed(fourth, RETRYABLE_FAILURE_CODE, "거절")).isTrue();
+    assertThat(attemptRows(invoiceId)).hasSize(4);
+    assertThat(exhaustedCount()).isEqualTo(exhaustedBefore + 1);
+  }
+
+  private UUID attemptIdWithStatus(UUID invoiceId, String status) {
+    return jdbcTemplate.queryForObject(
+        "SELECT id FROM payment_attempt WHERE invoice_id = ? AND status = ?",
+        UUID.class,
+        invoiceId,
+        status);
   }
 
   private void lookupReturns(
@@ -471,6 +539,13 @@ class PaymentRetryServiceTest {
         .thenReturn(
             new TossPaymentsResult.Success<>(
                 new TossPaymentsPayment(null, orderId, status, 13200, 13200, List.of())));
+  }
+
+  // retry()는 모든 도입사의 후보를 한 번에 세므로 자기 후보의 결과는 로그로 확인한다.
+  private static void assertSkipped(CapturedOutput output, UUID failedAttemptId, String expected) {
+    assertThat(output.getAll())
+        .contains(expected)
+        .doesNotContain(RETRY_FAILED_LOG + failedAttemptId);
   }
 
   private void assertNotRetried(Organization organization, UUID invoiceId, int attemptCount) {
