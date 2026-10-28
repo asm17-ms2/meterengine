@@ -93,6 +93,10 @@ public class PriceRateService {
   @Transactional
   public PriceRateResponse create(
       UUID organizationId, String code, CreatePriceRateRequest request) {
+    if (!request.isValidPricing())
+      throw new InvalidRequestException(
+          ErrorCode.VALIDATION_ERROR,
+          List.of(new FieldError("model", "요금 모델에 맞는 단가와 마지막 한도 없는 오름차순 구간이 필요합니다")));
     organizationRepository
         .findForUpdateById(organizationId)
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
@@ -104,13 +108,13 @@ public class PriceRateService {
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
     if (metric.getArchivedAt() != null) throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     validate(request.dimensionValues(), metric.getDimensionProperties());
-    if (!request.isValidPricing()) throw invalid("model", "요금 모델에 맞는 단가와 구간이 필요합니다");
     YearMonth current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
     YearMonth start = request.effectiveFrom() == null ? current : request.effectiveFrom();
     if (start.isBefore(current))
       throw new ConflictException(ErrorCode.PRICE_RATE_HISTORY_IMMUTABLE);
     if (request.effectiveUntil() != null && !request.effectiveUntil().isAfter(start))
-      throw invalid("effective_until", "시작 월보다 뒤여야 합니다");
+      throw new InvalidRequestException(
+          ErrorCode.VALIDATION_ERROR, List.of(new FieldError("effective_until", "시작 월보다 뒤여야 합니다")));
     validateCustomer(organizationId, request.customerId());
     if (request.customerId() != null) {
       var customer =
