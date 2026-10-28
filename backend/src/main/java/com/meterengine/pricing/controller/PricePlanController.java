@@ -72,7 +72,7 @@ public class PricePlanController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"),
+            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, status가 active, archived, all 중 하나가 아니다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -93,7 +93,12 @@ public class PricePlanController {
       @Parameter(description = "이 고객의 요금제만 고른다. 생략하면 도입사 공통 요금제만 나온다.")
           @RequestParam(name = "customer_id", required = false)
           UUID customerId,
-      @RequestParam(defaultValue = "active") @StorableText String status) {
+      @Parameter(
+              description =
+                  "보관 상태로 고른다. 생략하면 active로 보관하지 않은 버전만 나온다. archived는 보관한 버전, all은 둘 다다.")
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
     return pricePlanService.list(organizationId, month, customerId, status);
   }
 

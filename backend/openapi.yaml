@@ -605,7 +605,7 @@ paths:
           type: string
       responses:
         "204":
-          description: 이번 달 적용 중인 버전을 지우거나 닫았다. 본문 없음
+          description: 이번 달 적용 중인 버전을 보관했다. 본문 없음
         "400":
           content:
             application/json:
@@ -3610,7 +3610,9 @@ paths:
         schema:
           type: string
           format: uuid
-      - in: query
+      - description: "보관 상태로 고른다. 생략하면 active로 보관하지 않은 버전만 나온다. archived는 보관한 버전,\
+          \ all은 둘 다다."
+        in: query
         name: status
         required: false
         schema:
@@ -3629,7 +3631,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이\
-            \ 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
+            \ 아니거나 0001-01부터 9999-12까지의 범위 밖이거나, status가 active, archived, all 중 하\
+            나가 아니다"
         "401":
           content:
             application/json:

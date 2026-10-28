@@ -91,7 +91,7 @@ public class PriceRateController {
           키 순서와 상관없이 본다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "이번 달 적용 중인 버전을 지우거나 닫았다. 본문 없음"),
+    @ApiResponse(responseCode = "204", description = "이번 달 적용 중인 버전을 보관했다. 본문 없음"),
     @ApiResponse(
         responseCode = "400",
         content =
