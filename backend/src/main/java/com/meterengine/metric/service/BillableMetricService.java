@@ -19,6 +19,7 @@ import com.meterengine.metric.entity.MetricAggregation;
 import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.organization.repository.OrganizationRepository;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,18 +40,21 @@ public class BillableMetricService {
   private final BillableMetricPeriodRepository billableMetricPeriodRepository;
   private final OrganizationRepository organizationRepository;
   private final AuditLogService auditLogService;
+  private final EntityManager entityManager;
 
   BillableMetricService(
       BillableMetricRepository billableMetricRepository,
       EventPresence eventPresence,
       BillableMetricPeriodRepository billableMetricPeriodRepository,
       OrganizationRepository organizationRepository,
-      AuditLogService auditLogService) {
+      AuditLogService auditLogService,
+      EntityManager entityManager) {
     this.billableMetricRepository = billableMetricRepository;
     this.eventPresence = eventPresence;
     this.billableMetricPeriodRepository = billableMetricPeriodRepository;
     this.organizationRepository = organizationRepository;
     this.auditLogService = auditLogService;
+    this.entityManager = entityManager;
   }
 
   @Transactional
@@ -111,7 +115,6 @@ public class BillableMetricService {
   @Transactional
   public BillableMetricResponse update(
       UUID organizationId, String code, UpdateBillableMetricRequest request) {
-    lock(organizationId);
     Calculation calculation =
         validate(
             request.aggregation(),
@@ -130,26 +133,21 @@ public class BillableMetricService {
 
     if (billableMetric.getArchivedAt() != null)
       throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
+    String checkedEventType = null;
+    if (changesBeyondName(
+        changedFields(billableMetric, request, calculation, dimensionProperties))) {
+      checkedEventType = billableMetric.getEventType();
+      if (eventPresence.exists(organizationId, checkedEventType))
+        throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+    }
 
-    var fields = new ArrayList<String>();
-    if (!Objects.equals(billableMetric.getName(), request.name())) fields.add("name");
-    if (!Objects.equals(billableMetric.getEventType(), request.eventType()))
-      fields.add("event_type");
-    if (!Objects.equals(billableMetric.getAggregation(), calculation.aggregation()))
-      fields.add("aggregation");
-    if (!Objects.equals(billableMetric.getTargetProperty(), request.targetProperty()))
-      fields.add("target_property");
-    if (!Objects.equals(billableMetric.getDimensionProperties(), dimensionProperties))
-      fields.add("dimension_properties");
-    if (!decimalEquals(billableMetric.getUnitSize(), calculation.unitSize()))
-      fields.add("unit_size");
-    if (!Objects.equals(billableMetric.getRoundingMode(), calculation.roundingMode()))
-      fields.add("rounding_mode");
-    if (billableMetric.getRoundingPrecision() != calculation.roundingPrecision())
-      fields.add("rounding_precision");
-    if (!decimalEquals(billableMetric.getPercentile(), calculation.percentile()))
-      fields.add("percentile");
-    if (fields.stream().anyMatch(field -> !"name".equals(field))
+    lock(organizationId);
+    entityManager.refresh(billableMetric);
+    if (billableMetric.getArchivedAt() != null)
+      throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
+    List<String> fields = changedFields(billableMetric, request, calculation, dimensionProperties);
+    if (changesBeyondName(fields)
+        && !billableMetric.getEventType().equals(checkedEventType)
         && eventPresence.exists(organizationId, billableMetric.getEventType()))
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
     billableMetric.update(
@@ -285,6 +283,36 @@ public class BillableMetricService {
         selectedRounding,
         "none".equals(selectedRounding) ? 0 : selectedPrecision,
         percentile);
+  }
+
+  private static List<String> changedFields(
+      BillableMetric billableMetric,
+      UpdateBillableMetricRequest request,
+      Calculation calculation,
+      List<String> dimensionProperties) {
+    var fields = new ArrayList<String>();
+    if (!Objects.equals(billableMetric.getName(), request.name())) fields.add("name");
+    if (!Objects.equals(billableMetric.getEventType(), request.eventType()))
+      fields.add("event_type");
+    if (!Objects.equals(billableMetric.getAggregation(), calculation.aggregation()))
+      fields.add("aggregation");
+    if (!Objects.equals(billableMetric.getTargetProperty(), request.targetProperty()))
+      fields.add("target_property");
+    if (!Objects.equals(billableMetric.getDimensionProperties(), dimensionProperties))
+      fields.add("dimension_properties");
+    if (!decimalEquals(billableMetric.getUnitSize(), calculation.unitSize()))
+      fields.add("unit_size");
+    if (!Objects.equals(billableMetric.getRoundingMode(), calculation.roundingMode()))
+      fields.add("rounding_mode");
+    if (billableMetric.getRoundingPrecision() != calculation.roundingPrecision())
+      fields.add("rounding_precision");
+    if (!decimalEquals(billableMetric.getPercentile(), calculation.percentile()))
+      fields.add("percentile");
+    return fields;
+  }
+
+  private static boolean changesBeyondName(List<String> fields) {
+    return fields.stream().anyMatch(field -> !"name".equals(field));
   }
 
   private static boolean decimalEquals(BigDecimal first, BigDecimal second) {
