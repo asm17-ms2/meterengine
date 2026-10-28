@@ -163,7 +163,7 @@ cd backend
 scripts/issue-api-key.sh        # live 키. test 키는 인자로 test를 준다
 ```
 
-- 원문을 `FRONTEND_API_KEY`와 프론트의 `METERENGINE_API_KEY`에 같은 값으로 넣는다.
+- 원문을 `FRONTEND_API_KEY`에 넣는다. 프론트는 이 키를 쓰지 않고, 배포 compose도 이 값을 넘기지 않는다.
 
 ### 배포 환경의 운영 키 발급
 

@@ -3,11 +3,11 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { requestApi, toDisplayMessage } from "@/lib/api/transport";
-import { safeReturnPath } from "@/lib/auth/navigation";
+import { returnOrganizationId, safeReturnPath, withoutOrganizationId } from "@/lib/auth/navigation";
 import { workspaceHref } from "@/lib/workspace-href";
 import { saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
-import type { ActionState, SessionTokenResponse, SignupResponse } from "@/lib/auth/types";
+import type { ActionState, SessionResponse, SessionTokenResponse, SignupResponse } from "@/lib/auth/types";
 
 function textField(data: FormData, name: string) {
   const value = data.get(name);
@@ -26,7 +26,14 @@ export async function loginAction(_prev: ActionState, data: FormData): Promise<A
     return { message: toDisplayMessage(result.error) };
   }
   await saveSession(result.data.token, result.data.expires_at);
-  const destination = workspaceHref(safeReturnPath(data.get("returnTo"), result.data.user_account.role === "operator"), result.data.organization ? new URLSearchParams({ organization_id: result.data.organization.id }) : "");
+  const returnPath = safeReturnPath(data.get("returnTo"), result.data.user_account.role === "operator");
+  const requested = returnOrganizationId(returnPath);
+  let organization = result.data.organization;
+  if (requested && organization && requested !== organization.id && !result.data.consent_required) {
+    const switched = await requestApi<SessionResponse>("/v1/sessions/current/organization", { method: "PUT", token: result.data.token, body: { organization_id: requested } });
+    if (switched.ok && switched.data.organization?.status === "active") organization = switched.data.organization;
+  }
+  const destination = workspaceHref(requested && requested !== organization?.id ? withoutOrganizationId(returnPath) : returnPath, organization ? new URLSearchParams({ organization_id: organization.id }) : "");
   if (result.data.consent_required) redirect(`/account/consents?returnTo=${encodeURIComponent(destination)}`);
   redirect(destination);
 }
