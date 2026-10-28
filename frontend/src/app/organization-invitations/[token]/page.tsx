@@ -10,7 +10,7 @@ import { scopeSummary } from "@/lib/auth/permissions";
 import type { SessionResponse } from "@/lib/auth/types";
 import { reviewConsentsForInvitation, signInForInvitation } from "./actions";
 
-export const metadata: Metadata = { robots: { index: false, follow: false }, referrer: "no-referrer" };
+export const metadata: Metadata = { title: "도입사 초대", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
 type InvitationPreview = { organization_name: string; email: string; expires_at: string; account_exists: boolean; scopes: string[] };
 

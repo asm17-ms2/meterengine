@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { CustomersLoading } from "@/components/customers/CustomersLoading";
@@ -7,6 +8,8 @@ import { listCustomers } from "@/lib/api/customers";
 import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = { title: "고객" };
 
 export default async function CustomersPage({
   searchParams,

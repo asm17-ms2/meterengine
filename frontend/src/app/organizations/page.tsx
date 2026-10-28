@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoutButton, OrganizationPicker } from "@/components/auth/SessionControls";
 import { requireSession } from "@/lib/auth/session";
 import { ORGANIZATION_STATUS_LABELS } from "@/lib/auth/types";
+
+export const metadata: Metadata = { title: "도입사 선택" };
 
 export default async function OrganizationsPage() {
   const session = await requireSession();

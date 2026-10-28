@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { scopeField } from "@/lib/auth/scope-fields";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
@@ -6,6 +7,8 @@ import { WorkspaceError, WorkspaceTable } from "@/components/workspace/Workspace
 
 export type ApiKeyResponse = { id: string; label: string; mode: string; scopes: string[]; last_four: string; expires_at: string | null; revoked_at: string | null; rate_limit_per_minute: number | null; status: "active" | "revoked" | "expired" };
 const KEY_STATUS_OPTIONS = [{ value: "active", label: "사용 중" }, { value: "revoked", label: "폐기됨" }, { value: "expired", label: "만료됨" }, { value: "all", label: "전체" }];
+
+export const metadata: Metadata = { title: "API 키와 통보" };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
