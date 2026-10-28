@@ -60,7 +60,7 @@ public class PriceRateController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, effective_until이 시작 월보다 뒤가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
             code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(

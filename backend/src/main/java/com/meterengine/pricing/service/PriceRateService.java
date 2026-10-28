@@ -90,7 +90,8 @@ public class PriceRateService {
     if (start.isBefore(current))
       throw new ConflictException(ErrorCode.PRICE_RATE_HISTORY_IMMUTABLE);
     if (request.effectiveUntil() != null && !request.effectiveUntil().isAfter(start))
-      throw invalid("effective_until", "시작 월보다 뒤여야 합니다");
+      throw new InvalidRequestException(
+          ErrorCode.VALIDATION_ERROR, List.of(new FieldError("effective_until", "시작 월보다 뒤여야 합니다")));
     validateCustomer(organizationId, request.customerId());
     organizationRepository
         .findForUpdateById(organizationId)
