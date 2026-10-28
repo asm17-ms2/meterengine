@@ -1,0 +1,4 @@
+D-044 member/webhook/desktop: after(콘솔 0, 넘침 False, axe 0) -> final(콘솔 0, 넘침 False, axe 0) 통과
+D-044 member/webhook/mobile: after(콘솔 0, 넘침 False, axe 1) -> final(콘솔 0, 넘침 False, axe 1) 통과
+D-226 operator/admin/desktop: after(콘솔 0, 넘침 False, axe 0) -> final(콘솔 0, 넘침 False, axe 0) 통과
+D-226 operator/admin/mobile: after(콘솔 0, 넘침 False, axe 0) -> final(콘솔 0, 넘침 False, axe 0) 통과

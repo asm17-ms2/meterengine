@@ -1,7 +1,7 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-28T23:00:51+09:00",
+  "updated_at": "2026-10-28T23:03:41+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
@@ -418,9 +418,9 @@
     "running": true,
     "layer": 444,
     "pids": [
-      20530,
-      87551,
-      230
+      26013,
+      26035,
+      26088
     ],
     "container": "meterengine-0696-e2e"
   }

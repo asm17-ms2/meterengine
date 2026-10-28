@@ -1,0 +1,3 @@
+마지막 실화면 점검 #444, sha c0a9f4a02595f979304f0a6c24115efcf5462cc2 (fix/s456-444-t-inho), DB부터 새로 띄움
+auth: 통과 3 passed (signup/approval/login/isolation/logout, operator without organization, role promotion and demotion), 뺀 시험 없음
+화면: 고친 화면 항목(D-044 /integrations/<id>, D-226 /admin)의 after와 같은 라우트, 같은 폭 4건을 다시 찍어 콘솔 오류, 가로 넘침, axe 위반이 늘지 않음(screens-compare.txt). /integrations/<id>는 새 DB에 수신 주소와 시험 통보를 다시 만들어 찍었다
