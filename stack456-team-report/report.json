@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:09:27+09:00",
+  "updated_at": "2026-10-28T19:12:40+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "3901315c8b184bbdb52ebcf64bb825623aa23d08"
+    "fix/s456-443-t-inho": "d4129fbd43fdd075c952f449d658f6bf9f811395"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1456,15 +1456,36 @@
       "id": "D-084",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 globals.css는 패널 안 h3를 14px로(142행), 모바일 레코드 제목 h3를 16px로(244행) 정하고, 두 선택자는 명시도가 같아 뒤에 오는 244행이 모바일에서 이긴다. WorkspaceTable은 첫 열 값을 h3로 그리므로(WorkspaceView.tsx:60) 패널 안 h3 소제목 아래에 표를 두면 레코드 제목이 소제목보다 커진다. #443 층 화면(members, integrations)은 패널 제목이 17px h2라 뒤집힘이 보이지 않지만, #445 payments/[id] 100-102행(4ace811)과 정점 113-115행(c9a86c4, #449)은 14px h3 소제목 바로 아래 WorkspaceTable을 두고 첫 열이 요청 시각이라 지적대로 시각이 16px로 더 크게 보인다. 두 CSS 줄은 #443 f671a4f가 들였고 정점까지 바뀌지 않았으니 크기 순서는 이 층 globals.css 한 줄로 고칠 수 있다. 결제 시도 표의 columns 순서를 바꾸는 제안은 #445, #449 화면 파일이라 이 층에서 고치지 않고 propagation_note로 넘긴다.",
+      "evidence": [
+        "frontend/src/app/globals.css:142 @ 0f1d1bf",
+        "frontend/src/app/globals.css:244 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:60 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:36 @ 0f1d1bf",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:100-102 @ 54bb1d5",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:113-115 @ 0fe7d2a",
+        "커밋 f671a4f",
+        "커밋 d4129fbd43fdd075c952f449d658f6bf9f811395"
+      ],
+      "commits": [
+        "d4129fbd43fdd075c952f449d658f6bf9f811395"
+      ],
+      "tests": [
+        "보이는 크기만 바뀌어 시험으로 잡을 수 없다. evidence/D-084 before, after 캡처(members, integrations 390). integrations PNG는 키 정보가 보일 수 있어 보고 브랜치에 두지 않고 screens.json만 남겼다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 142, 244행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "뒤집힘이 보이는 화면은 #445 payments/[id] 100-102행과 #449 같은 파일 113-115행이다. 결제 시도, 취소 내역 표의 열 순서(결과와 금액을 첫 열로)는 그 층 몫이다.",
+      "summary": "767px 이하 WorkspaceTable 레코드 제목을 14px로 낮췄다"
     },
     {
       "id": "D-097",
@@ -7698,6 +7719,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "42 passed (20.5s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (19.6s)"
     }
   ],
   "pushes": [
@@ -7840,6 +7899,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
       "at": "2026-10-28T19:06:47+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "at": "2026-10-28T19:12:21+09:00"
     }
   ],
   "usage_log": [],

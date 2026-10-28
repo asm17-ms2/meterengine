@@ -1,14 +1,14 @@
-미완료 286건, 결과: 끝 상태 86/372건 (fixed 69, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 28번(마지막 3901315)
+미완료 285건, 결과: 끝 상태 87/372건 (fixed 70, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 29번(마지막 d4129fb)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T19:09:27+09:00
+상태: running, 갱신 2026-10-28T19:12:40+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 69 | 1 | 0 | 16 | 0 | 6 |
+| #443 | fix/s456-443-t-inho | 92 | 70 | 1 | 0 | 16 | 0 | 5 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -56,6 +56,7 @@ push: fix/s456-443-t-inho 28번(마지막 3901315)
 | X-073 | #443 | 3901315 | .setup-list 조치 링크를 기본 글자 크기와 44px 높이로 맞췄다 | 없음(git grep -n setup-list HEAD -- frontend/src/**/*.tsx: 이 층에는 쓰는 화면이 없다; git grep -n setup-list origin/feat/rds-auto-stop:) |
 | X-078 | #443 | b6d0822 | 옆 패널 h2를 clamp(22px, 1.8vw, 26px)로 낮춰 과업 제목보다 작게 했다 | the login side panel title is smaller than the task title: 실패 Expected < 34 Received 42 (1440px 패널 h2) |
 | D-080 | #443 | e26db2c | 지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다 | 없음(git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다; git grep -n finance-flow origin/feat/) |
+| D-084 | #443 | d4129fb | 767px 이하 WorkspaceTable 레코드 제목을 14px로 낮췄다 | 없음(보이는 크기만 바뀌어 시험으로 잡을 수 없다. evidence/D-084 before, after 캡처(members, integrations 390). integrations PNG는 키 정보가 보일 수 있어 보고) |
 | C443-001 | #443 | 55ce723 | 스켈레톤을 aria-hidden div로 감싸고 상태 영역에서 aria-busy, aria-label을 뺐다 | 없음(개발 서버 /customers?state=loading의 상태 영역 접근성 트리(.s456-work/verify-skeleton.mjs): 고치기 전 status 이름 '데이터를 불러오고 있습니다' 안에 list와 ) |
 | G-087 | #443 | cc3de53 | README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다 | 없음(문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조; 글꼴 버전: PretendardVaria) |
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
@@ -143,6 +144,7 @@ push: fix/s456-443-t-inho 28번(마지막 3901315)
 - X-073 (#443): 이 목록을 쓰는 화면은 #444 integrations, #450 UsageQuality, #451 overview다. 반영 뒤 그 화면 1440, 390 캡처로 링크 크기와 높이를 확인한다.
 - X-078 (#443): 카드 등록 화면 registration.module.css 8, 12행(#445 4ace811)의 context h2(최대 30px)도 panel h1(최대 28px)보다 커서, #445에서 h2를 h1보다 작게 맞춘다.
 - D-080 (#443): #451 (console)/overview/page.tsx 22행의 순수납액 div에 className="is-settled"를 붙여야 개요의 초록 강조가 남는다. #444 admin/page.tsx는 손댈 것이 없고 반영되면 마지막 칸(발송 실패 통보)의 초록 배경이 사라진다.
+- D-084 (#443): 뒤집힘이 보이는 화면은 #445 payments/[id] 100-102행과 #449 같은 파일 113-115행이다. 결제 시도, 취소 내역 표의 열 순서(결과와 금액을 첫 열로)는 그 층 몫이다.
 - G-087 (#443): #452 29a78d0이 README 29, 135, 140행을 고쳐 위층 반영 때 겹친다. 겹치는 줄은 #452 문장을 택하되 136행 '시스템 글꼴' 문구는 #452 C452-010 몫이다. 31-32행과 112행(개발 모드 스위치, antd Layout 틀)은 G-081에서 고친다.
 - G-083 (#443): ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.
 - D-021 (#443): #451 events/page.tsx 38행 수집 로그 탭 이름은 X-071이 맡는다. #444 integrations/[id]/page.tsx 17행 뒤로 가기 '연동 설정으로'는 'API 키와 통보로'로 위층에서 맞춘다. #450 UsageQuality '처리 결과 통보 연결'은 동작 링크라 그대로 둔다.
