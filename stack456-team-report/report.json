@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:54:28+09:00",
+  "updated_at": "2026-10-28T19:57:21+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "109526b",
+    "feat/account-permissions": "9cab573",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1133,14 +1133,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "(public)/actions.ts, 초대 actions.ts, admin/actions.ts는 빈 이름과 255자 초과를 한 조건으로 묶어 빈 이름에도 '255자 이내' 안내를 내고, 가입은 두 이름 가운데 어느 것이 문제인지 알리지 않는다. 정점도 같다. 빈 값과 길이 초과를 나눠 안내했다.",
+      "evidence": [
+        "frontend/src/app/(public)/actions.ts:37 @ 72e8718",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:43 @ 72e8718",
+        "frontend/src/app/admin/actions.ts:26 @ 72e8718",
+        "signup with a blank name asks for that name instead of a length limit: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByText('도입사 이름을 입력하세요.')"
+      ],
+      "commits": [
+        "9cab57365470"
+      ],
+      "tests": [
+        "auth.contract.spec.ts signup with a blank name asks for that name instead of a length limit: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 34건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same a39db70 e5fca11",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "빈 이름과 길이 초과 안내 분리"
     },
     {
       "id": "X-103",
@@ -7962,6 +7978,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 12 ℹ pass 12 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  34 passed (15.4s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.315s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8214,6 +8286,11 @@
       "branch": "feat/account-permissions",
       "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
       "at": "2026-10-28T19:51:07+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cab573654703d881fb014d2d085aea6a8a82df1",
+      "at": "2026-10-28T19:57:21+09:00"
     }
   ],
   "usage_log": [],
