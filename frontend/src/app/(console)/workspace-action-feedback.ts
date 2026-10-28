@@ -19,6 +19,14 @@ export function unconfirmedMessage(operation: string): string {
   return UNCONFIRMED_MESSAGES[operation] ?? "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.";
 }
 
+const ERROR_MESSAGES: Partial<Record<string, string>> = {
+  toss_payments_credential_missing: "현재 결제 환경의 토스페이먼츠 키가 없습니다. 도입사 설정의 토스페이먼츠 연동에서 키를 저장한 뒤 다시 시도하세요.",
+};
+
+export function errorMessageForCode(code: string): string | undefined {
+  return ERROR_MESSAGES[code];
+}
+
 export function staleCancellationMessage(operation: string, code?: string): string | undefined {
   if (operation !== "createPaymentCancellation") return undefined;
   if (code === "payment_cancellation_idempotency_conflict") return unconfirmedMessage(operation);

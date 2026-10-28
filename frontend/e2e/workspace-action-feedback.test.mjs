@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { InputFieldError, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
+import { errorMessageForCode, InputFieldError, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
 import { operationResultCopy } from "../src/lib/workspace-operation-results.ts";
 
 test("each workspace action that shows a toast says what it did", () => {
@@ -40,4 +40,11 @@ test("a cancellation rejected because another cancellation came first asks to re
   assert.equal(staleCancellationMessage("createPaymentAttempt", "payment_attempt_fully_canceled"), undefined);
   assert.equal(staleCancellationMessage("createPaymentCancellation", "validation_failed"), undefined);
   assert.equal(staleCancellationMessage("createPaymentCancellation", undefined), undefined);
+});
+
+test("a missing Toss key says where to save it", () => {
+  const message = errorMessageForCode("toss_payments_credential_missing");
+  assert.match(message, /도입사 설정/);
+  assert.match(message, /토스페이먼츠 연동/);
+  assert.equal(errorMessageForCode("unknown_code"), undefined);
 });
