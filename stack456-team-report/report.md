@@ -1,12 +1,12 @@
-미완료 280건, 결과: 끝 상태 49/328건 (fixed 15, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 5개(마지막 b4b9800)
+미완료 279건, 결과: 끝 상태 50/328건 (fixed 16, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 6개(마지막 322afb1)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 15 | 1 | 7 | 23 | 3 | 94 |
+| #442 | 143 | 16 | 1 | 7 | 23 | 3 | 93 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -32,6 +32,7 @@ push: feat/account-permissions 5개(마지막 b4b9800)
 | X-004 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | X-008 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | X-015 | #442 | b3cbfd8 | 쿠키 없는 서버 액션을 proxy가 넘기고 로그인 만료로 안내 | a server action after the session cookie disappears goes to login instead of the error screen: 실패 Expected pattern /login?reason=expired$, Received /customers?o |
+| X-019 | #442 | 322afb1 | 사이드바 Menu tabIndex -1 복구 | the sidebar menu list is not a separate tab stop: 실패 Expected "-1", Received "0" |
 
 ## 정할 것
 
@@ -116,6 +117,7 @@ push: feat/account-permissions 5개(마지막 b4b9800)
 | X-000 | #442 | 같은 언마운트 구조가 main에서 온 BillableMetricsScreen(closeForm, closeDelete)과 InvoiceFinalizeDialog에도 있고, #451 e5fca11의 RoutedEventDetail에도 있다. 스택이 들인 ActionPanel만 이 층에서 고쳤다. 정점 ActionPanel.tsx 141-142행은 23b1844가 environment 숨은 입력만 더해 같은 수정이 그대로 맞는다. |
 | X-004 | #442 | 복사하지 않고 닫으면 확인 창이 뜬다. Playwright는 확인 창을 기본으로 거절하므로 #453 23b1844가 더한 명세가 반영 뒤 실패한다: workspace.contract.spec.ts 39-42행 closeDialog(비밀값 표시 뒤 X로 닫음, 153행과 168행 호출), mvp.real.spec.ts 128행과 136행 Escape, people.real.spec.ts 135행 닫기. 반영 때 닫기 앞에 page.once("dialog", d => d.accept())를 두거나 복사 버튼을 먼저 누르게 맞춘다. #453은 T-yang 층이라 그 차례에 함께 본다. 정점 ActionPanel.tsx는 23b1844가 environment 숨은 입력만 더해 같은 수정이 맞는다. |
 | X-015 | #442 | 정점 proxy.ts는 4ace811(#445), c9a86c4(#449)가 공개 경로를 늘리고 23b1844(#453)가 환경 검사와 x-meterengine-environment 헤더를 더해 쿠키 검사가 16행으로 내려갔다. 반영 때 같은 조건(&& !request.headers.has("next-action"))을 그 쿠키 검사에 붙인다. 통과한 액션 요청도 requestHeaders를 실어 환경 헤더가 유지된다. session.ts 19행은 정점까지 같다. |
+| X-019 | #442 | 위층 커밋들이 NavMenu.tsx의 NAV_GROUPS와 Menu 줄을 바꿨다. 반영 때 정점 Menu 요소에 tabIndex={-1}이 남았는지 본다. |
 | X-046 | #442 | 통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다. |
 | X-057 | #442 | WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다. |
 
