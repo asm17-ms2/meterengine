@@ -364,6 +364,23 @@ test("signup with a blank name asks for that name instead of a length limit", as
   expect(calls.some((call: { path: string }) => call.path === "/v1/signups")).toBe(false);
 });
 
+test("a dangerous row action is a quiet link and its final confirmation carries the weight", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("폐기할 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await page.reload();
+  const trigger = page.locator(".workspace-desktop-table").getByRole("button", { name: "키 폐기", exact: true });
+  await expect(trigger).toHaveClass(/ant-btn-link/);
+  await expect(trigger).toHaveClass(/ant-btn-dangerous/);
+  await trigger.click();
+  const confirm = page.getByRole("dialog").locator("button.ant-btn-dangerous[type=submit]");
+  await expect(confirm).toHaveClass(/ant-btn-primary/);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
