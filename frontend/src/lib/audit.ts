@@ -17,7 +17,7 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   price_plan_archived: "요금제 보관", price_plan_restored: "요금제 복원", payment_attempt_created: "결제 요청", payment_cancellation_created: "결제 취소",
   organization_member_scopes_updated: "사용자 업무 권한 변경", api_key_scopes_updated: "API 키 권한 변경", session_organization_updated: "도입사 전환", user_account_consents_accepted: "이용 안내 동의",
   user_account_password_updated: "비밀번호 변경", payment_setting_updated: "결제 모드 변경", toss_payments_credential_updated: "토스 키 저장", toss_payments_credential_archived: "토스 키 보관",
-  supplier_updated: "공급자 정보 변경", payment_method_archived: "등록 카드 보관", webhook_endpoint_created: "수신 주소 등록", webhook_endpoint_updated: "수신 주소 수정",
+  supplier_updated: "공급자 정보 변경", payment_method_created: "카드 등록", payment_method_archived: "등록 카드 보관", webhook_endpoint_created: "수신 주소 등록", webhook_endpoint_updated: "수신 주소 수정",
   webhook_endpoint_archived: "수신 주소 보관", webhook_endpoint_restored: "수신 주소 복원", webhook_delivery_retried: "통보 다시 보내기",
 };
 
