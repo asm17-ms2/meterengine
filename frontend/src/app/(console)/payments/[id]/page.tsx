@@ -32,7 +32,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   );
   if (!cancellations.ok) return <section className="workspace-panel">
     <h2>승인 결제 취소</h2>
-    <p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode}</p>
+    <p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode === "test" ? "테스트 결제" : "실결제"}</p>
     <WorkspaceError message={cancellations.error.message} />
     <p className="muted">취소 내역을 확인한 뒤 새로 요청할 수 있습니다.</p>
   </section>;
@@ -48,7 +48,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   const isFullyCanceled = isValidHistory && remainingAmount === 0;
   return <section className="workspace-panel">
     <div className="workspace-heading">
-      <div><h2>승인 결제 취소</h2><p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode}</p></div>
+      <div><h2>승인 결제 취소</h2><p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode === "test" ? "테스트 결제" : "실결제"}</p></div>
       {canCancel && <ActionPanel title="부분 또는 전액 취소" operation="createPaymentCancellation" isDanger
         description={(attempt.mode === "test" ? "테스트 결제 취소. " : "실결제 취소. ") + "최대 " + formatKrw(remainingAmount) + "까지 취소할 수 있습니다. 금액을 비우면 남은 금액 전부를 취소합니다. 취소 요청은 되돌릴 수 없습니다."}
         fields={[
