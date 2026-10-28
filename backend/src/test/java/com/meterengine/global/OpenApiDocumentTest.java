@@ -194,6 +194,22 @@ class OpenApiDocumentTest {
             });
   }
 
+  @Test
+  void 세션으로_부르는_경로의_403은_동의_대기_code를_문서화한다() {
+    JsonNode paths = root().path("paths");
+    List<JsonNode> sessionOperations =
+        List.of(
+            paths.path("/v1/user-accounts").path("get"),
+            paths.path("/v1/organization/members").path("get"));
+
+    assertThat(sessionOperations)
+        .allSatisfy(
+            operation ->
+                assertThat(operation.path("responses").path("403").path("description").asText())
+                    .as(operation.path("operationId").asText())
+                    .contains("code=consent_required"));
+  }
+
   // ---------------------------------------------------------------------------
   // 손으로 잡아 준 스키마
   // ---------------------------------------------------------------------------
