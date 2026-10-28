@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:02:34+09:00",
+  "updated_at": "2026-10-29T00:04:36+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "b22fd8d874399c19bcab7f64ea0998c34853af94"
+    "fix/s456-446-t-inho": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4614,15 +4614,39 @@
       "id": "Ck3-446-05",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "#446(614d3bc4)이 더한 GET /v1/price-plans는 description, 파라미터 설명, 400과 404 응답 문서가 모두 없다. 실제 동작은 customer_id를 생략하면 고객 요금제를 빼고 도입사 공통 요금제만, month를 생략하면 모든 버전 이력을 돌려주는데, 기존 인보이스 목록은 customer_id 생략을 모든 고객으로, 미터별 가격 목록은 month 생략을 이번 달로 정해 문서에 적어 두었다. 같은 이름의 파라미터가 API마다 뜻이 갈리는데 새 API만 설명이 없고, 서비스가 던지는 customer_not_found(404)와 형식 오류(400)도 문서에 없어 README의 '오류 코드는 openapi.yaml을 본다'와 어긋난다. customer_id 생략 의미는 미터별 가격 목록과는 같으므로 원문의 '기존 API와 다르다'는 인보이스 계열 API 기준으로만 맞다. 프론트(pricing/page.tsx)는 이 의미대로 부르고 있어 실패 경로는 없고 문서 공백이다. 정점에서도 같은 공백이 남아 있다. GET /v1/price-plans에 설명(customer_id 생략은 공통 요금제만, month 생략은 모든 버전 이력, 시작 월 내림차순), 파라미터 설명, 200, 400, 404를 적었다. 같은 공백이 있는 단가 이력 GET은 이 항목 밖이라 두었다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:48-57 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:49-55 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:130-133 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:54-55 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/BillableMetricPriceController.java:31 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:57-71 @ da90aac",
+        "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:75,78 @ da90aac",
+        "backend/openapi.yaml:3359-3414 @ da90aac",
+        "backend/README.md:201 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:51-61 @ 8dd028a",
+        "요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다: 실패 Expecting not blank but was: \"\" (description 없음)",
+        "커밋 ae50ce0ff7b6b8d27984ab21d95b2d97568cc817"
+      ],
+      "commits": [
+        "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.global.OpenApiDocumentTest': 고치기 전 새 시험 실패, 고친 뒤 통과. 전체 ./gradlew build로 openapi.yaml을 다시 만들었다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "changed: #447 2ec5d85가 같은 GET에 status 파라미터(기본 active)를, #453 23b1844가 @EnvironmentReady를 더했고 문서 공백은 정점에도 그대로다",
+      "propagation_note": "반영 때 listPricePlans 시그니처가 충돌하면 위층의 status 파라미터와 @EnvironmentReady를 살리고 이 층의 설명, 파라미터 설명, 400과 404를 더한다. status 파라미터 설명과 그 400 경우도 같이 적는다. openapi.yaml은 그 층에서 다시 만든다.",
+      "summary": "요금제 이력 조회 API가 생략한 파라미터의 뜻과 400, 404를 적는다"
     },
     {
       "id": "Ck3-446-06",
@@ -7822,6 +7846,51 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (27.5s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.6s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10592,6 +10661,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "b22fd8d874399c19bcab7f64ea0998c34853af94",
       "at": "2026-10-28T23:58:28+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
+      "at": "2026-10-29T00:04:22+09:00"
     }
   ],
   "usage_log": [],
