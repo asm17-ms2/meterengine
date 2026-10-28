@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:36:03+09:00",
+  "updated_at": "2026-10-28T17:37:05+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -830,7 +830,7 @@
       "reason": "ActionPanel.tsx 68행은 `${field.label}을 하나 이상 선택하세요.`로 라벨 받침과 관계없이 '을'을 붙여 '받을 통보을'처럼 틀리고, 요약이 '라벨: 문구'로 그려 라벨이 겹친다. 정점도 같다. 문구에서 라벨과 조사를 뺐다.",
       "evidence": [
         "frontend/src/components/workspace/ActionPanel.tsx:68,93 @ 72e8718",
-        "frontend/src/components/workspace/ActionPanel.tsx:72 @ 0fe7d2a",
+        "frontend/src/components/workspace/ActionPanel.tsx:71 @ 0fe7d2a",
         "a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상')"
       ],
       "commits": [
@@ -1110,7 +1110,7 @@
         "frontend/src/app/layout.tsx:7-10 @ 72e8718",
         "frontend/src/app/organization-invitations/[token]/page.tsx:13 @ 72e8718",
         "frontend/src/app/organization-invitations/continue/page.tsx:7 @ 72e8718",
-        "frontend/src/app/layout.tsx:8 @ 0fe7d2a",
+        "frontend/src/app/layout.tsx:17 @ 0fe7d2a",
         "each screen has its own document title: 실패 Expected \"로그인 | MeterEngine\", Received \"MeterEngine 관리자 콘솔\""
       ],
       "commits": [
@@ -1444,7 +1444,7 @@
         "frontend/src/app/layout.tsx:7-10 @ 72e8718",
         "frontend/src/app/organization-invitations/[token]/page.tsx:13 @ 72e8718",
         "frontend/src/app/organization-invitations/continue/page.tsx:7 @ 72e8718",
-        "frontend/src/app/layout.tsx:8 @ 0fe7d2a",
+        "frontend/src/app/layout.tsx:17 @ 0fe7d2a",
         "each screen has its own document title: 실패 Expected \"로그인 | MeterEngine\", Received \"MeterEngine 관리자 콘솔\""
       ],
       "commits": [
@@ -2772,7 +2772,7 @@
         "frontend/src/app/layout.tsx:7-10 @ 72e8718",
         "frontend/src/app/organization-invitations/[token]/page.tsx:13 @ 72e8718",
         "frontend/src/app/organization-invitations/continue/page.tsx:7 @ 72e8718",
-        "frontend/src/app/layout.tsx:8 @ 0fe7d2a",
+        "frontend/src/app/layout.tsx:17 @ 0fe7d2a",
         "each screen has its own document title: 실패 Expected \"로그인 | MeterEngine\", Received \"MeterEngine 관리자 콘솔\""
       ],
       "commits": [
