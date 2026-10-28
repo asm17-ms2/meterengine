@@ -146,6 +146,12 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired$/);
 });
 
+test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.getByRole("navigation", { name: "도입사 업무" }).getByRole("menu")).toHaveAttribute("tabindex", "-1");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

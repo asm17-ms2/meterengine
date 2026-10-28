@@ -20,5 +20,5 @@ export function NavMenu({ onNavigate }: { onNavigate?: () => void }) {
   const search = useWorkspaceSearch().toString();
   const selected = NAV_GROUPS.flatMap(group => group.items).find(item => pathname === item.href || pathname.startsWith(item.href + "/"))?.href;
   if (!canRead) return <nav aria-label="도입사 업무"><Link href="/organizations" onClick={onNavigate}>도입사 선택</Link></nav>;
-  return <nav aria-label="도입사 업무"><Menu mode="inline" selectedKeys={selected ? [selected] : []} onClick={onNavigate} items={NAV_GROUPS.map(group => ({ type: "group", key: group.label, label: group.label, children: group.items.map(item => ({ key: item.href, label: <Link href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined}>{item.label}</Link> })) }))} /></nav>;
+  return <nav aria-label="도입사 업무"><Menu mode="inline" tabIndex={-1} selectedKeys={selected ? [selected] : []} onClick={onNavigate} items={NAV_GROUPS.map(group => ({ type: "group", key: group.label, label: group.label, children: group.items.map(item => ({ key: item.href, label: <Link href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined}>{item.label}</Link> })) }))} /></nav>;
 }
