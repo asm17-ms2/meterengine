@@ -465,3 +465,12 @@ test("a focused field in a workspace dialog keeps its whole focus ring inside th
   expect(room.left).toBeGreaterThanOrEqual(7);
   expect(room.right).toBeGreaterThanOrEqual(7);
 });
+
+test("screen titles use the same size whichever header component draws them", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "member@contract.local", "/members");
+  const membersTitle = await page.getByRole("heading", { level: 1, name: "사용자 관리" }).evaluate(element => getComputedStyle(element).fontSize);
+  await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
+  const customersTitle = await page.getByRole("heading", { level: 1, name: "고객" }).evaluate(element => getComputedStyle(element).fontSize);
+  expect(membersTitle).toBe(customersTitle);
+});
