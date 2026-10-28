@@ -449,3 +449,19 @@ test("the home trace example is a named group", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("group", { name: "한 고객, 한 청구 월" })).toBeVisible();
 });
+
+test("a focused field in a workspace dialog keeps its whole focus ring inside the dialog body", async ({ page }) => {
+  await login(page, "member@contract.local", "/members");
+  await page.getByRole("button", { name: "초대 링크 만들기", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator("input:not([type=hidden])").first().focus();
+  const room = await dialog.evaluate(element => {
+    const body = element.querySelector(".ant-modal-body")!;
+    const scroller = [...body.querySelectorAll("*")].find(node => getComputedStyle(node).overflowY === "auto") ?? body;
+    const box = scroller.getBoundingClientRect();
+    const input = document.activeElement!.getBoundingClientRect();
+    return { left: input.left - (box.left + scroller.clientLeft), right: box.left + scroller.clientLeft + scroller.clientWidth - input.right };
+  });
+  expect(room.left).toBeGreaterThanOrEqual(7);
+  expect(room.right).toBeGreaterThanOrEqual(7);
+});
