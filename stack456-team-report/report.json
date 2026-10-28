@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:32:37+09:00",
+  "updated_at": "2026-10-28T17:34:58+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5621,7 +5621,26 @@
       "left": "시작 전"
     }
   ],
-  "new_findings": [],
+  "new_findings": [
+    {
+      "id": "NT-inho-001",
+      "merged_ids": [],
+      "layer": 443,
+      "branch": "feat/product-design",
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "title": "실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다",
+      "reason": "D-058 판정 중 함께 확인했다. 관리 권한이 있는 모든 도입사 관리자에게 헤더 토글 '시연 안내 보기'와 안내 영역 aria-label '시연 안내', '시연 준비 확인'이 보인다. 안내를 시연용으로 둘지, 실제 업무 안내 낱말로 바꿀지는 제품 문구 결정이다.",
+      "evidence": [
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 9de0e1e",
+        "frontend/src/components/shell/ConsoleShell.tsx:52 @ 9de0e1e"
+      ],
+      "commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "question": "헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다."
+    }
+  ],
   "checks": [
     {
       "branch": "fix/s456-443-t-inho",
