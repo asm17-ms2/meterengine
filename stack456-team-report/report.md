@@ -1,12 +1,12 @@
-미완료 264건, 결과: 끝 상태 65/328건 (fixed 31, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 13개(마지막 eb3e1bc)
+미완료 263건, 결과: 끝 상태 66/328건 (fixed 32, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 14개(마지막 50d7032)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 31 | 1 | 7 | 23 | 3 | 78 |
+| #442 | 143 | 32 | 1 | 7 | 23 | 3 | 77 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -46,6 +46,7 @@ push: feat/account-permissions 13개(마지막 eb3e1bc)
 | X-015 | #442 | b3cbfd8 | 쿠키 없는 서버 액션을 proxy가 넘기고 로그인 만료로 안내 | a server action after the session cookie disappears goes to login instead of the error screen: 실패 Expected pattern /login?reason=expired$, Received /customers?o |
 | X-016 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
 | X-019 | #442 | 322afb1 | 사이드바 Menu tabIndex -1 복구 | the sidebar menu list is not a separate tab stop: 실패 Expected "-1", Received "0" |
+| X-020 | #442 | 50d7032 | 복사 결과 상태 영역을 미리 둠 | copy results are announced through a status region that is already present: 실패 Expected 1, Received 0 |
 | X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 
