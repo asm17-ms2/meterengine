@@ -39,6 +39,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "createCustomer": path = "/v1/customers"; body = { name: text(data, "name"), billing_email: optional(data, "billing_email"), external_id: optional(data, "external_id") }; break;
       case "archivePaymentMethod": path = `/v1/customers/${identifier(data)}/payment-method`; method = "DELETE"; break;
       case "archiveTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "DELETE"; break;
       case "restoreCustomer": path = `/v1/customers/${identifier(data)}/restorations`; break;
