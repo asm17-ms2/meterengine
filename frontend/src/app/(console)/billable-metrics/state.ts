@@ -38,6 +38,10 @@ export type BillableMetricFormState =
 
 export const BILLABLE_METRIC_FORM_IDLE: BillableMetricFormState = { status: "idle" };
 
+export function billableMetricFailureMessage(code: string, message: string): string {
+  return code === "billable_metric_has_events" ? "수집된 이벤트가 있어 이름 외의 계산 기준은 바꿀 수 없습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요." : message;
+}
+
 export type BillableMetricDeleteState =
   | { status: "idle" }
   | { status: "failed"; message: string }

@@ -7,7 +7,6 @@ import com.meterengine.global.validation.StorableJsonValidator;
 import com.meterengine.global.validation.StorableText;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
@@ -35,7 +34,7 @@ public record CreatePriceRateRequest(
     this(dimensionValues, unitPrice, null, null, null, null, null);
   }
 
-  @AssertTrue(message = "요금 모델에 맞는 단가와 마지막 한도 없는 오름차순 구간이 필요합니다") @Schema(hidden = true)
+  @Schema(hidden = true)
   public boolean isValidPricing() {
     String selected = model == null ? "per_unit" : model;
     if ("per_unit".equals(selected)) return unitPrice != null && tiers == null;
