@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:16:38+09:00",
+  "updated_at": "2026-10-28T20:19:48+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "2e973ac",
+    "feat/account-permissions": "eb01be8",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -883,14 +883,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ActionPanel.tsx 137-138행은 crypto.randomUUID()로 요청 키를 만드는데, 브라우저는 보안 컨텍스트가 아니면 randomUUID를 주지 않아 HTTP로 연 콘솔에서 작업 버튼이 TypeError로 깨진다. getRandomValues는 비보안 컨텍스트에도 있다. 정점 141-142행도 같다. 대체 생성 함수를 두고 ActionPanel이 쓰게 했다.",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:137-138 @ 72e8718",
+        "frontend/src/components/workspace/ActionPanel.tsx:141-142 @ 0fe7d2a",
+        "a request id is a version 4 UUID even without crypto.randomUUID: 실패 ERR_MODULE_NOT_FOUND request-id.ts"
+      ],
+      "commits": [
+        "eb01be8e3f60"
+      ],
+      "tests": [
+        "e2e/request-id.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "differs: 정점은 ActionPanel.tsx 141-142행으로 줄만 옮겨졌다",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "randomUUID 없는 환경의 요청 키 대체",
+      "propagation_note": "main에서 온 CustomerFormDialog, BillableMetricFormDialog도 randomUUID를 쓰지만 이 지적 밖이다."
     },
     {
       "id": "X-032",
@@ -8192,6 +8208,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  34 passed (15.3s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.335s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8459,6 +8531,11 @@
       "branch": "feat/account-permissions",
       "sha": "2e973ac94126ea21756b4a79e1e04f668c3c88b1",
       "at": "2026-10-28T20:13:24+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
+      "at": "2026-10-28T20:19:47+09:00"
     }
   ],
   "usage_log": [],
