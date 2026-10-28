@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:59:40+09:00",
+  "updated_at": "2026-10-28T21:03:23+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "a87832f",
+    "feat/account-permissions": "57176f7",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -393,14 +393,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ReviewAction.tsx 12행과 AttachOrganizationButton.tsx 42-43행은 비활성 버튼 뒤에 이유 문단을 형제로 둬서 workspace-actions 줄 안에서 버튼처럼 정렬되고, 버튼과 이유가 aria로 이어지지 않는다. 정점도 같다. 비활성일 때 버튼과 이유를 세로 묶음으로 두고 aria-describedby로 이었다.",
+      "evidence": [
+        "frontend/src/components/auth/ReviewAction.tsx:12 @ 72e8718",
+        "frontend/src/components/auth/AttachOrganizationButton.tsx:42-43 @ 72e8718",
+        "a disabled operator action explains itself through its description: 실패 Expected pattern /.+/, Received \"\""
+      ],
+      "commits": [
+        "57176f779081"
+      ],
+      "tests": [
+        "auth.contract.spec.ts a disabled operator action explains itself through its description: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 37건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "비활성 버튼 이유를 설명으로 잇고 세로 배치"
     },
     {
       "id": "D-141",
@@ -8616,6 +8631,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 15 ℹ pass 15 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  37 passed (17.0s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.315s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8913,6 +8984,11 @@
       "branch": "feat/account-permissions",
       "sha": "a87832f52449f41a78f73d46d9b1c8b42aa03205",
       "at": "2026-10-28T20:55:20+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "57176f779081d6fde7c7840404f8c0dddb60967b",
+      "at": "2026-10-28T21:03:23+09:00"
     }
   ],
   "usage_log": [],
