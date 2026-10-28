@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ReviewAction } from "@/components/auth/ReviewAction";
 import { listOrganizations, listUserAccounts } from "@/lib/api/operator";
 import { toDisplayMessage } from "@/lib/api/transport";
 import { ORGANIZATION_STATUS_LABELS, type OrganizationStatus } from "@/lib/auth/types";
+
+export const metadata: Metadata = { title: "가입 승인과 도입사" };
 
 export default async function AdminOrganizationsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const query = await searchParams;
