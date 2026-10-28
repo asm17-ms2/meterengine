@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:42:32+09:00",
+  "updated_at": "2026-10-28T23:44:28+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "61d521686d65530831f8c992432ac5ac7c53db9e"
+    "fix/s456-446-t-inho": "8804e65746245b157569e2ed985cc48ff2a262c9"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4713,15 +4713,35 @@
       "id": "D-120",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "층 head da90aac의 BillableMetricFormDialog는 요청 중이 아니면 onCancel이 바로 onClose이고 keyboard와 mask.closable이 켜져 있으며, 취소 버튼도 onClose를 바로 부른다. 그래서 집계 대상 속성, 차원 키, 결과 변환까지 채운 뒤 Esc나 바깥 클릭 한 번이면 확인 없이 폼이 사라진다. 같은 층 614d3bc가 폼을 넓히면서 PricingWorkspace의 PriceRateEditor에는 작성 중이면 window.confirm으로 묻는 close를 넣었고, ActionPanel도 같은 기준을 써서 같은 종류의 작성 대화상자 닫기 처리가 두 갈래로 나뉘어 있다. 이를 막는 래퍼나 부모 쪽 확인은 없다(BillableMetricsScreen의 closeForm은 setForm(null)뿐이다). 정점 8dd028a에서도 같은 코드이고 Q 번호 주제나 기록된 결정에 걸리지 않으며, 한 파일과 계약 명세 시험 하나로 고칠 수 있다. 입력한 항목이 있으면 닫기 전에 window.confirm으로 묻는다(단가 창, 업무 대화상자와 같은 기준). Esc와 바깥 클릭은 antd가 onCancel로 보내 같은 확인을 거친다.",
+      "evidence": [
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:151-153 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:156 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:110 @ da90aac",
+        "frontend/src/components/workspace/ActionPanel.tsx:87 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:52 @ da90aac",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:159-161 @ 8dd028a",
+        "a meter form with input asks before Escape throws it away: 실패 Expected \"작성 중인 미터를 버리고 닫을까요?\" Received \"\" (확인 없이 닫힘)",
+        "커밋 8804e65746245b157569e2ed985cc48ff2a262c9"
+      ],
+      "commits": [
+        "8804e65746245b157569e2ed985cc48ff2a262c9"
+      ],
+      "tests": [
+        "corepack pnpm test:e2e:contract -g 'asks before Escape': 고치기 전 실패, 고친 뒤 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 BillableMetricFormDialog.tsx 159-161, 164행도 onCancel과 취소가 바로 onClose를 부른다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), e5fca11(#451). 정점 명세 가운데 미터 폼을 Esc나 취소로 닫는 것은 없다",
+      "propagation_note": "반영 때 onCancel과 취소 버튼이 close()를 부르는 것을 남긴다.",
+      "summary": "작성 중인 미터 폼을 Esc, 바깥 클릭, 취소로 닫기 전에 묻는다"
     },
     {
       "id": "X-091",
@@ -7738,6 +7758,44 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "59 passed (26.6s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.1s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10322,6 +10380,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "61d521686d65530831f8c992432ac5ac7c53db9e",
       "at": "2026-10-28T23:40:32+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "8804e65746245b157569e2ed985cc48ff2a262c9",
+      "at": "2026-10-28T23:44:10+09:00"
     }
   ],
   "usage_log": [],
