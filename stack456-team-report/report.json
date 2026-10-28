@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T21:46:50+09:00",
+  "updated_at": "2026-10-28T21:49:39+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -3157,13 +3157,22 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "WebhookClient는 소켓에 요청 줄과 헤더를 직접 써서 보내고, 113-126행이 만드는 헤더는 Host, Content-Type, Content-Length, webhook-id, webhook-timestamp, webhook-signature, Connection뿐이라 User-Agent가 실리지 않는다. java.net.http나 RestClient를 거치지 않으므로 기본 User-Agent를 붙여 줄 층도 없고, webhook 패키지와 backend, deploy 어디에도 User-Agent를 넣는 코드나 프록시 설정이 없다(git grep 결과 없음). 수신 측 WAF가 User-Agent 없는 요청을 403으로 막으면 131-132행에서 unexpected_status가 되어 재시도 끝에 failed로 끝난다. WebhookClientTest의 HTTPS 시험(144-147행)도 헤더를 webhook-id까지만 확인해 이 빠짐을 잡지 못한다. 정점 b8abfdf와 origin/feat/rds-auto-stop의 WebhookClient는 층 head와 diff가 비어 있어 같다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:131-132 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:144-147 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:113-126 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-002",
@@ -3171,13 +3180,26 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서 create(65-67행)와 update(95-99행)는 @Transactional 안에서 validate를 부르고, validate(141행)는 WebhookAddressPolicy.resolve에서 시간 상한이 없는 InetAddress.getAllByName(31행)을 실행한다. spring-boot-starter-data-jpa라 JpaTransactionManager가 쓰이고 Hikari autoCommit 기본값을 바꾸는 설정이 없어 Hibernate가 트랜잭션 시작 때 커넥션을 잡는다. update는 98행 get()이 먼저 쿼리를 날리므로 설정과 무관하게 DNS 응답을 기다리는 동안 커넥션을 쥔다. application.properties에는 socketTimeout(24-26행)만 있고 풀 크기, connectionTimeout, JVM DNS 캐시나 resolver 상한 설정이 없으며, 웹훅 경로에는 API 키의 선택적 분당 한도만 있어 동시 요청 10건을 막지 못한다. 층 head와 정점 어디에서도 이 경로를 막는 검사나 시험을 찾지 못했고, 정점 508beb5에서는 #447 2ec5d85가 restore()를 더해 같은 구조가 한 곳 늘었다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:65-67 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:95-99 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:141 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookAddressPolicy.java:31 @ 178e19e",
+        "backend/build.gradle.kts:25 @ 178e19e",
+        "backend/src/main/resources/application.properties:24-26 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:104-109 @ 508beb5",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:146-150 @ 508beb5"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-003",
@@ -3185,13 +3207,28 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head에서 웹훅 지표는 WebhookDeliveryService.java 144-146행의 meterengine.webhook.delivery 카운터 하나뿐이고, 처리량은 실행당 100건과 15초 예산(29, 83행), 30초 fixedDelay(WebhookDeliveryConfig.java 33행)로 상한이 있다. 예산에 걸려 대기가 남아도 deliver()는 정상 반환해 ScheduledJobRunService.java 64-68행이 성공과 last_success를 기록하므로, 미실행 경보(alerting.yml 203, 215행)도 실패 경보(383-384행)도 울리지 않는다. Grafana 데이터 소스는 Prometheus 하나라 DB를 직접 보는 패널도 없고, 운영 현황 API(OperationsService.java 52행)는 failed 건수만 준다. 막는 검사나 설정을 찾지 못했고 정점 b8abfdf의 같은 파일도 층 head와 diff가 없다. 공개 이름을 바꾸지 않는 지표 추가라 이 층에서 작게 고칠 수 있다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:144-146 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:29,83 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:33 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:64-68 @ 178e19e",
+        "deploy/grafana/provisioning/alerting/alerting.yml:203,215 @ 178e19e",
+        "deploy/grafana/provisioning/alerting/alerting.yml:383-384 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:52 @ 178e19e",
+        "deploy/grafana/provisioning/datasources/prometheus.yml:5-11 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:42 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:144-146 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-004",
@@ -3199,69 +3236,135 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4의 WebhookClient에는 로거가 없다. send의 ExecutionException(67-68행)은 원인과 상관없이, sendPinned의 IOException(138-139행)은 SSLHandshakeException과 UnknownHostException까지 모두 connection_error로 바뀌고 예외 객체는 어디에도 남지 않는다. WebhookDeliveryService는 종결 실패일 때만 사유 문자열 한 줄을 WARN으로 남기고(147-153행) 재시도 중에는 로그가 없어서, 운영자는 인증서나 DNS 문제를 도입사 연결 문제와 구분할 수 없다. sendPinned 안에서 난 RuntimeException도 67-68행에서 삼켜져 a886852가 정한 항목 예외 경로(92-97행, 스택 로그를 남기고 작업 failed로 셈)에 닿지 못하고, 도입사에게 보이는 시도 기록에 connection_error로 남는다. 원문의 로그가 한 줄도 없다는 말은 종결 때 한 줄이 남으니 과장이다. 수신 실패를 작업 succeeded로 끝내는 것은 a886852가 의도한 설계이고, CHECK 값은 여섯이 아니라 일곱이며, 정점 508beb5에서도 세 파일이 같다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:67-68 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:138-139 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:147-153 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:92-97 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:50 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:152,187 @ 178e19e",
+        "커밋 a886852"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-007",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 head의 retry()는 get()으로 엔드포인트가 있는지만 본 뒤 UPDATE 건수가 0이면 409 webhook_delivery_not_retryable을 던진다. UPDATE 조건에 전송 id, status='failed', 엔드포인트 enabled, deleted_at IS NULL이 함께 들어 있어서, 없는 delivery_id, 비활성 엔드포인트, failed가 아닌 전송이 모두 같은 code로 나간다. error-handling.md는 받는 쪽이 무엇을 다르게 하는지로 code를 가르고 존재 여부는 서비스가 조회해서 막으라고 한다. 다른 리소스는 없는 id에 404 *_NOT_FOUND를 쓰고, 같은 PR의 test()는 비활성 엔드포인트에 webhook_endpoint_disabled를 쓴다. 이 실패를 막는 검사나 없는 id를 다루는 시험은 없고, 콘솔은 비활성 엔드포인트의 실패 전송에도 다시 보내기를 띄우며, 정점 b8abfdf의 retry()도 같다. 다만 비활성 엔드포인트 경우는 b1983b3이 더한 WebhookIntegrationTest 321-325행이 not_retryable을 단정하고, Q9를 백엔드 쪽으로 정하면 바로 그 비활성화 시험의 기대값을 바꾼다고 적혀 있어서 지금 고치면 Q9 주제에 걸린다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:170-174 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:172 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:126-127 @ 178e19e",
+        "docs/contributing/error-handling.md:5,7,35 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:77,85,86 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:321-325 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:170-174 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "Q9와 상관없는 없는 delivery_id의 404 webhook_delivery_not_found 분리를 먼저 고치고, 비활성 엔드포인트를 재시도할 때 webhook_endpoint_disabled를 돌려줄지는 Q9(발송 일시 중지 의미) 결정에 맞춰 정할지. 새 오류 code 추가는 공개 계약 변경이다. (Q9 발송 일시 중지와 함께 정한다)"
     },
     {
       "id": "D-188",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "#443 수정이 조율 담당의 반영 merge(178e19e)로 이 층에 들어와 풀렸다. e26db2c가 .finance-flow 마지막 칸의 배경 규칙을 정산 칸 클래스(.is-settled)로 옮겨, admin/page.tsx 12행의 마지막 칸인 발송 실패 통보는 이제 흰 배경이다(admin 화면은 is-settled를 쓰지 않는다).",
+      "evidence": [
+        "frontend/src/app/globals.css:144 @ f3855f4",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/components/shell/AppProviders.tsx:12,14 @ f3855f4",
+        "frontend/src/app/globals.css:147 @ f3855f4",
+        "frontend/src/app/globals.css:144 @ b8abfdf",
+        "frontend/src/app/admin/page.tsx:12 @ b8abfdf",
+        "커밋 e26db2c",
+        "frontend/src/app/globals.css:123 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      }
     },
     {
       "id": "D-234",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "#443 수정이 조율 담당의 반영 merge(178e19e)로 이 층에 들어와 풀렸다. 18be9f0이 .operator-content를 flex column, gap 28px로 바꿔 운영 현황의 제목, 지표 띠, 두 패널 사이에 콘솔과 같은 간격이 생겼다.",
+      "evidence": [
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/globals.css:92,158 @ f3855f4",
+        "frontend/src/app/globals.css:139,166 @ f3855f4",
+        "frontend/src/app/globals.css:140,142,144 @ f3855f4",
+        "frontend/src/components/shell/OperatorShell.tsx:9 @ 178e19e",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ f3855f4",
+        "frontend/src/app/globals.css:156 @ 18be9f0",
+        "커밋 18be9f0631c3a1bca9700d6a23865573e5e156e7",
+        "frontend/src/app/globals.css:158 @ 508beb5",
+        "frontend/src/app/globals.css:137 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      }
     },
     {
       "id": "X-041",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "#443 수정이 조율 담당의 반영 merge(178e19e)로 이 층에 들어와 풀렸다. 18be9f0이 .operator-content를 flex column, gap 28px로 바꿔 운영 현황의 제목, 지표 띠, 두 패널 사이에 콘솔과 같은 간격이 생겼다.",
+      "evidence": [
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/globals.css:92,158 @ f3855f4",
+        "frontend/src/app/globals.css:166 @ f3855f4",
+        "frontend/src/app/globals.css:140,142,144 @ f3855f4",
+        "frontend/src/app/globals.css:156 @ 18be9f0",
+        "커밋 18be9f0631c3a1bca9700d6a23865573e5e156e7",
+        "frontend/src/app/globals.css:158 @ 508beb5",
+        "frontend/src/app/globals.css:137 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      }
     },
     {
       "id": "D-044",
@@ -3269,13 +3372,26 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head의 발송 내역 표(page.tsx:26)는 종류 열을 type 그대로, 실패 사유를 failure_reason 그대로 그리고, 다시 보내기 설명도 `${delivery.type}`를 쓴다. 같은 파일 8행에 EVENT_TYPES 라벨이 있고 목록 화면(integrations/page.tsx:39)은 같은 값을 라벨로 바꿔 보여 주어 두 곳이 갈라져 있다. 상태 열은 statusLabels가 없어 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나오는데, 백엔드에서 pending은 종료되지 않은 실패의 재시도 예정(WebhookDeliveryRepository.java:76)이고 소개 화면(page.tsx:51)은 이 문구를 결제 상태로 쓴다. 정점에서도 page.tsx는 바뀌지 않았고, 고치는 곳은 page.tsx 한 파일이며 C444-001의 '발송 일시 중지' 문구는 건드리지 않는다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "frontend/src/app/page.tsx:51 @ f3855f4",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-088",
@@ -3283,13 +3399,25 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열과 다시 보내기 설명은 원시 type을, 상태 열은 statusLabels 없이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34)을 쓰며, 실패 사유도 원문 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면(integrations/page.tsx:39)의 라벨 변환이 있는데 이 표만 쓰지 않아 두 곳이 갈라져 있다. 백엔드 pending은 재시도 예정 상태(WebhookDeliveryRepository.java:76)라 결제용 문구와 뜻이 어긋난다. 정점에서도 같은 코드다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-195",
@@ -3297,13 +3425,23 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 전송 표가 type과 failure_reason 원문을 그대로 그리고, 상태는 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 같은 파일 8행에 EVENT_TYPES 라벨이 있어 갈라진 두 곳이 분명하고, 백엔드 pending은 재시도 예정이다(WebhookDeliveryRepository.java:76). 정점에서도 바뀌지 않았다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-252",
@@ -3311,13 +3449,23 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이다. 백엔드는 종료되지 않은 실패를 pending으로 두고 다음 시도 시각을 잡는데(WebhookDeliveryRepository.java:71-76), 표는 statusLabels 없이 공용 STATUS_LABELS를 써 '결과 확인 중'으로 보이고 종류 열은 원시 type이다(page.tsx:26, 같은 파일 8행 EVENT_TYPES 미사용). 제안 중 마지막 응답 코드는 이미 '수신 응답' 열(response_status)이 있어 따로 더할 것이 없고, 상태 라벨과 종류 라벨만 고치면 된다. 정점에서도 같은 코드다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "X-028",
@@ -3325,69 +3473,142 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이다. 상세 표(page.tsx:26)의 상태 열이 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21, 34의 warning 태그)을 쓰고, 종류와 실패 사유, 다시 보내기 설명이 원시 코드다. 같은 파일 8행 EVENT_TYPES와 목록 화면 라벨 변환(integrations/page.tsx:39)이 있어 갈라진 곳이 분명하다. 목록에 최근 실패 신호를 보이는 부분은 응답에 새 필드가 있어야 해 이 묶음의 수정 범위가 아니고, 상세 표는 page.tsx 한 파일로 고칠 수 있다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-045",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 head의 웹훅 목록은 archived_at과 enabled만 보고 상태 문구를 정하므로, 발송이 계속 실패하는 수신 주소도 정상 주소와 똑같이 '발송 중'으로 나온다. 목록 응답 WebhookEndpointResponse와 목록 조회 SQL에는 최근 발송 결과나 실패 건수가 없고, 발송 상태는 상세 화면의 발송 내역 표에서만 보인다. 엔드포인트가 연속 실패하면 자동으로 중지하는 코드도 없고, 발송 실패 집계(failed_webhook_count)는 서비스 운영자 화면(/admin)에만 있어 도입사 콘솔 사용자가 실패를 알아챌 다른 경로가 없다. 정점 b8abfdf도 같은 줄(page.tsx:45)이 같은 판단을 하고, DTO에는 archived_at만 더해졌다. 고치려면 목록 응답에 DTO 필드를 더하거나(공개 이름 추가, DTO, 저장소, 서비스, openapi.yaml, 화면까지 파일 셋 이상) 목록 화면이 수신 주소마다 발송 내역을 따로 조회해야 하고, 어떤 신호(마지막 발송 상태, 최근 실패 건수)를 보일지는 제품 결정이라 needs-decision으로 둔다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/page.tsx:39 @ f3855f4cb70d4536ce20e45d5b0cef8228eeb450",
+        "backend/src/main/java/com/meterengine/webhook/dto/WebhookEndpointResponse.java:9-16 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:21-26 @ 178e19e",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:45 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "웹훅 목록에 수신 주소별 발송 상태(마지막 발송 결과나 최근 실패 건수)를 보일지, 보인다면 WebhookEndpointResponse에 필드를 더할지 목록 화면이 수신 주소마다 발송 내역 1건을 따로 조회할지 정한다."
     },
     {
       "id": "C444-002",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "POST /{id}/test-events에는 @AdminAccess만 걸려 있다. WebhookEndpointService.test는 enabled만 보고, WebhookEventRepository.insert가 호출마다 next_attempt_at=clock_timestamp()인 전송을 새로 만든다. claim은 도입사 구분 없이 ORDER BY next_attempt_at, id LIMIT 1로 하나씩 꺼내고, deliver는 15초 예산을 claim 직전에만 본다. send는 연결 5초, 전체 15초까지 막히고 30초 슬롯마다 실행이 하나뿐이라, 패킷을 버리는 공개 IP(203.0.113.0/24는 차단 목록에 없다)면 약 45초에 3건만 빠진다. 다른 도입사가 나중에 만든 전송은 next_attempt_at이 더 늦어 먼저 쌓인 2000건 뒤에 서서 약 8시간 밀리고, retry가 attempt_count=0, next_attempt_at=now로 되돌려 지연을 되풀이할 수 있다. RateLimitFilter는 한도를 정한 API 키에만, #454 한도는 로그인과 가입에만 걸려 세션 관리자 요청을 막지 못한다. 정점(b8abfdf, 508beb5)에서도 claim 41행과 컨트롤러 96행, 120행이 같고, 이 층에서는 다른 도입사의 webhook_test만 늦지만 정점에서는 결제와 미청구 통보가 같은 큐에 선다. 진입점 한도(새 오류 코드, openapi.yaml)를 둘지, 발송 루프를 공정 소비나 병렬로 바꿀지와 한도 값을 정해야 고칠 수 있어 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:93-101 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:117-127 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:125-133 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEventRepository.java:22-35 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:37-40 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:172 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:83-84 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:28-29 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:59 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:33-37 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:49-53 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:39-43 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookAddressPolicy.java:51-57 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:41 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:96,120 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 하려면 무엇을 둘지 정한다. 후보는 시험 통보와 재시도의 도입사별 호출 한도나 엔드포인트별 대기 상한(새 409 오류 코드와 openapi.yaml 변경), 발송 루프의 도입사별 공정 소비와 병렬 발송, 또는 둘 다이고 그 한도 값도 함께 정한다."
     },
     {
       "id": "G-140",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "deliver는 claim, send, complete를 한 건씩 직렬로 돈다. 15초 예산은 83행 루프 조건에서 claim 전에만 확인하고, WebhookClient.send는 Future.get으로 최대 15초 막힌다. 그래서 15초를 다 쓰는 수신 주소 하나가 걸리면 그 실행은 1건으로 끝나고, 기존 WebhookDeliveryServiceTest 29-63행이 15초 send 뒤 한 실행에 claim 1번, 처리 1건을 그대로 단언한다. claim은 엔드포인트나 도입사를 가리지 않고 next_attempt_at 순서로 꺼내고 실행은 30초 슬롯과 fixedDelay 30초로 하나씩만 돈다. 응답 없는 엔드포인트 10곳의 전송이 앞에 서면 뒤 전송이 수 분 늦고, RETRY_SECONDS(60, 300, 1800, 7200, 28800) 재시도마다 다시 실행을 차지한다. 정점에서도 WebhookDeliveryService blob이 같고, #450의 09:00 KST 미청구 통보와 #445 결제 통보가 같은 큐에 선다. 병렬 발송의 동시 수, 엔드포인트별 1건, 연속 실패 처리는 C444-002와 함께 정할 발송 루프 설계다. 팀 리드가 원래 커밋(80a3ef1)에서 쓴 시험 기대도 바꿔야 해서 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:83-84 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:130-134 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:37 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:59 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:37-40 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:22 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:33-37 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/service/WebhookDeliveryServiceTest.java:29-63 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:83-84 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:35-37 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:421-423 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건), 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정한다. 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 함께 정한다."
     },
     {
       "id": "Ck2-005",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "OperationsService.java:52는 webhook_delivery의 failed를 엔드포인트 조건 없이 모두 센다. 엔드포인트를 지우면 deleted_at이 찍히고(WebhookEndpointRepository.java:81), 남은 pending 전송은 endpoint_disabled로 처리되어(WebhookDeliveryService.java:110-111) 종결 failed가 된다(WebhookDeliveryRepository.java:71-76). 재시도는 enabled이고 deleted_at IS NULL인 엔드포인트만 받고(172행) webhook_delivery를 지우는 경로도 없어서, 이 행들은 운영 현황 숫자에서 끝내 빠지지 않는다. 정점 b8abfdf도 52행이 같고 재시도 조건(180행)도 그대로다. 반면 기간이 없다는 점 자체는 OperationsController.java:23-24가 '웹훅 실패는 현재 failed 상태인 전송'이라고 결제 24시간과 구분해 적어 둔 의미라서, 24시간 창으로 바꾸는 것은 이 수정에 넣지 않고 따로 결정을 받을 일이다. 순차 스캔은 운영자 화면에서 한 번 도는 count이고 해를 보인 측정이 없으며, 색인을 더하려면 V28을 고쳐야 하므로 이것도 수정 범위에서 뺀다. 다만 고치려면 박성종 님이 80a3ef1에서 적은 failed_webhook_count의 의미(\"웹훅 실패는 현재 failed 상태인 전송\", OperationsController.java 23-24행)를 바꿔야 하고, 같은 원인을 본 Ck2-010과 같은 결정에 걸려 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:52 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:81 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:110-111 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:172 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/controller/OperationsController.java:23-24 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:52 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:180 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다). (Ck2-010과 같은 결정)"
     },
     {
       "id": "Ck2-006",
@@ -3395,13 +3616,25 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서 findByEndpoint는 organization_id, webhook_endpoint_id로 거른 뒤 created_at DESC, id DESC로 정렬하고, countByEndpoint는 같은 조건의 행을 모두 세며, 서비스 list가 요청마다 둘을 함께 부른다. webhook_delivery의 색인은 V28의 UNIQUE(webhook_endpoint_id, webhook_event_id), UNIQUE(organization_id, id), status='pending' 부분 색인뿐이라 엔드포인트 행을 모두 읽어 정렬해야 한다. 시도 표가 append-only 트리거와 FK로 전송 행을 붙잡아 지우는 경로가 없으니 행 수는 계속 는다. 정점 b8abfdf에서도 V48은 (organization_id, environment_scope_id, id) 유일 제약만 더했고 created_at 색인은 없으며, 81651ed 뒤 이 층의 마이그레이션 변경도 없다. V28은 main에 없어 같은 파일에 색인을 더할 수 있고, C444-003도 6b31a03에서 같은 방식으로 고쳤다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:123-126 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:110 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:165-166 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:38-42 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:52,66-68 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:131-132 @ b8abfdf",
+        "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:101,115 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-008",
@@ -3409,69 +3642,141 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "CreateWebhookEndpointRequest와 UpdateWebhookEndpointRequest의 event_types에는 @NotEmpty와 @Size(max = 20)가 같이 달려 있다. 그래서 openapi.yaml은 minItems: 0을 내는데, 같은 @NotEmpty를 단 CreateApiKeyRequest.scopes는 minItems: 1이라 문서가 서버 검증과 어긋난다. event_types 항목도 openapi.yaml에는 제약 없는 type: string으로만 나가지만, WebhookEndpointService는 WebhookEventType의 다섯 값 밖이면 400 invalid_webhook_event_type을 낸다. 반면 제목의 '오류 code가 openapi.yaml에 나가지 않는다'는 틀렸다. 웹훅 오류 code 여섯 개는 ErrorResponse.code enum에 이미 있고, error-handling.md 8행도 code 목록은 이 enum이 낸다고만 정한다. 서명 비밀값이 한 번만 나온다는 설명도 등록 오퍼레이션 description에 있으므로, 오퍼레이션별 @ApiResponses와 status, type, failure_reason, latest_status의 allowableValues는 규칙이 아닌 관례 차이로 보고 확인된 범위는 event_types의 minItems와 허용값으로 좁힌다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/dto/CreateWebhookEndpointRequest.java:12 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/dto/UpdateWebhookEndpointRequest.java:13 @ 178e19e",
+        "backend/src/main/java/com/meterengine/apikey/dto/CreateApiKeyRequest.java:21-25 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:30-33 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:137-138 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:67 @ 178e19e",
+        "backend/openapi.yaml:8170 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/dto/CreateWebhookEndpointRequest.java:12 @ b8abfdf",
+        "backend/openapi.yaml:3588-3594 @ 178e19e",
+        "backend/openapi.yaml:3350-3360 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-009",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4의 SDK는 organizationId를 X-MeterEngine-Organization-Id 헤더로 보내고(meter-engine-client.ts:67-68, 122) WebhookEvent에 environment를 둔다(webhook-signature.ts:10). 같은 sha의 백엔드에는 이 헤더를 읽는 코드가 없고(git grep -i organization-id 결과는 application.properties:22의 다른 설정뿐) 웹훅 payload도 type, timestamp, data뿐이라(WebhookEventService.java:32-40) SDK 계약과 서버가 어긋난다. 헤더 검증과 403은 #453(23b1844)의 BusinessEnvironmentInterceptor.java:32-45에서 생기고, PATCH와 text 응답, body와 canRetry는 #444의 GET 세 메서드가 쓰지 않으며 PATCH는 정점에서도 쓰는 곳이 없다. 다만 SDK는 private 패키지라 #444에는 소비자가 없고 #442 프론트 transport.ts:93도 같은 헤더를 미리 보내므로 실제 피해는 낮다. 고치려면 이 코드를 #445, #450, #451, #453으로 옮겨야 하고 canRetry 기본값을 바꾸면 #450 수집 재시도(정점 meter-engine-client.ts:127과 시험 127행)가 달라지므로, 스택 나누기를 바꾸는 일이라 이 작업에서 정하지 않는다.",
+      "evidence": [
+        "demo/sdk/src/meter-engine-client.ts:67-68 @ 178e19e",
+        "demo/sdk/src/meter-engine-client.ts:122 @ 178e19e",
+        "demo/sdk/src/webhook-signature.ts:10 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEventService.java:32-40 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:32-45 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/global/config/OpenApiConfig.java:83-84 @ b8abfdf",
+        "demo/sdk/src/meter-engine-client.ts:24 @ 178e19e",
+        "demo/sdk/src/meter-engine-client.ts:76-88 @ 178e19e",
+        "demo/sdk/src/meter-engine-client.ts:127 @ b8abfdf",
+        "demo/sdk/src/meter-engine-client.test.ts:127-131 @ b8abfdf",
+        "frontend/src/lib/api/transport.ts:93 @ f3855f4"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "#444 SDK에 미리 들어온 위층 계약(organizationId 헤더, WebhookEvent.environment, POST 본문과 canRetry 기본 true, text 응답, PATCH)을 처음 쓰는 층(#445, #450, #451, #453)으로 옮길지, #442 프론트 transport처럼 미리 담아 둔 채 스택 순서대로 머지할지 정한다."
     },
     {
       "id": "Ck2-010",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "삭제한 엔드포인트의 대기 전송은 WebhookDeliveryService.java:110-111에서 endpoint_disabled로 곧바로 failed가 됩니다. retry는 WebhookDeliveryRepository.java:172의 enabled, deleted_at IS NULL 조건 때문에 0건을 돌려주고(WebhookIntegrationTest 329-348행이 이 동작을 단정한다), V28의 FK와 attempt DELETE 차단 트리거 때문에 행을 지울 길도 없습니다. 그래서 OperationsService.java:52의 failed 전체 집계는 삭제된 엔드포인트 몫만큼 영영 줄지 않습니다. 운영자 화면 admin/page.tsx:12의 '재시도 상한에 도달한 전송' 설명과도 어긋납니다(endpoint_disabled, blocked_address는 상한 전에 끝난다). 다만 기간 없는 집계 자체는 박성종 님이 80a3ef1에 쓴 @Operation 설명(OperationsController.java:23-24)이 '웹훅 실패는 현재 failed 상태인 전송'으로 명시한 계약입니다. 24시간 창과 삭제되지 않은 엔드포인트만 세는 안 중 고르는 일은 공개 응답 필드의 의미를 바꾸는 제품 결정이고, 비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 C444-001(Q9)의 일시 중지 의미에 걸리므로 needs-decision으로 둡니다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:49-52 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:81 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:110-111 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:172 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:52,67 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:329-348 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/controller/OperationsController.java:23-24 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:52 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다)."
     },
     {
       "id": "Ck2-011",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "failure_reason 값은 WebhookClient 일곱 곳, WebhookDeliveryService 두 곳, WebhookDeliveryRepository 세 곳에 문자열로 따로 적히고, 값 목록은 V28 50행의 시도 표 CHECK에만 있다. 같은 사유를 담는 webhook_delivery.failure_reason(V28 34행)에는 CHECK가 없고, lease_expired는 그 CHECK 없는 열에만 쓰이며(Repository 32행) CHECK가 걸린 시도 표에는 들어가지 않아 두 열의 제약이 어긋난다. 59febde가 secret_unavailable을 더할 때 서비스와 V28 CHECK를 함께 고쳐야 했던 것도 정본이 없다는 근거다. 다만 원문 실패 시나리오 중 예외가 deliver() 밖으로 나가 남은 전송이 처리되지 않는다는 부분은 Service 90-99행의 try/catch가 막아 틀렸고, secret_unavailable은 이미 CHECK에 있다. 제안대로 enum을 두고 WebhookOutcome 형태를 바꾸면 운영 파일 다섯 이상이 바뀌어 유지보수 분류 상한(둘)을 넘고, 저장소의 다른 상태 값도 문자열과 CHECK 관례를 따르므로 정할 일이다.",
+      "evidence": [
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:34,50 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-75 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:62,66,68,132,135,137,139 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:111,128 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/dto/WebhookOutcome.java:3-6 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:90-99 @ 178e19e",
+        "커밋 59febde"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "failure_reason 정본으로 WebhookFailureReason enum을 두고 WebhookOutcome, WebhookClient, WebhookDeliveryService, WebhookDeliveryRepository를 함께 바꿀지(운영 파일 다섯), 아니면 저장소의 문자열과 CHECK 관례를 유지하고 V28에서 webhook_delivery.failure_reason에도 같은 CHECK를 거는 것만 할지 정한다."
     },
     {
       "id": "Ck2-012",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서 WebhookEndpointService.EVENT_TYPES는 WebhookEventType.values() 전체를 구독 값으로 받는데, #444 운영 코드에서 publish를 부르는 곳은 test()의 WEBHOOK_TEST 하나뿐이다(git grep으로 다른 호출부 없음). #444 콘솔 등록 화면은 기본 구독값을 아직 발행되지 않는 payment_* 셋과 unbilled_usage_detected로 채운다. PAYMENT_*는 #445 PaymentAttemptService와 PaymentCancellationService에서, UNBILLED_USAGE_DETECTED는 #450 UnbilledUsageReportService에서 처음 발행되고, 그 사이 층에서는 enum이 바뀌지 않아 지적 내용은 사실이다. 다만 고치려면 #444에서 enum, integrations/page.tsx, integrations/[id]/page.tsx 세 운영 파일과 시험 둘을 바꾸고 담당 밖인 #445와 #450에 값을 다시 넣어야 한다. 이는 박성종 님이 80a3ef1로 나눈 스택 분할을 바꾸는 일이고, 유지보수 분류에서 시험을 빼고 파일 셋을 바꾸는 경우라 needs-decision이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/entity/WebhookEventType.java:8-11 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:30-33 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:129-133 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:37 @ f3855f4",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:199,220 @ f382376",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:136 @ f382376",
+        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:75-76 @ 6fef5f3",
+        "커밋 80a3ef1"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "#444가 발행하지 않는 PAYMENT_* 셋과 UNBILLED_USAGE_DETECTED를 #444에서 빼 발행 코드가 있는 #445, #450으로 옮길지(스택 재분할, #445는 담당 밖), 아니면 #444에 구독 계약을 미리 두는 지금 분할을 유지하고 PR 본문에만 적을지 정한다."
     },
     {
       "id": "Ck2-013",
@@ -3479,55 +3784,106 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "f3855f4의 SecretMask.lastFour(12-20행)는 null이면 null, 9자 미만이면 \"****\", 그 밖에는 \"****\"와 끝 네 글자를 돌려준다. main에서 온 SecureTokens.lastFour(54-57행)는 원문 끝 네 글자를 그대로 돌려주는데, 두 주석 모두 로그에 원문 대신 남길 값이라고 적고 있다. 같은 이름이 다른 결과를 내므로 naming.md 13-14행의 '읽는 자리에서 답이 나온다', '다른 개념에 다른 낱말' 조항에 어긋나 confirmed로 본다. 반박할 근거를 찾아봤지만 SecretMask를 다루는 시험이 없고 #444 안에는 호출부도 없으며, 정점 b8abfdf까지 두 파일을 바꾼 위층 커밋도 없다. 동작이 다른 것 자체는 입력 차이(고정 길이로 만드는 API 키와 길이를 모르는 외부 비밀값)로 설명되므로 고칠 대상은 이름이다. 이 층에서는 SecretMask.java 한 파일만 바꾸면 되지만, #445(f382376)의 세 파일이 이 이름을 부르고 있어 반영할 때 같이 바꿔야 한다. 처음 쓰는 #445로 옮기는 것은 PR 나누기라 손대지 않으므로, 새 이름과 모을 자리를 정하는 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/crypto/SecretMask.java:12-20 @ 178e19e",
+        "backend/src/main/java/com/meterengine/global/security/SecureTokens.java:54-57 @ 178e19e",
+        "docs/contributing/naming.md:13-14 @ 178e19e",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:137 @ 178e19e",
+        "backend/src/main/java/com/meterengine/payment/client/TossPaymentsBilling.java:13 @ f382376",
+        "backend/src/main/java/com/meterengine/payment/dto/UpdateTossPaymentsCredentialRequest.java:26 @ f382376",
+        "backend/src/main/java/com/meterengine/payment/service/BillingKeyService.java:198,210 @ f382376"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "Ck2-014",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "spring-boot-starter-restclient 줄은 #444 커밋 80a3ef1이 더했고 층 head f3855f4의 backend/src 어디에도 RestClient, RestTemplate, org.springframework.boot.http.client를 쓰는 코드가 없다. WebhookClient는 Socket과 SSLSocket으로 HTTP를 직접 쓰고, ActuatorExposureIntegrationTest의 RestTestClient는 이 스타터가 없던 #443 head 0fc4894에서도 같은 코드로 쓰였다. 이 스타터를 처음 쓰는 곳은 #445 TossPaymentsConfig로, RestClient.Builder 빈과 ClientHttpRequestFactoryBuilder, HttpClientSettings를 쓰며 #445의 build.gradle.kts diff는 비어 있다. 실행 실패는 없지만 쓰는 층과 선언한 층이 어긋난 것은 선언 줄과 첫 사용 줄로 눈으로 확인된다. 다만 #444에서 지우기만 하면 #445가 깨지므로 #445 담당과 함께 옮겨야 해 not-owner로 둔다.",
+      "evidence": [
+        "backend/build.gradle.kts:31 @ 178e19e",
+        "커밋 80a3ef1",
+        "backend/build.gradle.kts:30-31 @ 0fc4894",
+        "backend/src/test/java/com/meterengine/global/ActuatorExposureIntegrationTest.java:26 @ 0fc4894",
+        "backend/src/main/java/com/meterengine/payment/config/TossPaymentsConfig.java:6-7 @ f382376",
+        "backend/src/main/java/com/meterengine/payment/config/TossPaymentsConfig.java:20 @ f382376",
+        "backend/build.gradle.kts:31 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "blocked_reason": "not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다."
     },
     {
       "id": "Ck2-015",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "demo/eslint-naming-rules.mjs 1-40행은 frontend/eslint.config.mjs 6-45행과 export 한 단어만 빼고 글자까지 같고, 이 파일은 #444 커밋 80a3ef1이 더했다. naming.md 28행은 프론트 이름 규칙을 보는 도구로 frontend/eslint.config.mjs만 적어 demo 사본이 문서에 없고, ci.yml 경로 필터(28-35행)와 job에 demo가 없어 두 사본이 갈라져도 잡는 검사가 없다. 그래서 중복과 문서 어긋남은 확인된다. 다만 정본을 하나로 모으려면 lockfile과 Docker 빌드 문맥을 따로 쓰는 frontend와 demo 중 어디에 둘지 정해야 하고, frontend가 demo를 import하면 CI 경로 필터를 바꿔야 하며, demo가 frontend 파일을 import하면 정점의 llm-service Dockerfile(demo 문맥에서 이 파일만 복사)이 깨진다. 파일 셋 이상과 .github/workflows에 걸리는 구조 결정이라 needs-decision으로 둔다.",
+      "evidence": [
+        "demo/eslint-naming-rules.mjs:1-40 @ 178e19e",
+        "frontend/eslint.config.mjs:6-45 @ 178e19e",
+        "docs/contributing/naming.md:28 @ 178e19e",
+        "demo/sdk/eslint.config.mjs:4 @ 178e19e",
+        ".github/workflows/ci.yml:28-35 @ 178e19e",
+        "커밋 80a3ef1",
+        "demo/web/eslint.config.mjs:5 @ b8abfdf",
+        "demo/llm-service/Dockerfile:10 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 CI 경로 필터와 #452 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다."
     },
     {
       "id": "D-093",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "#443 수정이 조율 담당의 반영 merge(178e19e)로 이 층에 들어와 풀렸다. 색은 e26db2c(.finance-flow > .is-settled로 배경 이동), 간격은 18be9f0(.operator-content flex column, gap 28px)이 고쳤다. 같은 지적의 JOB_LABELS 부분은 이 층 D-226이 따로 고친다.",
+      "evidence": [
+        "frontend/src/app/globals.css:144 @ f3855f4",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/globals.css:92,158 @ f3855f4",
+        "frontend/src/components/workspace/WorkspaceView.tsx:24 @ f3855f4",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:31-32 @ 178e19e",
+        "frontend/src/app/globals.css:144 @ b8abfdf",
+        "커밋 e26db2c",
+        "커밋 18be9f0",
+        "frontend/src/app/globals.css:123,137 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      }
     },
     {
       "id": "D-035",
@@ -3535,13 +3891,24 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이다. 층 head page.tsx:26의 종류 열이 type을 그대로 쓰고 같은 파일 8행 EVENT_TYPES를 쓰지 않으며, 상태 열은 결제용 공용 STATUS_LABELS의 pending '결과 확인 중'(WorkspaceView.tsx:21)으로 나온다. 백엔드에서 연결 실패 후 다음 시도를 기다리는 건은 pending이다(WebhookDeliveryRepository.java:71-76). 이 줄은 #444의 80a3ef1이 들였고 정점에서도 같다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "커밋 80a3ef1",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-157",
@@ -3549,13 +3916,25 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "D-044와 같은 원인이고 실패 사유 원문 표시에 무게를 둔 지적이다. 층 head page.tsx:26은 type과 failure_reason을 그대로 그리고, 백엔드 실패 사유는 timeout, connection_error, unexpected_status, blocked_address(WebhookClient.java), endpoint_disabled(WebhookDeliveryService.java:111), lease_expired(WebhookDeliveryRepository.java:32) 여섯 값으로 고정이라 번역 표를 둘 수 있다. pending도 공용 STATUS_LABELS의 '결과 확인 중'으로 나온다(WorkspaceView.tsx:21). 정점에서도 같은 코드다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:8,26 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:62,66,68,132,135,137,139 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:111 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ f3855f4",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:26 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:20,33 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "C444-008",
@@ -3565,13 +3944,30 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서 콘솔의 updateWebhookEndpoint 액션은 PUT 본문을 url, event_types, enabled로만 만들고, 상세 화면의 '수신 주소와 통보 수정' 폼에도 description 필드가 없다. 백엔드 UpdateWebhookEndpointRequest의 description은 @Size만 붙은 선택값이라 빠지면 null이 되고, WebhookEndpointService.update가 그 값을 그대로 넘겨 WebhookEndpointRepository.update가 description = ? 로 null을 쓴다. 생성 API는 description을 받아 저장하므로 API로 넣은 설명이 콘솔에서 발송 상태만 바꿔 저장해도 지워진다. 반박을 시도했으나 생략 시 기존 값을 유지하는 분기, @Operation이나 openapi의 안내는 없고, WebhookIntegrationTest 305행은 오히려 호출자가 기존 description을 다시 넘기는 전체 교체 계약을 전제한다. 81651ed 뒤 이 층에서 관련 파일을 바꾼 커밋은 없고, 정점 b8abfdf(현재 508beb5와 이 파일들은 같음)에서도 workspace-actions.ts 72행과 page.tsx 22행이 그대로다.",
+      "evidence": [
+        "frontend/src/app/(console)/workspace-actions.ts:57 @ f3855f4",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:22 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/dto/UpdateWebhookEndpointRequest.java:16 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:100-106 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:70 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/dto/CreateWebhookEndpointRequest.java:14 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:301-305 @ 178e19e",
+        "frontend/src/app/(console)/workspace-actions.ts:72 @ b8abfdf",
+        "frontend/src/app/(console)/integrations/[id]/page.tsx:22 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:110-116 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:75 @ b8abfdf",
+        "frontend/src/app/(console)/workspace-actions.ts:54 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "D-226",
@@ -3581,13 +3977,26 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "#444 커밋 80a3ef1부터 OperationsService가 예약 작업 목록에 unbilled_usage_report를 넣어 돌려주고, 서비스 운영 현황(/admin)이 job_name 열을 WorkspaceView의 CellValue로 그린다. 층 head f3855f4의 JOB_LABELS(24행)에는 이 이름이 없어 39행의 JOB_LABELS[v] ?? v 분기에서 원시 코드만 나오고 보조 코드 표시도 비어 이 줄만 영어 코드로 보인다. 백엔드 작업 목록과 프론트 이름표가 갈라진 두 줄이 근거다. 반박을 위해 frontend 전체에서 unbilled_usage_report와 라벨을 찾았지만 없고, 넘길 때 head 뒤 WorkspaceView를 바꾼 커밋(ae1dc84, b84cf7a, 65fc925, eb3e1bc와 #442 반영 merge)도 JOB_LABELS는 건드리지 않았다. 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 같다. 묶인 D-202도 같은 원인이라 같은 끝 상태다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:31-32 @ 178e19e",
+        "frontend/src/components/workspace/WorkspaceView.tsx:24,39 @ f3855f4",
+        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/(console)/integrations/page.tsx:11 @ f3855f4",
+        "커밋 80a3ef1",
+        "frontend/src/components/workspace/WorkspaceView.tsx:23,38 @ b8abfdf",
+        "frontend/src/components/workspace/WorkspaceView.tsx:24,39 @ 508beb5",
+        "frontend/src/components/workspace/WorkspaceView.tsx:23,38 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "G-144",
@@ -3595,27 +4004,52 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서도 WebhookEventRepository.insert는 구독 엔드포인트 유무와 상관없이 webhook_event를 먼저 넣고, 전달 행은 그 순간 구독 중인 활성 엔드포인트에만 만든다. V28 트리거가 webhook_event의 UPDATE, DELETE, TRUNCATE를 막고, 정점 b8abfdf까지 이를 푸는 마이그레이션이나 정리 작업이 없다. #444 층 안의 발행자는 엔드포인트를 지정하는 시험 발송뿐이라 이 층만으로는 쌓이지 않지만, #450 head 6fef5f3의 UnbilledUsageReportService는 매일 09시 진단이 비어 있지 않으면 구독 확인 없이 발행하고, 기존 통합 시험도 엔드포인트 없이 webhook_event가 저장되는 것을 단정한다. 81651ed 뒤 이 층의 webhook 파일과 마이그레이션을 바꾼 커밋은 없어 문제는 남아 있다. brief대로 #444 차례에는 open(left \"#450 차례에 고친다\")으로 두고, 고치는 곳은 #450 발행부뿐이며 #444 insert 조건(C444-001, Q9)은 바꾸지 않아도 된다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEventRepository.java:16-21 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEventRepository.java:22-28 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:63-65 @ 178e19e",
+        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:64-76 @ 6fef5f3",
+        "backend/src/main/resources/application.properties:46 @ 6fef5f3",
+        "backend/src/test/java/com/meterengine/notification/UnbilledUsageNotificationIntegrationTest.java:42-48 @ 6fef5f3",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookEventRepository.java:17-23 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:50,130 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "#450 차례에 고친다(T-inho brief: #450 UnbilledUsageReportService 발행부만 고치고 branch는 feat/event-ingestion으로 적는다). 178e19e에서도 남아 있다."
     },
     {
       "id": "G-151",
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서도 작업 이름 다섯 개가 OperationsService의 VALUES 목록, WebhookDeliveryConfig의 register와 run 문자열, alerting.yml 경보 정규식 열 줄에 따로 적혀 있고, 정점에서는 PaymentJobScheduler(#445)의 private 상수와 UnbilledUsageNotificationConfig(#450)의 문자열 두 곳이 더해진다. 이 목록들이 서로 같은지 보는 시험은 층 head와 정점 어디에도 없고, /v1/operations 시험은 상태 코드만 본다. 반박 근거를 찾았지만 지금 이름이 어긋난 곳은 없을 뿐 한 곳을 빠뜨리는 회귀를 막는 장치는 없어 지적은 맞다. 다만 제안한 수정은 #444에서만 이름 보관처, OperationsService, WebhookDeliveryConfig 세 파일을 바꾸고 #445(담당 밖)와 #450 파일까지 걸친다. 또 운영 화면을 register 목록으로 바꾸면 #444 head에서 결제 작업과 미청구 작업 행이 사라지고 meterengine.webhook.enabled=false일 때 webhook_delivery 행도 빠지는 동작 변경이라 유지보수 분류 기준(파일 셋 이상)에 따라 needs-decision으로 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:31-32 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:30,37 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:13-16 @ 178e19e",
+        "deploy/grafana/provisioning/alerting/alerting.yml:169,171,172,174,203,204,233,234,263,264 @ 178e19e",
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:24-26 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:32,41 @ b8abfdf",
+        "backend/src/test/java/com/meterengine/account/OperatorAccountIntegrationTest.java:107,123 @ f3855f4"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "question": "예약 작업 이름을 scheduling 패키지 enum 하나로 모아 #444, #445, #450에 걸쳐 바꾸고 운영 화면을 등록된 작업 목록 기준으로 바꿀지, 아니면 운영 코드는 그대로 두고 등록 이름, 운영 화면 VALUES, 경보 정규식이 일치하는지 보는 시험만 더할지 정한다."
     },
     {
       "id": "G-152",
@@ -3625,13 +4059,40 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4의 backend/README.md에는 웹훅, 암호화 키, 운영 조회 내용이 하나도 없다. #444가 더한 webhook, dashboard, global.crypto 패키지가 구조 표(232-248행)에 없다. 설정 절(84-92행)은 DB 변수만 적고, 운영 기본값 없이 필수인 CRYPTO_ENCRYPTION_KEY를 빠뜨렸다(CryptoProperties 9행 @NotBlank, 기본값은 local 프로파일에만 있다). 재시도 간격 60/300/1800/7200/28800초와 모두 6회, 2분 임대, 종결 조건, meterengine.webhook.enabled, create_webhook_tables의 append-only 트리거는 README, openapi.yaml, 화면 어디에도 없다. documents.md 17-18행의 README 점검이 마이그레이션과 컨트롤러를 바꾸면 이 README를 보라고 정한다. 키 교체 위험은 deploy/README.md 401행이 웹훅 비밀값까지 적어 줄지만, WEBHOOK_ENABLED 별칭(#445 4ace811)과 토스 키, 빌링키가 든 CRYPTO 행(#453 23b1844)은 위층 것이라 이 층에서는 meterengine.webhook.enabled와 웹훅 비밀값만 적는다. 묶인 G-142(meterengine.webhook.enabled 범위가 README에 없다): WebhookDeliveryConfig 13-16행 @ f3855f4는 meterengine.webhook.enabled(값이 없으면 true)로만 켜진다. false면 발송 작업과 28-31행 register()가 사라지지만, 엔드포인트 API와 통보 적재 경로에는 조건이 없다. 이 층 README에는 이 플래그도 scheduling.enabled도 없어서 끄는 범위를 알 수 없다. 경보가 울리지 않는 것은 SchedulingConfig 8-9행의 scheduling.enabled로 끈 작업도 같아서 저장소에서 일관된 방식이다. WEBHOOK_ENABLED 별칭(#445 4ace811)과 미청구 통보까지 같이 꺼지는 것(#450)은 이 층에 없다. 남는 결함은 플래그 범위를 적지 않은 것뿐이고 G-152와 원인이 같아 같은 README 수정으로 끝난다.",
+      "evidence": [
+        "backend/README.md:232-248 @ f3855f4",
+        "backend/README.md:250 @ f3855f4",
+        "backend/README.md:84-92 @ f3855f4",
+        "backend/src/main/java/com/meterengine/global/crypto/CryptoProperties.java:9 @ 178e19e",
+        "backend/src/main/resources/application-local.properties:3 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:118,128 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:21-22 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:43 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-75 @ 178e19e",
+        "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:57-68 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:13-16 @ 178e19e",
+        "docs/contributing/documents.md:17-18 @ 178e19e",
+        "deploy/README.md:401 @ 178e19e",
+        "backend/README.md:304 @ b8abfdf",
+        "backend/README.md:311,314 @ b8abfdf",
+        "커밋 23b1844",
+        "커밋 4ace811",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:28-31 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/config/SchedulingConfig.java:8-9 @ 178e19e",
+        "backend/src/main/resources/application.properties:44 @ b8abfdf",
+        "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:15-18 @ b8abfdf",
+        "backend/README.md:311 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "U14-B1",
@@ -3639,13 +4100,27 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head f3855f4에서 claim()의 첫 UPDATE가 여섯 번째 시도 선점이 만료된 전송을 status=failed, failure_reason=lease_expired로 끝내고 행 수를 버리며, meterengine.webhook.delivery 카운터는 record() 한 곳에서만 오른다. 웹훅 전송 실패 경보 식은 이 카운터만 보므로 lease_expired 종결은 경보가 울리지 않는데, deploy/README.md 481행은 재시도 상한까지 실패한 웹훅이 endpoint_disabled만 빼고 모두 경보된다고 읽힌다. 반대로 blocked_address는 complete()가 첫 시도에 종결하는데도 식에 들어가 '재시도 상한까지'라는 문구와 맞지 않는다. 기존 통합 시험(마지막_시도_중_선점이_만료된_전송은...)은 상태만 보고 지표를 확인하지 않으며, lease_expired를 경보에서 뺀다는 기록된 결정은 a886852 메시지를 포함해 찾지 못했다. send 예외 경로는 deliver()가 failed로 세어 예약 작업 경보가 울리지만, 완료 전 프로세스 종료 경로는 어떤 경보도 없다(scheduling shutdown await 설정도 없음). 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 UPDATE, 경보 식, README 행이 그대로다.",
+      "evidence": [
+        "deploy/README.md:481 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:31-33 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:137-146 @ 178e19e",
+        "deploy/grafana/provisioning/alerting/alerting.yml:383-384 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:71-76 @ 178e19e",
+        "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:352-368 @ 178e19e",
+        "backend/src/main/resources/application.properties:41 @ 178e19e",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:32-34 @ b8abfdf",
+        "deploy/README.md:495 @ b8abfdf"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "U5-B1",
@@ -3653,13 +4128,28 @@
       "layer": 444,
       "branch": "feat/webhook-jobs",
       "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "verdict": "confirmed",
+      "reason": "층 head에서 슬롯을 진 인스턴스는 insertIfAbsent가 0이면 곧바로 findLastSucceededFinishedAt을 읽는데, 이긴 쪽 행은 끝날 때까지 'running'이고 조회는 'succeeded'만 보므로 같은 시각 cron에서는 어제 성공만 게이지에 남는다. 그 뒤 메모리 값을 다시 읽는 곳은 register와 다음 슬롯을 질 때뿐이다. deploy.sh는 전환 뒤 DRAIN 5초를 기다려 이전 색을 stop하고, Prometheus는 두 색을 정적 대상으로 긁는다. 그래서 이긴 이전 색의 시리즈가 사라지면 alerting.yml 263행 식이 남은 색의 어제 값만 보고 90000을 넘겨 약 23시간 울린다. 하루 주기 호출부는 #444 head에는 없고 #445(PaymentJobScheduler, 04:00)와 #450(UnbilledUsageNotificationConfig, 09:00)에서 생긴다. 다만 원인 코드(59aad79, 문인호 님 커밋)와 그 두 작업을 가리키는 경보식이 이 층에 있어 여기서 고친다. 막는 검사는 찾지 못했고, 단위 시험 59-69행은 건너뛰는 순간 DB에 상대의 이번 성공이 이미 있다고 스텁해서 실제로는 일어나지 않는 순서만 본다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:49-51 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:71-75 @ 178e19e",
+        "backend/src/main/java/com/meterengine/scheduling/repository/ScheduledJobRunRepository.java:20,29 @ 178e19e",
+        "deploy/grafana/provisioning/alerting/alerting.yml:263,275 @ 178e19e",
+        "deploy/grafana/dashboards/meterengine-billing.json:460 @ 178e19e",
+        "deploy/deploy.sh:538-542 @ 178e19e",
+        "deploy/prometheus/prometheus.yml:20 @ 178e19e",
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ 508beb5",
+        "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:35-41 @ 508beb5",
+        "backend/src/test/java/com/meterengine/scheduling/service/ScheduledJobRunServiceTest.java:59-69 @ 178e19e"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "left": "판정 끝(178e19e), 고칠 차례"
     },
     {
       "id": "X-014",
@@ -8368,7 +8858,8 @@
     "2026-10-28 #444 시작에서 멈춤: 바꾸지 않은 #444 head(f3855f4)에서 frontend-unit이 실패한다(NT-inho-002). common-brief 10절, 12절대로 전체를 멈췄다. #444 U1-B1 커밋 235ebf1은 fix/s456-444-t-inho에 로컬로만 있고 push하지 않았다(frontend-unit 말고는 통과).",
     "2026-10-28T21:36:06+09:00 재시작: 조율 담당이 NT-inho-002를 4222fbd로 풀었다(origin/feat/webhook-jobs 178e19e). 바꾸지 않은 178e19e에서 frontend(lint, build), frontend-unit(13 통과), 계약 명세(53 통과)가 통과해 #444를 이어 간다. 시작 점검을 다시 돌려 모두 통과했다(push 확인은 feat/webhook-jobs dry-run).",
     "2026-10-28T21:36:06+09:00 PR #465는 조율 담당이 feat/product-design에 merge했다(85de660, 2026-10-28T12:27:53Z). origin의 fix/s456-443-t-inho는 지워졌다. #443 push 33건은 85de660을 통해 origin에 있다. 보조 검사는 report.json fix_merges의 머지 커밋으로 이 push들을 확인한다.",
-    "2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다."
+    "2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다.",
+    "2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",

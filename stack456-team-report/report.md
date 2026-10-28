@@ -1,15 +1,15 @@
-미완료 279건, 결과: 끝 상태 93/372건 (fixed 76, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+미완료 263건, 결과: 끝 상태 109/372건 (fixed 76, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 1번(마지막 de7565b)
-정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
+정할 것: 28건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T21:46:50+09:00
+상태: running, 갱신 2026-10-28T21:49:39+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 1 | 0 | 0 | 0 | 0 | 39 |
+| #444 | fix/s456-444-t-inho | 40 | 1 | 0 | 4 | 11 | 1 | 23 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -119,12 +119,24 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 1번(마
 | G-084 | #443 | 로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(6px, 27px)과 콘솔(5px, 23px) 중 어느 비율을 기준으로 할지 정해야 한다. |
 | G-078 | #443 | LinkButton과 ScopedLink의 href 변환을 공용 훅으로 합치고 ConsoleShell의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 정리(#442 NavMenu 23행의 같은 패턴 포함 여부까지)를 #443에서 할지 정한다. |
 | D-237 | #443 | 화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker prop과 admin 화면의 .page-heading을 없애고, ActionPanel(#442)에 버튼 type을 두어 제목 줄 생성 행동을 primary로 통일할지 정한다. |
+| Ck2-007 | #444 | Q9와 상관없는 없는 delivery_id의 404 webhook_delivery_not_found 분리를 먼저 고치고, 비활성 엔드포인트를 재시도할 때 webhook_endpoint_disabled를 돌려줄지는 Q9(발송 일시 중지 의미) 결정에 맞춰 정할지. 새 오류 code 추가는 공개 계약 변경이다. (Q9 발송 일시 중지와 함께 정한다) |
+| D-045 | #444 | 웹훅 목록에 수신 주소별 발송 상태(마지막 발송 결과나 최근 실패 건수)를 보일지, 보인다면 WebhookEndpointResponse에 필드를 더할지 목록 화면이 수신 주소마다 발송 내역 1건을 따로 조회할지 정한다. |
+| C444-002 | #444 | 도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 하려면 무엇을 둘지 정한다. 후보는 시험 통보와 재시도의 도입사별 호출 한도나 엔드포인트별 대기 상한(새 409 오류 코드와 openapi.yaml 변경), 발송 루프의 도입사별 공정 소비와 병렬 발송, 또는 둘 다이고 그 한도 값도 함께 정한다. |
+| G-140 | #444 | 웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건), 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정한다. 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 함께 정한다. |
+| Ck2-005 | #444 | 운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다). (Ck2-010과 같은 결정) |
+| Ck2-009 | #444 | #444 SDK에 미리 들어온 위층 계약(organizationId 헤더, WebhookEvent.environment, POST 본문과 canRetry 기본 true, text 응답, PATCH)을 처음 쓰는 층(#445, #450, #451, #453)으로 옮길지, #442 프론트 transport처럼 미리 담아 둔 채 스택 순서대로 머지할지 정한다. |
+| Ck2-010 | #444 | 운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다). |
+| Ck2-011 | #444 | failure_reason 정본으로 WebhookFailureReason enum을 두고 WebhookOutcome, WebhookClient, WebhookDeliveryService, WebhookDeliveryRepository를 함께 바꿀지(운영 파일 다섯), 아니면 저장소의 문자열과 CHECK 관례를 유지하고 V28에서 webhook_delivery.failure_reason에도 같은 CHECK를 거는 것만 할지 정한다. |
+| Ck2-012 | #444 | #444가 발행하지 않는 PAYMENT_* 셋과 UNBILLED_USAGE_DETECTED를 #444에서 빼 발행 코드가 있는 #445, #450으로 옮길지(스택 재분할, #445는 담당 밖), 아니면 #444에 구독 계약을 미리 두는 지금 분할을 유지하고 PR 본문에만 적을지 정한다. |
+| Ck2-015 | #444 | frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 CI 경로 필터와 #452 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다. |
+| G-151 | #444 | 예약 작업 이름을 scheduling 패키지 enum 하나로 모아 #444, #445, #450에 걸쳐 바꾸고 운영 화면을 등록된 작업 목록 기준으로 바꿀지, 아니면 운영 코드는 그대로 두고 등록 이름, 운영 화면 VALUES, 경보 정규식이 일치하는지 보는 시험만 더할지 정한다. |
 | NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
 
 ## 막힌 것
 
 | id | 층 | 까닭 |
 | --- | --- | --- |
+| Ck2-014 | #444 | not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다. |
 
 ## 새 지적
 
@@ -196,3 +208,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 1번(마
 - 2026-10-28T21:36:06+09:00 재시작: 조율 담당이 NT-inho-002를 4222fbd로 풀었다(origin/feat/webhook-jobs 178e19e). 바꾸지 않은 178e19e에서 frontend(lint, build), frontend-unit(13 통과), 계약 명세(53 통과)가 통과해 #444를 이어 간다. 시작 점검을 다시 돌려 모두 통과했다(push 확인은 feat/webhook-jobs dry-run).
 - 2026-10-28T21:36:06+09:00 PR #465는 조율 담당이 feat/product-design에 merge했다(85de660, 2026-10-28T12:27:53Z). origin의 fix/s456-443-t-inho는 지워졌다. #443 push 33건은 85de660을 통해 origin에 있다. 보조 검사는 report.json fix_merges의 머지 커밋으로 이 push들을 확인한다.
 - 2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다.
+- 2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다.
