@@ -281,7 +281,8 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     const reader = await browserPage(browser, session); contexts.push(reader.context);
     for (const path of ["/overview", "/customers", `/customers/${data.customerId}?month=${data.month}`, "/billable-metrics", "/pricing", "/events", "/usage", "/billing", "/invoices", "/payments", `/payments/${data.invoiceId}`, "/integrations", "/settings", "/members", "/audit"]) {
       await reader.page.goto(path);
-      await expect(reader.page.getByRole("button", { name: "조회 전용, 권한 새로 조회", exact: true })).toBeVisible();
+      await expect(reader.page.locator(".workspace-scope")).toHaveText("조회 전용");
+      await expect(reader.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
       for (const name of ["고객 등록", "고객 정보 수정", "고객 보관", "API 키 발급", "키 권한 변경", "고객 조회 링크 발급", "등록 카드로 결제", "결제 다시 시도", "계정 직접 생성", "초대 링크 만들기"]) await expect(reader.page.getByRole("button", { name, exact: true })).toHaveCount(0);
       await expect(reader.page).not.toHaveURL(/\/login/);
     }
@@ -376,7 +377,8 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     const switched = await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: authorization(operator.token), data: { organization_id: data.organizationId } });
     expect(switched.status()).toBe(200); expect((await switched.json()).scopes).toEqual(["read"]);
     await platform.page.goto("/customers"); await expect(platform.page.getByRole("button", { name: "고객 등록", exact: true })).toHaveCount(0);
-    await expect(platform.page.getByRole("button", { name: "조회 전용, 권한 새로 조회", exact: true })).toBeVisible();
+    await expect(platform.page.locator(".workspace-scope")).toHaveText("조회 전용");
+    await expect(platform.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
     await platform.page.goto("/admin/users"); await expect(platform.page.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
     expect((await request.get(`${API_URL}/v1/organizations`, { headers: authorization(operator.token) })).status()).toBe(200);
     expect((await request.post(`${API_URL}/v1/customers`, { headers: authorization(operator.token), data: { name: "플랫폼 역할 우회 시도" } })).status()).toBe(403);
