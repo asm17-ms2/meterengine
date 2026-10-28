@@ -2,6 +2,7 @@ package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.PaymentSettingResponse;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,6 +62,7 @@ public class PaymentSettingController {
       description =
           """
           결제에 쓸 모드를 test나 live로 바꾼다. live로 바꾸려면 live 모드의 토스페이먼츠 키가 먼저 저장돼 있어야 한다.
+          API 키로 부르면 요청한 mode와 현재 결제 모드가 모두 키의 모드와 같아야 하고, 다르면 409다.
           updated_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -78,11 +81,16 @@ public class PaymentSettingController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: live로 바꾸려는데 live 모드의 토스페이먼츠 키가 없다")
+        description =
+            """
+            code=payment_mode_mismatch: API 키의 모드가 요청한 mode나 현재 결제 모드와 다르다.
+            code=toss_payments_credential_missing: live로 바꾸려는데 live 모드의 토스페이먼츠 키가 없다.
+            """)
   })
   public PaymentSettingResponse updatePaymentSetting(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Valid @RequestBody UpdatePaymentSettingRequest request) {
-    return paymentSettingService.update(organizationId, request.mode());
+    return paymentSettingService.update(organizationId, request.mode(), principal.mode());
   }
 }

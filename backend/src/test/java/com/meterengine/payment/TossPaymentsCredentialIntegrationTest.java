@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
@@ -299,6 +300,40 @@ class TossPaymentsCredentialIntegrationTest {
   }
 
   @Test
+  void test_API_키로_live_키를_저장하면_409_payment_mode_mismatch이고_토스를_부르지_않으며_저장된_live_키는_그대로다() {
+    UUID organizationId = insertOrganization();
+    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+    assertThat(
+            updateCredential(
+                organizationId, "live", "live_ck_live0000", "live_sk_live00000000LIVE"))
+        .hasStatus(200);
+    Map<String, Object> saved = credentialRow(organizationId, "live");
+
+    assertError(
+        updateCredential(
+            apiKey(organizationId, "test"), "live", "live_ck_other0000", "live_sk_other0000OTHR"),
+        409,
+        ErrorCode.PAYMENT_MODE_MISMATCH);
+
+    verify(tossPaymentsClient).findPaymentByOrderId(eq("live_sk_live00000000LIVE"), any());
+    verifyNoMoreInteractions(tossPaymentsClient);
+    assertThat(credentialRow(organizationId, "live")).isEqualTo(saved);
+  }
+
+  @Test
+  void API_키의_모드와_같은_모드의_키는_저장한다() {
+    UUID organizationId = insertOrganization();
+    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+
+    assertThat(
+            updateCredential(
+                apiKey(organizationId, "test"), "test", TEST_CLIENT_KEY, TEST_SECRET_KEY))
+        .hasStatus(200);
+
+    assertThat(countCredentials(organizationId)).isEqualTo(1);
+  }
+
+  @Test
   void 모드_경로가_test나_live가_아니면_400_validation_error이고_토스를_부르지_않는다() {
     UUID organizationId = insertOrganization();
 
@@ -371,7 +406,18 @@ class TossPaymentsCredentialIntegrationTest {
 
   private MvcTestResult updateCredential(
       UUID organizationId, String mode, String clientKey, String secretKey) {
-    return withOrganization(mvc.put().uri("/v1/toss-payments-credentials/" + mode), organizationId)
+    return updateCredential(
+        TestCredentials.issueMemberSession(jdbcTemplate, organizationId),
+        mode,
+        clientKey,
+        secretKey);
+  }
+
+  private MvcTestResult updateCredential(
+      String authorization, String mode, String clientKey, String secretKey) {
+    return mvc.put()
+        .uri("/v1/toss-payments-credentials/" + mode)
+        .header("Authorization", authorization)
         .contentType(MediaType.APPLICATION_JSON)
         .content(
             """
@@ -379,6 +425,10 @@ class TossPaymentsCredentialIntegrationTest {
             """
                 .formatted(clientKey, secretKey))
         .exchange();
+  }
+
+  private String apiKey(UUID organizationId, String mode) {
+    return TestCredentials.issueApiKey(jdbcTemplate, organizationId, mode);
   }
 
   private MvcTestResult listCredentials(UUID organizationId) {

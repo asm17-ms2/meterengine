@@ -1,6 +1,7 @@
 package com.meterengine.payment.service;
 
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
@@ -65,6 +66,17 @@ public class TossPaymentsCredentialService {
 
   public TossPaymentsCredentialResponse update(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    return update(organizationId, mode, request, null);
+  }
+
+  public TossPaymentsCredentialResponse update(
+      UUID organizationId,
+      String mode,
+      UpdateTossPaymentsCredentialRequest request,
+      String principalMode) {
+    if (principalMode != null && !principalMode.equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
     checkPrefixes(mode, request);
     verify(request.secretKey());
     return transactionTemplate.execute(status -> save(organizationId, mode, request));
