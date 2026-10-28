@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:37:27+09:00",
+  "updated_at": "2026-10-28T20:40:21+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "0451016",
+    "feat/account-permissions": "193978f",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -2628,14 +2628,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "documents.md README 점검 표대로 이 PR이 바꾼 동작을 README가 따라야 하는데, backend README 224행은 발급 API가 한도를 정하지 않는다고 적고 CreateApiKeyRequest 35-36행은 rate_limit_per_minute를 받는다. 403 consent_required 설명은 G-005 커밋이, frontend README의 설정과 화면 표는 G-039와 G-040 커밋이 맞췄다. 남은 한도 문장을 고쳤다.",
+      "evidence": [
+        "backend/README.md:224 @ 72e8718",
+        "backend/src/main/java/com/meterengine/apikey/dto/CreateApiKeyRequest.java:35-36 @ 72e8718",
+        "docs/contributing/documents.md:18-20 @ 72e8718",
+        "backend/README.md:244 @ 0fe7d2a"
+      ],
+      "commits": [
+        "193978fe2454"
+      ],
+      "tests": [
+        "문서 변경: CreateApiKeyRequest의 rate_limit_per_minute(@Positive, null 허용)와 대조했다. backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "differs: #453 23b1844가 한도 문장을 같은 뜻으로 고쳤고 #452 29a78d0이 frontend README를 고쳤다",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "backend README API 키 한도 설명"
     },
     {
       "id": "G-026",
@@ -8407,6 +8422,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 15 ℹ pass 15 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.308s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8689,6 +8752,11 @@
       "branch": "feat/account-permissions",
       "sha": "045101673831eeb579634433d9543b1443559d7e",
       "at": "2026-10-28T20:34:21+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "193978fe2454c1fbb78e8cb07b212c0330a45487",
+      "at": "2026-10-28T20:40:21+09:00"
     }
   ],
   "usage_log": [],
