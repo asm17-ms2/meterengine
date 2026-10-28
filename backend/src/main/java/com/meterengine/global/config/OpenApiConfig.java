@@ -46,12 +46,16 @@ class OpenApiConfig {
       """;
 
   private static final String FORBIDDEN_DESCRIPTION =
-      "code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.";
+      """
+      code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+      code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+      """;
 
   private static final String ORGANIZATION_FORBIDDEN_DESCRIPTION =
       """
       code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
       code=organization_not_active: 도입사가 활성 상태가 아니다.
+      code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       """;
 
   private static final String TOO_MANY_REQUESTS_DESCRIPTION =

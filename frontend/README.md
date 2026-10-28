@@ -121,13 +121,13 @@ docker run -p 3000:3000 \
 | `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
-| `src/components/shell/` | antd Layout 틀, 메뉴, 개발 모드 스위치, 테마와 로케일을 거는 `AppProviders` |
+| `src/components/shell/` | 콘솔과 운영자 셸, 메뉴, 안내 모드, 테마와 로케일을 거는 `AppProviders` |
 | `src/components/screen/` | 화면 공용 조각: 제목 줄, 툴바, 카드, 각주, 빈 상태, 오류, 스켈레톤, 링크 버튼, 월 선택, 검색과 필터, 페이지 |
 | `src/components/table/` | 표 공용 조각: 접기 상태, 조합 칸, 미터 라벨, 숫자 칸, 정렬, 표 공통값 |
 | `src/lib/api/` | 백엔드 호출. `client.ts`가 공용 fetch |
 | `src/lib/config.ts` | 서버 사이드 설정 |
-| `src/app/layout.tsx` | antd 스타일을 SSR HTML에 넣는 `AntdRegistry` |
-| `src/app/globals.css` | 기본 여백, 글꼴 다듬기, 화면 폭에 따른 본문 여백 |
+| `src/app/layout.tsx` | antd 스타일을 SSR HTML에 넣는 `AntdRegistry`, 로컬 Pretendard 글꼴 변수 |
+| `src/app/globals.css` | 콘솔 셸과 인증 화면의 공통 배치, 색 변수, 화면 폭에 따른 본문 여백 |
 
 화면 컴포넌트의 접미사는 다음과 같다.
 
@@ -139,12 +139,12 @@ docker run -p 3000:3000 \
 
 스타일 규칙은 다음과 같다.
 
-- 업무 화면은 antd 6 컴포넌트로 그린다. 공통 배치는 `globals.css`, 페이지 고유 스타일은 같은 폴더의 CSS Modules에 둔다.
-- 테마는 보라색 강조와 시스템 글꼴을 쓴다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
+- 업무 화면은 antd 6 컴포넌트로 그린다. 공통 배치는 `globals.css`, 페이지 고유 스타일은 같은 폴더의 CSS Modules(예: `HomePage.module.css`)에 둔다.
+- 테마는 보라색 강조다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
 - antd는 `"use client"` 파일에서만 import한다. Server Component는 직렬화할 수 있는 prop만 넘겨 그 래퍼를 그린다.
 - 폼은 HTML form 또는 antd Form과 antd 입력을 쓴다. 서버 액션과 작업 상태는 `useActionState`로 연결한다.
 - 페이지를 옮기는 버튼은 `LinkButton`, 토스트는 `App.useApp()`의 `message`를 쓴다.
-- 본문과 UI는 로컬 Pretendard Variable을 쓴다. 로고는 기존 서체, 코드와 JSON은 고정폭 서체를 유지한다. 글꼴 파일과 OFL 라이선스는 `src/app/fonts/`에 있다.
+- 본문과 UI는 로컬 Pretendard Variable 1.3.9(https://github.com/orioncactus/pretendard)를 `next/font/local`로 쓴다. 로고는 기존 서체, 코드와 JSON은 고정폭 서체를 유지한다. 글꼴 파일과 OFL 라이선스는 `src/app/fonts/`에 있다.
 
 ## 목록 조회
 
@@ -159,6 +159,7 @@ docker run -p 3000:3000 \
 
 | 경로 | 사용자 과업 |
 | --- | --- |
+| `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 신청 링크) |
 | `/overview` | 미완료 설정, 과금 경고와 월별 예정액, 확정액, 결제 대기액, 순수납 확인 |
 | `/customers`, `/customers/{id}` | 외부 ID로 고객 연결, 사용량, 청구, 수납과 카드 등록 연결 |
 | `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 정정 확인, 원본 로그 조회 |

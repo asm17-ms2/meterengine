@@ -7,9 +7,9 @@ import { clearSession, readSessionToken, requireSession } from "@/lib/auth/sessi
 import type { ActionState, SessionResponse } from "@/lib/auth/types";
 import { workspaceHref } from "@/lib/workspace-href";
 
-export async function logoutAction(_prev: ActionState, _data: FormData): Promise<ActionState> {
+export async function logoutAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   void _prev;
-  void _data;
+  const returnTo = data.get("returnTo");
   const token = await readSessionToken();
   if (token) {
     const result = await requestApi<void>("/v1/sessions/current", { method: "DELETE", token });
@@ -17,7 +17,7 @@ export async function logoutAction(_prev: ActionState, _data: FormData): Promise
   }
   await clearSession();
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect(typeof returnTo === "string" && /^\/organization-invitations\/me_invite_[A-Za-z0-9]{32}$/.test(returnTo) ? returnTo : "/login");
 }
 
 export async function switchOrganizationAction(_prev: ActionState, data: FormData): Promise<ActionState> {
