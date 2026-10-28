@@ -1,0 +1,4 @@
+globals.css 재정의 정리 전후 화소 비교(screens.mjs 18개 라우트, 1440x900과 390x844, 정리 전 6730d65 빌드와 정리 뒤 빌드)
+같음 30장
+다름 6장: billing, events, usage의 desktop과 mobile. 다른 영역은 '계산 시각', '조회 시각' 글자(캡처 시각 차이)뿐이다
+billing-desktop (995,225)-(1176,239), events-desktop (1157,225)-(1348,239), usage-desktop (994,225)-(1175,239), 모바일 3장도 같은 줄
