@@ -1,0 +1,39 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "registration-complete",
+    "path": "/payment-method-registrations/<token>/complete",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/payment-method-registrations/<token>/complete",
+        "title": "결제 카드 등록 | MeterEngine | MeterEngine",
+        "h1": "카드 등록 결과를 확인하지 못했습니다",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-049/after/registration-complete-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/payment-method-registrations/<token>/complete",
+        "title": "결제 카드 등록 | MeterEngine | MeterEngine",
+        "h1": "카드 등록 결과를 확인하지 못했습니다",
+        "horizontalOverflow": false,
+        "screenshot": "stack456-team-report/evidence/X-049/after/registration-complete-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]
