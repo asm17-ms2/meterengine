@@ -1,12 +1,12 @@
-미완료 198건, 결과: 끝 상태 130/328건 (fixed 87, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 52개(마지막 180d80f)
+미완료 195건, 결과: 끝 상태 133/328건 (fixed 90, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 53개(마지막 2e973ac)
 정할 것: 31건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 87 | 1 | 7 | 32 | 3 | 13 |
+| #442 | 143 | 90 | 1 | 7 | 32 | 3 | 10 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -26,6 +26,7 @@ push: feat/account-permissions 52개(마지막 180d80f)
 | C442-023 | #442 | 6028b62 | NotEmpty 가드를 기본 그룹 검증만 세게 | 신규_초대를_빈_동의로_수락하면_400이고_계정과_수락을_남기지_않는다: 실패 AssertionFailedError: [HTTP status code] expected: 400 but was: 201 (동의 검사 제거 변이) |
 | C442-024 | #442 | 9fff495 | 마지막 운영자 보호 행 잠금 동시성 시험 | 다른_운영자를_먼저_내리는_중이면_기다린_자기_하향은_409이고_역할은_그대로다: 실패 java.lang.AssertionError: Expecting code to raise a throwable (@Lock 제거 변이) |
 | D-061 | #442 | b931df4 | 비로그인 초대 수신자에게 도입사 선택 링크 숨김 | an invitation opened without a session does not offer the organization picker: 실패 Expected 0, Received 1 |
+| D-103 | #442 | 2e973ac | 비밀번호 안내를 글자 수로 | 없음(보이는 변경(문구): git grep -nE 'UTF-8 기준\|72바이트' frontend/src가 고친 뒤 비었다. lint, build, auth.contract.spec.ts, auth.real.spec.ts ) |
 | D-232 | #442 | 99fb104 | 동의 블록 마크업 통일 | signup and invitation show the same required consent block: 실패 Expected 2, Received 0 |
 | G-001 | #442 | 00794cc | 가입 이메일 중복을 저장 전 조회로, 제약 이름 비교 제거 | 이미_있는_이메일로_가입하면_저장하지_않고_409_예외다: 실패 Expecting actual throwable to be an instance of: ConflictException but was: NullPointerException |
 | G-005 | #442 | a53cc1b | 공통 403 설명에 consent_required | 세션으로_부르는_경로의_403은_동의_대기_code를_문서화한다: 실패 Expecting actual "code=permission_denied: ..." to contain "code=consent_required" |
