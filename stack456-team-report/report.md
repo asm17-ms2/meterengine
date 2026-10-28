@@ -1,12 +1,12 @@
-미완료 221건, 결과: 끝 상태 107/328건 (fixed 65, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 40개(마지막 a53cc1b)
+미완료 220건, 결과: 끝 상태 108/328건 (fixed 66, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 41개(마지막 d2b69cf)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 65 | 1 | 7 | 31 | 3 | 36 |
+| #442 | 143 | 66 | 1 | 7 | 31 | 3 | 35 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -26,6 +26,7 @@ push: feat/account-permissions 40개(마지막 a53cc1b)
 | C442-024 | #442 | 9fff495 | 마지막 운영자 보호 행 잠금 동시성 시험 | 다른_운영자를_먼저_내리는_중이면_기다린_자기_하향은_409이고_역할은_그대로다: 실패 java.lang.AssertionError: Expecting code to raise a throwable (@Lock 제거 변이) |
 | G-001 | #442 | 00794cc | 가입 이메일 중복을 저장 전 조회로, 제약 이름 비교 제거 | 이미_있는_이메일로_가입하면_저장하지_않고_409_예외다: 실패 Expecting actual throwable to be an instance of: ConflictException but was: NullPointerException |
 | G-005 | #442 | a53cc1b | 공통 403 설명에 consent_required | 세션으로_부르는_경로의_403은_동의_대기_code를_문서화한다: 실패 Expecting actual "code=permission_denied: ..." to contain "code=consent_required" |
+| G-006 | #442 | d2b69cf | 사용자와 초대 API 오류 code 문서화 | 공개_경로인_초대_수락은_403_404_409_오류_code를_ErrorResponse로_문서화한다: 실패 AssertionFailedError: [403 응답 ...] expected: "#/components/schemas/ErrorResponse" but was: "" |
 | G-042 | #442 | 36f7e74 | 업무 작업 이름 목록과 화면, 액션 대조 시험 | every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS' |
 | G-045 | #442 | b84cf7a | WorkspaceError를 기존 ErrorAlert로 모음 | a workspace load failure offers an in-place retry button: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole('button', { name: '다시 시도' }) |
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
@@ -141,6 +142,7 @@ push: feat/account-permissions 40개(마지막 a53cc1b)
 | C442-012 | #442 | 정점 (public)/actions.ts는 a39db70이 clientIp를 더해 로그인 요청 줄이 달라졌다. 반영 때 saveSession 뒤의 destination 계산을 이 커밋의 꼴로 맞춘다. 23b1844가 proxy.ts에 environment 검사를 더했지만 이 수정과 겹치지 않는다. |
 | C442-021 | #442 | 80a3ef1이 OperatorAccountIntegrationTest의 다른 줄을 바꿨다. 반영 때 195-200행 검사가 actor_id 기준으로 남았는지 본다. |
 | G-001 | #442 | 가입 경로의 조회와 저장 사이 경합은 이제 409가 아니라 500이다(error-handling.md 규칙). 정점까지 이 파일을 바꾼 위층 커밋은 없다. |
+| G-006 | #442 | 23b1844 등 위층 커밋이 같은 컨트롤러에 environment 관련 변경을 했다면 반영 때 @ApiResponses 블록을 남긴다. openapi.yaml은 각 층 빌드가 다시 만든다. |
 | G-009 | #442 | 정점 0fe7d2a에서 invitations 사용처는 OrganizationPeopleController.java:115 하나뿐이고 OrganizationPeopleService는 위층에서 바뀌지 않았다. 컨트롤러는 23b1844가 두 줄 바꿨으니 서비스를 옮기면 위층 컨트롤러의 호출과 주입 필드도 같이 맞춘다. |
 | G-027 | #442 | 바꾸기로 하면 #442에서 OrganizationInvitationController.java의 @PostMapping, SecurityConfig.java permitAll 매처, OrganizationPeopleIntegrationTest와 UserPermissionsIntegrationTest의 경로, frontend/src/app/organization-invitations/[token]/actions.ts의 `${path}/accept`, backend/openapi.yaml을 함께 고친다. 위층에서는 #448의 backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:222 @ 0fe7d2a와 각 층의 openapi.yaml 재생성이 필요하다. 다른 동사 경로는 EventController.java:212, EventExportController.java:38, EventIssueController.java:34, EventRejectionController.java:34, InvoiceViewLinkController.java:75,87, WorkspaceQueryController.java:46,101 @ 0fe7d2a다. |
 | G-039 | #442 | 반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다. |

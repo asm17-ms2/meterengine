@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:56:01+09:00",
+  "updated_at": "2026-10-28T18:58:23+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "a53cc1b",
+    "feat/account-permissions": "d2b69cf",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -457,14 +457,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "OrganizationInvitationController의 초대 확인(30행)과 수락(38행), OrganizationPeopleController, SessionConsentController 오퍼레이션에 @ApiResponses가 없어 openapi.yaml이 성공 응답만 싣고, 실제로 OrganizationPeopleService와 인증 필터가 던지는 400, 401, 403, 404, 409 code가 빠졌다. backend README 103행과 202행도 공개 경로에 초대 확인과 수락을 빠뜨렸다. 정점도 같다. 경로별 실제 오류만 UserAccountController 꼴로 적고 README 점검 표대로 API 문서 절을 맞췄다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:30,38 @ 72e8718",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:43 @ 72e8718",
+        "backend/README.md:103,202 @ 72e8718",
+        "공개_경로인_초대_수락은_403_404_409_오류_code를_ErrorResponse로_문서화한다: 실패 AssertionFailedError: [403 응답 ...] expected: \"#/components/schemas/ErrorResponse\" but was: \"\""
+      ],
+      "commits": [
+        "d2b69cfdae61"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 공개_경로인_초대_수락은_403_404_409_오류_code를_ErrorResponse로_문서화한다, 소속_제거는_404와_409_오류_code를_ErrorResponse로_문서화한다: 고치기 전 실패, 고친 뒤 통과",
+        "OpenApiDocumentTest 21건, backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "사용자와 초대 API 오류 code 문서화",
+      "propagation_note": "23b1844 등 위층 커밋이 같은 컨트롤러에 environment 관련 변경을 했다면 반영 때 @ApiResponses 블록을 남긴다. openapi.yaml은 각 층 빌드가 다시 만든다."
     },
     {
       "id": "G-008",
@@ -7251,6 +7268,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.329s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7453,6 +7518,11 @@
       "branch": "feat/account-permissions",
       "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
       "at": "2026-10-28T18:43:26+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "d2b69cfdae6144d93c5060086445a3670444ef9b",
+      "at": "2026-10-28T18:58:23+09:00"
     }
   ],
   "usage_log": [],
