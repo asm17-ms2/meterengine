@@ -18,6 +18,7 @@ import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.UrlPathHelper;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
   static final String AUDITED_ATTRIBUTE = RequestAuditFilter.class.getName() + ".audited";
@@ -41,7 +42,12 @@ public class RequestAuditFilter extends OncePerRequestFilter {
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
-    return !request.getRequestURI().startsWith("/v1/");
+    return !isApiRequest(request);
+  }
+
+  // 퍼센트 인코딩한 경로도 MVC와 보안 설정처럼 디코딩한 경로로 /v1 요청인지 본다.
+  static boolean isApiRequest(HttpServletRequest request) {
+    return UrlPathHelper.defaultInstance.getPathWithinApplication(request).startsWith("/v1/");
   }
 
   @Override
