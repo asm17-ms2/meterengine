@@ -1,12 +1,12 @@
-미완료 206건, 결과: 끝 상태 122/328건 (fixed 80, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 47개(마지막 7842944)
+미완료 203건, 결과: 끝 상태 125/328건 (fixed 83, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 48개(마지막 4b992f3)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 80 | 1 | 7 | 31 | 3 | 21 |
+| #442 | 143 | 83 | 1 | 7 | 31 | 3 | 18 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -36,6 +36,7 @@ push: feat/account-permissions 47개(마지막 7842944)
 | X-032 | #442 | 32a3356 | 새 계정용 초대에서 현재 로그인 상태 안내 | a new-account invitation opened while signed in as someone else says who is signed in: 실패 Error: expect(locator).toContainText failed, Locator: getByRole('statu |
 | X-034 | #442 | b7e5d38 | 가입 신청 접수 안내 | signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
+| X-066 | #442 | 4b992f3 | 작업별 성공 안내 문구 | each workspace action that shows a toast says what it did: 실패 ERR_MODULE_NOT_FOUND workspace-action-feedback.ts |
 | X-084 | #442 | 7842944 | 초대, 동의 화면 보조 동작 access-actions 묶음 | 없음(보이는 변경: 이 층에는 access-actions 스타일이 없어 화면 차이가 없다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 간격은 #443 이상에서 ) |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
 | C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
@@ -161,6 +162,7 @@ push: feat/account-permissions 47개(마지막 7842944)
 | G-065 | #442 | 정점 transport.ts 111-112행 catch가 같은 글자라 그대로 옮겨진다. e5fca11(#451)과 a39db70(#454)이 근처 줄을 바꿨지만 겹치지 않는다. H2-S1(#453)의 옛 백엔드 조합 호환은 이 수정 밖이다. |
 | G-067 | #442 | CONSENT_VERSION 상수는 정점 0fe7d2a의 real e2e 여러 곳(aggregation, archive-filters, customer-payment-retry, environment-cycle, events 등 frontend/e2e/*.real.spec.ts)에서 가입 요청의 판으로 쓰인다. 상수를 없애거나 서버에서 받게 바꾸면 그 파일들도 같이 고쳐야 한다. 결제 수단 등록의 consent_document_version(CreateBillingKeyRequest, #445 이후)도 같은 방식으로 판을 그대로 받는다. |
 | X-061 | #442 | 정점 명세 people.real.spec.ts와 mvp.real.spec.ts는 링크를 getByRole('link', { name, exact: true })로 찾아 이름이 그대로라 영향이 없다. |
+| X-066 | #442 | 위층에서 더한 작업(결제, 웹훅, 고객 등)은 맵에 없어 '처리했습니다.'로 남는다. 각 층이 원하면 SUCCESS_MESSAGES에 문구를 더한다. #453 mvp.real.spec.ts 106행과 environment-cycle.real.spec.ts 72행은 updateSupplier라 영향이 없다. |
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
 | C442-017 | #442 | #442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다. |
 | C442-018 | #442 | #453 반영 때 integrations/page.tsx의 mode 필드는 #453 문구(environment === legacy 조건과 업무 환경 전환 안내)를 따른다. #443부터 #452까지는 이 커밋 문구가 맞다. |
