@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:26:56+09:00",
+  "updated_at": "2026-10-28T19:29:29+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "99fb104",
+    "feat/account-permissions": "7842944",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1009,14 +1009,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "초대 수락 화면의 '도입사 선택으로' 링크와 계정 동의 화면의 LogoutButton이 감싸는 요소 없이 제출 버튼 뒤에 붙어 있고, 도입사 선택 화면(organizations/page.tsx 14행)은 같은 보조 동작을 access-actions로 감싼다. 정점에서 #443 globals.css가 access-actions에 간격을 준다. 두 보조 동작을 같은 묶음으로 감쌌다. 체크박스 13px 부분은 D-232 커밋이 맞췄다.",
+      "evidence": [
+        "frontend/src/app/organization-invitations/[token]/page.tsx:32 @ 72e8718",
+        "frontend/src/app/account/consents/page.tsx:18 @ 72e8718",
+        "frontend/src/app/organizations/page.tsx:11 @ 72e8718",
+        "커밋 99fb1049d1c5"
+      ],
+      "commits": [
+        "7842944820ee"
+      ],
+      "tests": [
+        "보이는 변경: 이 층에는 access-actions 스타일이 없어 화면 차이가 없다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 간격은 #443 이상에서 보인다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same f671a4f",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "초대, 동의 화면 보조 동작 access-actions 묶음"
     },
     {
       "id": "X-095",
@@ -7673,6 +7688,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  32 passed (14.8s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.318s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7905,6 +7976,11 @@
       "branch": "feat/account-permissions",
       "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
       "at": "2026-10-28T19:24:45+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "7842944820ee6ed08c62a6b9f8aacf76d7dc4c2c",
+      "at": "2026-10-28T19:29:29+09:00"
     }
   ],
   "usage_log": [],

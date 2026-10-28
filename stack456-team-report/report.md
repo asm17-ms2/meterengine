@@ -1,12 +1,12 @@
-미완료 207건, 결과: 끝 상태 121/328건 (fixed 79, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 46개(마지막 99fb104)
+미완료 206건, 결과: 끝 상태 122/328건 (fixed 80, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 47개(마지막 7842944)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 79 | 1 | 7 | 31 | 3 | 22 |
+| #442 | 143 | 80 | 1 | 7 | 31 | 3 | 21 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -36,6 +36,7 @@ push: feat/account-permissions 46개(마지막 99fb104)
 | X-032 | #442 | 32a3356 | 새 계정용 초대에서 현재 로그인 상태 안내 | a new-account invitation opened while signed in as someone else says who is signed in: 실패 Error: expect(locator).toContainText failed, Locator: getByRole('statu |
 | X-034 | #442 | b7e5d38 | 가입 신청 접수 안내 | signup sends displayed consent versions without stale Bearer or a password-bearing follow-up: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
+| X-084 | #442 | 7842944 | 초대, 동의 화면 보조 동작 access-actions 묶음 | 없음(보이는 변경: 이 층에는 access-actions 스타일이 없어 화면 차이가 없다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 간격은 #443 이상에서 ) |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
 | C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
 | C442-018 | #442 | 3f74137 | 없는 업무 환경 전환 안내 제거 | 없음(보이는 변경(문구): 이 층에 환경 전환 요소가 없는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
