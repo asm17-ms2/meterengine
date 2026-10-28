@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T22:43:47+09:00",
+  "updated_at": "2026-10-28T22:45:57+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,7 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "8008c4430efbfec2791bf97b5ae9b675ad81b152"
+    "fix/s456-444-t-inho": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4102,28 +4102,37 @@
         "D-202"
       ],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-444-t-inho",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "#444 커밋 80a3ef1부터 OperationsService가 예약 작업 목록에 unbilled_usage_report를 넣어 돌려주고, 서비스 운영 현황(/admin)이 job_name 열을 WorkspaceView의 CellValue로 그린다. 층 head f3855f4의 JOB_LABELS(24행)에는 이 이름이 없어 39행의 JOB_LABELS[v] ?? v 분기에서 원시 코드만 나오고 보조 코드 표시도 비어 이 줄만 영어 코드로 보인다. 백엔드 작업 목록과 프론트 이름표가 갈라진 두 줄이 근거다. 반박을 위해 frontend 전체에서 unbilled_usage_report와 라벨을 찾았지만 없고, 넘길 때 head 뒤 WorkspaceView를 바꾼 커밋(ae1dc84, b84cf7a, 65fc925, eb3e1bc와 #442 반영 merge)도 JOB_LABELS는 건드리지 않았다. 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 같다. 묶인 D-202도 같은 원인이라 같은 끝 상태다.",
+      "reason": "#444 커밋 80a3ef1부터 OperationsService가 예약 작업 목록에 unbilled_usage_report를 넣어 돌려주고, 서비스 운영 현황(/admin)이 job_name 열을 WorkspaceView의 CellValue로 그린다. 층 head f3855f4의 JOB_LABELS(24행)에는 이 이름이 없어 39행의 JOB_LABELS[v] ?? v 분기에서 원시 코드만 나오고 보조 코드 표시도 비어 이 줄만 영어 코드로 보인다. 백엔드 작업 목록과 프론트 이름표가 갈라진 두 줄이 근거다. 반박을 위해 frontend 전체에서 unbilled_usage_report와 라벨을 찾았지만 없고, 넘길 때 head 뒤 WorkspaceView를 바꾼 커밋(ae1dc84, b84cf7a, 65fc925, eb3e1bc와 #442 반영 merge)도 JOB_LABELS는 건드리지 않았다. 정점 b8abfdf와 지금 origin/feat/rds-auto-stop 508beb5에서도 같다. 묶인 D-202도 같은 원인이라 같은 끝 상태다. JOB_LABELS에 unbilled_usage_report를 '과금 제외 사용량 통보'로 더하고(연동 설정의 통보 종류 이름과 같은 말), 운영 현황 API가 나열하는 작업마다 이름표가 있는지 보는 단위 시험을 더했다. 묶인 D-202도 같은 원인이다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:31-32 @ 178e19e",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:31-32 @ f3855f4",
         "frontend/src/components/workspace/WorkspaceView.tsx:24,39 @ f3855f4",
-        "frontend/src/app/admin/page.tsx:12 @ 178e19e",
+        "frontend/src/app/admin/page.tsx:12 @ f3855f4",
         "frontend/src/app/(console)/integrations/page.tsx:11 @ f3855f4",
         "커밋 80a3ef1",
         "frontend/src/components/workspace/WorkspaceView.tsx:23,38 @ b8abfdf",
         "frontend/src/components/workspace/WorkspaceView.tsx:24,39 @ 508beb5",
-        "frontend/src/components/workspace/WorkspaceView.tsx:23,38 @ 178e19e"
+        "every scheduled job the operations API lists has a label on the operations screen: 실패 unbilled_usage_report has no label in JOB_LABELS",
+        "커밋 ce5041c085a1d1da3a5350f929d6c3d8f35122bb"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ce5041c085a1d1da3a5350f929d6c3d8f35122bb"
+      ],
+      "tests": [
+        "node --test e2e/scheduled-job-labels.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "실화면 /admin을 evidence/D-226/before, after로 찍었다(작업 열 unbilled_usage_report에서 과금 제외 사용량 통보로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+        "top_sha": "0fe7d2a"
       },
-      "left": "판정 끝(178e19e), 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "same: 정점의 WorkspaceView.tsx JOB_LABELS에도 unbilled_usage_report가 없고 OperationsService 작업 목록은 같다",
+      "propagation_note": "새 시험 scheduled-job-labels.test.mjs는 OperationsService의 작업 목록과 WorkspaceView의 JOB_LABELS를 맞대 본다. #445부터 정점까지 작업 목록은 이 층과 같다. 반영 때 JOB_LABELS 줄이 충돌하면 unbilled_usage_report 항목을 남겨야 위층에서도 이 시험이 통과한다.",
+      "summary": "운영 현황 예약 작업 표가 과금 제외 사용량 통보 작업을 이름으로 보인다"
     },
     {
       "id": "G-144",
@@ -7422,6 +7431,66 @@
   "checks": [
     {
       "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "static",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 33 tests in 2.598s OK (skipped=10)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "55 passed (24.8s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.0s)"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 14 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
       "sha": "8008c4430efbfec2791bf97b5ae9b675ad81b152",
       "kind": "static",
       "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' 'deploy/grafana/provisioning/alerting/alerting.yml'",
@@ -9609,6 +9678,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "8008c4430efbfec2791bf97b5ae9b675ad81b152",
       "at": "2026-10-28T22:41:30+09:00"
+    },
+    {
+      "branch": "fix/s456-444-t-inho",
+      "sha": "ce5041c085a1d1da3a5350f929d6c3d8f35122bb",
+      "at": "2026-10-28T22:45:26+09:00"
     }
   ],
   "usage_log": [],
