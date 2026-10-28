@@ -506,6 +506,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
     await page.setViewportSize(viewport);
     await login(page);
     await expectTenantUrl(page, "/customers");
+    await expect(page.locator(".workspace-header")).toBeVisible();
     await expect.poll(() => page.evaluate(() => {
       const header = document.querySelector(".workspace-header")!.getBoundingClientRect().height;
       const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
@@ -573,7 +574,7 @@ test("the sidebar calls the integrations screen by its menu name", async ({ page
 test("the login side panel title is smaller than the task title", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/login");
-  const sizes = await page.evaluate(() => [document.querySelector(".auth-intro h2"), document.querySelector("main h1")].map(element => parseFloat(getComputedStyle(element!).fontSize)));
+  const sizes = await page.evaluate(() => [document.querySelector(".auth-intro-title"), document.querySelector("main h1")].map(element => parseFloat(getComputedStyle(element!).fontSize)));
   expect(sizes[0]).toBeLessThan(sizes[1]);
 });
 
