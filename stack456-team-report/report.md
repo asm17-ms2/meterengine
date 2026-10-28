@@ -1,8 +1,8 @@
-미완료 230건, 결과: 끝 상태 142/372건 (fixed 98, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a)
+미완료 229건, 결과: 끝 상태 143/372건 (fixed 99, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 1번(마지막 848ef3b)
 정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T23:25:52+09:00
+상태: running, 갱신 2026-10-28T23:28:54+09:00
 
 ## 층별 상태
 
@@ -10,7 +10,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | feat/pricing-aggregation | 50 | 0 | 0 | 3 | 4 | 3 | 40 |
+| #446 | fix/s456-446-t-inho | 50 | 1 | 0 | 3 | 4 | 3 | 39 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
@@ -117,6 +117,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-152 | #444 | 815f525 | backend README에 웹훅 발송과 암호화 키, 운영 현황을 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 값을 WebhookDeliveryRepository.java 21-22, 43, 71-75행(재시도 간격, 6회, 2분 선점, 종결 조건), WebhookDelive) |
 | U14-B1 | #444 | f67bc41 | 마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다 | 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0 |
 | U5-B1 | #444 | c0a9f4a | 하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다 | 없음(Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시) |
+| X-014 | #446 | 48fd833 | 사업자등록번호를 하이픈과 공백을 빼고 보내고 틀리면 우리말로 알린다 | a business registration number keeps only its ten digits and names the field when it is not ten digits: 실패 SyntaxError: does not provide an export named 'readBu |
 
 ## 정할 것
 
@@ -220,6 +221,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - G-152 (#444): 위층(#450 notification, #453 23b1844 CRYPTO_ENCRYPTION_KEY 표 행)이 같은 README의 구조 표와 설정 절을 바꿨다. 반영 때 구조 표의 webhook, dashboard 행이 겹치면 위층 행(webhook, notification 합친 행)을 남기고 이 층의 global.crypto 행과 의존 방향 문장을 더한다. 설정 절의 CRYPTO_ENCRYPTION_KEY는 위층 표 행과 이 층 문장을 하나로 합친다(위층은 토스 키와 빌링키, 이 층은 웹훅 비밀값과 secret_unavailable). #450부터는 meterengine.webhook.enabled=false가 미청구 통보 작업도 멈추는지 그 층 기준으로 맞춘다.
 - U14-B1 (#444): #453 23b1844가 WebhookDeliveryRepository.claim과 UPDATE 문에 environment_scope_id를 더했다. 반영 때 claim 앞의 lease_expired UPDATE는 expireLeases()로 옮긴 채 두고(환경 조건 없이 전역으로 끝내는 동작은 같다), 정점 deploy/README.md 495행의 경보 표 문장을 이 층 문장으로 맞춘다.
 - U5-B1 (#444): alerting.yml scheduled-job-missed-day 식과 meterengine-billing.json 마지막 성공 패널 식이 바뀐다. 위층에서 같은 줄이 충돌하면 max_over_time(...[26h]) 형태를 남긴다. 코드로 게이지를 다시 읽는 방안(ScheduledJobRunService)은 넣지 않았다.
+- X-014 (#446): workspace-actions.ts의 updateSupplier 줄과 settings/page.tsx 공급자 정보 필드는 위층에서 같은 내용이다. 반영 때 충돌하면 readBusinessRegistrationNumber 호출과 hint를 남긴다. 위층 mvp.real.spec.ts와 environment-cycle.real.spec.ts는 getByLabel(/^사업자등록번호/)와 숫자 10자리만 써서 영향이 없다.
 
 ## fixed-above로 둔 것
 
@@ -252,3 +254,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다.
 - 2026-10-28T21:55:14+09:00 #444 중간 push의 screen 검사(auth 실화면, 계약 명세)는 층에서 띄운 실화면 환경을 쓴다. 백엔드를 바꾼 커밋 뒤에는 backend-restart로 그 HEAD의 백엔드를 다시 띄우고, V__를 고친 커밋 뒤에는 DB부터 다시 만든다. Ck2-001 push(02b14f4)의 auth 실화면 검사는 de7565b에서 띄운 백엔드로 돌렸다(바뀐 곳은 웹훅 발송 헤더뿐이라 인증 화면과 관계없다).
 - 2026-10-28T23:03:41+09:00 #444 마지막 실화면 점검 통과: c0a9f4a에서 DB부터 새로 띄워 auth.real 3개 통과(뺀 시험 없음), 고친 화면 4건 증가 없음. #444에서 끝 상태가 없는 것은 G-144(T-inho brief대로 #450 차례에 고친다)뿐이다.
+- 2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 정점 origin/feat/rds-auto-stop은 이 재시작 뒤 줄곧 8dd028a였다.

@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:25:52+09:00",
+  "updated_at": "2026-10-28T23:28:54+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -23,7 +23,8 @@
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
-    "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2"
+    "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
+    "fix/s456-446-t-inho": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3176,7 +3177,7 @@
       "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점 origin/feat/rds-auto-stop의 WebhookClient.java가 이 층과 같다(위층 커밋 없음)",
@@ -3211,7 +3212,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점 WebhookEndpointService의 create와 update도 @Transactional 안에서 validate를 부른다. 같은 파일을 바꾼 위층 커밋은 #447 2ec5d85",
@@ -3251,7 +3252,7 @@
       "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 WebhookDeliveryService, WebhookDeliveryConfig에도 적체 지표가 없다. 같은 파일을 바꾼 위층 커밋은 #453 23b1844(environment_scope_id)",
@@ -3287,7 +3288,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점 WebhookClient.java도 예외를 버린다(위층 커밋 없음)",
@@ -3431,7 +3432,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -3464,7 +3465,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -3496,7 +3497,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -3528,7 +3529,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -3561,7 +3562,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -3712,7 +3713,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 V28에도 이 색인이 없고 V48은 (organization_id, environment_scope_id, id) 유일 제약만 더했다. V28을 바꾼 위층 커밋은 없다",
@@ -3752,7 +3753,7 @@
       "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 두 요청 DTO도 @Size(max = 20)뿐이다(이 파일을 바꾼 위층 커밋 없음)",
@@ -3900,7 +3901,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점 SecretMask.java도 lastFour다(이 파일을 바꾼 위층 커밋 없음)",
@@ -4015,7 +4016,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -4049,7 +4050,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 integrations/[id]/page.tsx도 원시 type, failure_reason과 공용 상태 문구를 쓴다(이 파일을 바꾼 위층 커밋은 #447 보관 화면 반영뿐이고 표 열은 같다)",
@@ -4089,7 +4090,7 @@
       "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 workspace-actions.ts 72행과 integrations/[id]/page.tsx 22행도 description을 보내지 않는다",
@@ -4127,7 +4128,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 WorkspaceView.tsx JOB_LABELS에도 unbilled_usage_report가 없고 OperationsService 작업 목록은 같다",
@@ -4226,7 +4227,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": false,
       "top_head": "same: 정점 backend/README.md는 구조 표에 webhook, notification, dashboard 행(261, 262행)과 CRYPTO_ENCRYPTION_KEY 행(304행)을 위층에서 더했지만 재시도 간격, 종결 조건, meterengine.webhook.enabled 범위, User-Agent, 기록 표 수정 금지 트리거는 정점에도 없다",
@@ -4263,7 +4264,7 @@
       "behavior_change": true,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": true,
       "top_head": "same: 정점의 WebhookDeliveryRepository.claim(32-34행)도 lease_expired 건수를 버리고 deploy/README.md 495행이 같은 문장이다. 같은 파일을 바꾼 위층 커밋은 #453 23b1844",
@@ -4301,7 +4302,7 @@
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
-        "top_sha": "0fe7d2a"
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
       },
       "fails_without_fix": false,
       "top_head": "same: 정점 alerting.yml의 scheduled-job-missed-day 식도 max_over_time 없이 남은 시리즈만 본다. 같은 파일을 바꾼 위층 커밋은 경보 규칙 추가(#445 결제 규칙 등)",
@@ -4312,15 +4313,42 @@
       "id": "X-014",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "재현 경로를 줄 단위로 따라가면 막는 곳이 없다. 사업자등록번호 입력에는 placeholder \"하이픈 없이 10자리\"만 있고(settings/page.tsx:23), ActionPanel submit은 isMultiple 필드만 검사하며(ActionPanel.tsx:73-82), 서버 액션은 text()로 trim만 해 \"123-45-67890\"을 그대로 PUT한다(workspace-actions.ts:14-17, 66). 백엔드 UpdateSupplierRequest의 message 없는 @Pattern(regexp = \"[0-9]{10}\")이 실패하고 GlobalExceptionHandler가 기본 메시지를 그대로 fieldErrors로 내리며(로캘은 ko 고정이라 '\"[0-9]{10}\"와 일치해야 합니다'), workspace-actions.ts:91을 거쳐 ActionPanel.tsx:105 요약과 130 필드 아래에 정규식 원문이 뜨고 저장되지 않는다. 피해 관점에서는 보안 문제나 데이터 손상은 없고(@Pattern과 V37 CHECK가 잘못된 값을 막는다) 공급자 정보 저장이 막혀 청구 준비가 늦어지는 UX 문제라 앞선 판정처럼 medium이 맞다. 이 placeholder와 @Pattern은 614d3bc4에서 들어왔고 feat/billing-payments에는 없어 #446 몫이며, 정점 8dd028a에서도 코드가 같다. 업무 액션이 사업자등록번호에서 하이픈과 공백을 빼고 숫자 10자리인지 먼저 보고(아니면 그 필드에 우리말 오류), placeholder 대신 필드 안내를 두었다. 백엔드 @Pattern 메시지와 DTO는 바꾸지 않았다.",
+      "evidence": [
+        "frontend/src/app/(console)/settings/page.tsx:23 @ da90aac",
+        "frontend/src/components/workspace/ActionPanel.tsx:73-82 @ da90aac",
+        "frontend/src/app/(console)/workspace-actions.ts:14-17 @ da90aac",
+        "frontend/src/app/(console)/workspace-actions.ts:66 @ da90aac",
+        "backend/src/main/java/com/meterengine/organization/dto/UpdateSupplierRequest.java:11 @ da90aac",
+        "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:77-83 @ da90aac",
+        "backend/src/main/resources/application.properties:35-36 @ da90aac",
+        "frontend/src/app/(console)/workspace-actions.ts:91 @ da90aac",
+        "frontend/src/components/workspace/ActionPanel.tsx:105,130 @ da90aac",
+        "frontend/src/app/(console)/settings/page.tsx:28 @ 8dd028a",
+        "frontend/src/app/(console)/workspace-actions.ts:81 @ 8dd028a",
+        "a business registration number keeps only its ten digits and names the field when it is not ten digits: 실패 SyntaxError: does not provide an export named 'readBusinessRegistrationNumber'",
+        "커밋 48fd83302b69ba750c06ad82af8eb5fd80af1aba"
+      ],
+      "commits": [
+        "48fd83302b69ba750c06ad82af8eb5fd80af1aba"
+      ],
+      "tests": [
+        "node --test e2e/workspace-action-feedback.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "실화면(da90aac 백엔드)에서 /settings 공급자 정보에 123-45-67890을 넣고 저장하면 처리되고 다시 열었을 때 1234567890으로 저장된 것을 보았다(.s456-work/probe-x014.mjs)",
+        "/settings를 evidence/X-014/before, after로 찍었다(placeholder '하이픈 없이 10자리'에서 필드 안내로). axe, 콘솔 오류, 가로 넘침은 늘지 않았다"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 settings/page.tsx 28행과 workspace-actions.ts 81행도 placeholder뿐이고 trim만 해서 보낸다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), 03574b9(#447), e5fca11(#451), 23b1844(#453)",
+      "propagation_note": "workspace-actions.ts의 updateSupplier 줄과 settings/page.tsx 공급자 정보 필드는 위층에서 같은 내용이다. 반영 때 충돌하면 readBusinessRegistrationNumber 호출과 hint를 남긴다. 위층 mvp.real.spec.ts와 environment-cycle.real.spec.ts는 getByLabel(/^사업자등록번호/)와 숫자 10자리만 써서 영향이 없다.",
+      "summary": "사업자등록번호를 하이픈과 공백을 빼고 보내고 틀리면 우리말로 알린다"
     },
     {
       "id": "D-040",
@@ -7593,6 +7621,44 @@
   ],
   "checks": [
     {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "58 passed (26.7s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (8.4s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 23 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
       "branch": "fix/s456-444-t-inho",
       "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
       "kind": "screen",
@@ -10049,6 +10115,11 @@
       "branch": "fix/s456-444-t-inho",
       "sha": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
       "at": "2026-10-28T23:00:20+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
+      "at": "2026-10-28T23:27:31+09:00"
     }
   ],
   "usage_log": [],
@@ -10071,11 +10142,13 @@
     "2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다.",
     "2026-10-28T21:49:39+09:00 #444 판정: 판정 Workflow(29 에이전트, f3855f4 기준) 결과를 메인 세션이 178e19e에서 다시 대조해 적었다. #443 수정(e26db2c, 18be9f0)이 178e19e로 들어와 D-188, D-093, D-234, X-041은 not-owner 대신 already-fixed가 됐다. Ck2-005와 Ck2-010은 같은 원인인데 판정이 갈려, 박성종 님이 정한 failed_webhook_count 의미를 바꾸는 일이라 둘 다 needs-decision으로 맞췄다. Ck2-013은 판정 에이전트가 needs-decision을 권했지만 #444에서 바뀌는 파일이 SecretMask.java 하나라 6절 유지보수 기준대로 고치고 #445 호출부는 propagation_note에 적는다.",
     "2026-10-28T21:55:14+09:00 #444 중간 push의 screen 검사(auth 실화면, 계약 명세)는 층에서 띄운 실화면 환경을 쓴다. 백엔드를 바꾼 커밋 뒤에는 backend-restart로 그 HEAD의 백엔드를 다시 띄우고, V__를 고친 커밋 뒤에는 DB부터 다시 만든다. Ck2-001 push(02b14f4)의 auth 실화면 검사는 de7565b에서 띄운 백엔드로 돌렸다(바뀐 곳은 웹훅 발송 헤더뿐이라 인증 화면과 관계없다).",
-    "2026-10-28T23:03:41+09:00 #444 마지막 실화면 점검 통과: c0a9f4a에서 DB부터 새로 띄워 auth.real 3개 통과(뺀 시험 없음), 고친 화면 4건 증가 없음. #444에서 끝 상태가 없는 것은 G-144(T-inho brief대로 #450 차례에 고친다)뿐이다."
+    "2026-10-28T23:03:41+09:00 #444 마지막 실화면 점검 통과: c0a9f4a에서 DB부터 새로 띄워 auth.real 3개 통과(뺀 시험 없음), 고친 화면 4건 증가 없음. #444에서 끝 상태가 없는 것은 G-144(T-inho brief대로 #450 차례에 고친다)뿐이다.",
+    "2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 정점 origin/feat/rds-auto-stop은 이 재시작 뒤 줄곧 8dd028a였다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
-    "444": "https://github.com/asm17-ms2/meterengine/pull/466"
+    "444": "https://github.com/asm17-ms2/meterengine/pull/466",
+    "446": "https://github.com/asm17-ms2/meterengine/pull/468"
   },
   "final_checks": [
     {
