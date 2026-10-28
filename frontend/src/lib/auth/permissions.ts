@@ -1,6 +1,8 @@
 export type AccessScope = "read" | "ingest" | "admin";
 export type OrganizationRole = "owner" | "admin" | "member";
 
+export const ORGANIZATION_ROLE_LABELS: Record<OrganizationRole, string> = { owner: "대표관리자", admin: "관리자", member: "일반 사용자" };
+
 export const ACCESS_SCOPE_OPTIONS = [
   { value: "read", label: "조회 (read): 고객, 사용량과 청구 내역" },
   { value: "ingest", label: "수집 (ingest): 고객 등록과 사용량 이벤트 전송" },
