@@ -3362,14 +3362,20 @@ paths:
       - payment-setting-controller
   /v1/price-plans:
     get:
+      description: |
+        customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
+        month를 주면 그 달에 적용되는 버전만, 생략하면 모든 버전 이력을 돌려준다. 시작 월 내림차순이다.
       operationId: listPricePlans
       parameters:
-      - in: query
+      - description: "이 달(yyyy-MM, KST)에 적용되는 버전만 고른다. 생략하면 모든 버전 이력이다."
+        example: 2026-08
+        in: query
         name: month
         required: false
         schema:
           type: string
-      - in: query
+      - description: 이 고객의 요금제만 고른다. 생략하면 도입사 공통 요금제만 나온다.
+        in: query
         name: customer_id
         required: false
         schema:
@@ -3381,7 +3387,14 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListPricePlansResponse"
-          description: OK
+          description: 요금제 버전 목록. 조건에 맞는 것이 없으면 price_plans가 빈 배열이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이\
+            \ 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
         "401":
           content:
             application/json:
@@ -3399,6 +3412,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: customer_id가 가리키는 고객이 이 도입사에 없다"
         "429":
           content:
             application/json:
