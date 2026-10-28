@@ -258,3 +258,16 @@ test("with reduced motion a workspace dialog becomes visible and closing it rele
   await trigger.click();
   await expect(page.getByRole("dialog")).toHaveCount(1);
 });
+
+test("the sidebar fits a short screen and scrolls by itself so its last link stays visible", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const sidebar = page.locator(".workspace-sidebar");
+  const sidebarBox = (await sidebar.boundingBox())!;
+  expect(sidebarBox.y + sidebarBox.height).toBeLessThanOrEqual(720);
+  const lastLink = sidebar.locator(".workspace-sidebar-note a").first();
+  await lastLink.focus();
+  const linkBox = (await lastLink.boundingBox())!;
+  expect(linkBox.y + linkBox.height).toBeLessThanOrEqual(720);
+});

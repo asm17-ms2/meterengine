@@ -124,7 +124,7 @@ p { line-height: 1.7; }
 .workspace-divider { width: 1px; height: 22px; background: #dce1eb; }
 .organization-link { display: flex; gap: 12px; align-items: center; text-decoration: none; color: #202b40; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-user { font-size: 13px; }
-.workspace-sidebar { background: #fff; border-right: 1px solid #dce1eb; padding-top: 28px; position: sticky; top: 68px; align-self: start; min-height: calc(100dvh - 68px); display: flex; flex-direction: column; }
+.workspace-sidebar { background: #fff; border-right: 1px solid #dce1eb; padding-top: 28px; position: sticky; top: var(--workspace-header-height); align-self: start; box-sizing: border-box; height: calc(100dvh - var(--workspace-header-height)); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
 .workspace-sidebar-label { padding: 0 24px 20px; font-size: 11px; font-weight: 750; color: #78839a; letter-spacing: .12em; }
 .workspace-sidebar .ant-menu { border: 0 !important; }
 .workspace-sidebar .ant-menu-item-group-title { padding-left: 24px; font-size: 11px; margin-top: 10px; }
