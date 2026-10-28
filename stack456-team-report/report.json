@@ -1,8 +1,8 @@
 {
   "package": "T-inho",
   "owner": "문인호",
-  "status": "running",
-  "updated_at": "2026-10-29T01:22:04+09:00",
+  "status": "stopped",
+  "updated_at": "2026-10-29T01:28:36+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -8246,9 +8246,49 @@
         "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2"
       },
       "question": "감사 조회 API에 'API 요청 제외'를 고르는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면의 기본 보기를 변경 기록으로 할지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다."
+    },
+    {
+      "id": "NT-inho-005",
+      "merged_ids": [],
+      "layer": 448,
+      "branch": "feat/request-audit",
+      "status": "open",
+      "verdict": "not-judged",
+      "title": "#448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다",
+      "reason": "#448 마지막 실화면 점검에서 archive-filters.real.spec.ts의 '고객 검색어와 월을 유지하며 세 관리 상태 조회' 단계가 getByRole('combobox', { name: '관리 상태' })를 찾지 못해 실패했다. cea0a76(이 패키지 수정 뒤), 6431cef(바꾸지 않은 head), bc7e538(넘길 때 head) 모두 같은 실패다. bc7e538의 customers/page.tsx는 '관리 상태'를 표의 열로만 그리고 선택 필터가 없어, 명세가 위층에서 생기는 화면을 기대하는 것으로 보인다(정점 0fe7d2a에서는 명세 12개가 모두 통과했다고 common-brief 11절에 적혀 있다). 이 패키지 담당이 아닌 스택 분할 문제일 수 있어 판정하지 않고 조율 담당에게 넘긴다.",
+      "evidence": [
+        "frontend/e2e/archive-filters.real.spec.ts:154-158 @ bc7e538",
+        "frontend/src/app/(console)/customers/page.tsx:19 @ bc7e538",
+        "archive-filters 보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다: 실패 '관리 상태' combobox element(s) not found (cea0a76, 6431cef, bc7e538)"
+      ],
+      "commits": [],
+      "tests": [
+        "cea0a76, 6431cef, bc7e538 각각 DB부터 새로 띄워 archive-filters.real.spec.ts를 돌렸다"
+      ],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2"
+      },
+      "left": "12절로 멈춤. 조율 담당이 명세를 그 층에 맞추거나(관리 상태 선택 필터가 생기는 층으로 옮기기) 이 층에서 빼도록 정하면, #448 마지막 실화면 점검을 cea0a76(또는 그 뒤 마지막 push)에서 다시 한다"
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "마지막 실화면 점검: 2 passed, DB부터 새로 띄움; 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-448-t-inho",
+      "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts archive-filters.real.spec.ts",
+      "result": "fail",
+      "detail": "마지막 실화면 점검: 1 failed, '고객 검색어와 월을 유지하며 세 관리 상태 조회'에서 '관리 상태' combobox 없음. 바꾸지 않은 6431cef와 넘길 때 head bc7e538에서도 같은 실패"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
@@ -11620,7 +11660,8 @@
     "2026-10-29T00:15:14+09:00 #446 demo 검사: 10절 표가 pnpm 검사를 #447부터로 적어, #446에서는 demo kind를 python3 -m unittest discover로 돌린다. 이 층 demo/package.json에는 build 스크립트가 없어 e4da2fa에서 pnpm -r build가 실패했다(이 변경과 무관, 기록은 checks에 fail로 남김). 같은 커밋에서 corepack pnpm -r --if-present typecheck, lint, test는 모두 통과했다.",
     "2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.",
     "2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.",
-    "2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다."
+    "2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다.",
+    "2026-10-29T01:27:30+09:00 12절로 전체를 멈췄다: #448 마지막 실화면 점검에서 archive-filters.real.spec.ts가 실패했고, 바꾸지 않은 head 6431cef와 넘길 때 head bc7e538에서도 같은 단계에서 같은 실패였다(NT-inho-005). #448 항목은 모두 끝 상태이고(fixed 10, needs-decision 5, already-fixed 1, refuted 1), 고친 커밋은 fix/s456-448-t-inho(PR #469)에 모두 push했다. #446은 동기화 충돌(C446-001)로 남은 24건이 열려 있다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
@@ -11642,6 +11683,13 @@
       "passed": 1,
       "total": 1,
       "screens": "고친 화면 4건 after 대비 콘솔 오류, 넘침, axe 증가 없음"
+    },
+    {
+      "layer": 448,
+      "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
+      "passed": 1,
+      "total": 2,
+      "screens": "명세 실패로 멈춰 화면 비교는 돌리지 않음"
     }
   ],
   "usage_note": "사용량 도구가 없어 수치를 남기지 못했다(사람이 /usage로 지켜본다). #443 한 층에 판정 Workflow 1회(에이전트 44개, 하위 에이전트 토큰 약 406만)와 커밋 33개 각각의 10절 검사, 마지막 실화면 점검을 썼다. 남은 7개 층은 항목이 280건이라 #443과 비슷한 비율이면 이보다 약 3배가 더 든다고 본다(추정).",

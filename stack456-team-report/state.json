@@ -1,10 +1,15 @@
 {
   "package": "T-inho",
-  "status": "running",
-  "updated_at": "2026-10-29T01:22:04+09:00",
+  "status": "stopped",
+  "updated_at": "2026-10-29T01:28:36+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": null,
-  "resume_hint": null,
+  "stop_reason": "final-live-check-failure: #448 archive-filters.real.spec.ts가 cea0a76, 바꾸지 않은 6431cef, 넘길 때 head bc7e538에서 모두 같은 단계(고객 관리 상태 선택 필터)로 실패한다. 이 패키지 탓이 아니라 15절 5번대로 멈춘다(NT-inho-005)",
+  "resume_hint": {
+    "last_finished_id": "X-045",
+    "in_progress": "#448 마지막 실화면 점검(cea0a76): auth 2개 통과, archive-filters 실패로 멈춤(NT-inho-005). #446은 동기화 충돌(C446-001, evidence/sync-conflict/446, 로컬 커밋 e4da2fa)로 남은 24건이 열려 있고 판정 결과는 .s456-work/judge/446/results.json에 있다. #450 G-144는 #450 차례에 고친다.",
+    "next_command": "조율 담당이 NT-inho-005(archive-filters 명세의 층)와 #446 동기화 충돌(PR #468의 OpenApiDocumentTest.java, auth.contract.spec.ts, patch 0001)을 정해 반영한 뒤 같은 붙여 넣기 글로 다시 시작한다. 시작하면 git fetch origin, #448 마지막 push sha에서 15절 마지막 실화면 점검을 다시 하고(통과하면 #448 끝), #446으로 돌아가 9절 patch-id 확인과 남은 24건을 고친 뒤 #450으로 간다",
+    "reset_at": null
+  },
   "current": {
     "id": "X-045",
     "step": "check",
@@ -428,13 +433,9 @@
     }
   },
   "live_env": {
-    "running": true,
-    "layer": 448,
-    "pids": [
-      7729,
-      5687,
-      12601
-    ],
-    "container": "meterengine-0696-e2e"
+    "running": false,
+    "layer": null,
+    "pids": [],
+    "container": null
   }
 }
