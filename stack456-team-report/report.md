@@ -1,15 +1,15 @@
-미완료 249건, 결과: 끝 상태 123/372건 (fixed 90, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 9번(마지막 40089ce)
+미완료 247건, 결과: 끝 상태 125/372건 (fixed 92, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 10번(마지막 8008c44)
 정할 것: 29건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T22:39:51+09:00
+상태: running, 갱신 2026-10-28T22:41:41+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 15 | 0 | 4 | 11 | 1 | 9 |
+| #444 | fix/s456-444-t-inho | 40 | 17 | 0 | 4 | 11 | 1 | 7 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -112,6 +112,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 9번(마
 | Ck2-013 | #444 | 40089ce | SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다 | SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다) |
 | D-035 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-157 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
+| C444-008 | #444 | 8008c44 | 콘솔에서 웹훅 수신 주소를 수정해도 기존 설명을 지우지 않는다 | saving a webhook endpoint keeps its existing description: 실패 Expected "운영 알림 수신기" Received "설명 없이 보냄" (PUT 본문에 description이 없다) |
 
 ## 정할 것
 
@@ -203,6 +204,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 9번(마
 - Ck2-006 (#444): #453부터 findByEndpoint와 countByEndpoint가 environment_scope_id 조건을 더한다(V48, 조율 담당 몫 파일). 이 색인의 앞부분(organization_id, webhook_endpoint_id)으로 범위를 좁힌 뒤 environment_scope_id는 걸러 읽는다. 환경까지 넣은 색인이 필요하면 V48 쪽 결정으로 넘긴다. V28 체크섬이 바뀌어 이 파일을 적용한 로컬 볼륨은 다시 만들어야 기동한다.
 - Ck2-008 (#444): openapi.yaml의 CreateWebhookEndpointRequest, UpdateWebhookEndpointRequest event_types에 enum과 minItems 1이 생긴다. 위층 반영 때 openapi.yaml이 충돌하면 그 층에서 ./gradlew build로 다시 만든다.
 - Ck2-013 (#444): 이름을 바꿔 위층 반영 merge 뒤 #445부터 컴파일이 깨진다. 반영 때 #445 f382376의 TossPaymentsBilling.java 13행, UpdateTossPaymentsCredentialRequest.java 26행, BillingKeyService.java의 SecretMask.lastFour 두 곳(정점 230, 248행)을 SecretMask.mask로 바꾼다. 동작은 같다.
+- C444-008 (#444): workspace-actions.ts의 updateWebhookEndpoint 줄은 위층(#451 X-050, X-093이 보는 같은 파일)에서도 같은 내용이다. 반영 때 그 줄이 충돌하면 description 필드를 남긴다. integrations/[id]/page.tsx 수정 폼의 숨은 description 필드도 같다.
 
 ## fixed-above로 둔 것
 
