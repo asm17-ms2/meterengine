@@ -31,7 +31,7 @@ export function useGuideMode() {
 
 export function GuideModeToggle() {
   const { isGuideMode, setGuideMode } = useGuideMode();
-  return <Button aria-pressed={isGuideMode} onClick={() => setGuideMode(!isGuideMode)}>{isGuideMode ? "업무 화면으로" : "시연 안내 보기"}</Button>;
+  return <Button onClick={() => setGuideMode(!isGuideMode)}>{isGuideMode ? "업무 화면으로" : "시연 안내 보기"}</Button>;
 }
 
 export function GuideOnly({ children }: { children: React.ReactNode }) {

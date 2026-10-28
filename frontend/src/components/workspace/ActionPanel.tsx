@@ -78,7 +78,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     const data = new FormData(event.currentTarget);
     const nextErrors: Record<string, string> = {};
     for (const field of fields) {
-      if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = `${field.label}을 하나 이상 선택하세요.`;
+      if (field.isMultiple && !field.isOptional && data.getAll(field.name).length === 0) nextErrors[field.name] = "하나 이상 선택하세요.";
     }
     setClientErrors(nextErrors);
     if (Object.keys(nextErrors).length) { requestAnimationFrame(() => summaryRef.current?.focus()); return; }
@@ -108,7 +108,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {description && <p className="muted">{description}</p>}
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
     {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
-    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer">{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
+    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{state.registrationLabel ? "한 번 사용할 수 있는 초대 링크입니다. 닫기 전에 복사하고 초대할 사람에게 안전하게 전달하세요." : "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? "카드 등록 링크"} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열립니다.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? "카드 등록 링크"} 복사</Button></div>}
     <div role="status">{copyResult && <p className="field-hint">{copyResult}</p>}</div>
     <fieldset disabled={isPending || isLocked}>
       {fields.map(field => {
@@ -140,7 +140,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {isInline && submitButton}
   </form>;
   if (isInline) return form;
-  return <Modal title={title} open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: "4px 4px 4px 0" } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button>{submitButton}</div>} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>{form}</Modal>;
+  return <Modal title={title} open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button>{submitButton}</div>} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>{form}</Modal>;
 }
 
 export function ActionPanel(props: ActionPanelProps) {
