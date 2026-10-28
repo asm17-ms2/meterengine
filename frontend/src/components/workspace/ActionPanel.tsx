@@ -29,7 +29,7 @@ export type WorkspaceField = {
 
 export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean };
 
-function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: () => void; onNewRequest?: () => void }) {
+function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: (isConfirmedFailure?: boolean) => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
   const tenantAccess = useTenantAccess();
   const [mutationScope] = useState(() => ({ organizationId: tenantAccess?.organizationId ?? "" }));
@@ -86,7 +86,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     if (isPending) return;
     if (isDirty && !window.confirm("작성 중인 내용을 버리고 닫을까요?")) return;
     if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없습니다. 복사하지 않고 닫을까요?")) return;
-    onClose?.();
+    onClose?.(Boolean(state.isConfirmedFailure));
   }
 
   async function copy(value: string) {
@@ -149,6 +149,6 @@ export function ActionPanel(props: ActionPanelProps) {
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
     <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={() => { setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
+    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }
