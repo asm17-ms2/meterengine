@@ -68,7 +68,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
         [필수] 위 자동결제 안내를 확인하고 카드 등록에 동의합니다.
       </Checkbox>
     </fieldset>
-    {errorMessage && <div role="alert"><Alert type="error" showIcon title={errorMessage} /></div>}
+    {errorMessage && <Alert type="error" showIcon title={errorMessage} />}
     <Button type="primary" size="large" block disabled={!hasConsent || !isSdkReady} loading={isSubmitting} onClick={registerCard}>
       토스에서 카드 등록하기
     </Button>
