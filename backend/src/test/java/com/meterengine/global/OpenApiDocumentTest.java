@@ -251,6 +251,121 @@ class OpenApiDocumentTest {
     assertErrorResponse(responses, "409", "code=last_owner_required");
   }
 
+  @Test
+  void 보관한_자원을_쓰는_경로는_409_보관_code를_ErrorResponse로_문서화한다() {
+    JsonNode paths = root().path("paths");
+
+    assertErrorResponse(
+        paths.path("/v1/events").path("post").path("responses"), "409", "code=customer_archived");
+    assertErrorResponse(
+        paths.path("/v1/customers/{id}").path("put").path("responses"),
+        "409",
+        "code=customer_archived");
+    assertErrorResponse(
+        paths.path("/v1/billable-metrics/{code}").path("put").path("responses"),
+        "409",
+        "code=resource_archived");
+    assertErrorResponse(
+        paths.path("/v1/billable-metrics/{code}/price-rates").path("post").path("responses"),
+        "409",
+        "code=resource_archived",
+        "code=customer_archived",
+        "code=archive_restoration_conflict");
+    assertErrorResponse(
+        paths
+            .path("/v1/billable-metrics/{code}/price-rates/{id}/restorations")
+            .path("post")
+            .path("responses"),
+        "409",
+        "code=archive_restoration_conflict");
+    assertErrorResponse(
+        paths.path("/v1/price-plans").path("post").path("responses"),
+        "409",
+        "code=customer_archived",
+        "code=archive_restoration_conflict");
+    assertErrorResponse(
+        paths.path("/v1/price-plans/{id}/restorations").path("post").path("responses"),
+        "409",
+        "code=archive_restoration_conflict");
+    assertErrorResponse(
+        paths.path("/v1/webhook-endpoints/{id}").path("put").path("responses"),
+        "409",
+        "code=resource_archived");
+    assertErrorResponse(
+        paths
+            .path("/v1/customers/{id}/payment-method-registrations")
+            .path("post")
+            .path("responses"),
+        "409",
+        "code=customer_archived");
+    assertErrorResponse(
+        paths.path("/v1/payment-method-registrations/{token}").path("get").path("responses"),
+        "409",
+        "code=customer_archived");
+    assertErrorResponse(
+        paths
+            .path("/v1/payment-method-registrations/{token}/billing-keys")
+            .path("post")
+            .path("responses"),
+        "409",
+        "code=customer_archived");
+  }
+
+  @Test
+  void 보관과_복원_경로는_없는_대상의_404_code를_ErrorResponse로_문서화한다() {
+    JsonNode paths = root().path("paths");
+
+    for (String method : List.of("get", "delete")) {
+      assertErrorResponse(
+          paths.path("/v1/customers/{id}").path(method).path("responses"),
+          "404",
+          "code=customer_not_found");
+    }
+    assertErrorResponse(
+        paths.path("/v1/customers/{id}/restorations").path("post").path("responses"),
+        "404",
+        "code=customer_not_found");
+    assertErrorResponse(
+        paths.path("/v1/billable-metrics/{code}").path("delete").path("responses"),
+        "404",
+        "code=billable_metric_not_found");
+    assertErrorResponse(
+        paths.path("/v1/billable-metrics/{code}/restorations").path("post").path("responses"),
+        "404",
+        "code=billable_metric_not_found");
+    assertErrorResponse(
+        paths
+            .path("/v1/billable-metrics/{code}/price-rates/{id}/restorations")
+            .path("post")
+            .path("responses"),
+        "404",
+        "code=price_rate_not_found");
+    assertErrorResponse(
+        paths.path("/v1/price-plans/{id}/restorations").path("post").path("responses"),
+        "404",
+        "code=price_plan_not_found");
+  }
+
+  @Test
+  void 보관_경로의_설명은_지우거나_숨긴다고_하지_않는다() {
+    JsonNode paths = root().path("paths");
+    JsonNode webhookDelete = paths.path("/v1/webhook-endpoints/{id}").path("delete");
+
+    assertThat(
+            paths
+                .path("/v1/billable-metrics/{code}/price-rates")
+                .path("delete")
+                .path("responses")
+                .path("204")
+                .path("description")
+                .asText())
+        .isEqualTo("보관했다. 본문 없음");
+    assertThat(webhookDelete.path("summary").asText()).isEqualTo("웹훅 엔드포인트 보관");
+    assertThat(webhookDelete.path("description").asText())
+        .contains("status=archived")
+        .doesNotContain("숨긴다");
+  }
+
   // ---------------------------------------------------------------------------
   // 손으로 잡아 준 스키마
   // ---------------------------------------------------------------------------

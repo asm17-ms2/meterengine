@@ -94,6 +94,16 @@ public class CustomerController {
   @GetMapping("/{id}")
   @ReadAccess
   @Operation(summary = "고객 조회")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "고객"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: 그런 고객이 없다")
+  })
   public CustomerResponse getCustomer(
       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     return CustomerResponse.from(customerService.get(organizationId, id));
@@ -124,7 +134,14 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 그런 고객이 없다")
+        description = "code=customer_not_found: 그런 고객이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다")
   })
   public CustomerResponse updateCustomer(
       @CurrentOrganizationId UUID organizationId,
@@ -137,6 +154,16 @@ public class CustomerController {
   @PostMapping("/{id}/restorations")
   @AdminAccess
   @Operation(summary = "고객 복원")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "복원한 고객. 보관하지 않은 고객이면 그대로 돌려준다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: 그런 고객이 없다")
+  })
   public CustomerResponse restoreCustomer(
       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     return CustomerResponse.from(customerService.restore(organizationId, id));
@@ -148,6 +175,16 @@ public class CustomerController {
   @Operation(
       summary = "고객 보관",
       description = "새 수집과 신규 등록을 중단한다. 기존 이벤트, 청구, 결제 이력은 유지한다. 반복 요청은 204다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: 그런 고객이 없다")
+  })
   public void deleteCustomer(@CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     customerService.delete(organizationId, id);
   }

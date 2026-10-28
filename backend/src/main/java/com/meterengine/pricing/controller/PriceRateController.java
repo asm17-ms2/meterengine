@@ -69,7 +69,20 @@ public class PriceRateController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=resource_archived: 보관한 미터다. 미터를 복원한 뒤 등록한다.
+            code=price_rate_history_immutable: effective_from이 이번 달보다 앞이다.
+            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
+            code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
+            """)
   })
   public PriceRateResponse createPriceRate(
       @CurrentOrganizationId UUID organizationId,
@@ -89,7 +102,7 @@ public class PriceRateController {
           빈 객체 {}는 기본 단가다. 현재 월 계산과 버전 이력, 미래 예약은 유지한다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
+    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -146,6 +159,24 @@ public class PriceRateController {
   @Operation(
       summary = "단가 버전 복원",
       description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "복원한 단가 버전. 보관하지 않은 버전이면 그대로 돌려준다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 보관하지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다")
+  })
   public PriceRateResponse restorePriceRate(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,

@@ -65,7 +65,11 @@ public class PaymentMethodRegistrationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다")
+        description =
+            """
+            code=customer_archived: 보관한 고객이다.
+            code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
+            """)
   })
   public PaymentMethodRegistrationResponse createPaymentMethodRegistration(
       @CurrentOrganizationId UUID organizationId,
@@ -106,7 +110,11 @@ public class PaymentMethodRegistrationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다")
+        description =
+            """
+            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
+            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
+            """)
   })
   public PaymentMethodRegistrationResponse getPaymentMethodRegistration(
       @Parameter(description = "카드 등록 링크를 만들 때 받은 token.") @PathVariable @StorableText
