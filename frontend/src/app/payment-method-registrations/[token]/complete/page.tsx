@@ -14,7 +14,7 @@ export default async function RegistrationCompletePage({ params }: { params: Pro
     : null;
   const isUnknown = !outcome || outcome.status === "unavailable";
   const title = isSuccess ? "카드를 등록했습니다" : outcome?.status === "canceled" ? "카드 등록을 취소했습니다" : isUnknown ? "카드 등록 결과를 확인하지 못했습니다" : "카드 등록을 완료하지 못했습니다";
-  return <RegistrationFrame title={title} organizationName={outcome?.organizationName}>
+  return <RegistrationFrame title={title} organizationName={outcome?.organizationName} currentStep={3}>
     <div className={styles.outcome} role="status">
       {isSuccess ? <>
         <p><strong>{outcome.customerName}</strong>의 결제 카드가 등록되었습니다.</p>
