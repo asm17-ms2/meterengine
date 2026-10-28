@@ -1,15 +1,10 @@
 {
   "package": "T-yang",
-  "status": "stopped",
-  "updated_at": "2026-10-28T15:26:20+09:00",
+  "status": "running",
+  "updated_at": "2026-10-28T15:40:20+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": "start-check-failed: docker",
-  "resume_hint": {
-    "last_finished_id": null,
-    "in_progress": null,
-    "next_command": "OrbStack을 켠 뒤 같은 붙여 넣기 글을 다시 붙여 넣는다",
-    "reset_at": null
-  },
+  "stop_reason": null,
+  "resume_hint": null,
   "current": null,
   "finished_ids": [],
   "open_ids": [
