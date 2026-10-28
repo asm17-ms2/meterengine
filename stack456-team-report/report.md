@@ -1,14 +1,14 @@
-미완료 355건, 결과: 끝 상태 17/372건 (fixed 0, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: 없음
+미완료 354건, 결과: 끝 상태 18/372건 (fixed 1, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 1번(마지막 3ec2f28)
 정할 것: 16건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T17:11:08+09:00
+상태: running, 갱신 2026-10-28T17:12:27+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | feat/product-design | 92 | 0 | 1 | 0 | 16 | 0 | 75 |
+| #443 | fix/s456-443-t-inho | 92 | 1 | 1 | 0 | 16 | 0 | 74 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -22,6 +22,7 @@ push: 없음
 
 | id | 층 | 커밋 | 설명 | 고치기 전 실패한 시험 |
 | --- | --- | --- | --- | --- |
+| C443-000 | #443 | 3ec2f28 | 동작 줄이기에서 animation, transition을 none으로 덮던 규칙을 지워 antd 대화상자가 보이고 닫히게 했다 | with reduced motion a workspace dialog becomes visible and closing it releases the page: 실패 Expected "1" Received "0" (.ant-modal opacity) |
 
 ## 정할 것
 
