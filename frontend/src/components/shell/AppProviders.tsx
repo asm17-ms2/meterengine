@@ -9,7 +9,7 @@ dayjs.locale("ko");
 
 const CONSOLE_THEME: ThemeConfig = {
   token: {
-    colorPrimary: "#5746ad", colorInfo: "#5746ad", colorSuccess: "#087f75", colorWarning: "#9a620c", colorError: "#c23d4b",
+    colorPrimary: "#5746ad", colorPrimaryBorder: "#5746ad", colorInfo: "#5746ad", colorSuccess: "#087f75", colorWarning: "#9a620c", colorError: "#c23d4b",
     colorInfoBg: "#f3f0fb", colorInfoBgHover: "#eeeafb", colorInfoBorder: "#c8bde7",
     colorSuccessBg: "#f5fbf8", colorSuccessBgHover: "#f0faf6", colorSuccessBorder: "#b3d5c6",
     colorWarningBg: "#fff8e9", colorWarningBgHover: "#fff4dd", colorWarningBorder: "#e7cd97",

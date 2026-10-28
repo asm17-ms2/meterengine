@@ -271,3 +271,12 @@ test("the sidebar fits a short screen and scrolls by itself so its last link sta
   const linkBox = (await lastLink.boundingBox())!;
   expect(linkBox.y + linkBox.height).toBeLessThanOrEqual(720);
 });
+
+test("an antd button shows a focus ring in the brand color", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("비밀번호", { exact: true }).focus();
+  const button = page.getByRole("button", { name: "로그인", exact: true });
+  for (let step = 0; step < 4 && !(await button.evaluate(element => element === document.activeElement)); step++) await page.keyboard.press("Tab");
+  await expect(button).toBeFocused();
+  await expect(button).toHaveCSS("outline-color", "rgb(87, 70, 173)");
+});
