@@ -121,7 +121,7 @@ export function BillableMetricsTable({
         />
       ),
     },
-    { key: "managementStatus", title: "관리 상태 / 적용", width: 170, render: (_, row) => <><Tag>{row.archivedAt ? "보관됨" : "사용 중"}</Tag>{row.inactiveFrom && <p className="field-hint">{row.inactiveFrom}부터 집계 중단</p>}{row.isReactivationScheduled && <p className="field-hint">{row.activeFrom}부터 집계 재개</p>}</> },
+    { key: "managementStatus", title: "관리 상태 / 적용", width: 170, render: (_, row) => <><Tag color={row.archivedAt ? "default" : "success"}>{row.archivedAt ? "보관됨" : "사용 중"}</Tag>{row.inactiveFrom && <p className="field-hint">{row.inactiveFrom}부터 집계 중단</p>}{row.isReactivationScheduled && <p className="field-hint">{row.activeFrom}부터 집계 재개</p>}</> },
     {
       key: "actions",
       title: "작업",
