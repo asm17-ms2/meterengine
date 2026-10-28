@@ -9,6 +9,7 @@ import { unstable_rethrow } from "next/navigation";
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
+import { createRequestId } from "@/lib/request-id";
 
 export type WorkspaceField = {
   name: string;
@@ -148,7 +149,7 @@ export function ActionPanel(props: ActionPanelProps) {
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
+    <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
+    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }
