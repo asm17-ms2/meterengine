@@ -311,3 +311,5 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 12�
 - 2026-10-28 사람이 붙여 넣기 글을 다시 보냈다. 같은 세션이 계속 돌고 있었고, 시작 점검과 넘기기 자료 확인을 다시 돌려 통과한 뒤 이어 갔다.
 - 2026-10-28 21:47 KST: push 방식을 바꿨다. 박성종 님 요청(PR #442 댓글)을 양성지 님이 승인해 #445부터 fix/s456-<PR>-t-yang 후속 브랜치에 push하고 층마다 PR을 하나 연다(merge하지 않음). #442 feat 브랜치에 올린 커밋은 그대로 둔다. check-report.mjs가 feat 브랜치만 알아 fix 브랜치 배치로 나는 오류는 걸러 내고, 그 층 항목의 branch에는 fix 브랜치를 적는다.
 - G-098(2bc72d8)이 토스 키 저장과 결제 모드 변경을 세션 전용으로 올려, C445-002(ad5872e)의 API 키 모드 검사는 HTTP로는 닿지 않는 이중 방어로 남는다.
+- fix/s456-445-t-yang의 merge 커밋 3326f31은 셸 변수 문제로 메시지가 'chore: origin/ 변경을 받는다'로 비었다(origin/feat/billing-payments를 받은 merge). 이미 push해 고쳐 쓰지 않았고 뒤 merge부터 고쳤다.
+- origin/feat/billing-payments에 위층 반영으로 V28(create_webhook_tables) 내용이 바뀌어 들어와, 실화면 환경 DB를 다시 만들었다. 이 세션이 바꾼 마이그레이션이 아니다.
