@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:17:08+09:00",
+  "updated_at": "2026-10-28T17:18:16+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "9679307",
+    "feat/account-permissions": "9cd9421",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -116,14 +116,34 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "proxy.ts는 쿠키가 없을 때 path와 search를 returnTo로 담고, loginAction은 safeReturnPath 결과에 organization_id가 있으면 workspaceHref가 세션 도입사로 덮지 않는다. SessionService.create는 첫 활성 도입사로 세션을 만들어, returnTo가 다른 도입사를 가리키면 (console)/layout.tsx 10행이 차단 화면을 띄운다. 동의 액션도 같다. 정점도 같다. 로그인에서 그 도입사로 전환하고 안 되면 도입사를 지우게 했다.",
+      "evidence": [
+        "frontend/src/app/(public)/actions.ts:26-29 @ 72e8718",
+        "frontend/src/lib/workspace-href.ts:9-10 @ 72e8718",
+        "frontend/src/app/(console)/layout.tsx:9-10 @ 72e8718",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:104-112 @ 72e8718",
+        "frontend/src/app/(public)/actions.ts:29-31 @ 0fe7d2a",
+        "logging in to a return path of another member organization opens that organization: 실패 Expected 0, Received 1 (도입사 선택이 바뀌었습니다)"
+      ],
+      "commits": [
+        "9cd942158c62"
+      ],
+      "tests": [
+        "auth.contract.spec.ts logging in to a return path of another member organization opens that organization: 고치기 전 실패, 고친 뒤 통과",
+        "e2e/return-organization.test.mjs: 고치기 전 실패(함수 없음), 고친 뒤 통과",
+        "auth.contract.spec.ts 23건 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same a39db70 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "재로그인 돌아갈 주소의 도입사로 세션 전환",
+      "propagation_note": "정점 (public)/actions.ts는 a39db70이 clientIp를 더해 로그인 요청 줄이 달라졌다. 반영 때 saveSession 뒤의 destination 계산을 이 커밋의 꼴로 맞춘다. 23b1844가 proxy.ts에 environment 검사를 더했지만 이 수정과 겹치지 않는다."
     },
     {
       "id": "C442-013",
@@ -5793,6 +5813,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 4 ℹ pass 4 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  23 passed (10.8s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.2s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.320s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -5890,6 +5966,11 @@
       "branch": "feat/account-permissions",
       "sha": "96793078f8b887cd48a3437d5b4871ac38039b42",
       "at": "2026-10-28T17:08:03+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "9cd942158c6263e23b662f70a855752ec6decfc0",
+      "at": "2026-10-28T17:18:16+09:00"
     }
   ],
   "usage_log": [],
