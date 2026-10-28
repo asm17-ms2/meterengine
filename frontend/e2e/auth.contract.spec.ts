@@ -45,6 +45,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   await page.getByRole("button", { name: "가입 신청", exact: true }).click();
   await expect(page).toHaveURL(/\/pending$/);
   await expect(page.getByRole("heading", { level: 1, name: "가입 신청을 접수했습니다", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "가입 절차" }).locator('li[aria-current="step"]')).toContainText("운영자 승인");
   await expect(page.getByText("승인 여부는 운영자에게 확인하세요")).toHaveCount(0);
   await page.reload();
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
