@@ -1,12 +1,12 @@
-미완료 281건, 결과: 끝 상태 48/328건 (fixed 14, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 4개(마지막 b3cbfd8)
+미완료 280건, 결과: 끝 상태 49/328건 (fixed 15, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 5개(마지막 b4b9800)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 14 | 1 | 7 | 23 | 3 | 95 |
+| #442 | 143 | 15 | 1 | 7 | 23 | 3 | 94 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -23,6 +23,7 @@ push: feat/account-permissions 4개(마지막 b3cbfd8)
 | D-066 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-091 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-127 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
+| D-128 | #442 | b4b9800 | 업무 대화상자 액션 예외를 잡아 입력 유지 | a workspace action that throws keeps the dialog and its input: 실패 Error: expect(locator).toBeVisible() failed, element(s) not found |
 | D-150 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-172 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | D-189 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -92,6 +93,7 @@ push: feat/account-permissions 4개(마지막 b3cbfd8)
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
 | C442-017 | #442 | #442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다. |
 | D-127 | #442 | 복사하지 않고 닫으면 확인 창이 뜬다. Playwright는 확인 창을 기본으로 거절하므로 #453 23b1844가 더한 명세가 반영 뒤 실패한다: workspace.contract.spec.ts 39-42행 closeDialog(비밀값 표시 뒤 X로 닫음, 153행과 168행 호출), mvp.real.spec.ts 128행과 136행 Escape, people.real.spec.ts 135행 닫기. 반영 때 닫기 앞에 page.once("dialog", d => d.accept())를 두거나 복사 버튼을 먼저 누르게 맞춘다. #453은 T-yang 층이라 그 차례에 함께 본다. 정점 ActionPanel.tsx는 23b1844가 environment 숨은 입력만 더해 같은 수정이 맞는다. |
+| D-128 | #442 | #445 4ace811부터 결제 작업(createPaymentAttempt, createPaymentCancellation, updateTossPaymentsCredential)이 ActionPanel을 탄다. 그 층에서는 같은 catch가 결제 작업이면 isUnconfirmed: true와 내역 재조회 안내를 돌려주도록 맞춘다(#445는 T-yang 층). 정점 ActionPanel.tsx 45-46행은 층과 같고 23b1844의 environment 줄과 겹치지 않는다. |
 | D-136 | #442 | 통일하면 #442는 WorkspaceHeader.tsx MonthFilter와 MonthPicker.tsx를 바꾸는데, #451 e5fca11이 MonthPicker.tsx에 onChange, id, label을 따로 더해 반영 merge에서 충돌한다. 위층은 AuditScreen.tsx:65(#448), EventFilters.tsx:182(#451), event-issues/page.tsx:43, event-rejections/page.tsx:33(#450), EmptyState.tsx:11 기본값을 맞춘다. |
 | D-170 | #442 | 통일하면 #442 WorkspaceHeader.tsx와 MonthPicker.tsx(#451 e5fca11이 onChange 모드를 따로 더해 충돌), #446 PricingWorkspace.tsx:187, #450 event-issues/page.tsx:38, event-rejections/page.tsx:28, #451 EventFilters.tsx:158을 바꾼다. EventFilters를 바꾸면 events.real.spec.ts:127,240의 getByLabel('조회 월').fill도 맞춰야 한다. |
 | D-172 | #442 | 같은 언마운트 구조가 main에서 온 BillableMetricsScreen(closeForm, closeDelete)과 InvoiceFinalizeDialog에도 있고, #451 e5fca11의 RoutedEventDetail에도 있다. 스택이 들인 ActionPanel만 이 층에서 고쳤다. 정점 ActionPanel.tsx 141-142행은 23b1844가 environment 숨은 입력만 더해 같은 수정이 그대로 맞는다. |
