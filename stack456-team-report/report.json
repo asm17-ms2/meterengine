@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:08:11+09:00",
+  "updated_at": "2026-10-29T00:10:16+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817"
+    "fix/s456-446-t-inho": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4652,15 +4652,39 @@
       "id": "Ck3-446-06",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "POST /v1/billable-metrics/{code}/price-rates는 컨트롤러의 @Valid에서 CreatePriceRateRequest.isValidPricing()의 @AssertTrue를 먼저 검사하므로, 모델과 단가, 구간이 맞지 않는 요청은 서비스에 닿기 전에 400 validation_error로 끝난다. 이때 Hibernate Validator가 붙인 속성 이름은 validPricing이고, GlobalExceptionHandler.jsonFieldName은 그런 선언 필드가 없으면 자바 이름을 그대로 돌려줘 errors[].field가 요청 스키마에 없는 validPricing이 된다(메서드는 @Schema(hidden = true)라 OpenAPI에도 없다). 같은 규칙을 PriceRateService.create 87행이 다시 부르지만 HTTP 경로에서는 닿지 않는 죽은 검사이고, 닿는다 해도 invalid_price_rate와 field model로 다른 계약을 낸다. 두 검사 모두 614d3bc4(#446) 한 커밋에서 들어왔고, 유일한 HTTP 시험(VersionedPricingIntegrationTest 294-314행)은 상태 400만 봐서 이 어긋남을 잡지 못한다. 정점에서도 DTO, 서비스 107행, 필드 이름 대응 코드가 같다. DTO의 @AssertTrue를 지우고 PriceRateService.create 첫 줄에서 같은 검사를 해 validation_error와 field model을 던진다(400이 404보다 먼저인 순서 유지). 이 경우의 errors[].field가 validPricing에서 model로 바뀐다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:38-39 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java:77 @ da90aac",
+        "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:76-85 @ da90aac",
+        "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:282-292 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:87 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:243-246 @ da90aac",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:9,12 @ da90aac",
+        "backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:294-314 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:107 @ 8dd028a",
+        "커밋 614d3bc4",
+        "요금_모델에_맞지_않는_단가는_요청에_있는_model_필드로_거절된다: 실패 expected: \"model\" but was: \"validPricing\"",
+        "커밋 a7a789e97fd4941df4d8ddcd9efb7256368e9c15"
+      ],
+      "commits": [
+        "a7a789e97fd4941df4d8ddcd9efb7256368e9c15"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.pricing.VersionedPricingIntegrationTest': 고치기 전 새 시험 실패, 고친 뒤 통과. 전체 ./gradlew build 뒤 openapi.yaml은 바뀌지 않았다"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 CreatePriceRateRequest의 @AssertTrue와 PriceRateService 107행의 서비스 검사가 그대로다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), 23b1844(#453), GlobalExceptionHandler는 a39db70(#454)",
+      "propagation_note": "정점에서는 서비스 검사가 107행으로 옮겨져 있다. 반영 때 PriceRateService.create 첫 줄의 isValidPricing 검사를 남기고 뒤쪽의 invalid(\"model\") 줄은 지운 상태를 택한다. DTO의 @AssertTrue를 지운 것도 남긴다.",
+      "summary": "요금 모델 검사를 서비스 한곳에 두고 오류 필드를 요청의 model로 낸다"
     },
     {
       "id": "Ck3-446-07",
@@ -7846,6 +7870,51 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "60 passed (27.5s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (8.0s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 26 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10666,6 +10735,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
       "at": "2026-10-29T00:04:22+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "at": "2026-10-29T00:09:57+09:00"
     }
   ],
   "usage_log": [],

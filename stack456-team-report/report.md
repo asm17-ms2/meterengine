@@ -1,8 +1,8 @@
-미완료 219건, 결과: 끝 상태 153/372건 (fixed 109, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 8번(마지막 ae50ce0)
+미완료 218건, 결과: 끝 상태 154/372건 (fixed 110, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e)
 정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T00:08:11+09:00
+상태: running, 갱신 2026-10-29T00:10:16+09:00
 
 ## 층별 상태
 
@@ -10,7 +10,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | fix/s456-446-t-inho | 50 | 11 | 0 | 3 | 4 | 3 | 29 |
+| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 3 | 28 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
@@ -125,6 +125,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-446-02 | #446 | d5ae200 | 단가 종료 월이 시작 월보다 뒤가 아니면 요금제와 같은 validation_error를 낸다 | 종료_월이_시작_월보다_뒤가_아니면_요금제와_같은_validation_error다: 실패 expected: VALIDATION_ERROR but was: INVALID_PRICE_RATE |
 | Ck3-446-04 | #446 | b22fd8d | 조합별 단가 DELETE 설명을 이번 달 공통 단가를 끝내는 실제 동작에 맞춘다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 동작을 PriceRateService.java 159-191행(공통 단가, 이번 달 적용 중, 이번 달 시작은 삭제, 그 전은 close(current))과 Audi) |
 | Ck3-446-05 | #446 | ae50ce0 | 요금제 이력 조회 API가 생략한 파라미터의 뜻과 400, 404를 적는다 | 요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다: 실패 Expecting not blank but was: "" (description 없음) |
+| Ck3-446-06 | #446 | a7a789e | 요금 모델 검사를 서비스 한곳에 두고 오류 필드를 요청의 model로 낸다 | 요금_모델에_맞지_않는_단가는_요청에_있는_model_필드로_거절된다: 실패 expected: "model" but was: "validPricing" |
 | D-120 | #446 | 8804e65 | 작성 중인 미터 폼을 Esc, 바깥 클릭, 취소로 닫기 전에 묻는다 | a meter form with input asks before Escape throws it away: 실패 Expected "작성 중인 미터를 버리고 닫을까요?" Received "" (확인 없이 닫힘) |
 | X-091 | #446 | 1574c86 | 미터 폼의 숫자 입력에서 영어 이름의 증감 버튼을 뺀다 | meter number inputs do not expose English stepper buttons: 실패 Expected 0 Received 2 (Increase Value, Decrease Value) |
 | D-119 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
@@ -239,6 +240,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - Ck3-446-02 (#446): 반영 때 PriceRateService의 effective_until 검사 줄이 충돌하면 validation_error 쪽을 남기고, PriceRateController 400 설명과 openapi.yaml은 그 층에서 ./gradlew build로 다시 만든다.
 - Ck3-446-04 (#446): 위층 반영 때 이 설명이 충돌하면 #447 2ec5d85의 보관 동작 설명을 택하고 openapi.yaml은 그 층에서 다시 만든다.
 - Ck3-446-05 (#446): 반영 때 listPricePlans 시그니처가 충돌하면 위층의 status 파라미터와 @EnvironmentReady를 살리고 이 층의 설명, 파라미터 설명, 400과 404를 더한다. status 파라미터 설명과 그 400 경우도 같이 적는다. openapi.yaml은 그 층에서 다시 만든다.
+- Ck3-446-06 (#446): 정점에서는 서비스 검사가 107행으로 옮겨져 있다. 반영 때 PriceRateService.create 첫 줄의 isValidPricing 검사를 남기고 뒤쪽의 invalid("model") 줄은 지운 상태를 택한다. DTO의 @AssertTrue를 지운 것도 남긴다.
 - D-120 (#446): 반영 때 onCancel과 취소 버튼이 close()를 부르는 것을 남긴다.
 - D-119 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
 
