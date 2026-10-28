@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:23:53+09:00",
+  "updated_at": "2026-10-28T20:27:07+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "eb01be8",
+    "feat/account-permissions": "6ae4ec0",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -813,14 +813,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ActionPanel.tsx 119-122행은 결과 링크 안내를 registrationLabel 유무로, 재요청 버튼을 createPaymentCancellation 비교로, 새로 조회 링크와 링크 이름을 결제 문구 고정값으로 고른다. 그래서 결제가 아닌 작업에도 결제 문구가 기본값으로 나온다. 정점도 같다. 작업별 결과 문구 함수를 새 모듈에 두고 ActionPanel이 쓰게 했다(바뀌는 파일은 ActionPanel과 새 모듈 둘).",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:119-122 @ 72e8718",
+        "frontend/src/components/workspace/ActionPanel.tsx:123-126 @ 0fe7d2a",
+        "result labels come from the operation, not from response fields: 실패 ERR_MODULE_NOT_FOUND workspace-operation-results.ts"
+      ],
+      "commits": [
+        "6ae4ec0c4648"
+      ],
+      "tests": [
+        "e2e/workspace-operation-results.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 15건, auth.contract.spec.ts 34건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "결과 문구를 작업별 표로",
+      "propagation_note": "#453 workspace.contract.spec.ts 75행과 101행은 취소 작업의 '결제와 취소 내역 새로 조회', '새 취소 요청'을 찾고 문구 표가 같은 값을 준다. 위층에서 isUnconfirmed를 돌려주는 다른 작업(#445 updateTossPaymentsCredential 등)이 결제 문구를 원하면 그 층에서 COPY에 더한다."
     },
     {
       "id": "G-065",
@@ -8264,6 +8280,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 15 ℹ pass 15 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  34 passed (16.2s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.0s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.329s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8536,6 +8608,11 @@
       "branch": "feat/account-permissions",
       "sha": "eb01be8e3f600335ae35e9387efcb9a8da435905",
       "at": "2026-10-28T20:19:47+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "6ae4ec0c4648de62b279309ae5e2efcd5d091c2c",
+      "at": "2026-10-28T20:27:07+09:00"
     }
   ],
   "usage_log": [],
