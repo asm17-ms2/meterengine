@@ -1,12 +1,12 @@
-미완료 263건, 결과: 끝 상태 66/328건 (fixed 32, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 14개(마지막 50d7032)
+미완료 262건, 결과: 끝 상태 67/328건 (fixed 33, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 23, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 15개(마지막 07d30c7)
 정할 것: 23건 (G-009, G-027, G-050, G-056, G-067, C442-002, D-136, D-170, D-179, D-236, G-010, G-011, G-013, G-017, G-018, G-038, G-041, G-054, G-057, G-059, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 32 | 1 | 7 | 23 | 3 | 77 |
+| #442 | 143 | 33 | 1 | 7 | 23 | 3 | 76 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -24,6 +24,7 @@ push: feat/account-permissions 14개(마지막 50d7032)
 | D-026 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-029 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-031 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
+| D-043 | #442 | 07d30c7 | 확정 실패 뒤 닫으면 요청 키 초기화 | 없음(이 층에는 확정 실패를 돌려주는 작업(결제 취소는 #445부터)과 계약 장치(workspace.contract는 #453부터)가 없어 고치기 전 실패 시험을 만들 수 없다. lint, typecheck, build와) |
 | D-049 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-050 | #442 | 65fc925 | 403, 404 조회 실패의 제목과 다시 시도 구분 | a forbidden workspace load says so without a retry: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByText('조회 권한이 없습니다') |
 | D-066 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -114,6 +115,7 @@ push: feat/account-permissions 14개(마지막 50d7032)
 | D-012 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |
 | D-029 | #442 | #445부터 MonthFilter를 쓰는 화면(수납과 취소)에 그대로 적용된다. 23b1844가 WorkspaceHeader.tsx를 바꿨지만 15행 입력과는 겹치지 않는다. |
 | D-031 | #442 | #445 4ace811(/settings 추가)과 #446 614d3bc(/pricing 추가)가 NavMenu.tsx 14행을 바꿔 반영 때 충돌한다. 각 층의 과금과 연동 items에 { href: "/billable-metrics", label: "미터" }를 남기고, #446부터는 요금 설계 바로 뒤에 둔다. 가격 항목은 넣지 않는다(#451부터 /billable-metric-prices는 /pricing으로 이동). |
+| D-043 | #442 | #453 workspace.contract.spec.ts에 확정 실패 뒤 창을 닫았다 다시 열어 보내면 새 request_id가 실리는지 보는 시험을 더할 수 있다(T-yang #453 차례). |
 | D-050 | #442 | 위층 WorkspaceError 호출부(정점 16개 파일)는 status를 넘기지 않아 지금처럼 일반 실패로 보인다. 상세 화면(#444 integrations/[id], #445 payments/[id], #447 customers/[id] 등)에서 404를 구분하려면 그 층이 status={...error.status}를 넘긴다. |
 | D-086 | #442 | 정점 members/page.tsx 23행이 같은 문구다. 2ec5d85, 15692f8이 같은 파일을 바꿨으니 반영 때 이 줄의 두 문구가 남았는지 본다. |
 | D-090 | #442 | 위층에서 더한 화면(#444 integrations/[id], #445 payments와 settings, #446 pricing, #447 customers/[id], #448 audit, #449 invoices 상세, #450 event-issues, event-rejections, #451 overview 등)에는 metadata.title이 없어 루트 기본값 'MeterEngine 관리자 콘솔'이 보인다. 각 층 담당이 같은 방식으로 title을 더한다. 정점 layout.tsx는 f671a4f가 description을 바꿨으니 title 틀만 옮긴다. |

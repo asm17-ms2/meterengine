@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T16:53:52+09:00",
+  "updated_at": "2026-10-28T16:54:47+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "50d7032",
+    "feat/account-permissions": "07d30c7",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1098,14 +1098,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ActionPanel은 열기 버튼에서 requestId를 current || randomUUID로 두고 닫기(onClose)에서는 requestId를 지우지 않아, 확정 실패 결과를 본 뒤 닫았다 다시 열면 같은 멱등 키로 다른 요청을 보낸다. 새 요청 버튼(onNewRequest)이 있지만 닫았다 여는 경로는 키를 유지한다. 정점도 같다. 닫을 때 확정 실패였으면 키를 비우게 했고, 미확인과 일반 오류는 중복 방지를 위해 키를 둔다.",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:75-79,119,137-138 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:62,76 @ 72e8718",
+        "frontend/src/components/workspace/ActionPanel.tsx:141-142 @ 0fe7d2a"
+      ],
+      "commits": [
+        "07d30c7ad8e3"
+      ],
+      "tests": [
+        "이 층에는 확정 실패를 돌려주는 작업(결제 취소는 #445부터)과 계약 장치(workspace.contract는 #453부터)가 없어 고치기 전 실패 시험을 만들 수 없다. lint, typecheck, build와 auth.contract.spec.ts, auth.real.spec.ts 통과로 확인했다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": false,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "확정 실패 뒤 닫으면 요청 키 초기화",
+      "propagation_note": "#453 workspace.contract.spec.ts에 확정 실패 뒤 창을 닫았다 다시 열어 보내면 새 request_id가 실리는지 보는 시험을 더할 수 있다(T-yang #453 차례)."
     },
     {
       "id": "D-049",
@@ -5347,6 +5362,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 3 ℹ pass 3 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  20 passed (10.8s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -5419,6 +5474,11 @@
       "branch": "feat/account-permissions",
       "sha": "50d7032961126c3659cd9a274524b50f8ff3cffc",
       "at": "2026-10-28T16:53:04+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07d30c7ad8e3795d31a9130b98fc93c031076b08",
+      "at": "2026-10-28T16:54:47+09:00"
     }
   ],
   "usage_log": [],
