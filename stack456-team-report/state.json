@@ -1,15 +1,10 @@
 {
   "package": "T-inho",
-  "status": "stopped",
-  "updated_at": "2026-10-28T19:51:17+09:00",
+  "status": "running",
+  "updated_at": "2026-10-28T21:39:52+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": "baseline-check-failure: 바꾸지 않은 #444 head f3855f4에서 frontend-unit(workspace-operations.test.mjs) 실패, NT-inho-002",
-  "resume_hint": {
-    "last_finished_id": "G-081",
-    "in_progress": "U1-B1(#444): 커밋 235ebf1을 fix/s456-444-t-inho에 만들었고 forbidden-chars, frontend, screen(auth 3, contract)은 통과했지만 frontend-unit이 바꾸지 않은 head에서도 실패해 push하지 않았다. #444 판정 Workflow 결과는 .s456-work/judge/444/results.json에 저장한다(다시 대조 필요).",
-    "next_command": "조율 담당이 NT-inho-002를 정해 넘기기 자료나 #444 브랜치로 반영한 뒤, git fetch origin, git switch fix/s456-444-t-inho, 9절대로 origin/feat/webhook-jobs를 merge하고 10절 검사(frontend-unit 포함)를 돌려 통과하면 push한다(첫 push라 base feat/webhook-jobs PR을 연다)",
-    "reset_at": null
-  },
+  "stop_reason": null,
+  "resume_hint": null,
   "current": {
     "id": "U1-B1",
     "step": "check",

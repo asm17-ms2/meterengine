@@ -1,8 +1,8 @@
 {
   "package": "T-inho",
   "owner": "문인호",
-  "status": "stopped",
-  "updated_at": "2026-10-28T19:51:17+09:00",
+  "status": "running",
+  "updated_at": "2026-10-28T21:39:52+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -6735,25 +6735,51 @@
       "merged_ids": [],
       "layer": 444,
       "branch": "feat/webhook-jobs",
-      "status": "needs-decision",
+      "status": "already-fixed",
       "verdict": "confirmed",
       "title": "반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음)",
-      "reason": "#442 36f7e74가 더한 workspace-operations.test.mjs가 f3855f4 반영으로 #444에 들어왔다. #444 integrations/[id]/page.tsx 20행이 operation restoreWebhookEndpoint를 쓰지만 #444 workspace-actions.ts에는 그 분기가 없고, 백엔드에도 웹훅 수신 주소 복원 API가 없다. 정점에서는 workspace-actions.ts 59행에 분기가 있다. archived_at이 있을 때만 그리는 패널이라 #444 실행 중 화면에는 나오지 않지만, frontend-unit 검사가 바꾸지 않은 head에서 실패해 #444 push가 막힌다.",
+      "reason": "#442 36f7e74가 더한 workspace-operations.test.mjs가 f3855f4 반영으로 #444에 들어왔다. #444 integrations/[id]/page.tsx 20행이 operation restoreWebhookEndpoint를 쓰지만 #444 workspace-actions.ts에는 그 분기가 없고, 백엔드에도 웹훅 수신 주소 복원 API가 없다. 정점에서는 workspace-actions.ts 59행에 분기가 있다. archived_at이 있을 때만 그리는 패널이라 #444 실행 중 화면에는 나오지 않지만, frontend-unit 검사가 바꾸지 않은 head에서 실패해 #444 push가 막힌다. 조율 담당이 4222fbd로 workspace-actions.ts에 restoreWebhookEndpoint 분기를 더해 풀었다(#447이 더하는 줄과 같다). 바꾸지 않은 #444 head 178e19e에서 frontend-unit이 통과한다.",
       "evidence": [
-        "frontend/src/app/(console)/integrations/[id]/page.tsx:20 @ f3855f4",
-        "frontend/e2e/workspace-operations.test.mjs:19 @ f3855f4",
-        "frontend/src/app/(console)/workspace-actions.ts:59 @ b8abfdf",
-        "every workspace panel operation is a known permission and has a workspace action case: 실패 restoreWebhookEndpoint has no case in workspace-actions.ts (바꾸지 않은 f3855f4)"
+        "커밋 4222fbd",
+        "frontend/src/app/(console)/workspace-actions.ts:42 @ 178e19e",
+        "every workspace panel operation is a known permission and has a workspace action case: 통과 ℹ pass 13 ℹ fail 0 (바꾸지 않은 178e19e)"
       ],
       "commits": [],
       "tests": [
-        "바꾸지 않은 origin/feat/webhook-jobs(f3855f4) 워크트리에서 node --test 'e2e/*.test.mjs': pass 5, fail 1"
+        "바꾸지 않은 origin/feat/webhook-jobs(f3855f4) 워크트리에서 node --test 'e2e/*.test.mjs': pass 5, fail 1",
+        "바꾸지 않은 origin/feat/webhook-jobs(178e19e) 워크트리에서 node --test 'e2e/*.test.mjs': pass 13, fail 0"
       ],
       "behavior_change": false,
-      "question": "#444 integrations/[id]/page.tsx 20행의 '수신 주소 복원' 패널(operation restoreWebhookEndpoint)은 백엔드 복원 API와 workspace-actions.ts 분기가 #447부터 있어, #442에서 반영된 workspace-operations.test.mjs가 바꾸지 않은 #444 head(f3855f4)에서 실패한다. 이 패널을 #444에서 빼고 #447로 옮길지, 시험이 #444에서 이 작업을 건너뛰게 할지 정해야 한다."
+      "judged_at": {
+        "layer_sha": "178e19efdad39fc549bfc53968486016f0bdcdf8"
+      }
     }
   ],
   "checks": [
+    {
+      "branch": "feat/webhook-jobs",
+      "sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "detail": "바꾸지 않은 head 기준선(10절), .s456-work/base 워크트리"
+    },
+    {
+      "branch": "feat/webhook-jobs",
+      "sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 13 ℹ fail 0; 바꾸지 않은 head 기준선(10절), NT-inho-002 해소 확인"
+    },
+    {
+      "branch": "feat/webhook-jobs",
+      "sha": "178e19efdad39fc549bfc53968486016f0bdcdf8",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "53 passed (24.5s); 바꾸지 않은 head 기준선(10절)"
+    },
     {
       "branch": "fix/s456-444-t-inho",
       "sha": "235ebf14b9b1db82ad0a1df4ade9ec748a289ceb",
@@ -8270,7 +8296,10 @@
     "후속 브랜치에서 고친 항목은 report.json의 branch를 후속 브랜치로 적고 layer는 원래 PR 번호를 둔다. check-report.mjs는 후속 브랜치를 스택 목록에 두지 않아 후속 브랜치 push마다 '이 세션 커밋을 읽지 못했다' 오류를 낸다. 넘기기 도구가 바뀔 때까지 이 오류만 빼고, 같은 기준(push한 sha의 kind별 통과 기록, 커밋과 항목, push 기록 대응)을 .s456-work의 보조 검사로 확인한 뒤 보고를 push한다.",
     "2026-10-28T17:55+09:00 사람 지시: 이 뒤 커밋 메시지에 Co-Authored-By 줄을 넣지 않고 새로 여는 PR 본문 끝에 Generated with Claude Code 줄을 넣지 않는다. 이미 push한 3ec2f28, 0dfdbd3과 #465 본문은 그대로 둔다.",
     "PR #465에 조율 담당 댓글(2026-10-28 17:53 KST): #443 작업을 마치고 다른 층으로 넘어갈 때 조율 담당이 #465를 feat/product-design에 merge하고, 그 전까지 이 브랜치에 push하라는 안내와 0fc4894를 받으라는 요청. 0fc4894는 93491f9로 받았다.",
-    "2026-10-28 #444 시작에서 멈춤: 바꾸지 않은 #444 head(f3855f4)에서 frontend-unit이 실패한다(NT-inho-002). common-brief 10절, 12절대로 전체를 멈췄다. #444 U1-B1 커밋 235ebf1은 fix/s456-444-t-inho에 로컬로만 있고 push하지 않았다(frontend-unit 말고는 통과)."
+    "2026-10-28 #444 시작에서 멈춤: 바꾸지 않은 #444 head(f3855f4)에서 frontend-unit이 실패한다(NT-inho-002). common-brief 10절, 12절대로 전체를 멈췄다. #444 U1-B1 커밋 235ebf1은 fix/s456-444-t-inho에 로컬로만 있고 push하지 않았다(frontend-unit 말고는 통과).",
+    "2026-10-28T21:36:06+09:00 재시작: 조율 담당이 NT-inho-002를 4222fbd로 풀었다(origin/feat/webhook-jobs 178e19e). 바꾸지 않은 178e19e에서 frontend(lint, build), frontend-unit(13 통과), 계약 명세(53 통과)가 통과해 #444를 이어 간다. 시작 점검을 다시 돌려 모두 통과했다(push 확인은 feat/webhook-jobs dry-run).",
+    "2026-10-28T21:36:06+09:00 PR #465는 조율 담당이 feat/product-design에 merge했다(85de660, 2026-10-28T12:27:53Z). origin의 fix/s456-443-t-inho는 지워졌다. #443 push 33건은 85de660을 통해 origin에 있다. 보조 검사는 report.json fix_merges의 머지 커밋으로 이 push들을 확인한다.",
+    "2026-10-28T21:39:52+09:00 #465 머지와 fix/s456-443-t-inho 삭제 뒤 check-report.mjs는 #443 항목 커밋과 push가 origin/fix/s456-443-t-inho에 없다, feat/product-design의 이 세션 커밋을 올린 push가 없다는 오류를 낸다. 보조 검사가 이 오류를 줄마다 따져, 그 커밋이 머지 커밋 85de660 안에 있고 85de660이 origin/feat/product-design에 있으며 fix/s456-443-t-inho push로 올린 것일 때만 넘긴다. 그 밖의 오류가 하나라도 있으면 보고를 push하지 않는다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465"
@@ -8284,5 +8313,8 @@
       "screens": "고친 화면 66건 after 대비 콘솔 오류, 넘침, axe 증가 없음"
     }
   ],
-  "usage_note": "사용량 도구가 없어 수치를 남기지 못했다(사람이 /usage로 지켜본다). #443 한 층에 판정 Workflow 1회(에이전트 44개, 하위 에이전트 토큰 약 406만)와 커밋 33개 각각의 10절 검사, 마지막 실화면 점검을 썼다. 남은 7개 층은 항목이 280건이라 #443과 비슷한 비율이면 이보다 약 3배가 더 든다고 본다(추정)."
+  "usage_note": "사용량 도구가 없어 수치를 남기지 못했다(사람이 /usage로 지켜본다). #443 한 층에 판정 Workflow 1회(에이전트 44개, 하위 에이전트 토큰 약 406만)와 커밋 33개 각각의 10절 검사, 마지막 실화면 점검을 썼다. 남은 7개 층은 항목이 280건이라 #443과 비슷한 비율이면 이보다 약 3배가 더 든다고 본다(추정).",
+  "fix_merges": {
+    "443": "85de660528fa0399d71f33cf03eb075668aae4b6"
+  }
 }
