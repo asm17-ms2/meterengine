@@ -1,11 +1,15 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-28T22:03:35+09:00",
+  "updated_at": "2026-10-28T22:09:17+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
-  "current": null,
+  "current": {
+    "id": "X-006",
+    "step": "check",
+    "branch": "fix/s456-445-t-yang"
+  },
   "finished_ids": [
     "C442-004",
     "C442-005",
@@ -369,6 +373,11 @@
       "origin_sha": "f014e03",
       "local_sha": "f014e03",
       "unpushed": []
+    },
+    "fix/s456-445-t-yang": {
+      "origin_sha": "",
+      "local_sha": "3db6a0e",
+      "unpushed": []
     }
   },
   "usage": {
@@ -384,9 +393,13 @@
     }
   },
   "live_env": {
-    "running": false,
-    "layer": null,
-    "pids": [],
-    "container": null
+    "running": true,
+    "layer": 445,
+    "pids": [
+      6222,
+      6268,
+      6334
+    ],
+    "container": "meterengine-0696-e2e"
   }
 }
