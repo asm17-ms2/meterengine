@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:50:32+09:00",
+  "updated_at": "2026-10-28T22:55:01+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "b74ebeb"
+    "fix/s456-445-t-yang": "fdf3b2c"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4260,15 +4260,32 @@
       "id": "Ck2-016",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "application.properties의 spring.task.scheduling.pool.size=2인데 이 층의 @Scheduled 메서드는 결제 결과 확인, 대사, 재시도와 웹훅 발송 등 넷 이상이라, 결제 작업이 토스를 기다리며 스레드 둘을 잡으면 웹훅 발송이 밀린다. 정점도 같은 값이다. 풀 크기를 늘리고 예약 작업 수와 맞는지 보는 시험을 더했다. 결제 작업의 시간 상한과 배치 크기는 이 수정 밖이다.",
+      "evidence": [
+        "backend/src/main/resources/application.properties:41 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:55,60,65 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/webhook/config/WebhookDeliveryConfig.java:33 @ b10f8c7",
+        "예약_스레드_풀은_예약_작업_수_이상이다: 실패 Expecting actual: 2 to be greater than or equal to: 4"
+      ],
+      "commits": [
+        "fdf3b2ceb745"
+      ],
+      "tests": [
+        "SchedulingConfigTest 예약_스레드_풀은_예약_작업_수_이상이다: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same a39db70 23b1844 2ec5d85",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "예약 작업 스레드 수를 작업 수 이상으로",
+      "propagation_note": "위층이 @Scheduled 메서드를 더하면 새 시험이 풀 크기를 그 수 이상으로 올리라고 실패한다. 정점의 예약 작업 수를 반영 때 확인한다."
     },
     {
       "id": "Ck2-017",
@@ -9216,6 +9233,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9543,6 +9600,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "b74ebebc691b0b051cc9e339eaca9120d594c545",
       "at": "2026-10-28T22:46:56+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
+      "at": "2026-10-28T22:55:01+09:00"
     }
   ],
   "usage_log": [],

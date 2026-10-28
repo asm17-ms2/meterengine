@@ -1,5 +1,5 @@
-미완료 167건, 결과: 끝 상태 161/328건 (fixed 108, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 3개(마지막 b74ebeb)
+미완료 166건, 결과: 끝 상태 162/328건 (fixed 109, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 4개(마지막 fdf3b2c)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 3�
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 8 | 0 | 9 | 1 | 0 | 50 |
+| #445 | 68 | 9 | 0 | 9 | 1 | 0 | 49 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -99,6 +99,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 3�
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | C445-003 | #445 | b74ebeb | 더 새 시도가 있는 NOT_FOUND 실패의 7일 창 제외 | 수동_생성은_더_새_시도가_있는_NOT_FOUND_PAYMENT_실패면_7일이_지나도_다시_조회해_새로_승인한다: 실패 [HTTP status code] expected: 201 but was: 409 |
 | C445-002 | #445 | ad5872e | 결제 설정과 토스 키 변경의 키 모드 검사 | test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 200 |
+| Ck2-016 | #445 | fdf3b2c | 예약 작업 스레드 수를 작업 수 이상으로 | 예약_스레드_풀은_예약_작업_수_이상이다: 실패 Expecting actual: 2 to be greater than or equal to: 4 |
 | D-042 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-085 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-148 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
@@ -251,6 +252,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 3�
 | C445-006 | #445 | C445-007(시험 412행 isIn(409, 500))은 #449 feat/customer-invoices에서 좁힌다. #449 head 2fe98d1과 정점 0fe7d2a의 PaymentAttemptIntegrationTest.java:412가 같고, 그 위에서는 23b1844(#453)가 findForUpdate를 lockInvoice로 바꿨을 뿐 잠금 순서는 같다. |
 | C445-009 | #445 | #445 단독 머지 구간에만 남는다. 정점에서도 create의 예외 경로 정리는 없지만 organization 행 잠금으로 PK 경합이 사라져 이 지적의 실패 경로는 막힌다. 정점 시험은 backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java 87-122행이다. |
 | X-075 | #445 | 위층(#446~#455)으로 옮길 때 9dff033의 WorkspaceHeader.tsx 한 줄 변경이 들어가면 정점 payments/[id]/page.tsx:99-100의 '고객으로 이동', '내역 새로 조회'도 한 묶음이 된다. 페이지 쪽에 따로 div.workspace-actions를 더하지 않는다. integrations/[id], members 화면은 이미 자식으로 div.workspace-actions를 넘겨 겹으로 감싸지지만 배치는 같다. |
+| Ck2-016 | #445 | 위층이 @Scheduled 메서드를 더하면 새 시험이 풀 크기를 그 수 이상으로 올리라고 실패한다. 정점의 예약 작업 수를 반영 때 확인한다. |
 | Ck2-017 | #445 | 어느 안을 고르든 #453 23b1844가 PaymentReconciliationService.reconcile을 환경별로 나눴으므로 재실행이나 따라잡기 경로를 #453 head의 환경 구분 코드에도 맞춰야 한다. 슬롯을 cron 예정 시각에서 계산하는 부분은 PaymentJobScheduler.java 한 파일이며 위층에서 이 파일을 바꾼 커밋은 없다. |
 | D-042 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | D-085 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
