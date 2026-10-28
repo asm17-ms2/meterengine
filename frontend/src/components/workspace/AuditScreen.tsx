@@ -1,6 +1,7 @@
 import { ScopedLink } from "@/components/workspace/ScopedLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError } from "@/components/workspace/WorkspaceView";
+import { StatusTag } from "@/components/screen/StatusTag";
 import { type AuditLogsResponse, listOrganizationMembers } from "@/lib/api/management";
 import { operatorRequest, listOrganizations, listUserAccounts } from "@/lib/api/operator";
 import { workspaceFetch } from "@/lib/api/workspace";
@@ -54,7 +55,8 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
     {!result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST입니다. 조회 요청도 감사 대상이므로 새로 조회하면 기록이 추가됩니다.</p></div>
       {result.data.audit_logs.length === 0 ? <p className="muted">이 조건에 해당하는 기록이 없습니다. 기간이나 행동 조건을 조정하세요.</p> : <div className="audit-list">{result.data.audit_logs.map(log => {
         const status = Number(log.detail.status);
-        const outcome = log.action === "api_request_completed" && Number.isFinite(status) ? status >= 400 ? `요청 거절/오류 (${status})` : `성공 (${status})` : "변경 기록";
+        const isRequest = log.action === "api_request_completed" && Number.isFinite(status);
+        const outcome = isRequest ? status >= 400 ? <StatusTag color="error">요청 거절/오류 ({status})</StatusTag> : `성공 (${status})` : "변경 기록";
         return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{AUDIT_ACTIONS[log.action] ?? log.action}</strong><span>{auditActorLabel(log.actor_type, log.actor_id, names)}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
           <div><dt>실행 주체</dt><dd>{log.actor_id ? names.get(log.actor_id) ?? `${AUDIT_ACTOR_TYPES[log.actor_type]} ${log.actor_id}` : AUDIT_ACTOR_TYPES[log.actor_type]}</dd></div>
           {isOperator && <div><dt>도입사</dt><dd>{log.organization_id ? orgNames.get(log.organization_id) ?? log.organization_id : "도입사 미지정"}</dd></div>}
