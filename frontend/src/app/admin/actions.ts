@@ -26,7 +26,7 @@ export async function createOperatorAction(_previous: CreateOperatorState, data:
   if (!name) fieldErrors.name = "이름을 입력하세요.";
   else if (name.length > 255) fieldErrors.name = "이름은 255자 이내로 입력하세요.";
   if (email.length > 254 || !/^\S+@\S+\.\S+$/.test(email)) fieldErrors.email = "올바른 이메일 주소를 입력하세요.";
-  if (password.length < 8 || password.length > 72 || new TextEncoder().encode(password).length > 72) fieldErrors.password = "비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력하세요.";
+  if (password.length < 8 || password.length > 72 || new TextEncoder().encode(password).length > 72) fieldErrors.password = "비밀번호는 8자 이상 72자 이하로 입력하세요. 한글은 1자를 3자로 계산합니다.";
   if (Object.keys(fieldErrors).length) return { message: "입력한 내용을 확인하세요.", fieldErrors };
   const result = await operatorRequest<UserAccountResponse>("/v1/user-accounts", { method: "POST", body: { name, email, password } });
   if (!result.ok) {
@@ -53,7 +53,7 @@ export async function reviewSignupAction(_prev: ActionState, data: FormData): Pr
   const id = data.get("id");
   const status = data.get("status");
   if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "승인하거나 거절할 도입사를 확인하세요." };
-  const current = await listOrganizations();
+  const current = await listOrganizations("pending");
   if (!current.ok) return { message: toDisplayMessage(current.error) };
   if (!current.data.organizations.some(org => org.id === id && org.status === "pending")) return { message: "승인 대기 중인 도입사가 아닙니다. 목록을 새로고침하세요." };
   const result = await operatorRequest<OrganizationResponse>(`/v1/organizations/${id}/status`, { method: "PUT", body: { status } });
