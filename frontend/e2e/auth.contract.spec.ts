@@ -183,6 +183,70 @@ test("a workspace load failure offers an in-place retry button", async ({ page, 
   await expect(page.getByRole("link", { name: "다시 시도", exact: true })).toHaveCount(0);
 });
 
+test("a forbidden workspace load says so without a retry", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { fail: { "/v1/api-keys": 403 } } });
+  await page.reload();
+  await expect(page.getByText("조회 권한이 없습니다").first()).toBeVisible();
+  await expect(page.getByText("데이터를 불러오지 못했습니다")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
+test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.getByRole("region", { name: "API 키 목록" })).toHaveAttribute("tabindex", "0");
+});
+
+test("copy results are announced through a status region that is already present", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("상태 영역 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveCount(1);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await expect(dialog.getByRole("status")).toHaveText("복사했습니다.");
+});
+
+test("the operator user list sends the active organizations once instead of once per user", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  const payload = await (await page.request.get("/admin/users", { headers: { RSC: "1" } })).text();
+  expect(payload).toContain("66666666-6666-4666-8666-000000000000");
+  const perUserReferences = payload.split(":props:organizations:").length - 1;
+  expect(perUserReferences).toBeLessThan(100);
+});
+
+test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
+  await page.context().addCookies([{ name: "me_session", value: "stale-session", url: "http://localhost:33148" }]);
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await page.getByLabel(/^이름/).fill("초대 받은 사용자");
+  await page.getByLabel(/^비밀번호/).fill("invited-password");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
+  await page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+  await expectTenantUrl(page, "/customers");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const accept = calls.find((call: { path: string; method: string }) => call.path.endsWith("/accept") && call.method === "POST");
+  expect(accept.hasAuthorization).toBe(false);
+});
+
+test("logging in to a return path of another member organization opens that organization", async ({ page }) => {
+  const other = "22222222-2222-4222-8222-222222222222";
+  await login(page, "member@contract.local", `/customers?organization_id=${other}&q=abc`);
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === other && url.searchParams.get("q") === "abc");
+  await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
+  await page.context().clearCookies();
+  await login(page, "member@contract.local", "/customers?organization_id=99999999-9999-4999-8999-999999999999&q=abc");
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === ORGANIZATION_ID && url.searchParams.get("q") === "abc");
+  await expect(page.getByRole("heading", { name: "도입사 선택이 바뀌었습니다" })).toHaveCount(0);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

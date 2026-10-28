@@ -28,8 +28,8 @@ pnpm dev
 
 - http://localhost:3000 에서 열린다. `/`는 로그인 없이 보는 서비스 소개 화면이다.
 - 다른 기계에서 이 dev 서버를 볼 수 있다 (`next.config.ts`의 `allowedDevOrigins`).
-- 개발 모드에서만 사이드바 하단에 표 상태(정상, 빈 상태, 로딩, 에러) 스위치가 뜬다.
-  - `?state=`만 바꾸며 프로덕션 빌드에서는 제거된다.
+- 개발 모드에서는 `?state=empty|loading|error`로 표 상태(빈 상태, 로딩, 에러)를 바꿔 본다. 프로덕션 빌드에서는 무시된다.
+- 로그인 세션이 없으면 `src/proxy.ts`가 로그인 화면으로 보낸다.
 
 조회 조건은 다음 쿼리스트링으로 받는다.
 
@@ -64,12 +64,8 @@ pnpm build
 | 환경변수 | 용도 | 기본값 |
 | --- | --- | --- |
 | `METERENGINE_API_BASE_URL` | 백엔드 API 주소 | `http://localhost:8080` |
-| `METERENGINE_API_KEY` | 백엔드 호출에 쓰는 API 키. `Authorization: Bearer` 헤더로 나가고, 이 키의 도입사 데이터를 본다 | `backend/src/main/resources/db/local/R__local_credentials.sql`의 live 키 `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` (데모 도입사, admin 스코프) |
-| `METERENGINE_ORGANIZATION_ID` | 셸 표시용 도입사 식별자. 백엔드 호출에는 쓰지 않는다 | `backend/src/main/resources/db/migration/R__seed.sql`의 데모 도입사 |
-| `METERENGINE_ORGANIZATION_NAME` | 셸 표시용 도입사 이름. 상단 바에 나온다 | `데모 도입사` |
 
-- 셸 표시용 변수는 API 키가 속한 도입사와 같은 값으로 맞춘다. 다르면 상단 바와 화면의 데이터가 어긋난다.
-- 배포할 때는 `deploy/compose.prod.yml`이 API 키와 셸 표시용 변수를 필수로 걸어 주입한다. 값이 없으면 컨테이너가 뜨지 않는다.
+- API 키와 도입사 변수는 읽지 않는다. 백엔드 호출은 로그인 세션 토큰으로 하고, 도입사와 그 이름은 세션에서 읽는다.
 - 배포 환경의 백엔드 주소는 공개 도메인이 아니라 컨테이너 네트워크 안의 Caddy 내부 사이트 `http://caddy:8081`이다. Caddy가 헬스체크를 통과한 백엔드 색으로 보낸다.
 
 ## 컨테이너 이미지
@@ -85,7 +81,7 @@ docker run -p 3000:3000 \
 ```
 
 - standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
-- 백엔드 주소, API 키, 셸 표시용 도입사 값은 이미지에 굽지 않고 런타임 환경변수로 받는다.
+- 백엔드 주소는 이미지에 굽지 않고 런타임 환경변수로 받는다.
   - 주지 않으면 `src/lib/config.ts`의 기본값으로 떨어지고 오류가 나지 않는다.
 
 ## 백엔드 연동
@@ -96,9 +92,8 @@ docker run -p 3000:3000 \
 
 - 브라우저는 백엔드(:8080)를 직접 호출하지 않는다. 쓰기 화면도 같다 (각 라우트의 `actions.ts`가 Server Action).
 - 모든 백엔드 호출은 Server Component에서 서버 사이드 fetch로 나간다 (`src/lib/api/client.ts`).
-  - API 키를 담은 `Authorization: Bearer` 헤더도 여기서 붙어서 클라이언트에 가지 않는다.
-- 필터 선택지(고객, 미터 목록)만 Next 데이터 캐시에 잠깐 둔다. 캐시 키에 `Authorization` 헤더가 들어가 API 키의 도입사끼리 섞이지 않는다.
-  - 콘솔에서 고객이나 미터를 바꾸면 Server Action이 `updateTag`로 바로 비운다. 콘솔 밖에서 바꾼 값은 `CACHE_REVALIDATE_SECONDS`(`src/lib/api/client.ts`)가 지난 뒤 첫 조회 다음부터 보인다.
+  - 로그인 세션 토큰(`me_session` 쿠키, httpOnly, SameSite=Lax, 프로덕션에서 Secure)을 `Authorization: Bearer` 헤더로 여기서 실어 클라이언트에 가지 않는다.
+- 모든 조회는 `cache: "no-store"`로 보내 Next 데이터 캐시에 두지 않는다(`src/lib/api/transport.ts`).
 - `next.config.ts`의 `rewrites()`로 프록시하지 않는다.
 - `src/lib/config.ts`는 `server-only`를 임포트한다. Client Component에서 쓰면 빌드가 깨진다.
 
@@ -107,6 +102,13 @@ docker run -p 3000:3000 \
 | 경로 | 내용 |
 | --- | --- |
 | `src/app/(console)/` | 라우트. 화면마다 `page.tsx`, 쓰기 화면은 `actions.ts`, `state.ts` |
+| `src/app/(public)/` | 로그인, 가입 신청, 승인 안내 화면과 그 Server Action |
+| `src/app/organizations/` | 소속 도입사 선택과 전환 |
+| `src/app/account/` | 첫 로그인 때 계정 이용 안내 확인 |
+| `src/app/organization-invitations/` | 초대 링크 확인과 수락 |
+| `src/app/admin/` | 플랫폼 운영자 화면 |
+| `src/proxy.ts` | 세션 쿠키가 없으면 로그인으로 보내고, 현재 경로와 화면의 도입사를 서버에 넘긴다 |
+| `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
 | `src/components/shell/` | antd Layout 틀, 메뉴, 개발 모드 스위치, 테마와 로케일을 거는 `AppProviders` |
@@ -158,5 +160,15 @@ docker run -p 3000:3000 \
 | `/customers` | 고객 관리 (검색, 검색어 URL 유지, 열 정렬, 등록/수정 다이얼로그, 삭제. 청구 이메일 열과 칸이 있고, 수정할 때는 지금 청구 이메일을 채워 두어 이름만 고쳐도 그대로다) |
 | `/billable-metrics` | 미터 관리 (이름 검색, 검색어 URL 유지, 열 정렬, 차원 키, 등록/수정 다이얼로그, 삭제) |
 | `/billable-metric-prices` | 미터별 가격 (이름/코드 검색, 검색어 URL 유지, 열 정렬, 미터마다 차원 키와 조합별 단가, 단가 등록 다이얼로그, 확인 창을 거친 삭제) |
+| `/login` | 로그인. 계정 역할에 따라 도입사 업무나 플랫폼 운영 화면으로 간다 |
+| `/signup` | 도입사 가입 신청과 필수 동의 |
+| `/pending` | 가입 신청 뒤 승인 안내 |
+| `/organizations` | 소속 도입사 선택과 전환 |
+| `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
+| `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
+| `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
+| `/integrations` | API 키 발급, 권한 변경, 폐기 |
+| `/admin/organizations` | 운영자의 가입 승인과 도입사 관리 |
+| `/admin/users` | 운영자의 사용자, 플랫폼 운영 권한, 소속 연결 관리 |
 
 - 화면이 부르는 백엔드 오퍼레이션은 `src/lib/api/`에 있다.
