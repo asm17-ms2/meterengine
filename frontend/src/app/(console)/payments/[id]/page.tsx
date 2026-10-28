@@ -6,6 +6,7 @@ import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import { paymentReadiness } from "./card-state";
+import { INVOICE_PAYMENT_STATUS_LABELS } from "@/lib/invoice-payment-status";
 
 type PaymentAttemptResponse = {
   id: string; invoice_id: string; status: string; amount: number;
@@ -16,13 +17,13 @@ type PaymentCancellationResponse = {
 };
 
 const PAYMENT_STATES: Record<string, { label: string; description: string }> = {
-  unpaid: { label: "미청구", description: "등록한 카드로 이 인보이스의 결제를 요청할 수 있습니다." },
-  failed: { label: "결제 실패", description: "실패 사유와 등록 카드를 확인한 뒤 다시 결제를 요청하세요." },
-  pending: { label: "결제 결과 확인 중", description: "진행 중인 결제의 결과가 확인될 때까지 추가로 청구할 수 없습니다. 내역을 새로 조회해 주세요." },
-  paid: { label: "수납 완료", description: "승인된 결제가 있어 이 인보이스로 다시 청구할 수 없습니다." },
-  partially_canceled: { label: "부분 취소", description: "승인된 결제의 일부를 취소했습니다. 취소는 청구액과 별도로 기록하며 재청구는 별도 작업입니다." },
-  canceled: { label: "전액 취소", description: "결제 금액 전부를 취소했습니다. 확정 청구액은 보존되며 재청구는 별도 작업입니다." },
-  not_required: { label: "결제 불필요", description: "청구 금액이 0원이므로 결제할 금액이 없습니다." },
+  unpaid: { label: INVOICE_PAYMENT_STATUS_LABELS.unpaid, description: "등록한 카드로 이 인보이스의 결제를 요청할 수 있습니다." },
+  failed: { label: INVOICE_PAYMENT_STATUS_LABELS.failed, description: "실패 사유와 등록 카드를 확인한 뒤 다시 결제를 요청하세요." },
+  pending: { label: INVOICE_PAYMENT_STATUS_LABELS.pending, description: "진행 중인 결제의 결과가 확인될 때까지 추가로 청구할 수 없습니다. 내역을 새로 조회해 주세요." },
+  paid: { label: INVOICE_PAYMENT_STATUS_LABELS.paid, description: "승인된 결제가 있어 이 인보이스로 다시 청구할 수 없습니다." },
+  partially_canceled: { label: INVOICE_PAYMENT_STATUS_LABELS.partially_canceled, description: "승인된 결제의 일부를 취소했습니다. 취소는 청구액과 별도로 기록하며 재청구는 별도 작업입니다." },
+  canceled: { label: INVOICE_PAYMENT_STATUS_LABELS.canceled, description: "결제 금액 전부를 취소했습니다. 확정 청구액은 보존되며 재청구는 별도 작업입니다." },
+  not_required: { label: INVOICE_PAYMENT_STATUS_LABELS.not_required, description: "청구 금액이 0원이므로 결제할 금액이 없습니다." },
 };
 
 async function CancellationHistory({ attempt }: { attempt: PaymentAttemptResponse }) {
