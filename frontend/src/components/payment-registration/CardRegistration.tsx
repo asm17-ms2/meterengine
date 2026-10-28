@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Alert, Button, Checkbox } from "antd";
 import { prepareRegistration } from "@/app/payment-method-registrations/actions";
 import type { PaymentMethodRegistrationResponse } from "@/app/payment-method-registrations/types";
+import { formatKstDateTime } from "@/lib/format";
 import styles from "./registration.module.css";
 
 type TossPaymentsSdk = (clientKey: string) => {
@@ -25,7 +26,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
   const [isSdkReady, setIsSdkReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const expiresAt = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(registration.expires_at));
+  const expiresAt = formatKstDateTime(registration.expires_at);
 
   async function registerCard() {
     if (!hasConsent || isSubmitting || !window.TossPayments) return;
@@ -59,7 +60,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
     <dl className={styles.summary}>
       <div><dt>서비스 제공자</dt><dd>{registration.organization_name}</dd></div>
       <div><dt>고객명</dt><dd>{registration.customer_name}</dd></div>
-      <div><dt>링크 유효기간</dt><dd>{expiresAt}까지</dd></div>
+      <div><dt>링크 유효기간</dt><dd>{expiresAt} KST까지</dd></div>
     </dl>
     <fieldset className={styles.consent}>
       <legend>자동결제 등록 동의</legend>
