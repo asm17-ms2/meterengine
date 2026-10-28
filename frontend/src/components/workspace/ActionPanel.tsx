@@ -131,10 +131,12 @@ export function ActionPanel(props: ActionPanelProps) {
   const access = useTenantAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [requestId, setRequestId] = useState("");
+  const triggerId = useId();
+  const restoreFocus = () => requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={() => setIsOpen(false)} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); }} />}
+    <Button id={triggerId} danger={props.isDanger} onClick={() => { setRequestId(current => current || crypto.randomUUID()); setIsOpen(true); }}>{props.title}</Button>
+    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={() => { setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(crypto.randomUUID())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }
