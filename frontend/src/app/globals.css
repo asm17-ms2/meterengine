@@ -151,6 +151,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-pre
 a { color: #51409c; }
 :is(p, .field-hint, [role=alert]) a:not(.ant-btn) { text-decoration: underline; }
 .month-apply { border:1px solid #d4dbe7; border-radius:5px; background:#fff; padding:8px 16px; align-self:end; min-height:39px; cursor:pointer; }
+.month-apply:hover:not(:disabled) { border-color: var(--blue); background: #f3f0fb; color: #483795; }.month-apply:active:not(:disabled) { background: #ebe6f8; }.month-apply:disabled { cursor: not-allowed; opacity: .6; }
 .workspace-actions + .ant-table-wrapper { margin-top:22px; }
 .operator-content { max-width:1450px; }
 .workspace-header .mobile-menu { display: none; }
