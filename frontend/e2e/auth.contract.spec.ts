@@ -325,6 +325,17 @@ test("logging out on an invitation keeps the invitation open", async ({ page, re
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/sessions/current" && call.method === "DELETE")).toBe(true);
 });
 
+test("signup and invitation show the same required consent block", async ({ page }) => {
+  const names: string[][] = [];
+  for (const path of ["/signup", "/organization-invitations/me_invite_ContractInvitation00000000000001"]) {
+    await page.goto(path);
+    const checks = page.locator("fieldset.consent-fields label.consent-check");
+    await expect(checks).toHaveCount(2);
+    names.push(await checks.allTextContents());
+  }
+  expect(names[1]).toEqual(names[0]);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
