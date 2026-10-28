@@ -3,12 +3,15 @@ package com.meterengine.webhook;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.webhook.client.WebhookAddressPolicy;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.WebhookClaim;
@@ -40,9 +43,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -60,6 +65,7 @@ class WebhookIntegrationTest {
   @Autowired private WebhookDeliveryRepository webhookDeliveryRepository;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private WebApplicationContext webApplicationContext;
+  @MockitoSpyBean private WebhookAddressPolicy webhookAddressPolicy;
   private HttpServer httpServer;
   private UUID organizationId;
   private WebhookEndpointResponse endpoint;
@@ -131,6 +137,30 @@ class WebhookIntegrationTest {
                 .getFirst()
                 .status())
         .isEqualTo("done");
+  }
+
+  @Test
+  void 수신_주소의_DNS_조회는_트랜잭션_밖에서_해_DB_커넥션을_쥐지_않는다() throws Exception {
+    List<Boolean> transactionActiveOnResolve = new CopyOnWriteArrayList<>();
+    doAnswer(
+            invocation -> {
+              transactionActiveOnResolve.add(
+                  TransactionSynchronizationManager.isActualTransactionActive());
+              return invocation.callRealMethod();
+            })
+        .when(webhookAddressPolicy)
+        .resolve(anyString());
+    String url = "http://127.0.0.1:" + httpServer.getAddress().getPort() + "/webhook";
+
+    WebhookEndpointResponse created =
+        webhookEndpointService.create(
+            organizationId, new CreateWebhookEndpointRequest(url, List.of("webhook_test"), null));
+    webhookEndpointService.update(
+        organizationId,
+        created.id(),
+        new UpdateWebhookEndpointRequest(url, List.of("webhook_test"), true, null));
+
+    assertThat(transactionActiveOnResolve).containsExactly(false, false);
   }
 
   @Test
