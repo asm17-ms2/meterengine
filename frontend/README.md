@@ -111,7 +111,7 @@ docker run -p 3000:3000 \
 | `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
-| `src/components/shell/` | antd Layout 틀, 메뉴, 개발 모드 스위치, 테마와 로케일을 거는 `AppProviders` |
+| `src/components/shell/` | 콘솔과 운영자 셸, 메뉴, 안내 모드, 테마와 로케일을 거는 `AppProviders` |
 | `src/components/screen/` | 화면 공용 조각: 제목 줄, 툴바, 카드, 각주, 빈 상태, 오류, 스켈레톤, 링크 버튼, 월 선택, 검색과 필터, 페이지 |
 | `src/components/table/` | 표 공용 조각: 접기 상태, 조합 칸, 미터 라벨, 숫자 칸, 정렬, 표 공통값 |
 | `src/lib/api/` | 백엔드 호출. `client.ts`가 공용 fetch |
