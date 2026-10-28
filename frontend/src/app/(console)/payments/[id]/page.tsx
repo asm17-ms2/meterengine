@@ -75,7 +75,16 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
     workspaceFetch<InvoiceResponse>("/v1/invoices/" + encodeURIComponent(id)),
     workspaceFetch<{ payment_attempts: PaymentAttemptResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/payment-attempts"),
   ]);
-  if (!invoice.ok || !attempts.ok) return <WorkspaceError message={!invoice.ok ? invoice.error.message : !attempts.ok ? attempts.error.message : "조회하지 못했습니다."} />;
+  if (!invoice.ok || !attempts.ok) {
+    const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
+    return <>
+      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"} kicker="도입사 콘솔"
+        description={failure?.status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
+        <Link href="/payments">수납 목록으로</Link>
+      </WorkspaceHeader>
+      <WorkspaceError message={failure?.message ?? "조회하지 못했습니다."} status={failure?.status} />
+    </>;
+  }
   const payments = await workspaceFetch<{ invoice_payments: InvoicePaymentResponse[] }>("/v1/invoice-payments", {
     month: invoice.data.month, customer_id: invoice.data.customer_id,
   });
