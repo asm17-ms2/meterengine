@@ -1,12 +1,12 @@
-미완료 253건, 결과: 끝 상태 76/328건 (fixed 35, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 17개(마지막 c6327b2)
+미완료 252건, 결과: 끝 상태 77/328건 (fixed 36, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 18개(마지막 e4b7522)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 35 | 1 | 7 | 30 | 3 | 67 |
+| #442 | 143 | 36 | 1 | 7 | 30 | 3 | 66 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -42,6 +42,7 @@ push: feat/account-permissions 17개(마지막 c6327b2)
 | D-256 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-258 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | G-040 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
+| G-066 | #442 | e4b7522 | 운영자 사용자 화면의 도입사 목록 곱 렌더 제거 | the operator user list sends the active organizations once instead of once per user: 실패 Expected < 100, Received 930 |
 | G-068 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
 | X-000 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | X-004 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
