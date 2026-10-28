@@ -269,6 +269,19 @@ test("a one-time link that opens in a new tab says so", async ({ page }) => {
   await expect(dialog.getByRole("link", { name: "초대 링크 열기", exact: true })).toHaveAccessibleDescription("새 탭에서 열립니다.");
 });
 
+test("an API key without a rate limit is listed as unlimited", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("한도 없는 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await page.reload();
+  const table = page.locator(".workspace-desktop-table");
+  await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("무제한");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);

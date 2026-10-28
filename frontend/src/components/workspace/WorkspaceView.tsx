@@ -14,7 +14,7 @@ export function WorkspaceError({ message, status }: { message: string; status?: 
   return <ErrorAlert title="데이터를 불러오지 못했습니다" message={status && status > 0 ? `${message} (${status})` : message} />;
 }
 
-export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string };
+export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string; emptyLabel?: string };
 export type WorkspaceRowActions = Record<string, ActionPanelProps[]>;
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,7 +26,7 @@ const NUMBER = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 12 });
 
 function CellValue({ value, column, row }: { value: unknown; column: WorkspaceColumn; row: Record<string, unknown> }) {
   if (column.hrefPrefix) return <Link href={`${column.hrefPrefix}${encodeURIComponent(String(row[column.hrefKey ?? "id"]))}${column.hrefSuffix ?? ""}`}>{String(value ?? "-")}</Link>;
-  if (value === null || value === undefined || value === "") return <span className="muted">{column.key.startsWith("last_") && column.key.endsWith("_at") ? "기록 없음" : "-"}</span>;
+  if (value === null || value === undefined || value === "") return <span className="muted">{column.emptyLabel ?? (column.key.startsWith("last_") && column.key.endsWith("_at") ? "기록 없음" : "-")}</span>;
   if (column.isMoney || column.isNumber || typeof value === "number") {
     const number = Number(value);
     return <span className="numeric">{Number.isFinite(number) ? NUMBER.format(number) + (column.isMoney ? "원" : "") : "확인 필요"}</span>;
