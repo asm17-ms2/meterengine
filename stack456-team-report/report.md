@@ -1,8 +1,8 @@
-미완료 229건, 결과: 끝 상태 143/372건 (fixed 99, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 1번(마지막 848ef3b)
+미완료 225건, 결과: 끝 상태 147/372건 (fixed 103, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 2번(마지막 efabb7c)
 정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-28T23:32:15+09:00
+상태: running, 갱신 2026-10-28T23:34:09+09:00
 
 ## 층별 상태
 
@@ -10,7 +10,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | fix/s456-446-t-inho | 50 | 1 | 0 | 3 | 4 | 3 | 39 |
+| #446 | fix/s456-446-t-inho | 50 | 5 | 0 | 3 | 4 | 3 | 35 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
@@ -118,6 +118,10 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | U14-B1 | #444 | f67bc41 | 마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다 | 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0 |
 | U5-B1 | #444 | c0a9f4a | 하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다 | 없음(Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시) |
 | X-014 | #446 | 48fd833 | 사업자등록번호를 하이픈과 공백을 빼고 보내고 틀리면 우리말로 알린다 | a business registration number keeps only its ten digits and names the field when it is not ten digits: 실패 SyntaxError: does not provide an export named 'readBu |
+| D-040 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| D-180 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| X-005 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| D-119 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
 
 ## 정할 것
 
@@ -222,6 +226,10 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - U14-B1 (#444): #453 23b1844가 WebhookDeliveryRepository.claim과 UPDATE 문에 environment_scope_id를 더했다. 반영 때 claim 앞의 lease_expired UPDATE는 expireLeases()로 옮긴 채 두고(환경 조건 없이 전역으로 끝내는 동작은 같다), 정점 deploy/README.md 495행의 경보 표 문장을 이 층 문장으로 맞춘다.
 - U5-B1 (#444): alerting.yml scheduled-job-missed-day 식과 meterengine-billing.json 마지막 성공 패널 식이 바뀐다. 위층에서 같은 줄이 충돌하면 max_over_time(...[26h]) 형태를 남긴다. 코드로 게이지를 다시 읽는 방안(ScheduledJobRunService)은 넣지 않았다.
 - X-014 (#446): workspace-actions.ts의 updateSupplier 줄과 settings/page.tsx 공급자 정보 필드는 위층에서 같은 내용이다. 반영 때 충돌하면 readBusinessRegistrationNumber 호출과 hint를 남긴다. 위층 mvp.real.spec.ts와 environment-cycle.real.spec.ts는 getByLabel(/^사업자등록번호/)와 숫자 10자리만 써서 영향이 없다.
+- D-040 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
+- D-180 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
+- X-005 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
+- D-119 (#446): #451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.
 
 ## fixed-above로 둔 것
 

@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T23:32:15+09:00",
+  "updated_at": "2026-10-28T23:34:09+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -24,7 +24,7 @@
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
     "fix/s456-443-t-inho": "b99d2efdc25faebea3fd02b620be9cd466f4a28f",
     "fix/s456-444-t-inho": "c0a9f4a02595f979304f0a6c24115efcf5462cc2",
-    "fix/s456-446-t-inho": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4"
+    "fix/s456-446-t-inho": "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4354,43 +4354,112 @@
       "id": "D-040",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "da90aac의 단가 창에서 단일 단가 input은 defaultValue=\"0\"에 required이고(PricingWorkspace.tsx 122행), form에 noValidate도 0원 확인도 없어 115행 onSubmit이 값 0을 그대로 action으로 보낸다. 시작 월 기본값은 이번 달이고(119행), 서버 액션은 unit_price를 그대로 넘기며(workspace-actions.ts 64행), 백엔드는 @DecimalMin(\"0\")이라 0을 받는다. PriceRateService.create는 미터, 고객, 조합, 시작 월이 같은 행을 98-108행에서 찾아 126행 rate.update로 단가를 0으로 덮어쓰고, ChargeService 64-68행은 시작 월이 늦은 버전을 고르므로 이번 달 청구 예정액에서 그 미터 금액이 0원이 된다. 창에는 덮어쓰기 경고가 없다. 감사 로그에 이전 값이 남고 확정 전에는 다시 등록해 되돌릴 수 있지만, 이 경로를 막는 검사는 층 head와 정점 어디에도 없다. 단가 입력을 0으로 미리 채우지 않고(빈 칸은 필수 검사가 막는다), 단일 단가 0이나 모든 구간 단가 0이면 저장 전에 확인을 묻는다. 같은 원인의 D-040, D-180, X-005, D-119를 한 커밋으로 고쳤다. 같은 시작 월 덮어쓰기 경고는 편집기에 이력이 없어 넣지 않았다.",
+      "evidence": [
+        "frontend/src/components/pricing/PricingWorkspace.tsx:122 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:115 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:119 @ da90aac",
+        "frontend/src/app/(console)/workspace-actions.ts:64 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:24 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:98-108 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:126 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:64-68 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:193 @ 8dd028a",
+        "a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력이 \"0\"으로 미리 채워져 있었다)",
+        "커밋 efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "commits": [
+        "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "tests": [
+        "node --test e2e/price-rate.test.mjs: 고치기 전 실패, 고친 뒤 통과(0원 판정과 단가 입력에 0을 미리 채우지 않는지)",
+        "실화면(.s456-work/probe-price.mjs): 고치기 전 단가 입력 값 \"0\", 고친 뒤 빈 값과 placeholder '예: 120', 빈 채 저장은 필수 검사가 막고, 0을 넣고 저장하면 확인을 묻고 취소하면 창이 남아 저장되지 않음"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 PricingWorkspace.tsx도 단일 단가 defaultValue=\"0\"과 구간 unitPrice \"0\"이 남아 있고 0원 확인이 없다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), e5fca11(#451), 23b1844(#453)",
+      "propagation_note": "#451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.",
+      "summary": "단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다"
     },
     {
       "id": "D-180",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "122행 unit_price input이 defaultValue=\"0\"과 required를 함께 가져 값이 비지 않으므로 브라우저 필수 검사가 통과하고, 115행 onSubmit은 per_unit 단가를 따로 보지 않아 적용 월만 고르고 저장해도 0원 버전이 action으로 간다(PricingWorkspace.tsx @ da90aac). 백엔드 CreatePriceRateRequest 41행은 per_unit에서 unitPrice가 null인지만 보고 24행 @DecimalMin(\"0\")이 0을 허용하므로 그대로 저장된다. 저장 뒤에는 ChargeService 133행이 rate가 null일 때만 단가 미설정 사용량으로 분류하므로 0원 단가가 생긴 조합은 경고 목록에서 빠진다. 층 head와 정점(193행) 어디에도 막는 검사나 시험이 없다. 단가 입력을 0으로 미리 채우지 않고(빈 칸은 필수 검사가 막는다), 단일 단가 0이나 모든 구간 단가 0이면 저장 전에 확인을 묻는다. 같은 원인의 D-040, D-180, X-005, D-119를 한 커밋으로 고쳤다. 같은 시작 월 덮어쓰기 경고는 편집기에 이력이 없어 넣지 않았다.",
+      "evidence": [
+        "frontend/src/components/pricing/PricingWorkspace.tsx:122 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:115 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:41 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:24 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:133 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:193 @ 8dd028a",
+        "a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력이 \"0\"으로 미리 채워져 있었다)",
+        "커밋 efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "commits": [
+        "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "tests": [
+        "node --test e2e/price-rate.test.mjs: 고치기 전 실패, 고친 뒤 통과(0원 판정과 단가 입력에 0을 미리 채우지 않는지)",
+        "실화면(.s456-work/probe-price.mjs): 고치기 전 단가 입력 값 \"0\", 고친 뒤 빈 값과 placeholder '예: 120', 빈 채 저장은 필수 검사가 막고, 0을 넣고 저장하면 확인을 묻고 취소하면 창이 남아 저장되지 않음"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 PricingWorkspace.tsx도 단일 단가 defaultValue=\"0\"과 구간 unitPrice \"0\"이 남아 있고 0원 확인이 없다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), e5fca11(#451), 23b1844(#453)",
+      "propagation_note": "#451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.",
+      "summary": "단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다"
     },
     {
       "id": "X-005",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "단일 단가는 122행 defaultValue=\"0\" required, 구간 단가는 101행 초기값과 122행 '구간 추가'가 모두 unitPrice \"0\"이라 required를 통과하고, 115행 onSubmit은 끝 수량만 검사하고 단가는 검사하지 않으며 0원 확인도 없다(PricingWorkspace.tsx @ da90aac). 서버 액션 workspace-actions.ts 64행은 unit_price나 tiers를 그대로 넘기고, CreatePriceRateRequest 49행은 구간 단가가 음수일 때만 거절하므로 0원 버전이 저장되고 ChargeService 64-68행에 따라 시작 월부터 기존 단가를 대신한다. 단가 창 라벨에 필수 표시가 없는 점도 119행, 122행에서 확인된다. '고칠 수 없는 인보이스'는 청구 검토에서 한 번 더 놓쳐야 생기는 단계라 과장이 있으나, 미리 채운 0이 필수 검사를 무력화하는 경로는 층 head와 정점(118행, 193행)에 그대로 있다. 단가 입력을 0으로 미리 채우지 않고(빈 칸은 필수 검사가 막는다), 단일 단가 0이나 모든 구간 단가 0이면 저장 전에 확인을 묻는다. 같은 원인의 D-040, D-180, X-005, D-119를 한 커밋으로 고쳤다. 같은 시작 월 덮어쓰기 경고는 편집기에 이력이 없어 넣지 않았다.",
+      "evidence": [
+        "frontend/src/components/pricing/PricingWorkspace.tsx:101 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:122 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:115 @ da90aac",
+        "frontend/src/app/(console)/workspace-actions.ts:64 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:49 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:64-68 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:118 @ 8dd028a",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:193 @ 8dd028a",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:139-171 @ 8dd028a",
+        "a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력이 \"0\"으로 미리 채워져 있었다)",
+        "커밋 efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "commits": [
+        "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "tests": [
+        "node --test e2e/price-rate.test.mjs: 고치기 전 실패, 고친 뒤 통과(0원 판정과 단가 입력에 0을 미리 채우지 않는지)",
+        "실화면(.s456-work/probe-price.mjs): 고치기 전 단가 입력 값 \"0\", 고친 뒤 빈 값과 placeholder '예: 120', 빈 채 저장은 필수 검사가 막고, 0을 넣고 저장하면 확인을 묻고 취소하면 창이 남아 저장되지 않음"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 PricingWorkspace.tsx도 단일 단가 defaultValue=\"0\"과 구간 unitPrice \"0\"이 남아 있고 0원 확인이 없다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), e5fca11(#451), 23b1844(#453)",
+      "propagation_note": "#451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.",
+      "summary": "단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다"
     },
     {
       "id": "D-109",
@@ -4645,15 +4714,35 @@
       "id": "D-119",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-446-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "D-040, D-180, X-005와 원인이 같다. PricingWorkspace.tsx 122행의 defaultValue=\"0\"과 101행 구간 초기값 \"0\" 때문에 required가 걸리지 않고, 115행 onSubmit이 바로 action을 부르므로 창을 열고 곧바로 저장하면 시작 월부터 적용되는 0원 단가 버전이 만들어진다(@ da90aac). 저장 뒤 ChargeService 133행은 rate가 null일 때만 단가 없음으로 분류하므로 누락 경고 없이 0원으로 계산된다. 정점 193행도 같다. 단가 입력을 0으로 미리 채우지 않고(빈 칸은 필수 검사가 막는다), 단일 단가 0이나 모든 구간 단가 0이면 저장 전에 확인을 묻는다. 같은 원인의 D-040, D-180, X-005, D-119를 한 커밋으로 고쳤다. 같은 시작 월 덮어쓰기 경고는 편집기에 이력이 없어 넣지 않았다.",
+      "evidence": [
+        "frontend/src/components/pricing/PricingWorkspace.tsx:122 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:101 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:115 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:133 @ da90aac",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:193 @ 8dd028a",
+        "a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력이 \"0\"으로 미리 채워져 있었다)",
+        "커밋 efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "commits": [
+        "efabb7cdaed2849cd007f82764edd8b495ac1f1e"
+      ],
+      "tests": [
+        "node --test e2e/price-rate.test.mjs: 고치기 전 실패, 고친 뒤 통과(0원 판정과 단가 입력에 0을 미리 채우지 않는지)",
+        "실화면(.s456-work/probe-price.mjs): 고치기 전 단가 입력 값 \"0\", 고친 뒤 빈 값과 placeholder '예: 120', 빈 채 저장은 필수 검사가 막고, 0을 넣고 저장하면 확인을 묻고 취소하면 창이 남아 저장되지 않음"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "65d4150dd91118ca31e9c3c0aff3242dd708a13a"
+      },
+      "fails_without_fix": true,
+      "top_head": "same: 정점 PricingWorkspace.tsx도 단일 단가 defaultValue=\"0\"과 구간 unitPrice \"0\"이 남아 있고 0원 확인이 없다. 같은 파일을 바꾼 위층 커밋 2ec5d85(#447), e5fca11(#451), 23b1844(#453)",
+      "propagation_note": "#451 e5fca11이 단가 창 검사를 submit()으로 옮겼다(정점 139-171행). 반영 때 단가 입력의 placeholder와 빈 처음 값을 남기고, 0원 확인은 submit()의 action 호출 직전에 둔다. 단가 라벨에 필수 표시를 더하지 않아 정점 mvp.real.spec.ts 90행의 getByLabel 정확 일치는 그대로 맞는다.",
+      "summary": "단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다"
     },
     {
       "id": "C446-001",
@@ -7622,6 +7711,44 @@
   "checks": [
     {
       "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "58 passed (26.5s)"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "2 passed (7.2s); 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 25 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
       "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
@@ -10120,6 +10247,11 @@
       "branch": "fix/s456-446-t-inho",
       "sha": "848ef3b8212d53a642e0a5ad8ba5d9bd8b42f4e4",
       "at": "2026-10-28T23:27:31+09:00"
+    },
+    {
+      "branch": "fix/s456-446-t-inho",
+      "sha": "efabb7cdaed2849cd007f82764edd8b495ac1f1e",
+      "at": "2026-10-28T23:33:51+09:00"
     }
   ],
   "usage_log": [],
