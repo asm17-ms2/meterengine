@@ -209,6 +209,41 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 기한부_단가_보관은_원래_종료월부터_구단가로_돌아간다() {
+    legacyRate();
+    var promotion = rate(null, month, month.plusMonths(2), "per_unit", new BigDecimal("20"), null);
+    priceRateService.delete(organizationId, "tokens", promotion.id());
+    assertThat(amount(month, "100")).isEqualTo(2000);
+    assertThat(amount(month.plusMonths(1), "100")).isZero();
+    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1000);
+    assertThat(
+            billableMetricPriceService
+                .list(organizationId, month.plusMonths(2), null)
+                .billableMetricPrices()
+                .getFirst()
+                .priceRates()
+                .getFirst()
+                .unitPrice())
+        .isEqualByComparingTo("10");
+  }
+
+  @Test
+  void 기한부_요금제_보관은_원래_종료월부터_구요금제로_돌아간다() {
+    legacyRate();
+    jdbcTemplate.update(
+        "INSERT INTO price_plan (organization_id,effective_from,base_fee,minimum_amount) VALUES (?, ?, 100, 0)",
+        organizationId,
+        month.minusMonths(1).toString());
+    var promotion =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, month, month.plusMonths(2), 200L, 0L));
+    pricePlanService.delete(organizationId, promotion.id());
+    assertThat(amount(month, "100")).isEqualTo(1200);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1100);
+  }
+
+  @Test
   void 누진_구간은_각_라인에서_절사하고_경계를_겹치지_않는다() {
     rate(null, month, null, "graduated", null, tiers());
     String[] quantities = {"0", "100", "101", "1000", "1500.5"};
