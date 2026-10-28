@@ -39,6 +39,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "restoreWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/restorations`; break;
       case "createApiKey":
         path = "/v1/api-keys";
         body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute", { min: 1, max: 2147483647, message: "분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요." }) : null };
