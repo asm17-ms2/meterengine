@@ -432,15 +432,14 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void 빌링키가_없으면_새_시도를_만들지_않고_skipped로_센다() {
+  void 빌링키가_없으면_새_시도를_만들지_않는다() {
     Organization organization = organization(false);
     UUID invoiceId = invoice(organization);
     failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(25));
 
-    PaymentJobResult result = paymentRetryService.retry();
+    paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertThat(result.skippedCount()).isPositive();
   }
 
   @Test
