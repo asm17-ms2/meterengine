@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:15:18+09:00",
+  "updated_at": "2026-10-28T19:18:23+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "d4129fbd43fdd075c952f449d658f6bf9f811395"
+    "fix/s456-443-t-inho": "c002716ca8d044b8c3e78b06f99c69b3e9692814"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1491,29 +1491,76 @@
       "id": "D-097",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 .month-apply를 고르는 규칙은 globals.css 156행과 176행 두 줄뿐이고 :hover, :active가 없습니다. 같은 층의 흰 테두리 버튼 .secondaryAction은 HomePage.module.css 22행에 hover가 있어 같은 모양의 버튼이 둘로 갈라져 있습니다. 초대 화면 page.tsx 29-30행은 이 버튼을 그 분기의 유일한 다음 행동에 쓰는데, 같은 AuthFrame의 다른 분기(InvitationForm.tsx 19행)와 로그인(AuthForm.tsx 23행), 동의(AccountConsentForm.tsx 16행)는 모두 antd primary입니다. 다만 cursor:pointer는 있으니 누를 수 있는지조차 모른다는 말은 과장입니다. 그리고 초대 화면 마크업은 #442 커밋 d4f1714가 들였습니다. #443 f671a4f는 CSS만 더했으므로, 이 층에서 바로 고칠 몫은 hover와 active 규칙입니다.",
+      "evidence": [
+        "frontend/src/app/globals.css:156 @ 0f1d1bf",
+        "frontend/src/app/globals.css:176 @ 0f1d1bf",
+        "frontend/src/app/HomePage.module.css:21-22 @ 0f1d1bf",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:29-30 @ 0f1d1bf",
+        "frontend/src/components/auth/InvitationForm.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/auth/AuthForm.tsx:23 @ 0f1d1bf",
+        "frontend/src/components/auth/AccountConsentForm.tsx:16 @ 0f1d1bf",
+        "frontend/README.md:132 @ 0f1d1bf",
+        "커밋 d4f171457c866ca1345d3554f6e4afb002fc70c5",
+        "커밋 f671a4f5",
+        "커밋 c002716ca8d044b8c3e78b06f99c69b3e9692814"
+      ],
+      "commits": [
+        "c002716ca8d044b8c3e78b06f99c69b3e9692814"
+      ],
+      "tests": [
+        "보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가 기본과 같음(evidence/D-097/computed-before.txt), 고친 뒤 hover 배경 rgb(243, 240, 251), 테두리 rgb(87, 70, 173), disabled cursor not-allowed, opacity 0.6(computed-after.txt)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 156행 .month-apply에 hover, disabled 규칙이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "비활성 상태가 실제로 보이는 곳은 #449 InvoiceViewLinks.tsx 72, 90행이다. 초대 화면 두 버튼을 antd primary로 바꾸는 일은 #442 d4f1714 마크업(Server Component라 client 제출 버튼 파일이 필요)이라 #442 몫이다.",
+      "summary": ".month-apply에 hover, 누름, 비활성 상태를 주었다"
     },
     {
       "id": "D-240",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css 156행과 176행이 배경, 테두리, cursor:pointer를 명시합니다. 22행 button { color: inherit }은 작성자 스타일이라 UA의 button:disabled 색, 배경, 테두리를 덮고, :hover와 :disabled 규칙이 따로 없으니 disabled여도 활성 버튼과 똑같이 보입니다. 이 층에는 disabled를 거는 .month-apply가 없습니다(page.tsx 29-30행, WorkspaceHeader.tsx 15행). 문제는 정점의 #449 InvoiceViewLinks.tsx 72행과 90행 disabled={isBusy}에서 드러나지만, 원인인 규칙은 #443 globals.css에 있습니다. 원문의 '복사'가 isBusy로 막힌다는 말은 틀렸고(81행에 disabled가 없음), 진행 상태는 '발급 중', '폐기 중' 문구로 보입니다. 44px 높이는 176행이 입력칸과 함께 맞춘 터치 대상 결정이라 취향 차이입니다. 클래스 이름을 바꾸거나 antd로 교체하는 일은 #442, #448, #449, #450 파일까지 걸쳐 이 층 수정에 넣지 않습니다.",
+      "evidence": [
+        "frontend/src/app/globals.css:22-24 @ 0f1d1bf",
+        "frontend/src/app/globals.css:156 @ 0f1d1bf",
+        "frontend/src/app/globals.css:176 @ 0f1d1bf",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:29-30 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 0f1d1bf",
+        "frontend/src/components/workspace/InvoiceViewLinks.tsx:72,90 @ 0fe7d2a",
+        "frontend/src/components/workspace/InvoiceViewLinks.tsx:81 @ 0fe7d2a",
+        "frontend/src/components/invoice-links/PublicInvoiceView.module.css:11-12 @ 0fe7d2a",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "커밋 c002716ca8d044b8c3e78b06f99c69b3e9692814"
+      ],
+      "commits": [
+        "c002716ca8d044b8c3e78b06f99c69b3e9692814"
+      ],
+      "tests": [
+        "보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가 기본과 같음(evidence/D-097/computed-before.txt), 고친 뒤 hover 배경 rgb(243, 240, 251), 테두리 rgb(87, 70, 173), disabled cursor not-allowed, opacity 0.6(computed-after.txt)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 156행 .month-apply에 hover, disabled 규칙이 없다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "비활성 상태가 실제로 보이는 곳은 #449 InvoiceViewLinks.tsx 72, 90행이다. 초대 화면 두 버튼을 antd primary로 바꾸는 일은 #442 d4f1714 마크업(Server Component라 client 제출 버튼 파일이 필요)이라 #442 몫이다.",
+      "summary": ".month-apply에 hover, 누름, 비활성 상태를 주었다"
     },
     {
       "id": "D-081",
@@ -7757,6 +7804,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "42 passed (19.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (21.1s)"
     }
   ],
   "pushes": [
@@ -7904,6 +7989,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
       "at": "2026-10-28T19:12:21+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "at": "2026-10-28T19:18:10+09:00"
     }
   ],
   "usage_log": [],
