@@ -550,6 +550,39 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 보관_상태로_거르는_목록의_status는_active_archived_all만_받고_기본이_active다() {
+    List<String> operationIds =
+        List.of(
+            "listCustomers",
+            "listBillableMetrics",
+            "listPriceRates",
+            "listPricePlans",
+            "listPaymentMethods",
+            "listTossPaymentsCredentials",
+            "listWebhookEndpoints");
+
+    for (String operationId : operationIds) {
+      JsonNode operation =
+          operations().stream()
+              .filter(candidate -> candidate.path("operationId").asText().equals(operationId))
+              .findFirst()
+              .orElseThrow(() -> new AssertionError(operationId + " 오퍼레이션이 문서에 없다"));
+      JsonNode schema = null;
+      for (JsonNode parameter : operation.path("parameters")) {
+        if (parameter.path("in").asText().equals("query")
+            && parameter.path("name").asText().equals("status")) {
+          schema = parameter.path("schema");
+        }
+      }
+      assertThat(schema).as("%s의 status 파라미터", operationId).isNotNull();
+      List<String> values = new ArrayList<>();
+      schema.path("enum").forEach(value -> values.add(value.asText()));
+      assertThat(values).as(operationId).containsExactly("active", "archived", "all");
+      assertThat(schema.path("default").asText()).as(operationId).isEqualTo("active");
+    }
+  }
+
+  @Test
   void 스키마_속성_이름과_열거값은_snake_case다() {
     List<String> names = new ArrayList<>();
     List<String> enumValues = new ArrayList<>();

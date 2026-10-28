@@ -11,6 +11,7 @@ import com.meterengine.pricing.dto.ListPricePlansResponse;
 import com.meterengine.pricing.dto.PricePlanResponse;
 import com.meterengine.pricing.service.PricePlanService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -74,7 +75,15 @@ public class PricePlanController {
       @RequestParam(required = false) @FourDigitYear @DateTimeFormat(pattern = "yyyy-MM")
           YearMonth month,
       @RequestParam(name = "customer_id", required = false) UUID customerId,
-      @RequestParam(defaultValue = "active") @StorableText String status) {
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
     return pricePlanService.list(organizationId, month, customerId, status);
   }
 

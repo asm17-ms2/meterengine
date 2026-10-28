@@ -56,7 +56,15 @@ public class CustomerController {
   })
   public ListCustomersResponse listCustomers(
       @CurrentOrganizationId UUID organizationId,
-      @RequestParam(defaultValue = "active") @StorableText String status) {
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
     return ListCustomersResponse.from(customerService.list(organizationId, status));
   }
 

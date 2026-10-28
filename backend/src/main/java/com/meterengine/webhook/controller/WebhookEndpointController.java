@@ -13,6 +13,7 @@ import com.meterengine.webhook.dto.WebhookEndpointResponse;
 import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -53,7 +54,15 @@ public class WebhookEndpointController {
   @Operation(summary = "웹훅 엔드포인트 목록 조회")
   public ListWebhookEndpointsResponse listWebhookEndpoints(
       @CurrentOrganizationId UUID organizationId,
-      @RequestParam(defaultValue = "active") @StorableText String status) {
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
     return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId, status));
   }
 

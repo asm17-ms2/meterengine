@@ -59,7 +59,14 @@ public class TossPaymentsCredentialController {
   })
   public ListTossPaymentsCredentialsResponse listTossPaymentsCredentials(
       @CurrentOrganizationId UUID organizationId,
-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
+          @StorableText
           String status) {
     return tossPaymentsCredentialService.list(organizationId, status);
   }

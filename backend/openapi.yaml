@@ -287,12 +287,17 @@ paths:
     get:
       operationId: listBillableMetrics
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -672,12 +677,17 @@ paths:
         schema:
           type: string
           format: uuid
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -992,12 +1002,17 @@ paths:
         페이지를 나누지 않는다.
       operationId: listCustomers
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -3411,12 +3426,17 @@ paths:
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
       operationId: listPaymentMethods
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -3671,12 +3691,17 @@ paths:
         schema:
           type: string
           format: uuid
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -4135,12 +4160,17 @@ paths:
         verified_at과 updated_at은 KST(+09:00)로 나온다.
       operationId: listTossPaymentsCredentials
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -4582,12 +4612,17 @@ paths:
     get:
       operationId: listWebhookEndpoints
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
