@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Empty, Pagination, Table, Tag } from "antd";
+import { Empty, Pagination, Table, Tag } from "antd";
+import { ErrorAlert } from "@/components/screen/ErrorAlert";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { useState } from "react";
 import { ActionPanel, type ActionPanelProps } from "@/components/workspace/ActionPanel";
@@ -8,8 +9,8 @@ import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { formatKstDateTime } from "@/lib/format";
 
-export function WorkspaceError({ message }: { message: string }) {
-  return <Alert showIcon type="error" title="데이터를 불러오지 못했습니다" description={message} action={<a href="">다시 시도</a>} />;
+export function WorkspaceError({ message, status }: { message: string; status?: number }) {
+  return <ErrorAlert title="데이터를 불러오지 못했습니다" message={status && status > 0 ? `${message} (${status})` : message} />;
 }
 
 export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string };

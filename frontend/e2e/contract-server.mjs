@@ -9,6 +9,7 @@ let sessions = new Map();
 let requests = [];
 let outage = false;
 let customers = [];
+let failures = {};
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
 
@@ -23,7 +24,8 @@ const server = createServer(async (req, res) => {
   let result;
   if (path === "/health") result = { status: 200, body: {} };
   else if (path === "/__control" && req.method === "POST") {
-    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; }
+    if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; }
+    if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
     if (body.suspend) { const entry = sessions.get(body.suspend); if (entry) entry.organization = organizations[2]; }
@@ -33,6 +35,7 @@ const server = createServer(async (req, res) => {
   else {
     requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents });
     if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
+    else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
     else if (path === "/v1/sessions" && req.method === "POST") {
       if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
