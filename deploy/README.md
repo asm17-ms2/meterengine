@@ -394,14 +394,14 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `db-username` | String | 백엔드 datasource |
 | `db-password` | SecureString | 백엔드 datasource. 배포 때 KMS로 복호화한다 |
 | `db-exporter-password` | SecureString | postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
-| `organization-id` | String | 프론트가 조회할 도입사. 프론트 API 키도 이 도입사에 속한다 |
-| `organization-name` | String | 프론트 상단 바에 표시할 이름 |
+| `organization-id` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트가 조회하던 도입사이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
+| `organization-name` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트 상단 바의 이름이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
-| `frontend-api-key` | SecureString | 프론트가 백엔드를 부를 때 쓰는 API 키 원문. 백엔드가 기동할 때 없으면 넣는다 |
+| `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 
 - 새 파라미터를 등록한다.
 
