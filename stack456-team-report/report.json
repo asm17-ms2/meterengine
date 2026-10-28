@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:05:13+09:00",
+  "updated_at": "2026-10-28T18:07:15+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "93491f9cc376f0b04ade93d7656feea512e67a01"
+    "fix/s456-443-t-inho": "cd1a0fa4152e994b82b8207647553a839af22be1"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -2406,15 +2406,40 @@
       "id": "X-017",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 루트 layout.tsx가 모든 화면을 AppProviders의 antd <App>으로 감싸고, antd 6.6.7(설치본과 같은 버전)의 genStyleUtils.getResetStyles가 genLinkStyle을 공용 리셋으로 등록해 ':where(.css-해시) a'에 text-decoration을 linkDecoration 기본값 none으로 준다(hover, focus도 none). globals.css는 a에 text-underline-offset만 주고 text-decoration을 되살리는 규칙이 없어, /login과 /signup의 .auth-switch 문장 속 링크(AuthForm.tsx:24)는 밑줄 없이 색으로만 구분된다. 링크 색 #51409c(globals.css:155, antd 순서면 #5746ad)와 주변 --muted #5a6578의 대비는 1.39:1 또는 1.24:1로 WCAG 1.4.1이 요구하는 3:1에 못 미친다. 막는 규칙, 테마 토큰(linkDecoration), e2e 검사를 층 head와 정점 양쪽에서 찾았으나 없고, globals.css, AppProviders.tsx, AuthForm.tsx는 0f1d1bf 뒤 정점까지 바뀐 커밋이 없다. 색과 테마는 #443 f671a4f가 넣었으므로 이 층 globals.css 한 곳에서 고치면 위층의 같은 구조 링크(event-issues, InvoiceViewLinks, EventFilters)까지 함께 풀린다.",
+      "evidence": [
+        "frontend/src/components/auth/AuthForm.tsx:24 @ 0f1d1bf",
+        "frontend/src/app/globals.css:38 @ 0f1d1bf",
+        "frontend/src/app/globals.css:73 @ 0f1d1bf",
+        "frontend/src/app/globals.css:155 @ 0f1d1bf",
+        "frontend/src/app/globals.css:162 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ 0f1d1bf",
+        "frontend/src/app/layout.tsx:30-31 @ 0f1d1bf",
+        "frontend/package.json:18 @ 0f1d1bf",
+        "frontend/src/app/(console)/event-issues/page.tsx:53 @ 0fe7d2a",
+        "frontend/src/components/workspace/InvoiceViewLinks.tsx:83 @ 0fe7d2a",
+        "frontend/src/components/events/EventFilters.tsx:185 @ 0fe7d2a",
+        "a link inside a sentence keeps its underline: 실패 Expected \"underline\" Received \"none\"",
+        "커밋 cd1a0fa4152e994b82b8207647553a839af22be1"
+      ],
+      "commits": [
+        "cd1a0fa4152e994b82b8207647553a839af22be1"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'a link inside a sentence keeps its underline'; evidence/X-017 before, after 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf globals.css 155행 a 규칙과 AuthForm.tsx 24행이 같다. 위층 event-issues 등의 field-hint 링크도 이 규칙을 받는다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "문단, 입력 안내, 경고 안 링크에 밑줄을 되살렸다"
     },
     {
       "id": "D-107",
@@ -6676,6 +6701,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "32 passed (16.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "33 passed (16.6s)"
     }
   ],
   "pushes": [
@@ -6748,6 +6811,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
       "at": "2026-10-28T18:03:13+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "at": "2026-10-28T18:06:44+09:00"
     }
   ],
   "usage_log": [],
