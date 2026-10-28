@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CsvDownload } from "@/components/screen/CsvDownload";
 import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
@@ -28,6 +29,8 @@ async function SelectedEvent({ transactionId }: { transactionId: string }) {
   const event = result.data;
   return <RoutedEventDetail row={{ transactionId: event.transaction_id, customerName: event.customer_name, eventType: event.type, occurredAt: formatKstDateTime(event.occurred_at), receivedAt: formatKstDateTime(event.received_at), propertiesPreview: summarizeProperties(event.properties), rawJson: toRawJson(event), requestId: event.request_id, actorType: event.actor_type, actorId: event.actor_id }} />;
 }
+
+export const metadata: Metadata = { title: "수집 로그" };
 
 export default async function EventsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
