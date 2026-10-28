@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:09:17+09:00",
+  "updated_at": "2026-10-28T22:13:45+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -8927,6 +8927,46 @@
       "command": "node .stack456-team/tools/screens.mjs (9개 라우트, 1440, 1024, 390)",
       "result": "pass",
       "detail": "마지막 실화면 점검: 콘솔 오류 0, 가로 넘침 없음, axe는 color-contrast 등 기존 위반만이고 X-008 after보다 늘지 않음(members 모바일 2에서 1)"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  53 passed (20.9s) "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "screen",
+      "result": "fail",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  1 failed   2 passed (15.4s) rc=1"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
