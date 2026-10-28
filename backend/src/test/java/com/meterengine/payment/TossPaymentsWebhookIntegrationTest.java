@@ -3,6 +3,7 @@ package com.meterengine.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -18,8 +19,10 @@ import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
+import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+import com.meterengine.payment.service.TossPaymentsCredentialService;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -54,6 +57,7 @@ class TossPaymentsWebhookIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private InvoiceRepository invoiceRepository;
   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
+  @Autowired private TossPaymentsCredentialService tossPaymentsCredentialService;
   @Autowired private MeterRegistry meterRegistry;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
@@ -200,6 +204,30 @@ class TossPaymentsWebhookIntegrationTest {
 
     assertThat(attemptRow(attempt)).containsEntry("status", "pending");
     verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void 키를_바꾼_뒤에_받은_웹훅도_바꾸기_전에_요청한_시도는_이전_키로_재조회해_done으로_바꾼다() {
+    Attempt attempt = attempt("pending");
+    String paymentKey = paymentKey(attempt);
+    String newSecretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
+    when(tossPaymentsClient.findPaymentByOrderId(eq(newSecretKey), anyString()))
+        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
+    tossPaymentsCredentialService.update(
+        attempt.organizationId(),
+        "test",
+        new UpdateTossPaymentsCredentialRequest(TEST_CLIENT_KEY, newSecretKey));
+    when(tossPaymentsClient.findPayment(TEST_SECRET_KEY, paymentKey))
+        .thenReturn(found(attempt, paymentKey, "DONE"));
+
+    assertThat(
+            receive(attempt.organizationId(), webhookBody(attempt.attemptId(), paymentKey, "DONE")))
+        .hasStatusOk();
+
+    assertThat(attemptRow(attempt))
+        .containsEntry("status", "done")
+        .containsEntry("payment_key", paymentKey);
+    verify(tossPaymentsClient, never()).findPayment(eq(newSecretKey), anyString());
   }
 
   @Test
