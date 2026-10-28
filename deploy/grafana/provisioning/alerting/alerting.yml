@@ -245,6 +245,7 @@ groups:
                 - evaluator: { type: gt, params: [1800] }
 
       # 하루 한 번 도는 작업은 정해진 시각에서 1시간이 지나도록 그날 성공이 없으면 울린다.
+      # 슬롯을 이긴 색이 배포로 멈춰 그 시리즈가 사라져도 26시간 안의 가장 최근 성공을 본다.
       - uid: scheduled-job-missed-day
         title: 예약 작업 미실행 (하루 주기)
         condition: C
@@ -260,7 +261,7 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}))
+                (time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}[26h])))
                 or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
                 + scalar(time() - max(process_start_time_seconds{job="backend"})))
               instant: true
@@ -363,7 +364,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
-      # 재시도 상한까지 보내지 못해 포기한 웹훅이 생겼다. 도입사가 이벤트를 받지 못했다.
+      # 실패로 끝나 더는 보내지 않는 웹훅이 생겼다(재시도 상한, 선점 만료, 막힌 주소). 도입사가 이벤트를 받지 못했다.
       # 예약 작업 실패와 같은 이유로 15분 안에 새로 생긴 시계열도 센다.
       - uid: webhook-delivery-failed
         title: 웹훅 전송 실패
@@ -372,7 +373,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 재시도 상한까지 보내지 못한 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
+          summary: 실패로 끝난 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -392,3 +393,30 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      # 보낼 때가 지난 웹훅이 10분 넘게 밀렸다. 실패가 없어도 발송이 처리량을 따라가지 못하면 도입사 통보가 늦는다.
+      - uid: webhook-delivery-backlog
+        title: 웹훅 발송 적체
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 보낼 때가 지난 웹훅이 10분 넘게 밀려 있다. 응답이 느린 수신 주소가 발송 시간을 쓰고 있는지 전송 기록 조회 API와 백엔드 로그를 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: max(meterengine_webhook_delivery_backlog_age_seconds)
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [600] }

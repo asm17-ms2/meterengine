@@ -9,7 +9,7 @@ public final class SecretMask {
 
   private SecretMask() {}
 
-  public static String lastFour(String secret) {
+  public static String mask(String secret) {
     if (secret == null) {
       return null;
     }
