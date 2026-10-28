@@ -267,14 +267,18 @@ paths:
           type: string
           maxLength: 255
           minLength: 0
-      - in: query
+      - description: "이 시각부터(포함). yyyy-MM-dd는 그날 KST 0시, 오프셋이 있는 ISO 시각은 그 순간이다. 연\
+          도는 0001부터 9999까지다."
+        in: query
         name: from
         required: false
         schema:
           type: string
           maxLength: 40
           minLength: 0
-      - in: query
+      - description: "이 시각까지(미포함). yyyy-MM-dd는 그날 끝까지 담고(다음 날 KST 0시 미포함), 오프셋이 있는\
+          \ ISO 시각은 그 순간을 뺀다. 연도는 0001부터 9999까지다."
+        in: query
         name: to
         required: false
         schema:
@@ -294,7 +298,15 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListAuditLogsResponse"
-          description: OK
+          description: 감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: page, size, action, actor_type, sort가\
+            \ 범위나 형식 밖이거나, from과 to가 날짜나 오프셋 있는 시각이 아니거나 연도가 0001부터 9999까지의 범위 밖이거\
+            나, from이 to보다 늦다"
         "401":
           content:
             application/json:
@@ -2354,14 +2366,18 @@ paths:
           type: string
           maxLength: 255
           minLength: 0
-      - in: query
+      - description: "이 시각부터(포함). yyyy-MM-dd는 그날 KST 0시, 오프셋이 있는 ISO 시각은 그 순간이다. 연\
+          도는 0001부터 9999까지다."
+        in: query
         name: from
         required: false
         schema:
           type: string
           maxLength: 40
           minLength: 0
-      - in: query
+      - description: "이 시각까지(미포함). yyyy-MM-dd는 그날 끝까지 담고(다음 날 KST 0시 미포함), 오프셋이 있는\
+          \ ISO 시각은 그 순간을 뺀다. 연도는 0001부터 9999까지다."
+        in: query
         name: to
         required: false
         schema:
@@ -2381,7 +2397,15 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ListAuditLogsResponse"
-          description: OK
+          description: 감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: page, size, action, actor_type, sort가\
+            \ 범위나 형식 밖이거나, from과 to가 날짜나 오프셋 있는 시각이 아니거나 연도가 0001부터 9999까지의 범위 밖이거\
+            나, from이 to보다 늦다"
         "401":
           content:
             application/json:

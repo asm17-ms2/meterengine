@@ -45,6 +45,26 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
+  void 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다() {
+    UUID organizationId = UUID.randomUUID();
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    jdbcTemplate.update(
+        "UPDATE user_account SET role = 'operator' WHERE id = (SELECT user_account_id FROM organization_member WHERE organization_id = ?)",
+        organizationId);
+
+    MvcTestResult result =
+        mvc.get().uri("/v1/operations").header(AUTHORIZATION, session).exchange();
+
+    assertThat(result).hasStatusOk();
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT organization_id FROM audit_log WHERE detail->>'request_id'=?",
+                UUID.class,
+                result.getResponse().getHeader("X-Request-ID")))
+        .containsExactly((UUID) null);
+  }
+
+  @Test
   void 감사조회는_도입사와_read권한을_지키며_필터와_안정정렬과_페이지를_제공한다() {
     UUID first = UUID.randomUUID();
     UUID second = UUID.randomUUID();
@@ -132,6 +152,7 @@ class AuditQueryAndRequestIntegrationTest {
             Map.of("sort", "random"),
             Map.of("action", "Customer"),
             Map.of("from", "2026-99-99"),
+            Map.of("to", "+300000-01-01T00:00:00Z"),
             Map.of("from", "2026-10-02", "to", "2026-10-01"))) {
       var request = mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, read);
       invalid.forEach(request::queryParam);
