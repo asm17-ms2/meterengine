@@ -1,5 +1,5 @@
-미완료 175건, 결과: 끝 상태 153/328건 (fixed 100, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66)
+미완료 169건, 결과: 끝 상태 159/328건 (fixed 106, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 1개(마지막 3db6a0e)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 0 | 0 | 9 | 1 | 0 | 58 |
+| #445 | 68 | 6 | 0 | 9 | 1 | 0 | 52 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -97,6 +97,12 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | X-072 | #442 | 09d27a3 | 표 빈 상태 작은 삽화 | an empty workspace table uses the small empty illustration: 실패 Expected 1, Received 0 |
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
+| D-042 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| D-085 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| D-148 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| D-181 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| D-212 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| X-006 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
@@ -243,6 +249,12 @@ push: feat/account-permissions 62개(마지막 643ae66)
 | C445-009 | #445 | #445 단독 머지 구간에만 남는다. 정점에서도 create의 예외 경로 정리는 없지만 organization 행 잠금으로 PK 경합이 사라져 이 지적의 실패 경로는 막힌다. 정점 시험은 backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java 87-122행이다. |
 | X-075 | #445 | 위층(#446~#455)으로 옮길 때 9dff033의 WorkspaceHeader.tsx 한 줄 변경이 들어가면 정점 payments/[id]/page.tsx:99-100의 '고객으로 이동', '내역 새로 조회'도 한 묶음이 된다. 페이지 쪽에 따로 div.workspace-actions를 더하지 않는다. integrations/[id], members 화면은 이미 자식으로 div.workspace-actions를 넘겨 겹으로 감싸지지만 배치는 같다. |
 | Ck2-017 | #445 | 어느 안을 고르든 #453 23b1844가 PaymentReconciliationService.reconcile을 환경별로 나눴으므로 재실행이나 따라잡기 경로를 #453 head의 환경 구분 코드에도 맞춰야 한다. 슬롯을 cron 예정 시각에서 계산하는 부분은 PaymentJobScheduler.java 한 파일이며 위층에서 이 파일을 바꾼 커밋은 없다. |
+| D-042 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| D-085 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| D-148 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| D-181 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| D-212 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| X-006 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | NT-yang-001 | #442 | #443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다. |
 
 ## fixed-above로 둔 것

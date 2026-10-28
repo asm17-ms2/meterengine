@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:13:45+09:00",
+  "updated_at": "2026-10-28T22:17:44+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -17,7 +17,8 @@
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
-    "feat/environment-isolation": "f014e03"
+    "feat/environment-isolation": "f014e03",
+    "fix/s456-445-t-yang": "3db6a0e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4266,29 +4267,61 @@
       "id": "D-042",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "D-085",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "D-105",
@@ -4308,57 +4341,121 @@
       "id": "D-148",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "D-181",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "D-212",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "X-006",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "payments/[id]/page.tsx 72-79행은 인보이스, 결제 시도, invoice-payments만 조회하고 82행 canCollect는 상태만 봐서, 카드나 결제 모드의 토스 키가 없어도 93-95행 결제 버튼과 18행 안내가 나온다. 백엔드 prepare는 키 없음과 카드 없음을 409로 막아 금전 피해는 없지만 확인 단계를 지난 뒤에야 알 수 있다. 정점도 같다. 카드와 키를 함께 조회해 판정하고 버튼 대신 필요한 준비를 안내했다. 묶인 D-042, D-085, D-148, D-181, D-212도 같은 버튼과 안내 지적이다.",
+      "evidence": [
+        "frontend/src/app/(console)/payments/[id]/page.tsx:18,72-82,93-95 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:357-362 @ b10f8c7",
+        "a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts"
+      ],
+      "commits": [
+        "3db6a0ef2e8f"
+      ],
+      "tests": [
+        "e2e/payment-card-state.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 14건, typecheck, lint, build 통과. 이 층에는 수납 상세를 다루는 실화면 명세가 없다"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "same c9a86c4 e5fca11",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "카드, 키 없을 때 결제 버튼 대신 준비 안내",
+      "propagation_note": "#447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다."
     },
     {
       "id": "X-069",
@@ -8967,6 +9064,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  53 passed (19.7s) "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts --grep-invert 'real Spring: operator without organization can manage the platform'",
+      "detail": "  2 passed (4.5s) rc=0, 뺀 시험: real Spring: operator without organization can manage the platform"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9279,6 +9416,11 @@
       "branch": "feat/account-permissions",
       "sha": "643ae664599c3d5f516e2ced375af7b3c39a47ec",
       "at": "2026-10-28T21:20:30+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "3db6a0ef2e8f51d44ba85814872f34b54034659f",
+      "at": "2026-10-28T22:17:44+09:00"
     }
   ],
   "usage_log": [],
