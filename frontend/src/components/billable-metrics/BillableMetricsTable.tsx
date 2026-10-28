@@ -16,7 +16,7 @@ import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
 import { metricAggregationLabel, metricCalculationFormula } from "@/lib/billable-metric-calculation";
 
-const MIN_WIDTH = 1090;
+const MIN_WIDTH = 1340;
 
 function DimensionPropertyTags({
   dimensionProperties,
