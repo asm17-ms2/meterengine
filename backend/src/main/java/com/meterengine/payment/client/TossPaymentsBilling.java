@@ -10,7 +10,7 @@ public record TossPaymentsBilling(String billingKey, OffsetDateTime authenticate
   @Override
   public String toString() {
     return "TossPaymentsBilling[billingKey="
-        + SecretMask.lastFour(billingKey)
+        + SecretMask.mask(billingKey)
         + ", authenticatedAt="
         + authenticatedAt
         + ", card="

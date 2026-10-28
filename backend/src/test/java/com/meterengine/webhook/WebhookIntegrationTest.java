@@ -3,12 +3,15 @@ package com.meterengine.webhook;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.webhook.client.WebhookAddressPolicy;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.WebhookClaim;
@@ -20,6 +23,8 @@ import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import com.meterengine.webhook.service.WebhookEventService;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -40,9 +45,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -60,6 +67,8 @@ class WebhookIntegrationTest {
   @Autowired private WebhookDeliveryRepository webhookDeliveryRepository;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private WebApplicationContext webApplicationContext;
+  @Autowired private MeterRegistry meterRegistry;
+  @MockitoSpyBean private WebhookAddressPolicy webhookAddressPolicy;
   private HttpServer httpServer;
   private UUID organizationId;
   private WebhookEndpointResponse endpoint;
@@ -131,6 +140,46 @@ class WebhookIntegrationTest {
                 .getFirst()
                 .status())
         .isEqualTo("done");
+  }
+
+  @Test
+  void 수신_주소의_DNS_조회는_트랜잭션_밖에서_해_DB_커넥션을_쥐지_않는다() throws Exception {
+    List<Boolean> transactionActiveOnResolve = new CopyOnWriteArrayList<>();
+    doAnswer(
+            invocation -> {
+              transactionActiveOnResolve.add(
+                  TransactionSynchronizationManager.isActualTransactionActive());
+              return invocation.callRealMethod();
+            })
+        .when(webhookAddressPolicy)
+        .resolve(anyString());
+    String url = "http://127.0.0.1:" + httpServer.getAddress().getPort() + "/webhook";
+
+    WebhookEndpointResponse created =
+        webhookEndpointService.create(
+            organizationId, new CreateWebhookEndpointRequest(url, List.of("webhook_test"), null));
+    webhookEndpointService.update(
+        organizationId,
+        created.id(),
+        new UpdateWebhookEndpointRequest(url, List.of("webhook_test"), true, null));
+
+    assertThat(transactionActiveOnResolve).containsExactly(false, false);
+  }
+
+  @Test
+  void 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() - interval '20 minutes' WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+
+    webhookDeliveryService.measure();
+
+    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog").gauge().value())
+        .isGreaterThanOrEqualTo(1);
+    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog.age").gauge().value())
+        .isGreaterThanOrEqualTo(1200);
   }
 
   @Test
@@ -247,6 +296,15 @@ class WebhookIntegrationTest {
                 "SELECT count(*) FROM pg_indexes WHERE tablename = 'webhook_delivery_attempt' AND indexname = 'webhook_delivery_attempt_webhook_delivery_lookup'",
                 Integer.class))
         .isOne();
+  }
+
+  @Test
+  void 전송기록_목록을_엔드포인트별_최신순으로_읽는_색인이_있다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE tablename = 'webhook_delivery' AND indexname = 'webhook_delivery_endpoint_created_at'",
+                String.class))
+        .endsWith("(organization_id, webhook_endpoint_id, created_at DESC, id DESC)");
   }
 
   @Test
@@ -381,6 +439,20 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET attempt_count = 6, last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() - interval '1 second', claim_token = gen_random_uuid() WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    double before = leaseExpiredCount();
+
+    webhookDeliveryService.deliver();
+
+    assertThat(leaseExpiredCount() - before).isGreaterThanOrEqualTo(1);
+  }
+
+  @Test
   void 비밀값을_풀지_못한_전송은_secret_unavailable_시도로_남기고_재시도_간격을_따른다() {
     String stored =
         jdbcTemplate.queryForObject(
@@ -451,6 +523,15 @@ class WebhookIntegrationTest {
     webhookDeliveryService.deliver();
     assertThat(received).hasSize(1);
     return eventId;
+  }
+
+  private double leaseExpiredCount() {
+    Counter counter =
+        meterRegistry
+            .find("meterengine.webhook.delivery")
+            .tags("result", "failed", "reason", "lease_expired")
+            .counter();
+    return counter == null ? 0 : counter.count();
   }
 
   private void pullNextAttempt(UUID eventId) {

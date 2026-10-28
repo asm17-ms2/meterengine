@@ -4663,9 +4663,15 @@ components:
           type: array
           items:
             type: string
+            enum:
+            - webhook_test
+            - unbilled_usage_detected
+            - payment_succeeded
+            - payment_failed
+            - payment_canceled
             minLength: 1
           maxItems: 20
-          minItems: 0
+          minItems: 1
         url:
           type: string
           maxLength: 2048
@@ -5867,9 +5873,15 @@ components:
           type: array
           items:
             type: string
+            enum:
+            - webhook_test
+            - unbilled_usage_detected
+            - payment_succeeded
+            - payment_failed
+            - payment_canceled
             minLength: 1
           maxItems: 20
-          minItems: 0
+          minItems: 1
         url:
           type: string
           maxLength: 2048
