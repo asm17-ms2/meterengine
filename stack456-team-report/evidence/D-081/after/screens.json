@@ -1,0 +1,76 @@
+[
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-organizations",
+    "path": "/admin/organizations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-081/after/admin-organizations-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-081/after/admin-organizations-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@fe-e2e.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-users",
+    "path": "/admin/users",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-081/after/admin-users-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "/Users/temp/Developer/meterengine-s456-T-inho/.s456-report/stack456-team-report/evidence/D-081/after/admin-users-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]

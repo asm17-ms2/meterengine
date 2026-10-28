@@ -1,14 +1,14 @@
-미완료 283건, 결과: 끝 상태 89/372건 (fixed 72, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 30번(마지막 c002716)
+미완료 282건, 결과: 끝 상태 90/372건 (fixed 73, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 31번(마지막 18be9f0)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T19:20:55+09:00
+상태: running, 갱신 2026-10-28T19:24:18+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 72 | 1 | 0 | 16 | 0 | 3 |
+| #443 | fix/s456-443-t-inho | 92 | 73 | 1 | 0 | 16 | 0 | 2 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -59,6 +59,7 @@ push: fix/s456-443-t-inho 30번(마지막 c002716)
 | D-084 | #443 | d4129fb | 767px 이하 WorkspaceTable 레코드 제목을 14px로 낮췄다 | 없음(보이는 크기만 바뀌어 시험으로 잡을 수 없다. evidence/D-084 before, after 캡처(members, integrations 390). integrations PNG는 키 정보가 보일 수 있어 보고) |
 | D-097 | #443 | c002716 | .month-apply에 hover, 누름, 비활성 상태를 주었다 | 없음(보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가) |
 | D-240 | #443 | c002716 | .month-apply에 hover, 누름, 비활성 상태를 주었다 | 없음(보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가) |
+| D-081 | #443 | 18be9f0 | .operator-content를 flex column, gap 28px로 두었다 | 없음(보이는 간격만 바뀌어 시험으로 잡을 수 없다. evidence/D-081 before, after 캡처(admin-organizations, admin-users 1440, 390)) |
 | C443-001 | #443 | 55ce723 | 스켈레톤을 aria-hidden div로 감싸고 상태 영역에서 aria-busy, aria-label을 뺐다 | 없음(개발 서버 /customers?state=loading의 상태 영역 접근성 트리(.s456-work/verify-skeleton.mjs): 고치기 전 status 이름 '데이터를 불러오고 있습니다' 안에 list와 ) |
 | G-087 | #443 | cc3de53 | README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다 | 없음(문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조; 글꼴 버전: PretendardVaria) |
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
@@ -149,6 +150,7 @@ push: fix/s456-443-t-inho 30번(마지막 c002716)
 - D-084 (#443): 뒤집힘이 보이는 화면은 #445 payments/[id] 100-102행과 #449 같은 파일 113-115행이다. 결제 시도, 취소 내역 표의 열 순서(결과와 금액을 첫 열로)는 그 층 몫이다.
 - D-097 (#443): 비활성 상태가 실제로 보이는 곳은 #449 InvoiceViewLinks.tsx 72, 90행이다. 초대 화면 두 버튼을 antd primary로 바꾸는 일은 #442 d4f1714 마크업(Server Component라 client 제출 버튼 파일이 필요)이라 #442 몫이다.
 - D-240 (#443): 비활성 상태가 실제로 보이는 곳은 #449 InvoiceViewLinks.tsx 72, 90행이다. 초대 화면 두 버튼을 antd primary로 바꾸는 일은 #442 d4f1714 마크업(Server Component라 client 제출 버튼 파일이 필요)이라 #442 몫이다.
+- D-081 (#443): 간격이 크게 보이는 운영 현황(#444 80a3ef1)과 감사 기록(#448 15692f8) 운영자 화면은 반영 뒤 그 층에서 확인한다.
 - G-087 (#443): #452 29a78d0이 README 29, 135, 140행을 고쳐 위층 반영 때 겹친다. 겹치는 줄은 #452 문장을 택하되 136행 '시스템 글꼴' 문구는 #452 C452-010 몫이다. 31-32행과 112행(개발 모드 스위치, antd Layout 틀)은 G-081에서 고친다.
 - G-083 (#443): ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.
 - D-021 (#443): #451 events/page.tsx 38행 수집 로그 탭 이름은 X-071이 맡는다. #444 integrations/[id]/page.tsx 17행 뒤로 가기 '연동 설정으로'는 'API 키와 통보로'로 위층에서 맞춘다. #450 UsageQuality '처리 결과 통보 연결'은 동작 링크라 그대로 둔다.

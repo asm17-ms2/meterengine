@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:20:55+09:00",
+  "updated_at": "2026-10-28T19:24:18+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "c002716ca8d044b8c3e78b06f99c69b3e9692814"
+    "fix/s456-443-t-inho": "18be9f0631c3a1bca9700d6a23865573e5e156e7"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1566,15 +1566,39 @@
       "id": "D-081",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "#443 head에서 OperatorShell의 main.operator-content(globals.css:92, 158)에는 display와 gap이 없고, 도입사 콘솔의 .workspace-content(139, 166행)만 flex column에 gap 28px를 준다. #443 화면 안에서도 가입 승인 화면에서 담당자 조회가 실패하면, 테두리가 있는 .failure-note 바로 아래에 .empty-panel이나 첫 .organization-card가 여백 없이 붙는다(globals.css:104에 margin이 없다). 원문이 짚은 운영 현황의 금액 카드와 패널 두 개는 #444 80a3ef1이, 감사 기록의 두 패널은 #448 15692f8이 들였다. 같은 AuditScreen이 도입사 쪽에서는 gap 안에서, 운영자 쪽에서는 gap 없이 그려져 두 맥락의 간격이 갈라진다. 정점까지 globals.css를 바꾼 위층 커밋이 없어서 원인 줄은 이 층의 .operator-content 하나이고, 이 파일 한 곳에서 고칠 수 있다. 간격 값은 도입사 콘솔의 28px를 그대로 쓰면 되므로 새 디자인 결정은 필요 없다.",
+      "evidence": [
+        "frontend/src/app/globals.css:92,158 @ 0f1d1bf",
+        "frontend/src/app/globals.css:139,166 @ 0f1d1bf",
+        "frontend/src/app/globals.css:104 @ 0f1d1bf",
+        "frontend/src/components/shell/OperatorShell.tsx:9 @ 0f1d1bf",
+        "frontend/src/app/admin/organizations/page.tsx:14-16 @ 0f1d1bf",
+        "frontend/src/app/admin/page.tsx:12 @ 0fe7d2a",
+        "frontend/src/components/workspace/AuditScreen.tsx:56,67 @ 0fe7d2a",
+        "frontend/src/app/globals.css:142,144 @ 0fe7d2a",
+        "커밋 80a3ef1",
+        "커밋 15692f8",
+        "커밋 18be9f0631c3a1bca9700d6a23865573e5e156e7"
+      ],
+      "commits": [
+        "18be9f0631c3a1bca9700d6a23865573e5e156e7"
+      ],
+      "tests": [
+        "보이는 간격만 바뀌어 시험으로 잡을 수 없다. evidence/D-081 before, after 캡처(admin-organizations, admin-users 1440, 390)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 158행 .operator-content가 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "간격이 크게 보이는 운영 현황(#444 80a3ef1)과 감사 기록(#448 15692f8) 운영자 화면은 반영 뒤 그 층에서 확인한다.",
+      "summary": ".operator-content를 flex column, gap 28px로 두었다"
     },
     {
       "id": "G-076",
@@ -7842,6 +7866,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "42 passed (21.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (19.4s)"
     }
   ],
   "pushes": [
@@ -7994,6 +8056,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
       "at": "2026-10-28T19:18:10+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "at": "2026-10-28T19:23:55+09:00"
     }
   ],
   "usage_log": [],
