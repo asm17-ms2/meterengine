@@ -1,12 +1,12 @@
-미완료 223건, 결과: 끝 상태 105/328건 (fixed 63, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 38개(마지막 00794cc)
+미완료 222건, 결과: 끝 상태 106/328건 (fixed 64, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 39개(마지막 16ae391)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 63 | 1 | 7 | 31 | 3 | 38 |
+| #442 | 143 | 64 | 1 | 7 | 31 | 3 | 37 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -30,6 +30,7 @@ push: feat/account-permissions 38개(마지막 00794cc)
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
+| C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
 | C442-018 | #442 | 3f74137 | 없는 업무 환경 전환 안내 제거 | 없음(보이는 변경(문구): 이 층에 환경 전환 요소가 없는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | D-003 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-006 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
