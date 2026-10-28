@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:32:50+09:00",
+  "updated_at": "2026-10-28T19:35:58+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -6712,555 +6712,23 @@
   "checks": [
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.8s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
-      "detail": "18 passed (11.1s)"
+      "detail": "42 passed (22.3s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "not-run",
-      "detail": "3 passed (7.2s); 바로잡음: 이 실행은 17:09에 3ec2f28 빌드로 떠 남아 있던 프론트(pid 36188)를 상대로 돌아 이 sha 빌드를 확인하지 못했다. 이 sha의 실화면 확인은 같은 sha의 계약 명세 통과 기록과 다음 push 검사로 대신한다"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "19 passed (11.3s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "fail",
-      "detail": "3 failed"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "20 passed (11.9s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
-      "detail": "3 passed (7.6s)"
+      "detail": "3 passed (8.7s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "20 passed (11.4s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.7s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "20 passed (11.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.4s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "21 passed (11.4s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.9s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.7s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "22 passed (12.1s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "24 passed (12.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.5s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "24 passed (12.9s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.8s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "25 passed (13.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 4 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.8s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "25 passed (13.0s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 4 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.9s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "26 passed (13.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 4 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.9s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "26 passed (13.3s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7268,45 +6736,29 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "32 passed (16.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
       "kind": "frontend",
       "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
       "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
+      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (19.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
@@ -7314,29 +6766,7 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "33 passed (16.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7344,349 +6774,29 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "34 passed (17.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
       "kind": "frontend",
       "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
       "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "34 passed (17.0s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
       "kind": "forbidden-chars",
       "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
       "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.1s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
-      "detail": "35 passed (16.9s)"
+      "detail": "42 passed (21.1s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "35 passed (17.2s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "36 passed (17.8s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.7s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "37 passed (18.0s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "38 passed (18.0s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (7.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "39 passed (18.5s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.5s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "40 passed (19.3s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "45fde1759f76d6b5ae419459b985097601995581",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "45fde1759f76d6b5ae419459b985097601995581",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "45fde1759f76d6b5ae419459b985097601995581",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
@@ -7694,29 +6804,7 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "45fde1759f76d6b5ae419459b985097601995581",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "41 passed (19.7s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7724,37 +6812,37 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (19.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
-      "detail": "3 passed (8.6s)"
+      "detail": "3 passed (8.7s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (20.4s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7762,23 +6850,14 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.5s)"
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (20.7s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
       "kind": "forbidden-chars",
       "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
       "result": "pass"
@@ -7786,17 +6865,10 @@
     {
       "branch": "fix/s456-443-t-inho",
       "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
-      "detail": "ℹ pass 7 ℹ fail 0"
+      "detail": "42 passed (20.5s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
@@ -7809,28 +6881,6 @@
     {
       "branch": "fix/s456-443-t-inho",
       "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (20.5s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7838,37 +6888,37 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (20.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
-      "detail": "3 passed (8.7s)"
+      "detail": "3 passed (8.5s)"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "d4129fbd43fdd075c952f449d658f6bf9f811395",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (19.6s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7876,7 +6926,67 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
+      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (20.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "41 passed (19.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
@@ -7884,29 +6994,7 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "c002716ca8d044b8c3e78b06f99c69b3e9692814",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (21.1s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7914,7 +7002,371 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "45fde1759f76d6b5ae419459b985097601995581",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "40 passed (19.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.5s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "a8024e03151fb03d762fc56bc534826526ad1105",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "39 passed (18.5s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "24c970fd6aed7c49ddbc1f604de8883cf72a2696",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "38 passed (18.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "b6d082242cd00afc4b4b0aa2b6705e50354ef2f7",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "37 passed (18.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "90d920f2b69153435f80b3c193ed01cd2a1c17cb",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "36 passed (17.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "35 passed (17.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "35 passed (16.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "abb155df213e16217e8ae2a455716ba76c11463b",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "34 passed (17.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "5147f0cbd173a3473785c6ffe7dde058c6a54764",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "34 passed (17.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f07a01f591c5b1f912e9b4e333e073ba92dc7ac1",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "33 passed (16.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
       "kind": "screen",
       "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
       "result": "pass",
@@ -7922,29 +7374,7 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "18be9f0631c3a1bca9700d6a23865573e5e156e7",
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "42 passed (19.4s)"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
-      "result": "pass"
-    },
-    {
-      "branch": "fix/s456-443-t-inho",
-      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
       "kind": "frontend-unit",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "result": "pass",
@@ -7952,19 +7382,589 @@
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
-      "kind": "screen",
-      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
-      "result": "pass",
-      "detail": "3 passed (8.7s)"
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
     },
     {
       "branch": "fix/s456-443-t-inho",
-      "sha": "4455641855343d61b1300f5a1a240116044b99c5",
+      "sha": "cd1a0fa4152e994b82b8207647553a839af22be1",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
       "kind": "screen",
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
-      "detail": "42 passed (22.3s)"
+      "detail": "32 passed (16.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "93491f9cc376f0b04ade93d7656feea512e67a01",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "26 passed (13.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "6730d65c8e5b019155fc0a180f3e456b174af9c3",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "26 passed (13.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "25 passed (13.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "25 passed (13.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "38f991ce5bbd6dfd5da84110c3cbb6dea84ce0e8",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "24 passed (12.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.5s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "fabaca16ab332c4fce0526f87615b56198f9bab6",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "24 passed (12.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "22 passed (12.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cc3de5338d5ab3490fdd2e3c4e4084963746e961",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "21 passed (11.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "cab9f45885b95e44cc397741f067bfc6ce5970d7",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "20 passed (11.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "e26db2c9eb8df3e4160b0a7981e4f37cfbcd5f79",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "20 passed (11.4s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "20 passed (11.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "fail",
+      "detail": "3 failed"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "ee07130326131afca1b9374477bd48afc6e8bd1d",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "19 passed (11.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "not-run",
+      "detail": "3 passed (7.2s); 바로잡음: 이 실행은 17:09에 3ec2f28 빌드로 떠 남아 있던 프론트(pid 36188)를 상대로 돌아 이 sha 빌드를 확인하지 못했다. 이 sha의 실화면 확인은 같은 sha의 계약 명세 통과 기록과 다음 push 검사로 대신한다"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "0dfdbd373428f5cf3cfbfd0ae8e2b6febd0a643f",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "18 passed (11.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.8s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3ec2f286f0153bbc74cbe1a414bf34bb1c9c54e9",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
     }
   ],
   "pushes": [
