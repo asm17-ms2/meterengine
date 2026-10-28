@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { BillingCalculatedStamp } from "@/components/billing/BillingCalculatedStamp";
@@ -27,6 +28,8 @@ import { readListQuery, type MonthlyListQuery } from "@/lib/list-query";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const BILLING_CAPABILITIES = CAPABILITIES.previewDraftInvoice;
+
+export const metadata: Metadata = { title: "청구 검토" };
 
 export default async function BillingPage({
   searchParams,
