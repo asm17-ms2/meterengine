@@ -16,7 +16,7 @@ export async function readSessionToken(): Promise<string | undefined> {
 
 export const requireSession = cache(async (): Promise<SessionResponse> => {
   const token = await readSessionToken();
-  if (!token) redirect("/login");
+  if (!token) redirect("/login?reason=expired");
   const result = await requestApi<SessionResponse>("/v1/sessions/current", { token });
   if (!result.ok) {
     if (result.error.status === 401 || result.error.status === 403) redirect("/login?reason=expired");
