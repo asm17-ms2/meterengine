@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T20:04:24+09:00",
+  "updated_at": "2026-10-28T20:07:07+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -585,14 +585,24 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "층 sha 72e8718의 workspace-actions.ts에 위층 기능 분기가 false 상수로 그대로 있다: 57행 if (false && version 검사), 58행 isPaymentRequest = false와 67-68행 결제 미확인 분기, 62행 ifMatch: false ?, 64행 isEmptyResponse: false, 73, 75행 if (false) redirect, 80행 false ? 시험 통보 문구, 82행 /payment-method-registrations/ 경로, 63행 이 층에 case가 없는 createPaymentCancellation, createCustomer 멱등 키. 반박을 시도했지만 각 위층 head(81651ed, 54bb1d5, 8babc3d, 17cc788)가 바로 이 false를 실제 조건으로 바꾸고, 0f1d1bf(#443)는 #442와 같은 줄을 그대로 가져 이 상수들이 #442 단독으로는 도달할 수 없는 코드라는 것이 확인된다. integrations/page.tsx:21도 #453에서야 생기는 업무 환경 전환을 안내하며, 정점 0fe7d2a에서는 같은 줄이 environment === \"legacy\" 조건 안에 있다. 런타임 피해는 없고 #442 단독 화면의 안내 문구와 리뷰 가능성에 그친다. 바뀌는 파일은 #442의 두 파일이라 이 층에서 고친다.",
+      "evidence": [
+        "frontend/src/app/(console)/workspace-actions.ts:57-58,62-64 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:73,75,80,82 @ 72e8718",
+        "frontend/src/app/(console)/integrations/page.tsx:21 @ 72e8718",
+        "frontend/src/app/(console)/workspace-actions.ts:97,104,113,120 @ 0fe7d2a",
+        "frontend/src/app/(console)/integrations/page.tsx:29 @ 0fe7d2a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "question": "workspace-actions.ts의 위층 기능 분기(false 상수, isPaymentRequest, 결제 상태 처리)를 #442에서 지우고 #445, #446, #447, #449가 각자 다시 더하게 할지, 스택을 한 번에 머지하는 전제(Q4)로 그대로 둘지 정한다(G-038과 같은 결정이다)."
     },
     {
       "id": "G-027",

@@ -1,12 +1,12 @@
-미완료 199건, 결과: 끝 상태 129/328건 (fixed 87, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+미완료 198건, 결과: 끝 상태 130/328건 (fixed 87, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 32, blocked 3(그중 no-evidence 0))
 push: feat/account-permissions 52개(마지막 180d80f)
-정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
+정할 것: 31건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 87 | 1 | 7 | 31 | 3 | 14 |
+| #442 | 143 | 87 | 1 | 7 | 32 | 3 | 13 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -95,6 +95,7 @@ push: feat/account-permissions 52개(마지막 180d80f)
 | --- | --- | --- |
 | G-008 | #442 | OrganizationPeopleService 안의 응답 레코드 셋(IssuedInvitation, InvitationPreview, AcceptedInvitation)을 organization.dto의 *Response 레코드로 옮겨 OpenAPI 스키마 이름을 바꿀지(파일 여섯 개, 공개 스키마 이름 변경) 정한다. |
 | G-009 | #442 | 초대 메서드(invitations, invite, revoke, preview, accept)를 새 OrganizationInvitationService로 옮겨 목록 읽기를 list로 부를지(파일 넷), 아니면 쓰지 않는 2인자 list를 지우고 invitations를 인자 수만 다른 list로 바꿀지, 아니면 그대로 둘지 정한다. |
+| G-020 | #442 | workspace-actions.ts의 위층 기능 분기(false 상수, isPaymentRequest, 결제 상태 처리)를 #442에서 지우고 #445, #446, #447, #449가 각자 다시 더하게 할지, 스택을 한 번에 머지하는 전제(Q4)로 그대로 둘지 정한다(G-038과 같은 결정이다). |
 | G-027 | #442 | 초대 수락 경로 POST /v1/organization-invitations/{token}/accept를 명사 하위 리소스(/acceptance)로 바꾸고 위층의 /revoke, /lookup, /export, /search 동사 경로도 같은 기준으로 맞출지, 아니면 naming.md에 상태 전이 동사 경로를 예외로 적을지 정한다. |
 | G-039 | #442 | 롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다. |
 | G-050 | #442 | 비밀번호, 이름, 이메일 검사를 D-103이 만드는 frontend/src/components/auth/credential-rules.ts로 모으려고 서버 액션 네 파일(admin, (public), 초대, workspace-actions)을 함께 바꿀지, 아니면 workspace-actions.ts createMember 사전 검사만 더하고 복사는 그대로 둘지. |
