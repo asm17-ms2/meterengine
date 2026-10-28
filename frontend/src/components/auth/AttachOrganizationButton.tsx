@@ -41,7 +41,7 @@ export function AttachOrganizationButton({ userId, userLabel, organizations: act
   return <>
     <Button onClick={() => setIsOpen(true)} disabled={organizations.length === 0}>도입사 소속 연결</Button>
     {organizations.length === 0 && <p className="field-hint">추가로 연결할 사용 중인 도입사가 없습니다.</p>}
-    <Modal title="도입사 소속 연결" open={isOpen} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }} className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: "4px 4px 4px 0" } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={state.done}>소속 연결</Button></div>}>
+    <Modal title="도입사 소속 연결" open={isOpen} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }} className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={state.done}>소속 연결</Button></div>}>
       <form id={formId} onSubmit={submit} onChange={() => setIsDirty(true)} className="workspace-form" aria-busy={isPending}>
         <input name="user_account_id" type="hidden" value={userId} />
         <p><strong>{userLabel}</strong>의 도입사 업무 권한을 지정합니다. 플랫폼 운영 권한은 바뀌지 않습니다.</p>
