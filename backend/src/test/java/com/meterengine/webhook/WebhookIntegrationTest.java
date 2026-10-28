@@ -23,6 +23,7 @@ import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import com.meterengine.webhook.service.WebhookEventService;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -65,6 +66,7 @@ class WebhookIntegrationTest {
   @Autowired private WebhookDeliveryRepository webhookDeliveryRepository;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private WebApplicationContext webApplicationContext;
+  @Autowired private MeterRegistry meterRegistry;
   @MockitoSpyBean private WebhookAddressPolicy webhookAddressPolicy;
   private HttpServer httpServer;
   private UUID organizationId;
@@ -161,6 +163,22 @@ class WebhookIntegrationTest {
         new UpdateWebhookEndpointRequest(url, List.of("webhook_test"), true, null));
 
     assertThat(transactionActiveOnResolve).containsExactly(false, false);
+  }
+
+  @Test
+  void 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() - interval '20 minutes' WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+
+    webhookDeliveryService.measure();
+
+    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog").gauge().value())
+        .isGreaterThanOrEqualTo(1);
+    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog.age").gauge().value())
+        .isGreaterThanOrEqualTo(1200);
   }
 
   @Test

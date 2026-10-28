@@ -34,6 +34,10 @@ public class WebhookDeliveryConfig {
   public void deliver() {
     OffsetDateTime now = OffsetDateTime.now();
     OffsetDateTime slotAt = now.withNano(0).withSecond(now.getSecond() < 30 ? 0 : 30);
-    scheduledJobRunService.run("webhook_delivery", slotAt, webhookDeliveryService::deliver);
+    try {
+      scheduledJobRunService.run("webhook_delivery", slotAt, webhookDeliveryService::deliver);
+    } finally {
+      webhookDeliveryService.measure();
+    }
   }
 }

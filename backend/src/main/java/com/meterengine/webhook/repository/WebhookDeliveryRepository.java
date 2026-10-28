@@ -1,5 +1,6 @@
 package com.meterengine.webhook.repository;
 
+import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse.Attempt;
@@ -103,6 +104,12 @@ public class WebhookDeliveryRepository {
         outcome.failureReason(),
         outcome.durationMs());
     return Optional.of(status);
+  }
+
+  public WebhookBacklog backlog() {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*), COALESCE(floor(extract(epoch FROM clock_timestamp() - min(next_attempt_at))), 0) FROM webhook_delivery WHERE status = 'pending' AND next_attempt_at <= clock_timestamp()",
+        (rs, rowNum) -> new WebhookBacklog(rs.getLong(1), rs.getLong(2)));
   }
 
   public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {
