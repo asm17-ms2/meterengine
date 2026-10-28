@@ -177,6 +177,7 @@ export interface WebhookEndpointResponse {
   enabled: boolean;
   description: string | null;
   created_at: string;
+  archived_at?: string | null;
   secret?: string;
 }
 
