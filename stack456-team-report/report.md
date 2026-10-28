@@ -1,14 +1,14 @@
-미완료 293건, 결과: 끝 상태 79/372건 (fixed 62, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 25번(마지막 45fde17)
+미완료 290건, 결과: 끝 상태 82/372건 (fixed 65, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 26번(마지막 f82e677)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T18:53:40+09:00
+상태: running, 갱신 2026-10-28T18:56:31+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 62 | 1 | 0 | 16 | 0 | 13 |
+| #443 | fix/s456-443-t-inho | 92 | 65 | 1 | 0 | 16 | 0 | 10 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -80,6 +80,9 @@ push: fix/s456-443-t-inho 25번(마지막 45fde17)
 | D-098 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-169 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-260 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
+| D-075 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
+| G-079 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
+| X-070 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
 | X-017 | #443 | cd1a0fa | 문단, 입력 안내, 경고 안 링크에 밑줄을 되살렸다 | a link inside a sentence keeps its underline: 실패 Expected "underline" Received "none" |
 | D-107 | #443 | a8024e0 | 소개 화면 예시 묶음을 role=group과 aria-labelledby로 이름 있는 그룹으로 만들었다 | the home trace example is a named group: 실패 getByRole('group', { name: '한 고객, 한 청구 월' }) element(s) not found |
 | D-165 | #443 | 45fde17 | 업무 대화상자 네 사본의 본문을 padding 8, 좌우 margin -8로 바꿔 포커스 테두리 여유를 두었다 | a focused field in a workspace dialog keeps its whole focus ring inside the dialog body: 실패 Expected >= 7 Received 0 (본문 안쪽 왼쪽 여유) |

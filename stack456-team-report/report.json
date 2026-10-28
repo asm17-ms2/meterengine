@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:53:40+09:00",
+  "updated_at": "2026-10-28T18:56:31+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "45fde1759f76d6b5ae419459b985097601995581"
+    "fix/s456-443-t-inho": "f82e677c2f3070ee18c992ed36e0a400704a4234"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -2614,15 +2614,36 @@
       "id": "D-075",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf에서 ScreenHeader는 Typography.Title에 인라인 fontSize 28과 Flex gap 4를 주고(ScreenHeader.tsx:18,20), WorkspaceHeader의 h1은 전역 h1 clamp(26px, 3vw, 34px)와 .workspace-heading h1 margin 6px 0 10px를 따른다(globals.css:43, 140). 3vw가 34px를 넘는 약 1134px 이상에서는 WorkspaceHeader 제목이 34px, ScreenHeader 제목이 28px로 갈리고 제목과 설명 간격도 10px와 4px로 다르다. 이 층에서는 사용자 관리와 API 키와 통보만 WorkspaceHeader이고 사용량, 수집 로그, 청구 검토, 확정 인보이스, 고객, 미터는 ScreenHeader라, 원문의 화면 목록(개요, 수납과 취소, 설정)은 정점 기준이지만 원인은 같다. 두 줄 모두 일관된 정보 위계를 목표로 한 #443 커밋 f671a4f가 들였고, 크기를 맞추는 규칙이나 시험은 없다.",
+      "evidence": [
+        "frontend/src/components/screen/ScreenHeader.tsx:18,20 @ 0f1d1bf",
+        "frontend/src/app/globals.css:43 @ 0f1d1bf",
+        "frontend/src/app/globals.css:140 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:29 @ 0f1d1bf",
+        "frontend/src/app/(console)/usage/page.tsx:39 @ 0f1d1bf",
+        "커밋 f671a4f",
+        "screen titles use the same size whichever header component draws them: 실패 Expected \"28px\" Received \"34px\" (1440px 사용자 관리 대 고객)",
+        "커밋 f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "commits": [
+        "f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'screen titles use the same size whichever header component draws them'; evidence/D-075 before, after 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ScreenHeader.tsx 20행과 globals.css 138, 148행이 같다. 정점은 WorkspaceHeader 사용 파일이 14개로 늘어 같은 CSS로 맞춰진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다"
     },
     {
       "id": "D-237",
@@ -2658,29 +2679,67 @@
       "id": "G-079",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "제목 크기를 정하는 곳이 ScreenHeader.tsx:20의 인라인 style(fontSize 28, letterSpacing -.035em)과 globals.css:43의 전역 h1 clamp 두 군데로 갈라져 있다. 인라인 style은 어떤 CSS 선택자보다 우선하고 AppProviders의 CONSOLE_THEME token에는 heading 크기 토큰이 없어(AppProviders.tsx:11-18), globals.css나 antd fontSizeHeading1로 맞추려 해도 ScreenHeader 10개 사용 파일에는 반영되지 않는다. 원문이 센 사용 파일 수(ScreenHeader 10개, 정점의 WorkspaceHeader 14개)도 git grep 결과와 같다. 크기를 한 곳에서 정하는 수정은 ScreenHeader.tsx와 globals.css 두 파일로 끝나 유지보수 수정 한도 안이고, 두 컴포넌트를 하나로 합치는 계획은 D-237의 결정 질문으로 넘긴다.",
+      "evidence": [
+        "frontend/src/components/screen/ScreenHeader.tsx:20 @ 0f1d1bf",
+        "frontend/src/app/globals.css:43 @ 0f1d1bf",
+        "frontend/src/app/globals.css:150 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:11-18 @ 0f1d1bf",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:6 @ 0f1d1bf",
+        "screen titles use the same size whichever header component draws them: 실패 Expected \"28px\" Received \"34px\" (1440px 사용자 관리 대 고객)",
+        "커밋 f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "commits": [
+        "f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'screen titles use the same size whichever header component draws them'; evidence/D-075 before, after 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ScreenHeader.tsx 20행과 globals.css 138, 148행이 같다. 정점은 WorkspaceHeader 사용 파일이 14개로 늘어 같은 CSS로 맞춰진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다"
     },
     {
       "id": "X-070",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "D-075와 같은 원인이다. ScreenHeader는 제목 28px 고정에 제목과 설명 사이 Flex gap 4px이고(ScreenHeader.tsx:18,20), WorkspaceHeader의 h1은 전역 clamp(26px, 3vw, 34px)로 1440px에서 34px이며 .workspace-heading h1 margin 6px 0 10px로 위아래 간격도 다르다(globals.css:43, 140). 원문이 든 사이드바 순서(고객 34, 이벤트 매핑 진단 34, 수납과 취소 34)는 정점 기준이고 이 층의 고객은 ScreenHeader(28px)지만, 이 층에서도 확정 인보이스(28px) 다음 API 키와 통보, 사용자 관리(34px)로 넘어갈 때 같은 크기 차이가 난다. 원문 suggested_fix의 .workspace-heading h1 { font-size: 28px; margin: 0 0 4px }가 가장 작은 수정과 맞는다.",
+      "evidence": [
+        "frontend/src/components/screen/ScreenHeader.tsx:18,20 @ 0f1d1bf",
+        "frontend/src/app/globals.css:43 @ 0f1d1bf",
+        "frontend/src/app/globals.css:140 @ 0f1d1bf",
+        "frontend/src/app/(console)/integrations/page.tsx:17 @ 0f1d1bf",
+        "frontend/src/app/(console)/members/page.tsx:29 @ 0f1d1bf",
+        "screen titles use the same size whichever header component draws them: 실패 Expected \"28px\" Received \"34px\" (1440px 사용자 관리 대 고객)",
+        "커밋 f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "commits": [
+        "f82e677c2f3070ee18c992ed36e0a400704a4234"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'screen titles use the same size whichever header component draws them'; evidence/D-075 before, after 캡처"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf ScreenHeader.tsx 20행과 globals.css 138, 148행이 같다. 정점은 WorkspaceHeader 사용 파일이 14개로 늘어 같은 CSS로 맞춰진다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다"
     },
     {
       "id": "X-017",
@@ -7441,6 +7500,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "41 passed (19.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (20.4s)"
     }
   ],
   "pushes": [
@@ -7568,6 +7665,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "45fde1759f76d6b5ae419459b985097601995581",
       "at": "2026-10-28T18:50:20+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "f82e677c2f3070ee18c992ed36e0a400704a4234",
+      "at": "2026-10-28T18:56:06+09:00"
     }
   ],
   "usage_log": [],
