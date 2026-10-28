@@ -149,6 +149,7 @@ p { line-height: 1.7; }
 
 body { color: var(--ink); background: var(--canvas); font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
 a { color: #51409c; }
+:is(p, .field-hint, [role=alert]) a:not(.ant-btn) { text-decoration: underline; }
 .month-apply { border:1px solid #d4dbe7; border-radius:5px; background:#fff; padding:8px 16px; align-self:end; min-height:39px; cursor:pointer; }
 .workspace-actions + .ant-table-wrapper { margin-top:22px; }
 .operator-content { max-width:1450px; }

@@ -391,3 +391,10 @@ test("an unchecked antd checkbox has a visible border", async ({ page }) => {
   const unchecked = page.getByRole("dialog").locator(".ant-checkbox:not(.ant-checkbox-checked)").first();
   await expect(unchecked).toHaveCSS("border-top-color", "rgb(124, 135, 153)");
 });
+
+test("a link inside a sentence keeps its underline", async ({ page }) => {
+  for (const path of ["/login", "/signup"]) {
+    await page.goto(path);
+    await expect(page.locator(".auth-switch a")).toHaveCSS("text-decoration-line", "underline");
+  }
+});
