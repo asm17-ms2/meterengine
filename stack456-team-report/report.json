@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:22:16+09:00",
+  "updated_at": "2026-10-28T19:24:45+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "0b601c9",
+    "feat/account-permissions": "99fb104",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -414,14 +414,31 @@
       ],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "AccountConsentForm.tsx 15행과 InvitationForm.tsx 18행은 클래스 없는 fieldset과 consent-item div, 클래스 없는 label과 '{title}를 읽고 동의합니다 (필수)' 문구를 쓰고, AuthForm.tsx 22행만 fieldset.consent-fields와 label.consent-check, '{title}에 동의합니다 (필수)'를 쓴다. 정점에서 #443 f671a4f의 CSS가 consent-fields에만 붙어 두 화면만 기본 모양이다. 두 폼의 동의 묶음을 AuthForm 마크업으로 맞췄다. 묶인 D-010, D-054, D-096, D-200, D-261도 같은 동의 블록 지적이다.",
+      "evidence": [
+        "frontend/src/components/auth/AccountConsentForm.tsx:15 @ 72e8718",
+        "frontend/src/components/auth/InvitationForm.tsx:18 @ 72e8718",
+        "frontend/src/components/auth/AuthForm.tsx:22 @ 72e8718",
+        "signup and invitation show the same required consent block: 실패 Expected 2, Received 0"
+      ],
+      "commits": [
+        "99fb1049d1c5"
+      ],
+      "tests": [
+        "auth.contract.spec.ts signup and invitation show the same required consent block: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 32건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "동의 블록 마크업 통일",
+      "propagation_note": "체크박스 이름은 문서 제목으로 시작해 #453 people.real.spec.ts의 agree(/^이용 안내/, /^개인정보 처리 안내/)가 그대로 맞는다. 테두리와 크기는 #443 globals.css의 consent-fields 규칙으로 보인다."
     },
     {
       "id": "G-001",
@@ -7600,6 +7617,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  32 passed (15.6s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (5.1s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.312s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7827,6 +7900,11 @@
       "branch": "feat/account-permissions",
       "sha": "0b601c945f2af6c3568fc30f692e38e80544c74d",
       "at": "2026-10-28T19:18:54+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "99fb1049d1c5d8d1f2265b9277a25c3841ccd467",
+      "at": "2026-10-28T19:24:45+09:00"
     }
   ],
   "usage_log": [],
