@@ -1,4 +1,4 @@
-미완료 139건, 결과: 끝 상태 189/328건 (fixed 136, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
+미완료 117건, 결과: 끝 상태 211/328건 (fixed 158, refuted 1, already-fixed 16(그중 fixed-above 11), needs-decision 33, blocked 3(그중 no-evidence 0))
 push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35)
 정할 것: 32건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017). 로컬 DB 다시 만들기: 없음
 
@@ -7,7 +7,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
-| #445 | 68 | 36 | 0 | 9 | 1 | 0 | 22 |
+| #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -103,26 +103,41 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C445-011 | #445 | 87448f2 | 결제 요청 409 설명의 payment_mode_mismatch | 없음(OpenApiDocumentTest로 openapi.yaml 재생성, 한 줄 추가; backend build 통과) |
 | C445-012 | #445 | 2469efb | 시크릿 키 문자 검사로 500 대신 400 | 시크릿_키에_콜론이나_공백이나_ASCII_밖_문자가_있으면_400이고_토스를_부르지_않는다: 실패 expected: 400 but was: 500 |
 | C445-013 | #445 | 62fb032 | 짝 없는 완료 취소를 토스 재조회 뒤 누락 기록 | 거래_목록에_없는_완료_취소도_재조회한_결제의_cancels에_있으면_누락으로_남기지_않고_금액만_비교한다: 실패 Expecting actual [("missing_in_toss_payments", ..., "tx_cancel_missing", ...)] |
+| C445-014 | #445 | 22dfb35 | Playwright 결제 설정이 없는 e2e 파일을 가리킴 | playwright test -c playwright.payment.config.ts: 실패 Process from config.webServer was not able to start |
 | C445-015 | #445 | 576f200 | retry exhausted 지표의 상한 초과 실패 중복 | 세_번째_시도가_실패하면_retry_exhausted가_한_번_오르고_상한을_넘긴_실패는_세지_않는다: 실패 expected: 1.0 but was: 2.0 |
 | C445-016 | #445 | f84e87e | 재시도 재확인 분기 시험 | 후보를_읽은_뒤_더_늦은_실패_시도가_생기면_새_시도를_만들지_않는다: 실패 Expected size: 2 but was: 3 (재확인 조건 제거 변이) |
 | C445-017 | #445 | c76428e | 재시도 시험 집계 단언이 자기 후보를 확인하지 못함 | 건너뜀 분기를 예외로 바꾼 변이에서 고친 PaymentRetryServiceTest: 실패 4건 (고치기 전 시험은 같은 변이에서 23건 통과) |
+| D-126 | #445 | 3903b2c | 카드 등록 화면 h2가 h1보다 먼저 나옴 | 없음(보이는 변경: 실화면 카드 등록, 등록 완료 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 제목 목록이 h1부터 시작하고 소개 문장 모양은 같다; ) |
 | D-149 | #445 | 6d9f804 | 수납 상태 이름 한 벌로 | each invoice payment status has one name used by both the list and the detail: 실패 ERR_MODULE_NOT_FOUND invoice-payment-status.ts |
+| D-163 | #445 | 978930a | 결제 취소 영역 승인 줄의 원시 모드 값 | 없음(보이는 변경: 실화면 수납 상세 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고치기 전 '승인 / test', 고친 뒤 '승인 / 테스트 결제'; lint, b) |
+| D-207 | #445 | ebcb263 | 카드 등록 단계 목록의 현재 단계 표시 | 없음(보이는 변경: 실화면 카드 등록, 등록 완료 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 등록 화면은 1단계, 완료 화면은 3단계만 진하다; li) |
+| D-217 | #445 | c331448 | 토스 키 저장 미확정 안내가 결제와 취소 내역을 가리킴 | workspace-action-feedback.test.mjs: 실패 SyntaxError does not provide an export named 'unconfirmedMessage' |
+| D-238 | #445 | c32f651 | 수납과 취소 화면에만 있는 탭 줄 | 없음(보이는 변경: 실화면 /payments?month=2026-09 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 탭 줄이 없다; lint, build 통과) |
+| D-248 | #445 | 593a78b | 수납과 취소 진행 중인 달 빈 상태 문구 | 없음(보이는 변경: 실화면 /payments?month=2026-10과 2026-09 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 진행 중인 달은 새 빈 상) |
+| D-255 | #445 | 9863110 | 수납 상세 조회 실패 때 제목과 목록 복귀 없음 | 없음(보이는 변경: 실화면에서 없는 인보이스 id의 수납 상세 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 제목 '수납 내역을 찾을 수 없습니다'와 수납 목) |
 | G-097 | #445 | 5549e89 | 정지 도입사의 카드 등록 링크와 자동 재결제 중단 | 정지된_도입사의_링크는_조회도_발급도_404이고_토스를_부르지_않으며_재개하면_다시_조회된다: 실패 [HTTP status code] expected: 404 but was: 200 |
 | G-098 | #445 | 2bc72d8 | 토스 키 저장과 결제 모드 변경을 세션 전용으로 | admin_API_키로는_키와_같은_모드의_키도_저장할_수_없고_403이며_토스를_부르지_않고_저장된_키는_그대로다: 실패 [HTTP status code] expected: 403 but was: 200 |
 | G-102 | #445 | 6d5fad4 | 카드 등록과 교체 감사 기록 | 카드를_등록하거나_바꾸면_도입사_감사_행을_시스템_행위자로_남기고_교체면_이전_카드를_싣는다: 실패 Expected size: 2 but was: 0 |
+| G-180 | #445 | 02bb3ec | 결제 취소의 화면 낡음 409를 새로 조회 상태로 다룸 | workspace-action-feedback.test.mjs: 실패 SyntaxError does not provide an export named 'staleCancellationMessage' |
 | X-009 | #445 | 6d9f804 | 수납 상태 이름 한 벌로 | each invoice payment status has one name used by both the list and the detail: 실패 ERR_MODULE_NOT_FOUND invoice-payment-status.ts |
+| X-029 | #445 | 978930a | 결제 취소 영역 승인 줄의 원시 모드 값 | 없음(보이는 변경: 실화면 수납 상세 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고치기 전 '승인 / test', 고친 뒤 '승인 / 테스트 결제'; lint, b) |
 | X-031 | #445 | 3a60ae1 | 카드 자동결제 안내 펼침과 금액 변동 안내 | 없음(보이는 변경: 실화면에서 카드 등록 화면을 1440, 390 폭으로 고치기 전과 뒤 캡처(evidence/X-031/before, after). 고친 뒤 안내 세 문장이 펼쳐져 있고 axe, 콘솔 오류, 가로 넘침은) |
 | X-049 | #445 | c46e4fa | 결과 미확인 완료 화면 제목 | 없음(보이는 변경: 결과 쿠키 없이 완료 화면을 1440, 390 폭으로 고치기 전과 뒤 캡처(evidence/X-049/before, after). h1이 '카드 등록을 완료하지 못했습니다'에서 '카드 등록 결과를 확인) |
+| X-051 | #445 | 1cf7396 | 토스 키 누락 오류의 안내 | workspace-action-feedback.test.mjs: 실패 SyntaxError does not provide an export named 'errorMessageForCode' |
 | X-087 | #445 | 3a5b72a | 카드 등록 오류 알림의 role 중첩 | 없음(lint, build 통과; 실화면 카드 등록 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after)에서 axe, 콘솔 오류, 가로 넘침이 늘지 않음. 오류 알림은 토) |
+| X-100 | #445 | 738fc52 | 카드 등록 링크 유효기간 연도와 시간대 | 없음(보이는 변경: 실화면 카드 등록 화면 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고치기 전 '10월 30일 오전 01:05까지', 고친 뒤 연도와 초, KST) |
 | C445-002 | #445 | ad5872e | 결제 설정과 토스 키 변경의 키 모드 검사 | test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 200 |
 | C445-005 | #445 | ab25813 | 카드 등록 링크 생성의 키 모드 검사 | API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | Ck2-016 | #445 | fdf3b2c | 예약 작업 스레드 수를 작업 수 이상으로 | 예약_스레드_풀은_예약_작업_수_이상이다: 실패 Expecting actual: 2 to be greater than or equal to: 4 |
 | D-042 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-085 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| D-105 | #445 | 4f5aa20 | 결제 모드 변경 버튼만 패널 폭 전체 | 없음(보이는 변경: 실화면 도입사 설정 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 버튼이 내용 폭이다; lint, build 통과) |
 | D-148 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-181 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-212 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | X-006 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
+| X-069 | #445 | 5879eca | 토스 키 저장 창의 클라이언트 키 가림과 접두어 안내 | 없음(보이는 변경: 실화면 도입사 설정의 토스 키 저장 창 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after의 settings-toss-key-dialog). 고친 뒤 두 칸) |
+| X-086 | #445 | 4fff860 | 청구 안내 메일 패널 문구 | 없음(보이는 변경: 실화면 도입사 설정 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 새 문구; lint, build 통과) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
@@ -272,12 +287,16 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C445-010 | #445 | 정점 0fe7d2a 컨트롤러 36행과 openapi.yaml 6452행에 같은 문장이 있다. 반영 때 openapi.yaml을 다시 만든다. |
 | C445-011 | #445 | 반영 때 openapi.yaml을 다시 만든다. |
 | C445-012 | #445 | 반영 때 openapi.yaml을 다시 만든다. |
+| C445-014 | #445 | 반영 때 23b1844의 같은 두 파일과 겹친다. 내용은 동의 판 기대값 한 줄만 다르고, 위층도 X-031 반영 뒤 2026-10-28이 맞다. /tmp 스크린샷 경로(G-190)는 이 항목 범위 밖이라 두었다. |
 | C445-017 | #445 | 정점에서는 f58e1b5(#453)가 같은 꼴의 skippedCount 단언을 484행에 더했다. 반영 때 그 단언도 assertSkipped로 바꾼다. |
 | D-149 | #445 | #451 e5fca11의 인보이스 목록 수납 열(미납, 납부 완료)도 이 모듈 이름으로 맞춘다(문인호 님 층). |
+| D-163 | #445 | 위층 c9a86c4(#449), e5fca11(#451)이 같은 파일을 바꿨다. 충돌하면 두 부제 줄만 같은 식으로 맞춘다. X-029 (3)의 EventDetailDrawer 라벨은 #451 층에서 고친다. |
+| D-217 | #445 | e92f6a1이 토스 키 저장 링크를 결제 문구로 맞춘 시험을 이 커밋이 새 문구로 바꿨다. 반영 때 workspace-operation-results.ts와 그 시험을 이 커밋 쪽으로 맞춘다. |
 | G-097 | #445 | #447 2ec5d85와 #453 23b1844가 findUsable과 재시도 후보 조회에 보관과 환경 조건을 더했다. 반영 때 도입사 활성 조건이 남았는지 본다. |
 | G-098 | #445 | #447 2ec5d85가 더한 토스 키 보관 DELETE(정점 TossPaymentsCredentialController 117행)도 @AdminAccess라 그 층에서 같은 세션 전용으로 맞출지 본다(T-yang 층). 정점 실화면 명세는 이 PUT을 세션으로 부른다. |
 | G-102 | #445 | #447 2ec5d85와 #453 23b1844가 replace에 보관 잠금과 환경 조건을 더했다. 반영 때 감사 기록 줄이 남았는지 본다. |
 | X-009 | #445 | #451 e5fca11의 인보이스 목록 수납 열(미납, 납부 완료)도 이 모듈 이름으로 맞춘다(문인호 님 층). |
+| X-029 | #445 | 위층 c9a86c4(#449), e5fca11(#451)이 같은 파일을 바꿨다. 충돌하면 두 부제 줄만 같은 식으로 맞춘다. X-029 (3)의 EventDetailDrawer 라벨은 #451 층에서 고친다. |
 | X-031 | #445 | 동의 판이 2026-10-28로 바뀌어 #453 23b1844의 payment-registration.contract.spec.ts 38행이 기대하는 consent_document_version 2026-10-26을 반영 뒤 2026-10-28로 맞춘다(T-yang #453 차례). |
 | X-049 | #445 | #453 payment-registration.contract.spec.ts 82행 뒤에 결과 미확인 제목 단언을 더할 수 있다(T-yang #453 차례). |
 | X-075 | #445 | 위층(#446~#455)으로 옮길 때 9dff033의 WorkspaceHeader.tsx 한 줄 변경이 들어가면 정점 payments/[id]/page.tsx:99-100의 '고객으로 이동', '내역 새로 조회'도 한 묶음이 된다. 페이지 쪽에 따로 div.workspace-actions를 더하지 않는다. integrations/[id], members 화면은 이미 자식으로 div.workspace-actions를 넘겨 겹으로 감싸지지만 배치는 같다. |
@@ -290,6 +309,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-181 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | D-212 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
 | X-006 | #445 | #447 2ec5d85부터 카드와 토스 키 응답에 archived_at이 생기고 결제가 보관 카드를 거절하므로 #447에서 card-state가 보관 행을 없음으로 보게 맞춘다(T-yang 층). #449 c9a86c4와 #451 e5fca11이 같은 파일의 Promise.all과 머리를 바꿨으니 반영 때 손으로 맞춘다. |
+| X-086 | #445 | 위층에서 메일 발송을 붙이면 이 문구를 다시 바꾼다. |
 | NT-yang-001 | #442 | #443 f671a4f의 globals.css 52행 `.auth-intro h2` 규칙이 이 문구를 꾸민다. 반영 때 선택자를 `.auth-intro .auth-intro-title`로 바꾼다(#443은 문인호 님 층). 바꾸지 않으면 문구가 `.auth-intro p` 모양으로 작게 보인다. |
 
 ## fixed-above로 둔 것
