@@ -1,13 +1,13 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T00:04:36+09:00",
+  "updated_at": "2026-10-29T00:08:11+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "Ck3-446-06",
-    "step": "fix",
+    "step": "check",
     "branch": "fix/s456-446-t-inho"
   },
   "finished_ids": [
@@ -403,8 +403,10 @@
     },
     "fix/s456-446-t-inho": {
       "origin_sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
-      "local_sha": "ae50ce0ff7b6b8d27984ab21d95b2d97568cc817",
-      "unpushed": []
+      "local_sha": "a7a789e97fd4941df4d8ddcd9efb7256368e9c15",
+      "unpushed": [
+        "a7a789e97fd4941df4d8ddcd9efb7256368e9c15"
+      ]
     }
   },
   "usage": {
@@ -424,8 +426,8 @@
     "layer": 446,
     "pids": [
       38360,
-      13387,
-      19864
+      50859,
+      57362
     ],
     "container": "meterengine-0696-e2e"
   }
