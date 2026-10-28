@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:13:18+09:00",
+  "updated_at": "2026-10-28T18:15:19+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "9dff033",
+    "feat/account-permissions": "0699a0b",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -214,14 +214,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "OperatorAccountCreateConcurrencyTest 104-109행과 OperatorAccountIntegrationTest 195-200행은 거절 뒤 감사 행 부재를 먼저 넣은 계정의 target_id로 세어, 거절된 요청이 감사 행을 남겨도 실패할 수 없다. 정점도 같다. 요청한 운영자의 actor_id로 세게 바꿨다.",
+      "evidence": [
+        "backend/src/test/java/com/meterengine/account/OperatorAccountCreateConcurrencyTest.java:104-109 @ 72e8718",
+        "backend/src/test/java/com/meterengine/account/OperatorAccountIntegrationTest.java:195-200 @ 72e8718",
+        "다른_생성이_먼저_이메일을_점유하면_기다린_운영자_생성은_409이고_기존_계정은_그대로다: 실패 AssertionFailedError: expected: 0 but was: 1 (감사 기록 선행 변이)"
+      ],
+      "commits": [
+        "0699a0bc200e"
+      ],
+      "tests": [
+        "감사 기록을 거절 전 REQUIRES_NEW로 옮긴 임시 변이에서 두 시험이 expected: 0 but was: 1로 실패, 되돌린 뒤 통과",
+        "OperatorAccountCreateConcurrencyTest 1건, OperatorAccountIntegrationTest 6건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 80a3ef1",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "운영자 생성 거절 감사 검사를 actor_id 기준으로",
+      "propagation_note": "80a3ef1이 OperatorAccountIntegrationTest의 다른 줄을 바꿨다. 반영 때 195-200행 검사가 actor_id 기준으로 남았는지 본다."
     },
     {
       "id": "C442-023",
@@ -6860,6 +6876,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.345s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7032,6 +7096,11 @@
       "branch": "feat/account-permissions",
       "sha": "9dff03382931decfa64dd9f9daef66c2b317a4d7",
       "at": "2026-10-28T18:02:24+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "0699a0bc200e6d5e6388da6c3915cfc213a3ac65",
+      "at": "2026-10-28T18:15:19+09:00"
     }
   ],
   "usage_log": [],
