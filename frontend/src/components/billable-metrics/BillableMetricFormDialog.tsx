@@ -107,6 +107,7 @@ export function BillableMetricFormDialog({
   const { message } = App.useApp();
   const { token } = theme.useToken();
   const firstFieldRef = useRef<InputRef>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
   const [dismissedState, setDismissedState] = useState<typeof state | null>(null);
   const dismissFailed = () => setDismissedState(state);
   const monoStyle = { fontFamily: token.fontFamilyCode };
@@ -126,6 +127,7 @@ export function BillableMetricFormDialog({
       message.success("저장했습니다");
       onClose();
     }
+    if (state.status === "failed") failureRef.current?.focus();
     if (state.status === "invalid") {
       form.setFields(
         Object.entries(state.fieldErrors).map(([field, error]) => ({
@@ -147,6 +149,9 @@ export function BillableMetricFormDialog({
   };
 
   const submitForm = () => form.submit();
+  const close = () => {
+    if (!isPending && (!form.isFieldsTouched() || window.confirm("작성 중인 미터를 버리고 닫을까요?"))) onClose();
+  };
 
   return (
     <Modal
@@ -156,12 +161,12 @@ export function BillableMetricFormDialog({
       style={{ top: 24 }}
       styles={{ body: { maxHeight: "calc(100dvh - 180px)", overflowY: "auto", paddingInlineEnd: 4 } }}
       title={isEdit ? "미터 수정" : "미터 등록"}
-      onCancel={isPending ? undefined : onClose}
+      onCancel={isPending ? undefined : close}
       keyboard={!isPending}
       mask={{ closable: !isPending }}
       closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} />, disabled: isPending }}
       footer={[
-        <Button key="cancel" disabled={isPending} onClick={onClose}>
+        <Button key="cancel" disabled={isPending} onClick={close}>
           취소
         </Button>,
         <Button key="submit" type="primary" loading={isPending} onClick={submitForm}>
@@ -169,6 +174,17 @@ export function BillableMetricFormDialog({
         </Button>,
       ]}
     >
+      <div ref={failureRef} tabIndex={-1}>
+        {state.status === "failed" && state !== dismissedState ? (
+          <Alert
+            type="error"
+            showIcon
+            icon={alertIcon("error")}
+            title={state.message}
+            style={{ marginBottom: token.margin }}
+          />
+        ) : null}
+      </div>
       <Form<BillableMetricFormValues>
         form={form}
         layout="vertical"
@@ -206,6 +222,9 @@ export function BillableMetricFormDialog({
             />
           </Form.Item>
         )}
+        {isEdit ? <Typography.Paragraph type="secondary">
+          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요.
+        </Typography.Paragraph> : null}
         <Form.Item
           name="name"
           label="이름"
@@ -246,7 +265,7 @@ export function BillableMetricFormDialog({
           preserve={false}
           extra="예: 95는 P95, 50은 중앙값입니다."
           rules={[{ required: true, type: "number", min: 0, max: 100, message: "백분위는 0부터 100 사이의 숫자로 입력하세요" }]}
-        ><InputNumber min={0} max={100} style={{ width: "100%" }} /></Form.Item> : null}
+        ><InputNumber controls={false} min={0} max={100} style={{ width: "100%" }} /></Form.Item> : null}
         {aggregation !== "count" ? (
         <Form.Item
           name="targetProperty"
@@ -291,23 +310,20 @@ export function BillableMetricFormDialog({
           { required: true, message: "과금 단위 크기를 입력하세요" },
           { validator: (_, value) => typeof value === "number" && Number.isFinite(value) && value > 0 ? Promise.resolve() : Promise.reject(new Error("과금 단위 크기는 0보다 커야 합니다")) },
         ]}>
-          <InputNumber min={0} style={{ width: "100%" }} />
+          <InputNumber controls={false} min={0} style={{ width: "100%" }} />
         </Form.Item>
         <Flex gap={16} wrap>
           <Form.Item name="roundingMode" label="반올림 방식" style={{ flex: "1 1 240px" }}>
             <Select options={METRIC_ROUNDING_OPTIONS} onChange={(value) => { if (value === "none") form.setFieldValue("roundingPrecision", 0); }} />
           </Form.Item>
           {roundingMode !== "none" ? <Form.Item name="roundingPrecision" label="소수 자릿수" extra="0이면 정수로 만듭니다." style={{ flex: "1 1 180px" }} rules={[{ required: true, type: "integer", min: 0, max: 12, message: "소수 자릿수는 0부터 12 사이의 정수로 입력하세요" }]}>
-            <InputNumber min={0} max={12} precision={0} style={{ width: "100%" }} />
+            <InputNumber controls={false} min={0} max={12} precision={0} style={{ width: "100%" }} />
           </Form.Item> : null}
         </Flex>
         <Alert type="info" title="계산 미리보기" description={<>
           <Typography.Paragraph style={{ fontFamily: token.fontFamilyCode, overflowWrap: "anywhere", marginBlock: 8 }}>{metricCalculationFormula(calculation)}</Typography.Paragraph>
           <span>{metricCalculationExample(calculation)}</span>
         </>} />
-        {isEdit ? <Typography.Paragraph type="secondary" style={{ marginTop: token.margin }}>
-          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요.
-        </Typography.Paragraph> : null}
         <EnterSubmitButton disabled={isPending} />
       </Form>
 
@@ -331,15 +347,6 @@ export function BillableMetricFormDialog({
         상단에 표시된 도입사에 저장합니다. 같은 이벤트와 속성으로 미터를 여러 개 만들 수 있습니다. 예를 들어 합계와 이벤트 수 미터에 각각 단가를 등록하면 두 사용료가 모두 청구됩니다.
       </Typography.Paragraph>
 
-      {state.status === "failed" && state !== dismissedState ? (
-        <Alert
-          type="error"
-          showIcon
-          icon={alertIcon("error")}
-          title={state.message}
-          style={{ marginTop: token.margin }}
-        />
-      ) : null}
     </Modal>
   );
 }

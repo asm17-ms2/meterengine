@@ -20,6 +20,7 @@ import type { ArchiveStatus } from "@/lib/list-query";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import type { BillableMetricResponse } from "@/lib/api/billable-metrics";
 import { metricCalculationFormula } from "@/lib/billable-metric-calculation";
+import { isZeroPriceRate } from "@/lib/price-rate";
 import type { CustomerResponse } from "@/lib/api/customers";
 import type { BillableMetricPricePriceRate, ListBillableMetricPricesResponse, PricePlanResponse, PriceRateResponse } from "@/lib/api/pricing";
 import styles from "./pricing.module.css";
@@ -115,7 +116,7 @@ function PriceRateEditor({ metric, month, currentMonth, customerId, customerName
   const bindScope = useMutationScope();
   const [isOpen,setIsOpen]=useState(false);
   const [model,setModel]=useState("per_unit");
-  const [tiers,setTiers]=useState([{id:0,upTo:"100",unitPrice:"0"},{id:1,upTo:"",unitPrice:"0"}]);
+  const [tiers,setTiers]=useState([{id:0,upTo:"100",unitPrice:""},{id:1,upTo:"",unitPrice:""}]);
   const [dimensionValues,setDimensionValues]=useState<Record<string,{kind:string;value:string}>>({});
   const [isDirty, setIsDirty] = useState(false);
   const { message } = App.useApp();
@@ -167,6 +168,7 @@ function PriceRateEditor({ metric, month, currentMonth, customerId, customerName
       requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
+    if (isZeroPriceRate(model, String(data.get("unit_price") ?? ""), tiers.map(tier => tier.unitPrice)) && !window.confirm("0원 단가로 저장하면 적용 시작 월부터 이 조합의 사용량에 사용료를 청구하지 않습니다. 저장할까요?")) return;
     startTransition(() => action(data));
   }
 
@@ -190,7 +192,7 @@ function PriceRateEditor({ metric, month, currentMonth, customerId, customerName
           {errorMessage("dimension_values")}
         </div>}
         <label className="workspace-field"><span>계산 방식</span><select {...attributes("model")} aria-label="계산 방식" name="model" value={model} onChange={event => setModel(event.target.value)}><option value="per_unit">단일 단가: 수량에 같은 단가 적용</option><option value="graduated">누진 구간: 구간별로 계산한 뒤 합산</option><option value="volume">총량 구간: 전체 수량으로 한 단가 선택</option></select>{errorMessage("model")}</label>
-        {model === "per_unit" ? <label className="workspace-field"><span>사용량 1당 단가 (원)</span><input {...attributes("unit_price")} name="unit_price" type="number" min="0" step="any" defaultValue="0" required />{errorMessage("unit_price")}</label> : <div {...attributes("tiers")} tabIndex={-1} role="group" aria-label="요금 구간" className={styles.tierEditor}><p>끝 수량은 해당 구간에 포함됩니다. 마지막 구간은 상한 없이 적용합니다.</p>{tiers.map((tier, index) => <div key={tier.id} className={styles.tierEditorRow}><span>구간 {index + 1}</span><label className="workspace-field"><span>끝 수량</span>{index === tiers.length - 1 ? <input value="상한 없음" readOnly aria-label={"구간 " + (index + 1) + " 끝 수량"} /> : <input {...attributes("tier:" + tier.id + ":upTo")} aria-label={"구간 " + (index + 1) + " 끝 수량"} type="number" min="0" step="any" required value={tier.upTo} onChange={event => changeTier(tier.id, "upTo", event.target.value)} />}{errorMessage("tier:" + tier.id + ":upTo")}</label><label className="workspace-field"><span>1당 단가 (원)</span><input {...attributes("tier:" + tier.id + ":unitPrice")} aria-label={"구간 " + (index + 1) + " 단가"} type="number" min="0" step="any" required value={tier.unitPrice} onChange={event => changeTier(tier.id, "unitPrice", event.target.value)} />{errorMessage("tier:" + tier.id + ":unitPrice")}</label>{tiers.length > 1 && index < tiers.length - 1 && <Button aria-label={"구간 " + (index + 1) + " 삭제"} onClick={() => setTiers(current => current.filter(item => item.id !== tier.id))}>삭제</Button>}</div>)}<Button onClick={() => setTiers(current => [...current.slice(0, -1), { id: Math.max(...current.map(tier => tier.id)) + 1, upTo: "", unitPrice: "0" }, current[current.length - 1]])}>구간 추가</Button>{errorMessage("tiers")}</div>}
+        {model === "per_unit" ? <label className="workspace-field"><span>사용량 1당 단가 (원)</span><input {...attributes("unit_price")} name="unit_price" type="number" min="0" step="any" placeholder="예: 120" required />{errorMessage("unit_price")}</label> : <div {...attributes("tiers")} tabIndex={-1} role="group" aria-label="요금 구간" className={styles.tierEditor}><p>끝 수량은 해당 구간에 포함됩니다. 마지막 구간은 상한 없이 적용합니다.</p>{tiers.map((tier, index) => <div key={tier.id} className={styles.tierEditorRow}><span>구간 {index + 1}</span><label className="workspace-field"><span>끝 수량</span>{index === tiers.length - 1 ? <input value="상한 없음" readOnly aria-label={"구간 " + (index + 1) + " 끝 수량"} /> : <input {...attributes("tier:" + tier.id + ":upTo")} aria-label={"구간 " + (index + 1) + " 끝 수량"} type="number" min="0" step="any" required value={tier.upTo} onChange={event => changeTier(tier.id, "upTo", event.target.value)} />}{errorMessage("tier:" + tier.id + ":upTo")}</label><label className="workspace-field"><span>1당 단가 (원)</span><input {...attributes("tier:" + tier.id + ":unitPrice")} aria-label={"구간 " + (index + 1) + " 단가"} type="number" min="0" step="any" required value={tier.unitPrice} onChange={event => changeTier(tier.id, "unitPrice", event.target.value)} />{errorMessage("tier:" + tier.id + ":unitPrice")}</label>{tiers.length > 1 && index < tiers.length - 1 && <Button aria-label={"구간 " + (index + 1) + " 삭제"} onClick={() => setTiers(current => current.filter(item => item.id !== tier.id))}>삭제</Button>}</div>)}<Button onClick={() => setTiers(current => [...current.slice(0, -1), { id: Math.max(...current.map(tier => tier.id)) + 1, upTo: "", unitPrice: "" }, current[current.length - 1]])}>구간 추가</Button>{errorMessage("tiers")}</div>}
       </fieldset>
       <div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button type="primary" htmlType="submit" loading={isPending}>이 단가 버전 저장</Button></div>
     </form>
