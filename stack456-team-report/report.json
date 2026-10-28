@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:29:08+09:00",
+  "updated_at": "2026-10-28T17:30:30+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "e72b5f211e8b393dcb2758ba75e691de52a4064f"
+    "fix/s456-443-t-inho": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -533,29 +533,73 @@
       "id": "D-153",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "#443 head에서 모바일 헤더 높이는 내용에 따라 정해지는데(225행 height: auto, 227-230행 줄바꿈과 버튼 min-height 36px) 289행은 변수 112px와 scroll-padding-top 128px로 고정한다. 관리자는 약 99px라 변수가 커서 고정 표 머리 위로 본문이 비치고, 운영자는 ConsoleShell.tsx 48행 링크로 세 줄(약 145px)이 되어 scroll-padding 128px를 넘으므로 포커스나 앵커 대상이 헤더 밑에 일부 가려진다. 정점에서는 23b1844(#453)의 업무 환경 select로 거의 모든 사용자 헤더가 약 155-160px가 되어 지적 그대로다. 고정 값으로는 어느 경우에도 맞출 수 없어 실제 높이를 변수에 쓰는 작은 수정으로 고칠 수 있다. 헤더 크기 자체는 D-011 결정과 따로 남는다.",
+      "evidence": [
+        "frontend/src/app/globals.css:225-230 @ 0f1d1bf",
+        "frontend/src/app/globals.css:289 @ 0f1d1bf",
+        "frontend/src/app/globals.css:163 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/customers/CustomersTable.tsx:128 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header height variable matches the real header at 390px: 실패 Expected true Received false (헤더 높이와 변수 차이 1px 초과, 900px도 같은 결과)",
+        "커밋 57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "commits": [
+        "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, after 캡처(390x844, 900x900)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 117, 162, 286-288행이 정점 b8abfdf에서도 같다. 정점은 23b1844 #453이 헤더에 업무 환경 선택을 더해 더 높아지고, ConsoleShell.tsx는 80a3ef1, 4ace811, 614d3bc, e5fca11, 23b1844가 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.",
+      "summary": "헤더 실제 높이를 --workspace-header-height에 쓰고 셸 격자와 scroll-padding이 그 변수를 쓴다"
     },
     {
       "id": "X-047",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "1100px 이하에서 225행이 헤더를 height: auto로 바꾸지만 287행 변수와 127행 사이드바 top은 68px로 고정이다. #443에서도 브랜드가 flex: 1(214행)이라 오른쪽 버튼 묶음 폭만큼 줄어들어, 운영자이거나 도입사 이름이 길면 768-900px 폭에서 organization-link가 여러 줄로 감싸져 헤더가 68px를 넘고 고정 표 머리(BillingTable.tsx 259행, InvoicesTable.tsx 216행)와 사이드바 윗부분이 z-index 30 헤더 밑에 들어간다. 지적의 1024px 93px 실측은 23b1844(#453)가 오른쪽에 업무 환경 select를 더한 정점 화면이다. 모바일 부분은 D-153과 같은 원인이고, 실제 높이를 변수에 쓰고 사이드바 top과 scroll-padding이 변수를 따르게 하면 고쳐진다.",
+      "evidence": [
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:214-216 @ 0f1d1bf",
+        "frontend/src/app/globals.css:225 @ 0f1d1bf",
+        "frontend/src/app/globals.css:287-289 @ 0f1d1bf",
+        "frontend/src/components/billing/BillingTable.tsx:259 @ 0f1d1bf",
+        "frontend/src/components/invoices/InvoicesTable.tsx:216 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53 @ 0fe7d2a",
+        "the header height variable matches the real header at 390px: 실패 Expected true Received false (헤더 높이와 변수 차이 1px 초과, 900px도 같은 결과)",
+        "커밋 57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "commits": [
+        "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, after 캡처(390x844, 900x900)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (globals.css 117, 162, 286-288행이 정점 b8abfdf에서도 같다. 정점은 23b1844 #453이 헤더에 업무 환경 선택을 더해 더 높아지고, ConsoleShell.tsx는 80a3ef1, 4ace811, 614d3bc, e5fca11, 23b1844가 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.",
+      "summary": "헤더 실제 높이를 --workspace-header-height에 쓰고 셸 격자와 scroll-padding이 그 변수를 쓴다"
     },
     {
       "id": "D-002",
@@ -1315,15 +1359,36 @@
       "id": "G-083",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "287행에서 --workspace-header-height를 두었지만 117행 grid-template-rows 68px, 127행 사이드바 top 68px와 calc(100dvh - 68px), 163행 scroll-padding-top 88px, 289행 128px는 같은 헤더 높이를 리터럴로 다시 쓴다. layout-sizes.ts 1행 HEADER_HEIGHT 64도 table-defaults.ts 3행에서 antd offsetHeader로 들어가고 288행 !important가 덮어, 같은 개념의 값이 세 갈래로 갈라져 있다. 1100px 이하에서 헤더가 height: auto(225행)라 68px를 넘으면 사이드바만 68px에 남는 실패는 X-047과 같다. globals.css 한 파일에서 리터럴을 변수와 calc로 바꾸면 되어 유지보수 수정 범위(파일 둘 이하) 안이다.",
+      "evidence": [
+        "frontend/src/app/globals.css:117 @ 0f1d1bf",
+        "frontend/src/app/globals.css:127 @ 0f1d1bf",
+        "frontend/src/app/globals.css:163 @ 0f1d1bf",
+        "frontend/src/app/globals.css:287-289 @ 0f1d1bf",
+        "frontend/src/components/shell/layout-sizes.ts:1 @ 0f1d1bf",
+        "frontend/src/components/table/table-defaults.ts:3 @ 0f1d1bf",
+        "커밋 57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "commits": [
+        "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, after 캡처(390x844, 900x900)",
+        "globals.css에서 헤더 높이 리터럴(117행 68px, 162행 88px, 288행 128px)을 변수와 calc로 바꿨다. 224행 min-height 68px는 헤더 최소 높이라 남긴다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (globals.css 117, 162, 286-288행이 정점 b8abfdf에서도 같다. 정점은 23b1844 #453이 헤더에 업무 환경 선택을 더해 더 높아지고, ConsoleShell.tsx는 80a3ef1, 4ace811, 614d3bc, e5fca11, 23b1844가 바꿨다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "ConsoleShell.tsx의 header ref와 ResizeObserver 줄은 위층 반영 때 위층 ConsoleShell(정점 46행 header)에도 그대로 들어가야 한다. 위층에서 헤더 요소를 바꿨으면 ref를 같은 header에 단다.",
+      "summary": "헤더 높이 리터럴을 --workspace-header-height로 모았다"
     },
     {
       "id": "X-058",
@@ -5844,6 +5909,43 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "22 passed (12.1s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "24 passed (12.6s)"
     }
   ],
   "pushes": [
@@ -5881,6 +5983,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "e72b5f211e8b393dcb2758ba75e691de52a4064f",
       "at": "2026-10-28T17:27:30+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "57c1ad98a93d1c03cb2a3f741e4d12387cfa670a",
+      "at": "2026-10-28T17:30:05+09:00"
     }
   ],
   "usage_log": [],
