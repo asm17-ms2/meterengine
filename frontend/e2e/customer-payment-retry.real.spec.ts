@@ -179,6 +179,58 @@ async function ready(page: Page, link: ViewLink) {
   await expect(page).toHaveURL(`${FRONTEND_URL}/invoice-links`);
 }
 
+test("결제 재시도의 처리 중과 결과를 기존 상태 영역에 알리고 포커스를 보존한다", async ({ browser, request }) => {
+  const secrets = newSecrets();
+  const data = await fixture(request, ["paid", "failed", "unknown", "screen"], secrets);
+  for (const name of ["paid", "failed", "unknown", "screen"]) await adminAttempt(request, data, name, "rejected", secrets);
+  const screen = await mint(request, data, "screen", secrets, true);
+  writeFileSync(`${OUTPUT}/screens-input.json`, JSON.stringify({
+    groups: [{ name: "public", routes: [{ name: "invoice-retry", path: `/invoice-links#${screen.token}` }] }],
+    secrets: [...secrets],
+  }), { mode: 0o600 });
+
+  for (const outcome of ["paid", "failed", "unknown"] as const) {
+    const context = await browser.newContext({ baseURL: FRONTEND_URL });
+    const page = await context.newPage();
+    let release = () => {};
+    try {
+      const link = await mint(request, data, outcome, secrets, true);
+      await ready(page, link);
+      await page.getByRole("status").evaluateAll(nodes => nodes.forEach(node => node.setAttribute("data-persistent-status", "true")));
+      await nextApproval(request, outcome === "failed" ? "rejected" : "done");
+      let handled = false;
+      const held = new Promise<void>(resolve => { release = resolve; });
+      await page.route("**/invoice-links/payment-retries", async route => {
+        const response = await route.fetch();
+        handled = true;
+        await held;
+        if (outcome === "unknown") await route.fulfill({ status: 503, contentType: "application/json", body: "{}" });
+        else await route.fulfill({ response });
+      });
+      await page.getByRole("button", { name: "결제 다시 시도", exact: true }).click();
+      await page.getByRole("button", { name: "1,100원 테스트 결제 다시 시도", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await expect.poll(() => handled).toBe(true);
+      await capture(page, `retry-focus-${outcome}-submitting`);
+      await expect(page.getByRole("heading", { name: "실패한 결제 다시 시도", exact: true })).toBeFocused();
+      const status = page.locator('[role="status"][data-persistent-status="true"]');
+      await expect(status).toContainText("결제 요청을 처리하고 있습니다");
+      expect(await status.evaluate(node => node.closest('[aria-busy="true"]') === null)).toBe(true);
+      release();
+      if (outcome === "unknown") {
+        await expect(page.getByRole("heading", { name: "결제 상태 확인", exact: true })).toBeFocused();
+        await expect(page.locator('[aria-labelledby="invoice-payment-retry-title"]').getByRole("alert")).toContainText("결제 요청 결과를 확인하지 못했습니다");
+        await expect(page.getByRole("button", { name: "결제 다시 시도", exact: true })).toHaveCount(0);
+      } else {
+        await expect(page.getByRole("heading", { name: "결제 내역", exact: true })).toBeFocused();
+        await expect(status).toContainText(outcome === "paid" ? "결제가 완료되었습니다" : "결제에 실패했습니다");
+      }
+      await capture(page, `retry-focus-${outcome}-result`);
+    } catch (error) { throw safeFailure(error, secrets); }
+    finally { release(); await context.close(); }
+  }
+});
+
 test("조회 전용 권한을 보존하고 같은 실패의 중복 요청과 관리자 경합을 한 번만 결제한다", async ({ request }) => {
   const secrets = newSecrets();
   try {
