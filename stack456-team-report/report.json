@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T19:03:56+09:00",
+  "updated_at": "2026-10-28T19:06:58+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "8abe196bbc89586747aa5380ea5037dabe83b3f1"
+    "fix/s456-443-t-inho": "3901315c8b184bbdb52ebcf64bb825623aa23d08"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1287,29 +1287,71 @@
       "id": "D-082",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "globals.css 147행의 .setup-list a가 링크 글자를 12px로 두고, 767px 이하에서는 150행이 11px로 더 줄인다. padding은 199행의 6px 2px뿐이라 링크가 설명(198행 13px)과 제목(197행 14px)보다 작고, 같은 파일의 링크 터치 기준(325행 min-height 44px)과도 어긋난다. 정점 overview/page.tsx 24행의 '검토' 링크가 이 규칙을 받으므로 모바일에서 작은 조치 링크가 되는 것은 CSS와 마크업만으로 정해진다. 위치(147행 margin-left: auto)는 1440에서 계산하면 항목과 약 800px 떨어지지만, 행 끝에 행동을 두는 것은 antd List actions와 같은 관례라 취향 차이로 보고 고칠 범위에서 뺀다. 지적이 덧붙인 230행 헤더 버튼과 317행 도입사 링크는 다른 요소이고 317행은 X-058이 따로 본다. #443 head에는 .setup-list를 쓰는 마크업이 없고 화면은 #444, #450, #451에서 들어오지만, globals.css는 #443에서만 바뀌므로 여기서 고친다. 오른쪽 끝 배치는 antd List actions와 같은 관례라 취향 차이로 보고 바꾸지 않았다.",
+      "evidence": [
+        "frontend/src/app/globals.css:147 @ 0f1d1bf",
+        "frontend/src/app/globals.css:150 @ 0f1d1bf",
+        "frontend/src/app/globals.css:197-199 @ 0f1d1bf",
+        "frontend/src/app/globals.css:325 @ 0f1d1bf",
+        "frontend/src/app/globals.css:117,139 @ 0f1d1bf",
+        "frontend/src/app/(console)/overview/page.tsx:24 @ 0fe7d2a",
+        "커밋 3901315c8b184bbdb52ebcf64bb825623aa23d08"
+      ],
+      "commits": [
+        "3901315c8b184bbdb52ebcf64bb825623aa23d08"
+      ],
+      "tests": [
+        "git grep -n setup-list HEAD -- frontend/src/**/*.tsx: 이 층에는 쓰는 화면이 없다",
+        "git grep -n setup-list origin/feat/rds-auto-stop: 정점에서는 integrations/page.tsx 45행, overview/page.tsx 23-24행, UsageQuality.tsx 19행이 쓴다. 보이는 크기만 바뀌는 CSS라 시험으로 잡을 수 없다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 147, 150, 199행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "이 목록을 쓰는 화면은 #444 integrations, #450 UsageQuality, #451 overview다. 반영 뒤 그 화면 1440, 390 캡처로 링크 크기와 높이를 확인한다.",
+      "summary": ".setup-list 조치 링크를 기본 글자 크기와 44px 높이로 맞췄다"
     },
     {
       "id": "X-073",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "147행 .setup-list a의 font-size 12px와 767px 이하 150행의 11px 때문에 조치 링크가 설명(198행 13px)보다 작다. 정점 overview/page.tsx 24행의 같은 패널에서 패널 직속 보조 링크 '수집 이벤트 N건 확인'은 antd App 기본 글자 크기 14px(AppProviders.tsx 17, 22행)를 받으므로, 주 행동 '검토'가 보조 링크보다 약하게 보이는 것이 CSS와 마크업으로 정해진다. UsageQuality.tsx 19행의 '미터 설정', '원본 확인'도 같은 규칙을 받는다. 오른쪽 끝 배치(147행 margin-left: auto)는 antd List actions와 같은 관례라 취향 차이로 보고 고칠 범위에서 뺀다. 원인이 D-082와 같은 .setup-list a 규칙이라 함께 고친다. 오른쪽 끝 배치는 antd List actions와 같은 관례라 취향 차이로 보고 바꾸지 않았다.",
+      "evidence": [
+        "frontend/src/app/globals.css:147 @ 0f1d1bf",
+        "frontend/src/app/globals.css:150 @ 0f1d1bf",
+        "frontend/src/app/globals.css:198-199 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:17,22 @ 0f1d1bf",
+        "frontend/src/app/(console)/overview/page.tsx:24 @ 0fe7d2a",
+        "frontend/src/components/workspace/UsageQuality.tsx:19 @ 0fe7d2a",
+        "커밋 3901315c8b184bbdb52ebcf64bb825623aa23d08"
+      ],
+      "commits": [
+        "3901315c8b184bbdb52ebcf64bb825623aa23d08"
+      ],
+      "tests": [
+        "git grep -n setup-list HEAD -- frontend/src/**/*.tsx: 이 층에는 쓰는 화면이 없다",
+        "git grep -n setup-list origin/feat/rds-auto-stop: 정점에서는 integrations/page.tsx 45행, overview/page.tsx 23-24행, UsageQuality.tsx 19행이 쓴다. 보이는 크기만 바뀌는 CSS라 시험으로 잡을 수 없다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same (정점 b8abfdf globals.css 147, 150, 199행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "propagation_note": "이 목록을 쓰는 화면은 #444 integrations, #450 UsageQuality, #451 overview다. 반영 뒤 그 화면 1440, 390 캡처로 링크 크기와 높이를 확인한다.",
+      "summary": ".setup-list 조치 링크를 기본 글자 크기와 44px 높이로 맞췄다"
     },
     {
       "id": "X-078",
@@ -7618,6 +7660,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "42 passed (20.7s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (8.3s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "42 passed (20.5s)"
     }
   ],
   "pushes": [
@@ -7755,6 +7835,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "8abe196bbc89586747aa5380ea5037dabe83b3f1",
       "at": "2026-10-28T19:01:14+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "3901315c8b184bbdb52ebcf64bb825623aa23d08",
+      "at": "2026-10-28T19:06:47+09:00"
     }
   ],
   "usage_log": [],
