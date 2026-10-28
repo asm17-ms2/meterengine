@@ -48,7 +48,7 @@ p { line-height: 1.7; }
 .field-hint { font-size: 12px; line-height: 1.6; }
 .auth-layout { display: grid; grid-template-columns: minmax(300px, 5fr) minmax(440px, 7fr); min-height: 100dvh; background: var(--paper); }
 .auth-context { padding: 40px clamp(32px, 5vw, 80px); background: #f3f0fb; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 64px; }
-.auth-intro h2 { font-size: clamp(28px, 3vw, 42px); line-height: 1.35; letter-spacing: -.045em; font-weight: 700; }
+.auth-intro h2 { font-size: clamp(22px, 1.8vw, 26px); line-height: 1.35; letter-spacing: -.045em; font-weight: 700; }
 .auth-intro p { color: #334660; }
 .onboarding-steps { list-style: none; padding: 0; margin: auto 0 0; counter-reset: step; }
 .onboarding-steps li { counter-increment: step; position: relative; padding: 0 0 28px 44px; border-left: 1px solid #c8bde7; margin-left: 14px; }

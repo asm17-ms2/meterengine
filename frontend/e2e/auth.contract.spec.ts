@@ -431,3 +431,10 @@ test("the sidebar calls the integrations screen by its menu name", async ({ page
   await expectTenantUrl(page, "/customers");
   await expect(page.locator(".workspace-sidebar-note").getByRole("link")).toHaveText("API 키와 통보");
 });
+
+test("the login side panel title is smaller than the task title", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/login");
+  const sizes = await page.evaluate(() => [document.querySelector(".auth-intro h2"), document.querySelector("main h1")].map(element => parseFloat(getComputedStyle(element!).fontSize)));
+  expect(sizes[0]).toBeLessThan(sizes[1]);
+});
