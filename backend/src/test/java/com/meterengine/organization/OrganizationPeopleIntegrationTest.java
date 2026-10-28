@@ -185,6 +185,33 @@ class OrganizationPeopleIntegrationTest {
   }
 
   @Test
+  void 신규_초대를_빈_동의로_수락하면_400이고_계정과_수락을_남기지_않는다() {
+    String email = UUID.randomUUID() + "@example.com";
+    String token = invite(email);
+    assertThat(
+            post(
+                "/v1/organization-invitations/" + token + "/accept",
+                null,
+                Map.of("name", "초대 사용자", "password", PASSWORD, "consents", List.of())))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("validation_error");
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM user_account WHERE lower(email)=?", Integer.class, email))
+        .isZero();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT accepted_at IS NULL FROM organization_invitation WHERE"
+                    + " token_hash=sha256(convert_to(?,'UTF8'))",
+                Boolean.class,
+                token))
+        .isTrue();
+  }
+
+  @Test
   void 기존계정_초대는_같은_이메일의_로그인본인만_수락한다() {
     UUID otherOrg = UUID.randomUUID();
     String invited = TestCredentials.issueMemberSession(jdbcTemplate, otherOrg);
