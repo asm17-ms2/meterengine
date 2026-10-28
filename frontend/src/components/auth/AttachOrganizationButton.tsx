@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, App, Button, Checkbox, Modal } from "antd";
+import { Alert, App, Button, Checkbox, Flex, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { attachOrganizationAction } from "@/app/admin/actions";
 import { ACCESS_SCOPE_OPTIONS } from "@/lib/auth/permissions";
@@ -39,8 +39,7 @@ export function AttachOrganizationButton({ userId, userLabel, organizations: act
   }
 
   return <>
-    <Button onClick={() => setIsOpen(true)} disabled={organizations.length === 0}>도입사 소속 연결</Button>
-    {organizations.length === 0 && <p className="field-hint">추가로 연결할 사용 중인 도입사가 없습니다.</p>}
+    {organizations.length === 0 ? <Flex vertical gap={4} align="flex-start"><Button disabled aria-describedby={`${formId}-empty`}>도입사 소속 연결</Button><span id={`${formId}-empty`} className="field-hint">추가로 연결할 사용 중인 도입사가 없습니다.</span></Flex> : <Button onClick={() => setIsOpen(true)}>도입사 소속 연결</Button>}
     <Modal title="도입사 소속 연결" open={isOpen} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }} className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: "4px 4px 4px 0" } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={state.done}>소속 연결</Button></div>}>
       <form id={formId} onSubmit={submit} onChange={() => setIsDirty(true)} className="workspace-form" aria-busy={isPending}>
         <input name="user_account_id" type="hidden" value={userId} />

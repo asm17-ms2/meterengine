@@ -391,6 +391,14 @@ test("the operator organization list asks the backend for the selected status", 
   expect(paths).toContain("/v1/organizations");
 });
 
+test("a disabled operator action explains itself through its description", async ({ page }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  const button = page.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription(/.+/);
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
