@@ -104,6 +104,7 @@ export function BillableMetricFormDialog({
   const { message } = App.useApp();
   const { token } = theme.useToken();
   const firstFieldRef = useRef<InputRef>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
   const [dismissedState, setDismissedState] = useState<typeof state | null>(null);
   const dismissFailed = () => setDismissedState(state);
   const monoStyle = { fontFamily: token.fontFamilyCode };
@@ -123,6 +124,7 @@ export function BillableMetricFormDialog({
       message.success("저장했습니다");
       onClose();
     }
+    if (state.status === "failed") failureRef.current?.focus();
     if (state.status === "invalid") {
       form.setFields(
         Object.entries(state.fieldErrors).map(([field, error]) => ({
@@ -161,6 +163,17 @@ export function BillableMetricFormDialog({
         </Button>,
       ]}
     >
+      <div ref={failureRef} tabIndex={-1}>
+        {state.status === "failed" && state !== dismissedState ? (
+          <Alert
+            type="error"
+            showIcon
+            icon={alertIcon("error")}
+            title={state.message}
+            style={{ marginBottom: token.margin }}
+          />
+        ) : null}
+      </div>
       <Form<BillableMetricFormValues>
         form={form}
         layout="vertical"
@@ -198,6 +211,9 @@ export function BillableMetricFormDialog({
             />
           </Form.Item>
         )}
+        {isEdit ? <Typography.Paragraph type="secondary">
+          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요.
+        </Typography.Paragraph> : null}
         <Form.Item
           name="name"
           label="이름"
@@ -297,9 +313,6 @@ export function BillableMetricFormDialog({
           <Typography.Paragraph style={{ fontFamily: token.fontFamilyCode, overflowWrap: "anywhere", marginBlock: 8 }}>{metricCalculationFormula(calculation)}</Typography.Paragraph>
           <span>{metricCalculationExample(calculation)}</span>
         </>} />
-        {isEdit ? <Typography.Paragraph type="secondary" style={{ marginTop: token.margin }}>
-          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요.
-        </Typography.Paragraph> : null}
         <EnterSubmitButton disabled={isPending} />
       </Form>
 
@@ -323,15 +336,6 @@ export function BillableMetricFormDialog({
         상단에 표시된 도입사에 저장합니다. 같은 이벤트와 속성으로 미터를 여러 개 만들 수 있습니다. 예를 들어 합계와 이벤트 수 미터에 각각 단가를 등록하면 두 사용료가 모두 청구됩니다.
       </Typography.Paragraph>
 
-      {state.status === "failed" && state !== dismissedState ? (
-        <Alert
-          type="error"
-          showIcon
-          icon={alertIcon("error")}
-          title={state.message}
-          style={{ marginTop: token.margin }}
-        />
-      ) : null}
     </Modal>
   );
 }
