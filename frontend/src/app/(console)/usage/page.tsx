@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { FilterBar } from "@/components/screen/FilterBar";
@@ -21,6 +22,8 @@ import { readListQuery } from "@/lib/list-query";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const USAGE_CAPABILITIES = CAPABILITIES.aggregateBillableMetricUsages;
+
+export const metadata: Metadata = { title: "사용량" };
 
 export default async function UsagePage({
   searchParams,

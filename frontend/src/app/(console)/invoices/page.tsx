@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { InvoicesSection } from "@/components/invoices/InvoicesSection";
@@ -19,6 +20,8 @@ import { readListQuery } from "@/lib/list-query";
 import { ALL_MONTHS } from "@/lib/month";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = { title: "확정 인보이스" };
 
 export default async function InvoicesPage({
   searchParams,

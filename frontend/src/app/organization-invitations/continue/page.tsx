@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { AuthFrame } from "@/components/auth/AuthFrame";
 
-export const metadata: Metadata = { robots: { index: false, follow: false }, referrer: "no-referrer" };
+export const metadata: Metadata = { title: "도입사 초대", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
 export default async function ContinueInvitationPage() {
   const token = (await cookies()).get("me_invitation_flow")?.value;
