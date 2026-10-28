@@ -1,5 +1,6 @@
 package com.meterengine.webhook.repository;
 
+import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse.Attempt;
@@ -26,11 +27,16 @@ public class WebhookDeliveryRepository {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  // 마지막 시도의 선점이 끝나도록 결과가 없던 전송을 실패로 끝내고 그 건수를 돌려준다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public Optional<WebhookClaim> claim() {
-    jdbcTemplate.update(
+  public int expireLeases() {
+    return jdbcTemplate.update(
         "UPDATE webhook_delivery SET status = 'failed', failure_reason = 'lease_expired', next_attempt_at = NULL WHERE status = 'pending' AND attempt_count >= ? AND next_attempt_at <= clock_timestamp()",
         MAX_ATTEMPTS);
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public Optional<WebhookClaim> claim() {
     return jdbcTemplate
         .query(
             """
@@ -103,6 +109,12 @@ public class WebhookDeliveryRepository {
         outcome.failureReason(),
         outcome.durationMs());
     return Optional.of(status);
+  }
+
+  public WebhookBacklog backlog() {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*), COALESCE(floor(extract(epoch FROM clock_timestamp() - min(next_attempt_at))), 0) FROM webhook_delivery WHERE status = 'pending' AND next_attempt_at <= clock_timestamp()",
+        (rs, rowNum) -> new WebhookBacklog(rs.getLong(1), rs.getLong(2)));
   }
 
   public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {

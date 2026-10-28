@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 @Service
 public class WebhookEndpointService {
@@ -36,18 +37,21 @@ public class WebhookEndpointService {
   private final EncryptedStringConverter encryptedStringConverter;
   private final WebhookEventService webhookEventService;
   private final AuditLogService auditLogService;
+  private final TransactionOperations transactionOperations;
 
   WebhookEndpointService(
       WebhookEndpointRepository webhookEndpointRepository,
       WebhookAddressPolicy webhookAddressPolicy,
       EncryptedStringConverter encryptedStringConverter,
       WebhookEventService webhookEventService,
-      AuditLogService auditLogService) {
+      AuditLogService auditLogService,
+      TransactionOperations transactionOperations) {
     this.webhookEndpointRepository = webhookEndpointRepository;
     this.webhookAddressPolicy = webhookAddressPolicy;
     this.encryptedStringConverter = encryptedStringConverter;
     this.webhookEventService = webhookEventService;
     this.auditLogService = auditLogService;
+    this.transactionOperations = transactionOperations;
   }
 
   @Transactional(readOnly = true)
@@ -62,9 +66,14 @@ public class WebhookEndpointService {
         .orElseThrow(() -> new NotFoundException(ErrorCode.WEBHOOK_ENDPOINT_NOT_FOUND));
   }
 
-  @Transactional
+  // 주소의 DNS 조회는 느릴 수 있어 DB 커넥션을 쥐는 트랜잭션 밖에서 한다.
   public WebhookEndpointResponse create(UUID organizationId, CreateWebhookEndpointRequest request) {
     validate(request.url(), request.eventTypes());
+    return transactionOperations.execute(status -> insertEndpoint(organizationId, request));
+  }
+
+  private WebhookEndpointResponse insertEndpoint(
+      UUID organizationId, CreateWebhookEndpointRequest request) {
     if (webhookEndpointRepository.countAndLock(organizationId) >= 10) {
       throw new ConflictException(ErrorCode.WEBHOOK_ENDPOINT_LIMIT_EXCEEDED);
     }
@@ -92,11 +101,15 @@ public class WebhookEndpointService {
         secret);
   }
 
-  @Transactional
   public WebhookEndpointResponse update(
       UUID organizationId, UUID id, UpdateWebhookEndpointRequest request) {
     get(organizationId, id);
     validate(request.url(), request.eventTypes());
+    return transactionOperations.execute(status -> updateEndpoint(organizationId, id, request));
+  }
+
+  private WebhookEndpointResponse updateEndpoint(
+      UUID organizationId, UUID id, UpdateWebhookEndpointRequest request) {
     webhookEndpointRepository.update(
         organizationId,
         id,
