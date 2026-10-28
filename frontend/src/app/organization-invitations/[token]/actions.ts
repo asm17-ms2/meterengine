@@ -45,7 +45,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
     if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "두 안내를 읽고 필수 동의에 체크하세요." };
     body = { name, password, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) };
   }
-  const accepted = await requestApi<{ user_account_id: string; organization_id: string }>(`${path}/accept`, { method: "POST", token: sessionToken, body });
+  const accepted = await requestApi<{ user_account_id: string; organization_id: string }>(`${path}/accept`, { method: "POST", token: preview.data.account_exists ? sessionToken : undefined, body });
   if (!accepted.ok) return { message: toDisplayMessage(accepted.error) };
   (await cookies()).set("me_invitation_flow", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/organization-invitations", maxAge: 0 });
   let activeToken = sessionToken;

@@ -14,3 +14,13 @@ export function safeReturnPath(raw: unknown, isOperator: boolean): string {
     return fallback;
   }
 }
+
+export function returnOrganizationId(path: string): string | null {
+  return new URL(path, "https://console.invalid").searchParams.get("organization_id");
+}
+
+export function withoutOrganizationId(path: string): string {
+  const url = new URL(path, "https://console.invalid");
+  url.searchParams.delete("organization_id");
+  return url.pathname + url.search;
+}
