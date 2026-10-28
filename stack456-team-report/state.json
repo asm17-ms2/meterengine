@@ -1,13 +1,13 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T00:16:57+09:00",
+  "updated_at": "2026-10-29T00:18:26+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": "C446-001",
-    "step": "check",
+    "step": "report",
     "branch": "fix/s456-446-t-inho"
   },
   "finished_ids": [
@@ -159,6 +159,7 @@
     "D-120",
     "X-091",
     "D-119",
+    "C446-001",
     "C446-002",
     "C446-006",
     "C446-010",
@@ -171,7 +172,6 @@
   ],
   "open_ids": [
     "G-144",
-    "C446-001",
     "D-070",
     "H3-B2",
     "Nk3-002",

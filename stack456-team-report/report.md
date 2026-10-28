@@ -1,8 +1,8 @@
-미완료 218건, 결과: 끝 상태 154/372건 (fixed 110, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 5(그중 no-evidence 0))
+미완료 217건, 결과: 끝 상태 155/372건 (fixed 110, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 6(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e)
 정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T00:16:57+09:00
+상태: running, 갱신 2026-10-29T00:18:26+09:00
 
 ## 층별 상태
 
@@ -10,7 +10,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 3 | 28 |
+| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
@@ -174,6 +174,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- |
 | Ck2-014 | #444 | not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다. |
 | Ck3-446-10 | #446 | needs-new-migration: price_rate에 부분 조건이 없는 도입사 인덱스가 있어야 한다. 필요한 SQL은 CREATE INDEX price_rate_organization_index ON price_rate (organization_id, billable_metric_code); 이다. V36 안에 넣어 고치는 길은 do-not-touch Ck3-446-01에 걸린다. |
+| C446-001 | #446 | sync-conflict #446: backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java, frontend/e2e/auth.contract.spec.ts |
 | G-110 | #446 | not-owner #449: 고치려면 #446 V41__create_invoice_view_links.sql의 invoice_view_link 표와 감사 제약을 #449 V44로 옮겨야 해 양성지 님 층을 같이 바꿔야 한다(T-inho brief: 판정이 맞으면 not-owner #449). |
 | C447-011 | #447 | not-owner #447: 양성지 님 층의 시험이라 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다. |
 
@@ -278,3 +279,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 이 항목들을 판정하고 정점과 대조할 때 origin/feat/rds-auto-stop은 8dd028a였다(2026-10-29 들어 65d4150으로 움직였다). 이 뒤 fixed 기록은 그때의 정점 sha를 쓴다.
 - 2026-10-29T00:15:14+09:00 #446 demo 검사: 10절 표가 pnpm 검사를 #447부터로 적어, #446에서는 demo kind를 python3 -m unittest discover로 돌린다. 이 층 demo/package.json에는 build 스크립트가 없어 e4da2fa에서 pnpm -r build가 실패했다(이 변경과 무관, 기록은 checks에 fail로 남김). 같은 커밋에서 corepack pnpm -r --if-present typecheck, lint, test는 모두 통과했다.
 - 2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.
+- 2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.

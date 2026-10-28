@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:16:57+09:00",
+  "updated_at": "2026-10-29T00:18:26+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4908,14 +4908,30 @@
       "merged_ids": [],
       "layer": 446,
       "branch": "feat/pricing-aggregation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "blocked",
+      "verdict": "confirmed",
+      "reason": "층 head da90aac에서도 verify_cmd.py 85행은 client.get_billable_metric_prices(month)를, 189행과 197행은 client.get_price_plans(...)를, 196행은 get_billable_metric_prices(month, customer_id)를 부른다. 그런데 같은 head의 api_client.py 124행 get_billable_metric_prices(self)는 인자를 받지 않고 get_price_plans는 demo 전체에 정의가 없다(git grep 결과 시험의 가짜 클라이언트에만 있다). --log 경로(125행)와 --csv 경로(141행) 모두 실제 ApiClient를 만들기 때문에 피할 길이 없고, TypeError는 meterdemo.py 82-87행의 generic except가 받아 exit 2로 끝난다. test_verify_cmd.py는 166-168행에서 ApiClient를 FakeVerifyClient(145-149행, 두 메서드를 가짐)로 바꿔 끼워 이 실패를 잡지 못한다. 백엔드는 이 층에서 이미 /v1/billable-metric-prices와 GET /v1/price-plans가 month, customer_id를 받으므로 클라이언트만 고치면 되고, c27b229 뒤 demo 쪽 변경은 없다. 정점에서는 #450 8bb17c3이 같은 두 메서드를 더해 풀렸지만 #447부터 #449까지(#449 head 66a4a788d의 api_client.py 124행)는 그대로라, 패키지 brief가 정한 대로 이 층에서 고치고 propagation_note에 위층 내용을 택하라고 적는다. 고친 커밋 e4da2fa(demo/core/api_client.py, test_api_client.py)는 10절 검사를 통과했지만(demo unittest 포함), push 전 동기화 merge에서 origin/feat/pricing-aggregation f91912f(#466 반영)와 이미 push한 이 층 커밋(Ck3-446-05의 OpenApiDocumentTest, D-120과 X-091의 auth.contract.spec.ts)이 같은 자리에 시험을 더해 충돌했다. 9절대로 풀지 않고 evidence/sync-conflict/446/의 patch로 넘긴다.",
+      "evidence": [
+        "demo/csvdemo/verify_cmd.py:85 @ da90aac",
+        "demo/csvdemo/verify_cmd.py:189,196,197 @ da90aac",
+        "demo/csvdemo/verify_cmd.py:125,141 @ da90aac",
+        "demo/core/api_client.py:124-125 @ da90aac",
+        "demo/meterdemo.py:82-87 @ da90aac",
+        "demo/csvdemo/test_verify_cmd.py:145-149,166-168 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/BillableMetricPriceController.java:37-42 @ da90aac",
+        "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:48-57 @ da90aac",
+        "demo/core/api_client.py:124 @ 66a4a788d",
+        "demo/core/api_client.py:133-143 @ 8dd028a"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "da90aac88d0b7d3fca1d26fcb3e088d12812132c",
+        "top_sha": "8dd028a4e3c8f04c7450c742a79bd740de23b36e"
+      },
+      "blocked_reason": "sync-conflict #446: backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java, frontend/e2e/auth.contract.spec.ts",
+      "left": "로컬 커밋 e4da2fa08839ee39905aa9f51bc584c626e368f3 (fix/s456-446-t-inho, push 안 함). 검사 통과(checks e4da2fa: demo unittest, backend, frontend, screen). 충돌 파일은 이 커밋이 아니라 이미 push한 이 층 커밋과 f91912f 사이에 있다."
     },
     {
       "id": "D-070",
@@ -10818,7 +10834,8 @@
     "2026-10-28T23:03:41+09:00 #444 마지막 실화면 점검 통과: c0a9f4a에서 DB부터 새로 띄워 auth.real 3개 통과(뺀 시험 없음), 고친 화면 4건 증가 없음. #444에서 끝 상태가 없는 것은 G-144(T-inho brief대로 #450 차례에 고친다)뿐이다.",
     "2026-10-28T23:28:54+09:00 #444, #446에서 fixed로 적은 항목의 judged_at.top_sha가 보조 스크립트 기본값(0fe7d2a)으로 들어간 것을 실제로 대조한 정점 8dd028a로 고쳤다(20건). 이 항목들을 판정하고 정점과 대조할 때 origin/feat/rds-auto-stop은 8dd028a였다(2026-10-29 들어 65d4150으로 움직였다). 이 뒤 fixed 기록은 그때의 정점 sha를 쓴다.",
     "2026-10-29T00:15:14+09:00 #446 demo 검사: 10절 표가 pnpm 검사를 #447부터로 적어, #446에서는 demo kind를 python3 -m unittest discover로 돌린다. 이 층 demo/package.json에는 build 스크립트가 없어 e4da2fa에서 pnpm -r build가 실패했다(이 변경과 무관, 기록은 checks에 fail로 남김). 같은 커밋에서 corepack pnpm -r --if-present typecheck, lint, test는 모두 통과했다.",
-    "2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다."
+    "2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.",
+    "2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
