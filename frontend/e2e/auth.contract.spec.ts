@@ -444,3 +444,8 @@ test("Korean text in the console wraps between words", async ({ page }) => {
   await expectTenantUrl(page, "/customers");
   await expect(page.locator("body")).toHaveCSS("word-break", "keep-all");
 });
+
+test("the home trace example is a named group", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "한 고객, 한 청구 월" })).toBeVisible();
+});
