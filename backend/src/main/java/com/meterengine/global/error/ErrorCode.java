@@ -38,6 +38,7 @@ public enum ErrorCode {
   PAYMENT_METHOD_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 카드가 없습니다"),
   PAYMENT_METHOD_REGISTRATION_NOT_FOUND(HttpStatus.NOT_FOUND, "카드 등록 링크를 찾을 수 없습니다"),
   PAYMENT_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 시도를 찾을 수 없습니다"),
+  TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "토스페이먼츠 키를 찾을 수 없습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
