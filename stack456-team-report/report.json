@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T19:48:21+09:00",
+  "updated_at": "2026-10-28T19:51:07+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "0b31ea4",
+    "feat/account-permissions": "109526b",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1071,14 +1071,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "WorkspaceView.tsx 21행 SCOPE_LABELS는 ingest를 '사용량 수집'으로, permissions.ts scopeSummary와 ACCESS_SCOPE_OPTIONS는 '수집'으로 부르고, 표는 받은 순서대로 이름을 늘어놓는다. 정점 WorkspaceView.tsx 21행도 같다. 권한 이름 표와 순서 있는 라벨 함수를 permissions.ts에 두고 표가 이를 쓰게 했다.",
+      "evidence": [
+        "frontend/src/components/workspace/WorkspaceView.tsx:21,34 @ 72e8718",
+        "frontend/src/lib/auth/permissions.ts:6,41-44 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:21 @ 0fe7d2a",
+        "scope labels use one name per scope in read, ingest, admin order: 실패 SyntaxError: does not provide an export named 'ACCESS_SCOPE_LABELS'"
+      ],
+      "commits": [
+        "109526b2d2ee"
+      ],
+      "tests": [
+        "e2e/scope-labels.test.mjs: 고치기 전 실패, 고친 뒤 통과",
+        "pnpm test:unit 12건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "권한 이름과 순서 통일",
+      "propagation_note": "정점 명세에 '사용량 수집'을 찾는 곳은 없다."
     },
     {
       "id": "X-097",
@@ -7889,6 +7906,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 12 ℹ pass 12 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  33 passed (14.9s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.325s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -8136,6 +8209,11 @@
       "branch": "feat/account-permissions",
       "sha": "0b31ea44f6203b34400a1b296bea843fc627a3c2",
       "at": "2026-10-28T19:43:09+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "109526b2d2eeef79d30512bdd7d701f707906e64",
+      "at": "2026-10-28T19:51:07+09:00"
     }
   ],
   "usage_log": [],

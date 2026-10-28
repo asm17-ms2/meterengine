@@ -1,12 +1,12 @@
-미완료 202건, 결과: 끝 상태 126/328건 (fixed 84, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 49개(마지막 0b31ea4)
+미완료 201건, 결과: 끝 상태 127/328건 (fixed 85, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 31, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 50개(마지막 109526b)
 정할 것: 30건 (G-008, G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 84 | 1 | 7 | 31 | 3 | 17 |
+| #442 | 143 | 85 | 1 | 7 | 31 | 3 | 16 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -39,6 +39,7 @@ push: feat/account-permissions 49개(마지막 0b31ea4)
 | X-061 | #442 | 1dcdc54 | 새 탭 링크 안내 | a one-time link that opens in a new tab says so: 실패 Expected "새 탭에서 열립니다.", Received "" |
 | X-066 | #442 | 4b992f3 | 작업별 성공 안내 문구 | each workspace action that shows a toast says what it did: 실패 ERR_MODULE_NOT_FOUND workspace-action-feedback.ts |
 | X-084 | #442 | 7842944 | 초대, 동의 화면 보조 동작 access-actions 묶음 | 없음(보이는 변경: 이 층에는 access-actions 스타일이 없어 화면 차이가 없다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과. 간격은 #443 이상에서 ) |
+| X-095 | #442 | 109526b | 권한 이름과 순서 통일 | scope labels use one name per scope in read, ingest, admin order: 실패 SyntaxError: does not provide an export named 'ACCESS_SCOPE_LABELS' |
 | X-097 | #442 | d26d695 | 필수 선택 묶음 오류 조사 수정 | a required choice group error reads without a broken particle: 실패 Expected 0, Received 2 ('을 하나 이상') |
 | C442-009 | #442 | 16ae391 | 소속 보관 시 대기 초대 취소 | 소속을_보관하면_같은_이메일의_대기초대를_취소해_다시_들어오지_못한다: 실패 [HTTP status code] expected: 403 but was: 201 |
 | C442-018 | #442 | 3f74137 | 없는 업무 환경 전환 안내 제거 | 없음(보이는 변경(문구): 이 층에 환경 전환 요소가 없는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
@@ -165,6 +166,7 @@ push: feat/account-permissions 49개(마지막 0b31ea4)
 | X-055 | #442 | 위층 amount 호출(결제 금액 등)은 기본 범위(0 이상 안전 정수)로 그대로 동작한다. 위층 catch에 JSON 조합과 구간 입력이 생기면(#446 요금제) 그 층에서 JSON 오류를 InputFieldError로 바꿔 필드를 알린다. |
 | X-061 | #442 | 정점 명세 people.real.spec.ts와 mvp.real.spec.ts는 링크를 getByRole('link', { name, exact: true })로 찾아 이름이 그대로라 영향이 없다. |
 | X-066 | #442 | 위층에서 더한 작업(결제, 웹훅, 고객 등)은 맵에 없어 '처리했습니다.'로 남는다. 각 층이 원하면 SUCCESS_MESSAGES에 문구를 더한다. #453 mvp.real.spec.ts 106행과 environment-cycle.real.spec.ts 72행은 updateSupplier라 영향이 없다. |
+| X-095 | #442 | 정점 명세에 '사용량 수집'을 찾는 곳은 없다. |
 | C442-016 | #442 | fixed-above는 #442부터 #445까지 아직 고장이다. 층마다 가격 화면 진입을 따로 열지는 배포 단위 결정 뒤 조율 담당이 본다. #451 e5fca11부터는 /billable-metric-prices가 /pricing으로 리다이렉트하므로 가격 항목을 아래층에 넣으면 위층에서 중복 메뉴가 된다. |
 | C442-017 | #442 | #442만 main에 들어가고 #443이 아직인 사이 상태에서만 목록과 행 버튼이 두 벌 보인다. 층마다 따로 고치기로 정하면 #443 globals.css 221행과 767px 미디어 쿼리 240~241행에 해당하는 최소 규칙(.workspace-mobile-records 기본 display none, 모바일 폭에서 .workspace-desktop-table none, .workspace-mobile-records grid)을 #442 globals.css에 넣으면 되고, #443의 같은 규칙은 그대로 두면 겹쳐도 결과가 같다. |
 | C442-018 | #442 | #453 반영 때 integrations/page.tsx의 mode 필드는 #453 문구(environment === legacy 조건과 업무 환경 전환 안내)를 따른다. #443부터 #452까지는 이 커밋 문구가 맞다. |
