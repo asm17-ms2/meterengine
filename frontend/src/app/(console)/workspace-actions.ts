@@ -7,6 +7,7 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
+import { successMessage } from "@/app/(console)/workspace-action-feedback";
 
 export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
 
@@ -74,7 +75,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
   return {
-    isSuccess: true, message: false ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : "처리했습니다.",
+    isSuccess: true, message: false ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,
