@@ -1,15 +1,15 @@
-미완료 261건, 결과: 끝 상태 111/372건 (fixed 78, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 3번(마지막 c5fb0e0)
+미완료 260건, 결과: 끝 상태 112/372건 (fixed 79, refuted 1, already-fixed 4(그중 fixed-above 0), needs-decision 27, blocked 1(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 4번(마지막 f0aa95b)
 정할 것: 28건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T22:07:44+09:00
+상태: running, 갱신 2026-10-28T22:10:58+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 3 | 0 | 4 | 11 | 1 | 21 |
+| #444 | fix/s456-444-t-inho | 40 | 4 | 0 | 4 | 11 | 1 | 20 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
@@ -100,6 +100,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 3번(마
 | U1-B1 | #444 | 235ebf1 | auth.real.spec.ts의 운영자 첫 화면 기대를 /admin으로 맞춘다 | real Spring: operator without organization can manage the platform: 실패 Expected pattern: /\/admin\/organizations$/ Received string: "http://localhost:33147/admi |
 | Ck2-001 | #444 | 02b14f4 | 웹훅 요청에 User-Agent 헤더를 싣는다 | 요청에_수신_서버가_발신자를_알아볼_User_Agent를_싣는다: 실패 Expecting actual "POST /hook HTTP/1.1 Host: 127.0.0.1:63777 Content-Type: application/json ..." to contain "User-Agent:  |
 | Ck2-002 | #444 | c5fb0e0 | 웹훅 수신 주소의 DNS 조회를 트랜잭션 밖에서 한다 | 수신_주소의_DNS_조회는_트랜잭션_밖에서_해_DB_커넥션을_쥐지_않는다: 실패 Expecting actual [true, true] to contain exactly (and in same order) [false, false] |
+| Ck2-003 | #444 | f0aa95b | 밀린 웹훅 발송을 지표로 내고 10분 넘게 밀리면 경보한다 | 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다: 실패 error: cannot find symbol method measure() (적체를 세어 지표로 내는 경로가 없다) |
 
 ## 정할 것
 
@@ -185,6 +186,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 3번(마
 - D-165 (#443): #446부터 있는 PricingWorkspace.tsx(c27b229 114행)의 대화상자 본문도 같은 padding이라, 그 층에서 padding 8, marginInline -8로 맞춘다.
 - G-046 (#443): 웹훅 pending이 '결과 확인 중'으로 보이는 부분은 #444 integrations/[id]/page.tsx 26행 statusLabels에서 시작하고 그 문구를 고정한 e2e는 #453 workspace.contract.spec.ts 122행이다. #443 수정 범위 밖이라 위층에서 맞춘다.
 - Ck2-002 (#444): #447 2ec5d85가 update에 보관 확인(archivedAt이면 409)을, restore()를 더했다. 반영 때 update의 보관 확인은 트랜잭션 밖 get() 자리에 두고, restore()도 validate(DNS 조회)를 transactionOperations.execute 밖에서 먼저 부르고 countAndLock, restore, 감사 기록만 안에서 하도록 맞춘다. 생성자에 TransactionOperations가 늘어 #447 이후의 WebhookEndpointServiceTest 생성자 호출에도 TransactionOperations.withoutTransaction()을 넘긴다.
+- Ck2-003 (#444): WebhookDeliveryRepository.backlog() 조회는 도입사와 환경을 가리지 않는 전역 집계라 #453 23b1844의 environment_scope_id 조건을 더하지 않는다. alerting.yml 끝의 webhook-delivery-backlog 규칙과 deploy/README.md 경보 표의 '웹훅 발송 적체' 행은 위층에서 같은 자리에 줄이 더해졌으면 둘 다 둔다.
 
 ## fixed-above로 둔 것
 
