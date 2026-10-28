@@ -2,6 +2,12 @@ package com.meterengine.webhook.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.meterengine.webhook.dto.WebhookOutcome;
 import java.io.ByteArrayOutputStream;
@@ -24,10 +30,15 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class WebhookClientTest {
   private static final char[] PASSWORD = "changeit".toCharArray();
 
@@ -79,6 +90,90 @@ class WebhookClientTest {
     } finally {
       allowRead.countDown();
     }
+  }
+
+  @Test
+  void 요청에_수신_서버가_발신자를_알아볼_User_Agent를_싣는다() throws Exception {
+    try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
+        var receiver = Executors.newSingleThreadExecutor();
+        WebhookClient client =
+            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(5))) {
+      var received =
+          receiver.submit(
+              () -> {
+                try (Socket socket = serverSocket.accept()) {
+                  socket.setSoTimeout(5000);
+                  String request = readRequest(socket.getInputStream());
+                  socket
+                      .getOutputStream()
+                      .write(
+                          "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n"
+                              .getBytes(StandardCharsets.US_ASCII));
+                  socket.getOutputStream().flush();
+                  return request;
+                }
+              });
+
+      client.send(
+          "http://127.0.0.1:" + serverSocket.getLocalPort() + "/hook",
+          "event",
+          "1",
+          "v1,signature",
+          "{}");
+
+      assertThat(received.get(5, TimeUnit.SECONDS))
+          .contains("\r\nUser-Agent: MeterEngine-Webhooks/1.0\r\n");
+    }
+  }
+
+  @Test
+  void 연결하지_못하면_예외를_WARN으로_남기고_주소의_경로와_쿼리는_남기지_않는다(CapturedOutput output) throws Exception {
+    int closedPort;
+    try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
+      closedPort = serverSocket.getLocalPort();
+    }
+    try (WebhookClient client =
+        new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(5))) {
+      WebhookOutcome outcome =
+          client.send(
+              "http://127.0.0.1:" + closedPort + "/hook?token=receiver-secret",
+              "event-1",
+              "1",
+              "v1,signature",
+              "{}");
+
+      assertThat(outcome.failureReason()).isEqualTo("connection_error");
+    }
+    assertThat(output.getOut())
+        .contains("WARN")
+        .contains("event-1")
+        .contains("java.net.ConnectException")
+        .doesNotContain("receiver-secret");
+  }
+
+  @Test
+  void 전송_중_예상하지_못한_예외는_원인과_함께_ERROR로_남긴다(CapturedOutput output) throws Exception {
+    SSLSocketFactory brokenFactory = mock(SSLSocketFactory.class);
+    when(brokenFactory.createSocket(any(Socket.class), anyString(), anyInt(), anyBoolean()))
+        .thenThrow(new IllegalStateException("broken tls setup"));
+    try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
+        WebhookClient client =
+            new WebhookClient(
+                new WebhookAddressPolicy(true), Duration.ofSeconds(5), brokenFactory)) {
+      WebhookOutcome outcome =
+          client.send(
+              "https://127.0.0.1:" + serverSocket.getLocalPort() + "/hook",
+              "event-2",
+              "1",
+              "v1,signature",
+              "{}");
+
+      assertThat(outcome.failureReason()).isEqualTo("connection_error");
+    }
+    assertThat(output.getOut())
+        .contains("ERROR")
+        .contains("event-2")
+        .contains("java.lang.IllegalStateException: broken tls setup");
   }
 
   @Test

@@ -14,6 +14,7 @@ import com.meterengine.webhook.repository.WebhookEndpointRepository;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 
 class WebhookEndpointServiceTest {
   @Test
@@ -25,7 +26,8 @@ class WebhookEndpointServiceTest {
             new WebhookAddressPolicy(false),
             mock(EncryptedStringConverter.class),
             mock(WebhookEventService.class),
-            mock(AuditLogService.class));
+            mock(AuditLogService.class),
+            TransactionOperations.withoutTransaction());
     for (String url :
         new String[] {
           "http://203.0.113.10/hook", "https://127.0.0.1/hook", "https://169.254.169.254/latest"
