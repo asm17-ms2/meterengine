@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T00:19:29+09:00",
+  "updated_at": "2026-10-29T00:31:46+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5412,14 +5412,27 @@
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "수집 부분은 #459 머지 커밋 4f8e59f8로 이 층 head에서 이미 빠졌다(RequestAuditFilter.java:54-57). 그래서 수집량만큼 행이 는다는 원래 시나리오는 더 성립하지 않는다. 남는 것은 수집 밖의 모든 /v1 요청(익명 401, 방화벽 400, 429 포함)이 finally(64-78행)를 거쳐 REQUIRES_NEW로 audit_log에 들어가고, V25 트리거가 DELETE와 TRUNCATE를 막아 보존 기간을 둘 수 없다는 점이다. 플랫폼 조회는 AuditLogController.java:70이 organizationId에 null을 넘겨 AuditLogQueryService.java:54-55의 도입사 조건이 빠지므로, 88-92행의 getTotalElements가 익명 행까지 테이블 전체를 센다. 행이 느는 속도는 이제 수집량이 아니라 익명 요청과 관리 요청의 양을 따르므로 high보다 낮다. 고치려면 감사 대상이나 보존 방식(트리거, 파티션, total 필드)을 바꿔야 하므로 brief대로 needs-decision(Q3)이다.",
+      "evidence": [
+        "커밋 4f8e59f8",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:54-57 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:64-78 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:27-56 @ 6431cefb",
+        "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:38-44 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:70 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:54-55 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:87-92 @ 6431cefb"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "question": "Q3: 요청 감사가 수집 밖의 주체 없는 실패 요청(익명 401, 방화벽 400)과 429까지 지울 수 없는 audit_log에 계속 남길지, 남긴다면 보존 기간(occurred_at 파티션과 V25 트리거 변경)과 플랫폼 조회의 전체 count를 어떻게 할지."
     },
     {
       "id": "C448-001",
@@ -5440,56 +5453,106 @@
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "감사 조회 GET /v1/audit-logs의 접근 어노테이션이 같은 정보를 내는 API 키와 구성원 조회(세션 전용)보다 넓다. 다만 이 층 커밋 15692f85의 시험이 지금 범위를 의도한 동작으로 단정해, 좁히면 그 의도를 뒤집는다. 보안 지적이라 자세한 판정은 .s456-work/security/G-095/에 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:27-31 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/ReadAccess.java:13 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/MemberReadAccess.java:13 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/apikey/controller/ApiKeyController.java:45,52 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:142-147 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:152-161 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:135-140 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:51,64 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:28-30 @ b5506b6"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "question": "도입사 감사 조회 GET /v1/audit-logs를 #442의 API 키 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 15692f85 시험이 단정한 대로 read API 키에도 열어 둘지 정한다."
     },
     {
       "id": "C448-002",
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "재현 경로는 이렇다. 인증 헤더 없이 GET /v1/customers를 보내면 RequestAuditFilter.java:43이 /v1/ 요청이라 필터를 타고, 54행의 수집 판정에도 걸리지 않는다. ApiCredentialAuthenticationFilter.java:49-51은 헤더가 없으면 DB 조회 없이 넘기고 RateLimitFilter.java:39-43은 API 키 주체에만 걸려 그냥 지나간다. SecurityConfig의 anyRequest().authenticated()로 401이 난 뒤 finally(64-78행)가 주체 null로 record를 부르고, RequestAuditService 36-37, 46-56행이 anonymous 행을 새 트랜잭션으로 넣는다. 시험 미인증실패와_잘못된인증도_기록하고_감사행은_수정할_수_없다(215-227행)가 이 동작을 고정하고, V25 38-44행 트리거가 이 행을 지우지 못하게 막는다. 피해 쪽에서 보면 배포 설정에 프록시 호출 제한이 없다. 정점 #454의 AuthRequestRateLimitService도 SessionController와 SignupController 안에서만 불려 감사 필터보다 뒤에 있으므로 다른 층이 막아 주지 않는다. 고치려면 감사 대상(주체 없는 요청 제외)이나 보존 방식, 감사 필터 앞 IP 제한 중 하나를 정해야 하므로 needs-decision(Q3)이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:42-44 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/ApiCredentialAuthenticationFilter.java:48-51 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:39-43 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:84-95 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:64-78 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:27-56 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:215-227 @ 6431cefb",
+        "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:38-44 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96 @ b5506b61",
+        "backend/src/main/java/com/meterengine/account/controller/SignupController.java:86 @ b5506b61"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "question": "Q3: 주체 없는 /v1 요청(익명 401, 잘못된 Bearer 401)을 지울 수 없는 audit_log에 계속 남길지, 뺄지, 아니면 남기되 감사 필터 앞에 IP 호출 제한이나 occurred_at 기준 보존 기간을 둘지."
     },
     {
       "id": "G-159",
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "지적한 실패 경로는 수집 요청마다 감사 행이 하나씩 생겨 패널 5의 B(DB 전체 tup_inserted)가 이벤트 유실을 메운다는 것이다. 그런데 #459 머지 커밋 4f8e59f8로 RequestAuditFilter.java:54-57이 POST /v1/events와 /v1/event-batches를 감사 없이 넘긴다. 통합 시험 수집_성공은_감사하지_않고_수집권한의_읽기거절은_기록한다(296-302행)와 RequestAuditFilterTest 74-82행이 수집 요청에 감사 행이 남지 않음을 단정한다. 그래서 이 층 head에서는 수집 부하 중 감사 행이 저장 응답 수만큼 늘어 유실을 가리는 일이 생기지 않는다. B 쿼리가 DB 전체를 세는 것은 main의 36a19ae5(#345)에서 온 것이라 #448이 만든 문제가 아니고, 같은 파일은 #450 G-165가 본다. audit_log 크기 패널과 보존 작업이 없다는 나머지 지적은 수집과 무관한 익명 요청과 관리 요청 증가 문제라 C448-002의 Q3 결정에 속한다.",
+      "evidence": [
+        "커밋 4f8e59f8",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:54-57 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:296-302 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/global/security/RequestAuditFilterTest.java:74-82 @ 6431cefb",
+        "deploy/grafana/dashboards/meterengine-storage.json:276 @ 6431cefb"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "top_head": "same: 정점 RequestAuditFilter.java 57-60행에도 수집 제외가 그대로다. 이 층의 #459 머지 커밋 4f8e59f8이 고쳤다(fixed-above 아님)"
     },
     {
       "id": "G-169",
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "수집 요청은 4f8e59f8 이후 RequestAuditFilter.java:54-57에서 상태와 관계없이 빠진다. 그래서 원래 시나리오의 시간당 1,440만 행과 수집 요청당 WAL flush 두 번은 이 층 head에서 더 일어나지 않는다. 남는 것은 수집 밖 경로다. RateLimitFilter.java:49-52가 API 키 한도 초과로 429를 쓰고 돌아오면 감사 필터 59-60행이 그 상태를 읽어 finally에서 행을 쓰므로, 호출 제한이 DB 쓰기를 막지 못한다. 익명 401도 C448-002와 같은 경로로 organization_id가 NULL인 anonymous 행이 된다(V26 37-43행이 FK를 지우고 anonymous를 허용). V25 트리거 때문에 이 행들을 지울 수 없는 것도 그대로다. 원인이 C448-002와 같고, 고치려면 감사 대상이나 보존 방식을 바꿔야 하므로 needs-decision(Q3)이다.",
+      "evidence": [
+        "커밋 4f8e59f8",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:54-57 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:49-52 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:59-60 @ 6431cefb",
+        "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql:37-43 @ 6431cefb",
+        "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:38-44 @ 6431cefb"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "question": "Q3: 수집 밖 경로의 401과 429(API 키 한도, 정점 #454 인증 제한)를 지울 수 없는 audit_log에 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 audit_log 보존 기간을 둘지."
     },
     {
       "id": "X-024",
@@ -5524,14 +5587,25 @@
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "취향 차이. 요청 감사 행의 target_type=http_request와 경로 UUID를 넣은 target_id는 의도한 설계이고 시험이 그대로 단정한다. AuditTargetIntegrationTest는 권한 실패와 없는 대상에도 target_id에 경로 UUID를 남기고, 그 UUID로 검색해 찾는 것을 확인한다. ApiKeyIntegrationTest는 target_type이 http_request인지와 detail 키 집합을 containsOnlyKeys로 못박는다. 문서에 없는 detail 키라는 부분은 비교할 문서가 없다. openapi.yaml의 detail은 additionalProperties 자유 객체이고, 어느 action의 detail 키도 README에 적혀 있지 않다. target_type과 target_id를 엮어 엔터티를 찾는 소비자도 없다. 조회는 LIKE 검색만 하고 detail.route도 함께 찾으며, 화면 요약에는 method와 route가 나온다. 그래서 실패 경로가 없고, target_type에 리소스 종류를 넣을지는 설계 취향만 남는다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:53-55 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:92-105 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/audit/AuditTargetIntegrationTest.java:90-98 @ 6431cefb",
+        "backend/src/test/java/com/meterengine/apikey/ApiKeyIntegrationTest.java:532-547 @ 6431cefb",
+        "backend/openapi.yaml:5320-5322 @ 6431cefb",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:68-81 @ 6431cefb",
+        "frontend/src/components/workspace/AuditScreen.tsx:70,73 @ 6431cefb"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      }
     },
     {
       "id": "Ck1-448-03",
@@ -5552,14 +5626,27 @@
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "지적은 코드상 사실이다. 플랫폼 감사 조회(AuditLogController 51-70행)는 도입사 인수가 없고 서비스에 organizationId로 null을 넘긴다. 서비스는 값이 있을 때만 도입사 조건을 건다(54-55행). 검색어 q가 보는 열은 action, target_type, target_id, detail.route뿐이라(68-81행) 한 도입사의 api_request_completed 기록만 골라낼 길이 없다. 화면도 action, actor_type, q, from, to, sort, page, size만 넘긴다(AuditScreen.tsx 35행). 다만 이것은 잘못된 출력이 아니라 기능 공백이다. 통합 시험(AuditQueryAndRequestIntegrationTest 87-99행)이 운영자 조회가 여러 도입사를 한꺼번에 돌려주는 동작을 단정하고 화면 설명도 전체 도입사 조회라서, 고치려면 공개 API에 새 조회 인수를 더하고 운영자 화면에 필터를 더해야 한다. 프론트에서는 organization_id 조회 키가 이미 작업 공간 범위로 쓰이고 있어(workspace-href.ts 9-10행, AuditScreen.tsx 56행) 키 이름도 정해야 하므로, 제품 결정이 필요하다. 정점도 같은 코드다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:51-70 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:54-55 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:68-81 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:35 @ 6431cef",
+        "frontend/src/components/workspace/AuditScreen.tsx:56 @ 6431cef",
+        "frontend/src/lib/workspace-href.ts:9-10 @ 6431cef",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:87-99 @ 6431cef",
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:53-72 @ b5506b6"
+      ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+        "top_sha": "b5506b61623b7b14ebbe4b735cee07cf347e7bc7"
+      },
+      "question": "운영자 감사 조회 GET /v1/operations/audit-logs에 선택 인수(도입사 id)를 더하고 /admin/audit 화면에 도입사 필터를 둘지, 둔다면 작업 공간 범위로 이미 쓰이는 organization_id와 겹치지 않는 조회 키 이름을 무엇으로 할지 정한다."
     },
     {
       "id": "D-152",

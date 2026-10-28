@@ -1,8 +1,8 @@
-미완료 217건, 결과: 끝 상태 155/372건 (fixed 110, refuted 1, already-fixed 7(그중 fixed-above 3), needs-decision 31, blocked 6(그중 no-evidence 0))
+미완료 210건, 결과: 끝 상태 162/372건 (fixed 110, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e)
-정할 것: 33건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+정할 것: 38건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T00:19:29+09:00
+상태: running, 갱신 2026-10-29T00:31:46+09:00
 
 ## 층별 상태
 
@@ -11,7 +11,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
 | #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
-| #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
+| #448 | feat/request-audit | 24 | 0 | 1 | 1 | 5 | 0 | 17 |
 | #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
 | #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
@@ -165,6 +165,11 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-446-07 | #446 | 단가 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 README 설명이나 감사 검색(detail.billable_metric_code)으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다. |
 | Ck3-446-08 | #446 | #446에서 운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 두 파일 상한의 예외), 아니면 지적 위치인 DraftInvoiceResponse만 지울지 정한다. |
 | Ck3-446-09 | #446 | OrganizationService.find(UUID)가 없으면 예외를 던져 naming.md의 get 뜻인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지 정한다. |
+| G-092 | #448 | Q3: 요청 감사가 수집 밖의 주체 없는 실패 요청(익명 401, 방화벽 400)과 429까지 지울 수 없는 audit_log에 계속 남길지, 남긴다면 보존 기간(occurred_at 파티션과 V25 트리거 변경)과 플랫폼 조회의 전체 count를 어떻게 할지. |
+| G-095 | #448 | 도입사 감사 조회 GET /v1/audit-logs를 #442의 API 키 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 15692f85 시험이 단정한 대로 read API 키에도 열어 둘지 정한다. |
+| C448-002 | #448 | Q3: 주체 없는 /v1 요청(익명 401, 잘못된 Bearer 401)을 지울 수 없는 audit_log에 계속 남길지, 뺄지, 아니면 남기되 감사 필터 앞에 IP 호출 제한이나 occurred_at 기준 보존 기간을 둘지. |
+| G-169 | #448 | Q3: 수집 밖 경로의 401과 429(API 키 한도, 정점 #454 인증 제한)를 지울 수 없는 audit_log에 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 audit_log 보존 기간을 둘지. |
+| Ck1-448-04 | #448 | 운영자 감사 조회 GET /v1/operations/audit-logs에 선택 인수(도입사 id)를 더하고 /admin/audit 화면에 도입사 필터를 둘지, 둔다면 작업 공간 범위로 이미 쓰이는 organization_id와 겹치지 않는 조회 키 이름을 무엇으로 할지 정한다. |
 | NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
 | NT-inho-003 | #444 | 웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다. |
 

@@ -1,14 +1,14 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T00:19:29+09:00",
+  "updated_at": "2026-10-29T00:31:46+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
-    "id": "C446-001",
-    "step": "report",
-    "branch": "fix/s456-446-t-inho"
+    "id": "G-092",
+    "step": "judge",
+    "branch": "fix/s456-448-t-inho"
   },
   "finished_ids": [
     "C443-000",
@@ -166,6 +166,13 @@
     "G-110",
     "G-173",
     "C447-011",
+    "G-092",
+    "G-095",
+    "C448-002",
+    "G-159",
+    "G-169",
+    "Ck1-448-02",
+    "Ck1-448-04",
     "NT-inho-001",
     "NT-inho-002",
     "NT-inho-003"
@@ -199,17 +206,10 @@
     "D-205",
     "X-077",
     "X-102",
-    "G-092",
     "C448-001",
-    "G-095",
-    "C448-002",
-    "G-159",
-    "G-169",
     "X-024",
     "Ck1-448-01",
-    "Ck1-448-02",
     "Ck1-448-03",
-    "Ck1-448-04",
     "D-152",
     "D-007",
     "D-032",
@@ -407,6 +407,11 @@
       "unpushed": [
         "e4da2fa08839ee39905aa9f51bc584c626e368f3"
       ]
+    },
+    "fix/s456-448-t-inho": {
+      "origin_sha": "",
+      "local_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2",
+      "unpushed": []
     }
   },
   "usage": {
@@ -423,11 +428,10 @@
   },
   "live_env": {
     "running": true,
-    "layer": 446,
+    "layer": 448,
     "pids": [
-      38360,
-      50859,
-      57362
+      7729,
+      7861
     ],
     "container": "meterengine-0696-e2e"
   }
