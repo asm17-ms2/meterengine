@@ -221,7 +221,7 @@ public class PaymentAttemptService {
       return false;
     }
     paymentMetrics.countAttempt(mode, PaymentAttempt.FAILED);
-    if (attemptCount.get() >= paymentProperties.retryMaxAttempts()) {
+    if (attemptCount.get() == paymentProperties.retryMaxAttempts()) {
       paymentMetrics.countRetryExhausted(mode);
     }
     return true;

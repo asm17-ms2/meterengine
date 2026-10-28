@@ -18,8 +18,10 @@ import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.entity.BillingKey;
+import com.meterengine.payment.entity.PaymentAttempt;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
+import com.meterengine.payment.repository.PaymentAttemptRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -54,6 +56,8 @@ class PaymentRetryServiceTest {
   @Autowired private BillingKeyRepository billingKeyRepository;
   @Autowired private MeterRegistry meterRegistry;
   @Autowired private PaymentRetryService paymentRetryService;
+  @Autowired private PaymentAttemptService paymentAttemptService;
+  @Autowired private PaymentAttemptRepository paymentAttemptRepository;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
@@ -478,7 +482,7 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void 세_번째_시도가_실패하면_retry_exhausted가_오른다() {
+  void 세_번째_시도가_실패하면_retry_exhausted가_한_번_오르고_상한을_넘긴_실패는_세지_않는다() {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(50));
@@ -496,6 +500,21 @@ class PaymentRetryServiceTest {
         .containsEntry("status", "failed")
         .containsEntry("failure_code", RETRYABLE_FAILURE_CODE);
     assertThat(exhaustedCount()).isEqualTo(exhaustedBefore + 1);
+
+    laterAttempt(organization, invoiceId, "pending", Duration.ZERO);
+    PaymentAttempt fourth =
+        paymentAttemptRepository.findById(attemptIdWithStatus(invoiceId, "pending")).orElseThrow();
+    assertThat(paymentAttemptService.markFailed(fourth, RETRYABLE_FAILURE_CODE, "거절")).isTrue();
+    assertThat(attemptRows(invoiceId)).hasSize(4);
+    assertThat(exhaustedCount()).isEqualTo(exhaustedBefore + 1);
+  }
+
+  private UUID attemptIdWithStatus(UUID invoiceId, String status) {
+    return jdbcTemplate.queryForObject(
+        "SELECT id FROM payment_attempt WHERE invoice_id = ? AND status = ?",
+        UUID.class,
+        invoiceId,
+        status);
   }
 
   private void lookupReturns(
