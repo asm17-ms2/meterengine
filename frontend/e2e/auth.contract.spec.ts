@@ -311,3 +311,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
     })).toBe(true);
   });
 }
+
+test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-scope")).toHaveText("전체 관리");
+  const refresh = page.getByRole("button", { name: "권한 새로 조회", exact: true });
+  await refresh.click();
+  await expect(page.getByText("권한을 다시 조회했습니다.", { exact: true })).toBeVisible();
+});

@@ -2,9 +2,9 @@
 
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
-import { Button, Drawer } from "antd";
-import { DownOutlined, MenuOutlined } from "@ant-design/icons";
-import { Suspense, useLayoutEffect, useRef, useState } from "react";
+import { App, Button, Drawer } from "antd";
+import { DownOutlined, MenuOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { LogoutButton } from "@/components/auth/SessionControls";
@@ -46,6 +46,14 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
   const { isGuideMode } = useGuideMode();
   const canRead = hasScope(scopes, "read");
   const canManage = hasScope(scopes, "admin");
+  const scopeLabel = `${scopeSummary(scopes)}${!canManage && canRead && !hasScope(scopes, "ingest") ? " 전용" : ""}`;
+  const { message } = App.useApp();
+  const [isRefreshing, startRefresh] = useTransition();
+  const wasRefreshing = useRef(false);
+  useEffect(() => {
+    if (wasRefreshing.current && !isRefreshing) message.success("권한을 다시 조회했습니다.");
+    wasRefreshing.current = isRefreshing;
+  }, [isRefreshing, message]);
   return <div className="workspace-shell">
     <header ref={headerRef} className="workspace-header">
       <div className="workspace-brand">
@@ -54,7 +62,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
         <span className="workspace-divider" />
         <Link href="/organizations" className="organization-link" title={organizationLabel}>{organizationLabel}<DownOutlined aria-hidden="true" /></Link>
       </div>
-      <div className="workspace-user">{canManage && <GuideModeToggle />}{isOperator && <Link href="/admin/organizations">플랫폼 운영</Link>}<span>{userLabel}{organizationRole ? ` / ${organizationRole === "owner" ? "대표관리자" : organizationRole === "admin" ? "관리자" : "사용자"}` : ""}</span><Button type="text" size="small" onClick={() => router.refresh()} title="현재 도입사의 권한을 다시 조회합니다" aria-label={`${scopeSummary(scopes)}${!canManage && canRead && !hasScope(scopes, "ingest") ? " 전용" : ""}, 권한 새로 조회`}>{scopeSummary(scopes)}{!canManage && canRead && !hasScope(scopes, "ingest") ? " 전용" : ""} / 권한 새로 조회</Button><LogoutButton /></div>
+      <div className="workspace-user">{canManage && <GuideModeToggle />}{isOperator && <Link href="/admin/organizations">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}{organizationRole ? ` / ${organizationRole === "owner" ? "대표관리자" : organizationRole === "admin" ? "관리자" : "사용자"}` : ""}</span><span className="workspace-scope">{scopeLabel}</span><Button type="text" size="small" icon={<ReloadOutlined aria-hidden="true" />} loading={isRefreshing} onClick={() => startRefresh(() => router.refresh())} title="현재 도입사의 권한을 다시 조회합니다">권한 새로 조회</Button><LogoutButton /></div>
     </header>
     <aside className="workspace-sidebar"><div className="workspace-sidebar-label">도입사 업무</div><NavMenu /><div className="workspace-sidebar-note">{canRead ? <Link href={workspaceHref("/integrations", search)}>서버 연동 설정</Link> : <Link href="/organizations">도입사 선택</Link>}<p>사람의 관리 권한과 API 키의 권한은 별도로 관리합니다.</p></div></aside>
     <main id="main-content" className="workspace-main">
