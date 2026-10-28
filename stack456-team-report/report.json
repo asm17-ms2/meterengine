@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T18:41:10+09:00",
+  "updated_at": "2026-10-28T18:44:50+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "16ae391",
+    "feat/account-permissions": "a53cc1b",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -427,14 +427,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "ApiCredentialAuthenticationFilter는 동의가 필요한 세션이면 동의 경로 밖의 모든 세션 경로에 403 CONSENT_REQUIRED를 돌려주는데, OpenApiConfig의 FORBIDDEN_DESCRIPTION과 ORGANIZATION_FORBIDDEN_DESCRIPTION, backend README 오류 응답 절에 그 code가 없다. 정점도 같다. 두 설명과 README에 code를 적고 문서 시험을 더했다. 공통 설명이라 동의 전에도 되는 세 세션 경로의 403에도 이 줄이 붙고, 이를 경로별로 나누려면 필터의 동의 경로 판단을 OpenApiConfig에 복제해야 해 하지 않았다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/global/security/ApiCredentialAuthenticationFilter.java:66-71 @ 72e8718",
+        "backend/src/main/java/com/meterengine/global/config/OpenApiConfig.java:48-52 @ 72e8718",
+        "backend/README.md:222 @ 72e8718",
+        "세션으로_부르는_경로의_403은_동의_대기_code를_문서화한다: 실패 Expecting actual \"code=permission_denied: ...\" to contain \"code=consent_required\""
+      ],
+      "commits": [
+        "a53cc1b40009"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 세션으로_부르는_경로의_403은_동의_대기_code를_문서화한다: 고치기 전 실패, 고친 뒤 통과",
+        "OpenApiDocumentTest 19건, backend build 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "공통 403 설명에 consent_required"
     },
     {
       "id": "G-006",
@@ -7187,6 +7203,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.310s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -7384,6 +7448,11 @@
       "branch": "feat/account-permissions",
       "sha": "16ae3913e6194788558c45c01ea97001c4aff0cf",
       "at": "2026-10-28T18:39:21+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "a53cc1b40009fa8994a0d08fcaf8f463f57547e2",
+      "at": "2026-10-28T18:43:26+09:00"
     }
   ],
   "usage_log": [],
