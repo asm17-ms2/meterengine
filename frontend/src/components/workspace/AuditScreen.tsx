@@ -4,9 +4,9 @@ import { WorkspaceError } from "@/components/workspace/WorkspaceView";
 import { type AuditLogsResponse, listOrganizationMembers } from "@/lib/api/management";
 import { operatorRequest, listOrganizations, listUserAccounts } from "@/lib/api/operator";
 import { workspaceFetch } from "@/lib/api/workspace";
+import { AUDIT_ACTOR_TYPES, auditActorLabel } from "@/lib/audit";
 import { formatKstDateTime } from "@/lib/format";
 
-const ACTORS: Record<string, string> = { user_account: "로그인 사용자", api_key: "API 키", system: "시스템", anonymous: "미인증 요청", invoice_view_link: "고객 조회 링크" };
 const ACTIONS: Record<string, string> = {
   api_request_completed: "API 요청", session_created: "로그인", session_deleted: "로그아웃", signup_created: "도입사 가입 신청",
   organization_status_updated: "도입사 상태 변경", user_account_created: "운영자 계정 생성", user_account_role_updated: "플랫폼 권한 변경", organization_member_created: "사용자 소속 추가",
@@ -56,7 +56,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
       <input type="hidden" name="organization_id" value={value(query, "organization_id")} />
       <div className="settings-grid">
         <label className="workspace-field"><span>행동 또는 대상 검색</span><input name="q" defaultValue={value(query, "q")} placeholder="행동 코드, 대상 ID 또는 API 경로" maxLength={255} /></label>
-        <div className="workspace-field"><label htmlFor="audit-actor">실행 주체</label><select id="audit-actor" name="actor_type" defaultValue={value(query, "actor_type")}><option value="">모든 주체</option>{Object.entries(ACTORS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
+        <div className="workspace-field"><label htmlFor="audit-actor">실행 주체</label><select id="audit-actor" name="actor_type" defaultValue={value(query, "actor_type")}><option value="">모든 주체</option>{Object.entries(AUDIT_ACTOR_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
         <div className="workspace-field"><label htmlFor="audit-action">행동</label><select id="audit-action" name="action" defaultValue={value(query, "action")}><option value="">모든 행동</option>{Object.entries(ACTIONS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
         <div className="workspace-field"><label htmlFor="audit-sort">정렬</label><select id="audit-sort" name="sort" defaultValue={value(query, "sort") || "occurred_at_desc"}><option value="occurred_at_desc">최신 기록부터</option><option value="occurred_at_asc">오래된 기록부터</option></select></div>
         <label className="workspace-field"><span>시작 일시 (KST)</span><input name="from" type="datetime-local" step="1" defaultValue={localTime(value(query, "from"))} /></label>
@@ -67,8 +67,8 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
       {result.data.audit_logs.length === 0 ? <p className="muted">이 조건에 해당하는 기록이 없습니다. 기간이나 행동 조건을 조정하세요.</p> : <div className="audit-list">{result.data.audit_logs.map(log => {
         const status = Number(log.detail.status);
         const outcome = log.action === "api_request_completed" && Number.isFinite(status) ? status >= 400 ? `요청 거절/오류 (${status})` : `성공 (${status})` : "변경 기록";
-        return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{ACTIONS[log.action] ?? log.action}</strong><span>{ACTORS[log.actor_type] ?? log.actor_type}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
-          <div><dt>실행 주체</dt><dd>{log.actor_id ? names.get(log.actor_id) ?? `${ACTORS[log.actor_type]} ${log.actor_id}` : ACTORS[log.actor_type]}</dd></div>
+        return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{ACTIONS[log.action] ?? log.action}</strong><span>{auditActorLabel(log.actor_type, log.actor_id, names)}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
+          <div><dt>실행 주체</dt><dd>{log.actor_id ? names.get(log.actor_id) ?? `${AUDIT_ACTOR_TYPES[log.actor_type]} ${log.actor_id}` : AUDIT_ACTOR_TYPES[log.actor_type]}</dd></div>
           {isOperator && <div><dt>도입사</dt><dd>{log.organization_id ? orgNames.get(log.organization_id) ?? log.organization_id : "도입사 미지정"}</dd></div>}
           <div><dt>대상</dt><dd>{log.target_type}: {log.target_id}</dd></div><div><dt>행동 코드</dt><dd><code>{log.action}</code></dd></div>
         </dl><pre className="workspace-json">{JSON.stringify(log.detail, null, 2)}</pre></div></details>;
