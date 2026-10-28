@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T17:42:03+09:00",
+  "updated_at": "2026-10-28T17:43:32+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "47e14c8e665218da0718e4d0c6ad707e335afcce"
+    "fix/s456-443-t-inho": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -837,29 +837,71 @@
       "id": "D-173",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "CONSOLE_THEME의 전역 colorBorder가 #dce1eb이고 components에서 Input, Select, DatePicker만 #7c8799로 올렸으며 Checkbox는 덮어쓰지 않았다. antd 6.6.7의 checkbox/style/index.js는 선택하지 않은 상자의 테두리에 token.colorBorder를 그대로 쓰고(63행, 154행), globals.css에도 .ant-checkbox-inner 테두리를 바꾸는 규칙이 없다(186-187행은 배치만 정한다). 계산하면 #dce1eb는 흰 배경에서 1.31:1로 WCAG 1.4.11의 3:1에 못 미치고, #7c8799는 3.63:1이다. 이 층에서 ActionPanel과 AttachOrganizationButton의 Checkbox.Group이 영향을 받고, 정점에서는 #445가 더한 카드 등록 동의 체크박스도 같은 테마를 쓴다. AppProviders.tsx 한 줄만 바꾸면 되는 작은 수정이다. antd 6 체크박스는 .ant-checkbox 자체에 테두리가 있다. 계약 명세로 재현했다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/workspace/ActionPanel.tsx:104 @ 0f1d1bf",
+        "frontend/src/components/auth/AttachOrganizationButton.tsx:49 @ 0f1d1bf",
+        "frontend/src/app/globals.css:186-187 @ 0f1d1bf",
+        "frontend/src/components/payment-registration/CardRegistration.tsx:67 @ 0fe7d2a",
+        "an unchecked antd checkbox has a visible border: 실패 Expected \"rgb(124, 135, 153)\" Received \"rgb(220, 225, 235)\"",
+        "커밋 8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
+      ],
+      "commits": [
+        "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'an unchecked antd checkbox has a visible border'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf AppProviders.tsx 12-19행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "Checkbox colorBorder를 #7c8799(3.63:1)로 올렸다"
     },
     {
       "id": "X-022",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "세 부분 모두 CONSOLE_THEME가 파생 토큰을 덮어쓰지 않아 생긴다. (1) 체크박스 테두리는 D-173과 같은 원인으로 1.31:1이다. (2) colorLink와 colorLinkHover를 주지 않아 antd genColorMapToken.js가 colorInfo #5746ad 팔레트의 4번(#9c8fc7)을 hover 색으로 만들고, 이 색은 흰 배경 2.93:1이다. Typography.Link는 operationUnit 스타일로 hover와 focus 모두 이 색을 쓰고, 이 층의 EventsTable transaction_id 링크와 LinkButton type link가 해당된다. (3) colorTextTertiary를 주지 않아 rgba(0,0,0,0.45), 흰 배경에서 #8c8c8c로 3.36:1이며 antd Descriptions의 labelColor 기본값이 이 토큰이라 BillableMetricFormDialog의 '코드' 라벨 등 14px 이하 글자가 4.5:1에 못 미친다. 수정은 AppProviders.tsx 한 파일이다.",
+      "evidence": [
+        "frontend/src/components/shell/AppProviders.tsx:12 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ 0f1d1bf",
+        "frontend/src/components/events/EventsTable.tsx:58-68 @ 0f1d1bf",
+        "frontend/src/components/billing/BillingFinalizedLink.tsx:16 @ 0f1d1bf",
+        "frontend/src/components/billable-metrics/BillableMetricFormDialog.tsx:227-238 @ 0f1d1bf",
+        "frontend/src/components/customers/CustomerFormDialog.tsx:172-188 @ 0f1d1bf",
+        "an unchecked antd checkbox has a visible border: 실패 Expected \"rgb(124, 135, 153)\" Received \"rgb(220, 225, 235)\"",
+        "커밋 8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
+      ],
+      "commits": [
+        "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'an unchecked antd checkbox has a visible border'",
+        "링크 hover와 Descriptions 라벨: antd getDesignToken 계산(evidence/X-022/tokens-before.txt). 고치기 전 colorLinkHover #9c8fc7 2.93:1, colorTextTertiary rgba(0,0,0,0.45). 고친 뒤 colorLinkHover #48339a 9.48:1, Descriptions labelColor #5a6578 5.89:1. 이 층 시드에는 해당 링크와 미터가 없어 화면 캡처로는 보이지 않는다"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf AppProviders.tsx 12-19행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "체크박스 테두리, 링크 hover, Descriptions 라벨 색을 기준 이상으로 올렸다"
     },
     {
       "id": "D-151",
@@ -6301,6 +6343,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "25 passed (13.0s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 4 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.9s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "26 passed (13.6s)"
     }
   ],
   "pushes": [
@@ -6358,6 +6438,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "47e14c8e665218da0718e4d0c6ad707e335afcce",
       "at": "2026-10-28T17:38:54+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "8bd13238a6f5d2011ca63c6f875f9243e8fc5bee",
+      "at": "2026-10-28T17:43:16+09:00"
     }
   ],
   "usage_log": [],
