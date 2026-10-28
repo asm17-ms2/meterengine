@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T22:58:41+09:00",
+  "updated_at": "2026-10-28T23:03:10+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -18,7 +18,7 @@
     "feat/customer-invoices": "2fe98d1",
     "feat/llm-service-demo": "2aa2be2",
     "feat/environment-isolation": "f014e03",
-    "fix/s456-445-t-yang": "fdf3b2c"
+    "fix/s456-445-t-yang": "5549e89"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4001,15 +4001,31 @@
       "id": "G-097",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-445-t-yang",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "PaymentMethodRegistrationService.findUsable은 도입사 상태를 보지 않아 정지 도입사의 공개 카드 등록 링크로 조회와 빌링키 발급이 되고, PaymentAttemptRepository.findRetryCandidates는 도입사 상태 조건이 없어 정지 도입사의 실패를 자동 재결제 후보로 돌려준다. 콘솔과 API 키 요청은 활성 도입사 검사로 막히는 것과 갈라진다. 활성 도입사에서만 링크와 재시도 후보를 돌려주게 했다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentMethodRegistrationService.java:98 @ b10f8c7",
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java:169 @ b10f8c7",
+        "정지된_도입사의_링크는_조회도_발급도_404이고_토스를_부르지_않으며_재개하면_다시_조회된다: 실패 [HTTP status code] expected: 404 but was: 200"
+      ],
+      "commits": [
+        "5549e890f8e9"
+      ],
+      "tests": [
+        "PaymentMethodRegistrationIntegrationTest 정지 도입사 링크 시험, PaymentAttemptRepositoryTest findRetryCandidates 정지 도입사 시험: 고치기 전 실패, 고친 뒤 통과",
+        "backend build 통과"
+      ],
+      "behavior_change": true,
+      "fails_without_fix": true,
+      "top_head": "differs: 정점에서 findUsable은 고객 보관과 환경 조건이 더해졌고 도입사 상태 조건은 없다",
+      "judged_at": {
+        "layer_sha": "b10f8c7",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "정지 도입사의 카드 등록 링크와 자동 재결제 중단",
+      "propagation_note": "#447 2ec5d85와 #453 23b1844가 findUsable과 재시도 후보 조회에 보관과 환경 조건을 더했다. 반영 때 도입사 활성 조건이 남았는지 본다."
     },
     {
       "id": "G-098",
@@ -9273,6 +9289,46 @@
       "result": "pass",
       "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 14 ℹ pass 14 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/fix/s456-445-t-yang...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-445-t-yang..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -9605,6 +9661,11 @@
       "branch": "fix/s456-445-t-yang",
       "sha": "fdf3b2ceb7452175827d91a0f4309b82212a1cdf",
       "at": "2026-10-28T22:55:01+09:00"
+    },
+    {
+      "branch": "fix/s456-445-t-yang",
+      "sha": "5549e890f8e9a4228b59f305d7c8900c1c30fdaa",
+      "at": "2026-10-28T23:03:09+09:00"
     }
   ],
   "usage_log": [],
