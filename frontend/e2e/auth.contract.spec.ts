@@ -152,6 +152,15 @@ test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "도입사 업무" }).getByRole("menu")).toHaveAttribute("tabindex", "-1");
 });
 
+test("the sidebar lists the meter screen and marks it as the current place", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const nav = page.getByRole("navigation", { name: "도입사 업무" });
+  await nav.getByRole("link", { name: "미터", exact: true }).click();
+  await expectTenantUrl(page, "/billable-metrics");
+  await expect(nav.locator(".ant-menu-item-selected")).toHaveText("미터");
+});
+
 test("operator actions recheck current role after demotion", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
