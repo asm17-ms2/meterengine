@@ -425,3 +425,9 @@ test("the guide toggle keeps a name that says what it does instead of a pressed 
   await expect(toggles).toHaveCount(2);
   for (const toggle of await toggles.all()) await expect(toggle).not.toHaveAttribute("aria-pressed");
 });
+
+test("the sidebar calls the integrations screen by its menu name", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-sidebar-note").getByRole("link")).toHaveText("API 키와 통보");
+});
