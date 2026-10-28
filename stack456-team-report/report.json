@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-28T18:26:33+09:00",
+  "updated_at": "2026-10-28T18:28:33+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -22,7 +22,7 @@
     "feat/billing-queries": "17cc7888e358b948b445e1b56340e69d4a0743d1",
     "feat/auth-rate-limit": "dac784b0f9a700ffc287a466d3f803dbb57649b2",
     "feat/rds-auto-stop": "0fe7d2a0b583925fd983fdd872580598aa5bfe0f",
-    "fix/s456-443-t-inho": "55ce723854cc7849ec105648ffe9447f226747ca"
+    "fix/s456-443-t-inho": "d337ba02c6b1f829777531510c45dcfe01296ae5"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -1728,43 +1728,94 @@
       "id": "D-138",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "0f1d1bf의 GuideModeToggle은 aria-pressed={isGuideMode}를 주면서 보이는 이름도 '시연 안내 보기'와 '업무 화면으로'로 바꾼다. aria-label이 따로 없고 antd Button은 나머지 속성을 button 요소로 넘기므로, 켜진 상태에서 접근성 이름은 '업무 화면으로', 상태는 눌림으로 노출된다. WAI-ARIA APG 버튼 패턴은 토글 버튼의 이름을 상태에 따라 바꾸지 말라고 하므로 마크업 한 줄로 문제가 정해진다. 이 이름이나 속성을 확인하는 e2e도 없고 위층에서 GuideMode.tsx를 바꾼 커밋도 없다. 도입 커밋 f671a4f 메시지에 aria-pressed를 고른 이유가 없어 뒤집을 기록된 결정은 아니다.",
+      "evidence": [
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:39,48 @ 0f1d1bf",
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0fe7d2a",
+        "the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed)",
+        "커밋 d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "commits": [
+        "d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the guide toggle keeps a name that says what it does instead of a pressed state'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf GuideMode.tsx 34행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "안내 토글에서 aria-pressed를 지웠다"
     },
     {
       "id": "D-178",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "D-138과 같은 원인이다. 0f1d1bf GuideMode.tsx 34행이 aria-pressed와 상태에 따라 바뀌는 텍스트를 함께 써서, 켜진 상태에서 '업무 화면으로, 눌림'으로 노출된다. 지적대로 안내가 켜지면 같은 토글이 헤더(ConsoleShell.tsx 48행)와 안내 섹션(52행) 두 곳에 렌더되어 두 버튼 모두 같은 오해를 준다. 이를 막는 aria-label이나 시험은 층 head와 정점 어디에도 없다. aria-pressed만 지우면 보이는 문구를 그대로 두고 고칠 수 있어 이 층에서 작게 고칠 수 있다.",
+      "evidence": [
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48,52 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:53,57 @ 0fe7d2a",
+        "the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed)",
+        "커밋 d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "commits": [
+        "d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the guide toggle keeps a name that says what it does instead of a pressed state'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf GuideMode.tsx 34행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "안내 토글에서 aria-pressed를 지웠다"
     },
     {
       "id": "X-059",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-443-t-inho",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "D-138, D-178과 같은 원인이다. 0f1d1bf GuideMode.tsx 34행의 Button이 aria-pressed={isGuideMode}와 함께 '업무 화면으로'와 '시연 안내 보기'를 바꿔 보여 주어, 켜진 상태에서 스크린리더가 현재 상태를 반대로 전한다. 원문이 짚은 ConsoleShell.tsx:53은 정점 기준 줄이고 층 head에서는 48행과 52행이다. 이름을 고정하는 aria-label도, 이를 검사하는 시험도 없어 반박할 근거를 찾지 못했다.",
+      "evidence": [
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0f1d1bf",
+        "frontend/src/components/shell/ConsoleShell.tsx:48,52 @ 0f1d1bf",
+        "frontend/src/components/shell/GuideMode.tsx:34 @ 0fe7d2a",
+        "the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed)",
+        "커밋 d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "commits": [
+        "d337ba02c6b1f829777531510c45dcfe01296ae5"
+      ],
+      "tests": [
+        "auth.contract.spec.ts 'the guide toggle keeps a name that says what it does instead of a pressed state'"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same (정점 b8abfdf GuideMode.tsx 34행이 같다)",
+      "judged_at": {
+        "layer_sha": "0f1d1bf",
+        "top_sha": "0fe7d2a",
+        "rechecked_layer_sha": "9de0e1e"
+      },
+      "summary": "안내 토글에서 aria-pressed를 지웠다"
     },
     {
       "id": "D-021",
@@ -6999,6 +7050,44 @@
       "command": "cd frontend && corepack pnpm test:e2e:contract",
       "result": "pass",
       "detail": "35 passed (17.2s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "ℹ pass 7 ℹ fail 0"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "screen",
+      "command": "playwright test --config ../.stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "result": "pass",
+      "detail": "3 passed (7.6s)"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "36 passed (17.8s)"
     }
   ],
   "pushes": [
@@ -7096,6 +7185,11 @@
       "branch": "fix/s456-443-t-inho",
       "sha": "55ce723854cc7849ec105648ffe9447f226747ca",
       "at": "2026-10-28T18:24:53+09:00"
+    },
+    {
+      "branch": "fix/s456-443-t-inho",
+      "sha": "d337ba02c6b1f829777531510c45dcfe01296ae5",
+      "at": "2026-10-28T18:28:19+09:00"
     }
   ],
   "usage_log": [],

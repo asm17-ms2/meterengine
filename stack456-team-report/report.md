@@ -1,14 +1,14 @@
-미완료 304건, 결과: 끝 상태 68/372건 (fixed 51, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 19번(마지막 55ce723)
+미완료 301건, 결과: 끝 상태 71/372건 (fixed 54, refuted 1, already-fixed 0(그중 fixed-above 0), needs-decision 16, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 20번(마지막 d337ba0)
 정할 것: 17건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, NT-inho-001). 로컬 DB 다시 만들기: 없음
 
-상태: running, 갱신 2026-10-28T18:26:33+09:00
+상태: running, 갱신 2026-10-28T18:28:33+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 51 | 1 | 0 | 16 | 0 | 24 |
+| #443 | fix/s456-443-t-inho | 92 | 54 | 1 | 0 | 16 | 0 | 21 |
 | #444 | feat/webhook-jobs | 40 | 0 | 0 | 0 | 0 | 0 | 40 |
 | #446 | feat/pricing-aggregation | 50 | 0 | 0 | 0 | 0 | 0 | 50 |
 | #448 | feat/request-audit | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -56,6 +56,9 @@ push: fix/s456-443-t-inho 19번(마지막 55ce723)
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
 | X-058 | #443 | f07a01f | 도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다 | a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝) |
 | X-079 | #443 | abb155d | 그룹 제목 선택자의 구체성을 올려 24px 시작선과 11px 글자를 적용했다 | sidebar group titles start on the same line as the sidebar label: 실패 Expected "24px" Received "16px" (padding-inline-start) |
+| D-138 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
+| D-178 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
+| X-059 | #443 | d337ba0 | 안내 토글에서 aria-pressed를 지웠다 | the guide toggle keeps a name that says what it does instead of a pressed state: 실패 Expected not have attribute Received have attribute (aria-pressed) |
 | X-063 | #443 | 5147f0c | 도입사 링크의 펼침 아이콘을 전환 아이콘으로 바꿨다 | 없음(보이는 아이콘만 바뀌어 시험으로 잡을 수 없다. evidence/X-063 before, after 캡처(/customers 1440, 390)) |
 | G-077 | #443 | 47e14c8 | 역할 라벨 정본 ORGANIZATION_ROLE_LABELS를 두고 헤더가 그것을 쓴다 | organization roles have one label definition that matches the member list: 실패 actual undefined, expected { owner: '대표관리자', admin: '관리자', member: '일반 사용자' } |
 | D-020 | #443 | 38f991c | 권한 범위 표시를 버튼 밖으로 떼고 '권한 새로 조회' 버튼에 진행 표시와 완료 메시지를 달았다 | the header shows the access scope apart from a refresh button that confirms when it finishes: 실패 locator('.workspace-scope') element(s) not found |
