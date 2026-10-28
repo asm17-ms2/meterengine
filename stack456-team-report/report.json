@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:54:18+09:00",
+  "updated_at": "2026-10-28T17:55:30+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "4aa624a",
+    "feat/account-permissions": "07f5a83",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -186,14 +186,28 @@
       ],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "playwright.mvp.config.ts 16행과 25행, playwright.workspace.config.ts 10행이 한 세션의 /private/tmp/meterengine-orchestration-0696 경로와 기계 전역 /tmp 경로를 박아 둔다. 정점도 같다. os.tmpdir() 기반 경로로 바꾸고 MVP 상태 파일은 환경변수를 먼저 쓰게 했다. 묶인 G-023, G-037, G-190도 같은 경로 문제다. 이 층에 없는 시나리오를 가리키는 부분은 기존 존재 가드가 막아 그대로 둔다.",
+      "evidence": [
+        "frontend/playwright.mvp.config.ts:16,25 @ 72e8718",
+        "frontend/playwright.workspace.config.ts:10 @ 72e8718",
+        "frontend/playwright.mvp.config.ts:16,25 @ 0fe7d2a"
+      ],
+      "commits": [
+        "07f5a83ff6fe"
+      ],
+      "tests": [
+        "설정 변경: git grep -n 'meterengine-orchestration|/tmp|/private/tmp' 두 설정 파일이 고친 뒤 비었다. typecheck, lint 통과. playwright --list는 고치기 전과 같은 시나리오 없음 가드 오류"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": false,
+      "top_head": "same 없음",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "Playwright 설정의 고정 임시 경로 제거"
     },
     {
       "id": "C442-021",
@@ -6657,6 +6671,54 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 9 ℹ pass 9 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "-",
+      "detail": "이 push의 새 커밋은 화면 파일을 바꾸지 않았다. 앞선 화면 변경은 그 push sha에서 확인했다"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.335s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6814,6 +6876,11 @@
       "branch": "feat/account-permissions",
       "sha": "4aa624a1a374b8242daf4316456a846f840a887e",
       "at": "2026-10-28T17:52:32+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "07f5a83ff6fed28f47fb3600cc1ec7b919966506",
+      "at": "2026-10-28T17:55:30+09:00"
     }
   ],
   "usage_log": [],

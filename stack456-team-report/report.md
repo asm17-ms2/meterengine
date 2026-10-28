@@ -1,12 +1,12 @@
-미완료 234건, 결과: 끝 상태 94/328건 (fixed 53, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 31개(마지막 4aa624a)
+미완료 230건, 결과: 끝 상태 98/328건 (fixed 57, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 32개(마지막 07f5a83)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 53 | 1 | 7 | 30 | 3 | 49 |
+| #442 | 143 | 57 | 1 | 7 | 30 | 3 | 45 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -20,6 +20,7 @@ push: feat/account-permissions 31개(마지막 4aa624a)
 | C442-005 | #442 | 88f0ab2 | frontend test:unit 스크립트 | pnpm test:unit: 실패 ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL Command "test:unit" not found |
 | C442-011 | #442 | 9679307 | 새 계정 초대 수락에 남은 세션을 싣지 않음 | accepting an invitation as a new account does not send a stale session: 실패 toHaveURL Received /organization-invitations/me_invite_..., 알림 '인증 정보가 올바르지 않습니다.' |
 | C442-012 | #442 | 9cd9421 | 재로그인 돌아갈 주소의 도입사로 세션 전환 | logging in to a return path of another member organization opens that organization: 실패 Expected 0, Received 1 (도입사 선택이 바뀌었습니다) |
+| C442-014 | #442 | 07f5a83 | Playwright 설정의 고정 임시 경로 제거 | 없음(설정 변경: git grep -n 'meterengine-orchestration\|/tmp\|/private/tmp' 두 설정 파일이 고친 뒤 비었다. typecheck, lint 통과. playwright --lis) |
 | G-042 | #442 | 36f7e74 | 업무 작업 이름 목록과 화면, 액션 대조 시험 | every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS' |
 | G-045 | #442 | b84cf7a | WorkspaceError를 기존 ErrorAlert로 모음 | a workspace load failure offers an in-place retry button: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole('button', { name: '다시 시도' }) |
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
