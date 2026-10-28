@@ -1,12 +1,12 @@
-미완료 241건, 결과: 끝 상태 88/328건 (fixed 47, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
-push: feat/account-permissions 27개(마지막 3f74137)
+미완료 240건, 결과: 끝 상태 89/328건 (fixed 48, refuted 1, already-fixed 7(그중 fixed-above 7), needs-decision 30, blocked 3(그중 no-evidence 0))
+push: feat/account-permissions 28개(마지막 013230e)
 정할 것: 29건 (G-009, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 47 | 1 | 7 | 30 | 3 | 55 |
+| #442 | 143 | 48 | 1 | 7 | 30 | 3 | 54 |
 | #445 | 68 | 0 | 0 | 0 | 0 | 0 | 68 |
 | #447 | 35 | 0 | 0 | 0 | 0 | 0 | 35 |
 | #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
@@ -28,6 +28,7 @@ push: feat/account-permissions 27개(마지막 3f74137)
 | D-003 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-006 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-012 | #442 | db2d22d | 화면별 문서 제목 | each screen has its own document title: 실패 Expected "로그인 \| MeterEngine", Received "MeterEngine 관리자 콘솔" |
+| D-017 | #442 | 013230e | 분당 한도 안내 문구와 무제한 표시 | an API key without a rate limit is listed as unlimited: 실패 Expected substring "무제한", Received "한도 없는 키사용 중운영 키조회0000---..." |
 | D-026 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-029 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-031 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |

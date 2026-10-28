@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-28T17:41:49+09:00",
+  "updated_at": "2026-10-28T17:43:16+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -12,7 +12,7 @@
     "feat/environment-isolation": "f014e03"
   },
   "end_heads": {
-    "feat/account-permissions": "3f74137",
+    "feat/account-permissions": "013230e",
     "feat/billing-payments": "54bb1d5",
     "feat/resource-archive": "8babc3d",
     "feat/customer-invoices": "2fe98d1",
@@ -1150,14 +1150,30 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "integrations/page.tsx 23행 한도 안내는 '백엔드 인스턴스별로 적용'이라 운영자가 허용량을 판단할 수 없고, 27행 표 열은 null 한도를 WorkspaceView CellValue의 '-'로 그린다. 정점 31행 안내도 같다. 안내를 실제 허용량 설명으로 바꾸고 열에 빈 값 문구를 둬 '무제한'으로 보였다. backend README와 openapi의 설명은 개발자 문서라 그대로 둔다.",
+      "evidence": [
+        "frontend/src/app/(console)/integrations/page.tsx:23,27 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:27 @ 72e8718",
+        "frontend/src/app/(console)/integrations/page.tsx:31 @ 0fe7d2a",
+        "an API key without a rate limit is listed as unlimited: 실패 Expected substring \"무제한\", Received \"한도 없는 키사용 중운영 키조회0000---...\""
+      ],
+      "commits": [
+        "013230e41299"
+      ],
+      "tests": [
+        "auth.contract.spec.ts an API key without a rate limit is listed as unlimited: 고치기 전 실패, 고친 뒤 통과",
+        "auth.contract.spec.ts 26건 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "fails_without_fix": true,
+      "top_head": "same 80a3ef1 2ec5d85 23b1844",
+      "judged_at": {
+        "layer_sha": "72e8718",
+        "top_sha": "0fe7d2a"
+      },
+      "summary": "분당 한도 안내 문구와 무제한 표시"
     },
     {
       "id": "D-026",
@@ -6384,6 +6400,62 @@
       "result": "pass",
       "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 8 ℹ pass 8 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "  26 passed (13.4s) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "playwright test --config .stack456-team/tools/playwright.live.config.ts auth.real.spec.ts",
+      "detail": "  3 passed (4.9s) rc=0"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "빌드 성공, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 33 tests in 1.326s  OK (skipped=10) "
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/feat/account-permissions...HEAD | perl 금지 문자; git log --format=%B origin/feat/account-permissions..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -6521,6 +6593,11 @@
       "branch": "feat/account-permissions",
       "sha": "3f74137584b8c81843ad00e39d2ad168c8a7fa20",
       "at": "2026-10-28T17:39:35+09:00"
+    },
+    {
+      "branch": "feat/account-permissions",
+      "sha": "013230e41299b3c47a5e12694e46211ca8409bcb",
+      "at": "2026-10-28T17:43:16+09:00"
     }
   ],
   "usage_log": [],
