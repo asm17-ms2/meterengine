@@ -190,6 +190,17 @@ test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 �
   expect(nativeDialogs).toBe(0);
 });
 
+test("격리 계약: 공백을 낀 환경 값도 다듬어 비교해 다른 환경으로 보내지 않는다", async ({ page, request }) => {
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("공백 환경");
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = " live "; });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(0);
+});
+
 test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 보낸다", async ({ page, request }) => {
   await page.goto("/integrations");
   for (const limit of ["120", ""]) {
