@@ -118,7 +118,16 @@ class EventIssueIntegrationTest {
     assertThat(number(reason, "$.total")).isEqualTo(1);
     assertThat(number(reason, "$.summary.unknown_event_type")).isZero();
     assertThat(number(body(get(read, "&q=diagnostic-client")), "$.total")).isEqualTo(3);
-    assertThat(number(body(get(read, "&q=%25")), "$.total")).isZero();
+    assertThat(
+            number(
+                body(
+                    mvc.get()
+                        .uri("/v1/event-issues/search?month=2026-10")
+                        .param("q", "%")
+                        .header(AUTHORIZATION, read)
+                        .exchange()),
+                "$.total"))
+        .isZero();
   }
 
   @Test
