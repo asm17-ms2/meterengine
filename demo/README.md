@@ -431,6 +431,7 @@ curl -X POST http://localhost:8080/v1/webhook-endpoints/<id>/test-events \
 ```
 
 - 서명 검증 뒤 본문의 `environment`가 선택한 대상과 같은지 확인한다. 대상이 없거나 중복된 URL은 거절한다.
+- 브라우저가 보낸 요청(`Origin`이 있거나 `Sec-Fetch-Site`가 `none`이 아님)은 403, 256KB를 넘는 본문은 413으로 기록 없이 거절한다.
 - 기록은 대상 이름, API 주소, 환경과 키별로 분리한다. 같은 `webhook-id`의 재전송도 수신 기록에 남으므로 업무 처리의 중복 방지는 별도로 한다.
 - 기존 `.data/webhooks.jsonl`은 `METERENGINE_LEGACY_WEBHOOK_TARGET`으로 지정한 원래 legacy 연결에만 고정한다. 기존 파일을 복사하거나 `test/live`에 자동 배정하지 않는다. 연결 키나 주소를 바꾼 뒤에도 원래 파일은 보존한다.
 - 백엔드 없이 검증하려면 대상 설정을 담은 비공개 환경 파일로 시험 통보를 보낸다.
