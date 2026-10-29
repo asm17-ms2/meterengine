@@ -1,5 +1,5 @@
-미완료 28건, 결과: 끝 상태 300/328건 (fixed 213, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b)
+미완료 22건, 결과: 끝 상태 306/328건 (fixed 219, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6)
 정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -10,8 +10,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
 | #449 | 24 | 11 | 1 | 3 | 1 | 6 | 2 |
-| #452 | 19 | 12 | 0 | 3 | 0 | 0 | 4 |
-| #453 | 39 | 10 | 1 | 4 | 1 | 1 | 22 |
+| #452 | 19 | 14 | 0 | 3 | 0 | 0 | 2 |
+| #453 | 39 | 14 | 1 | 4 | 1 | 1 | 18 |
 
 ## 고친 것
 
@@ -170,6 +170,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-080 | #449 | 922afac | 공개 청구서 결제 상태 배지 | 조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다: 실패 toHaveCSS color Expected rgb(169, 35, 52) |
 | C449-002 | #449 | bddcb58 | 재시도 허용 조회 링크 발급의 키 모드 검사 | test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | C449-004 | #449 | a5ec894 | 조회 전용 링크 재시도 거절의 code 확인 | 기존_조회_링크와_옵션을_생략한_링크는_고객의_결제를_허용하지_않는다: 실패 expected payment_retry_unavailable but was payment_retry_stale (허용 플래그 검사 제거 변이) |
+| L-002 | #453 | 6da19c6 | mvp.real.spec.ts 280-284행은 unbilled_usage_detected 웹훅을 100초  | 없음(문서와 실패 문구 변경: application.properties cron 기본값, application-local 사설 주소 허용과 대조. frontend lint, typecheck 통과; 6da19c6 검사: ) |
 | C452-000 | #452 | d89309a | 영구 거절 사용량 자동 재전송 중단 | MeterEngine이 영구 거절한 사용량은 자동으로 다시 보내지 않고 직접 재전송으로만 보낸다: 실패 actual 2 expected 1 |
 | C452-001 | #452 | 7deeea5 | 실행 묶음에서 .env와 로컬 DB 제외 | 실행 묶음은 앱 폴더의 .env와 로컬 DB를 복사하지 않는다: 실패 (고치기 전 스크립트) |
 | C452-002 | #452 | c6bade8 | 브리지의 외부 ID 없는 옛 고객 이어 쓰기 | test_외부_ID_없이_만든_옛_고객은_이름으로_이어_받는다: 실패 (고치기 전 새 고객 등록) |
@@ -178,12 +179,17 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C452-007 | #452 | c1ee7a8 | 웹훅 수신의 브라우저 요청과 본문 상한 | 브라우저 요청과 상한을 넘는 본문은 대상 선택 전에 기록 없이 거절한다: 실패 actual 400 expected 403 |
 | C452-008 | #452 | 62e8eee | 메뉴 이동 때 체험 시작 화면 깜빡임 | 없음(demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list; 보이는 변경: ) |
 | C452-009 | #452 | 600c74c | Lumen 청구 오류 문구 | 부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.' |
+| C452-011 | #452 | bb7d3c5 | main demo/README.md 458행은 eslint-naming-rules.mjs를 sdk/와 web | 없음(문서 변경: demo/llm-service/eslint.config.mjs의 import와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo 검사 통) |
 | C452-012 | #452 | 0b402fd | 재생성 사용량 시각 시험 | 실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다: 실패 (이벤트 시각을 지금 시각으로 바꾼 변이) |
 | C452-013 | #452 | 5c83728 | 계정별 재전송 격리 시험 보강 | 한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이) |
+| C452-016 | #452 | b3f414e | 원문의 시점 문제(#452 README가 #453 기능을 설명)는 #453 squash 94a48a20이 환 | 없음(문서 변경: environment.ts 환경 경로, ConsoleShell 안내, backend README와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험) |
 | C453-001 | #453 | d255870 | 대사의 옛 키 버전 실패 격리 | 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1 |
 | C453-002 | #453 | 04c93d9 | 도입사 공통 작업 감사의 환경 분리 | 도입사_공통_작업의_감사는_모든_환경의_감사_조회에_보인다: 실패 expected: 1 but was: 0 |
 | C453-008 | #453 | ffa9cd3 | 취소 확인의 환경과 키 버전 시험 | 요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다: 실패 status pending (환경 래퍼 제거 변이와 키 기준 시각 변이) |
 | G-133 | #453 | 6152c0b | test 환경 실패를 운영 지표와 경보에서 제외 | 환경별_수신처와_아웃박스와_실제_전송이_독립적이다: 실패 [legacy] Expecting actual not to be null(환경 태그 없음) |
+| G-145 | #453 | ca5e4a1 | 로컬 시드 키는 R__local_credentials.sql 31-41행에서 environment_id 없이 | 없음(문서 변경: BusinessEnvironmentInterceptor 기존 키 검사, R__local_credentials.sql, webhook-receipt.ts, webhook-signature.ts와 대조; 6) |
+| G-175 | #453 | 2ecaca4 | main backend/README.md 308행은 고객 external_id가 도입사 안에서 고유하다고 적 | 없음(문서 변경: V45 organization_environment, 고유 인덱스, event_pk와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo ) |
+| G-189 | #453 | ec42c75 | main frontend/package.json 12행에는 #442 squash 1b2c555d로 test: | 없음(문서 변경: package.json scripts와 세 playwright 설정의 포트와 변수와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo 검) |
 | U10-B1 | #453 | 82f5ad6 | 자동 재시도 저장 직전 키 보관 재확인 | 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다: 실패 Expected size: 1 but was: 2 |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
@@ -459,3 +465,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29 16:10 KST: 박성종 님 머지 뒤 지침(#논의 스택 스레드 15:49)을 양성지 님이 붙여 넣어 반영한다. 주제 브랜치는 push하면 바로 main으로 PR을 연다. 300줄 상한은 적용하지 않고 주제별로만 나눈다. needs-decision은 세션이 근거를 PR 본문에 적고 정해서 고치며, 다른 사람 영역이나 팀 전체에 걸리면 그 사람을 리뷰어로 지정한다. 같은 파일을 건드리면 나중에 머지하는 PR이 main을 받는다. 그래서 문인호 님 쪽 파일도 필요하면 고치되, 문인호 님이 고치기로 한 environment-cycle, mvp 명세 실패(NT-yang-002, 003)는 겹치지 않게 그대로 둔다.
 - 2026-10-29 16:10 KST: 연 PR: #472 fix/s456-t-yang-invoice-retry, #473 fix/s456-t-yang-public-invoice, #474 fix/s456-t-yang-lumen, #475 fix/s456-t-yang-demo-bridge-web, #476 fix/s456-t-yang-toss-key, #477 fix/s456-t-yang-audit-env(문인호 님 리뷰어 지정). 리뷰어는 CODEOWNERS가 붙였다.
 - 2026-10-29: #478 fix/s456-t-yang-ops-metrics(G-133)를 열고 경보 결정 때문에 박성종 님과 문인호 님을 리뷰어로 지정했다.
+- 2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다.
