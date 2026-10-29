@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T15:33:57+09:00",
+  "updated_at": "2026-10-29T15:42:25+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -22,7 +22,8 @@
     "fix/s456-447-t-yang": "84bb5e7",
     "main": "af15d7f",
     "fix/s456-t-yang-invoice-retry": "59e548e",
-    "fix/s456-t-yang-public-invoice": "22943db"
+    "fix/s456-t-yang-public-invoice": "22943db",
+    "fix/s456-t-yang-lumen": "62e8eee"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -6611,15 +6612,40 @@
         "G-141"
       ],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 flushMetering이 ingestEvent의 모든 예외를 같은 실패로 받고, finishOutbox는 늘 5초 뒤 failed로 되돌리며 claimOutbox가 failed를 다시 집는다. attempts와 오류 code는 아무 데서도 읽지 않는다. 백엔드는 아직 저장되지 않은 거래에 customer_archived, customer_not_found, event_too_old를 매번 다시 돌려주고 컨트롤러는 거절마다 event_rejection을 남기므로, 3초 주기 워커가 영구 거절된 이벤트를 끝없이 다시 보낸다. 요청 감사 행이 쌓인다는 원문 주장은 앞선 검증대로 맞지 않지만 결론은 같고, 묶인 G-141도 원인이 같다.",
+      "evidence": [
+        "demo/llm-service/src/lib/service.ts:195-197 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:205 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:213 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:218-221 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:223-227 @ af15d7f",
+        "demo/llm-service/src/lib/runtime.ts:29-36 @ af15d7f",
+        "demo/llm-service/src/lib/config.ts:56 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/service/EventIngestionService.java:50-68 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/controller/EventController.java:110-115 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/service/EventRejectionService.java:31-36 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:80 @ af15d7f",
+        "demo/llm-service/README.md:76 @ af15d7f",
+        "MeterEngine이 영구 거절한 사용량은 자동으로 다시 보내지 않고 직접 재전송으로만 보낸다: 실패 actual 2 expected 1",
+        "커밋 d89309a"
+      ],
+      "commits": [
+        "d89309ac"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "영구 거절 사용량 자동 재전송 중단"
     },
     {
       "id": "C452-001",
@@ -6627,15 +6653,39 @@
         "G-186"
       ],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 재현 내용은 .s456-work/security/C452-001/에 둔다.",
+      "evidence": [
+        "demo/llm-service/README.md:67 @ af15d7f",
+        "demo/llm-service/.gitignore:5 @ af15d7f",
+        "demo/llm-service/scripts/export-standalone.mjs:13 @ af15d7f",
+        "demo/llm-service/scripts/export-standalone.mjs:19-46 @ af15d7f",
+        "demo/llm-service/scripts/export-standalone.mjs:47 @ af15d7f",
+        "demo/llm-service/scripts/start.mjs:25 @ af15d7f",
+        "demo/llm-service/scripts/start.mjs:45 @ af15d7f",
+        "demo/llm-service/src/lib/config.ts:62 @ af15d7f",
+        "demo/llm-service/src/lib/config.ts:67 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:121 @ af15d7f",
+        "demo/.dockerignore:3-7 @ af15d7f",
+        "실행 묶음은 앱 폴더의 .env와 로컬 DB를 복사하지 않는다: 실패 (고치기 전 스크립트)",
+        "커밋 7deeea5"
+      ],
+      "commits": [
+        "7deeea52"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "실행 묶음에서 .env와 로컬 DB 제외"
     },
     {
       "id": "C452-002",
@@ -6655,15 +6705,33 @@
       "id": "C452-004",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 시험은 사용량 쪽을 JSON 문자열에 '다른 고객 비밀'과 '999999'가 없는지로만 확인한다. 그런데 usage.metrics 항목에는 고객 이름과 ID가 없고 밥의 수량은 999라서, service.ts 240행의 고객 필터를 지워 밥의 항목이 섞여도 두 검사가 모두 통과한다. 이 필터는 조직 전체 사용량에서 고객을 가르는 유일한 장치이고, 화면은 find로 첫 항목만 그리므로 회귀가 생기면 다른 고객 수량이 그대로 보일 수 있다.",
+      "evidence": [
+        "demo/llm-service/src/lib/service.test.ts:314-343 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:320 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:341-342 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:240-243 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:170-173 @ af15d7f",
+        "조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태를 섞지 않는다: 실패 (service.ts 고객 필터 제거 변이)",
+        "커밋 f76af6a"
+      ],
+      "commits": [
+        "f76af6a3"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "다른 고객 사용량 격리 시험 보강"
     },
     {
       "id": "C452-005",
@@ -6711,29 +6779,70 @@
       "id": "C452-008",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 page.tsx, usage, billing, history 페이지가 각각 LumenApplication을 그리고, 루트 레이아웃은 AntdRegistry와 FontProvider만 감싼다. 그래서 메뉴 Link로 이동할 때마다 컴포넌트가 다시 마운트되어 session이 null로 시작한다. 399행이 !session?.user이면 LoginScreen을 그리므로, /api/session 응답이 오기 전까지 로그인한 사용자에게도 환영 문구와 '체험 계정을 불러오고 있습니다'가 매번 보인다. 앞선 검증에서 production build를 띄워 재현했다.",
+      "evidence": [
+        "demo/llm-service/src/app/page.tsx:4 @ af15d7f",
+        "demo/llm-service/src/app/usage/page.tsx:9 @ af15d7f",
+        "demo/llm-service/src/app/billing/page.tsx:9 @ af15d7f",
+        "demo/llm-service/src/app/history/page.tsx:9 @ af15d7f",
+        "demo/llm-service/src/app/layout.tsx:16 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:230 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:271-277 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:399-400 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:102-105 @ af15d7f",
+        "커밋 62e8eee"
+      ],
+      "commits": [
+        "62e8eee3"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list",
+        "보이는 변경: Lumen 실화면 명세는 띄우는 법이 없어(10절) 메뉴 이동 재마운트 경로를 코드로 대조했다. 세션 재조회 효과는 그대로라 만료와 로그아웃은 지금과 같다"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "메뉴 이동 때 체험 시작 화면 깜빡임"
     },
     {
       "id": "C452-009",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 service.ts 258행은 billingErrors를 쉼표로 이은 뒤 조사 '를'을 고정으로 붙인다. 그래서 마지막 항목이 '요금 설정'(230행)이나 '청구 예정액'(224행)이면 '요금 설정를', '청구 예정액를'이 된다. 또 미터 계약이 어긋난 같은 조건을 246행은 '운영자가 연결 설정을 확인해야 합니다'로, 258행은 '연결 상태를 확인한 뒤 새로고침하세요'로 서로 다르게 안내한다. 이 문구는 154행 알림과 207행 Notice로 고객에게 그대로 보인다.",
+      "evidence": [
+        "demo/llm-service/src/lib/service.ts:224 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:230 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:246 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:258 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:154 @ af15d7f",
+        "demo/llm-service/src/components/LumenApplication.tsx:207 @ af15d7f",
+        "부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.'",
+        "커밋 600c74c"
+      ],
+      "commits": [
+        "600c74ca"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "Lumen 청구 오류 문구"
     },
     {
       "id": "C452-011",
@@ -6753,29 +6862,69 @@
       "id": "C452-012",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 '모델 작업 임대가 만료돼도 새 작업 결과만 outbox와 함께 저장한다' 시험은 289행에서 직접 만든 event의 timestamp를 294행에서 다시 읽을 뿐이다. store는 받은 event를 JSON 그대로 저장하므로 이 단언은 항상 참이다. 원래 예약 시각을 지키는 코드는 service.ts 175행인데, 서비스 시험은 모두 생성 시각과 now가 같아서 실패나 임대 만료 뒤 같은 requestId로 다시 생성하는 경로를 시험하지 않는다. 그래서 175행을 now 기반으로 바꾸는 회귀를 잡지 못한다.",
+      "evidence": [
+        "demo/llm-service/src/lib/service.test.ts:283-295 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:289 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:294 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:173-180 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:163-164 @ af15d7f",
+        "demo/llm-service/src/lib/service.ts:175 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:131-156 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:439-450 @ af15d7f",
+        "실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다: 실패 (이벤트 시각을 지금 시각으로 바꾼 변이)",
+        "커밋 0b402fd"
+      ],
+      "commits": [
+        "0b402fdc"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "재생성 사용량 시각 시험"
     },
     {
       "id": "C452-013",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-lumen",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 '한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다' 시험은 now를 NOW로 고정한다(301행). 밥의 실패 outbox는 next_attempt_at이 NOW+5000이므로, 같은 NOW에 retryMetering(앨리스)를 부르면 claimOutbox의 next_attempt_at 조건(207행)만으로 밥이 빠진다. 그래서 208행의 계정 조건을 지워도 시험이 통과해, 제목이 약속한 격리를 확인하지 못한다.",
+      "evidence": [
+        "demo/llm-service/src/lib/service.test.ts:297-312 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:301 @ af15d7f",
+        "demo/llm-service/src/lib/service.test.ts:308 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:207-208 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:218-221 @ af15d7f",
+        "demo/llm-service/src/lib/store.ts:223-227 @ af15d7f",
+        "한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이)",
+        "커밋 5c83728"
+      ],
+      "commits": [
+        "5c837284"
+      ],
+      "tests": [
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "계정별 재전송 격리 시험 보강"
     },
     {
       "id": "C452-014",
@@ -11554,6 +11703,30 @@
       "result": "pass",
       "command": "8절 금지 문자 검사(diff와 커밋 메시지)",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "62e8eee3d3f1a24574be44e60cc7812a18c9920e",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build; cd llm-service && corepack pnpm exec playwright test --list",
+      "detail": "모두 성공. llm-service 시험 39건, web 85건 통과, playwright 목록 3건(main 기준선도 통과)"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "62e8eee3d3f1a24574be44e60cc7812a18c9920e",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "Lumen 실화면 명세",
+      "detail": "10절: Lumen 실화면 명세는 띄우는 법이 없어 돌리지 않는다"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "62e8eee3d3f1a24574be44e60cc7812a18c9920e",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -11956,6 +12129,11 @@
       "branch": "fix/s456-t-yang-public-invoice",
       "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
       "at": "2026-10-29T15:33:38+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "62e8eee3d3f1a24574be44e60cc7812a18c9920e",
+      "at": "2026-10-29T15:42:07+09:00"
     }
   ],
   "usage_log": [],

@@ -1,5 +1,5 @@
-미완료 50건, 결과: 끝 상태 278/328건 (fixed 191, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db)
+미완료 41건, 결과: 끝 상태 287/328건 (fixed 200, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee)
 정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -10,7 +10,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
 | #449 | 24 | 11 | 1 | 3 | 1 | 6 | 2 |
-| #452 | 19 | 0 | 0 | 3 | 0 | 0 | 16 |
+| #452 | 19 | 9 | 0 | 3 | 0 | 0 | 7 |
 | #453 | 39 | 0 | 1 | 4 | 1 | 1 | 32 |
 
 ## 고친 것
@@ -170,6 +170,13 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-080 | #449 | 922afac | 공개 청구서 결제 상태 배지 | 조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다: 실패 toHaveCSS color Expected rgb(169, 35, 52) |
 | C449-002 | #449 | bddcb58 | 재시도 허용 조회 링크 발급의 키 모드 검사 | test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | C449-004 | #449 | a5ec894 | 조회 전용 링크 재시도 거절의 code 확인 | 기존_조회_링크와_옵션을_생략한_링크는_고객의_결제를_허용하지_않는다: 실패 expected payment_retry_unavailable but was payment_retry_stale (허용 플래그 검사 제거 변이) |
+| C452-000 | #452 | d89309a | 영구 거절 사용량 자동 재전송 중단 | MeterEngine이 영구 거절한 사용량은 자동으로 다시 보내지 않고 직접 재전송으로만 보낸다: 실패 actual 2 expected 1 |
+| C452-001 | #452 | 7deeea5 | 실행 묶음에서 .env와 로컬 DB 제외 | 실행 묶음은 앱 폴더의 .env와 로컬 DB를 복사하지 않는다: 실패 (고치기 전 스크립트) |
+| C452-004 | #452 | f76af6a | 다른 고객 사용량 격리 시험 보강 | 조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태를 섞지 않는다: 실패 (service.ts 고객 필터 제거 변이) |
+| C452-008 | #452 | 62e8eee | 메뉴 이동 때 체험 시작 화면 깜빡임 | 없음(demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list; 보이는 변경: ) |
+| C452-009 | #452 | 600c74c | Lumen 청구 오류 문구 | 부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.' |
+| C452-012 | #452 | 0b402fd | 재생성 사용량 시각 시험 | 실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다: 실패 (이벤트 시각을 지금 시각으로 바꾼 변이) |
+| C452-013 | #452 | 5c83728 | 계정별 재전송 격리 시험 보강 | 한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
