@@ -107,6 +107,12 @@ const server = createServer(async (request, response) => {
         return send(response, 200, { invoices });
       }
     }
+    if (current.scenario === "failed-payments") {
+      const statuses = ["failed", "failed", "paid"];
+      const invoiceId = index => `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`;
+      if (path === "/v1/invoices") return send(response, 200, { invoices: statuses.map((_, index) => ({ ...invoice, id: invoiceId(index), customer_name: `다른 고객의 확정 청구 ${index}` })) });
+      if (path === "/v1/invoice-payments") return send(response, 200, { invoice_payments: statuses.map((status, index) => ({ invoice_id: invoiceId(index), status, mode: "test", amount: 11_000, canceled_amount: 0, attempt_count: 1, last_failure_code: status === "failed" ? "CARD_DECLINED" : null, next_retry_at: null, completed_at: NOW })) });
+    }
     if (path === "/v1/invoice-payments") {
       const canceledAmount = current.cancellations.filter(cancellation => cancellation.status === "done").reduce((total, cancellation) => total + cancellation.amount, 0);
       return send(response, 200, { invoice_payments: [{ invoice_id: INVOICE_ID, status: canceledAmount === attempt.amount ? "canceled" : canceledAmount > 0 ? "partially_canceled" : "paid", mode: "test", amount: attempt.amount, canceled_amount: canceledAmount, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: NOW }] });

@@ -269,3 +269,15 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
     expect(call.size).toBeUndefined();
   }
 });
+
+test("the payments list can show only the month's failed payments and go back to all of them", async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await page.goto("/payments?month=2026-10&payment_status=failed");
+  await expect(page.getByText("결제 실패 2건만 표시합니다.", { exact: false })).toBeVisible();
+  for (const index of [0, 1]) await expect(page.getByRole("link", { name: `다른 고객의 확정 청구 ${index}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toHaveCount(0);
+  await expect(page.locator('form input[type="hidden"][name="payment_status"]')).toHaveValue("failed");
+  await page.getByRole("link", { name: "전체 수납 보기", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/payments" && !url.searchParams.has("payment_status") && url.searchParams.get("month") === "2026-10");
+  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toBeVisible();
+});
