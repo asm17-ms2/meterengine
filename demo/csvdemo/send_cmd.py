@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import random
 import sys
 import time
@@ -85,32 +86,90 @@ def send_events(events: List[Event], client: ApiClient, organization: Organizati
             argv=sys.argv[1:],
         )
         try:
-            for index, event in enumerate(events):
-                if index > 0:
-                    _pause(args.interval, args.jitter)
-                outcome, summary, auth_problem = _send_one(client, writer, index + 1, event, args.verbose)
-                sent += 1
-                counts[outcome] += 1
-                for line in format_send_pair(
-                    console, index + 1, len(events), event, outcome, summary, notes.get(index, "")
-                ):
-                    print(line)
-                if auth_problem is not None:
-                    print(
-                        "%s. 중단합니다. 이후 이벤트는 보내지 않았습니다." % auth_failure_text(auth_problem, client.api_key),
-                        file=sys.stderr,
-                    )
-                    break
-                if outcome == "error":
-                    print("전송 오류가 나서 중단합니다. 이후 이벤트는 보내지 않았습니다.", file=sys.stderr)
-                    break
+            if getattr(args, "batch_size", 1) > 1:
+                sent, auth_problem = _send_batches(events, client, writer, counts, notes, console, args)
+            else:
+                for index, event in enumerate(events):
+                    if index > 0:
+                        _pause(args.interval, args.jitter)
+                    outcome, summary, auth_problem = _send_one(client, writer, index + 1, event, args.verbose)
+                    sent += 1
+                    counts[outcome] += 1
+                    for line in format_send_pair(
+                        console, index + 1, len(events), event, outcome, summary, notes.get(index, "")
+                    ):
+                        print(line)
+                    if auth_problem is not None:
+                        print(
+                            "%s. 중단합니다. 이후 이벤트는 보내지 않았습니다." % auth_failure_text(auth_problem, client.api_key),
+                            file=sys.stderr,
+                        )
+                        break
+                    if outcome == "error":
+                        print("전송 오류가 나서 중단합니다. 이후 이벤트는 보내지 않았습니다.", file=sys.stderr)
+                        break
         except KeyboardInterrupt:
             print()
             print("중단했습니다. 여기까지의 기록은 로그에 남아 있습니다.")
+        finally:
+            sent = max(sent, counts.get("_sent", 0))
+            for index in range(sent, len(events)):
+                writer.write_send(seq=index + 1, sent_at_text=datetime.now(KST).isoformat(), request_body_text=build_body_text(events[index]), status=None, response_text=None, outcome="error", error="NOT_SENT: 앞선 요청 이후 전송을 중단했습니다", elapsed_ms=None)
+                print("%d/%d NOT_SENT: 전송하지 않았습니다" % (index + 1, len(events)))
     print()
     for line in format_summary(sent, counts["new"], counts["duplicate"], counts["rejected"], counts["error"], log_path):
         print(line)
-    return 2 if counts["error"] or auth_problem is not None else 0
+    return 2 if counts["error"] or auth_problem is not None or sent < len(events) else 0
+
+
+
+def _send_batches(events, client, writer, counts, notes, console, args):
+    sent = 0
+    auth_problem = None
+    batch_size = args.batch_size
+    for start in range(0, len(events), batch_size):
+        if start:
+            _pause(args.interval, args.jitter)
+        chunk = events[start:start + batch_size]
+        sent_at = datetime.now(KST).isoformat()
+        raw = '{"events":[' + ','.join(build_body_text(event) for event in chunk) + ']}'
+        result = None
+        failure = None
+        try:
+            result = client.post_events(raw)
+        except (TransportError, KeyboardInterrupt) as error:
+            failure = "UNKNOWN: " + (str(error) or "전송 중 중단되어 저장 여부를 확인할 수 없습니다")
+        rows = (result.body or {}).get("results") if result is not None and isinstance(result.body, dict) else None
+        valid_rows = result is not None and result.status == 200 and isinstance(rows, list) and len(rows) == len(chunk) and all(isinstance(row, dict) and row.get("index") == index and row.get("transaction_id") == chunk[index].transaction_id and row.get("result") in ("stored", "duplicate", "rejected") for index, row in enumerate(rows))
+        if not valid_rows and failure is None:
+            if result is not None and 400 <= result.status < 500:
+                failure = parse_problem(result.status, result.body).summary()
+                auth_problem = parse_problem(result.status, result.body) if is_auth_failure(result.status) else None
+            else:
+                failure = "UNKNOWN: 배치 응답으로 각 이벤트의 저장 여부를 확인할 수 없습니다"
+        for offset, event in enumerate(chunk):
+            if valid_rows:
+                row = rows[offset]
+                outcome = {"stored": "new", "duplicate": "duplicate", "rejected": "rejected"}[row["result"]]
+                summary = row["result"]
+                if row.get("error"):
+                    summary += ": " + parse_problem(400, row["error"]).summary()
+                response_text = json.dumps(row, ensure_ascii=False)
+                error = None
+            else:
+                outcome = "rejected" if result is not None and 400 <= result.status < 500 else "error"
+                summary = failure
+                response_text = result.body_text if result is not None else None
+                error = failure
+            counts[outcome] += 1
+            sent += 1
+            counts["_sent"] = sent
+            writer.write_send(seq=start + offset + 1, sent_at_text=sent_at, request_body_text=build_body_text(event), status=result.status if result is not None else None, response_text=response_text, outcome=outcome, error=error, elapsed_ms=result.elapsed_ms if result is not None else None)
+            for line in format_send_pair(console, start + offset + 1, len(events), event, outcome, summary, notes.get(start + offset, "")):
+                print(line)
+        if not valid_rows:
+            break
+    return sent, auth_problem
 
 
 def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event, verbose: bool):
@@ -118,12 +177,13 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
     sent_at = datetime.now(KST).isoformat()
     try:
         result = client.post_event(body_text)
-    except TransportError as error:
+    except (TransportError, KeyboardInterrupt) as error:
+        message = "UNKNOWN: " + (str(error) or "전송 중 중단되어 저장 여부를 확인할 수 없습니다")
         writer.write_send(
             seq=seq, sent_at_text=sent_at, request_body_text=body_text,
-            status=None, response_text=None, outcome="error", error=str(error), elapsed_ms=None,
+            status=None, response_text=None, outcome="error", error=message, elapsed_ms=None,
         )
-        return "error", str(error), None
+        return "error", message, None
     outcome = classify_outcome(result.status, result.body)
     writer.write_send(
         seq=seq, sent_at_text=sent_at, request_body_text=body_text,

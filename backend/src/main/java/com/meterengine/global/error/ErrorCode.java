@@ -22,6 +22,7 @@ public enum ErrorCode {
   // 403 Forbidden
   PERMISSION_DENIED(HttpStatus.FORBIDDEN, "이 요청을 할 권한이 없습니다"),
   ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 도입사입니다"),
+  ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -47,8 +48,11 @@ public enum ErrorCode {
   RESPONSE_TYPE_NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "Accept 헤더에 맞는 응답 형식이 없습니다"),
 
   // 409 Conflict
+  RESOURCE_VERSION_CONFLICT(HttpStatus.CONFLICT, "다른 요청이 변경한 항목입니다. 다시 조회한 뒤 수정하세요"),
+  IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 재시도 키로 다른 요청을 보낼 수 없습니다"),
   CUSTOMER_ARCHIVED(HttpStatus.CONFLICT, "보관한 고객입니다. 복원한 뒤 사용하세요"),
   RESOURCE_ARCHIVED(HttpStatus.CONFLICT, "보관한 항목입니다"),
+  ENVIRONMENT_NOT_READY(HttpStatus.CONFLICT, "선택한 환경에서 아직 지원하지 않는 기능입니다. 기존 데이터는 기존 범위에서 확인하세요"),
   ARCHIVE_RESTORATION_CONFLICT(
       HttpStatus.CONFLICT, "현재 버전과 충돌하거나 보관 기간이 시작되어 복원할 수 없습니다. 새 버전을 등록하세요"),
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),

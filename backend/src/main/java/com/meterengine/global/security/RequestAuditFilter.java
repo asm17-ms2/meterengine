@@ -21,6 +21,8 @@ import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.UrlPathHelper;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
+  public static final String REQUEST_ID_ATTRIBUTE =
+      RequestAuditFilter.class.getName() + ".requestId";
   static final String AUDITED_ATTRIBUTE = RequestAuditFilter.class.getName() + ".audited";
   static final List<String> UUID_VARIABLES = List.of("delivery_id", "id", "organization_id");
   private static final Pattern UUID_VALUE =
@@ -57,6 +59,7 @@ public class RequestAuditFilter extends OncePerRequestFilter {
     int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     UUID requestId = UUID.randomUUID();
     response.setHeader("X-Request-ID", requestId.toString());
+    request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
     if (isIngestion(request)) {
       filterChain.doFilter(request, response);
       return;

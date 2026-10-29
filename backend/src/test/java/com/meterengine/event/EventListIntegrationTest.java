@@ -554,6 +554,136 @@ class EventListIntegrationTest {
   // 헬퍼
   // ---------------------------------------------------------------------------
 
+  @Test
+  void 날짜와_시각_범위가_월_경계를_넘고_종료_직전까지_조회된다() {
+    UUID org = insertOrganization("기간 조회");
+    UUID customer = insertCustomer(org, "기간 고객");
+    insertEvent(org, "before", customer, "custom", 1, "2026-08-31T23:59:58+09:00");
+    insertEvent(org, "first", customer, "custom", 2, "2026-08-31T23:59:59+09:00");
+    insertEvent(org, "second", customer, "custom", 3, "2026-09-01T00:00:00+09:00");
+    insertEvent(org, "end", customer, "custom", 4, "2026-09-01T00:00:01+09:00");
+    MvcTestResult response =
+        mvc.get()
+            .uri("/v1/events")
+            .header(AUTHORIZATION, authorization(org))
+            .param("from", "2026-08-31T23:59:59")
+            .param("to", "2026-09-01T00:00:01+09:00")
+            .param("order", "asc")
+            .exchange();
+    assertThat(response).hasStatusOk();
+    assertThat(transactionIds(response)).containsExactly("first", "second");
+    assertThat(get(org, "?from=2026-08-31&to=2026-09-01"))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.total")
+        .asNumber()
+        .isEqualTo(4);
+  }
+
+  @Test
+  void 검색과_속성조건의_전체건수와_페이지가_같은_대상을_가리킨다() {
+    UUID org = insertOrganization("검색 조회");
+    UUID customer = insertCustomer(org, "서울 고객");
+    jdbcTemplate.update(
+        "UPDATE customer SET external_id='ext-search' WHERE organization_id=? AND id=?",
+        org,
+        customer);
+    insertEventWithProperties(
+        org,
+        "q-a",
+        customer,
+        "unmapped",
+        "{\"model\":\"gpt\",\"token\":1}",
+        "2026-08-04T00:00:00+09:00");
+    insertEventWithProperties(
+        org,
+        "q-b",
+        customer,
+        "unmapped",
+        "{\"model\":\"gpt\",\"token\":2}",
+        "2026-08-05T00:00:00+09:00");
+    insertEventWithProperties(
+        org, "q-c", customer, "other", "{\"model\":\"other\"}", "2026-08-06T00:00:00+09:00");
+    MvcTestResult response =
+        mvc.get()
+            .uri("/v1/events")
+            .header(AUTHORIZATION, authorization(org))
+            .param("month", AUGUST)
+            .param("q", "EXT-SEARCH")
+            .param("properties", "{\"model\":\"gpt\"}")
+            .param("sort", "transaction_id")
+            .param("order", "asc")
+            .param("size", "1")
+            .param("page", "1")
+            .exchange();
+    assertThat(response).hasStatusOk().bodyJson().extractingPath("$.total").asNumber().isEqualTo(2);
+    assertThat(transactionIds(response)).containsExactly("q-b");
+    assertThat(
+            mvc.get()
+                .uri("/v1/events/types")
+                .header(AUTHORIZATION, authorization(org))
+                .param("month", AUGUST)
+                .param("properties", "{\"model\":\"gpt\"}")
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.types")
+        .asArray()
+        .containsExactly("unmapped");
+  }
+
+  @Test
+  void 상세_직접조회는_임의문자_ID를_받고_다른_도입사는_가린다() {
+    UUID org = insertOrganization("상세 조회");
+    UUID customer = insertCustomer(org, "상세 고객");
+    String id = "event/a?x=한글";
+    insertEvent(org, id, customer, "custom", 7, "2026-08-01T00:00:00+09:00");
+    assertThat(
+            mvc.get()
+                .uri("/v1/events/lookup")
+                .header(AUTHORIZATION, authorization(org))
+                .param("transaction_id", id)
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.transaction_id")
+        .asString()
+        .isEqualTo(id);
+    UUID other = insertOrganization("다른 상세 조회");
+    assertThat(
+            mvc.get()
+                .uri("/v1/events/lookup")
+                .header(AUTHORIZATION, authorization(other))
+                .param("transaction_id", id)
+                .exchange())
+        .hasStatus(404)
+        .bodyJson()
+        .extractingPath("$.code")
+        .asString()
+        .isEqualTo("event_not_found");
+  }
+
+  @Test
+  void 역전된_기간과_모호한_조회_또는_잘못된_정렬을_거절한다() {
+    UUID org = insertOrganization("검증 조회");
+    for (String query :
+        List.of(
+            "?from=2026-09-02&to=2026-09-01",
+            "?from=2026-09-01",
+            "?from=2026-09-01&to=2026-09-02&month=2026-09",
+            "?from=invalid&to=2026-09-02",
+            "?sort=properties",
+            "?order=sideways",
+            "?properties=[]")) {
+      assertThat(get(org, query))
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.code")
+          .asString()
+          .isEqualTo("validation_error");
+    }
+  }
+
   private String authorization(UUID organizationId) {
     return authorizationsByOrganizationId.computeIfAbsent(
         organizationId, id -> TestCredentials.issueApiKey(jdbcTemplate, id));

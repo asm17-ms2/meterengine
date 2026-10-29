@@ -9,7 +9,8 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.customer.service.CustomerService;
 import com.meterengine.event.dto.IngestEventRequest;
-import com.meterengine.event.service.EventService;
+import com.meterengine.event.service.EventIngestionService;
+import com.meterengine.event.service.EventQueryService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
@@ -48,8 +49,11 @@ import org.springframework.web.context.WebApplicationContext;
 class BusinessArchiveIntegrationTest {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private CustomerService customers;
-  @Autowired private EventService ingestion;
-  @Autowired private EventService events;
+  @Autowired private EventIngestionService ingestion;
+  @Autowired private com.meterengine.event.service.EventBatchService batches;
+  @Autowired private tools.jackson.databind.json.JsonMapper jsonMapper;
+  @Autowired private EventQueryService events;
+  @Autowired private com.meterengine.event.service.UnbilledEventService unbilledEvents;
   @Autowired private BillableMetricService metrics;
   @Autowired private BillableMetricUsageService usage;
   @Autowired private PriceRateService rates;
@@ -87,13 +91,16 @@ class BusinessArchiveIntegrationTest {
         .isInstanceOfSatisfying(
             ConflictException.class,
             error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.CUSTOMER_ARCHIVED));
-    assertThat(
-            events
-                .list(organizationId, customerId, month, null, 0, 10)
-                .events()
-                .getFirst()
-                .customerId())
-        .isEqualTo(customerId);
+    var batch =
+        batches.ingest(
+            organizationId,
+            new com.meterengine.event.dto.IngestEventBatchRequest(
+                java.util.List.of(
+                    jsonMapper.readTree(jsonMapper.writeValueAsString(request("stored"))),
+                    jsonMapper.readTree(jsonMapper.writeValueAsString(request("batch-new"))))));
+    assertThat(batch.results().getFirst().result()).isEqualTo("duplicate");
+    assertThat(batch.results().getLast().error().code()).isEqualTo(ErrorCode.CUSTOMER_ARCHIVED);
+    assertThat(events.find(organizationId, "stored").customerId()).isEqualTo(customerId);
     assertThat(usage.aggregate(organizationId, month).getFirst().customers().getFirst().quantity())
         .isEqualByComparingTo("10");
     assertThat(customers.list(organizationId)).isEmpty();
@@ -128,6 +135,7 @@ class BusinessArchiveIntegrationTest {
     var restored = metrics.restore(organizationId, "tokens");
     assertThat(restored.activeFrom()).isEqualTo(month.plusMonths(1).toString());
     assertThat(usage.aggregate(organizationId, month)).isEmpty();
+    assertThat(unbilledEvents.get(organizationId, month).unmatchedType().eventCount()).isEqualTo(1);
     assertThat(metrics.list(organizationId).billableMetrics()).hasSize(1);
   }
 

@@ -53,8 +53,9 @@ public class AuditLogQueryService {
     Specification<AuditLog> specification =
         (root, query, cb) -> {
           List<Predicate> filters = new ArrayList<>();
-          if (organizationId != null)
+          if (organizationId != null) {
             filters.add(cb.equal(root.get("organizationId"), organizationId));
+          }
           if (action != null) filters.add(cb.equal(root.get("action"), action));
           if (actorType != null) filters.add(cb.equal(root.get("actorType"), actorType));
           if (start != null) filters.add(cb.greaterThanOrEqualTo(root.get("occurredAt"), start));
@@ -72,6 +73,15 @@ public class AuditLogQueryService {
                     cb.like(cb.lower(root.get("action")), term, '\\'),
                     cb.like(cb.lower(root.get("targetType")), term, '\\'),
                     cb.like(cb.lower(root.get("targetId")), term, '\\'),
+                    cb.like(
+                        cb.lower(
+                            cb.function(
+                                "jsonb_extract_path_text",
+                                String.class,
+                                root.get("detail"),
+                                cb.literal("request_id"))),
+                        term,
+                        '\\'),
                     cb.like(
                         cb.lower(
                             cb.function(

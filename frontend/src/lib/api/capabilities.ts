@@ -11,7 +11,7 @@ export type ListCapabilities = {
 };
 
 export const CAPABILITIES = {
-  listEvents: { page: true, size: true, sort: false, q: false, customer_id: true, type: true, month_all: false, range: false },
+  listEvents: { page: true, size: true, sort: true, q: true, customer_id: true, type: true, month_all: false, range: true },
   aggregateBillableMetricUsages: { page: false, size: false, sort: false, q: false, customer_id: false, type: false, month_all: false },
   previewDraftInvoice: { page: false, size: false, sort: false, q: false, customer_id: false, type: false, month_all: false },
   listInvoices: { page: false, size: false, sort: false, q: false, customer_id: true, type: false, month_all: true },

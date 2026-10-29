@@ -1,10 +1,11 @@
-
-import { MeterEngineApiError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
+import type { EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
+import { MeterEngineApiError, MeterEngineBatchError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ArchiveStatus, ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
+import type { ArchiveStatus, ErrorResponse, IngestEventBatchRequest, IngestEventBatchResponse, IngestEventBatchResult, IngestEventInput, IngestEventRequest, IngestEventResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, UnbilledEventsResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
+const BATCH_SIZE = 100;
 
 export interface MeterEngineClientOptions {
   baseUrl: string;
@@ -25,6 +26,11 @@ type HttpMethod = "GET" | "POST" | "PATCH";
 
 function defaultSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTransactionId(request: IngestEventInput): IngestEventRequest {
+  const transactionId = request.transaction_id === undefined ? crypto.randomUUID() : request.transaction_id;
+  return { ...request, transaction_id: transactionId };
 }
 
 function isErrorResponse(body: unknown): body is ErrorResponse {
@@ -71,6 +77,28 @@ export class MeterEngineClient {
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
     this.sleep = options.sleep ?? defaultSleep;
     this.random = options.random ?? Math.random;
+  }
+
+  ingestEvent(request: IngestEventInput, options: RequestOptions = {}): Promise<IngestEventResponse> {
+    return this.request<IngestEventResponse>("POST", "/v1/events", withTransactionId(request), options.signal);
+  }
+
+  async ingestEventBatch(requests: IngestEventInput[], options: RequestOptions = {}): Promise<IngestEventBatchResponse> {
+    const events = requests.map(withTransactionId);
+    const results: IngestEventBatchResult[] = [];
+    for (let start = 0; start < events.length; start += BATCH_SIZE) {
+      const body: IngestEventBatchRequest = { events: events.slice(start, start + BATCH_SIZE) };
+      try {
+        const response = await this.request<IngestEventBatchResponse>("POST", "/v1/event-batches", body, options.signal);
+        results.push(...response.results.map((result) => ({ ...result, index: result.index + start })));
+      } catch (error) {
+        throw new MeterEngineBatchError(results, error instanceof Error ? error : new Error(String(error)), {
+          startIndex: start,
+          size: body.events.length,
+        });
+      }
+    }
+    return { results };
   }
 
   aggregateBillableMetricUsages(params: { month?: string } = {}): Promise<ListBillableMetricUsagesResponse> {
@@ -135,6 +163,18 @@ export class MeterEngineClient {
 
   listWebhookDeliveries(id: string, params: { page?: number; size?: number; status?: string } = {}): Promise<ListWebhookDeliveriesResponse> {
     return this.request("GET", queryPath(`/v1/webhook-endpoints/${encodeURIComponent(id)}/deliveries`, params));
+  }
+
+  getUnbilledEvents(): Promise<UnbilledEventsResponse> {
+    return this.request("GET", "/v1/unbilled-events");
+  }
+
+  searchEventIssues(params: { month: string; customer_id?: string; reason?: EventIssueReason; q?: string; page?: number; size?: number }): Promise<EventIssueSearchResponse> {
+    return this.request("GET", queryPath("/v1/event-issues/search", params));
+  }
+
+  searchEventRejections(params: { month: string; customer_id?: string; error_code?: string; q?: string; page?: number; size?: number }): Promise<EventRejectionSearchResponse> {
+    return this.request("GET", queryPath("/v1/event-rejections/search", params));
   }
 
   private async request<T>(method: HttpMethod, path: string, body?: unknown, signal?: AbortSignal, canRetry = true, responseType: "json" | "text" = "json"): Promise<T> {

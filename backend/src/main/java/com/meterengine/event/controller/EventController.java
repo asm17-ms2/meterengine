@@ -3,24 +3,33 @@ package com.meterengine.event.controller;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
-import com.meterengine.event.service.EventService;
+import com.meterengine.event.service.EventIngestionService;
+import com.meterengine.event.service.EventQueryService;
+import com.meterengine.event.service.EventRejectionService;
+import com.meterengine.event.service.EventSearch;
+import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.IngestAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableText;
-import com.meterengine.metric.service.BillableMetricUsageService;
+import com.meterengine.global.validation.UnknownQueryParameterValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,10 +43,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/events")
 public class EventController {
 
-  private final EventService eventService;
+  private final EventIngestionService eventIngestionService;
+  private final EventQueryService eventQueryService;
+  private final EventRejectionService eventRejectionService;
 
-  EventController(EventService eventService) {
-    this.eventService = eventService;
+  EventController(
+      EventIngestionService eventIngestionService,
+      EventQueryService eventQueryService,
+      EventRejectionService eventRejectionService) {
+    this.eventIngestionService = eventIngestionService;
+    this.eventQueryService = eventQueryService;
+    this.eventRejectionService = eventRejectionService;
   }
 
   @PostMapping
@@ -89,7 +105,12 @@ public class EventController {
   })
   public IngestEventResponse ingestEvent(
       @CurrentOrganizationId UUID organizationId, @Valid @RequestBody IngestEventRequest request) {
-    return eventService.ingest(organizationId, request);
+    try {
+      return eventIngestionService.ingest(organizationId, request);
+    } catch (BusinessException exception) {
+      eventRejectionService.record(organizationId, request, exception);
+      throw exception;
+    }
   }
 
   @GetMapping
@@ -103,6 +124,8 @@ public class EventController {
           기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 든다. 사용량 조회와 기준이 같다.
           customer_id, month, type을 함께 주면 모두 만족하는 이벤트만 나오고, total은 조건을 적용한 뒤의 건수다.
+          from과 to를 함께 주면 월 대신 자유 기간을 조회한다. 시작은 포함하고 종료 시각은 제외한다. 날짜만 준 to는 그 날짜의 하루 전체를 포함한다. 시간대 없는 날짜와 시각은 KST다.
+          q는 transaction_id, 고객 이름과 외부 ID의 부분 검색이다. properties는 JSON 객체의 값이 포함된 이벤트를 찾는다.
           properties는 저장된 값 그대로다. 키 순서와 공백은 보낸 것과 다를 수 있고, 숫자 자릿수는 그대로다.
           """)
   @ApiResponses({
@@ -142,8 +165,64 @@ public class EventController {
       @Parameter(description = "이벤트 type을 좁힌다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회된다.")
           @RequestParam(required = false)
           @StorableText
-          String type) {
-    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
-    return eventService.list(organizationId, customerId, targetMonth, type, page, size);
+          String type,
+      @RequestParam(required = false) @StorableText @Size(max = 64) String from,
+      @RequestParam(required = false) @StorableText @Size(max = 64) String to,
+      @RequestParam(name = "q", required = false) @StorableText @Size(max = 512) String query,
+      @RequestParam(required = false) @StorableText @Size(max = 40) String sort,
+      @RequestParam(required = false) @StorableText @Size(max = 4) String order,
+      @RequestParam(required = false) @StorableText @Size(max = 4096) String properties) {
+    return eventQueryService.list(
+        organizationId,
+        customerId,
+        EventSearch.resolve(month, from, to, query, sort, order, properties),
+        type,
+        page,
+        size);
+  }
+
+  @GetMapping("/types")
+  @ReadAccess
+  @Operation(
+      summary = "수집된 이벤트 유형 조회",
+      description = "미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 돌려준다. month 또는 from/to를 사용한다.")
+  public Map<String, List<String>> listEventTypes(
+      @CurrentOrganizationId UUID organizationId,
+      @RequestParam(name = "customer_id", required = false) UUID customerId,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") @FourDigitYear
+          YearMonth month,
+      @RequestParam(required = false) @StorableText @Size(max = 64) String from,
+      @RequestParam(required = false) @StorableText @Size(max = 64) String to,
+      @RequestParam(name = "q", required = false) @StorableText @Size(max = 512) String query,
+      @RequestParam(required = false) @StorableText @Size(max = 4096) String properties) {
+    return Map.of(
+        "types",
+        eventQueryService.types(
+            organizationId,
+            customerId,
+            EventSearch.resolve(month, from, to, query, null, null, properties)));
+  }
+
+  @GetMapping("/months")
+  @ReadAccess
+  @Operation(
+      summary = "이벤트가 있는 월 조회",
+      description =
+          "현재 도입사와 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다.")
+  public Map<String, List<String>> listEventMonths(
+      @CurrentOrganizationId UUID organizationId, HttpServletRequest request) {
+    UnknownQueryParameterValidator.validate(request.getParameterMap(), Set.of());
+    return Map.of("months", eventQueryService.months(organizationId));
+  }
+
+  @GetMapping("/lookup")
+  @ReadAccess
+  @Operation(
+      summary = "이벤트 단건 조회",
+      description = "transaction_id 원문으로 조회한다. 목록의 페이지나 기간에 포함되지 않아도 상세 정보를 열 수 있다.")
+  public ListEventsResponse.EventResponse getEvent(
+      @CurrentOrganizationId UUID organizationId,
+      @RequestParam(name = "transaction_id") @StorableText @Size(min = 1, max = 1024) String transactionId) {
+    return eventQueryService.find(organizationId, transactionId);
   }
 }

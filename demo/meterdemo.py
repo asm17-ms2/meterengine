@@ -36,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     send = subparsers.add_parser("send", parents=[common], help="CSV의 이벤트를 순차 전송하고 요청:응답을 대조 출력")
     send.add_argument("--csv", required=True, help="이벤트 CSV 경로 (스키마는 MS2-142 확정 대기)")
+    send.add_argument("--batch-size", type=int, choices=range(1, 101), default=1, metavar="1-100", help="한 요청에 보낼 이벤트 수 (기본 1)")
     send.add_argument("--interval", type=float, default=0.0, help="전송 간격 초 (기본 0)")
     send.add_argument("--jitter", type=float, default=0.0, help="간격에 더할 랜덤 슬립 상한 초 (기본 0)")
     send.add_argument("--yes", action="store_true", help="전송 전 확인 게이트 생략")
