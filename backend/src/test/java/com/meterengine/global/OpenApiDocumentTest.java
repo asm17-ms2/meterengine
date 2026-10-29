@@ -301,6 +301,15 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다() {
+    JsonNode operation =
+        root().path("paths").path("/v1/payment-attempts/{id}/cancellations").path("post");
+    assertErrorResponse(operation.path("responses"), "400", "Idempotency-Key");
+    assertThat(operation.path("description").asText())
+        .contains("UUID", "Idempotency-Replayed", "payment_cancellation_idempotency_conflict");
+  }
+
+  @Test
   void 단가_응답의_tiers는_구간_객체의_배열이다() {
     JsonNode schemas = root().path("components").path("schemas");
     for (String schema : List.of("PriceRateResponse", "BillableMetricPricePriceRate")) {

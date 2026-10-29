@@ -325,7 +325,7 @@ unset SESSION
 | `meterengine.notification.unbilled-usage-cron` | 매일 09:00 KST. `UNBILLED_USAGE_REPORT_CRON`으로 변경 가능 |
 
 - 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST, 웹훅 발송 30초다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
-- 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 기존 결과를 반환하고 다른 내용이면 409다.
+- 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 그 취소를 지금 상태로 반환하고 다른 내용이면 409 `payment_cancellation_idempotency_conflict`다. 고객과 미터 등록의 키와 달리 UUID만 받고 `Idempotency-Replayed` 헤더를 붙이지 않는다.
 - 결제 결과가 미확인인 상태를 실패로 단정하지 않는다. 7일을 넘긴 불확실한 이전 주문은 새 주문으로 자동 청구하지 않는다.
 - 웹훅은 Standard Webhooks 서명을 쓰고 중복과 순서 변경을 전제로 수신한다. 시험 통보의 202는 발송 대기 등록이며 전달 완료가 아니다. 실패한 통보는 같은 `webhook-id`로 재전송한다.
 - 인보이스 메일은 저장 기록과 실제 발송을 구분한다. 전자세금계산서 발행은 구현 범위에 포함하지 않는다.
