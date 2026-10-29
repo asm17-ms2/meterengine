@@ -175,10 +175,14 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
-test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
+test("the sidebar lists page links in plain lists without menu roles", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  await expect(page.getByRole("navigation", { name: "도입사 업무" }).getByRole("menu")).toHaveAttribute("tabindex", "-1");
+  const nav = page.getByRole("navigation", { name: "도입사 업무" });
+  await expect(nav.getByRole("menu")).toHaveCount(0);
+  await expect(nav.getByRole("menuitem")).toHaveCount(0);
+  await expect(nav.getByRole("list")).toHaveCount(4);
+  await expect(nav.getByRole("list", { name: "과금과 연동", exact: true }).getByRole("link")).toHaveCount(4);
 });
 
 test("the sidebar lists the meter screen and marks it as the current place", async ({ page }) => {
@@ -187,7 +191,8 @@ test("the sidebar lists the meter screen and marks it as the current place", asy
   const nav = page.getByRole("navigation", { name: "도입사 업무" });
   await nav.getByRole("link", { name: "미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
-  await expect(nav.locator(".ant-menu-item-selected")).toHaveText("미터");
+  await expect(nav.getByRole("link", { name: "미터", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(nav.locator("[aria-current=page]")).toHaveCount(1);
 });
 
 test("each screen has its own document title", async ({ page }) => {
@@ -564,6 +569,10 @@ test("375px forms and tenant header fit, keyboard focus and menu work", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "업무 메뉴 열기" })).toBeFocused();
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await page.getByRole("dialog").getByRole("link", { name: "미터", exact: true }).click();
+  await expectTenantUrl(page, "/billable-metrics");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("server action replay on a public route cannot create a customer without a session", async ({ page, request }) => {
@@ -695,7 +704,7 @@ test("a long organization name is cut with an ellipsis and keeps the header icon
 test("sidebar group titles start on the same line as the sidebar label", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  const title = page.locator(".workspace-sidebar .ant-menu-item-group-title").first();
+  const title = page.locator(".workspace-sidebar .nav-group-title").first();
   await expect(title).toHaveCSS("padding-inline-start", "24px");
   await expect(title).toHaveCSS("font-size", "11px");
 });
