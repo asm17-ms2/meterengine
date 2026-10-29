@@ -87,4 +87,4 @@ pnpm --filter @meterengine/llm-service lint
 pnpm --filter @meterengine/llm-service test
 ```
 
-실제 E2E는 별도 시연 도입사와 SQLite를 사용한다. `LUMEN_E2E_ENV_FILE`에 비공개 JSON 설정 경로를, `LUMEN_E2E_URL`에 해당 앱 주소를 지정한다. `LUMEN_E2E_STANDALONE_URL`이 있으면 같은 자체 DB를 연결한 복사본의 세션과 요청 영속성도 확인한다.
+실제 E2E는 별도 시연 도입사와 SQLite를 사용한다. `LUMEN_E2E_ENV_FILE`에 비공개 JSON 설정 경로를, `LUMEN_E2E_URL`에 해당 앱 주소를 지정한다. `LUMEN_E2E_STANDALONE_URL`이 있으면 같은 자체 DB를 연결한 복사본의 세션과 요청 영속성도 확인한다. 화면과 결과 파일은 `LUMEN_E2E_ARTIFACT_DIR`(기본은 OS 임시 폴더 아래 `meterengine-llm-tenant`)에 남는다.

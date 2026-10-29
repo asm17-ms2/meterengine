@@ -1,11 +1,12 @@
 import { expect, type APIRequestContext, type APIResponse, type BrowserContext, type Page } from "@playwright/test";
 import { readFileSync, mkdirSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import type { GenerationView, SessionResponse, WorkspaceSnapshot } from "../src/lib/contracts";
 
 export const BASE_URL = process.env.LUMEN_E2E_URL ?? process.env.LUMEN_E2E_BASE_URL ?? "http://localhost:3200";
 export const APP_ORIGIN = new URL(BASE_URL).origin;
-export const ARTIFACT_DIR = process.env.LUMEN_E2E_ARTIFACT_DIR ?? "/private/tmp/meterengine-llm-tenant-2026-10-27";
+export const ARTIFACT_DIR = process.env.LUMEN_E2E_ARTIFACT_DIR ?? path.join(os.tmpdir(), "meterengine-llm-tenant");
 
 export type RuntimeAccount = { id: string; name: string; email: string; customerId: string };
 export type RuntimeEnvironment = Record<string, string>;
