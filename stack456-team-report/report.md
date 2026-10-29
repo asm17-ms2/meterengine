@@ -1,5 +1,5 @@
 결과: 끝 상태 328/328건 (fixed 262, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 2개(마지막 84c47c7)
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 2개(마지막 84c47c7)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -200,7 +200,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C452-006 | #452 | 163a6c5 | main에서도 tenant-service.real.spec.ts 244-245행이 이번 달(baseline. | 없음(Lumen 실화면은 띄우는 법이 없어 workspace 응답(그 달 본인 고객 인보이스)과 대조, demo typecheck, lint 통과; b78630c 검사: frontend lint, typecheck, bu) |
 | C452-007 | #452 | c1ee7a8 | 웹훅 수신의 브라우저 요청과 본문 상한 | 브라우저 요청과 상한을 넘는 본문은 대상 선택 전에 기록 없이 거절한다: 실패 actual 400 expected 403 |
 | C452-008 | #452 | 62e8eee | 메뉴 이동 때 체험 시작 화면 깜빡임 | 없음(demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list; 보이는 변경: ) |
-| C452-009 | #452 | 600c74c | Lumen 청구 오류 문구 | 부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.' |
+| C452-009 | #452 | 600c74c, 7ed660f | Lumen 청구 오류 문구 | 부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.' |
 | C452-011 | #452 | bb7d3c5 | main demo/README.md 458행은 eslint-naming-rules.mjs를 sdk/와 web | 없음(문서 변경: demo/llm-service/eslint.config.mjs의 import와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo 검사 통) |
 | C452-012 | #452 | 0b402fd | 재생성 사용량 시각 시험 | 실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다: 실패 (이벤트 시각을 지금 시각으로 바꾼 변이) |
 | C452-013 | #452 | 5c83728 | 계정별 재전송 격리 시험 보강 | 한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이) |
@@ -476,3 +476,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).
 - 2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.
 - 2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7).
+- 2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b).

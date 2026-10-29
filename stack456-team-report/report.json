@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T21:18:45+09:00",
+  "updated_at": "2026-10-29T22:38:01+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -23,7 +23,7 @@
     "main": "af15d7f",
     "fix/s456-t-yang-invoice-retry": "59e548e",
     "fix/s456-t-yang-public-invoice": "22943db",
-    "fix/s456-t-yang-lumen": "62e8eee",
+    "fix/s456-t-yang-lumen": "7ed660f",
     "fix/s456-t-yang-demo-bridge-web": "c1ee7a8",
     "fix/s456-t-yang-toss-key": "cce95ba",
     "fix/s456-t-yang-audit-env": "04c93d9",
@@ -7247,13 +7247,17 @@
         "demo/llm-service/src/components/LumenApplication.tsx:154 @ af15d7f",
         "demo/llm-service/src/components/LumenApplication.tsx:207 @ af15d7f",
         "부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.'",
-        "커밋 600c74c"
+        "커밋 600c74c",
+        "#474 리뷰 p4 반영 시험 '일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다': 고치기 전 실패 actual 'ready'",
+        "커밋 7ed660f"
       ],
       "commits": [
-        "600c74ca"
+        "600c74ca",
+        "7ed660ff"
       ],
       "tests": [
-        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list"
+        "demo 검사 통과(62e8eee): unittest, pnpm -r typecheck, lint, test(llm-service 39, web 85), build, playwright --list",
+        "#474 리뷰 p4 반영 뒤 demo 검사 통과(7ed660f, llm-service 40건)"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -13623,6 +13627,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm -r typecheck && lint && test && build; cd llm-service && corepack pnpm exec playwright test --list",
+      "detail": "python 328건 OK(skip 7), pnpm 모두 성공(llm-service 40건)"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -14135,6 +14155,11 @@
       "branch": "fix/s456-t-yang-ci-tests",
       "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
       "at": "2026-10-29T21:18:45+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "at": "2026-10-29T22:38:01+09:00"
     }
   ],
   "usage_log": [],
@@ -14180,7 +14205,8 @@
     "2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f).",
     "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).",
     "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.",
-    "2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7)."
+    "2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7).",
+    "2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b)."
   ],
   "final_checks": [
     {
