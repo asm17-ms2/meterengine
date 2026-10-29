@@ -188,6 +188,13 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다() {
+    JsonNode responses = root().path("paths").path("/v1/customers").path("post").path("responses");
+    assertErrorResponse(responses, "409", "code=customer_archived");
+    assertThat(responses.path("200").path("description").asText()).contains("read");
+  }
+
+  @Test
   void 단가_응답의_tiers는_구간_객체의_배열이다() {
     JsonNode schemas = root().path("components").path("schemas");
     for (String schema : List.of("PriceRateResponse", "BillableMetricPricePriceRate")) {

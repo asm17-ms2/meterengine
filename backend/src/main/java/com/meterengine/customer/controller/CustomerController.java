@@ -8,7 +8,9 @@ import com.meterengine.customer.dto.UpdateCustomerRequest;
 import com.meterengine.customer.service.CustomerRegistrationService;
 import com.meterengine.customer.service.CustomerService;
 import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.AccessScopes;
 import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.IngestAccess;
@@ -27,6 +29,7 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -100,7 +103,20 @@ public class CustomerController {
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "등록된 고객"),
-    @ApiResponse(responseCode = "200", description = "같은 external_id로 이미 등록한 고객"),
+    @ApiResponse(
+        responseCode = "200",
+        description =
+            "같은 external_id로 이미 등록한 고객. 조회(read) 권한이 없으면 id, external_id, version만 채우고 name,"
+                + " billing_email, created_at, archived_at은 null이다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=customer_archived: 같은 external_id의 고객을 보관했다. POST /v1/customers/{id}/restorations로"
+                + " 복원한 뒤 다시 보낸다."),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -114,21 +130,29 @@ public class CustomerController {
   })
   public ResponseEntity<CustomerResponse> createCustomer(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Valid @RequestBody CreateCustomerRequest request,
       @RequestHeader(name = "Idempotency-Key", required = false) @StorableText
           String idempotencyKey) {
-    return idempotencyService.execute(
-        organizationId,
-        "customer.create",
-        idempotencyKey,
-        request,
-        CustomerResponse.class,
-        () -> {
-          CustomerRegistration registration =
-              customerRegistrationService.create(organizationId, request);
-          return ResponseEntity.status(registration.created() ? HttpStatus.CREATED : HttpStatus.OK)
-              .body(CustomerResponse.from(registration.customer()));
-        });
+    ResponseEntity<CustomerResponse> response =
+        idempotencyService.execute(
+            organizationId,
+            "customer.create",
+            idempotencyKey,
+            request,
+            CustomerResponse.class,
+            () -> {
+              CustomerRegistration registration =
+                  customerRegistrationService.create(organizationId, request);
+              return ResponseEntity.status(
+                      registration.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                  .body(CustomerResponse.from(registration.customer()));
+            });
+    if (response.getStatusCode() != HttpStatus.OK
+        || AccessScopes.grants(principal.scopes(), "read")) return response;
+    return ResponseEntity.status(HttpStatus.OK)
+        .headers(response.getHeaders())
+        .body(response.getBody().identifiersOnly());
   }
 
   @GetMapping("/{id}")

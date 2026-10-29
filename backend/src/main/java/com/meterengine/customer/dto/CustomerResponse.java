@@ -26,4 +26,9 @@ public record CustomerResponse(
         customer.getArchivedAt(),
         customer.getVersion());
   }
+
+  // 조회 권한 없이 받는 재등록 응답에는 식별자만 남긴다.
+  public CustomerResponse identifiersOnly() {
+    return new CustomerResponse(id, null, null, null, externalId, null, version);
+  }
 }
