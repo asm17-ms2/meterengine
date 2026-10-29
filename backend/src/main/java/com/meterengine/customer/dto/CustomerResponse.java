@@ -16,16 +16,6 @@ public record CustomerResponse(
     @JsonProperty("archived_at") OffsetDateTime archivedAt,
     long version) {
 
-  public CustomerResponse(
-      UUID id,
-      String name,
-      String billingEmail,
-      OffsetDateTime createdAt,
-      String externalId,
-      OffsetDateTime archivedAt) {
-    this(id, name, billingEmail, createdAt, externalId, archivedAt, 0);
-  }
-
   public static CustomerResponse from(Customer customer) {
     return new CustomerResponse(
         customer.getId(),
