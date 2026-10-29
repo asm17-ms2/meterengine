@@ -13,6 +13,11 @@ test("legacy exports leave the environment out and ranges replace the month", ()
   assert.equal(exportFilename("customers", {}), "customers.csv");
 });
 
+test("a range with only one end names that end instead of the default month", () => {
+  assert.equal(exportFilename("invoices", { month: "2026-10", from: "2026-08-01T00:00:00", environment: "live" }), "invoices-from-2026-08-01T00-00-00-live.csv");
+  assert.equal(exportFilename("invoices", { month: "2026-10", to: "2026-08-31" }), "invoices-to-2026-08-31.csv");
+});
+
 test("unsafe characters never reach the file name", () => {
   assert.equal(exportFilename("events", { from: "2026-10-01T00:00:00+09:00", to: "2026-10-02" }), "events-2026-10-01T00-00-00-09-00_2026-10-02.csv");
 });

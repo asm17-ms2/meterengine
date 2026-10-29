@@ -8,7 +8,10 @@ function safe(value: string): string {
 
 /** 조회 기간과 업무 환경을 담은 CSV 파일 이름. legacy 환경은 이름에 넣지 않는다. */
 export function exportFilename(resource: string, scope: ExportScope): string {
-  const period = scope.from && scope.to ? `${safe(scope.from)}_${safe(scope.to)}` : scope.month ? safe(scope.month) : "";
+  const period = scope.from && scope.to ? `${safe(scope.from)}_${safe(scope.to)}`
+    : scope.from ? `from-${safe(scope.from)}`
+      : scope.to ? `to-${safe(scope.to)}`
+        : scope.month ? safe(scope.month) : "";
   const environment = scope.environment && scope.environment !== "legacy" ? safe(scope.environment) : "";
   return [resource, period, environment].filter(Boolean).join("-") + ".csv";
 }
