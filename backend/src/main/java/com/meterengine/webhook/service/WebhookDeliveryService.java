@@ -4,6 +4,7 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.crypto.EncryptedStringConverter;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.webhook.client.WebhookClient;
 import com.meterengine.webhook.dto.ListWebhookDeliveriesResponse;
@@ -199,6 +200,8 @@ public class WebhookDeliveryService {
   public void retry(UUID organizationId, UUID endpointId, UUID id) {
     webhookEndpointService.get(organizationId, endpointId);
     if (webhookDeliveryRepository.retry(organizationId, endpointId, id) == 0) {
+      if (!webhookDeliveryRepository.exists(organizationId, endpointId, id))
+        throw new NotFoundException(ErrorCode.WEBHOOK_DELIVERY_NOT_FOUND);
       throw new ConflictException(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
     }
     auditLogService.record(

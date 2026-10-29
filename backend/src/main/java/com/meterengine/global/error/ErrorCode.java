@@ -79,6 +79,7 @@ public enum ErrorCode {
   PAYMENT_CANCELLATION_IN_PROGRESS(HttpStatus.CONFLICT, "진행 중인 취소가 있습니다"),
   PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 멱등 키로 다른 취소 요청을 보낼 수 없습니다"),
   WEBHOOK_DELIVERY_NOT_RETRYABLE(HttpStatus.CONFLICT, "다시 전송할 수 없는 웹훅입니다"),
+  WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
 
   PRICE_RATE_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 단가 버전은 바꿀 수 없습니다"),
   PRICE_PLAN_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 요금제 버전은 바꿀 수 없습니다"),

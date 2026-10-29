@@ -11,6 +11,7 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.webhook.client.WebhookAddressPolicy;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
@@ -378,6 +379,26 @@ class WebhookIntegrationTest {
         .containsExactly("unexpected_status", "endpoint_disabled");
     assertThatThrownBy(
             () -> webhookDeliveryService.retry(organizationId, endpoint.id(), delivery.id()))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((ConflictException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
+  }
+
+  @Test
+  void 없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다() {
+    assertThatThrownBy(
+            () -> webhookDeliveryService.retry(organizationId, endpoint.id(), UUID.randomUUID()))
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((NotFoundException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_FOUND);
+    UUID eventId = failOnce();
+    UUID pending =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+            UUID.class,
+            organizationId,
+            eventId);
+    assertThatThrownBy(() -> webhookDeliveryService.retry(organizationId, endpoint.id(), pending))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((ConflictException) exception).getErrorCode())
         .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);

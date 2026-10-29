@@ -196,6 +196,17 @@ public class WebhookDeliveryRepository {
         id);
   }
 
+  public boolean exists(UUID organizationId, UUID endpointId, UUID id) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE organization_id = ? AND environment_scope_id = ? AND webhook_endpoint_id = ? AND id = ?)",
+            Boolean.class,
+            organizationId,
+            BusinessEnvironmentContext.scopeId(),
+            endpointId,
+            id));
+  }
+
   private static UUID scope(WebhookClaim claim) {
     return claim.environmentId() == null ? new UUID(0, 0) : claim.environmentId();
   }
