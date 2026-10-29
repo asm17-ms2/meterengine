@@ -261,6 +261,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
 - 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 도입사와 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
+  - 등록 전에 고객 목록에서 외부 ID 없이 같은 이름으로 만든 옛 고객을 찾으면 그 고객을 이어 쓴다.
 - 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 도입사 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
 
 ### 보내는 이벤트와 properties

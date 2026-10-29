@@ -360,9 +360,19 @@ class CustomerResolver:
             cached = self.state.cached_customer(name)
             if cached:
                 return cached
-            customer_id = self._create(name)
+            customer_id = self._find_legacy(name) or self._create(name)
             self.state.remember_customer(name, customer_id)
             return customer_id
+
+    def _find_legacy(self, name: str) -> Optional[str]:
+        result = self.client.get_customers()
+        if result.status != 200 or not isinstance(result.body, dict):
+            raise RuntimeError("고객 목록 조회 실패: HTTP %d %s" % (result.status, result.body_text[:200]))
+        for customer in result.body.get("customers") or []:
+            customer_id = customer.get("id")
+            if customer.get("external_id") is None and customer.get("name") == name and isinstance(customer_id, str) and is_uuid(customer_id):
+                return customer_id
+        return None
 
     def _create(self, name: str) -> str:
         result = self.client.create_customer(name, external_id=name)
