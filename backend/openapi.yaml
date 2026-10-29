@@ -4789,7 +4789,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/InvitationPreview"
+                $ref: "#/components/schemas/OrganizationInvitationPreviewResponse"
           description: "초대한 도입사, 초대 이메일, 만료 시각, 수락하면 받을 권한"
         "400":
           content:
@@ -4849,7 +4849,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/AcceptedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationAcceptanceResponse"
           description: 수락한 사용자와 소속된 도입사
         "400":
           content:
@@ -4983,7 +4983,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/IssuedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationSecretResponse"
           description: 발급한 초대와 링크 토큰. 토큰 원문은 이 응답에서만 볼 수 있다
         "400":
           content:
@@ -7972,15 +7972,6 @@ components:
           minItems: 1
       required:
       - consents
-    AcceptedInvitation:
-      type: object
-      properties:
-        organization_id:
-          type: string
-          format: uuid
-        user_account_id:
-          type: string
-          format: uuid
     ApiKeyResponse:
       type: object
       properties:
@@ -8897,11 +8888,14 @@ components:
           - invalid_toss_payments_credential
           - payment_method_rejected
           - toss_payments_test_code_in_live_mode
+          - invalid_webhook_url
+          - invalid_webhook_event_type
           - authentication_required
           - invalid_credentials
           - permission_denied
           - organization_not_active
           - environment_mismatch
+          - consent_required
           - customer_not_found
           - event_not_found
           - billable_metric_not_found
@@ -8910,13 +8904,15 @@ components:
           - invoice_view_link_not_found
           - endpoint_not_found
           - api_key_not_found
-          - api_key_unavailable
           - organization_not_found
           - user_account_not_found
           - payment_method_not_found
           - payment_method_registration_not_found
           - payment_attempt_not_found
           - toss_payments_credential_not_found
+          - price_plan_not_found
+          - webhook_endpoint_not_found
+          - invitation_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
@@ -8950,19 +8946,13 @@ components:
           - webhook_delivery_not_retryable
           - price_rate_history_immutable
           - price_plan_history_immutable
-          - price_plan_not_found
-          - customer_has_pricing
-          - invalid_webhook_url
-          - invalid_webhook_event_type
-          - webhook_endpoint_not_found
           - webhook_endpoint_disabled
           - webhook_endpoint_limit_exceeded
-          - consent_required
-          - invitation_not_found
           - invitation_unavailable
           - last_owner_required
           - owner_scopes_required
           - last_operator_required
+          - api_key_unavailable
           - upload_size_exceeded
           - request_type_not_supported
           - rate_limit_exceeded
@@ -9242,22 +9232,6 @@ components:
       required:
       - document
       - document_version
-    InvitationPreview:
-      type: object
-      properties:
-        account_exists:
-          type: boolean
-        email:
-          type: string
-        expires_at:
-          type: string
-          format: date-time
-        organization_name:
-          type: string
-        scopes:
-          type: array
-          items:
-            type: string
     InvoiceLineResponse:
       type: object
       properties:
@@ -9417,13 +9391,6 @@ components:
         revoked_at:
           type: string
           format: date-time
-        token:
-          type: string
-    IssuedInvitation:
-      type: object
-      properties:
-        invitation:
-          $ref: "#/components/schemas/OrganizationInvitationResponse"
         token:
           type: string
     ListApiKeysResponse:
@@ -9735,6 +9702,31 @@ components:
           enum:
           - test
           - live
+    OrganizationInvitationAcceptanceResponse:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        user_account_id:
+          type: string
+          format: uuid
+    OrganizationInvitationPreviewResponse:
+      type: object
+      properties:
+        account_exists:
+          type: boolean
+        email:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        organization_name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
     OrganizationInvitationResponse:
       type: object
       properties:
@@ -9760,6 +9752,13 @@ components:
           items:
             type: string
         status:
+          type: string
+    OrganizationInvitationSecretResponse:
+      type: object
+      properties:
+        invitation:
+          $ref: "#/components/schemas/OrganizationInvitationResponse"
+        token:
           type: string
     OrganizationMemberResponse:
       type: object
