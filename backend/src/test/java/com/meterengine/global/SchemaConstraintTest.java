@@ -107,6 +107,19 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
+  // --- 이름과 인덱스 ---
+
+  @Test
+  void 단가에는_조건_없는_도입사와_미터_인덱스가_있다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE tablename = 'price_rate' AND indexname ="
+                    + " 'price_rate_organization_index'",
+                String.class))
+        .contains("(organization_id, billable_metric_code)")
+        .doesNotContain("WHERE");
+  }
+
   // --- 단가 ---
 
   @Test
