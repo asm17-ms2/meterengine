@@ -33,3 +33,8 @@ test("the finalization result lists only the first few invoices and points to th
   assert.ok(dialog.includes("인보이스 보기'에서 확인하세요."));
 });
 
+test("the pricing meter rail stays a wrapping row of chips at 900px and below", () => {
+  const css = source("components/pricing/pricing.module.css");
+  assert.ok(css.includes("@media(max-width:900px){.meterRail.meterRail{flex-direction:row}.meterRail>:not(button){width:100%}}"));
+});
+

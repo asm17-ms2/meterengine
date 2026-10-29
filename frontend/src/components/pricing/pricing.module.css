@@ -2,3 +2,5 @@
 .sectionHeading>div{min-width:0;overflow-wrap:anywhere}.equation{border-left:0;border:1px solid #d6cef0;border-radius:6px}.equation b{color:#574c78}.meterRail button{border-left:0;border:1px solid transparent}.meterRail button[aria-pressed=true]{border-color:#b7a9e6}.meterRail button:hover{background:#eeebf8}.unitPrice strong{font-variant-numeric:tabular-nums;letter-spacing:-.03em}.next>div{min-width:0;overflow-wrap:anywhere}.formGrid input,.formGrid select{max-width:100%}@media(max-width:600px){.tierEditorRow{grid-template-columns:1fr 1fr}.tierEditorRow>span{grid-column:1/-1}.tierEditorRow>button{grid-column:2}.next a{white-space:normal}}
 
 .meterRail nav{margin:0 0 14px;width:100%}.meterRail nav a{padding:7px 10px}
+/* .workspace-panel의 세로 방향을 불러오는 순서와 상관없이 덮어 좁은 화면에서도 칩이 줄을 바꿔 나란히 놓이게 한다. */
+@media(max-width:900px){.meterRail.meterRail{flex-direction:row}.meterRail>:not(button){width:100%}}
