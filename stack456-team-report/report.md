@@ -1,8 +1,8 @@
-미완료 97건, 결과: 끝 상태 276/372건 (fixed 242, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37)
+미완료 40건, 결과: 끝 상태 333/372건 (fixed 298, refuted 4, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37), fix/s456-t-inho-list-screens 1번(마지막 58be815)
 정할 것: 5건 (Ck3-451-02, Nk3-011, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T21:21:06+09:00
+상태: running, 갱신 2026-10-29T22:40:13+09:00
 
 ## 층별 상태
 
@@ -10,10 +10,10 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
 | #444 | fix/s456-444-t-inho | 40 | 33 | 0 | 7 | 0 | 0 | 0 |
-| #446 | fix/s456-446-t-inho | 50 | 28 | 0 | 7 | 0 | 0 | 15 |
+| #446 | fix/s456-446-t-inho | 50 | 34 | 0 | 7 | 0 | 0 | 9 |
 | #448 | fix/s456-t-inho-webhook-audit-ops | 24 | 22 | 1 | 1 | 0 | 0 | 0 |
-| #450 | fix/s456-t-inho-events-query | 38 | 29 | 0 | 2 | 0 | 0 | 7 |
-| #451 | feat/billing-queries | 96 | 29 | 0 | 6 | 2 | 0 | 59 |
+| #450 | fix/s456-t-inho-events-query | 38 | 36 | 0 | 2 | 0 | 0 | 0 |
+| #451 | feat/billing-queries | 96 | 72 | 1 | 6 | 2 | 0 | 15 |
 | #454 | feat/auth-rate-limit | 19 | 14 | 1 | 4 | 0 | 0 | 0 |
 | #455 | fix/s456-t-inho-demo-infra | 12 | 11 | 0 | 1 | 0 | 0 | 0 |
 | #447 | fix/s456-t-inho-billing-api | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -151,10 +151,14 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | C446-011 | #446 | 628658f | 올림 음수 시험이 올림 미터를 쓴다 | 없음(ChargeServiceTest: 통과; 음수 판정을 변환 수량으로 바꾼 변이: 실패) |
 | C446-012 | #446 | 7347579 | 다른 도입사 단가 ID 삭제의 경계를 시험한다 | 없음(VersionedPricingIntegrationTest: 통과; 도입사 비교를 뺀 변이: 실패) |
 | C446-013 | #446 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
+| D-115 | #446 | 99c34ff | main의 InvoicesTable.tsx를 보면 데스크톱 인보이스 행은 인보이스 번호(153행)와 수납 화면으로 가는 '수납과 고객 조회 링크'(155행)를 보여 준다. 같은 groups를 그리는 모바일 카드(228행)에는 고객명, 금액, 월과 확정 | list-copy.test.mjs mobile invoice cards show the invoice number and the same payment link as the desktop table: 실패 (모바일 카드에 없음) |
+| D-142 | #446 | d419f7a | main의 UsageTable.tsx 164행 모바일 카드는 넘길 때 head(c27b229 162행)와 같은 블록이 그대로 남아 있다. kind가 meter인 항목의 차원 행 라벨은 모두 '차원별 집계값'으로 고정되고, 행을 가르는 차원 값은 숫자  | list-copy.test.mjs mobile usage cards label each dimension row with its dimension values under one group heading: 실패 (같은 라벨 반복) |
 | G-107 | #446 | c93b2d3 | 요금제 절사 규칙을 API 설명에 적는다 | 없음(VersionedPricingIntegrationTest.기본료와_최소_사용료는_청구할_때_10원_미만을_버린다: 통과; OpenApiDocumentTest: 통과) |
 | G-174 | #446 | 191dc8d | CHECK 제약 이름을 V51로 규칙에 맞춘다 | SchemaConstraintTest.집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다: 실패 새 이름 없음 |
 | Nk3-001 | #446 | 42b996d | sum 전용 우회 경로를 지운다 | BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 expected: 800 but was: 0 |
 | Nk3-003 | #446 | 5588b4f | 호출처 없는 옛 기간 판정 메서드를 지운다 | 없음(git grep 호출 없음, pricing 시험: 통과) |
+| X-036 | #446 | 3f80123 | 반박을 시도했지만 main에서 막는 줄을 찾지 못했다. ExpandControls는 화면 폭과 관계없이 두 버튼을 그리고 CollapseProvider의 mode만 바꾸는데, 이 상태를 읽는 곳은 데스크톱 Table의 expandedRowKeys를 만 | auth.contract.spec.ts phones do not show expand-all controls that only act on the desktop table: 실패 (Received: 1) |
+| X-102 | #446 | 625706d | main의 CustomerLabel.tsx 8행은 여전히 이름과 UUID를 <Typography.Text ellipsis> 한 줄로 감싸고 tooltip이나 title을 주지 않는다. 설치된 antd 6.6.7은 ellipsis가 true면 useTo | list-copy.test.mjs a truncated customer label offers the full name and id: 실패 (툴팁 없음) |
 | C447-011 | #447 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
 | G-092 | #448 | 794b0f8 | 수집 요청을 감사에서 빼는 코드는 넘길 때 head에 이미 있었고 main에서도 RequestAuditFilter.java:63-66에 그대로 있다. 그래서 수집량만큼 행이 는다는 원래 시나리오는 main에서 성립하지 않는다. 남는 것은 수집 밖의 모 | AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L) |
 | C448-001 | #448 | 1164c20 | 운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다 | 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다 |
@@ -175,6 +179,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-450-02 | #450 | 68afb08, c2d367a | 사유 목록끼리와 DB CHECK가 같은지 시험한다(결정: 문자열 유지) | 없음(EventReasonListTest: 통과; 서비스 목록에만 사유를 더한 변이: 실패; 시험 자리 이동 뒤 EventRejectionServiceTest, EventIssueIntegrationTest: 통과) |
 | Ck3-450-03 | #450 | fa9fdc9 | 행위자 종류를 PrincipalKind 전체 switch로 정한다(결정: 시그니처 유지) | 없음(EventRejectionIntegrationTest, audit 시험: 통과(동작 변화 없음)) |
 | Ck3-450-04 | #450 | 821ac9f | 요금 진단 계약을 event.api로 옮긴다(결정) | 없음(DomainBoundaryTest, EventIssueIntegrationTest: 통과) |
+| D-193 | #450 | f3afea4 | main의 이벤트 매핑 진단 표는 넘길 때 head와 똑같이 8개 열을 그리고, '확인할 내용' 열이 '문제' 바로 뒤에 있다. #451과 #453이 이 파일을 고쳤지만 열 목록은 바뀌지 않았다. 표는 scroll x를 max-content로 두고 첫 | event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음) |
 | G-116 | #450 | 7b270fe, 3831102 | 지난달 몫을 따로 통보한다 | UnbilledUsageNotificationIntegrationTest.지난달_사용량은_지난달_통보로_따로_발행한다: 실패 Expecting value to be true but was false |
 | G-117 | #450 | 645b7bb | 확정한 달의 단가 없는 사용량에 확정 안내를 준다(결정: reason 값 유지) | EventIssueIntegrationTest.확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다: 실패 단가를 등록하세요 to contain 확정 |
 | G-119 | #450 | a727083 | README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정) | 없음(README와 코드 대조로 확인) |
@@ -187,6 +192,11 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-450-11 | #450 | 06655a9 | 고객 조회 계약이 잠금을 건다고 적는다(결정: 이름 유지, 한 낱말 규칙) | 없음(컴파일 통과, naming.md와 MemberNamingConventionTest 규칙 대조) |
 | Ck3-450-12 | #450 | 1704e89 | 검증을 건너뛰는 옛 저장소 오버로드를 지운다 | 없음(git grep으로 기간 인자 findPage, count 호출 없음 확인; event, query 시험: 통과) |
 | Ck3-450-13 | #450 | 1e010c1 | 과금 달 계산을 global 도우미로 모은다(결정) | 없음(BillingMonthTest: 통과; global, event, metric, notification 시험과 DomainBoundaryTest: 통과) |
+| D-076 | #450 | f3afea4 | action_hint는 백엔드가 reason 하나만 보고 고르는 고정 문장 세 개라서, 바로 옆 '문제' 열이 같으면 '확인할 내용'도 항상 같은 문장이다. main의 표는 이 열을 그대로 두어 같은 문장을 줄마다 되풀이한다. 두 코드 줄(프런트 RE | event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음) |
+| D-092 | #450 | f3afea4 | D-076과 원인이 같다. reason으로 정해지는 고정 hint 문장을 '확인할 내용' 열로 줄마다 되풀이해 표 폭을 키운다. 덧붙인 지적인 요약 문장 이름도 main에 남아 있다. 46행 요약은 '미터 없음, 수량 확인, 단가 없음'이라 쓰고, 1 | event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음) |
+| D-056 | #450 | f3afea4 | main의 이벤트 매핑 진단 화면은 행마다 action_hint로 '미터를 정의하거나', '단가를 등록하세요'라고 안내하지만, 표에서 링크가 걸린 곳은 원본 이벤트(/events)로 가는 전송 ID 열 하나뿐이다. 요약 줄과 미래 이벤트, 음수 조합  | event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 (링크 없음) |
+| D-100 | #450 | f3afea4 | main의 이벤트 매핑 진단 화면은 미래 이벤트 건수와 음수 이벤트-미터 조합 건수를 보여 준 뒤 '위 문제 건수와 별도로 확인합니다'로 끝나고, 어디서 확인하는지 링크가 없다. 같은 개념을 보여 주는 사용량 화면의 UsageQuality는 미래 시각 | event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 (링크 없음) |
+| D-099 | #450 | 08fd6a3 | main에서도 고객 ID 입력란의 안내가 placeholder 한 줄뿐이라, 값을 넣으면 사라지고 UUID 형식이라는 말도 없습니다. 원문의 실패 시나리오는 조금 다릅니다. 고객명을 넣으면 0건이 아니라 백엔드가 customer_id를 UUID로 받기 | list-copy.test.mjs the rejection search keeps its customer id guidance visible below the field: 실패 (placeholder 안내) |
 | G-182 | #450 | a727083 | README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정) | 없음(README와 코드 대조로 확인) |
 | C450-009 | #450 | 210baa2 | 미청구 통보 실패 로그에 예외를 남긴다 | UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 출력에 java.lang.IllegalStateException: environments down이 없음 |
 | G-124 | #450 | d459a67 | 세 집계 가능 정의가 같은지 시험한다(결정: 구조 유지) | 없음(EligibleEventDefinitionIntegrationTest: 통과; 문제 진단 조건을 바꾼 변이: 실패) |
@@ -195,6 +205,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | C450-006 | #450 | eb6350c, 4caedb4 | DB 시각 범위를 넘는 기간을 400으로 막는다 | EventListIntegrationTest.DB_시각_범위를_넘는_기간은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
 | C450-007 | #450 | eb6350c, 39b29bd, 4caedb4 | DB가 받지 못할 속성 조건을 400으로 막는다 | EventListIntegrationTest.DB가_받지_못할_속성_조건은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
 | C450-012 | #450 | cfb0e6f | 검색어 % 시험이 실제로 % 한 글자를 보낸다 | 없음(EventIssueIntegrationTest, EventRejectionIntegrationTest: 통과; position을 이스케이프 없는 LIKE로 바꾼 변이: 실패 expected: 0 but was: 3) |
+| D-254 | #450 | 2bff105 | main에서도 UsageQuality의 '미터와 연결되지 않은 유형' 링크는 /billable-metrics로, '집계할 수 없는 속성' 링크는 /events?month로만 간다. 넘길 때 head와 줄 내용이 같고, #451은 import 한 줄만  | usage-quality.test.mjs ingestion exceptions link to the diagnosis filtered by their reason and month: 실패 (모듈 없음) |
 | C450-002 | #450 | db6bbd5 | 보안 지적 수정 | CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패 |
 | C450-003 | #450 | db6bbd5 | 고객 등록의 보관 409를 문서화하고 시험한다 | OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패 |
 | C450-010 | #450 | 1b33c58, 4e083bc | main의 _send_batches는 넘길 때 head와 같은 코드이고, build_body_text가 properties 원문을 그대로 이어 붙여 봉투 하나를 만든다. csvio.py는 빈 칸을 빈 문자열로 읽고 예측 단계는 문제를 표시만 한 채 그 | csvdemo.test_send_cmd.test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다: 실패 (세 행 모두 rejected) |
@@ -203,9 +214,24 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-451-01 | #451 | 4f705cd | main에서도 고객 등록 응답(이름, billing_email)을 idempotent_request.response_body에 기한 없이 저장한다. 지우는 코드가 없고 created_at 열을 읽는 곳도 없어서, 넘길 때 head와 같은 상태로 남아  | OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 (설명 없음) |
 | D-186 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | X-038 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| D-176 | #451 | c198bc1, 9d2a57f | main의 RoutedEventDetail은 넘길 때 head와 한 글자도 다르지 않고, 이 파일을 바꾼 커밋은 #451(f53222e7) 하나뿐이라 고쳐지지 않았다. 드로어를 늘 isOpen으로 그리고, 닫기와 Esc는 router.replace로  | list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 (일반 a 태그, 포커스 복귀 없음) |
+| D-185 | #451 | d81a162, 9d2a57f | main에서도 globals.css 124행과 153행이 '.workspace-field input'을 자손 선택자로 걸어서, ResourceSearchControls 107행에서 .workspace-field 안에 놓인 MonthPicker(antd | auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px) |
+| X-037 | #451 | d81a162, 9d2a57f | 원인은 D-185와 같습니다. main의 globals.css 124행과 153행에 있는 '.workspace-field input' 자손 규칙이 MonthPicker 안쪽 input에 min-height 44px를 넣어서 조회 기간 칸이 약 60px | auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px) |
+| D-001 | #451 | e373a55 | main의 globals.css 311행에 .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }가 그대로 남아 있다. 이 줄은 #443(be67d816) | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-025 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary가 display: flex를 걸어 summary의 기본 list-item 표시를 덮어쓰므로 펼침 삼각형이 사라진다. 이 줄은 #443( | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-047 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행이 .resource-advanced summary를 flex로 바꿔 기본 펼침 삼각형이 그려지지 않는다. 이벤트 화면의 .event-advanced summary(254행)는 disp | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-067 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }가 남아 있어 ::marker 삼 | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-133 | #451 | e373a55 | 지적 위치는 ResourceSearchControls.tsx 113행이지만 원인은 D-001과 같은 globals.css 311행의 display: flex다. main의 113~114행 summary에는 글자만 있고 펼침 아이콘이 없으며, CSS가  | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-147 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행이 summary를 flex로 바꿔 브라우저 기본 펼침 표시가 없어진다. 같은 패턴인 이벤트 화면은 254행 규칙만 받아 삼각형이 남는다. 이 줄은 #443 이후 바뀌지 않았다. 화면  | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-177 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary가 display: flex라 Chromium에서 ::marker가 그려지지 않는다. 수집 로그는 display를 바꾸지 않아 삼각형이  | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| X-023 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행이 남아 있어 /customers의 summary는 flex, /events의 summary는 기본 list-item이 된다. .audit-summary(286~289행)는 마커를 지운 | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| X-039 | #451 | 809c459, d967c92 | main에서도 ResourceSearchControls의 '조건 적용' 버튼이 type="primary"로 남아 있다. 고객 화면의 '고객 등록'은 ActionPanel 트리거인데 ActionPanel은 default와 link만 고를 수 있어, /c | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| X-053 | #451 | a2a9125, 9d2a57f | main에서도 조회 조건 폼의 apply()는 최소 금액이 최대 금액보다 크거나 확정 시각 시작이 종료보다 늦어도 막지 않고 그대로 주소를 바꾼다. 서버 SearchParameters가 이 경우 400을 던지고, InvoicesSection은 Erro | resource-query.test.mjs reversed amount and finalized time ranges are caught before the request: 실패 (export 없음) |
 | Ck3-451-03 | #451 | cdb63ae | 모르는 자원의 월 목록을 거부한다 | WorkspaceQueryIntegrationTest.모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다: 실패 Expecting code to raise a throwable |
 | Ck3-451-04 | #451 | d7f3266 | CSV 처리를 global 도우미로 모은다(결정) | 없음(EventExportIntegrationTest, WorkspaceQueryIntegrationTest CSV 시험: 통과(동작 변화 없음)) |
 | Ck3-451-05 | #451 | 4f63c98 | 고객과 미터 응답의 보조 생성자를 지운다 | 없음(컴파일, OpenApiDocumentTest: 통과, openapi.yaml 변화 없음) |
+| D-139 | #451 | 46b9621, 9d2a57f | main에서도 고객 검색 함수가 넘길 때 head와 한 글자도 다르지 않아 지적이 그대로 남아 있다. 서버 액션은 백엔드가 잠깐 응답하지 않으면 requireSession이 401/403이 아닌 실패에서 예외를 던지므로 클라이언트 쪽 await가 re | workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 (추가 요청) |
+| X-106 | #451 | 46b9621, 9d2a57f | main의 CustomerFilter.tsx는 넘길 때 head(17cc788)와 한 글자도 다르지 않고, 마지막으로 바꾼 커밋도 #451(f53222e7)이라 이후 squash나 후속 PR에서 고쳐지지 않았다. 78행 onSearch가 searchC | workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 (추가 요청) |
 | D-062 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
 | D-144 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
 | X-096 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
@@ -213,12 +239,34 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-072 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | D-135 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | D-160 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| D-116 | #451 | f4080ce | #451(f53222e7)이 수집 로그 표 머리글만 '전송 ID', '발생 시각 (KST)', '수신 시각 (KST)', '이벤트 유형'으로 바꿨고, 상세 서랍은 그대로 두었다. main의 서랍은 넘길 때 head(17cc788)와 같은 코드라 아직  | list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 (영어 키 라벨) |
+| D-199 | #451 | f4080ce | D-116과 원인이 같다. #451이 표 머리글은 한국어로 바꾸고 서랍에는 '수집 요청', '전송 주체' 같은 한국어 라벨을 더했지만, 기존 transaction_id, type, occurred_at, received_at 라벨은 영어 키로 남겼다. | list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 (영어 키 라벨) |
+| D-242 | #451 | 809c459, d967c92 | main(af15d7f5)에서 git grep을 돌려 보면 넘길 때 head(17cc788)와 같은 문구가 그대로 남아 있어, 어느 squash에서도 고쳐지지 않았다. 목록 조건을 제출하는 같은 동작이 세 갈래로 나뉜다. ResourceSearchCo | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| D-112 | #451 | 4a2e1c5 | #451(f53222e7)이 미터 목록 capabilities를 q: true, sort: true로 바꿔서 main에서 rows는 서버가 검색어로 걸러 준 현재 페이지다. 검색 결과가 없으면 visibleRows가 곧 rows라서 rows.lengt | list-copy.test.mjs the meter search empty state counts all meters and the sort note follows the applied sort: 실패 (행 수 기준) |
+| D-124 | #451 | c198bc1, 9d2a57f | main의 EventsTable.tsx 114행 모바일 레코드는 아직 Next Link가 아닌 그냥 <a href={detailHref(row)}>이고, 클릭 처리도 없다. 그래서 휴대폰 폭(globals.css 218행에서 data-mobile-re | list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 (일반 a 태그, 포커스 복귀 없음) |
+| D-134 | #451 | d81a162, 9d2a57f | main의 ResourceSearchControls 107행도 MonthPicker를 div.workspace-field 안에 두기 때문에 globals.css 153행의 min-height 44px가 DatePicker 안쪽 input에 걸립니다.  | auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px) |
+| D-159 | #451 | d81a162, 9d2a57f | 원인은 D-185와 같습니다. main globals.css 153행의 '.workspace-field input' min-height 44px가 DatePicker 안쪽 input에도 걸려서 월 선택 칸이 약 60px로 커집니다. 지적은 antd S | auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px) |
+| D-201 | #451 | e373a55 | D-001과 원인이 같다. main의 globals.css 311행 display: flex 때문에 .resource-advanced summary의 기본 펼침 화살표가 없어진다. 이벤트 화면 .event-advanced(254행)는 화살표가 남아 같 | auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex) |
+| D-203 | #451 | 809c459, d967c92 | 필터 적용과 초기화 부분은 D-263과 원인이 같고 main에서도 남아 있다. 이벤트 화면 안에서도 같은 초기화 주소를 필터 줄은 '필터 초기화', 빈 결과 안내는 '검색 조건 초기화'로 부르고, 감사 기록은 '조건 초기화'다. 모달 보조 버튼 부분은 | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| D-263 | #451 | 809c459, d967c92 | main에서도 조회 조건을 제출하는 버튼 문구가 화면마다 다르다. 목록 화면은 '조건 적용', 이벤트는 '이 조건으로 조회', 감사 기록은 '조건으로 조회', 단가 이력은 '이력 조건 적용', 월 선택은 '조회', 진단과 거절 화면은 '진단 조회'와  | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| D-013 | #451 | 809c459, d967c92 | 앞부분(필터 제출이 primary라 화면에 primary가 둘)은 main에 그대로 남아 있고 X-039와 원인이 같아 그 수정으로 함께 풀린다. 남는 뒷부분은 같은 동작의 이름이 화면마다 다르다는 지적인데, main에서도 제출은 '조건 적용', '이 | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| D-073 | #451 | 809c459, d967c92 | X-039와 원인이 같다. main의 ResourceSearchControls.tsx:124 '조건 적용'이 아직 primary라 청구 화면에는 되돌릴 수 없는 '월 전체 확정'과 채운 버튼이 둘 나오고, 요금 설계도 '단가 버전 등록'과 함께 pri | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| D-161 | #451 | 809c459, d967c92 | X-039와 원인이 같다. main에서 '조건 적용'은 여전히 type="primary"이고 ActionPanel 트리거는 default나 link만 되므로, 고객 목록에서 생성 동작보다 필터 버튼이 더 강하게 보인다. 청구 화면에는 InvoiceFi | auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary) |
+| X-082 | #451 | 8cefcf3 | 고객 검색칸의 라벨은 '이름 또는 외부 ID로 찾기'인데 같은 줄의 placeholder는 '이름, 외부 ID, 청구 이메일'이고, 백엔드 검색 SQL도 청구 이메일까지 LIKE로 찾는다. 라벨은 #447에서 들어왔고 청구 이메일 검색은 #451에서  | auth.contract.spec.ts the customer search names every searched field and fits its hint on a phone: 실패 (새 라벨 없음) |
+| D-243 | #451 | 1ffe52a | 화면마다 방식이 다른 것 자체는 의도한 설계다. 고객, 미터, 가격처럼 조건이 여럿인 목록은 README 목록 조회 절과 폼 위 안내 문구에 맞춰 '조건 적용'으로 한꺼번에 제출한다. 실화면 시험도 이 세 화면에서는 select만 바꿔서는 이동하지 않 | list-copy.test.mjs the meter screen shows the same submit-based archive filter while loading or failing: 실패 (링크 묶음) |
 | C451-003 | #451 | 3c7aae1, 46cb5c9 | 인보이스 검색이 고객과 월 조건을 조회에 넘긴다 | WorkspaceQueryIntegrationTest.인보이스_검색은_고객과_월_조건을_조회에_넘긴다: 실패 Argument(s) are different |
 | C451-004 | #451 | fafcdc0 | 개요 금액 집계를 상태별로 시험한다 | 없음(DashboardIntegrationTest: 통과; 수납액에서 취소액을 빼지 않는 변이: 실패) |
+| D-132 | #451 | 57e66ed | 반박하려고 고객 0곳을 따로 다루는 54행 분기와 백엔드 응답을 봤지만, /v1/usage/search는 summary를 항상 보내고 customer_count는 필터를 거친 뒤의 고객 수(filtered.size())라서 고객이 하나도 없는 환경에서 | usage-empty-kind.test.mjs usage empty states lead to registration instead of a filter reset when nothing exists yet: 실패 (모듈 없음) |
 | Nk3-009 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
+| X-035 | #451 | 2bff105 | main에서도 사용량 화면은 ScreenHeader, 조회 조건과 사용량 표를 담은 ScreenCard 순서로 그리고, UsageQuality(수집 확인과 정정)를 ScreenCard 뒤 맨 끝에 붙인다(page.tsx:83). 넘길 때 head 17 | usage-quality.test.mjs the usage screen shows ingestion exceptions above the long usage table: 실패 (표 아래) |
 | C451-006 | #451 | 01d7cbd, 921d9d0 | 조회 경로와 겹치는 미터 code를 거절한다 | BillableMetricServiceTest.조회_경로와_겹치는_code의_미터는_만들지_않는다: 실패 Expecting code to raise a throwable |
 | C451-009 | #451 | 3c7aae1 | 금액 범위 시험이 합계 기준을 가린다 | 없음(금액 필터를 공급가액으로 바꾼 변이: 실패 expected: 1 but was: 0; WorkspaceQueryIntegrationTest: 통과) |
 | C451-010 | #451 | d6653bf | main에서도 createCustomer는 external_id가 있을 때만 재시도를 켠다(meter-engine-client.ts 169행). 서버 설명대로 external_id를 빼면 매번 새 고객이 생기고 SDK는 Idempotency-Key를  | 변이(재시도 조건 true): external_id 없는 createCustomer는 실패해도 다시 보내지 않는다: 실패 확인 |
+| D-113 | #451 | cf7c788 | main에서도 인보이스 화면의 수납 상태 태그가 unpaid를 '미납', paid를 '납부 완료'로 보여 주고, 인보이스 목록의 수납 상태 필터 옵션도 같은 이름을 쓴다. 반면 수납과 취소 화면(/payments, /payments/{id})은 #44 | invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 (따로 적은 이름) |
+| D-118 | #451 | 836eba7 | main에서도 청구 예정액과 인보이스 표 하단 라벨은 그대로 '합계'(모바일은 '공급가액 합계', '세금 포함 합계')이고, 넘길 때 head 17cc788과 main 사이에 이 네 파일은 바뀐 것이 없다. 표에 넣는 값은 서버 summary 금액으로 | list-copy.test.mjs paged tables name their totals as totals of the whole filtered set: 실패 (합계 라벨) |
+| D-143 | #451 | 8ead910 | 반박으로 고객 행의 이 칸에 '집계 라인 N줄'이 보여 정렬 결과가 화면 값과 맞는다는 점을 봤지만, 헤더 이름은 '집계 수량'이고 정렬 기준은 어디에도 드러나지 않는다. main에서 사용량 목록은 서버 정렬(sort true)이라 헤더를 누르면 so | list-copy.test.mjs the usage quantity header and sort option say they sort by aggregated line count: 실패 (툴팁과 라벨 없음) |
+| D-156 | #451 | cf7c788 | main에서도 인보이스 목록의 수납 상태 태그가 color 없이 렌더되어 결제 실패, 결제 전, 수납 완료가 모두 같은 기본 회색이다. 같은 수납 상태를 보이는 수납 목록은 WorkspaceView.tsx:33 규칙으로 paid는 초록, failed는 | invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 (따로 적은 이름) |
+| D-231 | #451 | 9c8de96 | main의 고객 화면 숫자 줄은 넘길 때 head와 한 글자도 다르지 않고, #451 뒤에 이 파일을 바꾼 main 커밋이 없다. 백엔드는 total에 보관 조건과 검색어를 적용하고 total_unfiltered에는 조직과 환경의 전체 건수(보관 포함 | customer-count.test.mjs the customer count names its scope and only mentions a search when there is one: 실패 (모듈 없음) |
 | G-111 | #451 | 4e6ebc7 | main에도 지적이 그대로 남아 있다. 결제 취소는 Idempotency-Key를 UUID로만 받고 충돌하면 payment_cancellation_idempotency_conflict를 돌려주며 재생 헤더가 없다. 고객과 미터 생성이 쓰는 Idempo | OpenApiDocumentTest.결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다: 실패 (400 설명에 Idempotency-Key 없음) |
 | G-118 | #451 | e79f63e | 가격 검색이 그 달에 청구하는 미터만 센다(결정: status 뜻 유지) | WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 actual ["restored", "retired"] |
 | G-121 | #451 | 6198c5d | 빈 검색 CSV도 같은 열 제목을 쓴다 | WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 but was "empty_result" |
@@ -227,6 +275,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-126 | #451 | 3568cc3, d904aaf | CSV 내보내기 원본 속성 합계를 32MB로 묶는다 | EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 expected: 400 but was: 200 |
 | Nk3-008 | #451 | c93b2d3 | 개요 미수금 정의를 적는다(결정: 이름과 값 유지) | 없음(OpenApiDocumentTest: 통과, 설명과 DashboardService, WorkspaceQueryService 대조) |
 | Nk3-010 | #451 | ec1bc7f | main에서도 WorkspaceQueryController에는 @ApiResponse가 하나도 없고, OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 검색, 내보내기의 400 validation_err | OpenApiDocumentTest 새 시험 6개: 실패 (400, 404, 409 응답과 재생 헤더 없음, CSV format byte) |
+| X-071 | #451 | 2d5a733 | main에서도 사용량 화면(usage/page.tsx:43)의 탭 줄은 '사용량 | 수집 로그 | 청구 검토로 이동', 수집 로그 화면(events/page.tsx:41)의 탭 줄은 '월별 사용량 | 수집 로그 | 서버 연동 설정'으로 갈라져 있고,  | list-copy.test.mjs usage and event screens drop the mismatched sub-tab rows and keep their cross links in the content: 실패 (탭 줄) |
+| X-083 | #451 | 836eba7 | main의 InvoicesSection.tsx는 넘길 때 head(17cc788)와 한 글자도 다르지 않아 고쳐지지 않았다. #451이 앞에 넣은 65행 분기가 검색, 고객, 미터, 수납 상태, 금액, 기간, 결제 모드 조건을 모두 먼저 받기 때문에  | list-copy.test.mjs an empty invoice month points to the draft amounts instead of a reset that changes nothing: 실패 (필터 초기화 링크) |
 | Ck1-454-01 | #454 | 0428493, 52a27da | main의 Caddyfile은 두 log 블록(9~11줄, 48~50줄)에 같은 정규식을 세 줄씩 복사해 두었고, RequestLogFilter는 같은 경로 목록을 다른 정규식으로 따로 들고 있다. 넘길 때 head(dac784b)와 main 사이에  | test_logging.test_variant_paths_do_not_leak_tokens_into_logs: 실패 (인코딩 경로의 토큰이 로그에 남음) |
 | Ck1-454-02 | #454 | 2c62eb1 | main의 운영 compose는 백엔드에 호출 제한 설정 가운데 ENABLED와 TRUSTED_PROXIES 두 개만 넘기고, 로그인과 가입의 한도 넷과 창 둘은 넘기지 않는다. deploy.sh는 Parameter Store 값을 모두 env 파일에 | test_trusted_proxies.test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default: 실패 (LOGIN_IP_LIMIT 등 누락) |
 | Ck1-454-04 | #454 | 8453b90 | main의 서비스는 한도 확인보다 먼저 매 요청마다 cleanExpired 트랜잭션과 consume 트랜잭션을 따로 열고, 429는 consume가 끝난 뒤에야 던진다. consume의 upsert는 이미 한도를 넘어 attempts가 limit+1로 | AuthRequestRateLimitIntegrationTest.이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다: 실패 (카운터 행 xmin이 바뀜) |

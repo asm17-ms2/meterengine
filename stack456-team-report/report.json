@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T21:21:06+09:00",
+  "updated_at": "2026-10-29T22:40:13+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5812,8 +5812,8 @@
       "id": "D-115",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 InvoicesTable.tsx를 보면 데스크톱 인보이스 행은 인보이스 번호(153행)와 수납 화면으로 가는 '수납과 고객 조회 링크'(155행)를 보여 준다. 같은 groups를 그리는 모바일 카드(228행)에는 고객명, 금액, 월과 확정 시각, 수납 상태와 취소액, 계산 내역만 있고 번호와 링크가 없다. globals.css 203행의 767px 이하 미디어 쿼리 안 217행이 .data-desktop-table을 숨기므로 휴대폰에서는 번호와 링크를 볼 길이 전혀 없다. 넘길 때 head c27b229(147-148행, 221행)부터 있던 누락이고, 뒤의 #449는 데스크톱 링크만, #451은 모바일에 수납 상태 문단만 더해서 main까지 그대로 남았다. 틀렸다고 보려고 수납과 취소 목록에서 고객을 다시 찾아 같은 /payments/<id>로 갈 수 있는지도 봤다. 그렇게 갈 수는 있지만 같은 데이터를 그리는 두 화면이 서로 다른 정보를 보이는 문제는 그대로 남는다. 번호를 보여 주기만 하므로 번호 생성 규칙(Q10)은 건드리지 않는다.",
       "evidence": [
@@ -5823,24 +5823,33 @@
         "frontend/src/app/globals.css:203 @ af15d7f5",
         "frontend/src/app/globals.css:217 @ af15d7f5",
         "frontend/src/components/invoices/InvoicesTable.tsx:147-148 @ c27b229",
-        "frontend/src/components/invoices/InvoicesTable.tsx:221 @ c27b229"
+        "frontend/src/components/invoices/InvoicesTable.tsx:221 @ c27b229",
+        "list-copy.test.mjs mobile invoice cards show the invoice number and the same payment link as the desktop table: 실패 (모바일 카드에 없음)",
+        "커밋 99c34fff"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "99c34fff725a1ca39dfb1832ebf984535fe8330e"
+      ],
+      "tests": [
+        "lint, tsc, build, test:e2e:contract 69개 통과",
+        "list-copy.test.mjs mobile invoice cards show the invoice number and the same payment link as the desktop table: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-142",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 UsageTable.tsx 164행 모바일 카드는 넘길 때 head(c27b229 162행)와 같은 블록이 그대로 남아 있다. kind가 meter인 항목의 차원 행 라벨은 모두 '차원별 집계값'으로 고정되고, 행을 가르는 차원 값은 숫자 아래 p.field-hint로만 붙는다. meter-items.ts 29-38행상 meter는 조합이 둘 이상일 때만 생기므로 같은 라벨이 늘 두 줄 이상 반복된다. 반박하려고 간격 규칙을 봤으나 globals.css 228행 .data-mobile-line은 margin 14px 0이고 32행 p는 margin-top 0이라 힌트가 자기 행과 다음 행 사이 비슷한 거리에 놓이며 들여쓰기나 묶음 선도 없다. 같은 파일의 데스크톱 표는 124행에서 중첩 행 라벨을 비우고 135행에서 차원 값을 같은 행 조합 열에 그려 짝이 분명하므로, 같은 정보 표시가 두 곳에서 갈라져 있다. 이 블록은 #446에서 들어왔고 #451은 sortKey만 더해 이 줄을 건드리지 않았으며, /usage 모바일 카드를 단정하는 시험도 없다.",
       "evidence": [
@@ -5848,17 +5857,26 @@
         "frontend/src/components/usage/UsageTable.tsx:124,135 @ af15d7f5",
         "frontend/src/lib/meter-items.ts:29-38 @ af15d7f5",
         "frontend/src/app/globals.css:32,39,228 @ af15d7f5",
-        "frontend/src/components/usage/UsageTable.tsx:162 @ c27b229"
+        "frontend/src/components/usage/UsageTable.tsx:162 @ c27b229",
+        "list-copy.test.mjs mobile usage cards label each dimension row with its dimension values under one group heading: 실패 (같은 라벨 반복)",
+        "커밋 d419f7ac"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d419f7acd8e2752f47def5617f0a25333235c9e7"
+      ],
+      "tests": [
+        "tsc, lint, build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs mobile usage cards label each dimension row with its dimension values under one group heading: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-146",
@@ -6143,8 +6161,8 @@
         "D-155"
       ],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "반박을 시도했지만 main에서 막는 줄을 찾지 못했다. ExpandControls는 화면 폭과 관계없이 두 버튼을 그리고 CollapseProvider의 mode만 바꾸는데, 이 상태를 읽는 곳은 데스크톱 Table의 expandedRowKeys를 만드는 useExpandedRowKeys뿐이다. globals.css의 767px 이하 규칙은 데스크톱 표를 숨기고 모바일 카드를 보이며, 청구와 인보이스 카드의 계산 내역은 상태와 연결되지 않은 비제어 details이고 사용량 카드에는 접을 요소가 없다. FilterBar와 CSS 어디에도 모바일에서 ExpandControls를 숨기는 규칙이 없고 billing, invoices, usage 페이지가 모두 이를 렌더하므로 휴대폰에서 두 버튼을 눌러도 보이는 화면이 바뀌지 않는다. ExpandControls.tsx는 넘길 때 head c27b229와 main이 글자까지 같아 스택 squash와 후속 PR 어디에서도 고쳐지지 않았다. 묶인 D-114, D-155도 원인이 같아 같은 판정이다.",
       "evidence": [
@@ -6161,21 +6179,30 @@
         "frontend/src/app/(console)/invoices/page.tsx:47 @ af15d7f5",
         "frontend/src/app/(console)/usage/page.tsx:57 @ af15d7f5",
         "frontend/src/components/billing/BillingExpandControls.tsx:14 @ af15d7f5",
-        "frontend/src/components/screen/ErrorAlert.tsx:20-21 @ af15d7f5"
+        "frontend/src/components/screen/ErrorAlert.tsx:20-21 @ af15d7f5",
+        "auth.contract.spec.ts phones do not show expand-all controls that only act on the desktop table: 실패 (Received: 1)",
+        "커밋 3f801236"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "3f801236b1d25277ba67d3a8c67c876ce7c2c5ed"
+      ],
+      "tests": [
+        "build, test:e2e:contract 70개 통과",
+        "auth.contract.spec.ts phones do not show expand-all controls that only act on the desktop table: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ErrorAlert.tsx:20-21: 같은 md 경계 판별 방식",
         "git show c27b229:frontend/src/components/table/ExpandControls.tsx 와 af15d7f5 내용 동일"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-052",
@@ -6277,8 +6304,8 @@
       "id": "X-102",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 CustomerLabel.tsx 8행은 여전히 이름과 UUID를 <Typography.Text ellipsis> 한 줄로 감싸고 tooltip이나 title을 주지 않는다. 설치된 antd 6.6.7은 ellipsis가 true면 useTooltipProps가 title undefined를 돌려 EllipsisTooltip이 Tooltip 없이 자식만 그리고, CSS 말줄임일 때는 aria-label도 붙이지 않는다. 세 표(BillingTable, UsageTable, InvoicesTable)의 고객 셀도 따로 title이나 Tooltip을 두지 않아, 데스크톱에서 잘린 이름과 구분용 UUID를 확인할 길이 없다. 반박 근거로 767px 이하 모바일 카드는 이름 전체를 보여 주지만 ID는 없고 데스크톱 표와는 무관하다. 이 파일의 마지막 변경은 스택 이전 511d6117이고 #442~#455 squash 어느 것도 고치지 않았다. 한 파일 한 줄 수정이라 결정이 필요한 범위가 아니다.",
       "evidence": [
@@ -6287,21 +6314,30 @@
         "frontend/src/components/usage/UsageTable.tsx:111,118 @ af15d7f5",
         "frontend/src/components/invoices/InvoicesTable.tsx:149 @ af15d7f5",
         "frontend/src/components/screen/CustomerFilter.tsx:84 @ af15d7f5",
-        "frontend/package.json:19 @ af15d7f5"
+        "frontend/package.json:19 @ af15d7f5",
+        "list-copy.test.mjs a truncated customer label offers the full name and id: 실패 (툴팁 없음)",
+        "커밋 625706da"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "625706da858fbe1930b35385be2da09e395a2bd9"
+      ],
+      "tests": [
+        "build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs a truncated customer label offers the full name and id: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- frontend/src/components/table/CustomerLabel.tsx: 511d6117 하나뿐(스택 이전)",
         "frontend/package.json:19: antd 6.6.7); node_modules/antd/lib/typography/hooks/useTooltipProps.js는 tooltip이 undefined면 title undefined, lib/typography/Base/EllipsisTooltip.js는 title이 없으면 Tooltip 없이 children만 반환"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "C447-011",
@@ -7249,8 +7285,8 @@
       "id": "D-193",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 이벤트 매핑 진단 표는 넘길 때 head와 똑같이 8개 열을 그리고, '확인할 내용' 열이 '문제' 바로 뒤에 있다. #451과 #453이 이 파일을 고쳤지만 열 목록은 바뀌지 않았다. 표는 scroll x를 max-content로 두고 첫 열 고정이나 말줄임이 없으며, 칸 너비 상한은 360px뿐이라 긴 안내 문장이 가장 넓은 열이 된다. 1440px에서 쓸 수 있는 폭은 사이드바 228px, 본문 여백 38px 두 번, 패널 여백 26px 두 번을 빼면 약 1080px라 뒤쪽 '수량 속성'과 '발생 시각'이 가로 스크롤로 밀릴 가능성이 크다. 실제로 얼마나 밀리는지는 화면을 찍어 확인해야 한다.",
       "evidence": [
@@ -7258,17 +7294,23 @@
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157 @ af15d7f5",
         "frontend/src/components/workspace/WorkspaceView.tsx:63-64 @ af15d7f5",
         "frontend/src/app/globals.css:195 @ af15d7f5",
-        "frontend/src/app/globals.css:96 @ af15d7f5"
+        "frontend/src/app/globals.css:96 @ af15d7f5",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음)",
+        "커밋 f3afea41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f3afea41f0d63b642102bdcf33d79f5f7e2fa56d"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:49: '확인할 내용' 열이 8개 열 중 셋째에 남아 있다",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: hint는 reason만 보고 정하는 고정 문장 셋",
@@ -7276,7 +7318,10 @@
         "frontend/src/app/globals.css:195: 칸 너비 상한 360px만 있다",
         "frontend/src/app/globals.css:96: , frontend/src/app/globals.css:118 @ af15d7f5, frontend/src/app/globals.css:121 @ af15d7f5 (1440px에서 표 폭 약 1080px",
         "git log af15d7f5 -- event-issues/page.tsx: ec13ca29(#450), f53222e7(#451), 94a48a20(#453). 열 목록은 #450 이후 그대로"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "G-116",
@@ -7904,8 +7949,8 @@
       "id": "D-076",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "action_hint는 백엔드가 reason 하나만 보고 고르는 고정 문장 세 개라서, 바로 옆 '문제' 열이 같으면 '확인할 내용'도 항상 같은 문장이다. main의 표는 이 열을 그대로 두어 같은 문장을 줄마다 되풀이한다. 두 코드 줄(프런트 REASONS 라벨과 백엔드 hint switch)이 같은 reason 값에 일대일로 묶여 있어 열 하나가 새 정보를 주지 않는다는 점은 코드로 바로 보인다. 이 열 때문에 1440px에서 '발생 시각'이 가로 스크롤로 밀리는지는 화면 캡처로 확인해야 한다. 열만 화면에서 빼면 되고 DTO의 action_hint 필드는 그대로라 공개 이름을 바꾸지 않는다.",
       "evidence": [
@@ -7913,61 +7958,79 @@
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157 @ af15d7f5",
         "frontend/src/app/(console)/event-issues/page.tsx:49 @ af15d7f5",
         "frontend/src/components/workspace/WorkspaceView.tsx:63 @ af15d7f5",
-        "frontend/src/app/globals.css:195 @ af15d7f5"
+        "frontend/src/app/globals.css:195 @ af15d7f5",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음)",
+        "커밋 f3afea41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f3afea41f0d63b642102bdcf33d79f5f7e2fa56d"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:16: REASONS: reason마다 라벨 하나",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: 같은 reason마다 고정 hint 하나",
         "frontend/src/app/(console)/event-issues/page.tsx:49: '문제'와 '확인할 내용'을 나란히 그린다",
         "frontend/src/components/workspace/WorkspaceView.tsx:63: scroll x max-content"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-092",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-076과 원인이 같다. reason으로 정해지는 고정 hint 문장을 '확인할 내용' 열로 줄마다 되풀이해 표 폭을 키운다. 덧붙인 지적인 요약 문장 이름도 main에 남아 있다. 46행 요약은 '미터 없음, 수량 확인, 단가 없음'이라 쓰고, 16행 REASONS 라벨(필터와 '문제' 열에 쓰는 이름)은 '연결할 미터 없음, 집계할 수량 확인 필요, 적용 단가 없음'이다. 같은 문제 종류를 한 화면에서 두 이름으로 부르는 것이라 naming.md '같은 개념에 같은 낱말' 원칙과 어긋난다. 열이 밀리는 정도는 화면 캡처로 확인해야 한다.",
       "evidence": [
         "frontend/src/app/(console)/event-issues/page.tsx:49 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157 @ af15d7f5",
         "frontend/src/app/(console)/event-issues/page.tsx:46 @ af15d7f5",
-        "frontend/src/app/(console)/event-issues/page.tsx:16 @ af15d7f5"
+        "frontend/src/app/(console)/event-issues/page.tsx:16 @ af15d7f5",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 (모듈 없음)",
+        "커밋 f3afea41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f3afea41f0d63b642102bdcf33d79f5f7e2fa56d"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "event-issue-hints.test.mjs each issue reason's hint is shown once in order of first appearance: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:49: '확인할 내용' 열",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: reason별 고정 hint",
         "frontend/src/app/(console)/event-issues/page.tsx:46: 요약: 미터 없음, 수량 확인, 단가 없음",
         "frontend/src/app/(console)/event-issues/page.tsx:16: REASONS: 연결할 미터 없음, 집계할 수량 확인 필요, 적용 단가 없음",
         "docs/contributing/naming.md '원칙' 절 @ af15d7f5 (같은 개념에 같은 낱말)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-056",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 이벤트 매핑 진단 화면은 행마다 action_hint로 '미터를 정의하거나', '단가를 등록하세요'라고 안내하지만, 표에서 링크가 걸린 곳은 원본 이벤트(/events)로 가는 전송 ID 열 하나뿐이다. 요약 줄과 미래 이벤트, 음수 조합 경고 문단에도 미터, 요금, 이벤트 화면으로 가는 링크가 없다. #451과 #453이 이 파일을 고쳤지만 고객 필터와 환경 입력만 바꿨고 이 부분은 넘길 때 head와 같다. 같은 저장소의 개요 화면은 '단가를 등록해야 청구액에 포함됩니다' 옆에 검토 링크를, 가격 화면은 '미터를 먼저 등록하세요' 옆에 미터 화면 링크를 두므로 등록 안내에 링크를 붙이는 방식이 이 화면에서만 갈라져 있다. 요금 화면은 metric 쿼리로 미터를 미리 고를 수 있어 이동할 곳도 이미 있다. 감사 기록 안내 줄(D-222, X-064, Q3)은 건드리지 않고 고칠 수 있다.",
       "evidence": [
@@ -7978,17 +8041,23 @@
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:156 @ af15d7f5",
         "frontend/src/app/(console)/overview/page.tsx:31 @ af15d7f5",
         "frontend/src/components/billable-metric-prices/BillableMetricPricesScreen.tsx:93 @ af15d7f5",
-        "frontend/src/app/(console)/pricing/page.tsx:32 @ af15d7f5"
+        "frontend/src/app/(console)/pricing/page.tsx:32 @ af15d7f5",
+        "event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 (링크 없음)",
+        "커밋 f3afea41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f3afea41f0d63b642102bdcf33d79f5f7e2fa56d"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:46: 요약 줄에 미터 없음, 단가 없음 건수만 있고 조치 링크 없음",
         "frontend/src/app/(console)/event-issues/page.tsx:47: 미래 이벤트, 음수 조합 경고에 확인할 곳 링크 없음",
@@ -7999,14 +8068,17 @@
         "frontend/src/components/billable-metric-prices/BillableMetricPricesScreen.tsx:93: 미터 등록 안내에 LinkButton href=/billable-metrics를 붙임",
         "frontend/src/app/(console)/pricing/page.tsx:32: 요금 화면이 metric 쿼리로 미터를 미리 고를 수 있음",
         "git log af15d7f5 -- event-issues/: ec13ca29(#450) 도입, f53222e7(#451)와 94a48a20(#453)은 필터와 환경 입력만 바꿈"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-100",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 이벤트 매핑 진단 화면은 미래 이벤트 건수와 음수 이벤트-미터 조합 건수를 보여 준 뒤 '위 문제 건수와 별도로 확인합니다'로 끝나고, 어디서 확인하는지 링크가 없다. 같은 개념을 보여 주는 사용량 화면의 UsageQuality는 미래 시각 이벤트에 /events?month= '시각 확인', 음수 수량에 /billing?month= '청구 검토' 링크를 건수가 0보다 클 때 붙인다. 두 화면이 같은 안내를 다르게 처리해 갈라져 있고, 음수 조합 목록은 실제로 청구 검토 화면(BillingSection)에만 있어 이 화면만 보고는 다음 행동을 알 수 없다. #450에서 들어온 문구가 #451, #453을 거쳐도 그대로 남아 있어 이미 고쳐진 것이 아니다. 고칠 줄은 47행 한 곳이고, 53행의 감사 기록 안내(D-222, X-064, Q3)는 건드리지 않는다.",
       "evidence": [
@@ -8014,17 +8086,23 @@
         "frontend/src/components/workspace/UsageQuality.tsx:14 @ af15d7f5",
         "frontend/src/components/workspace/UsageQuality.tsx:15 @ af15d7f5",
         "frontend/src/components/workspace/UsageQuality.tsx:19 @ af15d7f5",
-        "frontend/src/components/billing/BillingSection.tsx:108 @ af15d7f5"
+        "frontend/src/components/billing/BillingSection.tsx:108 @ af15d7f5",
+        "event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 (링크 없음)",
+        "커밋 f3afea41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f3afea41f0d63b642102bdcf33d79f5f7e2fa56d"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "event-issue-hints.test.mjs the diagnosis table drops the repeated hint column and links to where each problem is fixed: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:47: 미래 이벤트, 음수 조합 건수 뒤에 '별도로 확인합니다'만 있고 링크 없음",
         "frontend/src/components/workspace/UsageQuality.tsx:14: 미래 시각 이벤트에 /events?month= '시각 확인' 링크",
@@ -8032,14 +8110,17 @@
         "frontend/src/components/workspace/UsageQuality.tsx:19: count > 0일 때만 링크 표시",
         "frontend/src/components/billing/BillingSection.tsx:108: 음수 집계 조합 목록은 청구 검토 화면에 있음",
         "git log af15d7f5 -- event-issues/page.tsx: ec13ca29(#450), f53222e7(#451), 94a48a20(#453) 모두 47행 문구를 바꾸지 않음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-099",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 ID 입력란의 안내가 placeholder 한 줄뿐이라, 값을 넣으면 사라지고 UUID 형식이라는 말도 없습니다. 원문의 실패 시나리오는 조금 다릅니다. 고객명을 넣으면 0건이 아니라 백엔드가 customer_id를 UUID로 받기 때문에 400이 나고, 화면에는 어느 칸이 틀렸는지 없이 '요청 값이 올바르지 않습니다'만 뜹니다. 바로 옆 수집 로그 화면의 검색칸은 고객명으로도 찾을 수 있어서, 운영자가 여기서도 이름을 넣을 만합니다. 다른 입력란은 설명 문장을 라벨 아래 small.field-hint로 두고 placeholder에는 형식 예시만 넣는데, 이 칸만 다르게 되어 있습니다. #453에서 이 파일을 고쳤지만 이 줄은 그대로라 아직 고쳐지지 않았습니다. 데스크톱에서 잘리는지는 입력란 폭에 달려 있어 화면 캡처로 확인해야 합니다.",
       "evidence": [
@@ -8050,17 +8131,23 @@
         "frontend/src/components/auth/InvitationForm.tsx:17 @ af15d7f5",
         "frontend/src/components/auth/CreateOperatorButton.tsx:75 @ af15d7f5",
         "frontend/src/components/events/EventFilters.tsx:169 @ af15d7f5",
-        "frontend/src/app/globals.css:124 @ af15d7f5"
+        "frontend/src/app/globals.css:124 @ af15d7f5",
+        "list-copy.test.mjs the rejection search keeps its customer id guidance visible below the field: 실패 (placeholder 안내)",
+        "커밋 08fd6a37"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "08fd6a37db04bc7c50f236ed50f1b3555a4b5281"
+      ],
+      "tests": [
+        "lint, build 통과",
+        "list-copy.test.mjs the rejection search keeps its customer id guidance visible below the field: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-rejections/page.tsx:30: 안내가 placeholder에만 있고 UUID 형식 언급이 없음",
         "backend/src/main/java/com/meterengine/event/controller/EventRejectionController.java:44: customer_id를 UUID 타입으로 받음, UUID가 아니면 형식 불일치 400",
@@ -8070,7 +8157,10 @@
         "frontend/src/components/auth/CreateOperatorButton.tsx:75: 같은 방식의 small.field-hint",
         "frontend/src/components/events/EventFilters.tsx:169: 옆 화면 검색칸은 고객명 검색을 허용",
         "frontend/src/app/globals.css:124: flex-wrap 줄 안 label 폭에 맞춘 input width 100%, 긴 placeholder가 잘릴 수 있음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "G-182",
@@ -8447,8 +8537,8 @@
       "id": "D-254",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 UsageQuality의 '미터와 연결되지 않은 유형' 링크는 /billable-metrics로, '집계할 수 없는 속성' 링크는 /events?month로만 간다. 넘길 때 head와 줄 내용이 같고, #451은 import 한 줄만 바꿨다. 이벤트 매핑 진단 화면은 이미 reason과 month를 받아 걸러 보여 주고, 백엔드의 두 사유 정의(미터 없는 유형, 수량 속성 형식 오류)도 unbilled-events와 같은 조건이라 바로 걸러진 목록으로 보낼 수 있다. 사용량 화면은 UsageQuality를 표와 페이지네이션이 든 ScreenCard 뒤에 두어 예외 안내가 표 아래에 있다. 개요의 '단가 없는 사용량' 링크는 /billing 청구 검토가 같은 단위('단가 없는 조합')를 보여 주므로 고칠 대상에서 뺀다. 미래 시각과 음수 수량은 매핑 진단에 사유가 없어 지금 링크를 둔다.",
       "evidence": [
@@ -8459,17 +8549,23 @@
         "frontend/src/app/(console)/event-issues/page.tsx:22,25 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:89-94 @ af15d7f5",
         "frontend/src/app/(console)/usage/page.tsx:52-83 @ af15d7f5",
-        "frontend/src/components/billing/BillingSection.tsx:107 @ af15d7f5"
+        "frontend/src/components/billing/BillingSection.tsx:107 @ af15d7f5",
+        "usage-quality.test.mjs ingestion exceptions link to the diagnosis filtered by their reason and month: 실패 (모듈 없음)",
+        "커밋 2bff105f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "2bff105f01c12deb19c9b9755f0e0fb3cec23ec8"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "usage-quality.test.mjs ingestion exceptions link to the diagnosis filtered by their reason and month: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/workspace/UsageQuality.tsx:12: href \"/billable-metrics\", 사유 필터 없음",
         "frontend/src/components/workspace/UsageQuality.tsx:13: href `/events?month=${data.month}`, 사유 필터 없음",
@@ -8479,7 +8575,10 @@
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:89-94: 와 backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:30,48 @ af15d7f5 (두 사유 조건이 같음",
         "frontend/src/app/(console)/usage/page.tsx:52-83: ScreenCard 표 뒤 83행에 UsageQuality",
         "frontend/src/components/billing/BillingSection.tsx:107: 와 frontend/src/app/(console)/overview/page.tsx:31 @ af15d7f5 (개요 '단가 없는 사용량 N개 조합'과 청구 검토 '단가 없는 조합'이 같은 단위라 개요 링크는 제외"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "C450-002",
@@ -8898,8 +8997,8 @@
       "id": "D-176",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 RoutedEventDetail은 넘길 때 head와 한 글자도 다르지 않고, 이 파일을 바꾼 커밋은 #451(f53222e7) 하나뿐이라 고쳐지지 않았다. 드로어를 늘 isOpen으로 그리고, 닫기와 Esc는 router.replace로 transaction_id만 지운다. 그러면 events/page.tsx 44행의 SelectedEvent가 통째로 빠져 Drawer가 열린 채 언마운트되고, 닫힘 뒤 포커스를 되돌리는 경로가 돌지 않는다. 앱 쪽에도 행 링크로 포커스를 되돌리는 코드가 없다(focus 호출 grep 결과는 ActionPanel과 ResourceSearchControls뿐이다). 같은 앱의 ActionPanel은 닫을 때 트리거로 포커스를 되돌리고 auth.contract.spec.ts 105행 시험이 이를 지키므로, 이벤트 상세만 규칙에서 벗어난 것이 코드로 보인다. events.real.spec.ts의 닫기 단계도 URL과 목록만 보고 포커스는 확인하지 않는다.",
       "evidence": [
@@ -8909,17 +9008,28 @@
         "frontend/src/components/events/EventDetailDrawer.tsx:37 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:159 @ af15d7f5",
         "frontend/e2e/auth.contract.spec.ts:105 @ af15d7f5",
-        "frontend/e2e/events.real.spec.ts:308 @ af15d7f5"
+        "frontend/e2e/events.real.spec.ts:308 @ af15d7f5",
+        "list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 (일반 a 태그, 포커스 복귀 없음)",
+        "list-copy.test.mjs mobile event links ...(리뷰 반영, 모바일 data-transaction-id): 실패",
+        "커밋 c198bc1b",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "c198bc1b2f0e343fa4d095d167d46ac89c74bbc8",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "lint, tsc, build, test:e2e:contract 70개 통과",
+        "단위 99개 통과",
+        "list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 확인 뒤 통과",
+        "list-copy.test.mjs mobile event links ...(리뷰 반영, 모바일 data-transaction-id): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/RoutedEventDetail.tsx:12: isOpen 고정, onClose는 router.replace로 transaction_id 삭제만 한다",
         "frontend/src/app/(console)/events/page.tsx:44: transactionId가 없어지면 SelectedEvent와 드로어가 언마운트된다",
@@ -8929,14 +9039,17 @@
         "frontend/e2e/auth.contract.spec.ts:105: 닫으면 트리거로 포커스가 돌아와야 한다는 기존 시험",
         "frontend/e2e/events.real.spec.ts:308: 닫기 뒤 포커스를 확인하지 않는다",
         "git show 17cc788:frontend/src/components/events/RoutedEventDetail.tsx 와 main이 같다, git log af15d7f5 -- RoutedEventDetail.tsx 는 f53222e7 하나뿐이다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-185",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 globals.css 124행과 153행이 '.workspace-field input'을 자손 선택자로 걸어서, ResourceSearchControls 107행에서 .workspace-field 안에 놓인 MonthPicker(antd DatePicker)의 안쪽 input에 min-height 44px가 들어갑니다. antd 6.6.7의 DatePicker 스타일은 안쪽 input의 padding, border, height만 덮어쓰고 min-height는 정하지 않아서 44px가 그대로 남습니다. 여기에 바깥 picker의 위아래 padding 7px와 테두리가 더해져 약 60px가 됩니다. 옆의 antd Select는 AppProviders 17행의 controlHeight 38을 따르고, 네이티브 검색칸과 select는 44px라서 한 줄에 세 가지 높이가 섞입니다. main의 squash 커밋 가운데 이 규칙을 바꾼 것은 없습니다. #443이 더한 125행 align-items: flex-start는 윗선만 맞추고 높이 차이는 그대로 둡니다. 화면 지적이라 캡처로 마지막 확인이 필요합니다.",
       "evidence": [
@@ -8947,17 +9060,28 @@
         "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:110 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:111 @ af15d7f5",
-        "frontend/src/app/globals.css:125 @ af15d7f5"
+        "frontend/src/app/globals.css:125 @ af15d7f5",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px)",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 (x=-208)",
+        "커밋 d81a1626",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d81a16268aad3979ee50c3807517d98c38462523",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 67개 통과",
+        "test:e2e:contract 71개 통과",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 확인 뒤 통과",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:124: .workspace-field input, textarea, select 자손 선택자에 padding 10px 12px, width 100%",
         "frontend/src/app/globals.css:153: .workspace-field input ... { min-height: 44px }",
@@ -8968,14 +9092,17 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:111: 네이티브 검색 input, 44px",
         "frontend/src/app/globals.css:125: align-items: flex-start로 윗선만 맞춤",
         "frontend/node_modules/antd/es/date-picker/style/index.js:106-121 (antd 6.6.7, 안쪽 input에 height auto, padding 0, border 0만 두고 min-height는 없음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-037",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "원인은 D-185와 같습니다. main의 globals.css 124행과 153행에 있는 '.workspace-field input' 자손 규칙이 MonthPicker 안쪽 input에 min-height 44px를 넣어서 조회 기간 칸이 약 60px가 됩니다. antd Select는 AppProviders 17행의 controlHeight 38, 네이티브 input과 select는 44px라서 같은 조회 줄에 세 가지 높이가 남습니다. main의 squash 커밋은 이 규칙을 바꾸지 않았고, 125행 align-items: flex-start는 윗선만 맞춥니다. 모바일에서 필드 폭이 들쭉날쭉하다는 부분은 제목인 높이 문제와 원인이 달라서 이번 수정 계획에 넣지 않았습니다. 화면 지적이라 캡처로 마지막 확인이 필요합니다.",
       "evidence": [
@@ -8985,17 +9112,28 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:109 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:111 @ af15d7f5",
-        "frontend/src/app/globals.css:125 @ af15d7f5"
+        "frontend/src/app/globals.css:125 @ af15d7f5",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px)",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 (x=-208)",
+        "커밋 d81a1626",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d81a16268aad3979ee50c3807517d98c38462523",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 67개 통과",
+        "test:e2e:contract 71개 통과",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 확인 뒤 통과",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:124: 자손 선택자로 antd 안쪽 input까지 걸림",
         "frontend/src/app/globals.css:153: min-height: 44px",
@@ -9004,14 +9142,17 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:109: 고객 CustomerFilter Select",
         "frontend/src/components/screen/ResourceSearchControls.tsx:111: 네이티브 검색 input",
         "frontend/src/app/globals.css:125: align-items: flex-start"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-001",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 globals.css 311행에 .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }가 그대로 남아 있다. 이 줄은 #443(be67d816)에서 들어온 뒤 af15d7f5까지 바뀐 적이 없다. display를 flex로 바꾸면 summary가 list-item이 아니게 되어 Chromium과 Firefox에서 펼침 삼각형(::marker)이 그려지지 않는다. 같은 event-advanced를 쓰는 수집 로그(EventFilters.tsx:171)는 display를 건드리지 않아 삼각형이 보이고, 감사 기록(.audit-summary)은 기본 표시를 끄는 대신 ::before 화살표를 그렸지만 resource-advanced에는 대체 표시가 없다. 같은 컨트롤이 두 곳에서 갈라져 있어 근거가 눈으로 확인된다. 실제로 보이는 모양은 화면 캡처로 마지막 확인이 필요하다.",
       "evidence": [
@@ -9020,17 +9161,23 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:114 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
         "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5",
-        "frontend/src/app/globals.css:286-289 @ af15d7f5"
+        "frontend/src/app/globals.css:286-289 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:311: .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113: <details className=\"event-advanced resource-advanced\">",
@@ -9039,181 +9186,247 @@
         "frontend/src/components/events/EventFilters.tsx:171: 수집 로그는 event-advanced만 사용",
         "frontend/src/app/globals.css:286-289: .audit-summary는 마커를 끄고 ::before 화살표와 [open] 회전으로 대체",
         "git log -L311,311 globals.css af15d7f5: be67d816(#443) 한 번뿐, 이후 수정 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-025",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary가 display: flex를 걸어 summary의 기본 list-item 표시를 덮어쓰므로 펼침 삼각형이 사라진다. 이 줄은 #443(be67d816) 뒤로 바뀌지 않았다. 수집 로그의 .event-advanced summary(254행)는 삼각형이 남고, 감사 기록 .audit-summary(286~289행)는 ::before 화살표로 대신하지만 여기는 대체 표시가 없다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/app/globals.css:286-289 @ af15d7f5"
+        "frontend/src/app/globals.css:286-289 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-047",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행이 .resource-advanced summary를 flex로 바꿔 기본 펼침 삼각형이 그려지지 않는다. 이벤트 화면의 .event-advanced summary(254행)는 display를 건드리지 않아 삼각형이 남아 화면끼리 모양이 갈린다. 이 줄은 #443 이후 바뀌지 않아 main에서도 그대로다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5"
+        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-067",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }가 남아 있어 ::marker 삼각형이 사라진다. 수집 로그는 같은 event-advanced인데 resource-advanced가 없어 삼각형이 보이므로 화면마다 모양이 다르다. 이 줄은 #443(be67d816)에서 들어와 main까지 바뀌지 않았다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/app/globals.css:286-289 @ af15d7f5"
+        "frontend/src/app/globals.css:286-289 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-133",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적 위치는 ResourceSearchControls.tsx 113행이지만 원인은 D-001과 같은 globals.css 311행의 display: flex다. main의 113~114행 summary에는 글자만 있고 펼침 아이콘이 없으며, CSS가 기본 삼각형을 없앤다. 수집 로그의 event-advanced summary(254행)는 기본 삼각형을 유지해 대비된다. 이 CSS 줄은 #443 이후 바뀌지 않았다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
         "frontend/src/app/globals.css:311 @ af15d7f5",
-        "frontend/src/app/globals.css:254 @ af15d7f5"
+        "frontend/src/app/globals.css:254 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-147",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행이 summary를 flex로 바꿔 브라우저 기본 펼침 표시가 없어진다. 같은 패턴인 이벤트 화면은 254행 규칙만 받아 삼각형이 남는다. 이 줄은 #443 이후 바뀌지 않았다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5"
+        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-177",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행 .resource-advanced summary가 display: flex라 Chromium에서 ::marker가 그려지지 않는다. 수집 로그는 display를 바꾸지 않아 삼각형이 보이므로 같은 컨트롤이 화면마다 다르다. 이 줄은 #443(be67d816) 이후 main까지 그대로다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5"
+        "frontend/src/components/events/EventFilters.tsx:171 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-023",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행이 남아 있어 /customers의 summary는 flex, /events의 summary는 기본 list-item이 된다. .audit-summary(286~289행)는 마커를 지운 대신 화살표를 그렸지만 resource-advanced에는 대체 표시가 없다. 지적이 덧붙인 summary 문구 보강은 지적 밖이라 수정 계획에 넣지 않는다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-123 @ af15d7f5",
         "frontend/src/app/globals.css:254 @ af15d7f5",
-        "frontend/src/app/globals.css:286-289 @ af15d7f5"
+        "frontend/src/app/globals.css:286-289 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-039",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 ResourceSearchControls의 '조건 적용' 버튼이 type=\"primary\"로 남아 있다. 고객 화면의 '고객 등록'은 ActionPanel 트리거인데 ActionPanel은 default와 link만 고를 수 있어, /customers에서 채운 버튼은 필터 적용 하나뿐이다. 청구 화면은 '월 전체 확정'과 같은 필터 컴포넌트가 함께 나와 primary가 둘이고, 미터와 요금 설계도 등록 버튼과 필터 버튼이 둘 다 primary다. 같은 역할의 필터 제출 버튼이 감사, 이벤트 매핑 진단, 수집 거절, 요금 이력에서는 default라 파일마다 무게가 갈린다. 필터 제출 두 곳을 default로 내리면 거꾸로 된 위계와 primary 두 개가 함께 풀린다. 화면 캡처로 마지막 확인이 필요하다.",
       "evidence": [
@@ -9226,17 +9439,26 @@
         "frontend/src/components/billing/InvoiceFinalizeButton.tsx:18 @ af15d7f5",
         "frontend/src/app/(console)/billing/page.tsx:106 @ af15d7f5",
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:65 @ af15d7f5",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:175 @ af15d7f5"
+        "frontend/src/components/pricing/PricingWorkspace.tsx:175 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: <Button type=\"primary\" htmlType=\"submit\">조건 적용</Button>",
         "frontend/src/components/events/EventFilters.tsx:182: 이 조건으로 조회도 type=\"primary\"",
@@ -9249,14 +9471,17 @@
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:65: 미터 등록 primary) + :74 (ResourceSearchControls",
         "frontend/src/components/pricing/PricingWorkspace.tsx:175: 단가 버전 등록 primary) + :63 (ResourceSearchControls",
         "갈라진 필터 제출 default: frontend/src/components/workspace/AuditScreen.tsx:54, frontend/src/app/(console)/event-issues/page.tsx:43, frontend/src/app/(console)/event-rejections/page.tsx:33, frontend/src/components/pricing/PricingWorkspace.tsx:106 @ af15d7f5"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-053",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 조회 조건 폼의 apply()는 최소 금액이 최대 금액보다 크거나 확정 시각 시작이 종료보다 늦어도 막지 않고 그대로 주소를 바꾼다. 서버 SearchParameters가 이 경우 400을 던지고, InvoicesSection은 ErrorState로 '인보이스를 불러오지 못했습니다'와 '(400)' 접미사, 같은 주소를 새로 고치기만 하는 '다시 시도' 주 버튼을 띄운다. 금액이나 시각 조건만 바꾼 경우에는 resetHref도 만들어지지 않아 '필터 초기화'가 나오지 않는다. 수집 로그 필터 EventFilters는 같은 범위 역전을 화면에서 먼저 막아 두 조회 폼의 처리가 갈라져 있다. 막아 주는 클라이언트 검사나 HTML 속성(min, max 연동)은 없어서 반박할 수 없다. 가장 작은 수정은 ResourceSearchControls에서만 범위를 검사하는 것이고, 감사 기록 폼과 ErrorState 문구 변경은 다른 화면, 다른 컴포넌트 일이라 이 수정에서 뺀다.",
       "evidence": [
@@ -9269,17 +9494,30 @@
         "frontend/src/components/invoices/InvoicesSection.tsx:42-60 @ af15d7f5",
         "frontend/src/components/screen/ErrorState.tsx:15-20 @ af15d7f5",
         "frontend/src/components/screen/ErrorAlert.tsx:25 @ af15d7f5",
-        "frontend/src/components/screen/RetryButton.tsx:9 @ af15d7f5"
+        "frontend/src/components/screen/RetryButton.tsx:9 @ af15d7f5",
+        "resource-query.test.mjs reversed amount and finalized time ranges are caught before the request: 실패 (export 없음)",
+        "workspace.contract.spec.ts 격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다: 실패 (alert 없음)",
+        "workspace.contract.spec.ts 격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다(리뷰 반영, 접근 이름): 실패",
+        "커밋 a2a91259",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "a2a9125934b98e96c6627d01be54ae19bc0110a5",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "단위 80개, workspace 계약 해당 시험, test:e2e:contract 68개 통과",
+        "workspace 계약 통과",
+        "resource-query.test.mjs reversed amount and finalized time ranges are caught before the request: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다(리뷰 반영, 접근 이름): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:82-88: apply가 범위 검사 없이 router.push",
         "frontend/src/components/screen/ResourceSearchControls.tsx:118: min_amount, max_amount 입력에 서로 연동되는 검사 없음",
@@ -9292,7 +9530,10 @@
         "frontend/src/components/screen/ErrorAlert.tsx:25: RetryButton 항상 표시",
         "frontend/src/components/screen/RetryButton.tsx:9: router.refresh로 같은 조건 재요청, 같은 400 반복",
         "git log af15d7f5 -- ResourceSearchControls.tsx: f53222e7(#451), 94a48a20(#453)만 있고 apply는 pinned_head 17cc788과 같음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "Ck3-451-02",
@@ -9488,8 +9729,8 @@
       "id": "D-139",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 검색 함수가 넘길 때 head와 한 글자도 다르지 않아 지적이 그대로 남아 있다. 서버 액션은 백엔드가 잠깐 응답하지 않으면 requireSession이 401/403이 아닌 실패에서 예외를 던지므로 클라이언트 쪽 await가 reject되고, try/finally가 없어 setIsSearching(false)가 불리지 않아 스피너와 '조회 중'이 다음 검색이 성공할 때까지 남는다. 응답이 ok:false로 오는 경우에도 searchError만 바꾸고 이전 목록(remoteOptions, 없으면 처음 받은 customers)을 그대로 두는데, 오류 문구는 notFoundContent에만 있어 목록이 비어 있지 않으면 보이지 않는다. filterOption이 false라 입력한 검색어와 무관한 목록이 결과처럼 남는다. 미터 검색(ResourceSearchControls)도 같은 구조라 reject 시 '조회 중'이 멈추지만, 미터는 바깥에 오류 안내 문단이 따로 있어 stale 목록 문제는 고객 쪽보다 약하다. 실패 경로를 다루는 시험은 없다.",
       "evidence": [
@@ -9500,17 +9741,30 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:110 @ af15d7f5",
         "frontend/src/lib/auth/session.ts:21-23 @ af15d7f5",
         "frontend/src/lib/api/client.ts:15 @ af15d7f5",
-        "frontend/src/app/query-options-actions.ts:8 @ af15d7f5"
+        "frontend/src/app/query-options-actions.ts:8 @ af15d7f5",
+        "workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 (추가 요청)",
+        "workspace.contract.spec.ts 격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 않고 실패를 알린다: 실패 (안내 없음)",
+        "workspace.contract.spec.ts 격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다(리뷰 반영): 실패",
+        "커밋 46b96215",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "46b9621500970d220d8800eed62665fba8c16689",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "workspace 계약 해당 시험 통과, test:e2e:contract 68개 통과",
+        "workspace 계약 통과",
+        "workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 않고 실패를 알린다: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:59-62: setIsSearching(true) 뒤 await queryOptionsAction, try/finally 없음",
         "frontend/src/components/screen/CustomerFilter.tsx:64: 실패 시 setSearchError만 하고 remoteOptions 유지",
@@ -9521,14 +9775,17 @@
         "frontend/src/lib/api/client.ts:15: 모든 serverFetch가 requireTenantSession을 거침",
         "frontend/src/app/query-options-actions.ts:8: 예외를 잡지 않고 그대로 전파",
         "git diff 17cc788 af15d7f5 -- frontend/src/components/screen/CustomerFilter.tsx 결과 없음 (main에서 바뀌지 않음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-106",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 CustomerFilter.tsx는 넘길 때 head(17cc788)와 한 글자도 다르지 않고, 마지막으로 바꾼 커밋도 #451(f53222e7)이라 이후 squash나 후속 PR에서 고쳐지지 않았다. 78행 onSearch가 searchCustomers를 바로 연결해 글자 하나마다 queryOptionsAction 서버 액션(/v1/customers/options size=200)이 나가고, 디바운스나 타이머는 없다. 86행 onOpenChange는 열 때마다 빈 검색어로 다시 부르는데, 닫을 때 searchText를 비우므로 열 때 검색어는 늘 빈 문자열이고 이는 ListControlsLoader와 events 페이지가 같은 searchOptions(\"customers\") 결과로 이미 props에 내려준 목록과 같다. 61행 순번 검사는 늦게 온 응답을 버릴 뿐 요청 자체를 줄이지 못하므로, Next 서버 액션이 클라이언트에서 차례로 처리되는 동안 마지막 검색 결과와 같은 화면의 다른 액션이 뒤로 밀리는 경로가 남아 있다. 틀렸다고 볼 근거(디바운스 래퍼, 캐시, 열 때 생략 조건)를 찾았지만 없어서 confirmed로 둔다.",
       "evidence": [
@@ -9538,17 +9795,30 @@
         "frontend/src/app/query-options-actions.ts:6-9 @ af15d7f5",
         "frontend/src/lib/api/search.ts:17-18 @ af15d7f5",
         "frontend/src/components/screen/ListControlsLoader.tsx:18-20 @ af15d7f5",
-        "frontend/src/app/(console)/events/page.tsx:22-23 @ af15d7f5"
+        "frontend/src/app/(console)/events/page.tsx:22-23 @ af15d7f5",
+        "workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 (추가 요청)",
+        "workspace.contract.spec.ts 격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 않고 실패를 알린다: 실패 (안내 없음)",
+        "workspace.contract.spec.ts 격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다(리뷰 반영): 실패",
+        "커밋 46b96215",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "46b9621500970d220d8800eed62665fba8c16689",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "workspace 계약 해당 시험 통과, test:e2e:contract 68개 통과",
+        "workspace 계약 통과",
+        "workspace.contract.spec.ts 격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 않고 실패를 알린다: 실패 확인 뒤 통과",
+        "workspace.contract.spec.ts 격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:78: showSearch onSearch: searchCustomers, 디바운스 없음",
         "frontend/src/components/screen/CustomerFilter.tsx:86: 열 때마다 searchCustomers(searchText.current), 닫을 때 searchText를 비움",
@@ -9558,34 +9828,34 @@
         "frontend/src/components/screen/ListControlsLoader.tsx:18-20: props customers가 같은 빈 검색 결과",
         "frontend/src/app/(console)/events/page.tsx:22-23: events 화면 props도 같은 빈 검색 결과",
         "git diff 17cc788 af15d7f5 -- frontend/src/components/screen/CustomerFilter.tsx 결과 없음, git log 마지막 커밋 f53222e7 (#451)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "C451-007",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
-      "verdict": "confirmed",
-      "reason": "main의 CustomerFilter.tsx는 넘길 때 head(17cc788)와 한 글자도 다르지 않아 고쳐지지 않았다. 필터를 열면 onOpenChange가 닫을 때 비워 둔 검색어로 searchCustomers를 부르고, 결과가 오면 options가 remoteOptions로 통째로 바뀐다. 이 검색은 searchOptions의 size 200으로 앞 200건만 받고, 선택한 고객을 앞에 붙여 주는 처리는 서버에서 처음 옵션을 만드는 loadCustomerOptions와 customerOptions에만 있다. 그래서 URL에 앞 200명 밖의 customer_id가 걸린 채 필터를 한 번 열기만 해도 value에 맞는 옵션이 사라지고, Select는 이름 대신 원시 id를 보여 준다. 화면 표시 지적이라 실제 표시는 화면으로 한 번 확인한다.",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "main에서 재현되지 않는다. 목록 화면을 그릴 때 고른 고객을 따로 읽어 첫 목록에 넣고(customerOptions, loadCustomerOptions), 같은 화면 안에서는 선택 상자가 고른 값의 이름을 기억한다. 회귀 방지 시험을 PR #496에 더했다.",
       "evidence": [
-        "frontend/src/components/screen/CustomerFilter.tsx:86 @ af15d7f5",
-        "frontend/src/components/screen/CustomerFilter.tsx:63 @ af15d7f5",
-        "frontend/src/components/screen/CustomerFilter.tsx:82 @ af15d7f5",
-        "frontend/src/components/screen/CustomerFilter.tsx:85 @ af15d7f5",
-        "frontend/src/lib/api/search.ts:18 @ af15d7f5",
-        "frontend/src/components/screen/ListControlsLoader.tsx:21 @ af15d7f5",
-        "frontend/src/lib/api/search.ts:25 @ af15d7f5"
+        "frontend/src/lib/api/search.ts:21-30 @ af15d7f5",
+        "frontend/src/components/screen/ListControlsLoader.tsx:13-26 @ af15d7f5",
+        "workspace.contract.spec.ts 격리 계약: 검색으로 고른 고객은 필터를 다시 열어도 이름으로 보인다: 통과 (main 코드)"
       ],
       "commits": [],
-      "tests": [],
+      "tests": [
+        "workspace.contract.spec.ts 격리 계약: 검색으로 고른 고객은 필터를 다시 열어도 이름으로 보인다: 통과, 목에서 고른 고객 상세를 빼면 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:86: 열 때마다 searchCustomers(searchText.current), 닫으면 searchText를 비움",
         "frontend/src/components/screen/CustomerFilter.tsx:63: 검색 결과로 remoteOptions를 통째로 교체, 선택한 고객 보존 없음",
@@ -9595,7 +9865,8 @@
         "frontend/src/components/screen/ListControlsLoader.tsx:21: 처음 옵션에만 선택 고객을 unshift",
         "frontend/src/lib/api/search.ts:25: customerOptions도 처음 옵션에만 선택 고객을 붙임",
         "git diff 17cc788 af15d7f5 -- frontend/src/components/screen/CustomerFilter.tsx 결과 없음 (main에서 바뀌지 않음)"
-      ]
+      ],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-062",
@@ -9917,8 +10188,8 @@
       "id": "D-116",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "#451(f53222e7)이 수집 로그 표 머리글만 '전송 ID', '발생 시각 (KST)', '수신 시각 (KST)', '이벤트 유형'으로 바꿨고, 상세 서랍은 그대로 두었다. main의 서랍은 넘길 때 head(17cc788)와 같은 코드라 아직 transaction_id, type, occurred_at, received_at 라벨을 쓴다. 서랍의 occurred_at 값은 formatKstDateTime으로 바꾼 KST 문자열인데 라벨에 시간대가 없다. 바로 아래 원본 JSON은 toRawJson이 API 값을 그대로 넣어 같은 occurred_at 키에 UTC ISO 값이 보인다. 표와 서랍이 같은 row.occurredAt을 다른 이름으로 부르는 두 줄이 있고, naming.md의 '같은 개념에 같은 낱말' 원칙과도 어긋나 confirmed로 본다. 라벨은 화면 문구라 공개 이름 변경이 아니고 서랍 파일 하나만 고치면 된다.",
       "evidence": [
@@ -9929,17 +10200,23 @@
         "frontend/src/components/events/EventsTable.tsx:114 @ af15d7f5",
         "frontend/src/components/events/EventsSection.tsx:68 @ af15d7f5",
         "frontend/src/lib/api/events.ts:64 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 (영어 키 라벨)",
+        "커밋 f4080ce6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f4080ce6fcfdf0982ded50fe128e2e2727bd1227"
+      ],
+      "tests": [
+        "lint, build 통과",
+        "list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventDetailDrawer.tsx:46: label: \"transaction_id\"",
         "frontend/src/components/events/EventDetailDrawer.tsx:54-56: label: \"type\", \"occurred_at\", \"received_at\"",
@@ -9950,14 +10227,17 @@
         "frontend/src/lib/api/events.ts:64: 원본 JSON의 occurred_at은 API 원값, UTC",
         "docs/contributing/naming.md:14: '같은 개념에 같은 낱말'",
         "git show f53222e7 -- frontend/src/components/events/EventsTable.tsx: 표 머리글만 바뀌고 서랍 라벨 줄은 그대로"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-199",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-116과 원인이 같다. #451이 표 머리글은 한국어로 바꾸고 서랍에는 '수집 요청', '전송 주체' 같은 한국어 라벨을 더했지만, 기존 transaction_id, type, occurred_at, received_at 라벨은 영어 키로 남겼다. 그래서 main의 서랍 한 목록 안에 영어 키와 한국어 라벨이 섞여 있고, 같은 값을 표와 서랍이 다른 이름으로 부른다. 시각 라벨에 KST 표기가 없어 서랍 값만 보고는 시간대를 알 수 없다. 앱의 다른 표와 서랍은 모두 한국어 라벨을 써서 이 서랍만 어긋난다. D-116과 같은 한 파일 수정으로 함께 해결된다.",
       "evidence": [
@@ -9966,17 +10246,23 @@
         "frontend/src/components/events/EventDetailDrawer.tsx:57-58 @ af15d7f5",
         "frontend/src/components/events/EventsTable.tsx:58,80,88,93 @ af15d7f5",
         "frontend/src/app/(console)/customers/page.tsx:28 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 (영어 키 라벨)",
+        "커밋 f4080ce6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "f4080ce6fcfdf0982ded50fe128e2e2727bd1227"
+      ],
+      "tests": [
+        "lint, build 통과",
+        "list-copy.test.mjs the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventDetailDrawer.tsx:46: label: \"transaction_id\"",
         "frontend/src/components/events/EventDetailDrawer.tsx:53-56: '고객'과 'type', 'occurred_at', 'received_at'이 한 목록에 섞임",
@@ -9984,14 +10270,17 @@
         "frontend/src/components/events/EventsTable.tsx:58,80,88,93: 같은 값을 '전송 ID', '발생 시각 (KST)', '수신 시각 (KST)', '이벤트 유형'으로 부름",
         "frontend/src/app/(console)/customers/page.tsx:28: 다른 화면은 '등록 시각' 같은 한국어 라벨",
         "docs/contributing/naming.md:14: '같은 개념에 같은 낱말'"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-242",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main(af15d7f5)에서 git grep을 돌려 보면 넘길 때 head(17cc788)와 같은 문구가 그대로 남아 있어, 어느 squash에서도 고쳐지지 않았다. 목록 조건을 제출하는 같은 동작이 세 갈래로 나뉜다. ResourceSearchControls는 primary '조건 적용', 수집 로그 EventFilters는 primary '이 조건으로 조회', 감사 기록 AuditScreen은 흰 .month-apply '조건으로 조회'를 쓴다. 초기화도 EventFilters, EmptyState, ErrorAlert는 '필터 초기화'이고 AuditScreen만 '조건 초기화'다. README:152의 '조건 적용' 규칙은 고객, 미터, 가격, 사용량, 청구, 인보이스만 들고 수집 로그와 감사 기록은 빠져 있어 문서 위반으로 보기는 어렵다. 그래서 같은 코드가 여러 파일에서 갈라진 근거로 confirmed로 판정한다. 공개 이름이나 API는 바뀌지 않는 문구 수정이다. 다만 AuditScreen은 Server Component라 primary 모양을 쓰려면 작은 클라이언트 제출 버튼이 하나 더 필요하다.",
       "evidence": [
@@ -10002,17 +10291,26 @@
         "frontend/src/app/globals.css:134 @ af15d7f5",
         "frontend/src/components/screen/EmptyState.tsx:11 @ af15d7f5",
         "frontend/src/components/screen/ErrorAlert.tsx:27 @ af15d7f5",
-        "frontend/README.md:152 @ af15d7f5"
+        "frontend/README.md:152 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: antd primary '조건 적용'",
         "frontend/src/components/screen/ResourceSearchControls.tsx:102: 안내 '조건 적용을 누르세요'",
@@ -10023,14 +10321,17 @@
         "frontend/src/components/screen/ErrorAlert.tsx:27: '필터 초기화' 고정",
         "frontend/README.md:152: 목록 조건은 '조건 적용'으로 제출, 대상 목록에 수집 로그와 감사 기록은 없음",
         "17cc788과 af15d7f5의 git grep 결과에서 위 문구가 모두 같다(main에서 바뀐 적 없음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-112",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "#451(f53222e7)이 미터 목록 capabilities를 q: true, sort: true로 바꿔서 main에서 rows는 서버가 검색어로 걸러 준 현재 페이지다. 검색 결과가 없으면 visibleRows가 곧 rows라서 rows.length는 항상 0이고, 86행 문구는 늘 '등록된 미터는 0개입니다'가 된다. 서버는 total_unfiltered로 조직과 환경의 전체 미터 수를 이미 돌려주고 PaginationFields 타입에도 그 필드가 있지만, BillableMetricsSection이 total만 넘기고 이 값을 버린다. 100행의 '정렬: 코드 오름차순'도 고정 문구인데, 머리글을 누르면 table-sort가 sort와 order를 URL에 넣어 서버 정렬이 바뀌므로 안내와 실제 순서가 어긋난다. 넘길 때 head 17cc788과 main의 이 파일은 글자까지 같고, 그 뒤 고친 main 커밋이 없다.",
       "evidence": [
@@ -10042,17 +10343,23 @@
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:164 @ af15d7f5",
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:100 @ af15d7f5",
         "frontend/src/components/table/table-sort.ts:128 @ af15d7f5",
-        "frontend/src/components/events/EventsSection.tsx:82 @ af15d7f5"
+        "frontend/src/components/events/EventsSection.tsx:82 @ af15d7f5",
+        "list-copy.test.mjs the meter search empty state counts all meters and the sort note follows the applied sort: 실패 (행 수 기준)",
+        "커밋 4a2e1c5d"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "4a2e1c5d1bc3333ea9c8ef696ed7b92cc1906d54"
+      ],
+      "tests": [
+        "tsc, lint, build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs the meter search empty state counts all meters and the sort note follows the applied sort: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:86: 빈 검색 문구가 rows.length를 개수로 씀",
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:56: capabilities.q이면 visibleRows = rows라 빈 결과일 때 rows.length는 0",
@@ -10064,14 +10371,17 @@
         "frontend/src/components/table/table-sort.ts:128: sort 지원 화면은 머리글 클릭 때 sort, order를 URL로 보내 서버 정렬을 바꿈",
         "frontend/src/components/events/EventsSection.tsx:82: query.sort와 query.order로 정렬 안내를 만드는 기존 방식",
         "git show 17cc788 와 af15d7f5 의 BillableMetricsScreen.tsx diff 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-124",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventsTable.tsx 114행 모바일 레코드는 아직 Next Link가 아닌 그냥 <a href={detailHref(row)}>이고, 클릭 처리도 없다. 그래서 휴대폰 폭(globals.css 218행에서 data-mobile-records가 보이는 폭)에서 이벤트를 열면 브라우저가 문서 전체를 새로 받고 스크롤이 맨 위로 간다. 같은 파일의 데스크톱 링크(64~72행)와 행 클릭(127행)은 openDetail로 router.push(..., { scroll: false })를 써서 목록 위치를 지키므로 두 경로가 갈라져 있다. 화면 전체 어디에도 문서 단위 클릭 가로채기가 없어 이 동작을 막는 줄을 찾지 못했다. 넘길 때 head(17cc788)와 main의 코드가 같고 #451(f53222e7)에서 들어온 뒤 바뀐 적이 없다.",
       "evidence": [
@@ -10079,17 +10389,28 @@
         "frontend/src/components/events/EventsTable.tsx:51 @ af15d7f5",
         "frontend/src/components/events/EventsTable.tsx:64-72 @ af15d7f5",
         "frontend/src/app/globals.css:217-218 @ af15d7f5",
-        "frontend/e2e/events.real.spec.ts:313-330 @ af15d7f5"
+        "frontend/e2e/events.real.spec.ts:313-330 @ af15d7f5",
+        "list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 (일반 a 태그, 포커스 복귀 없음)",
+        "list-copy.test.mjs mobile event links ...(리뷰 반영, 모바일 data-transaction-id): 실패",
+        "커밋 c198bc1b",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "c198bc1b2f0e343fa4d095d167d46ac89c74bbc8",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "lint, tsc, build, test:e2e:contract 70개 통과",
+        "단위 99개 통과",
+        "list-copy.test.mjs mobile event links open the drawer in place and closing it returns focus to the row link: 실패 확인 뒤 통과",
+        "list-copy.test.mjs mobile event links ...(리뷰 반영, 모바일 data-transaction-id): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventsTable.tsx:114: 모바일 레코드가 <a href={detailHref(row)}>로 문서 전체를 다시 받음",
         "frontend/src/components/events/EventsTable.tsx:51: 데스크톱은 router.push(detailHref(row), { scroll: false }",
@@ -10097,14 +10418,17 @@
         "frontend/src/app/globals.css:217-218: 좁은 폭에서 데스크톱 표를 숨기고 모바일 레코드만 보임",
         "git log af15d7f5 -- frontend/src/components/events/EventsTable.tsx: 마지막 변경이 f53222e7(#451), 114행은 이 커밋에서 들어옴",
         "frontend/e2e/events.real.spec.ts:313-330: 390px 단계는 필터만 보고 모바일 상세 열기는 시험하지 않음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-134",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 ResourceSearchControls 107행도 MonthPicker를 div.workspace-field 안에 두기 때문에 globals.css 153행의 min-height 44px가 DatePicker 안쪽 input에 걸립니다. antd 6.6.7은 안쪽 input의 min-height를 정하지 않아서 조회 기간 칸이 약 60px가 됩니다. 옆의 antd Select는 테마 controlHeight 38, 네이티브 검색 input과 select는 44px입니다. 125행 align-items: flex-start 때문에 윗선만 맞고 아랫선이 세 갈래로 어긋난다는 지적 내용이 main 코드와 맞습니다. main의 squash 커밋 중 이 부분을 고친 것은 없습니다. 화면 캡처로 마지막 확인이 필요합니다.",
       "evidence": [
@@ -10114,17 +10438,28 @@
         "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:110 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:112 @ af15d7f5",
-        "frontend/src/app/globals.css:125 @ af15d7f5"
+        "frontend/src/app/globals.css:125 @ af15d7f5",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px)",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 (x=-208)",
+        "커밋 d81a1626",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d81a16268aad3979ee50c3807517d98c38462523",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 67개 통과",
+        "test:e2e:contract 71개 통과",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 확인 뒤 통과",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:107: MonthPicker가 .workspace-field 안에 있음",
         "frontend/src/app/globals.css:153: .workspace-field input { min-height: 44px }",
@@ -10133,14 +10468,17 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:110: antd Select",
         "frontend/src/components/screen/ResourceSearchControls.tsx:112: 네이티브 수납 상태 select",
         "frontend/src/app/globals.css:125: align-items: flex-start"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-159",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "원인은 D-185와 같습니다. main globals.css 153행의 '.workspace-field input' min-height 44px가 DatePicker 안쪽 input에도 걸려서 월 선택 칸이 약 60px로 커집니다. 지적은 antd Select와 Button이 기본값 32px를 따른다고 적었지만, 실제로는 AppProviders 17행의 controlHeight 38을 따릅니다. 숫자는 조금 다르지만 네이티브 44px와 높이가 갈린다는 결론은 같습니다. 인보이스 조회 줄에는 월 선택(약 60), 고객과 미터 Select(38), 수납 상태 select와 검색칸(44), 조건 적용 버튼(38)이 함께 있어서 높이가 섞입니다. main의 squash 커밋은 이 규칙을 바꾸지 않았습니다. 화면 캡처로 마지막 확인이 필요합니다.",
       "evidence": [
@@ -10149,17 +10487,28 @@
         "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:112 @ af15d7f5",
-        "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5"
+        "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 (월 선택기 60px)",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 (x=-208)",
+        "커밋 d81a1626",
+        "커밋 9d2a57f1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d81a16268aad3979ee50c3807517d98c38462523",
+        "9d2a57f1591e457735a591782d2a849e6df1bcdc"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 67개 통과",
+        "test:e2e:contract 71개 통과",
+        "auth.contract.spec.ts filter row controls on a list screen share one height: 실패 확인 뒤 통과",
+        "auth.contract.spec.ts the month picker panel stays inside a phone screen(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:153: min-height: 44px가 자손 input 전체에 걸림",
         "frontend/src/app/globals.css:124: 자손 선택자 input 규칙",
@@ -10167,37 +10516,49 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:107: MonthPicker",
         "frontend/src/components/screen/ResourceSearchControls.tsx:112: 네이티브 수납 상태 select",
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: 조건 적용 antd Button"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-201",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-001과 원인이 같다. main의 globals.css 311행 display: flex 때문에 .resource-advanced summary의 기본 펼침 화살표가 없어진다. 이벤트 화면 .event-advanced(254행)는 화살표가 남아 같은 패턴이 화면마다 다르게 보인다. 이 줄은 #443 이후 바뀌지 않았다. 화면 모양은 캡처로 마지막 확인이 필요하다.",
       "evidence": [
         "frontend/src/app/globals.css:311 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113-114 @ af15d7f5",
-        "frontend/src/app/globals.css:254 @ af15d7f5"
+        "frontend/src/app/globals.css:254 @ af15d7f5",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 (display flex)",
+        "커밋 e373a55c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e373a55c662fd7aef7e8065aca94852f9a0f2910"
+      ],
+      "tests": [
+        "frontend build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts list screens keep the disclosure marker on the advanced filter summary: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-203",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "필터 적용과 초기화 부분은 D-263과 원인이 같고 main에서도 남아 있다. 이벤트 화면 안에서도 같은 초기화 주소를 필터 줄은 '필터 초기화', 빈 결과 안내는 '검색 조건 초기화'로 부르고, 감사 기록은 '조건 초기화'다. 모달 보조 버튼 부분은 실패 경로가 약하다. 미터, 단가, 공용 업무 대화상자 모두 입력이 있으면 버리기 전에 확인 창을 띄워 '닫기'가 입력을 말없이 버리지 않고, ActionPanel은 비밀값이나 결과를 보여 준 뒤에도 같은 버튼을 써서 '닫기'가 맞는 자리라 이 부분은 취향 차이에 가깝다. 남는 필터 문구는 화면 파일 9개 안팎을 한 낱말로 맞춰야 하고 D-263과 제안 낱말이 달라 팀이 정할 일이다.",
       "evidence": [
@@ -10213,17 +10574,26 @@
         "frontend/src/components/workspace/ActionPanel.tsx:98 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:99 @ af15d7f5",
         "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:84 @ af15d7f5",
-        "frontend/README.md:152 @ af15d7f5"
+        "frontend/README.md:152 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): D-013과 같은 결정",
       "decision_question": "조회 조건 제출과 초기화 문구를 '조건 적용'과 '조건 초기화'로 모든 화면에 맞출지 정해 주세요. 모달 보조 버튼의 '취소'와 '닫기'는 지금처럼 단계에 따라 나눠 둘지도 함께 정해 주세요.",
       "evidence_notes": [
         "frontend/src/components/events/EventFilters.tsx:182: '이 조건으로 조회', '필터 초기화'",
@@ -10239,14 +10609,18 @@
         "frontend/src/components/workspace/ActionPanel.tsx:99: 비밀값과 링크를 보여 준 뒤에도 같은 닫기 버튼 사용",
         "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:84: 와 :116 (확정 전 '취소', 결과 뒤 '닫기'로 단계마다 나눔",
         "frontend/README.md:152: 목록 화면은 '조건 적용'"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: D-013과 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-263",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 조회 조건을 제출하는 버튼 문구가 화면마다 다르다. 목록 화면은 '조건 적용', 이벤트는 '이 조건으로 조회', 감사 기록은 '조건으로 조회', 단가 이력은 '이력 조건 적용', 월 선택은 '조회', 진단과 거절 화면은 '진단 조회'와 '거절 기록 조회'다. 넘길 때 head와 main의 ResourceSearchControls 버튼 줄이 같고 다른 화면도 #450, #451 squash 뒤로 바뀐 커밋이 없어 이미 고쳐진 것은 없다. 다만 고치려면 시험을 빼고도 화면 파일 9개 안팎의 문구를 한 낱말로 맞춰야 하고, 이 지적은 '조회'로, D-203은 '조건 적용'으로 맞추자고 해 고를 낱말이 갈린다. frontend README는 목록 화면 제출을 '조건 적용'으로 적어 두었고 모든 문구가 팀 리드가 넣은 화면이라, 화면 전체에 걸 문구 규칙은 팀이 정할 일이다.",
       "evidence": [
@@ -10258,17 +10632,26 @@
         "frontend/src/app/(console)/event-issues/page.tsx:43 @ af15d7f5",
         "frontend/src/app/(console)/event-rejections/page.tsx:33 @ af15d7f5",
         "frontend/README.md:152 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): D-013과 같은 결정. 진단, 거절 화면도 같은 문구로 맞춘다",
       "decision_question": "조회 조건 제출 버튼과 초기화 링크를 모든 화면에서 한 문구(README대로 '조건 적용'과 '조건 초기화', 또는 '조회')로 맞출지, 진단과 거절 화면처럼 대상 이름을 붙인 문구는 예외로 둘지 정해 주세요.",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: '조건 적용'",
@@ -10281,14 +10664,18 @@
         "frontend/README.md:152: 목록 화면은 '조건 적용'으로 제출한다고 적음",
         "docs/contributing/naming.md:14: 같은 개념에 같은 낱말 원칙, 식별자 규칙이라 화면 문구에는 직접 걸리지 않음",
         "git log -S: 문구 모두 1b2c555d, d6072d70, 3446fbe3, ec13ca29, f53222e7(박성종)에서 들어옴"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: D-013과 같은 결정. 진단, 거절 화면도 같은 문구로 맞춘다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-013",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "앞부분(필터 제출이 primary라 화면에 primary가 둘)은 main에 그대로 남아 있고 X-039와 원인이 같아 그 수정으로 함께 풀린다. 남는 뒷부분은 같은 동작의 이름이 화면마다 다르다는 지적인데, main에서도 제출은 '조건 적용', '이 조건으로 조회', '조건으로 조회', '진단 조회', '거절 기록 조회'로, 초기화는 '필터 초기화', '조건 초기화', '검색 조건 초기화'로 갈려 있다. naming.md의 '같은 개념에 같은 낱말' 원칙과 어긋나는 것은 맞다. 다만 고치려면 표준 문구 한 벌을 정하고 화면 파일 7개와 이를 이름으로 찾는 real spec 2개를 함께 바꿔야 해서, 파일 셋 이상에 걸친 화면 전체 문구 기준을 정하는 일이 된다. '진단 조회'처럼 맥락을 담은 이름을 남길지도 함께 정해야 한다.",
       "evidence": [
@@ -10301,17 +10688,26 @@
         "frontend/src/app/(console)/event-issues/page.tsx:43 @ af15d7f5",
         "frontend/src/app/(console)/event-rejections/page.tsx:33 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:106 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): README 152행대로 목록 화면의 제출과 초기화를 '조건 적용'과 '조건 초기화'로 맞춘다. 모달의 '취소'와 '닫기'는 그대로 둔다",
       "decision_question": "필터 제출과 초기화 버튼 이름을 모든 목록 화면에서 '조건 적용'과 '조건 초기화' 한 벌로 맞출지, 맞춘다면 '진단 조회'와 '거절 기록 조회' 같은 맥락 이름도 바꿀지 정한다.",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: 조건 적용, primary",
@@ -10325,14 +10721,18 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:106: 이력 조건 적용",
         "docs/contributing/naming.md:14: 같은 개념에 같은 낱말, 한 대상을 파일마다 다르게 부르지 않는다",
         "frontend/e2e/events.real.spec.ts, frontend/e2e/people.real.spec.ts @ af15d7f5 (버튼 이름으로 찾는 시험)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: README 152행대로 목록 화면의 제출과 초기화를 '조건 적용'과 '조건 초기화'로 맞춘다. 모달의 '취소'와 '닫기'는 그대로 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-073",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "X-039와 원인이 같다. main의 ResourceSearchControls.tsx:124 '조건 적용'이 아직 primary라 청구 화면에는 되돌릴 수 없는 '월 전체 확정'과 채운 버튼이 둘 나오고, 요금 설계도 '단가 버전 등록'과 함께 primary가 둘이다. 고객 목록은 '고객 등록'이 ActionPanel의 default 트리거라 필터 적용이 가장 강조된다. 수집 로그 '이 조건으로 조회'는 primary인데 진단과 거절 조회는 .month-apply default라 같은 역할 버튼의 무게가 파일마다 갈린다. 필터 제출 두 곳을 default로 내리는 같은 수정으로 풀린다. 화면 캡처 확인이 필요하다.",
       "evidence": [
@@ -10342,29 +10742,41 @@
         "frontend/src/app/(console)/event-rejections/page.tsx:33 @ af15d7f5",
         "frontend/src/components/billing/InvoiceFinalizeButton.tsx:18 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:175 @ af15d7f5",
-        "frontend/src/components/workspace/ActionPanel.tsx:163 @ af15d7f5"
+        "frontend/src/components/workspace/ActionPanel.tsx:163 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventFilters.tsx:182: primary",
         "frontend/src/app/(console)/event-issues/page.tsx:43: month-apply default",
         "frontend/src/app/(console)/event-rejections/page.tsx:33: month-apply default"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-161",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "X-039와 원인이 같다. main에서 '조건 적용'은 여전히 type=\"primary\"이고 ActionPanel 트리거는 default나 link만 되므로, 고객 목록에서 생성 동작보다 필터 버튼이 더 강하게 보인다. 청구 화면에는 InvoiceFinalizeButton의 '월 전체 확정'과 필터 버튼이 함께 primary로 나온다. 필터 제출을 default로 내리면 두 문제가 함께 사라진다. ActionPanel에 primary 트리거를 더하는 제안은 여러 화면을 건드리는 별도 작업이라 최소 수정에서 뺀다.",
       "evidence": [
@@ -10373,24 +10785,36 @@
         "frontend/src/components/workspace/ActionPanel.tsx:163 @ af15d7f5",
         "frontend/src/app/(console)/customers/page.tsx:22 @ af15d7f5",
         "frontend/src/components/billing/InvoiceFinalizeButton.tsx:18 @ af15d7f5",
-        "frontend/src/components/screen/ListControlsLoader.tsx:60 @ af15d7f5"
+        "frontend/src/components/screen/ListControlsLoader.tsx:60 @ af15d7f5",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 (ant-btn-primary)",
+        "커밋 809c459a",
+        "커밋 d967c92e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "809c459affe2cc36adfd93d5438e19dc5af35edd",
+        "d967c92ede6ea31a9e7b02a87160ab7dc134b711"
+      ],
+      "tests": [
+        "frontend lint, build, test:e2e:contract 68개, 단위 79개 통과",
+        "events.real.spec.ts 새 안내 문구로 통과",
+        "auth.contract.spec.ts list filters submit with a default 조건 적용 button and reset with 조건 초기화: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-082",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "고객 검색칸의 라벨은 '이름 또는 외부 ID로 찾기'인데 같은 줄의 placeholder는 '이름, 외부 ID, 청구 이메일'이고, 백엔드 검색 SQL도 청구 이메일까지 LIKE로 찾는다. 라벨은 #447에서 들어왔고 청구 이메일 검색은 #451에서 더해졌는데 라벨만 그대로 남았다. 넘길 때 head와 main의 해당 줄이 같아서 main에서 고쳐지지 않았다. 라벨과 실제 검색 대상이 어긋난 두 줄을 눈으로 확인할 수 있어 copy 지적으로 confirmed다. 모바일에서 placeholder가 잘린다는 부분은 검색 field에 최소 폭이나 모바일 100% 규칙이 없다는 것까지는 CSS로 보이지만, 잘림 자체는 화면으로 확인해야 한다.",
       "evidence": [
@@ -10398,17 +10822,23 @@
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:93-95 @ af15d7f5",
         "frontend/src/app/(console)/customers/page.tsx:24 @ af15d7f5",
         "frontend/src/app/globals.css:125 @ af15d7f5",
-        "frontend/e2e/permissions.real.spec.ts:290 @ af15d7f5"
+        "frontend/e2e/permissions.real.spec.ts:290 @ af15d7f5",
+        "auth.contract.spec.ts the customer search names every searched field and fits its hint on a phone: 실패 (새 라벨 없음)",
+        "커밋 8cefcf3c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8cefcf3cd5c4c1cf0920c90bb72dd19e1cd30661"
+      ],
+      "tests": [
+        "frontend build, test:e2e:contract 69개 통과",
+        "auth.contract.spec.ts the customer search names every searched field and fits its hint on a phone: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:111: 라벨 '이름 또는 외부 ID로 찾기', placeholder '이름, 외부 ID, 청구 이메일'",
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:93-95: name, external_id, billing_email 셋을 LIKE로 검색",
@@ -10416,14 +10846,17 @@
         "frontend/src/app/globals.css:125: .workspace-actions는 flex-wrap만 있고 검색 field 최소 폭 규칙 없음",
         "git log -S: 라벨은 d6072d70(#447), billing_email 검색은 f53222e7(#451)에서 들어옴",
         "frontend/e2e/permissions.real.spec.ts:290: , frontend/e2e/query-workspace.real.spec.ts:168,172 @ af15d7f5 (지금 라벨 문자열로 검색칸을 찾음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-243",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "화면마다 방식이 다른 것 자체는 의도한 설계다. 고객, 미터, 가격처럼 조건이 여럿인 목록은 README 목록 조회 절과 폼 위 안내 문구에 맞춰 '조건 적용'으로 한꺼번에 제출한다. 실화면 시험도 이 세 화면에서는 select만 바꿔서는 이동하지 않아야 한다고 정해 두었다. 링크 묶음은 다른 조건 폼이 없는 사용자 관리, 연동, 설정, 카드 목록에만 쓰여서 지적이 제안한 규칙과 이미 같다. 다만 #451은 미터 목록 본문만 ResourceSearchControls의 select로 바꾸었고, 로딩 대기와 오류 때 쓰는 BillableMetricsFrame에는 ListControls의 ArchiveFilter 링크 묶음을 그대로 두었다. 그래서 같은 /billable-metrics 화면에서도 상태에 따라 같은 '관리 상태'가 즉시 이동하는 링크와 제출이 필요한 select로 갈린다. 이 한 곳으로 범위를 좁혀 confirmed로 둔다.",
       "evidence": [
@@ -10439,17 +10872,23 @@
         "frontend/src/components/billable-metrics/BillableMetricsFrame.tsx:23 @ af15d7f5",
         "frontend/src/components/screen/ListControls.tsx:32 @ af15d7f5",
         "frontend/src/components/billable-metrics/BillableMetricsLoading.tsx:14 @ af15d7f5",
-        "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:74 @ af15d7f5"
+        "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:74 @ af15d7f5",
+        "list-copy.test.mjs the meter screen shows the same submit-based archive filter while loading or failing: 실패 (링크 묶음)",
+        "커밋 1ffe52ad"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "1ffe52adf6081db27aa82293c150722b7b1af568"
+      ],
+      "tests": [
+        "tsc, lint, build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs the meter screen shows the same submit-based archive filter while loading or failing: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/README.md:152: 고객, 미터, 가격 등은 함께 선택한 뒤 조건 적용으로 제출한다고 문서화",
         "frontend/src/components/screen/ResourceSearchControls.tsx:102: 조건을 함께 선택한 뒤 조건 적용을 누르라는 안내",
@@ -10465,7 +10904,10 @@
         "frontend/src/components/billable-metrics/BillableMetricsLoading.tsx:14: , frontend/src/components/billable-metrics/BillableMetricsSection.tsx:21 @ af15d7f5 (Suspense 대기와 API 실패 때 이 틀을 씀",
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:74: 정상 상태는 ResourceSearchControls select",
         "f53222e7 (#451)에서 BillableMetricsScreen만 ResourceSearchControls로 바꾸고 ListControls에 ArchiveFilter를 더함"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "C451-002",
@@ -10598,8 +11040,8 @@
       "id": "D-132",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "반박하려고 고객 0곳을 따로 다루는 54행 분기와 백엔드 응답을 봤지만, /v1/usage/search는 summary를 항상 보내고 customer_count는 필터를 거친 뒤의 고객 수(filtered.size())라서 고객이 하나도 없는 환경에서는 필터가 없어도 42행이 먼저 걸린다. 42행은 q, customerId, metricCode를 보지 않고 '조건에 맞는 고객이 없습니다'와 기본 버튼 '필터 초기화'만 보이며, 이 버튼은 같은 빈 조건으로 다시 조회할 뿐이라 고객 등록으로 가는 길이 없다. 47-48행도 metricCode로 걸렀을 때 제목은 '조건에 맞는 미터가 없습니다'인데 본문은 '이 도입사에 등록된 미터가 없어'라고 단정하고, 미터 화면으로 가는 행동이 없다. main의 UsageSection.tsx는 넘길 때 head(17cc788)와 같고 #451 이후 이 파일을 고친 커밋이 없어 그대로 남아 있다. 응답에 이미 total_unfiltered(이 조직과 환경의 전체 고객 수)가 있어 API를 바꾸지 않고 화면에서 나눌 수 있다. 화면 지적이라 고친 뒤 빈 테스트 환경 화면을 찍어 확인해야 한다.",
       "evidence": [
@@ -10610,17 +11052,26 @@
         "frontend/src/components/screen/EmptyState.tsx:11 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:203 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:209 @ af15d7f5",
-        "frontend/src/lib/api/search.ts:9 @ af15d7f5"
+        "frontend/src/lib/api/search.ts:9 @ af15d7f5",
+        "usage-empty-kind.test.mjs usage empty states lead to registration instead of a filter reset when nothing exists yet: 실패 (모듈 없음)",
+        "커밋 57e66edc"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "57e66edc5734153a91f2834e216d49e0b76cae70"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "usage-empty-kind.test.mjs usage empty states lead to registration instead of a filter reset when nothing exists yet: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-190",
@@ -10724,8 +11175,8 @@
         "D-030"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 사용량 화면은 ScreenHeader, 조회 조건과 사용량 표를 담은 ScreenCard 순서로 그리고, UsageQuality(수집 확인과 정정)를 ScreenCard 뒤 맨 끝에 붙인다(page.tsx:83). 넘길 때 head 17cc788의 80행과 같은 줄이고 #451 뒤로 위치를 바꾼 커밋은 없다. 표의 고객 행은 여전히 isCollapsedByDefault: false라 모두 펼쳐지므로 고객과 미터가 많을수록 패널이 더 아래로 밀린다. 반박을 위해 다른 곳에서 먼저 보이는지 봤지만, 개요의 '확인할 항목'은 단가 없는 사용량, 음수 합계, 결제 실패만 보이고 미터와 연결되지 않은 유형, 집계할 수 없는 속성, 미래 시각은 없다. 사이드바의 이벤트 매핑 진단 화면은 따로 있지만 사용량 화면 안에서 경고가 끝에 묻히는 문제는 그대로 남는다. 배치 지적이라 실제 높이는 화면을 찍어 확인해야 한다.",
       "evidence": [
@@ -10735,17 +11186,26 @@
         "frontend/src/app/(console)/overview/page.tsx:31 @ af15d7f5",
         "frontend/src/components/workspace/UsageQuality.tsx:12 @ af15d7f5",
         "frontend/src/components/workspace/UsageQuality.tsx:22 @ af15d7f5",
-        "frontend/src/app/(console)/usage/page.tsx:80 @ 17cc788"
+        "frontend/src/app/(console)/usage/page.tsx:80 @ 17cc788",
+        "usage-quality.test.mjs the usage screen shows ingestion exceptions above the long usage table: 실패 (표 아래)",
+        "커밋 2bff105f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "2bff105f01c12deb19c9b9755f0e0fb3cec23ec8"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "usage-quality.test.mjs the usage screen shows ingestion exceptions above the long usage table: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "C451-006",
@@ -10991,8 +11451,8 @@
       "id": "D-113",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 인보이스 화면의 수납 상태 태그가 unpaid를 '미납', paid를 '납부 완료'로 보여 주고, 인보이스 목록의 수납 상태 필터 옵션도 같은 이름을 쓴다. 반면 수납과 취소 화면(/payments, /payments/{id})은 #445에서 만든 lib/invoice-payment-status.ts 맵을 읽어 '결제 전', '수납 완료'로 보여 준다. 인보이스 행의 '수납과 고객 조회 링크'가 /payments/{id}로 바로 이어지므로 같은 건의 이름이 화면을 넘어가면서 바뀐다. 게다가 #445의 시험(invoice-payment-status.test.mjs)은 '미납', '납부 완료'를 쓰지 않는다는 의도를 이미 적어 두었는데, #451에서 들어온 두 인라인 맵이 그 맵을 쓰지 않아 갈라졌다. InvoicesSection 맵에는 not_required도 없어 0원 인보이스는 코드 원문이 태그에 나온다. 고객 상세와 개요의 '수납 상태' 열이 failed를 WorkspaceView 기본값 '실패'로 보이는 작은 차이도 남지만, 지적의 중심인 인보이스와 수납 화면 사이 불일치는 두 파일만 고치면 풀린다.",
       "evidence": [
@@ -11005,24 +11465,33 @@
         "frontend/src/components/invoices/InvoicesTable.tsx:154 @ af15d7f5",
         "frontend/src/components/invoices/InvoicesTable.tsx:155 @ af15d7f5",
         "frontend/e2e/invoice-payment-status.test.mjs:11 @ af15d7f5",
-        "frontend/src/components/workspace/WorkspaceView.tsx:21 @ af15d7f5"
+        "frontend/src/components/workspace/WorkspaceView.tsx:21 @ af15d7f5",
+        "invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 (따로 적은 이름)",
+        "커밋 cf7c788f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "cf7c788fee7686900eaf2d7be1442a0a05b1b5ae"
+      ],
+      "tests": [
+        "단위 시험, lint, tsc, build, test:e2e:contract 69개 통과",
+        "invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-118",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 청구 예정액과 인보이스 표 하단 라벨은 그대로 '합계'(모바일은 '공급가액 합계', '세금 포함 합계')이고, 넘길 때 head 17cc788과 main 사이에 이 네 파일은 바뀐 것이 없다. 표에 넣는 값은 서버 summary 금액으로, 백엔드가 조건에 맞는 전체 목록(selected)을 더한 뒤 목록만 페이지로 잘라 보낸다. 두 화면 모두 capabilities에서 page가 true이고 기본 페이지 크기가 20이라, 조건에 맞는 고객이나 인보이스가 21개 이상이면 보이는 행을 더한 값과 하단 '합계'가 맞지 않는다. 반박 근거로 표 위 role=status 문단이 '조건 전체 N곳, 예정액 X'를 알려 주지만, 같은 값을 문단은 '조건 전체'로, 표는 '합계'로 다르게 불러 라벨이 현재 페이지 합으로 읽힌다. 금액 자체는 맞으므로 라벨 두 파일만 고치면 된다.",
       "evidence": [
@@ -11036,17 +11505,23 @@
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:268 @ af15d7f5",
         "frontend/src/lib/api/capabilities.ts:23 @ af15d7f5",
         "frontend/src/lib/list-query.ts:6 @ af15d7f5",
-        "frontend/src/components/billing/BillingSection.tsx:107 @ af15d7f5"
+        "frontend/src/components/billing/BillingSection.tsx:107 @ af15d7f5",
+        "list-copy.test.mjs paged tables name their totals as totals of the whole filtered set: 실패 (합계 라벨)",
+        "커밋 836eba7b"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "836eba7bc5289dc26bb9b599b50b0d9ef1991201"
+      ],
+      "tests": [
+        "lint, build, test:e2e:contract 69개 통과",
+        "list-copy.test.mjs paged tables name their totals as totals of the whole filtered set: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/billing/BillingTable.tsx:276: 요약 행 라벨 query.customerId ? \"선택 고객 합계\" : \"합계\"",
         "frontend/src/components/billing/BillingTable.tsx:254: 모바일 라벨 \"공급가액 합계\"",
@@ -11060,7 +11535,10 @@
         "frontend/src/lib/list-query.ts:6: DEFAULT_PAGE_SIZE = 20",
         "frontend/src/components/billing/BillingSection.tsx:107: , frontend/src/components/invoices/InvoicesSection.tsx:87 @ af15d7f5 (같은 값을 '조건 전체'로 부르는 상태 문단, 표 라벨과 어긋남",
         "git diff 17cc788 af15d7f5 -- BillingTable.tsx InvoicesTable.tsx InvoicesSection.tsx BillingSection.tsx 결과 없음 (main에서 고친 커밋 없음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-121",
@@ -11123,8 +11601,8 @@
       "id": "D-143",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "반박으로 고객 행의 이 칸에 '집계 라인 N줄'이 보여 정렬 결과가 화면 값과 맞는다는 점을 봤지만, 헤더 이름은 '집계 수량'이고 정렬 기준은 어디에도 드러나지 않는다. main에서 사용량 목록은 서버 정렬(sort true)이라 헤더를 누르면 sort=line_count가 서버로 가서 고객 전체가 라인 수 순으로 바뀐다. UsageTable.tsx는 넘길 때 head 17cc788 이후 바뀌지 않아 main에서 고쳐지지 않았다. 같은 기준을 상세 조건 정렬은 '미터 라인 수', 요약과 셀은 '집계 라인'으로 불러 naming.md의 '같은 개념에 같은 낱말' 원칙과 어긋난다. 청구 쪽은 정렬 옵션 '청구 라인 수'와 셀 '청구 라인 N줄'이 맞고, 같은 이름의 '집계 수량' 열에는 정렬이 없어 두 화면이 갈라져 있다. 고치려면 한 화면의 문구와 툴팁만 바꾸면 되고 공개 이름이나 서버 계약은 바뀌지 않는다.",
       "evidence": [
@@ -11140,27 +11618,36 @@
         "frontend/src/components/screen/ResourceSearchControls.tsx:38 @ af15d7f5",
         "frontend/src/components/billing/BillingTable.tsx:213 @ af15d7f5",
         "frontend/src/components/billing/BillingTable.tsx:218 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "list-copy.test.mjs the usage quantity header and sort option say they sort by aggregated line count: 실패 (툴팁과 라벨 없음)",
+        "커밋 8ead9105"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8ead9105dc04c63ca416a17c32a212c53bee247b"
+      ],
+      "tests": [
+        "tsc, lint, build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs the usage quantity header and sort option say they sort by aggregated line count: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- frontend/src/components/usage/UsageTable.tsx: 마지막 변경 f53222e7(#451), git diff 17cc788 af15d7f5 에서 이 파일 차이 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-156",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 인보이스 목록의 수납 상태 태그가 color 없이 렌더되어 결제 실패, 결제 전, 수납 완료가 모두 같은 기본 회색이다. 같은 수납 상태를 보이는 수납 목록은 WorkspaceView.tsx:33 규칙으로 paid는 초록, failed는 빨강, pending은 주황으로 칠하고, #445에서 들어온 공용 모듈 lib/invoice-payment-status.ts에도 상태별 색이 이미 정해져 있는데 인보이스 화면만 이 색을 쓰지 않는다. InvoicesSection.tsx:111이 상태 코드를 한국어 글자로 바꿔서 넘기기 때문에 표와 모바일 카드에서는 코드 기준 색을 고를 수 없다. 반박 시도로, 글자로 상태를 읽을 수 있고 수납 상태 필터(ResourceSearchControls.tsx:112)로 실패 건만 고를 수도 있어 정보가 빠지지는 않는다. 그래도 같은 상태가 화면마다 다른 색으로 보이는 어긋남은 두 파일의 코드로 확인되므로 confirmed로 둔다. 넘길 때 head 17cc788과 main의 154행이 같고, #451 뒤 main 커밋에서도 이 줄은 바뀌지 않았다.",
       "evidence": [
@@ -11169,17 +11656,26 @@
         "frontend/src/components/invoices/InvoicesSection.tsx:111 @ af15d7f5",
         "frontend/src/components/workspace/WorkspaceView.tsx:33 @ af15d7f5",
         "frontend/src/lib/invoice-payment-status.ts:1 @ af15d7f5",
-        "frontend/src/app/(console)/payments/page.tsx:21 @ af15d7f5"
+        "frontend/src/app/(console)/payments/page.tsx:21 @ af15d7f5",
+        "invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 (따로 적은 이름)",
+        "커밋 cf7c788f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "cf7c788fee7686900eaf2d7be1442a0a05b1b5ae"
+      ],
+      "tests": [
+        "단위 시험, lint, tsc, build, test:e2e:contract 69개 통과",
+        "invoice-payment-status.test.mjs invoice screens read payment status names and colors from the shared map: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "D-166",
@@ -11218,8 +11714,8 @@
       "id": "D-231",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 고객 화면 숫자 줄은 넘길 때 head와 한 글자도 다르지 않고, #451 뒤에 이 파일을 바꾼 main 커밋이 없다. 백엔드는 total에 보관 조건과 검색어를 적용하고 total_unfiltered에는 조직과 환경의 전체 건수(보관 포함)를 넣는다. 화면 기본 보관 조건이 active라서 검색어 없이 처음 들어와도 보관한 고객 수만큼 두 숫자가 다르게 나오는데, 문구는 이를 '검색 전'이라고 부른다. OpenAPI 설명(현재 조직과 환경의 전체 건수)과 화면 문구(검색 전)가 서로 다른 뜻을 말하므로 문서와 코드가 어긋난 두 줄이 근거가 된다. 반박을 시도했지만 머리글 설명은 검색과 정렬 범위만 말하고 숫자 줄의 뜻을 풀지 않아 막는 줄을 찾지 못했다.",
       "evidence": [
@@ -11231,17 +11727,26 @@
         "frontend/src/lib/list-query.ts:213 @ af15d7f5",
         "frontend/src/lib/list-query.ts:109 @ af15d7f5",
         "backend/openapi.yaml:1989 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:54 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:54 @ af15d7f5",
+        "customer-count.test.mjs the customer count names its scope and only mentions a search when there is one: 실패 (모듈 없음)",
+        "커밋 9c8de965"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "9c8de965bd2df1127f290720ab1c1ae14f33a830"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 70개 통과",
+        "customer-count.test.mjs the customer count names its scope and only mentions a search when there is one: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "G-111",
@@ -11854,8 +12359,8 @@
         "D-259"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 사용량 화면(usage/page.tsx:43)의 탭 줄은 '사용량 | 수집 로그 | 청구 검토로 이동', 수집 로그 화면(events/page.tsx:41)의 탭 줄은 '월별 사용량 | 수집 로그 | 서버 연동 설정'으로 갈라져 있고, 둘 다 제목(ScreenHeader) 위에 놓인다. 탭 이름 '월별 사용량', '서버 연동 설정'은 사이드바 이름 '사용량', 'API 키와 통보'(NavMenu.tsx:13-14)와 다르고, '청구 검토로 이동'은 다른 영역으로 가는 링크인데 탭 모양이다. 반박을 위해 탭만 해 주는 필터 이어 받기가 있는지 봤으나 사이드바도 workspaceHref로 month, customer_id, /events의 from/to를 똑같이 넘겨서 탭만의 기능은 없다. 지적 가운데 수납과 취소 화면의 탭(payments/page.tsx:20에 탭 없음)과 사이드바 하단 링크 이름(ConsoleShell.tsx:72가 'API 키와 통보')은 main에서 이미 사라졌다. 남은 것은 사용량과 수집 로그 두 파일의 탭 줄이라 confirmed로 두고, 묶인 D-077, D-221, D-259도 같은 원인으로 남는다.",
       "evidence": [
@@ -11868,28 +12373,37 @@
         "frontend/src/components/shell/NavMenu.tsx:24 @ af15d7f5",
         "frontend/src/lib/workspace-href.ts:20 @ af15d7f5",
         "frontend/src/app/(console)/payments/page.tsx:20 @ af15d7f5",
-        "frontend/src/components/shell/ConsoleShell.tsx:72 @ af15d7f5"
+        "frontend/src/components/shell/ConsoleShell.tsx:72 @ af15d7f5",
+        "list-copy.test.mjs usage and event screens drop the mismatched sub-tab rows and keep their cross links in the content: 실패 (탭 줄)",
+        "커밋 2d5a7337"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "2d5a7337aaa4545027b89c7fe50cde4291a83890"
+      ],
+      "tests": [
+        "tsc, lint, build, test:e2e:contract 70개 통과",
+        "list-copy.test.mjs usage and event screens drop the mismatched sub-tab rows and keep their cross links in the content: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/payments/page.tsx:20: 탭 없음, 이 부분은 이미 해소",
         "frontend/src/components/shell/ConsoleShell.tsx:72: 하단 링크가 'API 키와 통보', 이 부분은 이미 해소"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-083",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-list-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 InvoicesSection.tsx는 넘길 때 head(17cc788)와 한 글자도 다르지 않아 고쳐지지 않았다. #451이 앞에 넣은 65행 분기가 검색, 고객, 미터, 수납 상태, 금액, 기간, 결제 모드 조건을 모두 먼저 받기 때문에 67행 마지막 빈 상태는 이런 조건이 하나도 없을 때만 닿고, 77행 customerId 분기는 닿지 않는 코드가 됐다. 이때 버튼은 '/invoices'로 가는데 LinkButton은 inheritFilters가 기본 false라 환경과 조직만 붙이고 월은 붙이지 않으며, 월이 없으면 readMonth가 KST 현재 월을 고른다. 그래서 이번 달에 확정 인보이스가 없는 기본 화면에서 '필터 초기화'를 누르면 지금과 같은 주소로 다시 가서 아무것도 바뀌지 않고, 전체 기간에서 0건이면 현재 월로 가도 역시 0건이다. 반박으로 같은 카드의 월 선택과 '데이터가 있는 월'(DataMonths.tsx:9)로 다른 달에 갈 수는 있지만, 화면의 유일한 행동 버튼이 아무 일도 하지 않고 본문이 말하는 청구 예정액 화면 링크도 없다는 점은 코드로 짚힌다.",
       "evidence": [
@@ -11906,17 +12420,26 @@
         "frontend/src/lib/month.ts:34 @ af15d7f5",
         "frontend/src/lib/api/capabilities.ts:24 @ af15d7f5",
         "frontend/src/components/screen/DataMonths.tsx:9 @ af15d7f5",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:100 @ af15d7f5"
+        "frontend/src/components/pricing/PricingWorkspace.tsx:100 @ af15d7f5",
+        "list-copy.test.mjs an empty invoice month points to the draft amounts instead of a reset that changes nothing: 실패 (필터 초기화 링크)",
+        "커밋 836eba7b"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "836eba7bc5289dc26bb9b599b50b0d9ef1991201"
+      ],
+      "tests": [
+        "lint, build, test:e2e:contract 69개 통과",
+        "list-copy.test.mjs an empty invoice month points to the draft amounts instead of a reset that changes nothing: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     {
       "id": "X-092",
@@ -13584,7 +14107,8 @@
       ],
       "fails_without_fix": true,
       "top_head": "main af15d7f5 same",
-      "summary": "environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471)"
+      "summary": "environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471)",
+      "merged": "PR #471이 main 9df2768e로 머지됨"
     },
     {
       "merged_ids": [],
@@ -13618,7 +14142,8 @@
       ],
       "fails_without_fix": true,
       "top_head": "main af15d7f5 same",
-      "summary": "mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471)"
+      "summary": "mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471)",
+      "merged": "PR #471이 main 9df2768e로 머지됨"
     },
     {
       "id": "NT-inho-008",
@@ -13704,6 +14229,60 @@
     }
   ],
   "checks": [
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 main 백엔드(origin/main 9df2768e merge 뒤 environment-cycle, mvp 재실행)",
+      "result": "pass",
+      "detail": "12개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "not-applicable",
+      "detail": "14개 중 12개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "71 passed",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 99, fail 0",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac"
+    },
     {
       "kind": "static",
       "command": "terraform fmt -check -recursive measurements/terraform; rds-auto-stop root init -backend=false, validate, terraform test(mock); ci.yml YAML 파싱과 새 job 단계 로컬 실행",
@@ -17602,6 +18181,11 @@
       "branch": "fix/s456-t-inho-demo-infra",
       "sha": "aac9c3746d7911a03201146f438e3d874d863730",
       "at": "2026-10-29T21:20:17+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-list-screens",
+      "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac",
+      "at": "2026-10-29T22:40:13+09:00"
     }
   ],
   "usage_log": [],
@@ -17653,7 +18237,8 @@
     "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491",
     "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492",
     "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493",
-    "demo-infra": "https://github.com/asm17-ms2/meterengine/pull/495"
+    "demo-infra": "https://github.com/asm17-ms2/meterengine/pull/495",
+    "list-screens": "https://github.com/asm17-ms2/meterengine/pull/496"
   },
   "final_checks": [
     {
