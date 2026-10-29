@@ -648,6 +648,51 @@ class PaymentEnvironmentIntegrationTest {
         .isZero();
   }
 
+  @Test
+  void 대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다() {
+    String retiredSecret = "test_sk_reconciliation_partial_retired";
+    String currentSecret = "test_sk_reconciliation_partial_current";
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    // 같은 DB에 남은 다른 시험의 도입사 실패는 빼고 이 도입사의 실패만 센다.
+    int othersFailed = reconciliation.reconcile(OffsetDateTime.now()).failedCount();
+    Payable test = payable("test");
+    assertThat(putCredential("test", "test", retiredSecret)).hasStatusOk();
+    UUID retiredAttempt = insertAttempt(test, "test", false);
+    OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "reconciled-partial",
+        completed,
+        retiredAttempt);
+    assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
+    when(toss.listTransactions(eq(currentSecret), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Rejected<>(503, "PROVIDER_ERROR", "일시 장애"));
+    when(toss.listTransactions(eq(retiredSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-partial",
+                        "reconciled-partial",
+                        retiredAttempt.toString(),
+                        "DONE",
+                        completed,
+                        1100))));
+
+    PaymentJobResult result = reconciliation.reconcile(OffsetDateTime.now());
+
+    assertThat(result.failedCount() - othersFailed).isEqualTo(1);
+    verify(toss).listTransactions(eq(currentSecret), any(), any(), any(), eq(1000));
+    verify(toss).listTransactions(eq(retiredSecret), any(), any(), isNull(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
+                Integer.class,
+                organizationId))
+        .isZero();
+  }
+
   private UUID insertAttempt(Payable payable, String mode, boolean failed) {
     UUID id = UUID.randomUUID();
     jdbcTemplate.update(
