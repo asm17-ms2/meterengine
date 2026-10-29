@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T16:53:04+09:00",
+  "updated_at": "2026-10-29T17:01:56+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -32,7 +32,8 @@
     "fix/s456-t-yang-e2e": "b78630c",
     "fix/s456-t-yang-env-ui": "b303189",
     "fix/s456-t-yang-backend-cleanup": "6b954c5",
-    "fix/s456-t-yang-demo-web-target": "a34c969"
+    "fix/s456-t-yang-demo-web-target": "a34c969",
+    "fix/s456-t-yang-frontend-cleanup": "395d4b7"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -844,26 +845,37 @@
       "id": "G-050",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 비밀번호 8자와 72바이트 검사, 이름 255자, 이메일 정규식이 admin/actions.ts:26-28, (public)/actions.ts:37-39, 초대 actions.ts:43-44에 따로 복사되어 있고, 같은 규칙인 workspace-actions.ts:40 createMember는 사전 검사 없이 백엔드로 보낸다. 앞선 판정대로 72자 검사 누락과 동의 payload 분기는 실제 동작 차이가 없고(동의는 lib/auth/consents.ts 하나에서 나온다), 갈라진 복사와 createMember 누락만 남는다. 정점 0fe7d2a에서도 같은 줄이 그대로 있어 위층이 고치지 않았다. 분류가 maintainability이고 공용 모듈 하나에 모으려면 새 규칙 모듈과 서버 액션 넷(admin, public, 초대, workspace-actions)을 바꿔야 해서 common-brief 7절의 유지보수 두 파일 상한을 넘으므로 needs-decision으로 둔다. createMember 사전 검사만 따로 떼면 한 파일 수정이라 별도 버그로 고칠 수 있다.",
+      "reason": "결정(머지 뒤 지침): main에서 가입, 운영자 생성, 초대 수락의 세 서버 액션은 비밀번호 8자와 UTF-8 72바이트, 이름 255자, 이메일 검사를 각자 들고 있지만 결과는 아직 같다. 실제로 빈 곳은 계정 직접 생성(createMember)이다. 사전 검사 없이 백엔드로 보내서, 메시지를 지정하지 않은 @Size 검사의 기본 문구가 필드 오류로 그대로 보인다. 규칙을 lib/auth/credentials.ts 한 곳으로 모아 세 액션과 createMember가 함께 쓰게 해 이 빈 곳을 막고, 다음에 규칙을 바꿀 때 사본끼리 갈라지지 않게 한다. 모두 #442에서 들어온 내 영역 코드다.",
       "evidence": [
-        "frontend/src/app/admin/actions.ts:26-28 @ 72e8718",
-        "frontend/src/app/(public)/actions.ts:37-39 @ 72e8718",
-        "frontend/src/app/organization-invitations/[token]/actions.ts:43-44 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:40 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:45 @ 0fe7d2a"
+        "frontend/src/app/admin/actions.ts:26-29 @ af15d7f",
+        "frontend/src/app/(public)/actions.ts:48-50 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:44-45 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:41 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:108 @ af15d7f",
+        "frontend/src/app/(console)/members/page.tsx:39 @ af15d7f",
+        "frontend/src/components/workspace/ActionPanel.tsx:31 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/dto/CreateManagedMemberRequest.java:17 @ af15d7f",
+        "credentials.test.mjs: 실패 ERR_MODULE_NOT_FOUND credentials.ts",
+        "커밋 395d4b7"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "395d4b73"
+      ],
+      "tests": [
+        "단위 82건, 인증 계약 66건, 실화면 people, permissions 통과(395d4b7)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "비밀번호, 이름, 이메일 검사를 D-103이 만드는 frontend/src/components/auth/credential-rules.ts로 모으려고 서버 액션 네 파일(admin, (public), 초대, workspace-actions)을 함께 바꿀지, 아니면 workspace-actions.ts createMember 사전 검사만 더하고 복사는 그대로 둘지.",
-      "propagation_note": "정점 0fe7d2a에서 같은 검사가 (public)/actions.ts:41, admin/actions.ts:28, organization-invitations/[token]/actions.ts:44에 있고 createMember는 workspace-actions.ts:45로 옮겨 있다. #442에서 고치면 위층 merge 때 (public)/actions.ts(a39db70이 호출 제한을 더함)와 workspace-actions.ts(80a3ef1 이후 여러 층이 case를 더함)에서 충돌을 맞춰야 한다."
+      "propagation_note": "정점 0fe7d2a에서 같은 검사가 (public)/actions.ts:41, admin/actions.ts:28, organization-invitations/[token]/actions.ts:44에 있고 createMember는 workspace-actions.ts:45로 옮겨 있다. #442에서 고치면 위층 merge 때 (public)/actions.ts(a39db70이 호출 제한을 더함)와 workspace-actions.ts(80a3ef1 이후 여러 층이 case를 더함)에서 충돌을 맞춰야 한다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서 가입, 운영자 생성, 초대 수락의 세 서버 액션은 비밀번호 8자와 UTF-8 72바이트, 이름 "
     },
     {
       "id": "G-052",
@@ -3003,26 +3015,37 @@
       "id": "G-054",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718의 ConsoleShell.tsx 9행은 DevStateSwitch와 layout-sizes를 가져오지 않고, git grep으로 보면 DevStateSwitch, SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE와 이 PR이 새로 만든 TenantScope(TenantAccess.tsx 21행), WorkspaceOperations는 72e8718과 정점 0fe7d2a 모두 자기 정의 밖에서 쓰는 곳이 없다. frontend/README.md 31행은 개발 모드에서 사이드바 하단에 표 상태 스위치가 뜬다고 적고 lib/api 오류 문구도 그 스위치를 가리키지만 셸은 그것을 그리지 않아 문서와 코드가 어긋난다. 고치려면 DevStateSwitch.tsx, layout-sizes.ts, TenantAccess.tsx, WorkspaceView.tsx 네 파일(오류 문구까지 맞추면 더 많다)을 바꿔야 해 유지보수 분류의 두 파일 상한을 넘고, 스위치를 지울지 셸에 되살릴지도 정해야 하므로 needs-decision이다. HEADER_HEIGHT와 .workspace-header 높이가 어긋나는 부분은 72e8718에 그 CSS가 없고 #443 f671a4f가 만든 것이라 이 층 원인이 아니다.",
+      "reason": "결정(머지 뒤 지침): DevStateSwitch.tsx는 #443(be67d816)이 지웠고, README 31행도 ?state= 안내로 바뀌었다. 남은 것은 두 가지다. 쓰는 곳이 없는 SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE, TenantScope, WorkspaceOperations, 그리고 이제 없는 사이드바 표 상태 스위치를 가리키는 lib/api 7개 파일의 개발 모드 오류 문구다. 죽은 export는 지우고 문구는 state 파라미터 안내로 고친다. HEADER_HEIGHT는 표 sticky 기준으로 쓰이고, globals.css가 sticky 위치를 덮어쓰므로 그대로 둔다.",
       "evidence": [
-        "frontend/src/components/shell/ConsoleShell.tsx:9 @ 72e8718",
-        "frontend/src/components/shell/DevStateSwitch.tsx:14 @ 72e8718",
-        "frontend/src/components/shell/layout-sizes.ts:2-4 @ 72e8718",
-        "frontend/README.md:31-32 @ 72e8718",
-        "frontend/src/components/workspace/WorkspaceView.tsx:66 @ 72e8718"
+        "커밋 be67d816",
+        "frontend/README.md:31 @ af15d7f",
+        "frontend/src/lib/list-query.ts:122 @ af15d7f",
+        "frontend/src/components/shell/layout-sizes.ts:2-4 @ af15d7f",
+        "frontend/src/components/table/table-defaults.ts:1-3 @ af15d7f",
+        "frontend/src/components/auth/TenantAccess.tsx:21-23 @ af15d7f",
+        "frontend/src/components/workspace/WorkspaceView.tsx:74-76 @ af15d7f",
+        "frontend/src/lib/api/customers.ts:39 @ af15d7f",
+        "frontend/src/app/globals.css:266 @ af15d7f",
+        "커밋 f705dea"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "f705dea5"
+      ],
+      "tests": [
+        "죽은 코드 삭제와 개발 모드 문구: git grep으로 지운 이름과 옛 문구가 없음을 확인, lint, typecheck 통과(395d4b7)"
+      ],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "#442에서 쓰이지 않는 DevStateSwitch.tsx, layout-sizes의 SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE, TenantScope, WorkspaceOperations를 네 파일에 걸쳐 지우고 README와 lib/api 오류 문구의 표 상태 스위치 안내를 고칠지, 아니면 표 상태 스위치를 셸에 되살릴지.",
-      "propagation_note": "정점 0fe7d2a에서도 DevStateSwitch, TenantScope, WorkspaceOperations, SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE는 정의 밖 사용처가 없다(git grep). #443 f671a4f가 DevStateSwitch.tsx를 고쳤으므로 #442에서 지우면 위층으로 merge할 때 수정 대 삭제 충돌이 난다. 정점 frontend/README.md 117행의 개발 모드 스위치 설명과 lib/api 7개 파일(billable-metric-prices, billable-metrics, billing, customers, events, invoices, usage)의 오류 문구도 함께 맞춘다. HEADER_HEIGHT(64)와 정점 globals.css 117행 grid-template-rows 68px, 225행 min-height 68px의 불일치는 #443에서 맞춘다."
+      "propagation_note": "정점 0fe7d2a에서도 DevStateSwitch, TenantScope, WorkspaceOperations, SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE는 정의 밖 사용처가 없다(git grep). #443 f671a4f가 DevStateSwitch.tsx를 고쳤으므로 #442에서 지우면 위층으로 merge할 때 수정 대 삭제 충돌이 난다. 정점 frontend/README.md 117행의 개발 모드 스위치 설명과 lib/api 7개 파일(billable-metric-prices, billable-metrics, billing, customers, events, invoices, usage)의 오류 문구도 함께 맞춘다. HEADER_HEIGHT(64)와 정점 globals.css 117행 grid-template-rows 68px, 225행 min-height 68px의 불일치는 #443에서 맞춘다.",
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "DevStateSwitch.tsx는 #443(be67d816)이 지웠고, README 31행도 ?state="
     },
     {
       "id": "G-057",
@@ -3053,26 +3076,39 @@
       "id": "G-059",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 운영자 도입사 목록은 신청일을 toLocaleString('ko-KR')로 그려 '2026. 10. 27. 오후 3:04:05'가 되고, 같은 콘솔의 다른 시각은 format.ts formatKstDateTime의 '2026-10-27 15:04:05' 형식이다(node로 두 출력을 확인했다). workspace-href.ts 15행은 month.ts formatKstMonth와 같은 sv-SE, Asia/Seoul 월 계산을 다시 하고, WorkspaceView.tsx 23, 30행은 formatDecimal(10자리, 아주 작은 값은 지수 표기)과 다른 12자리 NumberFormat에 '원'을 직접 붙여 같은 일이 두 곳 이상에서 갈라져 있다. 세 파일 모두 #442(d4f1714)가 만들었고 정점 0fe7d2a에서도 그대로이며, 막는 시험이나 기록된 결정은 없다. 유지보수 분류인데 고치려면 시험과 README를 뺀 파일 셋(page.tsx, workspace-href.ts, WorkspaceView.tsx)을 바꿔야 하고 WorkspaceTable 숫자, 금액 표시 자릿수가 바뀌므로 needs-decision으로 둔다.",
+      "reason": "결정(머지 뒤 지침): 운영자 도입사 목록의 신청일만 toLocaleString으로 '2026. 10. 27. 오후 3:04:05'처럼 그린다. 그래서 콘솔 표의 시각 칸이 쓰는 formatKstDateTime과 KST 표기('2026-10-27 15:04:05 KST')와 다르게 보인다. 이 한 줄은 formatKstDateTime으로 바꾼다. workspace-href의 월 계산은 formatKstMonth와 출력이 같고 시험도 있어 둔다. WorkspaceTable의 소수 12자리는 상한 없는 NUMERIC 수량의 정밀도를 살리는 값이고, 원화 금액은 정수라 formatKrw와 같게 보여서 그대로 둔다. 개요 화면의 계산 기준 문장(#451)은 문장 속 시각이라 이번 범위에 넣지 않는다.",
       "evidence": [
-        "frontend/src/app/admin/organizations/page.tsx:16 @ 72e8718",
-        "frontend/src/lib/format.ts:22-54 @ 72e8718",
-        "frontend/src/lib/workspace-href.ts:15 @ 72e8718",
-        "frontend/src/lib/month.ts:10-18 @ 72e8718",
-        "frontend/src/components/workspace/WorkspaceView.tsx:23,30 @ 72e8718"
+        "frontend/src/app/admin/organizations/page.tsx:19 @ af15d7f",
+        "frontend/src/lib/format.ts:21-25 @ af15d7f",
+        "frontend/src/components/workspace/WorkspaceView.tsx:37 @ af15d7f",
+        "frontend/src/components/workspace/WorkspaceView.tsx:24 @ af15d7f",
+        "frontend/src/lib/billable-metric-calculation.ts:66 @ af15d7f",
+        "frontend/src/lib/workspace-href.ts:17 @ af15d7f",
+        "frontend/src/lib/month.ts:10-18 @ af15d7f",
+        "frontend/e2e/workspace-href.test.mjs:54-59 @ af15d7f",
+        "frontend/src/app/(console)/overview/page.tsx:33 @ af15d7f",
+        "frontend/e2e/contract-server.mjs:71 @ af15d7f",
+        "the operator organization list shows the application time in the console KST format: 실패 Received '신청일 2026. 10. 29. 오후 4:57:03'",
+        "커밋 190e645"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "190e6459"
+      ],
+      "tests": [
+        "인증 계약 66건 통과(395d4b7)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "#442에서 도입사 목록 신청일, workspace-href 월 계산, WorkspaceTable 숫자와 금액 표기의 세 파일을 formatKstDateTime, formatKstMonth, formatDecimal과 formatKrw로 모을지(WorkspaceTable 소수 자릿수가 12에서 10으로 줄어 보이는 값이 바뀐다) 정한다.",
-      "propagation_note": "정점에서 workspace-href.ts의 같은 계산은 e5fca11(#451)로 17행으로 밀렸을 뿐 같다. 같은 sv-SE 월 계산 사본이 #446(614d3bc)의 frontend/src/app/(console)/pricing/page.tsx:20, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:30에도 있고, 정점 payments/[id]/page.tsx는 72행 formatKrw(10자리)와 115행 WorkspaceTable isMoney(12자리)를 한 화면에 함께 쓴다. #442에서 WorkspaceView를 formatKrw, formatDecimal로 바꾸면 위층 isMoney 열은 따로 고칠 필요 없이 맞춰지고, #446 사본은 그 층에서 formatKstMonth로 바꾼다."
+      "propagation_note": "정점에서 workspace-href.ts의 같은 계산은 e5fca11(#451)로 17행으로 밀렸을 뿐 같다. 같은 sv-SE 월 계산 사본이 #446(614d3bc)의 frontend/src/app/(console)/pricing/page.tsx:20, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:30에도 있고, 정점 payments/[id]/page.tsx는 72행 formatKrw(10자리)와 115행 WorkspaceTable isMoney(12자리)를 한 화면에 함께 쓴다. #442에서 WorkspaceView를 formatKrw, formatDecimal로 바꾸면 위층 isMoney 열은 따로 고칠 필요 없이 맞춰지고, #446 사본은 그 층에서 formatKstMonth로 바꾼다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "운영자 도입사 목록의 신청일만 toLocaleString으로 '2026. 10. 27. 오후 3:04:05'"
     },
     {
       "id": "G-060",
@@ -6105,51 +6141,66 @@
       "id": "D-245",
       "merged_ids": [],
       "layer": 447,
-      "branch": "feat/resource-archive",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "5371d1e에서 /customers 화면은 2ec5d85(#447)로 ActionPanel과 WorkspaceTable을 쓰고, components/customers의 7개 파일과 그 다이얼로그만 부르는 customers/actions.ts, state.ts는 서로만 참조해 바깥 참조가 없다. 그래서 고객 등록 폼이 ActionPanel과 CustomerFormDialog 두 벌로 남은 것은 맞다. 정점 0fe7d2a에서도 같은 파일이 참조 없이 남아 있고, #451의 e5fca11이 이 죽은 파일을 계속 고쳤으며 같은 커밋이 /billable-metric-prices를 /pricing redirect로 바꿔 가격 쪽 6개 파일도 그때부터 죽는다. 고치려면 #447에서만 9개 파일을 지워야 하고 가격 쪽 삭제는 담당이 아닌 #451 몫이며, frontend/README.md 135행은 아직 antd Form과 actions.ts를 쓰기 폼 방식으로 적고 있어 어느 쪽을 정본으로 둘지 정해지지 않았다. 파일 셋 이상에 걸친 삭제이고 위층 e5fca11 수정과 수정, 삭제 충돌이 나므로 needs-decision으로 둔다.",
+      "reason": "결정(머지 뒤 지침): 쓰이지 않는 antd 고객, 가격 화면 파일을 지운다. main에서 /customers는 WorkspaceTable과 ActionPanel만 쓰고 /billable-metric-prices는 /pricing으로 redirect해, components/customers 7개와 components/billable-metric-prices 6개 파일, 두 라우트의 actions.ts와 state.ts는 서로만 참조하고 바깥 참조가 없다. 모든 층이 main에 들어가 층별 충돌 문제는 없어졌고, 남겨 두면 고객 등록이나 단가 문구를 고칠 때 화면에 닿지 않는 사본을 고치게 된다. 가격 쪽은 문인호 님 #451 영역이라 리뷰어로 지정하고, README의 actions.ts, state.ts 설명은 billable-metrics와 billing이 아직 그 방식을 써서 고치지 않는다.",
       "evidence": [
-        "frontend/src/app/(console)/customers/page.tsx:20 @ 5371d1e",
-        "frontend/src/components/customers/CustomersScreen.tsx:120,124 @ 5371d1e",
-        "frontend/src/components/customers/CustomerFormDialog.tsx:55,65 @ 5371d1e",
-        "frontend/README.md:135 @ 5371d1e",
-        "커밋 e5fca11"
+        "frontend/src/app/(console)/customers/page.tsx:1-11 @ af15d7f",
+        "frontend/src/app/(console)/billable-metric-prices/page.tsx:8-17 @ af15d7f",
+        "frontend/src/components/customers/CustomersSection.tsx:1-7 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:47-56 @ af15d7f",
+        "frontend/README.md:114 @ af15d7f",
+        "커밋 665f638"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "665f6389"
+      ],
+      "tests": [
+        "삭제: git grep으로 바깥 참조 없음 확인, frontend lint, typecheck, build, 단위 82건 통과(395d4b7)"
+      ],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "propagation_note": "0fe7d2a에서 CustomersSection, CustomersScreen, CustomersFrame, CustomersLoading, CustomersTable, CustomerFormDialog, CustomerDeleteDialog, createCustomerAction, updateCustomerAction, deleteCustomerAction을 git grep하면 components/customers 안과 customers/actions.ts 정의 말고 사용처가 없다. #447에서 지우면 #451 e5fca11이 바꾼 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts와 위층 merge에서 수정, 삭제 충돌이 나므로 위층에서는 삭제 쪽을 택한다. 가격 쪽 BillableMetricPricesSection, Screen, Frame, Loading, Table, PriceRateFormDialog와 billable-metric-prices/actions.ts, state.ts는 #451(e5fca11 redirect)부터 참조가 0이라 #451에서 지운다. lib/api/customers.ts의 create, update, deleteCustomer 정리는 같은 묶음 G-183과 겹친다.",
-      "question": "#447에서 쓰이지 않게 된 antd 고객 파일 7개와 customers/actions.ts, state.ts, #451에서 쓰이지 않게 된 antd 가격 파일 6개와 billable-metric-prices/actions.ts, state.ts를 지우고 README의 antd 쓰기 폼 설명을 고칠지, 지운다면 #447과 #451 층마다 지울지 정점에서 한 번에 지울지 정한다."
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "쓰이지 않는 antd 고객, 가격 화면 파일을 지운다. main에서 /customers는 WorkspaceT"
     },
     {
       "id": "G-183",
       "merged_ids": [],
       "layer": 447,
-      "branch": "feat/resource-archive",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "5371d1e의 customers/page.tsx는 2ec5d85부터 WorkspaceTable과 ActionPanel만 쓰고, components/customers 7개 파일과 customers/actions.ts, state.ts, lib/api/customers.ts의 create/update/deleteCustomer는 그 묶음 밖 어디서도 import되지 않는다. 실제 고객 변경은 workspace-actions.ts의 createCustomer, deleteCustomer 분기가 맡아 같은 변경 경로가 두 곳으로 갈라져 있고, customer_has_events 매핑은 쓰이지 않는 사본에만 있으므로 지적은 맞다. 정점 0fe7d2a에서도 이 파일들은 쓰이지 않은 채 남아 있으며, #451의 e5fca11(박성종 님)이 오히려 이 파일들을 고쳤다. 고치려면 시험과 README를 빼고 10개 파일을 지우거나 바꿔야 해 유지보수 분류 기준으로 needs-decision이고, #447에서 지우면 위층 e5fca11과 수정/삭제 충돌이 난다. 지적의 billable-metric-prices 부분과 unit_price 타입은 #451(17cc788)에서 페이지가 리다이렉트로 바뀐 뒤의 일이라 #447 범위가 아니다.",
+      "reason": "결정(머지 뒤 지침): 옛 변경 경로를 지운다. main에서도 lib/api/customers.ts의 createCustomer, updateCustomer, deleteCustomer는 D-245에서 지울 customers/actions.ts만 부르고, 실제 고객 변경은 workspace-actions.ts가 맡아 변경 경로가 두 갈래다. lib/api/billable-metric-prices.ts의 listBillableMetricPrices, createPriceRate, deletePriceRate와 unit_price: number 타입도 지울 가격 사본만 쓰므로, 타입을 고치지 않고 함께 지워 낡은 계약을 믿을 자리를 없앤다. D-245와 한 PR로 하고 가격 쪽은 문인호 님 영역이라 리뷰어로 지정한다.",
       "evidence": [
-        "frontend/src/app/(console)/customers/page.tsx:1-7 @ 5371d1e",
-        "frontend/src/app/(console)/customers/actions.ts:109-136 @ 5371d1e",
-        "frontend/src/app/(console)/workspace-actions.ts:42,50 @ 5371d1e",
-        "frontend/src/lib/api/customers.ts:48-73 @ 5371d1e",
-        "커밋 e5fca11"
+        "frontend/src/lib/api/customers.ts:50-79 @ af15d7f",
+        "frontend/src/app/(console)/customers/actions.ts:119-136 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:47-56 @ af15d7f",
+        "frontend/src/lib/api/billable-metric-prices.ts:12-15 @ af15d7f",
+        "frontend/src/lib/api/billable-metric-prices.ts:35-81 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:76-80 @ af15d7f",
+        "커밋 56dd61f"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "56dd61f6"
+      ],
+      "tests": [
+        "삭제: git grep으로 남은 호출 없음 확인, frontend lint, typecheck, build 통과(395d4b7)"
+      ],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "propagation_note": "0fe7d2a에서 git grep으로 components/customers와 customers/actions를 import하는 곳은 그 묶음 밖에 없다. 다만 #451 커밋 e5fca11이 CustomerDeleteDialog, CustomerFormDialog, CustomersSection, CustomersTable, customers/actions.ts, lib/api/customers.ts를 고쳤으므로 #447에서 지우면 #448부터 위로 옮길 때 #451에서 수정/삭제 충돌이 나고, #451에서 같은 파일을 지워 풀어야 한다. billable-metric-prices의 BillableMetricPricesSection, Loading, actions.ts와 lib/api/billable-metric-prices.ts unit_price 타입은 #451(17cc788) 페이지 리다이렉트 뒤에 쓰이지 않게 되므로 #451 담당 몫이다.",
-      "question": "#447 고객 화면 교체 뒤 쓰이지 않는 components/customers 7개 파일, customers/actions.ts, state.ts와 lib/api/customers.ts의 create/update/deleteCustomer를 지울지, 지운다면 이 파일들을 고친 #451 e5fca11과의 충돌을 어느 층에서 누가 풀지 정한다."
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "옛 변경 경로를 지운다. main에서도 lib/api/customers.ts의 createCustomer, "
     },
     {
       "id": "X-011",
@@ -12800,6 +12851,94 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 82, pass 82"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "인증 계약 66건 통과. 업무 계약 7 통과 2 실패는 main 기준선과 같은 두 시험(2db50b4, #481이 고침)이라 나빠지지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "auth.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "people.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "operator-create.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "customer-payment-retry.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "archive-filters.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "query-workspace.real.spec.ts 통과(백엔드 main, 프론트 이 sha)"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -13252,6 +13391,11 @@
       "branch": "fix/s456-t-yang-demo-web-target",
       "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
       "at": "2026-10-29T16:52:53+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "at": "2026-10-29T17:01:44+09:00"
     }
   ],
   "usage_log": [],
@@ -13284,7 +13428,8 @@
     "2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다.",
     "2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다.",
     "2026-10-29: #482 fix/s456-t-yang-backend-cleanup(G-018, G-008, G-011)을 열고 박성종 님과 문인호 님을 리뷰어로 지정했다.",
-    "2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다."
+    "2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다.",
+    "2026-10-29: #483 demo-web-target(C453-006), #484 frontend-cleanup(D-245, G-183, G-054, G-059, G-050, 문인호 님 리뷰어)을 열었다."
   ],
   "final_checks": [
     {

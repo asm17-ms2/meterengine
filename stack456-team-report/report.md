@@ -1,14 +1,14 @@
-결과: 끝 상태 328/328건 (fixed 245, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 17, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969)
-정할 것: 17건 (G-050, C442-002, D-136, D-170, D-179, D-236, G-054, G-059, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06, D-245, G-183). 로컬 DB 다시 만들기: 없음
+결과: 끝 상태 328/328건 (fixed 250, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 12, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7)
+정할 것: 12건 (C442-002, D-136, D-170, D-179, D-236, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 103 | 9 | 17 | 11 | 3 | 0 |
+| #442 | 143 | 106 | 9 | 17 | 8 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
-| #447 | 35 | 22 | 5 | 3 | 5 | 0 | 0 |
+| #447 | 35 | 24 | 5 | 3 | 3 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
 | #452 | 19 | 16 | 0 | 3 | 0 | 0 | 0 |
 | #453 | 39 | 33 | 1 | 4 | 0 | 1 | 0 |
@@ -37,6 +37,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | G-008 | #442 | 6a03fbf | OrganizationPeopleService 안의 IssuedInvitation, InvitationPre | 없음(JSON 본문이 같은 이름 변경: openapi.yaml에서 스키마 이름 셋과 $ref만 바뀌고 속성은 같다; ./gradlew build, frontend lint, typecheck, build 통과(6b954c) |
 | G-042 | #442 | 36f7e74 | 업무 작업 이름 목록과 화면, 액션 대조 시험 | every workspace panel operation is a known permission and has a workspace action case: 실패 SyntaxError: does not provide an export named 'WORKSPACE_OPERATIONS' |
 | G-045 | #442 | b84cf7a | WorkspaceError를 기존 ErrorAlert로 모음 | a workspace load failure offers an in-place retry button: 실패 Error: expect(locator).toBeVisible() failed, Locator: getByRole('button', { name: '다시 시도' }) |
+| G-050 | #442 | 395d4b7 | main에서 가입, 운영자 생성, 초대 수락의 세 서버 액션은 비밀번호 8자와 UTF-8 72바이트, 이름  | credentials.test.mjs: 실패 ERR_MODULE_NOT_FOUND credentials.ts |
 | G-052 | #442 | a87832f | 사용자와 초대 응답 타입 이름을 백엔드 스키마에 맞춤 | 없음(타입 변경: typecheck, lint, build 통과) |
 | G-058 | #442 | 6ae4ec0 | 결과 문구를 작업별 표로 | result labels come from the operation, not from response fields: 실패 ERR_MODULE_NOT_FOUND workspace-operation-results.ts |
 | G-065 | #442 | 872dffe | 백엔드 호출 시간 초과와 연결 실패 구분, 가린 로그 | a timeout and a connection failure become different errors with status 0: 실패 ERR_MODULE_NOT_FOUND transport-failure.ts |
@@ -86,6 +87,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | G-018 | #442 | 0c8881a | 스택이 main에 한 번에 들어와 위층 code 32개는 각 기능이 실제로 던지므로, code를 층별로 옮기 | 상수는_HTTP_상태_순서로_놓인다: 실패 [ORGANIZATION_NOT_FOUND] 404 to be greater than or equal to 409 |
 | G-022 | #442 | 193978f | backend README API 키 한도 설명 | 없음(문서 변경: CreateApiKeyRequest의 rate_limit_per_minute(@Positive, null 허용)와 대조했다. backend build 통과) |
 | G-040 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
+| G-054 | #442 | f705dea | DevStateSwitch.tsx는 #443(be67d816)이 지웠고, README 31행도 ?state= | 없음(죽은 코드 삭제와 개발 모드 문구: git grep으로 지운 이름과 옛 문구가 없음을 확인, lint, typecheck 통과(395d4b7)) |
+| G-059 | #442 | 190e645 | 운영자 도입사 목록의 신청일만 toLocaleString으로 '2026. 10. 27. 오후 3:04:05' | the operator organization list shows the application time in the console KST format: 실패 Received '신청일 2026. 10. 29. 오후 4:57:03' |
 | G-060 | #442 | 50a9a03 | 운영자 도입사 조회에 status 필터 | the operator organization list asks the backend for the selected status: 실패 Expected value "/v1/organizations?status=pending", Received ["/v1/organizations", .. |
 | G-066 | #442 | e4b7522 | 운영자 사용자 화면의 도입사 목록 곱 렌더 제거 | the operator user list sends the active organizations once instead of once per user: 실패 Expected < 100, Received 930 |
 | G-068 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
@@ -162,6 +165,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-108 | #447 | cc2baea | 미터 목록 이름 열 폭 0 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
 | D-223 | #447 | 449b06c | 이벤트가 있는 미터를 고칠 때 이름만 바꿀 수 있다고 알린다 | 이벤트가_있는_미터의_event_type을_바꾸면_409이고_미터는_그대로다: 실패 Expecting actual: "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다" not to contain: "삭제" |
 | D-241 | #447 | 1b50aeb | 관리 상태 사용 중이 화면마다 다른 색과 형태 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
+| D-245 | #447 | 665f638 | 쓰이지 않는 antd 고객, 가격 화면 파일을 지운다. main에서 /customers는 WorkspaceT | 없음(삭제: git grep으로 바깥 참조 없음 확인, frontend lint, typecheck, build, 단위 82건 통과(395d4b7)) |
+| G-183 | #447 | 56dd61f | 옛 변경 경로를 지운다. main에서도 lib/api/customers.ts의 createCustomer,  | 없음(삭제: git grep으로 남은 호출 없음 확인, frontend lint, typecheck, build 통과(395d4b7)) |
 | X-011 | #447 | cc2baea | 미터 목록 이름 열 폭 0 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
 | C449-003 | #449 | 10cae67 | 본문으로 이동 뒤 새로고침하면 공개 청구서 로딩에서 멈춤 | 발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 금액을 검증한다: 실패 expect(locator).toBeVisible() getByText(고객명) not found(본문으로 이동 뒤 새로고침) |
 | C449-005 | #449 | 6eacbc5 | main에서도 customer-payment-retry 명세 beforeAll이 /private/tmp/me | customer-payment-retry.real.spec.ts: 실패 Command failed: docker exec -i meterengine-0696-e2e (컨테이너 이름을 바꾼 환경, 고치기 전) |
@@ -215,14 +220,11 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
-| G-050 | #442 | 비밀번호, 이름, 이메일 검사를 D-103이 만드는 frontend/src/components/auth/credential-rules.ts로 모으려고 서버 액션 네 파일(admin, (public), 초대, workspace-actions)을 함께 바꿀지, 아니면 workspace-actions.ts createMember 사전 검사만 더하고 복사는 그대로 둘지. |
 | C442-002 | #442 | 관리자나 운영자가 정한 초기 비밀번호를 본인이 바꾸게 할지(첫 동의 단계에서 바꾸게 하거나 새 마이그레이션으로 변경 강제 열을 둔다), 도입사의 계정 직접 생성을 없애고 초대만 남길지, 지금대로 둘지 정한다. |
 | D-136 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | D-170 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | D-179 | #442 | 사이드바를 antd Menu 대신 nav 안 그룹 제목과 ul, li, a 링크 목록(aria-current만 유지)으로 바꾸고, #443의 Menu 테마 토큰(itemSelectedBg 등)과 .ant-menu 스타일을 CSS로 옮겨 모양을 지킬지 정한다. |
 | D-236 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
-| G-054 | #442 | #442에서 쓰이지 않는 DevStateSwitch.tsx, layout-sizes의 SIDER_WIDTH, CONTENT_MAX_WIDTH, NAV_DRAWER_SIZE, TenantScope, WorkspaceOperations를 네 파일에 걸쳐 지우고 README와 lib/api 오류 문구의 표 상태 스위치 안내를 고칠지, 아니면 표 상태 스위치를 셸에 되살릴지. |
-| G-059 | #442 | #442에서 도입사 목록 신청일, workspace-href 월 계산, WorkspaceTable 숫자와 금액 표기의 세 파일을 formatKstDateTime, formatKstMonth, formatDecimal과 formatKrw로 모을지(WorkspaceTable 소수 자릿수가 12에서 10으로 줄어 보이는 값이 바뀐다) 정한다. |
 | G-187 | #442 | CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다). |
 | X-046 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | X-104 | #442 | 로그아웃 요청이 401 밖의 이유(네트워크, 시간 초과, 5xx)로 실패했을 때 지금처럼 쿠키를 남겨 다시 시도하게 할지(계약 시험 logout keeps the session after a revocation failure가 이 동작을 고정한다), 쿠키를 먼저 지우고 서버 세션 종료를 확인하지 못했다고 알릴지 정한다. |
@@ -230,8 +232,6 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | Nk3-006 | #447 | GET /v1/price-plans에 month를 주면, status와 상관없이 그 달 청구에 적용되는 요금제 버전 하나만 돌려주도록 계약을 바꿀지 정해야 합니다. 바꾸지 않는다면 지금처럼 그 달에 걸친 이력을 status로 걸러 돌려주고, demo verify와 콘솔이 status=all 목록에서 보관 가림을 포함한 청구 규칙으로 직접 고르게 합니다. |
 | Ck3-447-03 | #447 | #447에서 결제 이력 목록을 저장소가 아니라 DTO from(KST 변환)과 서비스의 문서대로 정렬로 만들도록 저장소와 두 서비스를 고칠지, 컨트롤러 설명을 이력 행 순서에 맞게 고칠지, 그리고 교체로 물러난 키와 카드를 보관 목록에 보관으로 보일지 정합니다. |
 | Ck3-447-06 | #447 | CustomerRepository에서 호출처 없는 existsWithPricing과 findByOrganizationIdAndIdIn을 지우고, PricePlanService와 PriceRateService의 읽기 트랜잭션을 실제로 호출되는 4인자 list로 옮기는 세 파일 정리를 #447에서 할지 정합니다. |
-| D-245 | #447 | #447에서 쓰이지 않게 된 antd 고객 파일 7개와 customers/actions.ts, state.ts, #451에서 쓰이지 않게 된 antd 가격 파일 6개와 billable-metric-prices/actions.ts, state.ts를 지우고 README의 antd 쓰기 폼 설명을 고칠지, 지운다면 #447과 #451 층마다 지울지 정점에서 한 번에 지울지 정한다. |
-| G-183 | #447 | #447 고객 화면 교체 뒤 쓰이지 않는 components/customers 7개 파일, customers/actions.ts, state.ts와 lib/api/customers.ts의 create/update/deleteCustomer를 지울지, 지운다면 이 파일들을 고친 #451 e5fca11과의 충돌을 어느 층에서 누가 풀지 정한다. |
 
 ## 막힌 것
 
@@ -463,3 +463,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다.
 - 2026-10-29: #482 fix/s456-t-yang-backend-cleanup(G-018, G-008, G-011)을 열고 박성종 님과 문인호 님을 리뷰어로 지정했다.
 - 2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다.
+- 2026-10-29: #483 demo-web-target(C453-006), #484 frontend-cleanup(D-245, G-183, G-054, G-059, G-050, 문인호 님 리뷰어)을 열었다.

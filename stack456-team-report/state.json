@@ -1,7 +1,7 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-29T16:53:04+09:00",
+  "updated_at": "2026-10-29T17:01:56+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
@@ -406,6 +406,11 @@
     "fix/s456-t-yang-demo-web-target": {
       "origin_sha": "a34c969",
       "local_sha": "a34c969",
+      "unpushed": []
+    },
+    "fix/s456-t-yang-frontend-cleanup": {
+      "origin_sha": "395d4b7",
+      "local_sha": "395d4b7",
       "unpushed": []
     }
   },
