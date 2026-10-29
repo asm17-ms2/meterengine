@@ -342,6 +342,16 @@ class WorkspaceQueryIntegrationTest {
   }
 
   @Test
+  void 결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다() {
+    customer("가 고객", "first", false);
+    String populated = firstLine(get("/v1/customers/export"));
+    assertThat(firstLine(get("/v1/customers/export?q=nothing-matches"))).isEqualTo(populated);
+    assertThat(firstLine(get("/v1/invoices/export")))
+        .contains("\"invoice.id\"", "\"payment.status\"")
+        .doesNotContain("empty_result");
+  }
+
+  @Test
   void 모든_조회_API는_조회_키를_허용하고_수집_전용_키를_거부한다() {
     String ingest = TestCredentials.issueApiKey(jdbc, organizationId, "ingest");
     for (String path :
@@ -436,6 +446,12 @@ class WorkspaceQueryIntegrationTest {
 
   private MvcTestResult get(String path) {
     return mvc.get().uri(path).header(AUTHORIZATION, authorization).exchange();
+  }
+
+  private static String firstLine(MvcTestResult response) {
+    assertThat(response).hasStatusOk();
+    String csv = new String(response.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+    return csv.substring(csv.startsWith("\ufeff") ? 1 : 0, csv.indexOf("\r\n"));
   }
 
   private JsonNode data(MvcTestResult response) {

@@ -580,7 +580,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "customers",
         workspaceQueryService.search(
-            organizationId, SearchParameters.parse(parameters, "customers").forExport()));
+            organizationId, SearchParameters.parse(parameters, "customers").forExport()),
+        CustomerResponse.class);
   }
 
   @GetMapping(value = "/v1/billable-metrics/export", produces = "text/csv")
@@ -617,7 +618,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "billable-metrics",
         workspaceQueryService.metrics(
-            organizationId, SearchParameters.parse(parameters, "metrics").forExport()));
+            organizationId, SearchParameters.parse(parameters, "metrics").forExport()),
+        BillableMetricResponse.class);
   }
 
   @GetMapping(value = "/v1/billable-metric-prices/export", produces = "text/csv")
@@ -663,7 +665,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "billable-metric-prices",
         workspaceQueryService.prices(
-            organizationId, SearchParameters.parse(parameters, "prices").forExport()));
+            organizationId, SearchParameters.parse(parameters, "prices").forExport()),
+        PriceSearchResponse.class);
   }
 
   @GetMapping(value = "/v1/usage/export", produces = "text/csv")
@@ -709,7 +712,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "usage",
         workspaceQueryService.usage(
-            organizationId, SearchParameters.parse(parameters, "usage").forExport()));
+            organizationId, SearchParameters.parse(parameters, "usage").forExport()),
+        UsageCustomerResponse.class);
   }
 
   @GetMapping(value = "/v1/invoices/draft/export", produces = "text/csv")
@@ -759,7 +763,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "draft-invoices",
         workspaceQueryService.drafts(
-            organizationId, SearchParameters.parse(parameters, "drafts").forExport()));
+            organizationId, SearchParameters.parse(parameters, "drafts").forExport()),
+        DraftInvoiceCustomer.class);
   }
 
   @GetMapping(value = "/v1/invoices/export", produces = "text/csv")
@@ -827,7 +832,8 @@ public class WorkspaceQueryController {
       @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
     return searchCsvService.export(
         "invoices",
-        workspaceQueryService.invoices(organizationId, invoiceParameters(parameters).forExport()));
+        workspaceQueryService.invoices(organizationId, invoiceParameters(parameters).forExport()),
+        InvoiceSearchResponse.class);
   }
 
   private static SearchParameters invoiceParameters(Map<String, String> values) {
