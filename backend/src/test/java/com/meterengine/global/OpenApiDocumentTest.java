@@ -188,6 +188,47 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 단가_응답의_tiers는_구간_객체의_배열이다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    for (String schema : List.of("PriceRateResponse", "BillableMetricPricePriceRate")) {
+      JsonNode tiers = schemas.path(schema).path("properties").path("tiers");
+      assertThat(tiers.path("type").asText()).as(schema).isEqualTo("array");
+      assertThat(tiers.path("items").path("$ref").asText())
+          .as(schema)
+          .isEqualTo("#/components/schemas/PriceRateTier");
+    }
+  }
+
+  @Test
+  void 단가_모델과_청구_라인_종류는_서버가_쓰는_값_목록을_적는다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    for (String schema :
+        List.of("PriceRateResponse", "BillableMetricPricePriceRate", "CreatePriceRateRequest")) {
+      List<String> models = new ArrayList<>();
+      schemas
+          .path(schema)
+          .path("properties")
+          .path("model")
+          .path("enum")
+          .forEach(value -> models.add(value.asText()));
+      assertThat(models).as(schema).containsExactlyInAnyOrder("per_unit", "graduated", "volume");
+    }
+    for (String schema : List.of("DraftInvoiceLine", "InvoiceLineResponse")) {
+      List<String> lineTypes = new ArrayList<>();
+      schemas
+          .path(schema)
+          .path("properties")
+          .path("line_type")
+          .path("enum")
+          .forEach(value -> lineTypes.add(value.asText()));
+      assertThat(lineTypes)
+          .as(schema)
+          .containsExactlyInAnyOrder(
+              "per_unit", "volume", "graduated_tier", "base_fee", "minimum_adjustment");
+    }
+  }
+
+  @Test
   void 요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다() {
     JsonNode operation = root().path("paths").path("/v1/price-plans").path("get");
     assertThat(operation.path("description").asText()).isNotBlank();

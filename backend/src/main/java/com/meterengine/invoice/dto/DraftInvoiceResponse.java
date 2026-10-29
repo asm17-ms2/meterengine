@@ -51,7 +51,16 @@ public record DraftInvoiceResponse(
           BigDecimal quantity,
       @JsonProperty("unit_price") BigDecimal unitPrice,
       long amount,
-      @JsonProperty("line_type") String lineType,
+      @Schema(
+              allowableValues = {
+                "per_unit",
+                "volume",
+                "graduated_tier",
+                "base_fee",
+                "minimum_adjustment"
+              })
+          @JsonProperty("line_type")
+          String lineType,
       @JsonProperty("tier_index") int tierIndex,
       @Schema(description = "금액과 구간 판정에 사용한 정확 청구 수량의 분자") @JsonProperty("quantity_numerator")
           BigDecimal quantityNumerator,
