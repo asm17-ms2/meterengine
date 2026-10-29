@@ -48,6 +48,7 @@ export default async function UsagePage({
           </Suspense>
         ) : null}
       </ScreenHeader>
+      <Suspense fallback={<p role="status" className="field-hint">수집 상태를 확인하는 중입니다.</p>}><UsageQuality selectedMonth={month} /></Suspense>
 
       <ScreenCard>
         <FilterBar
@@ -80,7 +81,6 @@ export default async function UsagePage({
           <TableSkeleton />
         )}
       </ScreenCard>
-      <Suspense fallback={<TableSkeleton />}><UsageQuality selectedMonth={month} /></Suspense>
     </CollapseProvider>
   );
 }
