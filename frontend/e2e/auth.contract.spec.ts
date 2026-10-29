@@ -301,6 +301,22 @@ test("list filters submit with a default 조건 적용 button and reset with 조
   await expect(page.getByRole("link", { name: "조건 초기화", exact: true })).toBeVisible();
 });
 
+test("the customer search names every searched field and fits its hint on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const search = page.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true });
+  await expect(search).toBeVisible();
+  const fits = await search.evaluate(input => {
+    const element = input as HTMLInputElement;
+    const style = getComputedStyle(element);
+    const context = document.createElement("canvas").getContext("2d")!;
+    context.font = `${style.fontSize} ${style.fontFamily}`;
+    return context.measureText(element.placeholder).width <= element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  });
+  expect(fits).toBe(true);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

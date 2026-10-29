@@ -309,4 +309,6 @@ input, textarea { caret-color: var(--blue); }
 
 .resource-search { display: grid; gap: 12px; min-width: 0; width: 100%; }
 .resource-search > .field-hint { margin: 0; }
+.resource-search-text { flex: 1 1 240px; min-width: 240px; }
+@media (max-width: 767px) { .resource-search-text { flex-basis: 100%; min-width: 0; } }
 .resource-advanced summary { min-height: 44px; box-sizing: border-box; padding-block: 11px; }
