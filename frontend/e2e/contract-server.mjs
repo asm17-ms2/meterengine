@@ -14,6 +14,7 @@ let bulk = false;
 let apiKeys = [];
 let unresolvedInvoicePayments = [];
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
+const HEALTHY_WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999998";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const failure = (status, code, message) => ({ status, body: { code, message } });
@@ -92,7 +93,13 @@ const server = createServer(async (req, res) => {
       apiKeys.push(key);
       result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
     }
-    else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [] } };
+    else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [
+      { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
+      { id: HEALTHY_WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/healthy", event_types: ["payment_succeeded"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
+    ] } };
+    else if (path === `/v1/webhook-endpoints/${HEALTHY_WEBHOOK_ENDPOINT_ID}/deliveries` && req.method === "GET") result = { status: 200, body: { total: 1, deliveries: [
+      { id: "99999999-9999-4999-8999-0000000000b1", status: "done", type: "payment_succeeded", attempt_count: 1, response_status: 200, failure_reason: null, next_attempt_at: null, created_at: new Date().toISOString() },
+    ] } };
     else if (path === "/v1/audit-logs" && req.method === "GET") result = { status: 200, body: { page: 0, size: 20, total: 12, audit_logs: Array.from({ length: 12 }, (_, index) => ({ id: bulkId("aaaaaaaa-aaaa-4aaa-8aaa-", index), occurred_at: new Date(Date.UTC(2026, 9, 1, 0, index)).toISOString(), organization_id: organizations[0].id, actor_type: "user_account", actor_id: "44444444-4444-4444-8444-444444444444", action: "api_request_completed", target_type: "http_request", target_id: "", detail: { method: "GET", route: "/v1/customers", status: index === 0 ? 403 : 200, duration_ms: 3 } })) } };
     else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "GET") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, description: "운영 알림 수신기", created_at: new Date().toISOString(), archived_at: null } };
     else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "PUT") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: body.url, event_types: body.event_types, enabled: body.enabled, description: body.description ?? null, created_at: new Date().toISOString(), archived_at: null } };

@@ -269,6 +269,16 @@ test("meter number inputs do not expose English stepper buttons", async ({ page 
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
 
+test("a webhook receiver whose latest delivery is failing is flagged in the list", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  const failing = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" });
+  const healthy = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/healthy" });
+  await expect(failing).toContainText("최근 발송 실패");
+  await expect(healthy).toContainText("발송 중");
+  await expect(healthy).not.toContainText("최근 발송 실패");
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
