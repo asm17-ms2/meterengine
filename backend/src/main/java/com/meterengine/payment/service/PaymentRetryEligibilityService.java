@@ -75,7 +75,7 @@ public class PaymentRetryEligibilityService {
         BusinessEnvironmentContext.environmentId() == null
                 && failed.getCredentialUpdatedAt() == null
             ? tossPaymentsCredentialService.active(organizationId, mode)
-            : tossPaymentsCredentialService.historical(
+            : tossPaymentsCredentialService.chargeable(
                 organizationId,
                 mode,
                 failed.getCredentialUpdatedAt() == null

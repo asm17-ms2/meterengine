@@ -178,11 +178,11 @@ public class PaymentAttemptService {
     String mode = pendingAttempt.getMode();
     Optional<TossPaymentsCredential> credential =
         pendingAttempt.getCredentialUpdatedAt() != null
-            ? tossPaymentsCredentialService.historical(
+            ? tossPaymentsCredentialService.chargeable(
                 organizationId, mode, pendingAttempt.getCredentialUpdatedAt())
             : pendingAttempt.getEnvironmentId() == null
                 ? tossPaymentsCredentialService.active(organizationId, mode)
-                : tossPaymentsCredentialService.historical(
+                : tossPaymentsCredentialService.chargeable(
                     organizationId, mode, pendingAttempt.getRequestedAt());
     if (credential.isEmpty()) {
       return failWithoutToss(pendingAttempt, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);

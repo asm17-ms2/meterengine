@@ -136,26 +136,22 @@ public class PaymentMethodRegistrationService {
                 java.util.List.of(registration.getCustomerId()))
             .stream()
             .anyMatch(customer -> customer.getArchivedAt() == null)
-        && (registration.getEnvironmentId() == null
-                ? tossPaymentsCredentialService.active(
-                    registration.getOrganizationId(), registration.getMode())
-                : historicalCredential(registration))
-            .isPresent();
+        && chargeableCredential(registration).isPresent();
   }
 
   TossPaymentsCredential findCredential(PaymentMethodRegistration registration) {
-    return historicalCredential(registration)
+    return chargeableCredential(registration)
         .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
   }
 
-  private java.util.Optional<TossPaymentsCredential> historicalCredential(
+  private java.util.Optional<TossPaymentsCredential> chargeableCredential(
       PaymentMethodRegistration registration) {
     return PaymentEnvironments.call(
         registration.getOrganizationId(),
         registration.getEnvironmentId(),
         registration.getMode(),
         () ->
-            tossPaymentsCredentialService.historical(
+            tossPaymentsCredentialService.chargeable(
                 registration.getOrganizationId(),
                 registration.getMode(),
                 registration.getCredentialUpdatedAt() == null

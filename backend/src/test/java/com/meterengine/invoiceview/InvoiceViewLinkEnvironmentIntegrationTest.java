@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -185,6 +186,36 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
                 organizationId))
         .isEqualTo(environment("test"));
     assertThat(BusinessEnvironmentContext.current()).isNull();
+  }
+
+  @Test
+  void PG키를_보관하면_키_버전을_고정한_실패도_공개링크에서_재시도_가능으로_보이지_않는다() {
+    Payable test = payable("test");
+    failed(test, "test");
+    Link link = createLink("test", test.invoice());
+    assertThat(lookup("test", link.token()))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.payment_retry.allowed")
+        .isEqualTo(true);
+    assertThat(
+            mvc.delete()
+                .uri("/v1/toss-payments-credentials/test")
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatus(204);
+    MvcTestResult after = lookup("test", link.token());
+    assertThat(after)
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.payment_retry.allowed")
+        .isEqualTo(false);
+    assertThat(after)
+        .bodyJson()
+        .extractingPath("$.payment_retry.reason")
+        .isEqualTo("credentials_missing");
+    verify(toss, never()).approveBilling(anyString(), anyString(), any(), anyString(), isNull());
   }
 
   private Payable payable(String mode) {
