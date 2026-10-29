@@ -232,6 +232,19 @@ class EventExportIntegrationTest {
   }
 
   @Test
+  void 원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다() {
+    jdbcTemplate.update(
+        "INSERT INTO event(organization_id,transaction_id,customer_id,type,properties,occurred_at) SELECT ?, 'large-' || sequence, ?, 'usage', jsonb_build_object('blob', repeat('x', 9 * 1024 * 1024)), '2026-10-02T00:00:00+09:00'::timestamptz FROM generate_series(1,4) sequence",
+        organizationId,
+        customerId);
+    assertThat(get(authorization, null, ""))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .isEqualTo("export");
+  }
+
+  @Test
   void 잘못된_속성과_기간과_정렬과_미지원_조건을_거절한다() {
     for (String suffix :
         new String[] {

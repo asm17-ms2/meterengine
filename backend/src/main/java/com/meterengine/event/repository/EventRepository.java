@@ -136,6 +136,19 @@ public class EventRepository {
         parameters.toArray());
   }
 
+  public long sumPropertiesBytes(
+      UUID organizationId, UUID customerId, String type, EventSearch search) {
+    List<Object> parameters = new ArrayList<>();
+    String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
+    Long total =
+        jdbcTemplate.queryForObject(
+            "SELECT COALESCE(SUM(octet_length(e.properties::text)), 0) FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id "
+                + where,
+            Long.class,
+            parameters.toArray());
+    return total == null ? 0 : total;
+  }
+
   public long count(UUID organizationId, UUID customerId, String type, EventSearch search) {
     List<Object> parameters = new ArrayList<>();
     String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
