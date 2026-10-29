@@ -10,7 +10,13 @@ if (await stat(output).then(() => true, () => false)) throw new Error("기존 �
 const source = path.join(app, ".next", "standalone");
 await stat(path.join(source, "llm-service", "server.js"));
 await mkdir(path.dirname(output), { recursive: true });
-await cp(source, output, { recursive: true, verbatimSymlinks: true });
+// 앱 폴더의 .env와 로컬 DB는 build가 standalone에 함께 복사하므로 묶음에서 뺀다.
+const excluded = [];
+function isLocalSecret(file) {
+  const relative = path.relative(source, file).split(path.sep).join("/");
+  return /^llm-service\/\.env(\..+)?$/.test(relative) || relative === "llm-service/data";
+}
+await cp(source, output, { recursive: true, verbatimSymlinks: true, filter: file => { if (!isLocalSecret(file)) return true; excluded.push(path.relative(source, file)); return false; } });
 await cp(path.join(app, ".next", "static"), path.join(output, "llm-service", ".next", "static"), { recursive: true });
 if (await stat(path.join(app, "public")).then(() => true, () => false)) await cp(path.join(app, "public"), path.join(output, "llm-service", "public"), { recursive: true });
 await cp(path.join(app, "scripts", "start.mjs"), path.join(output, "start.mjs"));
@@ -44,5 +50,5 @@ async function checkLinks(directory) {
   }
 }
 await checkLinks(output);
-await writeFile(path.join(output, "bundle.json"), JSON.stringify({ application: "lumen-llm-service", node: ">=24.22.1", links, prunedUntracedLinks, configuration: "external JSON environment file", database: "external LUMEN_DATABASE_PATH", entrypoint: "start.mjs" }, null, 2) + "\n");
-console.log(JSON.stringify({ output, portableLinksChecked: links, prunedUntracedLinks, entrypoint: "start.mjs" }));
+await writeFile(path.join(output, "bundle.json"), JSON.stringify({ application: "lumen-llm-service", node: ">=24.22.1", links, prunedUntracedLinks, excludedLocalFiles: excluded.length, configuration: "external JSON environment file", database: "external LUMEN_DATABASE_PATH", entrypoint: "start.mjs" }, null, 2) + "\n");
+console.log(JSON.stringify({ output, portableLinksChecked: links, prunedUntracedLinks, excludedLocalFiles: excluded, entrypoint: "start.mjs" }));
