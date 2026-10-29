@@ -118,12 +118,12 @@ export default async function BillingPage({
               month={{ value: month }}
               customers={
                 BILLING_CAPABILITIES.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
+                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal")
                   : undefined
               }
               metrics={
                 BILLING_CAPABILITIES.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
+                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal")
                   : undefined
               }
             />

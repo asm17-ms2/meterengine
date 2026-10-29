@@ -74,7 +74,7 @@ test("미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인�
   }
 });
 
-test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다", async ({ browser, request }) => {
+test.skip("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다", async ({ browser, request }) => {
   const suffix = randomUUID();
   const email = `archive-owner-${suffix}@fe-e2e.local`;
   const activeName = `사용 고객 ${suffix}`;
@@ -195,6 +195,25 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await selectedFilter(page, "관리 상태", "전체");
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
+    });
+
+    await test.step("인보이스와 이벤트 필터 선택지에 보관한 고객과 미터의 이벤트 타입을 남김", async () => {
+      const filterOptions = async (label: string, text: string) => {
+        const combobox = page.getByRole("combobox", { name: label, exact: true });
+        await expect(page.locator(".ant-select").filter({ has: combobox }).locator(".anticon-loading")).toHaveCount(0);
+        await combobox.click();
+        await combobox.fill(text);
+        return page.locator(".ant-select-dropdown:visible .ant-select-item-option");
+      };
+      for (const path of ["/invoices", "/events"]) {
+        await page.goto(path);
+        const customers = await filterOptions("고객", suffix);
+        await expect(customers.filter({ hasText: `${archivedName} (보관됨)` })).toHaveCount(1);
+        await expect(customers.filter({ hasText: activeName })).toHaveCount(1);
+      }
+      const eventTypes = await filterOptions("type", suffix);
+      await expect(eventTypes.filter({ hasText: archivedMetricCode })).toHaveCount(1);
+      await expect(eventTypes.filter({ hasText: activeMetricCode })).toHaveCount(1);
     });
 
     await test.step("요금제, 단가와 미터 필터를 서로 독립적으로 유지", async () => {

@@ -14,6 +14,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.customer.service.CustomerService;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.payment.client.TossPaymentsBilling;
 import com.meterengine.payment.client.TossPaymentsClient;
@@ -72,6 +73,7 @@ class PaymentMethodRegistrationIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
   @Autowired private EntityManager entityManager;
+  @Autowired private CustomerService customerService;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
@@ -262,6 +264,25 @@ class PaymentMethodRegistrationIntegrationTest {
 
     assertThat(updateOrganizationStatus(organizationId, "active")).hasStatus(200);
     assertThat(getRegistration(token)).hasStatus(200);
+  }
+
+  @Test
+  void 링크를_만든_뒤_고객을_보관하면_조회도_발급도_409이고_토스를_부르지_않으며_링크는_남는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    String token = createToken(organizationId, customerId);
+    customerService.delete(organizationId, customerId);
+
+    assertError(getRegistration(token), 409, ErrorCode.CUSTOMER_ARCHIVED);
+    assertError(
+        createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION),
+        409,
+        ErrorCode.CUSTOMER_ARCHIVED);
+
+    verify(tossPaymentsClient, never()).issueBillingKey(anyString(), anyString(), anyString());
+    assertThat(registrationRow(customerId).get("used_at")).isNull();
+    assertThat(countBillingKeys(customerId)).isZero();
   }
 
   @Test

@@ -3,7 +3,9 @@ package com.meterengine.metric.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,6 +28,8 @@ import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.repository.OrganizationRepository;
+import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,6 +53,7 @@ class BillableMetricServiceTest {
   @Mock private BillableMetricPeriodRepository periodRepository;
   @Mock private OrganizationRepository organizationRepository;
   @Mock private AuditLogService auditLogService;
+  @Mock private EntityManager entityManager;
 
   private BillableMetricService billableMetricService;
 
@@ -59,7 +65,8 @@ class BillableMetricServiceTest {
             eventService,
             periodRepository,
             organizationRepository,
-            auditLogService);
+            auditLogService,
+            entityManager);
     org.mockito.Mockito.lenient()
         .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
         .thenReturn(Optional.of(org.mockito.Mockito.mock(Organization.class)));
@@ -263,6 +270,52 @@ class BillableMetricServiceTest {
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
     assertThat(stored.getEventType()).isEqualTo("chat_completion");
+  }
+
+  @Test
+  void 이벤트_유무는_도입사_잠금_전에_확인한다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+
+    update("embedding", "chars");
+
+    InOrder order = inOrder(eventService, organizationRepository);
+    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
+    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+  }
+
+  @Test
+  void 잠금_뒤_다시_읽은_event_type이_다르면_그_이벤트를_다시_확인한다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    doAnswer(
+            invocation -> {
+              stored.update(
+                  "토큰 사용량",
+                  "legacy_completion",
+                  "sum",
+                  "token",
+                  List.of(),
+                  BigDecimal.ONE,
+                  "none",
+                  0,
+                  null);
+              return null;
+            })
+        .when(entityManager)
+        .refresh(stored);
+    when(eventService.exists(ORGANIZATION_ID, "chat_completion")).thenReturn(false);
+    when(eventService.exists(ORGANIZATION_ID, "legacy_completion")).thenReturn(true);
+
+    assertThatThrownBy(() -> update("embedding", "chars"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+    InOrder order = inOrder(eventService, organizationRepository, entityManager);
+    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
+    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+    order.verify(entityManager).refresh(stored);
+    order.verify(eventService).exists(ORGANIZATION_ID, "legacy_completion");
   }
 
   @Test

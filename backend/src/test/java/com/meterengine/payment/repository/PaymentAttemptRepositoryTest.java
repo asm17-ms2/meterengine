@@ -155,6 +155,7 @@ class PaymentAttemptRepositoryTest {
     insertBillingKey(reregistered, LONG_AGO.plusDays(1));
     Fixture retryable = insertFixture();
     UUID retryableAttempt = insertFailedAttempt(retryable, "REJECT_CARD_COMPANY");
+    insertBillingKey(retryable, LONG_AGO.minusDays(1));
     Fixture removedWithCard = insertFixture();
     UUID removedWithCardAttempt =
         insertFailedAttempt(removedWithCard, "ALREADY_REMOVED_BILLING_KEY");
@@ -164,24 +165,13 @@ class PaymentAttemptRepositoryTest {
         insertFailedAttempt(removedWithoutCard, "ALREADY_REMOVED_BILLING_KEY");
     Fixture oldNotFound = insertFixture();
     UUID oldNotFoundAttempt = insertFailedAttempt(oldNotFound, "NOT_FOUND_PAYMENT");
+    insertBillingKey(oldNotFound, LONG_AGO.minusDays(1));
     Fixture recentNotFound = insertFixture();
     UUID recentNotFoundAttempt =
         insertFailedAttempt(recentNotFound, "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(1));
+    insertBillingKey(recentNotFound, LONG_AGO.minusDays(1));
 
-    List<UUID> candidateIds =
-        paymentAttemptRepository
-            .findRetryCandidates(
-                OffsetDateTime.now(),
-                Integer.MAX_VALUE,
-                Set.of("INVALID_CARD_EXPIRATION", "ALREADY_REMOVED_BILLING_KEY"),
-                "ALREADY_REMOVED_BILLING_KEY",
-                "NOT_FOUND_PAYMENT",
-                OffsetDateTime.now().minusDays(7))
-            .stream()
-            .map(PaymentRetryCandidateProjection::getId)
-            .toList();
-
-    assertThat(candidateIds)
+    assertThat(retryCandidateIds())
         .contains(
             reregisteredAttempt, retryableAttempt, removedWithCardAttempt, recentNotFoundAttempt)
         .doesNotContain(excludedAttempt, removedWithoutCardAttempt, oldNotFoundAttempt);
@@ -191,8 +181,10 @@ class PaymentAttemptRepositoryTest {
   void findRetryCandidates는_활성이_아닌_도입사의_실패를_돌려주지_않는다() {
     Fixture active = insertFixture();
     UUID activeAttempt = insertFailedAttempt(active, "REJECT_CARD_COMPANY");
+    insertBillingKey(active, LONG_AGO.minusDays(1));
     Fixture suspended = insertFixture();
     UUID suspendedAttempt = insertFailedAttempt(suspended, "REJECT_CARD_COMPANY");
+    insertBillingKey(suspended, LONG_AGO.minusDays(1));
     jdbcTemplate.update(
         "UPDATE organization SET status = 'suspended' WHERE id = ?", suspended.organizationId());
 
@@ -210,6 +202,45 @@ class PaymentAttemptRepositoryTest {
             .toList();
 
     assertThat(candidateIds).contains(activeAttempt).doesNotContain(suspendedAttempt);
+  }
+
+  @Test
+  void findRetryCandidates는_카드를_보관했거나_카드가_없는_실패_시도를_돌려주지_않는다() {
+    Fixture archived = insertFixture();
+    UUID archivedAttempt = insertFailedAttempt(archived, "REJECT_CARD_COMPANY");
+    insertBillingKey(archived, LONG_AGO.minusDays(1));
+    archiveBillingKey(archived);
+    Fixture archivedAfterReregistration = insertFixture();
+    UUID archivedAfterReregistrationAttempt =
+        insertFailedAttempt(archivedAfterReregistration, "ALREADY_REMOVED_BILLING_KEY");
+    insertBillingKey(archivedAfterReregistration, LONG_AGO.plusDays(1));
+    archiveBillingKey(archivedAfterReregistration);
+    Fixture withoutCard = insertFixture();
+    UUID withoutCardAttempt = insertFailedAttempt(withoutCard, "REJECT_CARD_COMPANY");
+
+    assertThat(retryCandidateIds())
+        .doesNotContain(archivedAttempt, archivedAfterReregistrationAttempt, withoutCardAttempt);
+  }
+
+  private List<UUID> retryCandidateIds() {
+    return paymentAttemptRepository
+        .findRetryCandidates(
+            OffsetDateTime.now(),
+            Integer.MAX_VALUE,
+            Set.of("INVALID_CARD_EXPIRATION", "ALREADY_REMOVED_BILLING_KEY"),
+            "ALREADY_REMOVED_BILLING_KEY",
+            "NOT_FOUND_PAYMENT",
+            OffsetDateTime.now().minusDays(7))
+        .stream()
+        .map(PaymentRetryCandidateProjection::getId)
+        .toList();
+  }
+
+  private void archiveBillingKey(Fixture fixture) {
+    jdbcTemplate.update(
+        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ? AND customer_id = ?",
+        fixture.organizationId(),
+        fixture.customerId());
   }
 
   private UUID insertFailedAttempt(Fixture fixture, String failureCode) {
