@@ -9,6 +9,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.service.OperationsService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
@@ -69,6 +70,7 @@ class WebhookIntegrationTest {
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private MeterRegistry meterRegistry;
+  @Autowired private OperationsService operationsService;
   @MockitoSpyBean private WebhookAddressPolicy webhookAddressPolicy;
   private HttpServer httpServer;
   private UUID organizationId;
@@ -405,6 +407,21 @@ class WebhookIntegrationTest {
     assertThat(received)
         .extracting(Received::id)
         .containsExactly(backlog.get(0), other, backlog.get(1), backlog.get(2));
+  }
+
+  @Test
+  void 운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다() {
+    long before = operationsService.get().failedWebhookCount();
+    UUID eventId = failOnce();
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET status = 'failed', next_attempt_at = NULL WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    assertThat(operationsService.get().failedWebhookCount()).isEqualTo(before + 1);
+
+    webhookEndpointService.delete(organizationId, endpoint.id());
+
+    assertThat(operationsService.get().failedWebhookCount()).isEqualTo(before);
   }
 
   @Test
