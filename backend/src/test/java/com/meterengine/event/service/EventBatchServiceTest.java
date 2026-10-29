@@ -22,8 +22,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -65,17 +63,8 @@ class EventBatchServiceTest {
         .containsExactly("tx-1", "tx-2");
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"transactionId", "customerId", "type", "properties", "occurredAt"})
-  void 검증_오류_필드는_단건_요청과_같은_JSON_이름이다(String javaField) throws Exception {
-    String jsonField =
-        IngestEventRequest.class.getDeclaredField(javaField).getAnnotation(JsonProperty.class)
-                == null
-            ? javaField
-            : IngestEventRequest.class
-                .getDeclaredField(javaField)
-                .getAnnotation(JsonProperty.class)
-                .value();
+  @Test
+  void 검증_오류_필드는_단건_요청과_같은_필드_이름이다() throws Exception {
     EventBatchService batchService =
         new EventBatchService(
             eventRepository,
@@ -83,15 +72,22 @@ class EventBatchServiceTest {
             new EventIngestMetrics(new SimpleMeterRegistry()),
             Validation.buildDefaultValidatorFactory().getValidator(),
             jsonMapper);
-    ObjectNode event = (ObjectNode) event("tx-missing");
-    event.putNull(jsonField);
+    for (String javaField :
+        List.of("transactionId", "customerId", "type", "properties", "occurredAt")) {
+      JsonProperty property =
+          IngestEventRequest.class.getDeclaredField(javaField).getAnnotation(JsonProperty.class);
+      String jsonField = property == null ? javaField : property.value();
+      ObjectNode event = (ObjectNode) event("tx-missing");
+      event.putNull(jsonField);
 
-    IngestEventBatchResponse response =
-        batchService.ingest(ORGANIZATION_ID, new IngestEventBatchRequest(List.of(event)));
+      IngestEventBatchResponse response =
+          batchService.ingest(ORGANIZATION_ID, new IngestEventBatchRequest(List.of(event)));
 
-    assertThat(response.results().getFirst().error().errors())
-        .extracting(FieldError::field)
-        .containsExactly("events[0]." + jsonField);
+      assertThat(response.results().getFirst().error().errors())
+          .as(javaField)
+          .extracting(FieldError::field)
+          .containsExactly("events[0]." + jsonField);
+    }
   }
 
   private JsonNode event(String transactionId) {
