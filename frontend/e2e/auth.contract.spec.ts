@@ -651,6 +651,20 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
   });
 }
 
+test("on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const header = page.locator(".workspace-header");
+  await expect(header.getByRole("combobox", { name: "업무 환경" })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(header.getByRole("button", { name, exact: true })).toBeHidden();
+  expect((await header.boundingBox())!.height).toBeLessThan(130);
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByText("전체 관리", { exact: true })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(drawer.getByRole("button", { name, exact: true })).toBeVisible();
+});
+
 test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");

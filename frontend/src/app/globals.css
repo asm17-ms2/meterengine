@@ -126,7 +126,7 @@ p { line-height: 1.7; }
 .setup-list { list-style: none; padding: 0; margin: 0; }.setup-list li { padding: 17px 0; border-bottom: 1px solid #edf0f5; display: flex; gap: 14px; align-items: center; }.setup-list li:last-child { border: 0; }.setup-list a { margin-left: auto; white-space: nowrap; }.setup-list strong { display: block; font-size: 13px; margin-bottom: 4px; }.setup-list p { margin: 0; line-height: 1.5; }
 .workspace-tabs { display: flex; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid #dce1eb; padding-bottom: 12px; }.workspace-tabs a { text-decoration: none; font-size: 13px; color: #5a6578; }.workspace-tabs a[aria-current=page] { color: #5746ad; font-weight: 700; }.numeric { font-variant-numeric: tabular-nums; font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }.detail-strip { display: flex; flex-wrap: wrap; gap: 30px; }.detail-strip dt { margin-bottom: 7px; }.detail-strip dd { margin: 0; font-weight: 600; }
 @media(max-width: 1100px) { .workspace-shell { grid-template-columns: 200px minmax(0,1fr); }.workspace-content { padding: 24px; }.workflow-nav { padding: 20px 24px 0; }.finance-flow > div { padding: 24px 16px; }.workspace-user > .workspace-user-name { display:none; } }
-@media(max-width: 767px) { .workspace-shell { display: block; }.workspace-header { height: 64px; padding: 0 14px; gap: 10px; }.workspace-sidebar { display:none; }.workspace-brand { gap: 10px; }.workspace-brand .wordmark { font-size: 17px; }.workspace-brand .workspace-divider, .workspace-user > a { display:none; }.organization-link { max-width: 120px; font-size: 12px; }.workspace-user { gap:0; }.workspace-user .ant-btn { font-size: 11px; padding: 0 8px; }.workflow-nav { padding: 16px 12px 0; gap: 4px; }.workflow-nav a { padding: 8px 4px; gap: 5px; }.workflow-nav strong { font-size: 11px; }.workflow-nav small { display:none; }.workspace-grid { grid-template-columns:1fr; }.finance-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }.finance-flow > div { border-bottom: 1px solid #e7eaf1; padding:20px; }.finance-flow strong { font-size: 24px; }.workspace-panel { padding:20px; } }
+@media(max-width: 767px) { .workspace-shell { display: block; }.workspace-header { height: 64px; padding: 0 14px; gap: 10px; }.workspace-sidebar { display:none; }.workspace-brand { gap: 10px; }.workspace-brand .wordmark { font-size: 17px; }.workspace-brand .workspace-divider { display:none; }.organization-link { max-width: 120px; font-size: 12px; }.workspace-user { gap:0; }.workspace-user .ant-btn { font-size: 11px; padding: 0 8px; }.workflow-nav { padding: 16px 12px 0; gap: 4px; }.workflow-nav a { padding: 8px 4px; gap: 5px; }.workflow-nav strong { font-size: 11px; }.workflow-nav small { display:none; }.workspace-grid { grid-template-columns:1fr; }.finance-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }.finance-flow > div { border-bottom: 1px solid #e7eaf1; padding:20px; }.finance-flow strong { font-size: 24px; }.workspace-panel { padding:20px; } }
 
 body { color: var(--ink); background: var(--canvas); font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all; overflow-wrap: break-word; }
 a { color: #51409c; }
@@ -191,6 +191,8 @@ input, textarea { caret-color: var(--blue); }
 .workspace-brand { flex: 1; }
 .organization-link { min-width: 0; white-space: normal; font-size: 14px; }
 .workspace-user { flex-wrap: wrap; justify-content: flex-end; gap: 14px; }
+.workspace-account { display: contents; }
+.drawer-account { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; }
 .workspace-cell-text, .workspace-cell-list { overflow-wrap: anywhere; }
 .workspace-desktop-table .ant-table-cell { max-width: 360px; white-space: normal; }
 .workspace-json { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -205,7 +207,7 @@ input, textarea { caret-color: var(--blue); }
   .workspace-brand { width: 100%; justify-content: flex-start; }
   .workspace-user { width: 100%; justify-content: flex-end; gap: 10px; }
   .workspace-user .ant-btn { font-size: 12px; padding-inline: 10px; min-height: 36px; }
-  .workspace-user > a { display: inline; font-size: 12px; }
+  .workspace-account { display: none; }
   .workspace-content { padding: 24px 16px 40px; }
   .workspace-guide { margin: 20px 16px 0; padding: 18px; }
   .workspace-guide-heading { flex-direction: column; gap: 14px; }
