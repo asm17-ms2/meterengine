@@ -68,6 +68,19 @@ public class InvoiceService {
             .toList());
   }
 
+  @Transactional(readOnly = true)
+  public InvoiceResponse get(UUID organizationId, UUID id) {
+    Invoice invoice =
+        invoiceRepository
+            .findByOrganizationIdAndId(organizationId, id)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
+    return toInvoiceResponse(
+        invoice,
+        invoiceLineRepository
+            .findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+                organizationId, id));
+  }
+
   private InvoiceResponse toInvoiceResponse(Invoice invoice, List<InvoiceLine> invoiceLines) {
     return new InvoiceResponse(
         invoice.getId(),

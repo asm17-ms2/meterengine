@@ -7,9 +7,15 @@ export const MAX_PAGE_SIZE = 100;
 export const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 
 export type SortDirection = "asc" | "desc";
+export type ArchiveStatus = "active" | "archived" | "all";
 
 export type ListQuery = {
   month?: string;
+  from?: string;
+  to?: string;
+  rangeMode?: "date" | "datetime";
+  properties?: string;
+  status?: ArchiveStatus;
   page: number;
   size: number;
   sort?: string;
@@ -23,7 +29,7 @@ export type ListQuery = {
 export type MonthlyListQuery = ListQuery & { month: string };
 
 export type ListQueryOverrides = Partial<
-  Pick<ListQuery, "month" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type">
+  Pick<ListQuery, "month" | "from" | "to" | "rangeMode" | "properties" | "status" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type">
 >;
 
 export type ListQueryOptions = {
@@ -82,6 +88,11 @@ export function readListQuery(
         : readMonth(searchParams.month)
       : undefined,
     page: capabilities.page ? readPage(searchParams.page) : 0,
+    from: capabilities.range ? readFirst(searchParams.from) : undefined,
+    to: capabilities.range ? readFirst(searchParams.to) : undefined,
+    properties: capabilities.range ? readFirst(searchParams.properties) : undefined,
+    status: capabilities.archive ? readArchiveStatus(readFirst(searchParams.status)) : undefined,
+    rangeMode: capabilities.range && readFirst(searchParams.range_mode) === "date" ? "date" : "datetime",
     size: capabilities.size ? readSize(searchParams.size) : DEFAULT_PAGE_SIZE,
     sort,
     order: sort ? readOrder(searchParams.order) : undefined,
@@ -97,13 +108,18 @@ export function toServerParams(
   capabilities: ListCapabilities,
 ): Record<string, string> {
   const params: Record<string, string> = {};
-  if (query.month && query.month !== ALL_MONTHS) params.month = query.month;
+  if (capabilities.range && (query.from || query.to)) {
+    if (query.from) params.from = rangeEndpoint(query.from, false, query.rangeMode);
+    if (query.to) params.to = rangeEndpoint(query.to, true, query.rangeMode);
+  } else if (query.month && query.month !== ALL_MONTHS) params.month = query.month;
   if (capabilities.page && query.page > 0) params.page = String(query.page);
   if (capabilities.size && query.size !== DEFAULT_PAGE_SIZE) params.size = String(query.size);
   if (capabilities.sort && query.sort) {
     params.sort = query.sort;
     if (query.order) params.order = query.order;
   }
+  if (capabilities.range && query.properties) params.properties = query.properties;
+  if (capabilities.archive && query.status) params.status = query.status;
   if (capabilities.q && query.q.trim() !== "") params.q = query.q.trim();
   if (capabilities.customer_id && query.customerId) params.customer_id = query.customerId;
   if (capabilities.type && query.type) params.type = query.type;
@@ -129,7 +145,13 @@ export function buildListHref(
   const next = applyListOverrides(query, overrides);
 
   const params = new URLSearchParams();
-  if (next.month) params.set("month", next.month);
+  if (next.from || next.to) {
+    if (next.from) params.set("from", next.from);
+    if (next.to) params.set("to", next.to);
+    if (next.rangeMode === "date") params.set("range_mode", "date");
+  } else if (next.month) params.set("month", next.month);
+  if (next.properties) params.set("properties", next.properties);
+  if (next.status && next.status !== "active") params.set("status", next.status);
   if (next.customerId) params.set("customer_id", next.customerId);
   if (next.type) params.set("type", next.type);
   const searchText = next.q.trim();
@@ -144,4 +166,17 @@ export function buildListHref(
 
   const search = params.toString();
   return search ? `${pathname}?${search}` : pathname;
+}
+
+export function rangeEndpoint(raw: string, isEnd: boolean, mode?: "date" | "datetime") {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const date = new Date(`${raw}T00:00:00Z`);
+    if (isEnd && mode === "date") date.setUTCDate(date.getUTCDate() + 1);
+    return Number.isFinite(date.getTime()) ? `${date.toISOString().slice(0, 10)}T00:00:00+09:00` : raw;
+  }
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(raw) ? `${raw.length === 16 ? `${raw}:00` : raw}+09:00` : raw;
+}
+
+export function readArchiveStatus(value?: string): ArchiveStatus {
+  return value === "archived" || value === "all" ? value : "active";
 }

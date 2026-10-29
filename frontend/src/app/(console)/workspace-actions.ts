@@ -7,7 +7,7 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
-import { InputFieldError, readWholeNumber, successMessage } from "@/app/(console)/workspace-action-feedback";
+import { errorMessageForCode, InputFieldError, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "@/app/(console)/workspace-action-feedback";
 
 export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
 
@@ -39,6 +39,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "archivePaymentMethod": path = `/v1/customers/${identifier(data)}/payment-method`; method = "DELETE"; break;
       case "restoreWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/restorations`; break;
       case "createApiKey":
         path = "/v1/api-keys";
@@ -54,6 +55,11 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true", description: optional(data, "description")?.replace(/\r\n/g, "\n") ?? null }; break;
       case "testWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/test-events`; break;
       case "retryWebhookDelivery": path = `/v1/webhook-endpoints/${identifier(data)}/deliveries/${identifier(data, "delivery_id")}/retries`; break;
+      case "updatePaymentSetting": path = "/v1/payment-setting"; method = "PUT"; body = { mode: text(data, "mode") }; break;
+      case "updateTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "PUT"; body = { client_key: text(data, "client_key"), secret_key: text(data, "secret_key") }; break;
+      case "createPaymentMethodRegistration": path = `/v1/customers/${identifier(data)}/payment-method-registrations`; break;
+      case "createPaymentAttempt": path = `/v1/invoices/${identifier(data)}/payment-attempts`; break;
+      case "createPaymentCancellation": path = `/v1/payment-attempts/${identifier(data)}/cancellations`; body = { reason: text(data, "reason"), amount: text(data, "amount") ? amount(data, "amount") : undefined }; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
   } catch (error) {
@@ -61,7 +67,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     return { message: "입력한 값을 처리하지 못했습니다. 입력값을 확인한 뒤 다시 시도하세요." };
   }
   if (false && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
-  const isPaymentRequest = false;
+  const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {
     method, body,
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
@@ -71,8 +77,10 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   });
   if (!result.ok) {
     if (isPaymentRequest && (result.error.status === 0 || result.error.code === "malformed_response" || result.error.code === "payment_result_unconfirmed" || result.error.code === "payment_cancellation_in_progress"))
-      return { isUnconfirmed: true, message: "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요." };
-    return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
+      return { isUnconfirmed: true, message: unconfirmedMessage(operation) };
+    const staleCancellation = staleCancellationMessage(operation, result.error.code);
+    if (staleCancellation) return { isUnconfirmed: true, message: staleCancellation };
+    return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");
   const redirectScope = new URLSearchParams({ organization_id: session.organization!.id });

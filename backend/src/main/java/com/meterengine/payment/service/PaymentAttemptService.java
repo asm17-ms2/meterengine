@@ -1,86 +1,478 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
-import com.meterengine.metric.service.BillableMetricUsageService;
-import com.meterengine.payment.client.PaymentApproval;
-import com.meterengine.payment.client.PaymentGateway;
-import com.meterengine.payment.client.PaymentRequest;
+import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
+import com.meterengine.payment.client.TossPaymentsClient;
+import com.meterengine.payment.client.TossPaymentsError;
+import com.meterengine.payment.client.TossPaymentsPayment;
+import com.meterengine.payment.client.TossPaymentsResult;
+import com.meterengine.payment.config.PaymentProperties;
+import com.meterengine.payment.dto.ListPaymentAttemptsResponse;
 import com.meterengine.payment.dto.PaymentAttemptResponse;
+import com.meterengine.payment.entity.BillingKey;
+import com.meterengine.payment.entity.BillingKeyId;
 import com.meterengine.payment.entity.PaymentAttempt;
+import com.meterengine.payment.entity.PaymentSetting;
+import com.meterengine.payment.entity.TossPaymentsCredential;
+import com.meterengine.payment.repository.BillingKeyRepository;
 import com.meterengine.payment.repository.PaymentAttemptRepository;
+import com.meterengine.webhook.entity.WebhookEventType;
+import com.meterengine.webhook.service.WebhookEventService;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PaymentAttemptService {
 
+  private static final Logger logger = LoggerFactory.getLogger(PaymentAttemptService.class);
+  private static final String ORDER_NAME_SUFFIX = " 사용료";
+  private static final String TOSS_PAYMENT_DONE = "DONE";
+  private static final Set<String> TOSS_PAYMENT_ENDED_WITHOUT_APPROVAL =
+      Set.of("ABORTED", "EXPIRED");
+  private static final String ENDED_WITHOUT_APPROVAL_MESSAGE = "토스페이먼츠 결제가 승인되지 않고 끝났습니다";
+
   private final PaymentAttemptRepository paymentAttemptRepository;
   private final InvoiceRepository invoiceRepository;
-  private final PaymentGateway paymentGateway;
+  private final PaymentSettingService paymentSettingService;
+  private final TossPaymentsCredentialService tossPaymentsCredentialService;
+  private final BillingKeyRepository billingKeyRepository;
+  private final TossPaymentsClient tossPaymentsClient;
+  private final PaymentMetrics paymentMetrics;
+  private final PaymentProperties paymentProperties;
+  private final TransactionTemplate transactionTemplate;
+  private final AuditLogService auditLogService;
+  private final WebhookEventService webhookEventService;
 
   PaymentAttemptService(
       PaymentAttemptRepository paymentAttemptRepository,
       InvoiceRepository invoiceRepository,
-      PaymentGateway paymentGateway) {
+      PaymentSettingService paymentSettingService,
+      TossPaymentsCredentialService tossPaymentsCredentialService,
+      BillingKeyRepository billingKeyRepository,
+      TossPaymentsClient tossPaymentsClient,
+      PaymentMetrics paymentMetrics,
+      PaymentProperties paymentProperties,
+      PlatformTransactionManager platformTransactionManager,
+      AuditLogService auditLogService,
+      WebhookEventService webhookEventService) {
     this.paymentAttemptRepository = paymentAttemptRepository;
     this.invoiceRepository = invoiceRepository;
-    this.paymentGateway = paymentGateway;
+    this.paymentSettingService = paymentSettingService;
+    this.tossPaymentsCredentialService = tossPaymentsCredentialService;
+    this.billingKeyRepository = billingKeyRepository;
+    this.tossPaymentsClient = tossPaymentsClient;
+    this.paymentMetrics = paymentMetrics;
+    this.paymentProperties = paymentProperties;
+    this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
+    this.auditLogService = auditLogService;
+    this.webhookEventService = webhookEventService;
   }
 
-  @Transactional
-  public PaymentAttemptResponse create(UUID organizationId, UUID invoiceId) {
-    Invoice invoice =
-        invoiceRepository
-            .findByOrganizationIdAndId(organizationId, invoiceId)
-            .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
+  public PaymentAttemptResponse create(
+      UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
+    PaymentCreation creation =
+        transactionTemplate.execute(
+            status -> prepare(organizationId, invoiceId, principalMode, testCode));
+    for (PaymentAttempt attempt : creation.uncertainAttempts()) {
+      if (!isConfirmedUncharged(creation, attempt)) {
+        throw new ConflictException(ErrorCode.PAYMENT_RESULT_UNCONFIRMED);
+      }
+    }
+    PaymentAttempt pendingAttempt =
+        transactionTemplate.execute(status -> insertPending(creation, principalMode, testCode));
+    return approve(pendingAttempt, testCode);
+  }
+
+  @Transactional(readOnly = true)
+  public ListPaymentAttemptsResponse list(UUID organizationId, UUID invoiceId) {
+    findInvoice(organizationId, invoiceId);
+    return ListPaymentAttemptsResponse.from(
+        paymentAttemptRepository.findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(
+            organizationId, invoiceId));
+  }
+
+  PaymentAttemptResponse approve(PaymentAttempt pendingAttempt, String testCode) {
+    UUID organizationId = pendingAttempt.getOrganizationId();
+    UUID attemptId = pendingAttempt.getId();
+    String mode = pendingAttempt.getMode();
+    Optional<TossPaymentsCredential> credential =
+        tossPaymentsCredentialService.find(organizationId, mode);
+    if (credential.isEmpty()) {
+      return failWithoutToss(pendingAttempt, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
+    }
+    Optional<BillingKey> billingKey =
+        findBillingKey(organizationId, pendingAttempt.getCustomerId(), mode);
+    if (billingKey.isEmpty()) {
+      return failWithoutToss(pendingAttempt, ErrorCode.PAYMENT_METHOD_MISSING);
+    }
+    TossPaymentsResult<TossPaymentsPayment> result =
+        tossPaymentsClient.approveBilling(
+            credential.get().getSecretKey(),
+            billingKey.get().getBillingKey(),
+            new TossPaymentsApproveBillingRequest(
+                pendingAttempt.getCustomerId().toString(),
+                pendingAttempt.getAmount(),
+                attemptId.toString(),
+                pendingAttempt.getOrderName()),
+            attemptId.toString(),
+            testCode);
+    switch (result) {
+      case TossPaymentsResult.Success<TossPaymentsPayment> approved when isDone(approved.value()) ->
+          markApproved(pendingAttempt, approved.value().paymentKey());
+      case TossPaymentsResult.Success<TossPaymentsPayment> notDone -> {
+        logger.warn(
+            "toss payments billing approval returned a payment that is not done: attempt_id={},"
+                + " mode={}, status={}, payment_key_present={}",
+            attemptId,
+            mode,
+            new TossPaymentsError(null, notDone.value().status()).singleLineMessage(),
+            notDone.value().paymentKey() != null);
+        paymentMetrics.countAttempt(mode, PaymentMetrics.UNKNOWN);
+      }
+      case TossPaymentsResult.Rejected<TossPaymentsPayment> rejected -> {
+        logger.warn(
+            "toss payments rejected billing approval: attempt_id={}, mode={}, status={}, code={},"
+                + " message={}",
+            attemptId,
+            mode,
+            rejected.status(),
+            rejected.code(),
+            new TossPaymentsError(rejected.code(), rejected.message()).singleLineMessage());
+        markFailed(pendingAttempt, TossPaymentsFailureCode.of(rejected), rejected.message());
+      }
+      case TossPaymentsResult.Unknown<TossPaymentsPayment> unknown -> {
+        logger.warn(
+            "toss payments billing approval result unknown: attempt_id={}, mode={}, reason={}",
+            attemptId,
+            mode,
+            unknown.reason());
+        paymentMetrics.countAttempt(mode, PaymentMetrics.UNKNOWN);
+      }
+    }
+    return find(organizationId, attemptId);
+  }
+
+  // 토스가 조회해 준 결제로 pending 시도를 끝내고, 이번에 바꿨으면 true다.
+  boolean settle(PaymentAttempt attempt, TossPaymentsPayment payment) {
+    if (isDone(payment)) {
+      return markApproved(attempt, payment.paymentKey());
+    }
+    if (isEndedWithoutApproval(payment)) {
+      return markFailed(attempt, payment.status(), ENDED_WITHOUT_APPROVAL_MESSAGE);
+    }
+    return false;
+  }
+
+  boolean markDone(PaymentAttempt attempt, String paymentKey) {
+    UUID attemptId = attempt.getId();
+    String mode = attempt.getMode();
+    boolean applied =
+        Boolean.TRUE.equals(
+            transactionTemplate.execute(
+                status -> {
+                  if (paymentAttemptRepository.markDone(attemptId, paymentKey, now()) != 1) {
+                    return false;
+                  }
+                  publish(attempt, WebhookEventType.PAYMENT_SUCCEEDED);
+                  return true;
+                }));
+    if (applied) {
+      paymentMetrics.countAttempt(mode, PaymentAttempt.DONE);
+    }
+    return applied;
+  }
+
+  boolean markFailed(PaymentAttempt attempt, String failureCode, String failureMessage) {
+    UUID attemptId = attempt.getId();
+    UUID organizationId = attempt.getOrganizationId();
+    UUID invoiceId = attempt.getInvoiceId();
+    String mode = attempt.getMode();
+    Optional<Long> attemptCount =
+        transactionTemplate.execute(
+            status -> {
+              if (paymentAttemptRepository.markFailed(attemptId, failureCode, failureMessage, now())
+                  != 1) {
+                return Optional.empty();
+              }
+              publish(attempt, WebhookEventType.PAYMENT_FAILED);
+              return Optional.of(
+                  paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
+                      organizationId, invoiceId, mode));
+            });
+    if (attemptCount.isEmpty()) {
+      return false;
+    }
+    paymentMetrics.countAttempt(mode, PaymentAttempt.FAILED);
+    if (attemptCount.get() == paymentProperties.retryMaxAttempts()) {
+      paymentMetrics.countRetryExhausted(mode);
+    }
+    return true;
+  }
+
+  PaymentAttempt savePending(
+      UUID organizationId,
+      UUID customerId,
+      UUID invoiceId,
+      String mode,
+      long amount,
+      String orderName) {
+    PaymentAttempt attempt =
+        paymentAttemptRepository.saveAndFlush(
+            PaymentAttempt.pending(
+                UUID.randomUUID(), organizationId, customerId, invoiceId, mode, amount, orderName));
+    auditLogService.record(
+        organizationId,
+        "payment_attempt_created",
+        "payment_attempt",
+        attempt.getId().toString(),
+        Map.of("invoice_id", invoiceId, "customer_id", customerId, "mode", mode, "amount", amount));
+    return attempt;
+  }
+
+  boolean isUncharged(UUID attemptId, Instant requestedAt, TossPaymentsCredential credential) {
+    String orderId = attemptId.toString();
+    return switch (tossPaymentsClient.findPaymentByOrderId(credential.getSecretKey(), orderId)) {
+      case TossPaymentsResult.Success<TossPaymentsPayment> found
+          when orderId.equals(found.value().orderId()) && isEndedWithoutApproval(found.value()) ->
+          true;
+      case TossPaymentsResult.Success<TossPaymentsPayment> found -> {
+        logger.warn(
+            "toss payments order lookup found a payment for a failed attempt, skipping retry:"
+                + " failed_attempt_id={}, organization_id={}, mode={}, status={},"
+                + " order_matches={}",
+            attemptId,
+            credential.getOrganizationId(),
+            credential.getMode(),
+            new TossPaymentsError(null, found.value().status()).singleLineMessage(),
+            orderId.equals(found.value().orderId()));
+        yield false;
+      }
+      case TossPaymentsResult.Rejected<TossPaymentsPayment> notFound
+          when TossPaymentsFailureCode.isNotFoundPayment(notFound)
+              && credential.getUpdatedAt().toInstant().isBefore(requestedAt) ->
+          true;
+      case TossPaymentsResult.Rejected<TossPaymentsPayment> notFound
+          when TossPaymentsFailureCode.isNotFoundPayment(notFound) -> {
+        logger.warn(
+            "toss payments credential changed after the failed attempt, skipping retry:"
+                + " failed_attempt_id={}, mode={}",
+            attemptId,
+            credential.getMode());
+        yield false;
+      }
+      case TossPaymentsResult.Rejected<TossPaymentsPayment> rejected -> {
+        logger.warn(
+            "toss payments order lookup rejected before retry, skipping retry:"
+                + " failed_attempt_id={}, mode={}, status={}, code={}",
+            attemptId,
+            credential.getMode(),
+            rejected.status(),
+            rejected.code());
+        yield false;
+      }
+      case TossPaymentsResult.Unknown<TossPaymentsPayment> unknown -> {
+        logger.warn(
+            "toss payments order lookup result unknown before retry, skipping retry:"
+                + " failed_attempt_id={}, mode={}, reason={}",
+            attemptId,
+            credential.getMode(),
+            unknown.reason());
+        yield false;
+      }
+    };
+  }
+
+  private void publish(PaymentAttempt attempt, WebhookEventType type) {
+    webhookEventService.publish(
+        attempt.getOrganizationId(),
+        type,
+        Map.of(
+            "payment_attempt_id",
+            attempt.getId(),
+            "invoice_id",
+            attempt.getInvoiceId(),
+            "customer_id",
+            attempt.getCustomerId(),
+            "amount",
+            attempt.getAmount(),
+            "mode",
+            attempt.getMode()));
+  }
+
+  private boolean markApproved(PaymentAttempt attempt, String paymentKey) {
+    if (markDone(attempt, paymentKey)) {
+      return true;
+    }
+    paymentAttemptRepository
+        .findById(attempt.getId())
+        .filter(current -> PaymentAttempt.FAILED.equals(current.getStatus()))
+        .ifPresent(
+            failed ->
+                logger.error(
+                    "toss payments approved a payment attempt already marked failed:"
+                        + " attempt_id={}, organization_id={}, mode={}, failure_code={}",
+                    failed.getId(),
+                    failed.getOrganizationId(),
+                    failed.getMode(),
+                    failed.getFailureCode()));
+    return false;
+  }
+
+  // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 키가 바뀌었으면 다시 묻지 않는다.
+  private boolean isConfirmedUncharged(PaymentCreation creation, PaymentAttempt attempt) {
+    boolean credentialChanged =
+        !creation.credential().getUpdatedAt().isBefore(attempt.getRequestedAt());
+    if (!attempt.getId().equals(creation.latestAttemptId())) {
+      return credentialChanged
+          || isUncharged(
+              attempt.getId(), attempt.getRequestedAt().toInstant(), creation.credential());
+    }
+    return !credentialChanged
+        && !attempt
+            .getCompletedAt()
+            .isBefore(now().minus(PaymentAttemptConfirmationService.CONFIRMATION_WINDOW))
+        && isUncharged(
+            attempt.getId(), attempt.getRequestedAt().toInstant(), creation.credential());
+  }
+
+  private PaymentCreation prepare(
+      UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
+    Invoice invoice = findInvoice(organizationId, invoiceId);
     if (invoice.getTotalAmount() <= 0) {
       throw new ConflictException(ErrorCode.INVOICE_AMOUNT_ZERO);
     }
-    if (paymentAttemptRepository.findActive(organizationId, invoiceId).isPresent()) {
+    String mode = paymentSettingService.findMode(organizationId);
+    if (principalMode != null && !principalMode.equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
+    if (testCode != null && PaymentSetting.LIVE.equals(mode)) {
+      throw new InvalidRequestException(ErrorCode.TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE);
+    }
+    TossPaymentsCredential credential =
+        tossPaymentsCredentialService
+            .find(organizationId, mode)
+            .orElseThrow(() -> new ConflictException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
+    if (findBillingKey(organizationId, invoice.getCustomerId(), mode).isEmpty()) {
+      throw new ConflictException(ErrorCode.PAYMENT_METHOD_MISSING);
+    }
+    if (paymentAttemptRepository.findActive(organizationId, invoiceId, mode).isPresent()) {
       throw new ConflictException(ErrorCode.INVOICE_ALREADY_PAID);
     }
-
-    UUID attemptId = UUID.randomUUID();
-    String orderName = invoice.getPeriod() + " 사용료";
-    PaymentApproval approval =
-        paymentGateway.approve(
-            new PaymentRequest(
-                attemptId,
-                organizationId,
-                invoice.getCustomerId(),
-                invoice.getTotalAmount(),
-                orderName));
-    PaymentAttempt attempt =
-        paymentAttemptRepository.saveAndFlush(
-            PaymentAttempt.done(
-                attemptId,
-                organizationId,
-                invoice.getCustomerId(),
-                invoiceId,
-                invoice.getTotalAmount(),
-                orderName,
-                approval.paymentKey()));
-    return toPaymentAttemptResponse(attempt);
+    List<PaymentAttempt> attempts =
+        paymentAttemptRepository
+            .findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(organizationId, invoiceId)
+            .stream()
+            .filter(attempt -> mode.equals(attempt.getMode()))
+            .toList();
+    List<PaymentAttempt> uncertainAttempts =
+        attempts.stream()
+            .filter(attempt -> PaymentAttempt.FAILED.equals(attempt.getStatus()))
+            .filter(
+                attempt ->
+                    TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(attempt.getFailureCode()))
+            .toList();
+    UUID latestAttemptId = attempts.isEmpty() ? null : attempts.getFirst().getId();
+    return new PaymentCreation(invoice, mode, credential, uncertainAttempts, latestAttemptId);
   }
 
-  private static PaymentAttemptResponse toPaymentAttemptResponse(PaymentAttempt attempt) {
-    return new PaymentAttemptResponse(
-        attempt.getId(),
-        attempt.getInvoiceId(),
-        attempt.getStatus(),
-        attempt.getAmount(),
-        attempt.getPaymentKey(),
-        inBillingZone(attempt.getRequestedAt()),
-        inBillingZone(attempt.getCompletedAt()));
+  private PaymentAttempt insertPending(
+      PaymentCreation checked, String principalMode, String testCode) {
+    UUID organizationId = checked.invoice().getOrganizationId();
+    UUID invoiceId = checked.invoice().getId();
+    for (UUID attemptId : checked.uncertainAttemptIds().stream().sorted().toList()) {
+      paymentAttemptRepository.findForUpdate(organizationId, attemptId).orElseThrow();
+    }
+    PaymentCreation current = prepare(organizationId, invoiceId, principalMode, testCode);
+    if (!current.mode().equals(checked.mode())) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
+    if (!current.uncertainAttemptIds().equals(checked.uncertainAttemptIds())
+        || (!checked.uncertainAttempts().isEmpty()
+            && !current
+                .credential()
+                .getUpdatedAt()
+                .toInstant()
+                .equals(checked.credential().getUpdatedAt().toInstant()))) {
+      throw new ConflictException(ErrorCode.PAYMENT_RESULT_UNCONFIRMED);
+    }
+    Invoice invoice = current.invoice();
+    return savePending(
+        organizationId,
+        invoice.getCustomerId(),
+        invoiceId,
+        current.mode(),
+        invoice.getTotalAmount(),
+        invoice.getPeriod() + ORDER_NAME_SUFFIX);
   }
 
-  private static OffsetDateTime inBillingZone(OffsetDateTime time) {
-    return time.atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime();
+  private record PaymentCreation(
+      Invoice invoice,
+      String mode,
+      TossPaymentsCredential credential,
+      List<PaymentAttempt> uncertainAttempts,
+      UUID latestAttemptId) {
+
+    private Set<UUID> uncertainAttemptIds() {
+      return Set.copyOf(uncertainAttempts.stream().map(PaymentAttempt::getId).toList());
+    }
+  }
+
+  private Invoice findInvoice(UUID organizationId, UUID invoiceId) {
+    return invoiceRepository
+        .findByOrganizationIdAndId(organizationId, invoiceId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
+  }
+
+  private Optional<BillingKey> findBillingKey(UUID organizationId, UUID customerId, String mode) {
+    return billingKeyRepository.findById(new BillingKeyId(organizationId, customerId, mode));
+  }
+
+  private PaymentAttemptResponse failWithoutToss(PaymentAttempt pendingAttempt, ErrorCode reason) {
+    UUID organizationId = pendingAttempt.getOrganizationId();
+    UUID attemptId = pendingAttempt.getId();
+    logger.warn(
+        "billing approval failed before calling toss payments: attempt_id={}, mode={}, reason={}",
+        attemptId,
+        pendingAttempt.getMode(),
+        reason.getCode());
+    markFailed(pendingAttempt, reason.getCode(), reason.getMessage());
+    return find(organizationId, attemptId);
+  }
+
+  private PaymentAttemptResponse find(UUID organizationId, UUID attemptId) {
+    return PaymentAttemptResponse.from(
+        paymentAttemptRepository
+            .findByOrganizationIdAndId(organizationId, attemptId)
+            .orElseThrow());
+  }
+
+  static boolean isEndedWithoutApproval(TossPaymentsPayment payment) {
+    return TOSS_PAYMENT_ENDED_WITHOUT_APPROVAL.contains(payment.status());
+  }
+
+  private static boolean isDone(TossPaymentsPayment payment) {
+    return TOSS_PAYMENT_DONE.equals(payment.status()) && payment.paymentKey() != null;
+  }
+
+  private static OffsetDateTime now() {
+    return OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
   }
 }

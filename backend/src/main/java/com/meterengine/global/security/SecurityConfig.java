@@ -60,6 +60,13 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/v1/organization-invitations/*/accept")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/payment-method-registrations/*")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/v1/payment-method-registrations/*/billing-keys",
+                        "/v1/toss-payments-webhooks/*")
+                    .permitAll()
                     .requestMatchers(
                         "/actuator/health",
                         "/actuator/health/**",

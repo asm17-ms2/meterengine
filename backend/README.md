@@ -95,7 +95,7 @@ docker build -t meterengine-backend .
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
-- `CRYPTO_ENCRYPTION_KEY`는 운영 기본값이 없는 필수 값이다. 웹훅 서명 비밀값을 DB에 AES-GCM으로 암호화하는 키로, 32바이트를 base64로 준다. `local` 프로파일만 개발용 값을 쓴다. 값을 바꾸면 이미 저장한 비밀값을 풀지 못해 그 엔드포인트의 전송이 `secret_unavailable`로 실패한다. 배포 값은 `deploy/README.md`의 `crypto-encryption-key`다.
+- `CRYPTO_ENCRYPTION_KEY`는 운영 기본값이 없는 필수 값이다. 토스페이먼츠 시크릿 키, 빌링키, 웹훅 서명 비밀값을 DB에 AES-GCM으로 암호화하는 키로, 32바이트를 base64로 준다. `local` 프로파일만 개발용 값을 쓴다. 값을 바꾸면 이미 저장한 암호문을 풀지 못해 결제와 카드 등록이 실패하고, 웹훅 전송은 `secret_unavailable`로 실패한다. 배포 값은 `deploy/README.md`의 `crypto-encryption-key`다.
 - `meterengine.webhook.enabled`(기본 true)를 false로 두면 웹훅 발송 작업과 그 작업 등록만 멈춘다. 엔드포인트 등록, 시험 통보, 통보 적재는 계속되고, 다시 켜면 쌓인 전송을 차례로 보낸다.
 - `meterengine.webhook.allow-private-network`(기본 false)를 true로 두면 http와 사설망 주소로도 통보를 보낸다. `local` 프로파일과 시험만 켠다.
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
