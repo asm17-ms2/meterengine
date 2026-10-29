@@ -38,3 +38,12 @@ test("the usage quantity header and sort option say they sort by aggregated line
   assert.ok(filters.includes('{ value: "line_count", label: "집계 라인 수" }'));
 });
 
+test("the meter search empty state counts all meters and the sort note follows the applied sort", () => {
+  const screen = source("billable-metrics/BillableMetricsScreen.tsx");
+  const section = source("billable-metrics/BillableMetricsSection.tsx");
+  assert.ok(section.includes("totalUnfiltered={result.data.total_unfiltered}"));
+  assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개입니다."));
+  assert.ok(!screen.includes("<ScreenNote>정렬: 코드 오름차순</ScreenNote>"));
+  assert.ok(screen.includes('query.sort ?? "code"'));
+});
+
