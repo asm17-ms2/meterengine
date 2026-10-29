@@ -409,6 +409,27 @@ class BillableMetricServiceTest {
         new UpdateBillableMetricRequest("바뀐 이름", eventType, "sum", targetProperty, List.of()));
   }
 
+  @Test
+  void 조회_경로와_겹치는_code의_미터는_만들지_않는다() {
+    for (String code : List.of("search", "options", "export")) {
+      assertThatThrownBy(
+              () ->
+                  billableMetricService.create(
+                      ORGANIZATION_ID,
+                      new CreateBillableMetricRequest(
+                          code, "예약어 미터", "chat_completion", "sum", "token", List.of())))
+          .as(code)
+          .isInstanceOfSatisfying(
+              InvalidRequestException.class,
+              exception -> {
+                assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_BILLABLE_METRIC);
+                assertThat(exception.getErrors())
+                    .extracting(FieldError::field)
+                    .containsExactly("code");
+              });
+    }
+  }
+
   private BillableMetricResponse create(String aggregation, String targetProperty) {
     return create(aggregation, targetProperty, List.of());
   }
