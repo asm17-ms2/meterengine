@@ -470,6 +470,14 @@ test("a dangerous row action is a quiet link and its final confirmation carries 
   await expect(confirm).toHaveClass(/ant-btn-primary/);
 });
 
+test("the operator organization list shows the application time in the console KST format", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/organizations");
+  await expect(page).toHaveURL(/\/admin\/organizations/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/organizations?status=all");
+  await expect(page.getByText(/^신청일 /).first()).toHaveText(/^신청일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST$/);
+});
+
 test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/organizations");
   await expect(page).toHaveURL(/\/admin\/organizations/);
