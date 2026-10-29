@@ -91,7 +91,11 @@ class OrganizationPeopleIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .isEqualTo("consent_required");
-    assertThat(post("/v1/sessions/current/consents", authorization, Map.of("consents", CONSENTS)))
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                authorization,
+                Map.of("consents", CONSENTS, "new_password", "self-chosen-password")))
         .hasStatusOk();
     assertThat(
             mvc.get()
@@ -116,6 +120,47 @@ class OrganizationPeopleIntegrationTest {
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM consent WHERE user_account_id=?", Integer.class, userId))
         .isEqualTo(2);
+  }
+
+  @Test
+  void 직접_생성한_계정은_본인_동의에서_새_비밀번호를_정하고_초기_비밀번호와_먼저_연_세션이_막힌다() {
+    String email = UUID.randomUUID() + "@example.com";
+    assertThat(
+            post(
+                "/v1/organization/members",
+                owner,
+                Map.of("email", email, "name", "초기 비밀번호", "password", PASSWORD)))
+        .hasStatus(201);
+    String first = signIn(email, PASSWORD);
+    String earlier = signIn(email, PASSWORD);
+    assertThat(post("/v1/sessions/current/consents", first, Map.of("consents", CONSENTS)))
+        .hasStatus(400);
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                first,
+                Map.of("consents", CONSENTS, "new_password", PASSWORD)))
+        .hasStatus(400);
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                first,
+                Map.of("consents", CONSENTS, "new_password", "self-chosen-password")))
+        .hasStatusOk();
+    entityManager.flush();
+    assertThat(post("/v1/sessions", null, Map.of("email", email, "password", PASSWORD)))
+        .hasStatus(401);
+    assertThat(mvc.get().uri("/v1/sessions/current").header(AUTHORIZATION, earlier).exchange())
+        .hasStatus(401);
+    assertThat(mvc.get().uri("/v1/sessions/current").header(AUTHORIZATION, first).exchange())
+        .hasStatusOk();
+    assertThat(signIn(email, "self-chosen-password")).isNotBlank();
+  }
+
+  private String signIn(String email, String password) {
+    MvcTestResult login = post("/v1/sessions", null, Map.of("email", email, "password", password));
+    assertThat(login).hasStatus(201);
+    return "Bearer " + JsonPath.read(body(login), "$.token");
   }
 
   @Test

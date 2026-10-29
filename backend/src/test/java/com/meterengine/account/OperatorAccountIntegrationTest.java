@@ -115,7 +115,11 @@ class OperatorAccountIntegrationTest {
         .extractingPath("$.code")
         .isEqualTo("consent_required");
 
-    assertThat(post("/v1/sessions/current/consents", authorization, Map.of("consents", CONSENTS)))
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                authorization,
+                Map.of("consents", CONSENTS, "new_password", "operator-own-password")))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.consent_required")

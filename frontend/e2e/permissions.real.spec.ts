@@ -8,10 +8,13 @@ const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.PERMISSIONS_FRONTEND_URL ?? "http://localhost:33147";
 const OUTPUT = process.env.PERMISSIONS_EVIDENCE_DIR ?? "/private/tmp/meterengine-permissions-2026-10-27";
 const PASSWORD = "local-permissions-e2e-password";
+const CHANGED_PASSWORD = "local-permissions-e2e-own-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
 const SECRET_GROUPS: Set<string>[] = [];
 const CONSENTS = CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION }));
+// 직접 생성한 계정은 첫 동의에서 비밀번호를 바꾸므로 다음 로그인은 바뀐 비밀번호로 한다.
+const CONSENTED = new Set<string>();
 const READ = /^조회 \(read\):/;
 const INGEST = /^수집 \(ingest\):/;
 const ADMIN = /^전체 관리 \(admin\):/;
@@ -46,7 +49,7 @@ test.afterAll(() => {
   else process.env.PLAYWRIGHT_NO_COPY_PROMPT = previousCopyPrompt;
 });
 
-function newSecrets() { const values = new Set([PASSWORD, OPERATOR_PASSWORD]); SECRET_GROUPS.push(values); return values; }
+function newSecrets() { const values = new Set([PASSWORD, CHANGED_PASSWORD, OPERATOR_PASSWORD]); SECRET_GROUPS.push(values); return values; }
 function safeFailure(error: unknown, secrets: Set<string>) {
   let message = error instanceof Error ? error.stack ?? error.message : "권한 E2E 검증을 마치지 못했습니다.";
   for (const secret of secrets) if (secret) message = message.split(secret).join("[redacted]");
@@ -64,13 +67,14 @@ async function current(request: APIRequestContext, headers: Headers) {
   return await response.json() as Session;
 }
 async function login(request: APIRequestContext, email: string, secrets: Set<string>, password = PASSWORD): Promise<Session> {
-  const response = await request.post(`${API_URL}/v1/sessions`, { data: { email, password } });
+  const response = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: CONSENTED.has(email) ? CHANGED_PASSWORD : password } });
   expect(response.status()).toBe(201);
   const session = await response.json() as Session;
   secrets.add(session.token);
   if (session.consent_required) {
-    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: authorization(session.token), data: { consents: CONSENTS } });
+    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: authorization(session.token), data: { consents: CONSENTS, new_password: CHANGED_PASSWORD } });
     expect(accepted.status()).toBe(200);
+    CONSENTED.add(email);
     return { ...await accepted.json(), token: session.token } as Session;
   }
   return session;

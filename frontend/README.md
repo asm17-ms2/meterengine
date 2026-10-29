@@ -179,7 +179,7 @@ docker run -p 3000:3000 \
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
 | `/organizations` | 소속 도입사 선택과 전환 |
-| `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
+| `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
