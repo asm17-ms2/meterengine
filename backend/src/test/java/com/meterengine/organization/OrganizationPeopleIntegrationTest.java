@@ -297,6 +297,12 @@ class OrganizationPeopleIntegrationTest {
             .header(AUTHORIZATION, owner)
             .exchange();
     assertThat(archived).hasStatus(204);
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT detail->>'method' AS method,detail->>'status' AS status FROM audit_log WHERE detail->>'request_id'=?",
+                archived.getResponse().getHeader("X-Request-ID")))
+        .containsEntry("method", "DELETE")
+        .containsEntry("status", "204");
     entityManager.clear();
     assertThat(
             jdbcTemplate.queryForObject(

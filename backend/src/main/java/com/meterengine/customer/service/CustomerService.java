@@ -7,8 +7,10 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.validation.ArchiveStatus;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,8 +48,18 @@ public class CustomerService {
 
   @Transactional
   public Customer create(UUID organizationId, String name, String billingEmail) {
-    return customerRepository.saveAndFlush(
-        new Customer(UUID.randomUUID(), organizationId, name, billingEmail));
+    Customer customer =
+        customerRepository.saveAndFlush(
+            new Customer(UUID.randomUUID(), organizationId, name, billingEmail));
+    var fields = new ArrayList<>(List.of("name"));
+    if (billingEmail != null) fields.add("billing_email");
+    auditLogService.record(
+        organizationId,
+        "customer_created",
+        "customer",
+        customer.getId().toString(),
+        Map.of("changed_fields", fields));
+    return customer;
   }
 
   @Transactional
@@ -57,7 +69,17 @@ public class CustomerService {
             .lock(organizationId, customerId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
     if (customer.getArchivedAt() != null) throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
+    var fields = new ArrayList<String>();
+    if (!Objects.equals(customer.getName(), name)) fields.add("name");
+    if (!Objects.equals(customer.getBillingEmail(), billingEmail)) fields.add("billing_email");
     customer.update(name, billingEmail);
+    if (!fields.isEmpty())
+      auditLogService.record(
+          organizationId,
+          "customer_updated",
+          "customer",
+          customerId.toString(),
+          Map.of("changed_fields", fields));
     return customer;
   }
 

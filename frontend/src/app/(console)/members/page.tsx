@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { ArchiveFilter } from "@/components/workspace/ArchiveFilter";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
@@ -32,7 +33,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     invitationActions[invitation.id] = [{ title: "초대 취소", operation: "revokeOrganizationInvitation", description: `${invitation.email}의 초대 링크를 더 이상 사용할 수 없게 합니다.`, fields: [{ name: "id", label: "", type: "hidden", value: invitation.id }], isDanger: true }];
   }
   return <>
-    <WorkspaceHeader title="사용자 관리" kicker="도입사 설정" description="함께 일할 사용자를 추가하고, 사용자별 업무 권한과 접근을 관리하세요."></WorkspaceHeader>
+    <WorkspaceHeader title="사용자 관리" kicker="도입사 설정" description="함께 일할 사용자를 추가하고, 사용자별 업무 권한과 접근을 관리하세요."><Link href="/audit?q=organization_">변경 이력 보기</Link></WorkspaceHeader>
     <section className="workspace-panel"><h2>함께 일할 사용자 추가</h2><p className="muted">대표관리자는 사용자와 초대를 관리합니다. 조회, 수집과 전체 관리 권한을 사용자별로 정하며 새 사용자의 기본값은 조회입니다. MeterEngine 플랫폼 운영자 권한과는 별개입니다.</p>
       {isOwner ? <div className="workspace-actions">
         <ActionPanel title="계정 직접 생성" operation="createMember" description="새 사용자 계정을 만들고 업무 권한을 지정합니다. 본인이 처음 로그인해 이용 안내에 동의한 뒤 업무를 시작할 수 있습니다. 이미 가입한 이메일은 초대로 연결하세요." label="사용자 계정 생성" fields={[{ name: "email", label: "사용자 이메일", type: "email", maxLength: 254 }, { name: "name", label: "이름", maxLength: 255 }, { name: "password", label: "초기 비밀번호", type: "password", hint: "8자 이상 72자 이하. 한글은 1자를 3자로 계산합니다. 로그인 정보는 본인에게 안전하게 전달하세요.", maxLength: 72 }, scopeField()]} />

@@ -202,6 +202,7 @@ unset SESSION
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
+- 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다(이벤트 수집 요청은 감사 행을 남기지 않는다).
 - 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
@@ -244,7 +245,7 @@ unset SESSION
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(승인, 거절, 정지, 재개), 소속 추가 | `/v1/organization`, `/v1/organizations` |
 | `apikey` | API 키 발급, 폐기, 교체와 키 검증 | `/v1/api-keys` |
 | `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/user-accounts` |
-| `audit` | 핵심 동작의 감사 기록. 남긴 행은 고치지 않는다 | 없음 |
+| `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
 | `webhook` | 웹훅 엔드포인트 등록, 수정, 삭제, 서명한 통보 발송과 재시도, 전송 기록 조회, 수동 재시도 | `/v1/webhook-endpoints` |
 | `dashboard` | 운영자의 서비스 운영 현황 조회(도입사 수, 결제와 웹훅 실패, 예약 작업 마지막 성공) | `/v1/operations` |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |

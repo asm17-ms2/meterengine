@@ -2,7 +2,7 @@ import "server-only";
 
 import { workspaceFetch } from "@/lib/api/workspace";
 import type { OrganizationRole } from "@/lib/auth/permissions";
-type ArchiveStatus = "active" | "archived" | "all";
+import type { ArchiveStatus } from "@/lib/list-query";
 
 export type ManagedMemberResponse = {
   user_account_id: string;

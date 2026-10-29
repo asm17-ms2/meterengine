@@ -167,8 +167,10 @@ docker run -p 3000:3000 \
 | `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
+| `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
 | `/integrations` | API 키 발급, 권한 변경, 폐기 |
 | `/admin/organizations` | 운영자의 가입 승인과 도입사 관리 |
 | `/admin/users` | 운영자의 사용자, 플랫폼 운영 권한, 소속 연결 관리 |
+| `/admin/audit` | 운영자의 플랫폼 감사 기록 조회 |
 
 - 화면이 부르는 백엔드 오퍼레이션은 `src/lib/api/`에 있다.
