@@ -17,9 +17,14 @@ const PAYMENT_STATES: Record<string, { label: string; description: string }> = {
   canceled: { label: "전액 취소", description: "결제가 전액 취소되었습니다. 확정 청구서는 보존되며 취소액을 다시 결제 대기액에 더하지 않습니다." },
   not_required: { label: "결제 불필요", description: "청구 금액이 0원이므로 결제할 금액이 없습니다." },
 };
+const UNREADY_MESSAGES = {
+  missing: { title: "청구서 조회 정보가 없습니다", description: "이 주소만으로는 청구서를 열 수 없습니다. 받은 메일이나 메시지의 원래 조회 링크를 다시 열어 주세요. 링크를 찾을 수 없으면 청구서를 보낸 담당자에게 문의해 주세요." },
+  invalid: { title: "사용할 수 없는 조회 링크입니다", description: "링크가 만료되었거나 폐기되었을 수 있습니다. 청구서를 보낸 담당자에게 새 링크를 요청해 주세요." },
+  unavailable: { title: "청구서를 불러오지 못했습니다", description: "잠시 후 다시 조회해 주세요. 계속 연결되지 않으면 청구서를 보낸 담당자에게 문의해 주세요." },
+};
 const LINE_NAMES: Record<string, string> = { base_fee: "기본료", minimum_adjustment: "최소 과금 조정" };
 
-type ViewState = { kind: "loading" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoice; revision: number };
+type ViewState = { kind: "loading" } | { kind: "missing" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoice; revision: number };
 
 export function PublicInvoiceView() {
   const tokenRef = useRef("");
@@ -33,6 +38,7 @@ export function PublicInvoiceView() {
 
   async function load(token: string, isRefresh = false, signal?: AbortSignal) {
     const requestId = ++requestRef.current;
+    if (!token) { setView({ kind: "missing" }); return; }
     if (!isValidInvoiceViewToken(token)) { setView({ kind: "invalid" }); return; }
     if (isRefresh) setIsRefreshing(true);
     try {
@@ -93,6 +99,7 @@ export function PublicInvoiceView() {
   }
 
   const invoice = view.kind === "ready" ? view.invoice : null;
+  const unready = view.kind === "ready" || view.kind === "loading" ? null : UNREADY_MESSAGES[view.kind];
   const revision = view.kind === "ready" ? view.revision : 0;
   useEffect(() => {
     if (paymentFocusRevisionRef.current !== revision) return;
@@ -120,8 +127,8 @@ export function PublicInvoiceView() {
     <header className={styles.brand}><strong>MeterEngine</strong><span>청구서 조회</span></header>
     {view.kind === "loading" ? <section className={styles.message} aria-live="polite" aria-busy="true"><h1>청구서를 불러오고 있습니다</h1><p>확정 청구와 최신 결제 상태를 확인하고 있습니다.</p></section>
       : !invoice ? <section className={styles.message}>
-        <h1>{view.kind === "invalid" ? "사용할 수 없는 조회 링크입니다" : "청구서를 불러오지 못했습니다"}</h1>
-        <p>{view.kind === "invalid" ? "링크가 만료되었거나 폐기되었을 수 있습니다. 청구서를 보낸 담당자에게 새 링크를 요청해 주세요." : "잠시 후 다시 조회해 주세요. 계속 연결되지 않으면 청구서를 보낸 담당자에게 문의해 주세요."}</p>
+        <h1>{unready?.title}</h1>
+        <p>{unready?.description}</p>
         {view.kind === "unavailable" && <button type="button" onClick={() => load(tokenRef.current)}>다시 조회</button>}
       </section> : <article className={styles.invoice} aria-busy={isRefreshing}>
         <div className={styles.heading}><div><h1>{formatKoreanMonth(invoice.month)} 청구서</h1><p>{invoice.customer_name}님께 {invoice.organization_name}에서 발행한 청구서입니다.</p></div><div className={styles.actions}><button type="button" onClick={() => load(tokenRef.current, true)} disabled={isRefreshing || paymentRequestState === "submitting"}>{isRefreshing ? "조회 중" : "결제 상태 새로 조회"}</button><button type="button" onClick={copy}>조회 링크 복사</button></div></div>

@@ -320,7 +320,9 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
 
 test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다", async ({ page, request }) => {
   await page.goto(`${FRONTEND_URL}/invoice-links`);
-  await expect(page.getByRole("heading", { name: "사용할 수 없는 조회 링크입니다", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "청구서 조회 정보가 없습니다", exact: true })).toBeVisible();
+  await expect(page.getByText("받은 메일이나 메시지의 원래 조회 링크를 다시 열어 주세요.", { exact: false })).toBeVisible();
+  await expect(page.getByText(/만료되었거나 폐기/)).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: /고객|인보이스/ })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   const cross = await request.post(`${FRONTEND_URL}/invoice-links/lookup`, { headers: { Origin: "http://evil.example" }, data: { token: randomBytes(32).toString("base64url") } });
