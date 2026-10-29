@@ -25,6 +25,7 @@ public record DashboardResponse(
     @JsonProperty("unpriced_usage_count") long unpricedUsageCount,
     @JsonProperty("negative_usage_count") long negativeUsageCount,
     @JsonProperty("invoice_payments") List<DashboardInvoice> invoicePayments,
+    @JsonProperty("unresolved_invoice_payments") List<DashboardInvoice> unresolvedInvoicePayments,
     @JsonProperty("draft_invoice") DraftInvoiceResponse draftInvoice) {
 
   public record DashboardInvoice(

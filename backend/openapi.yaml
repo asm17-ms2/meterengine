@@ -8565,6 +8565,10 @@ components:
         unpriced_usage_count:
           type: integer
           format: int64
+        unresolved_invoice_payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardInvoice"
     DraftInvoiceCustomer:
       type: object
       properties:

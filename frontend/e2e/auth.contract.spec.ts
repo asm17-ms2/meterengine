@@ -18,6 +18,31 @@ async function login(page: Page, email = "member@contract.local", returnTo = "/c
 
 test.beforeEach(async ({ request }) => { await request.post(`${FIXTURE_URL}/__control`, { data: { reset: true } }); });
 
+test("overview keeps the selected month and shows unresolved invoices from every month", async ({ page, request }) => {
+  const invoiceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  await request.post(`${FIXTURE_URL}/__control`, { data: { unresolvedInvoicePayments: [
+    { invoice_id: invoiceId, customer_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", customer_name: "지난달 실패 고객", month: "2026-09", status: "failed", mode: "test", amount: 1100, canceled_amount: 0, attempt_count: 1, last_failure_code: "REJECT_CARD_PAYMENT", next_retry_at: null, completed_at: null },
+  ] } });
+  await login(page, "member@contract.local", "/overview");
+  const currentMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
+  await expect(page.getByLabel("청구 월", { exact: true })).toHaveValue(currentMonth);
+  const unresolved = page.locator("section.workspace-panel").filter({ has: page.getByRole("heading", { name: "미해결 결제", exact: true }) });
+  await expect(unresolved).toBeVisible();
+  await expect(unresolved).toContainText("2026-09");
+  const href = await unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true }).getAttribute("href");
+  const target = new URL(href!, "http://localhost:33148");
+  expect(target.pathname).toBe(`/payments/${invoiceId}`);
+  expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
+  await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
+  await page.getByRole("button", { name: "조회", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 과금 운영");
+  await expect(unresolved).toContainText("지난달 실패 고객");
+  await expect(page.getByText("선택한 달에 조치가 필요한 항목이 없습니다.", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
   expect((await request.get("/health")).status()).toBe(200);
   for (const path of ["/customers?q=abc", "/admin/users", "/organizations"]) {
