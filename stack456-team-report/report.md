@@ -2,6 +2,8 @@
 push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35)
 정할 것: 42건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183). 로컬 DB 다시 만들기: 없음
 
+멈춘 까닭: #447 demo 검사의 마지막 단계 corepack pnpm -r build가 바꾸지 않은 head 5371d1e에서도 실패한다(demo/sdk에 build 스크립트가 없다. common-brief 10절 표에 없음, 12절 멈춤 조건)
+
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
@@ -373,3 +375,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29 #447 수정 중 멈춤: frontend/e2e/archive-filters.real.spec.ts가 로컬 2734417과 바꾸지 않은 head 5371d1e 모두에서 실패한다(evidence/stop-447/specs.txt). common-brief 10절 표에 없는 실패라 12절대로 stopped로 멈췄다. #447 수정 커밋은 push하지 않았다. 박성종 님과 정한 뒤 넘기기 자료로 받는다.
 - #445 fix PR(#467)과 층 PR(#445)에서 마지막 두 push(c76428e, 22dfb35)에 달린 리뷰 댓글은 멈출 때까지 없었다. 박성종 님의 #467 댓글(feat/billing-payments ad9f7fa merge 요청)은 22dfb35에 들어 있다.
 - 2026-10-29 재개: archive-filters.real.spec.ts가 넘기기 자료 10절 표에 들어가(b334d36) 12절 멈춤이 풀렸다. #447 수정 21건을 fix/s456-447-t-yang에 모았다. origin/feat/resource-archive(5371d1e에서 6d91d41로 움직임)와의 동기화 merge는 backend/openapi.yaml, PaymentMethodRegistrationController, PricePlanController, PriceRateController, PaymentMethodRegistrationIntegrationTest, PaymentAttemptRepositoryTest, PaymentRetryServiceTest에서 충돌한다. 9절대로 충돌은 풀지 않았고, 박성종 님이 fix 브랜치로 push만 하면 직접 반영한다고 해 merge 없이 5371d1e 기반으로 push하며 PR은 열지 않는다.
+- 2026-10-29 다시 멈춤: 84bb5e7의 demo 검사가 corepack pnpm -r build 단계에서 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패했고, 바꾸지 않은 head 5371d1e에서도 같다. 10절 표에 없어 12절대로 멈추고 fix 브랜치는 push하지 않았다. 박성종 님이 바로 반영할 수 있게 21커밋 patch를 evidence/stop-447/patches에 둔다(5371d1e 기준 git am).

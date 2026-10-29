@@ -1,0 +1,106 @@
+From 01bb890b3aee9cc5725e41dff3079880d29e4842 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:46:01 +0900
+Subject: [PATCH 01/21] =?UTF-8?q?fix:=20=EB=B3=B4=EA=B4=80=ED=95=9C=20?=
+ =?UTF-8?q?=EA=B8=B0=ED=95=9C=EB=B6=80=20=EB=8B=A8=EA=B0=80=EC=99=80=20?=
+ =?UTF-8?q?=EC=9A=94=EA=B8=88=EC=A0=9C=EB=8A=94=20=EC=9B=90=EB=9E=98=20?=
+ =?UTF-8?q?=EC=A2=85=EB=A3=8C=EC=9B=94=EB=B6=80=ED=84=B0=20=EC=9D=B4?=
+ =?UTF-8?q?=EC=A0=84=20=EB=B2=84=EC=A0=84=EC=9D=84=20=EA=B0=80=EB=A6=AC?=
+ =?UTF-8?q?=EC=A7=80=20=EC=95=8A=EB=8A=94=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 기한 없는 단가 위에 기한부 단가(또는 요금제)를 두고 기한부 쪽을 보관하면, 보관 버전이 원래 종료월이 지난 뒤에도 이전 버전을 계속 가려 그 달부터 단가와 요금제가 비었다. 보관하지 않았다면 종료월부터 이전 버전이 다시 적용될 예정이었다.
+
+변경 사항
+
+- PriceRate.stops와 PricePlan.stops가 종료월을 보관 월이 아니라 대상 월과 비교한다. 보관하지 않았다면 그 달에 적용됐을 버전만 이전 버전을 가린다.
+- 기한부 단가와 요금제를 보관한 뒤 종료월부터 이전 버전으로 돌아가는지 보는 시험 두 개를 더했다. 기한 없는 버전의 기존 보관 시험 결과는 같다.
+
+검증
+
+- 고치기 전 새 시험 둘이 실패했다(expected: 1000L but was: 0L, expected: 1100L but was: 1000L). 고친 뒤 pricing, archive, invoice 패키지 시험 116건과 backend build 통과.
+---
+ .../meterengine/pricing/entity/PricePlan.java |  2 +-
+ .../meterengine/pricing/entity/PriceRate.java |  2 +-
+ .../VersionedPricingIntegrationTest.java      | 35 +++++++++++++++++++
+ 3 files changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java b/backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java
+index 6709ec71..d721d6f3 100644
+--- a/backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java
++++ b/backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java
+@@ -66,7 +66,7 @@ public class PricePlan implements Persistable<UUID> {
+     return archivedFrom != null
+         && archivedFrom.compareTo(month) <= 0
+         && effectiveFrom.compareTo(archivedFrom) < 0
+-        && (effectiveUntil == null || effectiveUntil.compareTo(archivedFrom) > 0);
++        && (effectiveUntil == null || effectiveUntil.compareTo(month) > 0);
+   }
+ 
+   @Transient private boolean isNew = true;
+diff --git a/backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java b/backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java
+index 242b7030..b8c6e14c 100644
+--- a/backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java
++++ b/backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java
+@@ -79,7 +79,7 @@ public class PriceRate implements Persistable<UUID> {
+     return archivedFrom != null
+         && archivedFrom.compareTo(month) <= 0
+         && effectiveFrom.compareTo(archivedFrom) < 0
+-        && (effectiveUntil == null || effectiveUntil.compareTo(archivedFrom) > 0);
++        && (effectiveUntil == null || effectiveUntil.compareTo(month) > 0);
+   }
+ 
+   @Transient private boolean isNew = true;
+diff --git a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+index c7004f85..5f1033e5 100644
+--- a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+@@ -208,6 +208,41 @@ class VersionedPricingIntegrationTest {
+     assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+   }
+ 
++  @Test
++  void 기한부_단가_보관은_원래_종료월부터_구단가로_돌아간다() {
++    legacyRate();
++    var promotion = rate(null, month, month.plusMonths(2), "per_unit", new BigDecimal("20"), null);
++    priceRateService.delete(organizationId, "tokens", promotion.id());
++    assertThat(amount(month, "100")).isEqualTo(2000);
++    assertThat(amount(month.plusMonths(1), "100")).isZero();
++    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1000);
++    assertThat(
++            billableMetricPriceService
++                .list(organizationId, month.plusMonths(2), null)
++                .billableMetricPrices()
++                .getFirst()
++                .priceRates()
++                .getFirst()
++                .unitPrice())
++        .isEqualByComparingTo("10");
++  }
++
++  @Test
++  void 기한부_요금제_보관은_원래_종료월부터_구요금제로_돌아간다() {
++    legacyRate();
++    jdbcTemplate.update(
++        "INSERT INTO price_plan (organization_id,effective_from,base_fee,minimum_amount) VALUES (?, ?, 100, 0)",
++        organizationId,
++        month.minusMonths(1).toString());
++    var promotion =
++        pricePlanService.create(
++            organizationId, new CreatePricePlanRequest(null, month, month.plusMonths(2), 200L, 0L));
++    pricePlanService.delete(organizationId, promotion.id());
++    assertThat(amount(month, "100")).isEqualTo(1200);
++    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
++    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1100);
++  }
++
+   @Test
+   void 누진_구간은_각_라인에서_절사하고_경계를_겹치지_않는다() {
+     rate(null, month, null, "graduated", null, tiers());
+-- 
+2.54.0 (Apple Git-157)
+

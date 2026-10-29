@@ -1,0 +1,188 @@
+From 2734417b67989ed2eaebe081ad45b9b394395f96 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:54:45 +0900
+Subject: [PATCH 04/21] =?UTF-8?q?fix:=20=EC=9D=B8=EB=B3=B4=EC=9D=B4?=
+ =?UTF-8?q?=EC=8A=A4,=20=EC=9D=B4=EB=B2=A4=ED=8A=B8,=20=EC=82=AC=EC=9A=A9?=
+ =?UTF-8?q?=EB=9F=89,=20=EC=B2=AD=EA=B5=AC=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=ED=95=84=ED=84=B0=20=EC=84=A0=ED=83=9D=EC=A7=80=EC=97=90=20?=
+ =?UTF-8?q?=EB=B3=B4=EA=B4=80=ED=95=9C=20=EA=B3=A0=EA=B0=9D=EA=B3=BC=20?=
+ =?UTF-8?q?=EB=AF=B8=ED=84=B0=EB=A5=BC=20=EB=82=A8=EA=B8=B4=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 고객과 미터 목록 API의 기본 상태가 사용 중으로 바뀌었는데, 네 화면은 필터 선택지를 상태 없이 만든 목록 조회로 받아 status=active가 실렸다. 보관한 고객은 고객 필터에서, 보관한 미터의 이벤트 타입은 이벤트 타입 필터에서 빠져 고객 화면 안내와 달리 보관한 고객의 지난 인보이스와 이벤트를 필터로 거를 수 없었다.
+
+변경 사항
+
+- 네 화면의 필터 선택지용 고객과 미터 조회가 status=all을 보낸다. 고객 화면과 미터 화면 목록의 기본 상태와 API 기본값은 그대로다.
+- 고객 필터 선택지에서 보관한 고객 이름 뒤에 (보관됨)을 붙인다. 이벤트 타입은 문자열 목록이라 표시를 붙이지 않는다.
+- 필터 선택지를 부르는 화면이 모든 상태를 요청하는지 보는 단위 시험을 더했다. 보관 조회 실화면 명세에 인보이스와 이벤트 화면의 선택지를 보는 단계를 더했다.
+
+검증
+
+- 고치기 전 새 단위 시험이 실패했다(listCustomers in billing/page.tsx, actual '{}', expected '{ status: "all" }'). 고친 뒤 단위 시험 24건, lint, tsc, build 통과. 실화면 명세는 실행 환경이 없어 돌리지 않았다.
+---
+ frontend/e2e/archive-filters.real.spec.ts     | 19 ++++++++++++++++++
+ frontend/e2e/filter-options.test.mjs          | 20 +++++++++++++++++++
+ frontend/src/app/(console)/billing/page.tsx   |  4 ++--
+ frontend/src/app/(console)/events/page.tsx    |  4 ++--
+ frontend/src/app/(console)/invoices/page.tsx  |  4 ++--
+ frontend/src/app/(console)/usage/page.tsx     |  4 ++--
+ .../components/screen/ListControlsLoader.tsx  |  5 ++++-
+ 7 files changed, 51 insertions(+), 9 deletions(-)
+ create mode 100644 frontend/e2e/filter-options.test.mjs
+
+diff --git a/frontend/e2e/archive-filters.real.spec.ts b/frontend/e2e/archive-filters.real.spec.ts
+index ecfc65e2..ecab9710 100644
+--- a/frontend/e2e/archive-filters.real.spec.ts
++++ b/frontend/e2e/archive-filters.real.spec.ts
+@@ -178,6 +178,25 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 
+       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
+     });
+ 
++    await test.step("인보이스와 이벤트 필터 선택지에 보관한 고객과 미터의 이벤트 타입을 남김", async () => {
++      const filterOptions = async (label: string, text: string) => {
++        const combobox = page.getByRole("combobox", { name: label, exact: true });
++        await expect(page.locator(".ant-select").filter({ has: combobox }).locator(".anticon-loading")).toHaveCount(0);
++        await combobox.click();
++        await combobox.fill(text);
++        return page.locator(".ant-select-dropdown:visible .ant-select-item-option");
++      };
++      for (const path of ["/invoices", "/events"]) {
++        await page.goto(path);
++        const customers = await filterOptions("고객", suffix);
++        await expect(customers.filter({ hasText: `${archivedName} (보관됨)` })).toHaveCount(1);
++        await expect(customers.filter({ hasText: activeName })).toHaveCount(1);
++      }
++      const eventTypes = await filterOptions("type", suffix);
++      await expect(eventTypes.filter({ hasText: archivedMetricCode })).toHaveCount(1);
++      await expect(eventTypes.filter({ hasText: activeMetricCode })).toHaveCount(1);
++    });
++
+     await test.step("요금제, 단가와 미터 필터를 서로 독립적으로 유지", async () => {
+       await page.goto(`/pricing?month=${currentMonth}&metric=${activeMetricCode}`);
+       const plans = page.locator("details").filter({ has: page.locator("summary").filter({ hasText: "요금제 변경 이력" }) });
+diff --git a/frontend/e2e/filter-options.test.mjs b/frontend/e2e/filter-options.test.mjs
+new file mode 100644
+index 00000000..4a306b5f
+--- /dev/null
++++ b/frontend/e2e/filter-options.test.mjs
+@@ -0,0 +1,20 @@
++import assert from "node:assert/strict";
++import { readdirSync, readFileSync, statSync } from "node:fs";
++import { join } from "node:path";
++import test from "node:test";
++
++const APP = new URL("../src/app/", import.meta.url).pathname;
++const files = dir => readdirSync(dir).flatMap(name => {
++  const path = join(dir, name);
++  return statSync(path).isDirectory() ? files(path) : name.endsWith(".tsx") ? [path] : [];
++});
++
++test("list filter options ask for archived customers and metrics too", () => {
++  const pages = files(APP).filter(path => readFileSync(path, "utf8").includes("<ListControlsLoader"));
++  assert.ok(pages.length > 0);
++  for (const path of pages) {
++    const calls = [...readFileSync(path, "utf8").matchAll(/(listCustomers|listBillableMetrics)\(readListQuery\(([^,]*),/g)];
++    assert.ok(calls.length > 0, `${path} loads no filter options`);
++    for (const [, name, params] of calls) assert.equal(params.replace(/\s+/g, " "), '{ status: "all" }', `${name} in ${path}`);
++  }
++});
+diff --git a/frontend/src/app/(console)/billing/page.tsx b/frontend/src/app/(console)/billing/page.tsx
+index eca7d4a5..64b30625 100644
+--- a/frontend/src/app/(console)/billing/page.tsx
++++ b/frontend/src/app/(console)/billing/page.tsx
+@@ -118,12 +118,12 @@ export default async function BillingPage({
+               month={{ value: month }}
+               customers={
+                 BILLING_CAPABILITIES.customer_id
+-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
++                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal")
+                   : undefined
+               }
+               metrics={
+                 BILLING_CAPABILITIES.type
+-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
++                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal")
+                   : undefined
+               }
+             />
+diff --git a/frontend/src/app/(console)/events/page.tsx b/frontend/src/app/(console)/events/page.tsx
+index 92dc5920..c449e3a2 100644
+--- a/frontend/src/app/(console)/events/page.tsx
++++ b/frontend/src/app/(console)/events/page.tsx
+@@ -63,12 +63,12 @@ export default async function EventsPage({
+               month={{ value: month }}
+               customers={
+                 capabilities.customer_id
+-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
++                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
+                   : undefined
+               }
+               metrics={
+                 capabilities.type
+-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
++                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
+                   : undefined
+               }
+             />
+diff --git a/frontend/src/app/(console)/invoices/page.tsx b/frontend/src/app/(console)/invoices/page.tsx
+index c2a5a507..6a5f843c 100644
+--- a/frontend/src/app/(console)/invoices/page.tsx
++++ b/frontend/src/app/(console)/invoices/page.tsx
+@@ -64,12 +64,12 @@ export default async function InvoicesPage({
+               month={monthControl}
+               customers={
+                 capabilities.customer_id
+-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
++                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
+                   : undefined
+               }
+               metrics={
+                 capabilities.type
+-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
++                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
+                   : undefined
+               }
+             />
+diff --git a/frontend/src/app/(console)/usage/page.tsx b/frontend/src/app/(console)/usage/page.tsx
+index 66e67397..0c47baa2 100644
+--- a/frontend/src/app/(console)/usage/page.tsx
++++ b/frontend/src/app/(console)/usage/page.tsx
+@@ -74,12 +74,12 @@ export default async function UsagePage({
+               month={{ value: month }}
+               customers={
+                 USAGE_CAPABILITIES.customer_id
+-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
++                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal")
+                   : undefined
+               }
+               metrics={
+                 USAGE_CAPABILITIES.type
+-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
++                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal")
+                   : undefined
+               }
+             />
+diff --git a/frontend/src/components/screen/ListControlsLoader.tsx b/frontend/src/components/screen/ListControlsLoader.tsx
+index dfa7aafb..370a57af 100644
+--- a/frontend/src/components/screen/ListControlsLoader.tsx
++++ b/frontend/src/components/screen/ListControlsLoader.tsx
+@@ -12,7 +12,10 @@ async function loadCustomerOptions(
+   if (!customers) return [];
+   const result = await customers.catch(() => null);
+   if (!result?.ok) return [];
+-  return result.data.customers.map((customer) => ({ value: customer.id, label: customer.name }));
++  return result.data.customers.map((customer) => ({
++    value: customer.id,
++    label: customer.archived_at ? `${customer.name} (보관됨)` : customer.name,
++  }));
+ }
+ 
+ async function loadEventTypes(
+-- 
+2.54.0 (Apple Git-157)
+

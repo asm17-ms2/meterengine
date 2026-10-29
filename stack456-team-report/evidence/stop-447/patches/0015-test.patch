@@ -1,0 +1,134 @@
+From 5697a0486942010ed26139a4db5e3e5b8744e35a Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:56:34 +0900
+Subject: [PATCH 15/21] =?UTF-8?q?test:=20=EB=B3=B4=EA=B4=80=ED=95=9C=20?=
+ =?UTF-8?q?=EB=8B=A8=EA=B0=80=EC=99=80=20=EC=9A=94=EA=B8=88=EC=A0=9C?=
+ =?UTF-8?q?=EC=9D=98=20=EA=B0=99=EC=9D=80=20=EC=8A=AC=EB=A1=AF=20=EC=9E=AC?=
+ =?UTF-8?q?=EB=93=B1=EB=A1=9D=EA=B3=BC=20=EC=86=8C=EA=B8=89=20=EB=B3=B5?=
+ =?UTF-8?q?=EC=9B=90=20=EA=B1=B0=EC=A0=88=EC=9D=84=20=EC=8B=9C=ED=97=98?=
+ =?UTF-8?q?=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 보관한 이번 달 단가와 요금제의 같은 슬롯 재등록 거절, archived_from이 이번 달 이하일 때의 복원 거절, 요금제 복원 전체에 시험이 없었다. 유일 색인이 보관하지 않은 행에만 걸려 DB가 막지 못하는데, 서비스 가드가 빠져도 지금 시험은 모두 통과했다.
+
+변경 사항
+
+- VersionedPricingIntegrationTest에 시험 세 개를 더했다.
+- 이번 달 단가를 보관한 뒤 같은 슬롯 등록과, archived_from을 이번 달로 당긴 뒤 복원이 409 archive_restoration_conflict인지 본다.
+- 요금제도 같은 두 경우를 본다.
+- 미래 효력 요금제를 보관한 뒤 다른 도입사로 복원하면 price_plan_not_found이고, 제 도입사로 복원하면 archived_at이 비고 목록에 돌아오며, 다시 보관하고 같은 슬롯에 새 요금제를 만들면 복원이 409인지 본다.
+
+검증
+
+- 가드를 하나씩 뺀 변이(단가 등록 슬롯, 단가 복원 소급, 요금제 등록 슬롯, 요금제 복원의 충돌, 소급, 도입사 비교)마다 해당 새 시험이 Expecting code to raise a throwable.로 실패했고, 요금제 복원을 하지 않는 변이는 expected: null로 실패했다. 기존 pricing, archive 시험은 모든 변이에서 통과했다. 변이를 되돌린 뒤 pricing, archive 패키지 시험 73건 통과.
+---
+ .../VersionedPricingIntegrationTest.java      | 75 +++++++++++++++++++
+ 1 file changed, 75 insertions(+)
+
+diff --git a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+index 2f00d374..fd42c67b 100644
+--- a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+@@ -9,6 +9,7 @@ import com.meterengine.TestCredentials;
+ import com.meterengine.TestcontainersConfiguration;
+ import com.meterengine.global.error.ConflictException;
+ import com.meterengine.global.error.ErrorCode;
++import com.meterengine.global.error.NotFoundException;
+ import com.meterengine.invoice.dto.DraftInvoiceResponse;
+ import com.meterengine.invoice.dto.InvoiceResponse;
+ import com.meterengine.invoice.entity.Invoice;
+@@ -22,6 +23,7 @@ import com.meterengine.metric.entity.BillableMetric;
+ import com.meterengine.metric.service.BillableMetricUsageService;
+ import com.meterengine.pricing.dto.CreatePricePlanRequest;
+ import com.meterengine.pricing.dto.CreatePriceRateRequest;
++import com.meterengine.pricing.dto.PricePlanResponse;
+ import com.meterengine.pricing.dto.PriceRateResponse;
+ import com.meterengine.pricing.dto.PriceRateTier;
+ import com.meterengine.pricing.service.BillableMetricPriceService;
+@@ -161,6 +163,79 @@ class VersionedPricingIntegrationTest {
+     assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+   }
+ 
++  @Test
++  void 보관한_이번_달_단가는_같은_슬롯_재등록과_소급_복원을_거절한다() {
++    var current = rate(null, month, null, "per_unit", new BigDecimal("2"), null);
++    priceRateService.delete(organizationId, "tokens", current.id());
++    assertThatThrownBy(() -> rate(null, month, null, "per_unit", new BigDecimal("5"), null))
++        .isInstanceOfSatisfying(
++            ConflictException.class,
++            error ->
++                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
++    entityManager.flush();
++    jdbcTemplate.update(
++        "UPDATE price_rate SET archived_from=? WHERE id=?", month.toString(), current.id());
++    entityManager.clear();
++    assertThatThrownBy(() -> priceRateService.restore(organizationId, "tokens", current.id()))
++        .isInstanceOfSatisfying(
++            ConflictException.class,
++            error ->
++                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
++  }
++
++  @Test
++  void 보관한_이번_달_요금제는_같은_슬롯_재등록과_소급_복원을_거절한다() {
++    var current =
++        pricePlanService.create(
++            organizationId, new CreatePricePlanRequest(null, month, null, 100L, 0L));
++    pricePlanService.delete(organizationId, current.id());
++    assertThatThrownBy(
++            () ->
++                pricePlanService.create(
++                    organizationId, new CreatePricePlanRequest(null, month, null, 200L, 0L)))
++        .isInstanceOfSatisfying(
++            ConflictException.class,
++            error ->
++                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
++    entityManager.flush();
++    jdbcTemplate.update(
++        "UPDATE price_plan SET archived_from=? WHERE id=?", month.toString(), current.id());
++    entityManager.clear();
++    assertThatThrownBy(() -> pricePlanService.restore(organizationId, current.id()))
++        .isInstanceOfSatisfying(
++            ConflictException.class,
++            error ->
++                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
++  }
++
++  @Test
++  void 미래_요금제_복원은_목록에_되돌리고_다른_도입사와_같은_슬롯_새_요금제는_거절한다() {
++    YearMonth future = month.plusMonths(2);
++    var plan =
++        pricePlanService.create(
++            organizationId, new CreatePricePlanRequest(null, future, null, 100L, 0L));
++    pricePlanService.delete(organizationId, plan.id());
++    UUID otherOrganizationId =
++        jdbcTemplate.queryForObject(
++            "INSERT INTO organization(name) VALUES ('다른 도입사') RETURNING id", UUID.class);
++    assertThatThrownBy(() -> pricePlanService.restore(otherOrganizationId, plan.id()))
++        .isInstanceOfSatisfying(
++            NotFoundException.class,
++            error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_NOT_FOUND));
++    assertThat(pricePlanService.restore(organizationId, plan.id()).archivedAt()).isNull();
++    assertThat(pricePlanService.list(organizationId, null, null).pricePlans())
++        .extracting(PricePlanResponse::id)
++        .containsExactly(plan.id());
++    pricePlanService.delete(organizationId, plan.id());
++    pricePlanService.create(
++        organizationId, new CreatePricePlanRequest(null, future, null, 200L, 0L));
++    assertThatThrownBy(() -> pricePlanService.restore(organizationId, plan.id()))
++        .isInstanceOfSatisfying(
++            ConflictException.class,
++            error ->
++                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
++  }
++
+   @Test
+   void 기존_조합_삭제는_이전_금액과_고객_단가와_미래_버전을_보존한다() {
+     legacyRate();
+-- 
+2.54.0 (Apple Git-157)
+

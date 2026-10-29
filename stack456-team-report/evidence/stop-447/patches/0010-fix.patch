@@ -1,0 +1,293 @@
+From 16acaa78aaeefa1028a5478d5c08c0ffa37b3769 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:57:29 +0900
+Subject: [PATCH 10/21] =?UTF-8?q?fix:=20=EA=B3=A0=EA=B0=9D=20=EC=B9=B4?=
+ =?UTF-8?q?=EB=93=9C=EB=A5=BC=20=EB=B3=B4=EA=B4=80=ED=95=98=EB=A9=B4=20?=
+ =?UTF-8?q?=EC=BB=A4=EB=B0=8B=ED=95=9C=20=EB=92=A4=20=ED=86=A0=EC=8A=A4=20?=
+ =?UTF-8?q?=EB=B9=8C=EB=A7=81=ED=82=A4=EB=A5=BC=20=ED=8F=90=EA=B8=B0?=
+ =?UTF-8?q?=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 카드 보관(DELETE /v1/customers/{id}/payment-method)은 archived_at만 채우고 토스 빌링키를 폐기하지 않았다. 보관한 카드는 다시 쓰는 경로가 없는데도 결제 가능한 빌링키가 토스와 DB에 남아, 청구 경로의 archived_at 필터만 이 키를 막고 있었다. 카드를 교체할 때는 이전 키를 폐기하므로 처리도 서로 맞지 않았다.
+
+변경 사항
+
+- 보관 트랜잭션이 커밋된 뒤 현재 모드의 활성 토스 키로 빌링키를 폐기한다. 결과는 도입사, 고객, 모드와 코드만 로그로 남기고 빌링키와 시크릿 키는 싣지 않는다.
+- 활성 토스 키가 없으면 폐기를 건너뛰고 로그만 남긴다. 폐기가 거절되거나 결과를 몰라도 응답은 204 그대로이고, 이미 보관된 카드는 다시 폐기하지 않는다.
+- billing_key.billing_key 열은 NOT NULL이라 DB 값은 그대로 둔다.
+
+검증
+
+- 고치기 전 새 시험이 실패했다(Wanted but not invoked: tossPaymentsClient.deleteBillingKey). 폐기 호출을 트랜잭션 안으로 옮기는 변이도 새 시험이 잡았다(커밋된 archived_at이 null). 고친 뒤 payment, archive, customer 패키지 시험 342건 통과.
+---
+ .../payment/service/PaymentMethodService.java | 67 ++++++++++++-
+ .../payment/PaymentMethodIntegrationTest.java | 95 +++++++++++++++++++
+ 2 files changed, 161 insertions(+), 1 deletion(-)
+
+diff --git a/backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java b/backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java
+index 9acc673a..5fa7b774 100644
+--- a/backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java
++++ b/backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java
+@@ -5,37 +5,52 @@ import com.meterengine.customer.repository.CustomerRepository;
+ import com.meterengine.global.error.ErrorCode;
+ import com.meterengine.global.error.NotFoundException;
+ import com.meterengine.global.validation.ArchiveStatus;
++import com.meterengine.payment.client.TossPaymentsClient;
++import com.meterengine.payment.client.TossPaymentsResult;
+ import com.meterengine.payment.dto.ListPaymentMethodsResponse;
+ import com.meterengine.payment.dto.PaymentMethodResponse;
+ import com.meterengine.payment.entity.BillingKeyId;
++import com.meterengine.payment.entity.TossPaymentsCredential;
+ import com.meterengine.payment.repository.BillingKeyRepository;
+ import com.meterengine.payment.repository.PaymentArchiveRepository;
+ import java.util.ArrayList;
+ import java.util.Map;
+ import java.util.UUID;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
++import org.springframework.transaction.support.TransactionSynchronization;
++import org.springframework.transaction.support.TransactionSynchronizationManager;
+ 
+ @Service
+ public class PaymentMethodService {
+ 
++  private static final Logger logger = LoggerFactory.getLogger(PaymentMethodService.class);
++
+   private final BillingKeyRepository billingKeyRepository;
+   private final CustomerRepository customerRepository;
+   private final PaymentSettingService paymentSettingService;
+   private final AuditLogService auditLogService;
+   private final PaymentArchiveRepository paymentArchiveRepository;
++  private final TossPaymentsCredentialService tossPaymentsCredentialService;
++  private final TossPaymentsClient tossPaymentsClient;
+ 
+   PaymentMethodService(
+       BillingKeyRepository billingKeyRepository,
+       CustomerRepository customerRepository,
+       PaymentSettingService paymentSettingService,
+       AuditLogService auditLogService,
+-      PaymentArchiveRepository paymentArchiveRepository) {
++      PaymentArchiveRepository paymentArchiveRepository,
++      TossPaymentsCredentialService tossPaymentsCredentialService,
++      TossPaymentsClient tossPaymentsClient) {
+     this.billingKeyRepository = billingKeyRepository;
+     this.customerRepository = customerRepository;
+     this.paymentSettingService = paymentSettingService;
+     this.auditLogService = auditLogService;
+     this.paymentArchiveRepository = paymentArchiveRepository;
++    this.tossPaymentsCredentialService = tossPaymentsCredentialService;
++    this.tossPaymentsClient = tossPaymentsClient;
+   }
+ 
+   @Transactional(readOnly = true)
+@@ -81,6 +96,7 @@ public class PaymentMethodService {
+             .findById(new BillingKeyId(organizationId, customerId, mode))
+             .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
+     if (key.getArchivedAt() != null) return;
++    String billingKey = key.getBillingKey();
+     key.archive();
+     auditLogService.record(
+         organizationId,
+@@ -88,5 +104,54 @@ public class PaymentMethodService {
+         "customer",
+         customerId.toString(),
+         Map.of("mode", mode));
++    String secretKey =
++        tossPaymentsCredentialService
++            .active(organizationId, mode)
++            .map(TossPaymentsCredential::getSecretKey)
++            .orElse(null);
++    TransactionSynchronizationManager.registerSynchronization(
++        new TransactionSynchronization() {
++          @Override
++          public void afterCommit() {
++            deleteBillingKey(organizationId, customerId, mode, secretKey, billingKey);
++          }
++        });
++  }
++
++  private void deleteBillingKey(
++      UUID organizationId, UUID customerId, String mode, String secretKey, String billingKey) {
++    if (secretKey == null) {
++      logger.warn(
++          "toss payments billing key deletion skipped: organization_id={}, customer_id={},"
++              + " mode={}, reason=toss_payments_credential_missing",
++          organizationId,
++          customerId,
++          mode);
++      return;
++    }
++    switch (tossPaymentsClient.deleteBillingKey(secretKey, billingKey)) {
++      case TossPaymentsResult.Success<Void> deleted ->
++          logger.info(
++              "toss payments billing key deleted: organization_id={}, customer_id={}, mode={}",
++              organizationId,
++              customerId,
++              mode);
++      case TossPaymentsResult.Rejected<Void> rejected ->
++          logger.warn(
++              "toss payments rejected billing key deletion: organization_id={}, customer_id={},"
++                  + " mode={}, code={}",
++              organizationId,
++              customerId,
++              mode,
++              rejected.code());
++      case TossPaymentsResult.Unknown<Void> unknown ->
++          logger.warn(
++              "toss payments billing key deletion result unknown: organization_id={},"
++                  + " customer_id={}, mode={}, reason={}",
++              organizationId,
++              customerId,
++              mode,
++              unknown.reason());
++    }
+   }
+ }
+diff --git a/backend/src/test/java/com/meterengine/payment/PaymentMethodIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/PaymentMethodIntegrationTest.java
+index 7de32683..67076039 100644
+--- a/backend/src/test/java/com/meterengine/payment/PaymentMethodIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/PaymentMethodIntegrationTest.java
+@@ -1,18 +1,34 @@
+ package com.meterengine.payment;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.ArgumentMatchers.anyString;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.times;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
+ import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+ 
+ import com.meterengine.TestCredentials;
+ import com.meterengine.TestcontainersConfiguration;
+ import com.meterengine.global.error.ErrorCode;
+ import com.meterengine.payment.client.TossPaymentsClient;
++import com.meterengine.payment.client.TossPaymentsResult;
+ import com.meterengine.payment.entity.BillingKey;
++import com.meterengine.payment.entity.TossPaymentsCredential;
+ import com.meterengine.payment.repository.BillingKeyRepository;
++import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
++import java.sql.Connection;
++import java.sql.PreparedStatement;
++import java.sql.ResultSet;
++import java.sql.SQLException;
+ import java.time.OffsetDateTime;
++import java.util.ArrayList;
+ import java.util.Comparator;
++import java.util.List;
+ import java.util.UUID;
+ import java.util.stream.Stream;
++import javax.sql.DataSource;
+ import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+ import org.springframework.beans.factory.annotation.Autowired;
+@@ -22,6 +38,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
+ import org.springframework.test.context.bean.override.mockito.MockitoBean;
+ import org.springframework.test.web.servlet.assertj.MockMvcTester;
+ import org.springframework.test.web.servlet.assertj.MvcTestResult;
++import org.springframework.transaction.annotation.Propagation;
+ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.web.context.WebApplicationContext;
+ 
+@@ -36,6 +53,8 @@ class PaymentMethodIntegrationTest {
+   @Autowired private WebApplicationContext webApplicationContext;
+   @Autowired private JdbcTemplate jdbcTemplate;
+   @Autowired private BillingKeyRepository billingKeyRepository;
++  @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
++  @Autowired private DataSource dataSource;
+ 
+   @MockitoBean private TossPaymentsClient tossPaymentsClient;
+ 
+@@ -133,6 +152,82 @@ class PaymentMethodIntegrationTest {
+         .isStrictlyEqualTo("{\"payment_methods\": []}");
+   }
+ 
++  @Test
++  @Transactional(propagation = Propagation.NOT_SUPPORTED)
++  void 카드를_보관하면_커밋한_뒤_토스_빌링키를_한_번만_폐기하고_폐기가_거절돼도_204다() {
++    UUID organizationId = insertOrganization();
++    UUID customerId = insertCustomer(organizationId);
++    String secretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
++    insertCredential(organizationId, secretKey);
++    String billingKey = "archiveBillingKey" + UUID.randomUUID();
++    insertBillingKey(organizationId, customerId, "test", billingKey, "61", "4330****");
++    List<OffsetDateTime> archivedAtWhenDeleted = new ArrayList<>();
++    when(tossPaymentsClient.deleteBillingKey(secretKey, billingKey))
++        .thenAnswer(
++            invocation -> {
++              archivedAtWhenDeleted.add(committedArchivedAt(organizationId, customerId));
++              return new TossPaymentsResult.Rejected<>(400, "NOT_FOUND_BILLING_KEY", "없는 빌링키");
++            });
++
++    assertThat(deletePaymentMethod(organizationId, customerId)).hasStatus(204);
++    verify(tossPaymentsClient, times(1)).deleteBillingKey(secretKey, billingKey);
++    assertThat(archivedAtWhenDeleted).hasSize(1).doesNotContainNull();
++
++    assertThat(deletePaymentMethod(organizationId, customerId)).hasStatus(204);
++    verify(tossPaymentsClient, times(1)).deleteBillingKey(anyString(), anyString());
++  }
++
++  @Test
++  @Transactional(propagation = Propagation.NOT_SUPPORTED)
++  void 토스_키가_없으면_카드만_보관하고_빌링키_폐기는_건너뛴다() {
++    UUID organizationId = insertOrganization();
++    UUID customerId = insertCustomer(organizationId);
++    insertBillingKey(
++        organizationId,
++        customerId,
++        "test",
++        "archiveBillingKey" + UUID.randomUUID(),
++        "61",
++        "4330****");
++
++    assertThat(deletePaymentMethod(organizationId, customerId)).hasStatus(204);
++
++    assertThat(committedArchivedAt(organizationId, customerId)).isNotNull();
++    verify(tossPaymentsClient, never()).deleteBillingKey(any(), any());
++  }
++
++  private MvcTestResult deletePaymentMethod(UUID organizationId, UUID customerId) {
++    return withOrganization(
++            mvc.delete().uri("/v1/customers/{id}/payment-method", customerId), organizationId)
++        .exchange();
++  }
++
++  // 요청 트랜잭션과 다른 연결로 읽어 커밋된 값만 본다.
++  private OffsetDateTime committedArchivedAt(UUID organizationId, UUID customerId) {
++    try (Connection connection = dataSource.getConnection();
++        PreparedStatement statement =
++            connection.prepareStatement(
++                "SELECT archived_at FROM billing_key WHERE organization_id = ? AND customer_id = ?")) {
++      statement.setObject(1, organizationId);
++      statement.setObject(2, customerId);
++      try (ResultSet resultSet = statement.executeQuery()) {
++        return resultSet.next() ? resultSet.getObject(1, OffsetDateTime.class) : null;
++      }
++    } catch (SQLException exception) {
++      throw new IllegalStateException(exception);
++    }
++  }
++
++  private void insertCredential(UUID organizationId, String secretKey) {
++    tossPaymentsCredentialRepository.saveAndFlush(
++        new TossPaymentsCredential(
++            organizationId,
++            "test",
++            "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq",
++            secretKey,
++            AUTHENTICATED_AT));
++  }
++
+   private MvcTestResult getPaymentMethod(UUID organizationId, UUID customerId) {
+     return withOrganization(
+             mvc.get().uri("/v1/customers/{id}/payment-method", customerId), organizationId)
+-- 
+2.54.0 (Apple Git-157)
+

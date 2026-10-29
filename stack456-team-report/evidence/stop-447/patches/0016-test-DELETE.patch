@@ -1,0 +1,92 @@
+From 858ef355861583b9ba569b962034b0b0026e1989 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:59:08 +0900
+Subject: [PATCH 16/21] =?UTF-8?q?test:=20=EC=A1=B0=ED=95=A9=20DELETE?=
+ =?UTF-8?q?=EA=B0=80=20=EC=A7=80=EC=A0=95=ED=95=9C=20=EC=A1=B0=ED=95=A9?=
+ =?UTF-8?q?=EB=A7=8C=20=EB=B3=B4=EA=B4=80=ED=95=98=EB=8A=94=EC=A7=80=20?=
+ =?UTF-8?q?=EB=B3=B8=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 조합 DELETE 시험은 price_rate 행 수와 haiku 단가만 봤다. 보관은 행을 지우지 않고 단가도 바꾸지 않으므로, DELETE가 haiku까지 보관하거나 아무것도 보관하지 않아도 이 시험은 통과했다.
+
+변경 사항
+
+- DELETE 뒤 변경을 flush하고, opus 행의 archived_from이 다음 달인지와 haiku 행이 보관되지 않았는지를 단언한다.
+- 보관된 행의 archived_from을 읽는 헬퍼를 더했다. 기존 행 수와 haiku 단가 단언은 그대로 둔다.
+
+검증
+
+- PriceRateService.delete의 조합 비교를 뺀 변이에서 새 단언이 expected: null but was: "2026-11"로 실패했고, 옛 시험은 통과했다. 변이를 되돌린 뒤 pricing 패키지 시험 66건 통과.
+---
+ .../pricing/PriceRateIntegrationTest.java     | 24 +++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/backend/src/test/java/com/meterengine/pricing/PriceRateIntegrationTest.java b/backend/src/test/java/com/meterengine/pricing/PriceRateIntegrationTest.java
+index 5b1be18f..ee6ae4b4 100644
+--- a/backend/src/test/java/com/meterengine/pricing/PriceRateIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/pricing/PriceRateIntegrationTest.java
+@@ -11,9 +11,11 @@ import com.meterengine.global.error.BusinessException;
+ import com.meterengine.global.error.ErrorCode;
+ import com.meterengine.global.error.InvalidRequestException;
+ import com.meterengine.global.error.NotFoundException;
++import com.meterengine.metric.service.BillableMetricUsageService;
+ import com.meterengine.pricing.dto.CreatePriceRateRequest;
+ import com.meterengine.pricing.dto.PriceRateResponse;
+ import com.meterengine.pricing.service.PriceRateService;
++import jakarta.persistence.EntityManager;
+ import java.math.BigDecimal;
+ import java.util.HashMap;
+ import java.util.LinkedHashMap;
+@@ -40,6 +42,7 @@ class PriceRateIntegrationTest {
+ 
+   @Autowired private PriceRateService priceRateService;
+   @Autowired private JdbcTemplate jdbcTemplate;
++  @Autowired private EntityManager entityManager;
+   @Autowired private WebApplicationContext webApplicationContext;
+ 
+   private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
+@@ -137,9 +140,13 @@ class PriceRateIntegrationTest {
+     create(organizationId, Map.of("model", "haiku"), "1");
+ 
+     assertThat(delete(organizationId, "{\"model\":\"opus\"}")).hasStatus(204);
++    entityManager.flush();
+ 
+     assertThat(priceRateCount(organizationId)).isEqualTo(2);
+     assertThat(storedUnitPrice(organizationId, "{\"model\": \"haiku\"}")).isEqualByComparingTo("1");
++    assertThat(archivedFrom(organizationId, "{\"model\": \"opus\"}"))
++        .isEqualTo(BillableMetricUsageService.currentMonth().plusMonths(1).toString());
++    assertThat(archivedFrom(organizationId, "{\"model\": \"haiku\"}")).isNull();
+   }
+ 
+   @Test
+@@ -238,6 +245,23 @@ class PriceRateIntegrationTest {
+         dimensionValuesJson);
+   }
+ 
++  private String archivedFrom(UUID organizationId, String dimensionValuesJson) {
++    return jdbcTemplate
++        .queryForList(
++            """
++            SELECT archived_from FROM price_rate
++            WHERE organization_id = ? AND billable_metric_code = ? AND dimension_values = ?::jsonb
++              AND archived_at IS NOT NULL
++            """,
++            String.class,
++            organizationId,
++            BILLABLE_METRIC_CODE,
++            dimensionValuesJson)
++        .stream()
++        .findFirst()
++        .orElse(null);
++  }
++
+   private Integer priceRateCount(UUID organizationId) {
+     return jdbcTemplate.queryForObject(
+         "SELECT count(*) FROM price_rate WHERE organization_id = ?", Integer.class, organizationId);
+-- 
+2.54.0 (Apple Git-157)
+

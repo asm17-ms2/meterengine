@@ -1,0 +1,381 @@
+From 4ec2ebddb84ebcf9b7365aeea8f54c15e13301f1 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:08:28 +0900
+Subject: [PATCH 08/21] =?UTF-8?q?docs:=20=EB=B3=B4=EA=B4=80=20=EC=83=81?=
+ =?UTF-8?q?=ED=83=9C=EB=A1=9C=20=EA=B1=B0=EB=A5=B4=EB=8A=94=20=EB=AA=A9?=
+ =?UTF-8?q?=EB=A1=9D=EC=9D=98=20status=EC=97=90=20=EB=B0=9B=EB=8A=94=20?=
+ =?UTF-8?q?=EA=B0=92=EC=9D=84=20API=20=EB=AC=B8=EC=84=9C=EC=97=90=20?=
+ =?UTF-8?q?=EC=A0=81=EB=8A=94=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 고객, 미터, 단가, 요금제, 고객 카드, 토스페이먼츠 키, 웹훅 엔드포인트 목록의 status는 openapi.yaml에 type string, default active로만 나갔다. 서버는 active, archived, all 밖의 값을 400 validation_error로 거절하는데 문서에는 받는 값이 없었다.
+- API 키와 도입사 사용자 목록의 status는 같은 꼴인데도 허용값을 enum으로 내고 있어 두 갈래로 갈라져 있었다.
+
+변경 사항
+
+- 일곱 목록의 status 파라미터에 설명과 허용값 active, archived, all을 달고 기본값 active를 그대로 남겼다. 서버가 받는 값과 동작은 바뀌지 않는다.
+- backend/openapi.yaml을 다시 만들었다.
+
+검증
+
+- OpenApiDocumentTest에 더한 시험이 고치기 전 실패했다([listCustomers] Expecting actual: [] to contain exactly (and in same order): ["active", "archived", "all"]). 고친 뒤 OpenApiDocumentTest 26건과 backend 전체 시험 1120건 통과.
+---
+ backend/openapi.yaml                          | 49 ++++++++++++++++---
+ .../controller/CustomerController.java        | 10 +++-
+ .../controller/BillableMetricController.java  |  9 +++-
+ .../controller/PaymentMethodController.java   |  9 +++-
+ .../TossPaymentsCredentialController.java     |  9 +++-
+ .../controller/PricePlanController.java       | 11 ++++-
+ .../controller/PriceRateController.java       | 10 +++-
+ .../controller/WebhookEndpointController.java | 11 ++++-
+ .../global/OpenApiDocumentTest.java           | 33 +++++++++++++
+ 9 files changed, 137 insertions(+), 14 deletions(-)
+
+diff --git a/backend/openapi.yaml b/backend/openapi.yaml
+index 486ec5c5..c069025c 100644
+--- a/backend/openapi.yaml
++++ b/backend/openapi.yaml
+@@ -287,12 +287,17 @@ paths:
+     get:
+       operationId: listBillableMetrics
+       parameters:
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -672,12 +677,17 @@ paths:
+         schema:
+           type: string
+           format: uuid
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -992,12 +1002,17 @@ paths:
+         페이지를 나누지 않는다.
+       operationId: listCustomers
+       parameters:
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -3411,12 +3426,17 @@ paths:
+         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
+       operationId: listPaymentMethods
+       parameters:
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -3671,12 +3691,17 @@ paths:
+         schema:
+           type: string
+           format: uuid
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -4135,12 +4160,17 @@ paths:
+         verified_at과 updated_at은 KST(+09:00)로 나온다.
+       operationId: listTossPaymentsCredentials
+       parameters:
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+@@ -4582,12 +4612,17 @@ paths:
+     get:
+       operationId: listWebhookEndpoints
+       parameters:
+-      - in: query
++      - description: 보관 상태. 생략하면 active
++        in: query
+         name: status
+         required: false
+         schema:
+           type: string
+           default: active
++          enum:
++          - active
++          - archived
++          - all
+       responses:
+         "200":
+           content:
+diff --git a/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java b/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
+index e3f18ef7..a62ac06c 100644
+--- a/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
++++ b/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
+@@ -56,7 +56,15 @@ public class CustomerController {
+   })
+   public ListCustomersResponse listCustomers(
+       @CurrentOrganizationId UUID organizationId,
+-      @RequestParam(defaultValue = "active") @StorableText String status) {
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @RequestParam(defaultValue = "active")
++          @StorableText
++          String status) {
+     return ListCustomersResponse.from(customerService.list(organizationId, status));
+   }
+ 
+diff --git a/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java b/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
+index 8311be9d..da7bd561 100644
+--- a/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
++++ b/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
+@@ -137,7 +137,14 @@ public class BillableMetricController {
+   @Operation(summary = "미터 목록 조회")
+   public ListBillableMetricsResponse listBillableMetrics(
+       @CurrentOrganizationId UUID organizationId,
+-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
++          @StorableText
+           String status) {
+     return billableMetricService.list(organizationId, status);
+   }
+diff --git a/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodController.java b/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodController.java
+index 734925db..f0844818 100644
+--- a/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodController.java
++++ b/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodController.java
+@@ -86,7 +86,14 @@ public class PaymentMethodController {
+   })
+   public ListPaymentMethodsResponse listPaymentMethods(
+       @CurrentOrganizationId UUID organizationId,
+-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
++          @StorableText
+           String status) {
+     return paymentMethodService.list(organizationId, status);
+   }
+diff --git a/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java b/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
+index 966a099a..1193eac7 100644
+--- a/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
++++ b/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
+@@ -59,7 +59,14 @@ public class TossPaymentsCredentialController {
+   })
+   public ListTossPaymentsCredentialsResponse listTossPaymentsCredentials(
+       @CurrentOrganizationId UUID organizationId,
+-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
++          @StorableText
+           String status) {
+     return tossPaymentsCredentialService.list(organizationId, status);
+   }
+diff --git a/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java b/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
+index 6e4b88e7..6a3a2385 100644
+--- a/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
++++ b/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
+@@ -11,6 +11,7 @@ import com.meterengine.pricing.dto.ListPricePlansResponse;
+ import com.meterengine.pricing.dto.PricePlanResponse;
+ import com.meterengine.pricing.service.PricePlanService;
+ import io.swagger.v3.oas.annotations.Operation;
++import io.swagger.v3.oas.annotations.Parameter;
+ import io.swagger.v3.oas.annotations.media.Content;
+ import io.swagger.v3.oas.annotations.media.Schema;
+ import io.swagger.v3.oas.annotations.responses.ApiResponse;
+@@ -74,7 +75,15 @@ public class PricePlanController {
+       @RequestParam(required = false) @FourDigitYear @DateTimeFormat(pattern = "yyyy-MM")
+           YearMonth month,
+       @RequestParam(name = "customer_id", required = false) UUID customerId,
+-      @RequestParam(defaultValue = "active") @StorableText String status) {
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @RequestParam(defaultValue = "active")
++          @StorableText
++          String status) {
+     return pricePlanService.list(organizationId, month, customerId, status);
+   }
+ 
+diff --git a/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java b/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
+index eaa2644b..d6c1423d 100644
+--- a/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
++++ b/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
+@@ -137,7 +137,15 @@ public class PriceRateController {
+       @CurrentOrganizationId UUID organizationId,
+       @PathVariable @StorableText String code,
+       @RequestParam(name = "customer_id", required = false) UUID customerId,
+-      @RequestParam(defaultValue = "active") @StorableText String status) {
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @RequestParam(defaultValue = "active")
++          @StorableText
++          String status) {
+     return priceRateService.list(organizationId, code, customerId, status);
+   }
+ 
+diff --git a/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java b/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
+index 97154d6b..2588036a 100644
+--- a/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
++++ b/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
+@@ -13,6 +13,7 @@ import com.meterengine.webhook.dto.WebhookEndpointResponse;
+ import com.meterengine.webhook.service.WebhookDeliveryService;
+ import com.meterengine.webhook.service.WebhookEndpointService;
+ import io.swagger.v3.oas.annotations.Operation;
++import io.swagger.v3.oas.annotations.Parameter;
+ import io.swagger.v3.oas.annotations.media.Content;
+ import io.swagger.v3.oas.annotations.media.Schema;
+ import io.swagger.v3.oas.annotations.responses.ApiResponse;
+@@ -53,7 +54,15 @@ public class WebhookEndpointController {
+   @Operation(summary = "웹훅 엔드포인트 목록 조회")
+   public ListWebhookEndpointsResponse listWebhookEndpoints(
+       @CurrentOrganizationId UUID organizationId,
+-      @RequestParam(defaultValue = "active") @StorableText String status) {
++      @Parameter(
++              description = "보관 상태. 생략하면 active",
++              schema =
++                  @Schema(
++                      allowableValues = {"active", "archived", "all"},
++                      defaultValue = "active"))
++          @RequestParam(defaultValue = "active")
++          @StorableText
++          String status) {
+     return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId, status));
+   }
+ 
+diff --git a/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java b/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
+index f41cc0ac..5f440e3b 100644
+--- a/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
++++ b/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
+@@ -549,6 +549,39 @@ class OpenApiDocumentTest {
+     assertThat(names).isNotEmpty().allMatch(name -> name.matches(SNAKE_CASE));
+   }
+ 
++  @Test
++  void 보관_상태로_거르는_목록의_status는_active_archived_all만_받고_기본이_active다() {
++    List<String> operationIds =
++        List.of(
++            "listCustomers",
++            "listBillableMetrics",
++            "listPriceRates",
++            "listPricePlans",
++            "listPaymentMethods",
++            "listTossPaymentsCredentials",
++            "listWebhookEndpoints");
++
++    for (String operationId : operationIds) {
++      JsonNode operation =
++          operations().stream()
++              .filter(candidate -> candidate.path("operationId").asText().equals(operationId))
++              .findFirst()
++              .orElseThrow(() -> new AssertionError(operationId + " 오퍼레이션이 문서에 없다"));
++      JsonNode schema = null;
++      for (JsonNode parameter : operation.path("parameters")) {
++        if (parameter.path("in").asText().equals("query")
++            && parameter.path("name").asText().equals("status")) {
++          schema = parameter.path("schema");
++        }
++      }
++      assertThat(schema).as("%s의 status 파라미터", operationId).isNotNull();
++      List<String> values = new ArrayList<>();
++      schema.path("enum").forEach(value -> values.add(value.asText()));
++      assertThat(values).as(operationId).containsExactly("active", "archived", "all");
++      assertThat(schema.path("default").asText()).as(operationId).isEqualTo("active");
++    }
++  }
++
+   @Test
+   void 스키마_속성_이름과_열거값은_snake_case다() {
+     List<String> names = new ArrayList<>();
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,256 @@
+From 1f269b5eff06db1275901694708f58e9fe40f9e5 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:10:05 +0900
+Subject: [PATCH 19/21] =?UTF-8?q?fix:=20=EB=AF=B8=ED=84=B0=20=EC=88=98?=
+ =?UTF-8?q?=EC=A0=95=EC=9D=80=20=EC=9D=B4=EB=B2=A4=ED=8A=B8=20=EC=9C=A0?=
+ =?UTF-8?q?=EB=AC=B4=EB=A5=BC=20=EB=8F=84=EC=9E=85=EC=82=AC=20=EC=9E=A0?=
+ =?UTF-8?q?=EA=B8=88=20=EC=A0=84=EC=97=90=20=ED=99=95=EC=9D=B8=ED=95=9C?=
+ =?UTF-8?q?=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 미터 수정은 도입사 행을 FOR UPDATE로 잠근 뒤 이벤트 유무를 물었다. event에는 type 색인이 없어 이 질의가 그 도입사의 이벤트를 모두 훑고, 그동안 같은 잠금을 잡는 카드 등록 완료와 단가, 요금제 변경이 기다렸다. 수집은 이 잠금을 잡지 않아 잠금 안에서 확인해 얻는 정합성도 없었다.
+
+변경 사항
+
+- 요청 검증과 미터 조회, 보관 확인, 이벤트 유무 확인을 잠금 앞에서 한다.
+- 잠금 뒤 미터를 다시 읽어 보관 여부와 바뀐 칸을 다시 계산하고, 다시 읽은 event_type이 앞에서 확인한 것과 다를 때만 잠금 안에서 이벤트 유무를 한 번 더 묻는다.
+- 바뀐 칸 계산을 메서드로 뺐다. 거절 코드와 감사 기록은 같다.
+
+검증
+
+- 고치기 전 새 단위 시험 둘이 실패했다(Verification in order failure Wanted but not invoked: organizationRepository.findForUpdateById, Expecting code to raise a throwable.). 고친 뒤 metric, archive 패키지 시험 102건과 backend 전체 시험 1120건 통과. 다시 읽기를 뺀 변이에서는 기존 ArchiveMutationConcurrencyTest의 미터 경합 시험이 실패했다.
+---
+ .../metric/service/BillableMetricService.java | 70 +++++++++++++------
+ .../service/BillableMetricServiceTest.java    | 55 ++++++++++++++-
+ 2 files changed, 103 insertions(+), 22 deletions(-)
+
+diff --git a/backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java b/backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java
+index 4653a9c0..18f5b669 100644
+--- a/backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java
++++ b/backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java
+@@ -19,6 +19,7 @@ import com.meterengine.metric.entity.MetricAggregation;
+ import com.meterengine.metric.repository.BillableMetricPeriodRepository;
+ import com.meterengine.metric.repository.BillableMetricRepository;
+ import com.meterengine.organization.repository.OrganizationRepository;
++import jakarta.persistence.EntityManager;
+ import java.math.BigDecimal;
+ import java.util.ArrayList;
+ import java.util.HashSet;
+@@ -39,18 +40,21 @@ public class BillableMetricService {
+   private final BillableMetricPeriodRepository billableMetricPeriodRepository;
+   private final OrganizationRepository organizationRepository;
+   private final AuditLogService auditLogService;
++  private final EntityManager entityManager;
+ 
+   BillableMetricService(
+       BillableMetricRepository billableMetricRepository,
+       EventPresence eventPresence,
+       BillableMetricPeriodRepository billableMetricPeriodRepository,
+       OrganizationRepository organizationRepository,
+-      AuditLogService auditLogService) {
++      AuditLogService auditLogService,
++      EntityManager entityManager) {
+     this.billableMetricRepository = billableMetricRepository;
+     this.eventPresence = eventPresence;
+     this.billableMetricPeriodRepository = billableMetricPeriodRepository;
+     this.organizationRepository = organizationRepository;
+     this.auditLogService = auditLogService;
++    this.entityManager = entityManager;
+   }
+ 
+   @Transactional
+@@ -111,7 +115,6 @@ public class BillableMetricService {
+   @Transactional
+   public BillableMetricResponse update(
+       UUID organizationId, String code, UpdateBillableMetricRequest request) {
+-    lock(organizationId);
+     Calculation calculation =
+         validate(
+             request.aggregation(),
+@@ -130,26 +133,21 @@ public class BillableMetricService {
+ 
+     if (billableMetric.getArchivedAt() != null)
+       throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
++    String checkedEventType = null;
++    if (changesBeyondName(
++        changedFields(billableMetric, request, calculation, dimensionProperties))) {
++      checkedEventType = billableMetric.getEventType();
++      if (eventPresence.exists(organizationId, checkedEventType))
++        throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
++    }
+ 
+-    var fields = new ArrayList<String>();
+-    if (!Objects.equals(billableMetric.getName(), request.name())) fields.add("name");
+-    if (!Objects.equals(billableMetric.getEventType(), request.eventType()))
+-      fields.add("event_type");
+-    if (!Objects.equals(billableMetric.getAggregation(), calculation.aggregation()))
+-      fields.add("aggregation");
+-    if (!Objects.equals(billableMetric.getTargetProperty(), request.targetProperty()))
+-      fields.add("target_property");
+-    if (!Objects.equals(billableMetric.getDimensionProperties(), dimensionProperties))
+-      fields.add("dimension_properties");
+-    if (!decimalEquals(billableMetric.getUnitSize(), calculation.unitSize()))
+-      fields.add("unit_size");
+-    if (!Objects.equals(billableMetric.getRoundingMode(), calculation.roundingMode()))
+-      fields.add("rounding_mode");
+-    if (billableMetric.getRoundingPrecision() != calculation.roundingPrecision())
+-      fields.add("rounding_precision");
+-    if (!decimalEquals(billableMetric.getPercentile(), calculation.percentile()))
+-      fields.add("percentile");
+-    if (fields.stream().anyMatch(field -> !"name".equals(field))
++    lock(organizationId);
++    entityManager.refresh(billableMetric);
++    if (billableMetric.getArchivedAt() != null)
++      throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
++    List<String> fields = changedFields(billableMetric, request, calculation, dimensionProperties);
++    if (changesBeyondName(fields)
++        && !billableMetric.getEventType().equals(checkedEventType)
+         && eventPresence.exists(organizationId, billableMetric.getEventType()))
+       throw new ConflictException(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+     billableMetric.update(
+@@ -287,6 +285,36 @@ public class BillableMetricService {
+         percentile);
+   }
+ 
++  private static List<String> changedFields(
++      BillableMetric billableMetric,
++      UpdateBillableMetricRequest request,
++      Calculation calculation,
++      List<String> dimensionProperties) {
++    var fields = new ArrayList<String>();
++    if (!Objects.equals(billableMetric.getName(), request.name())) fields.add("name");
++    if (!Objects.equals(billableMetric.getEventType(), request.eventType()))
++      fields.add("event_type");
++    if (!Objects.equals(billableMetric.getAggregation(), calculation.aggregation()))
++      fields.add("aggregation");
++    if (!Objects.equals(billableMetric.getTargetProperty(), request.targetProperty()))
++      fields.add("target_property");
++    if (!Objects.equals(billableMetric.getDimensionProperties(), dimensionProperties))
++      fields.add("dimension_properties");
++    if (!decimalEquals(billableMetric.getUnitSize(), calculation.unitSize()))
++      fields.add("unit_size");
++    if (!Objects.equals(billableMetric.getRoundingMode(), calculation.roundingMode()))
++      fields.add("rounding_mode");
++    if (billableMetric.getRoundingPrecision() != calculation.roundingPrecision())
++      fields.add("rounding_precision");
++    if (!decimalEquals(billableMetric.getPercentile(), calculation.percentile()))
++      fields.add("percentile");
++    return fields;
++  }
++
++  private static boolean changesBeyondName(List<String> fields) {
++    return fields.stream().anyMatch(field -> !"name".equals(field));
++  }
++
+   private static boolean decimalEquals(BigDecimal first, BigDecimal second) {
+     return first == null ? second == null : second != null && first.compareTo(second) == 0;
+   }
+diff --git a/backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java b/backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java
+index b460bb6d..16270218 100644
+--- a/backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java
++++ b/backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java
+@@ -3,7 +3,9 @@ package com.meterengine.metric.service;
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.Mockito.doAnswer;
+ import static org.mockito.Mockito.doThrow;
++import static org.mockito.Mockito.inOrder;
+ import static org.mockito.Mockito.never;
+ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+@@ -26,6 +28,8 @@ import com.meterengine.metric.repository.BillableMetricPeriodRepository;
+ import com.meterengine.metric.repository.BillableMetricRepository;
+ import com.meterengine.organization.entity.Organization;
+ import com.meterengine.organization.repository.OrganizationRepository;
++import jakarta.persistence.EntityManager;
++import java.math.BigDecimal;
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.UUID;
+@@ -33,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+ import org.junit.jupiter.api.extension.ExtendWith;
+ import org.mockito.ArgumentCaptor;
++import org.mockito.InOrder;
+ import org.mockito.Mock;
+ import org.mockito.junit.jupiter.MockitoExtension;
+ import org.springframework.dao.DataIntegrityViolationException;
+@@ -48,6 +53,7 @@ class BillableMetricServiceTest {
+   @Mock private BillableMetricPeriodRepository periodRepository;
+   @Mock private OrganizationRepository organizationRepository;
+   @Mock private AuditLogService auditLogService;
++  @Mock private EntityManager entityManager;
+ 
+   private BillableMetricService billableMetricService;
+ 
+@@ -59,7 +65,8 @@ class BillableMetricServiceTest {
+             eventService,
+             periodRepository,
+             organizationRepository,
+-            auditLogService);
++            auditLogService,
++            entityManager);
+     org.mockito.Mockito.lenient()
+         .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
+         .thenReturn(Optional.of(org.mockito.Mockito.mock(Organization.class)));
+@@ -265,6 +272,52 @@ class BillableMetricServiceTest {
+     assertThat(stored.getEventType()).isEqualTo("chat_completion");
+   }
+ 
++  @Test
++  void 이벤트_유무는_도입사_잠금_전에_확인한다() {
++    BillableMetric stored = storedBillableMetric();
++    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
++
++    update("embedding", "chars");
++
++    InOrder order = inOrder(eventService, organizationRepository);
++    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
++    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
++  }
++
++  @Test
++  void 잠금_뒤_다시_읽은_event_type이_다르면_그_이벤트를_다시_확인한다() {
++    BillableMetric stored = storedBillableMetric();
++    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
++    doAnswer(
++            invocation -> {
++              stored.update(
++                  "토큰 사용량",
++                  "legacy_completion",
++                  "sum",
++                  "token",
++                  List.of(),
++                  BigDecimal.ONE,
++                  "none",
++                  0,
++                  null);
++              return null;
++            })
++        .when(entityManager)
++        .refresh(stored);
++    when(eventService.exists(ORGANIZATION_ID, "chat_completion")).thenReturn(false);
++    when(eventService.exists(ORGANIZATION_ID, "legacy_completion")).thenReturn(true);
++
++    assertThatThrownBy(() -> update("embedding", "chars"))
++        .isInstanceOf(ConflictException.class)
++        .extracting(exception -> ((BusinessException) exception).getErrorCode())
++        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
++    InOrder order = inOrder(eventService, organizationRepository, entityManager);
++    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
++    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
++    order.verify(entityManager).refresh(stored);
++    order.verify(eventService).exists(ORGANIZATION_ID, "legacy_completion");
++  }
++
+   @Test
+   void 이벤트가_없으면_다른_미터와_같은_이벤트와_속성으로_변경할_수_있다() {
+     BillableMetric stored = storedBillableMetric();
+-- 
+2.54.0 (Apple Git-157)
+

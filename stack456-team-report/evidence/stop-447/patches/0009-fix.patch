@@ -1,0 +1,316 @@
+From 75d30178277c728c4599a0e0f83db70901a278d6 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:51:49 +0900
+Subject: [PATCH 09/21] =?UTF-8?q?fix:=20=EB=B3=B4=EA=B4=80=ED=96=88?=
+ =?UTF-8?q?=EA=B1=B0=EB=82=98=20=EC=97=86=EB=8A=94=20=EC=B9=B4=EB=93=9C?=
+ =?UTF-8?q?=EC=9D=98=20=EC=8B=A4=ED=8C=A8=20=EA=B2=B0=EC=A0=9C=EB=8A=94=20?=
+ =?UTF-8?q?=EC=9E=AC=EC=8B=9C=EB=8F=84=20=ED=9B=84=EB=B3=B4=EC=99=80=20?=
+ =?UTF-8?q?=EB=8B=A4=EC=9D=8C=20=EC=9E=AC=EC=8B=9C=EB=8F=84=20=EC=8B=9C?=
+ =?UTF-8?q?=EA=B0=81=EC=97=90=EC=84=9C=20=EB=BA=80=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 재시도 후보 조회와 인보이스 결제 목록 조회가 billing_key를 보관 여부와 상관없이 조인했다. 재시도 가능한 코드로 실패한 시도의 카드를 보관하면 그 시도가 10분마다 후보로 돌아오고, 재시도 작업은 매번 인보이스와 시도를 잠근 뒤 카드 없음으로 건너뛰어 시도 수가 늘지 않으니 끝나지 않았다. 결제 목록의 next_retry_at도 일어나지 않을 재시도 시각을 계속 보였다.
+
+변경 사항
+
+- 재시도 후보 조회는 보관하지 않은 카드가 있는 실패 시도만 고른다(LEFT JOIN을 JOIN으로 바꾸고 archived_at IS NULL 조건을 더했다).
+- 인보이스 결제 목록 조회의 카드 조인에 archived_at IS NULL을 더하고, 지금 쓸 카드가 없으면 next_retry_at을 null로 낸다.
+- 카드 없이 재시도 대상이 되기를 기대하던 기존 시험 픽스처에 카드를 넣었다. 빌링키가 없는 재시도 시험은 이제 후보로 고르지 않으므로 skipped 건수 검사를 뺐다.
+
+검증
+
+- 고치기 전 새 시험 둘이 실패했다(findRetryCandidates가 보관 카드와 카드 없는 시도 셋을 돌려줌, next_retry_at이 [null, null] 대신 재시도 시각). 고친 뒤 payment, archive 패키지 시험 310건 통과.
+---
+ .../repository/PaymentAttemptRepository.java  |  4 +-
+ .../service/InvoicePaymentService.java        |  2 +-
+ .../InvoicePaymentIntegrationTest.java        | 68 +++++++++++++++++--
+ .../PaymentAttemptRepositoryTest.java         | 56 +++++++++++----
+ .../service/PaymentRetryServiceTest.java      |  5 +-
+ 5 files changed, 109 insertions(+), 26 deletions(-)
+
+diff --git a/backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java b/backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java
+index 0239c9c1..2fe7bafd 100644
+--- a/backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java
++++ b/backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java
+@@ -62,6 +62,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt,
+             ON bk.organization_id = i.organization_id
+            AND bk.customer_id = i.customer_id
+            AND bk.mode = :mode
++           AND bk.archived_at IS NULL
+           LEFT JOIN LATERAL (
+             SELECT a.id, a.status, a.failure_code, a.completed_at
+             FROM payment_attempt a
+@@ -135,10 +136,11 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt,
+                  bk.authenticated_at AS "billingKeyAuthenticatedAt"
+           FROM payment_attempt a
+           LEFT JOIN payment_setting s ON s.organization_id = a.organization_id
+-          LEFT JOIN billing_key bk
++          JOIN billing_key bk
+             ON bk.organization_id = a.organization_id
+            AND bk.customer_id = a.customer_id
+            AND bk.mode = a.mode
++           AND bk.archived_at IS NULL
+           CROSS JOIN LATERAL (
+             SELECT count(*) AS attempt_count
+             FROM payment_attempt c
+diff --git a/backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java b/backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java
+index 439a10a5..e83ae29b 100644
+--- a/backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java
++++ b/backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java
+@@ -71,7 +71,7 @@ public class InvoicePaymentService {
+         done ? invoicePayment.getCanceledAmount() : 0,
+         invoicePayment.getAttemptCount(),
+         failed ? latestFailureCode : null,
+-        failed
++        failed && invoicePayment.getBillingKeyAuthenticatedAt() != null
+             ? paymentRetryPolicy.nextRetryAt(
+                 latestFailureCode,
+                 invoicePayment.getAttemptCount(),
+diff --git a/backend/src/test/java/com/meterengine/payment/InvoicePaymentIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/InvoicePaymentIntegrationTest.java
+index 81d8cae0..a1279fae 100644
+--- a/backend/src/test/java/com/meterengine/payment/InvoicePaymentIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/InvoicePaymentIntegrationTest.java
+@@ -83,7 +83,8 @@ class InvoicePaymentIntegrationTest {
+         insertDoneAttempt(organizationId, canceled, "test", FIRST_REQUESTED_AT, FIRST_COMPLETED_AT);
+     insertCancellation(organizationId, canceledAttempt, "done", 10000);
+     insertCancellation(organizationId, canceledAttempt, "done", 3200);
+-    UUID failed = insertInvoice(organizationId, insertCustomer(organizationId, "사"), 12000);
++    UUID failedCustomer = insertCustomer(organizationId, "사");
++    UUID failed = insertInvoice(organizationId, failedCustomer, 12000);
+     insertFailedAttempt(
+         organizationId,
+         failed,
+@@ -91,6 +92,7 @@ class InvoicePaymentIntegrationTest {
+         "REJECT_CARD_PAYMENT",
+         FIRST_REQUESTED_AT,
+         FIRST_COMPLETED_AT);
++    insertBillingKey(organizationId, failedCustomer, FIRST_REQUESTED_AT);
+ 
+     assertThat(list(organizationId, ""))
+         .hasStatusOk()
+@@ -164,7 +166,7 @@ class InvoicePaymentIntegrationTest {
+   @Test
+   void next_retry_at은_재시도_대상_코드면_채워지고_INVALID_CARD_EXPIRATION이거나_시도_수가_상한이면_null이다() {
+     UUID organizationId = insertOrganization();
+-    UUID expired = insertInvoice(organizationId, insertCustomer(organizationId, "가"), 12000);
++    UUID expired = insertInvoice(organizationId, insertCardCustomer(organizationId, "가"), 12000);
+     insertFailedAttempt(
+         organizationId,
+         expired,
+@@ -173,7 +175,7 @@ class InvoicePaymentIntegrationTest {
+         FIRST_REQUESTED_AT,
+         FIRST_COMPLETED_AT);
+     UUID credentialMissing =
+-        insertInvoice(organizationId, insertCustomer(organizationId, "나"), 12000);
++        insertInvoice(organizationId, insertCardCustomer(organizationId, "나"), 12000);
+     insertFailedAttempt(
+         organizationId,
+         credentialMissing,
+@@ -181,12 +183,13 @@ class InvoicePaymentIntegrationTest {
+         "toss_payments_credential_missing",
+         FIRST_REQUESTED_AT,
+         FIRST_COMPLETED_AT);
+-    UUID serverError = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
++    UUID serverError =
++        insertInvoice(organizationId, insertCardCustomer(organizationId, "다"), 12000);
+     insertFailedAttempt(
+         organizationId, serverError, "test", "HTTP_500", FIRST_REQUESTED_AT, FIRST_COMPLETED_AT);
+     insertFailedAttempt(
+         organizationId, serverError, "test", "HTTP_500", SECOND_REQUESTED_AT, SECOND_COMPLETED_AT);
+-    UUID exhausted = insertInvoice(organizationId, insertCustomer(organizationId, "라"), 12000);
++    UUID exhausted = insertInvoice(organizationId, insertCardCustomer(organizationId, "라"), 12000);
+     insertFailedAttempt(
+         organizationId,
+         exhausted,
+@@ -298,7 +301,8 @@ class InvoicePaymentIntegrationTest {
+         "ALREADY_REMOVED_BILLING_KEY",
+         FIRST_REQUESTED_AT,
+         FIRST_COMPLETED_AT);
+-    UUID oldNotFound = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
++    UUID oldNotFound =
++        insertInvoice(organizationId, insertCardCustomer(organizationId, "다"), 12000);
+     OffsetDateTime oldFailedAt = OffsetDateTime.now().minusDays(7).minusMinutes(1);
+     insertFailedAttempt(
+         organizationId,
+@@ -307,7 +311,8 @@ class InvoicePaymentIntegrationTest {
+         "NOT_FOUND_PAYMENT",
+         oldFailedAt.minusSeconds(5),
+         oldFailedAt);
+-    UUID recentNotFound = insertInvoice(organizationId, insertCustomer(organizationId, "라"), 12000);
++    UUID recentNotFound =
++        insertInvoice(organizationId, insertCardCustomer(organizationId, "라"), 12000);
+     OffsetDateTime recentFailedAt = OffsetDateTime.now().minusDays(1);
+     insertFailedAttempt(
+         organizationId,
+@@ -331,6 +336,49 @@ class InvoicePaymentIntegrationTest {
+             nextRetryAt -> assertThat(nextRetryAt).isNotNull());
+   }
+ 
++  @Test
++  void next_retry_at은_재시도_대상_코드여도_카드를_보관했거나_카드가_없으면_null이다() {
++    UUID organizationId = insertOrganization();
++    UUID active = insertInvoice(organizationId, insertCardCustomer(organizationId, "가"), 12000);
++    insertFailedAttempt(
++        organizationId,
++        active,
++        "test",
++        "REJECT_CARD_PAYMENT",
++        FIRST_REQUESTED_AT,
++        FIRST_COMPLETED_AT);
++    UUID archivedCustomer = insertCardCustomer(organizationId, "나");
++    UUID archived = insertInvoice(organizationId, archivedCustomer, 12000);
++    insertFailedAttempt(
++        organizationId,
++        archived,
++        "test",
++        "REJECT_CARD_PAYMENT",
++        FIRST_REQUESTED_AT,
++        FIRST_COMPLETED_AT);
++    jdbcTemplate.update(
++        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ? AND customer_id = ?",
++        organizationId,
++        archivedCustomer);
++    UUID withoutCard = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
++    insertFailedAttempt(
++        organizationId,
++        withoutCard,
++        "test",
++        "REJECT_CARD_PAYMENT",
++        FIRST_REQUESTED_AT,
++        FIRST_COMPLETED_AT);
++
++    MvcTestResult listed = list(organizationId, "");
++
++    assertInvoiceIds(listed, active, archived, withoutCard);
++    assertThat(listed)
++        .bodyJson()
++        .extractingPath("$.invoice_payments[*].next_retry_at")
++        .asArray()
++        .containsExactly("2026-10-02T09:00:05+09:00", null, null);
++  }
++
+   @Test
+   void 인보이스_목록과_같은_순서이고_month와_customer_id로_거르며_다른_도입사_인보이스는_나오지_않는다() {
+     UUID organizationId = insertOrganization();
+@@ -517,6 +565,12 @@ class InvoicePaymentIntegrationTest {
+         "INSERT INTO organization (name) VALUES ('도입사') RETURNING id", UUID.class);
+   }
+ 
++  private UUID insertCardCustomer(UUID organizationId, String name) {
++    UUID customerId = insertCustomer(organizationId, name);
++    insertBillingKey(organizationId, customerId, FIRST_REQUESTED_AT);
++    return customerId;
++  }
++
+   private UUID insertCustomer(UUID organizationId, String name) {
+     return jdbcTemplate.queryForObject(
+         "INSERT INTO customer (organization_id, name) VALUES (?, ?) RETURNING id",
+diff --git a/backend/src/test/java/com/meterengine/payment/repository/PaymentAttemptRepositoryTest.java b/backend/src/test/java/com/meterengine/payment/repository/PaymentAttemptRepositoryTest.java
+index 74ba6884..772edef5 100644
+--- a/backend/src/test/java/com/meterengine/payment/repository/PaymentAttemptRepositoryTest.java
++++ b/backend/src/test/java/com/meterengine/payment/repository/PaymentAttemptRepositoryTest.java
+@@ -155,6 +155,7 @@ class PaymentAttemptRepositoryTest {
+     insertBillingKey(reregistered, LONG_AGO.plusDays(1));
+     Fixture retryable = insertFixture();
+     UUID retryableAttempt = insertFailedAttempt(retryable, "REJECT_CARD_COMPANY");
++    insertBillingKey(retryable, LONG_AGO.minusDays(1));
+     Fixture removedWithCard = insertFixture();
+     UUID removedWithCardAttempt =
+         insertFailedAttempt(removedWithCard, "ALREADY_REMOVED_BILLING_KEY");
+@@ -167,26 +168,53 @@ class PaymentAttemptRepositoryTest {
+     Fixture recentNotFound = insertFixture();
+     UUID recentNotFoundAttempt =
+         insertFailedAttempt(recentNotFound, "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(1));
++    insertBillingKey(recentNotFound, LONG_AGO.minusDays(1));
+ 
+-    List<UUID> candidateIds =
+-        paymentAttemptRepository
+-            .findRetryCandidates(
+-                OffsetDateTime.now(),
+-                Integer.MAX_VALUE,
+-                Set.of("INVALID_CARD_EXPIRATION", "ALREADY_REMOVED_BILLING_KEY"),
+-                "ALREADY_REMOVED_BILLING_KEY",
+-                "NOT_FOUND_PAYMENT",
+-                OffsetDateTime.now().minusDays(7))
+-            .stream()
+-            .map(PaymentRetryCandidateProjection::getId)
+-            .toList();
+-
+-    assertThat(candidateIds)
++    assertThat(retryCandidateIds())
+         .contains(
+             reregisteredAttempt, retryableAttempt, removedWithCardAttempt, recentNotFoundAttempt)
+         .doesNotContain(excludedAttempt, removedWithoutCardAttempt, oldNotFoundAttempt);
+   }
+ 
++  @Test
++  void findRetryCandidates는_카드를_보관했거나_카드가_없는_실패_시도를_돌려주지_않는다() {
++    Fixture archived = insertFixture();
++    UUID archivedAttempt = insertFailedAttempt(archived, "REJECT_CARD_COMPANY");
++    insertBillingKey(archived, LONG_AGO.minusDays(1));
++    archiveBillingKey(archived);
++    Fixture archivedAfterReregistration = insertFixture();
++    UUID archivedAfterReregistrationAttempt =
++        insertFailedAttempt(archivedAfterReregistration, "ALREADY_REMOVED_BILLING_KEY");
++    insertBillingKey(archivedAfterReregistration, LONG_AGO.plusDays(1));
++    archiveBillingKey(archivedAfterReregistration);
++    Fixture withoutCard = insertFixture();
++    UUID withoutCardAttempt = insertFailedAttempt(withoutCard, "REJECT_CARD_COMPANY");
++
++    assertThat(retryCandidateIds())
++        .doesNotContain(archivedAttempt, archivedAfterReregistrationAttempt, withoutCardAttempt);
++  }
++
++  private List<UUID> retryCandidateIds() {
++    return paymentAttemptRepository
++        .findRetryCandidates(
++            OffsetDateTime.now(),
++            Integer.MAX_VALUE,
++            Set.of("INVALID_CARD_EXPIRATION", "ALREADY_REMOVED_BILLING_KEY"),
++            "ALREADY_REMOVED_BILLING_KEY",
++            "NOT_FOUND_PAYMENT",
++            OffsetDateTime.now().minusDays(7))
++        .stream()
++        .map(PaymentRetryCandidateProjection::getId)
++        .toList();
++  }
++
++  private void archiveBillingKey(Fixture fixture) {
++    jdbcTemplate.update(
++        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ? AND customer_id = ?",
++        fixture.organizationId(),
++        fixture.customerId());
++  }
++
+   private UUID insertFailedAttempt(Fixture fixture, String failureCode) {
+     return insertFailedAttempt(fixture, failureCode, LONG_AGO);
+   }
+diff --git a/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java b/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
+index fc81fd51..5a5d2fc5 100644
+--- a/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
++++ b/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
+@@ -432,15 +432,14 @@ class PaymentRetryServiceTest {
+   }
+ 
+   @Test
+-  void 빌링키가_없으면_새_시도를_만들지_않고_skipped로_센다() {
++  void 빌링키가_없으면_새_시도를_만들지_않는다() {
+     Organization organization = organization(false);
+     UUID invoiceId = invoice(organization);
+     failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(25));
+ 
+-    PaymentJobResult result = paymentRetryService.retry();
++    paymentRetryService.retry();
+ 
+     assertNotRetried(organization, invoiceId, 1);
+-    assertThat(result.skippedCount()).isPositive();
+   }
+ 
+   @Test
+-- 
+2.54.0 (Apple Git-157)
+

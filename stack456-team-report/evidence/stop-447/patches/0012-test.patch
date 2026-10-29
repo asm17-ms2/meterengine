@@ -1,0 +1,151 @@
+From e64caaf2541587b8cc3f985c7e76e50079d803b0 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:04:46 +0900
+Subject: [PATCH 12/21] =?UTF-8?q?test:=20=EB=B3=B4=EA=B4=80=ED=95=9C=20?=
+ =?UTF-8?q?=EC=B9=B4=EB=93=9C,=20=ED=86=A0=EC=8A=A4=20=ED=82=A4,=20?=
+ =?UTF-8?q?=EA=B3=A0=EA=B0=9D=EC=9C=BC=EB=A1=9C=EB=8A=94=20=EC=B2=AD?=
+ =?UTF-8?q?=EA=B5=AC=EC=99=80=20=EC=B9=B4=EB=93=9C=20=EB=93=B1=EB=A1=9D?=
+ =?UTF-8?q?=EC=9D=B4=20=EB=82=98=EA=B0=80=EC=A7=80=20=EC=95=8A=EB=8A=94?=
+ =?UTF-8?q?=EC=A7=80=20=EC=8B=9C=ED=97=98=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 청구 경로에 넣은 보관 가드(결제 생성과 승인의 카드와 토스 키 조회, 예약 재시도의 카드 확인, 카드 등록 링크의 보관 고객 검사)를 지워도 통과하는 시험뿐이었다. 기존 시험은 카드나 키 행이 아예 없는 경우만 봐서 archived_at 필터가 빠져도 알아채지 못했다.
+
+변경 사항
+
+- 관리자 결제 요청: 카드를 보관하면 409 payment_method_missing, 결제 모드의 토스 키를 보관하면 409 toss_payments_credential_missing이고 시도가 남지 않으며 토스를 부르지 않는지 본다.
+- 예약 재시도: 후보로 고른 뒤 확정 조회 사이에 카드를 보관하면 새 시도를 만들지 않고 skipped로 세는지 본다. 미리 보관한 카드는 재시도 후보 조회에서 이미 빠지므로 재시도 쪽 가드는 이 경로로만 확인된다.
+- 카드 등록 링크: 링크를 만든 뒤 고객을 보관하면 공개 조회와 빌링키 발급이 409 customer_archived이고 토스 발급을 부르지 않으며 링크가 쓰이지 않은 채 남는지 본다.
+- 운영 코드는 바꾸지 않았다.
+
+검증
+
+- 가드를 하나씩 지우는 변이를 새 시험이 모두 잡았다. 카드 조회의 archived_at 필터 삭제(expected: 409 but was: 500), 결제 생성의 활성 키 조회를 보관 포함 조회로 바꿈(expected: 409 but was: 201), 재시도 삽입의 archived_at 필터 삭제(Expected size: 1 but was: 2), 등록 링크의 보관 고객 검사 삭제(expected: 409 but was: 500). 기존 시험은 이 변이에서 모두 통과했다. 되돌린 뒤 payment, archive 패키지 시험 317건 통과.
+---
+ .../PaymentAttemptIntegrationTest.java        | 25 +++++++++++++++++++
+ ...mentMethodRegistrationIntegrationTest.java | 21 ++++++++++++++++
+ .../service/PaymentRetryServiceTest.java      | 22 ++++++++++++++++
+ 3 files changed, 68 insertions(+)
+
+diff --git a/backend/src/test/java/com/meterengine/payment/PaymentAttemptIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/PaymentAttemptIntegrationTest.java
+index f7e85e70..dc9144a2 100644
+--- a/backend/src/test/java/com/meterengine/payment/PaymentAttemptIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/PaymentAttemptIntegrationTest.java
+@@ -353,6 +353,31 @@ class PaymentAttemptIntegrationTest {
+     verifyNoInteractions(tossPaymentsClient);
+   }
+ 
++  @Test
++  void 보관한_카드나_보관한_결제_모드의_키로는_409이고_시도를_남기지_않으며_토스를_부르지_않는다() {
++    Payable archivedCard = payableInvoice("test");
++    jdbcTemplate.update(
++        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ?",
++        archivedCard.organizationId());
++    Payable archivedCredential = payableInvoice("test");
++    jdbcTemplate.update(
++        "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
++        archivedCredential.organizationId());
++
++    assertError(
++        createPaymentAttempt(archivedCard.organizationId(), archivedCard.invoiceId()),
++        409,
++        ErrorCode.PAYMENT_METHOD_MISSING);
++    assertError(
++        createPaymentAttempt(archivedCredential.organizationId(), archivedCredential.invoiceId()),
++        409,
++        ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
++
++    assertThat(countAttempts(archivedCard.invoiceId())).isZero();
++    assertThat(countAttempts(archivedCredential.invoiceId())).isZero();
++    verifyNoInteractions(tossPaymentsClient);
++  }
++
+   @Test
+   void test_모드에서_결제한_인보이스도_live_모드로_바꾸면_live_키와_카드로_결제할_수_있다() {
+     Payable payable = payableInvoice("test");
+diff --git a/backend/src/test/java/com/meterengine/payment/PaymentMethodRegistrationIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/PaymentMethodRegistrationIntegrationTest.java
+index a29387f2..10252e42 100644
+--- a/backend/src/test/java/com/meterengine/payment/PaymentMethodRegistrationIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/PaymentMethodRegistrationIntegrationTest.java
+@@ -14,6 +14,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
+ import com.jayway.jsonpath.JsonPath;
+ import com.meterengine.TestCredentials;
+ import com.meterengine.TestcontainersConfiguration;
++import com.meterengine.customer.service.CustomerService;
+ import com.meterengine.global.error.ErrorCode;
+ import com.meterengine.payment.client.TossPaymentsBilling;
+ import com.meterengine.payment.client.TossPaymentsClient;
+@@ -70,6 +71,7 @@ class PaymentMethodRegistrationIntegrationTest {
+   @Autowired private WebApplicationContext webApplicationContext;
+   @Autowired private JdbcTemplate jdbcTemplate;
+   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
++  @Autowired private CustomerService customerService;
+ 
+   @MockitoBean private TossPaymentsClient tossPaymentsClient;
+ 
+@@ -214,6 +216,25 @@ class PaymentMethodRegistrationIntegrationTest {
+     verifyNoInteractions(tossPaymentsClient);
+   }
+ 
++  @Test
++  void 링크를_만든_뒤_고객을_보관하면_조회도_발급도_409이고_토스를_부르지_않으며_링크는_남는다() {
++    UUID organizationId = insertOrganization();
++    UUID customerId = insertCustomer(organizationId);
++    insertCredential(organizationId, "test");
++    String token = createToken(organizationId, customerId);
++    customerService.delete(organizationId, customerId);
++
++    assertError(getRegistration(token), 409, ErrorCode.CUSTOMER_ARCHIVED);
++    assertError(
++        createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION),
++        409,
++        ErrorCode.CUSTOMER_ARCHIVED);
++
++    verify(tossPaymentsClient, never()).issueBillingKey(anyString(), anyString(), anyString());
++    assertThat(registrationRow(customerId).get("used_at")).isNull();
++    assertThat(countBillingKeys(customerId)).isZero();
++  }
++
+   @Test
+   void 빌링키를_발급하면_201이고_암호문과_동의_기록이_남고_같은_링크는_다시_쓸_수_없다() {
+     UUID organizationId = insertOrganization();
+diff --git a/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java b/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
+index 5a5d2fc5..9e2c981c 100644
+--- a/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
++++ b/backend/src/test/java/com/meterengine/payment/service/PaymentRetryServiceTest.java
+@@ -442,6 +442,28 @@ class PaymentRetryServiceTest {
+     assertNotRetried(organization, invoiceId, 1);
+   }
+ 
++  @Test
++  void 후보로_고른_뒤_카드를_보관했으면_새_시도를_만들지_않고_skipped로_센다() {
++    Organization organization = organization(true);
++    UUID invoiceId = invoice(organization);
++    UUID failedAttemptId =
++        failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
++    when(tossPaymentsClient.findPaymentByOrderId(
++            organization.secretKey(), failedAttemptId.toString()))
++        .thenAnswer(
++            invocation -> {
++              jdbcTemplate.update(
++                  "UPDATE billing_key SET archived_at = now() WHERE organization_id = ?",
++                  organization.organizationId());
++              return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
++            });
++
++    PaymentJobResult result = paymentRetryService.retry();
++
++    assertNotRetried(organization, invoiceId, 1);
++    assertThat(result.skippedCount()).isPositive();
++  }
++
+   @Test
+   void 세_번째_시도가_실패하면_retry_exhausted가_오른다() {
+     Organization organization = organization(true);
+-- 
+2.54.0 (Apple Git-157)
+

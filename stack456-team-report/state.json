@@ -1,15 +1,15 @@
 {
   "package": "T-yang",
-  "status": "running",
-  "updated_at": "2026-10-29T10:55:34+09:00",
+  "status": "stopped",
+  "updated_at": "2026-10-29T11:06:54+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": null,
+  "stop_reason": "#447 demo 검사의 마지막 단계 corepack pnpm -r build가 바꾸지 않은 head 5371d1e에서도 실패한다(demo/sdk에 build 스크립트가 없다. common-brief 10절 표에 없음, 12절 멈춤 조건)",
   "resume_hint": {
     "last_finished_id": "C445-014 (#445 층 끝, 마지막 실화면 점검 22dfb35 통과). #447 판정 35건 끝, 그중 수정 아닌 13건 기록",
-    "doing": "#447 수정 21건을 fix/s456-447-t-yang 한 브랜치에 모았다(5371d1e 위 21커밋). 10절 검사 뒤 merge 없이 push한다. origin/feat/resource-archive 6d91d41과의 동기화 merge는 파일 7개에서 충돌해 박성종 님이 반영할 때 푼다.",
-    "blocked_by": null,
+    "doing": "#447 수정 21건을 fix/s456-447-t-yang 한 브랜치(84bb5e7, 5371d1e 위 21커밋)에 모았고 push 전이다. 84bb5e7에서 frontend, frontend-unit, screen(계약 60, auth 2, archive-filters 10절로 뺌), backend, forbidden-chars는 통과했고 demo만 실패했다. 21커밋 patch는 보고 브랜치 evidence/stop-447/patches에 있다. origin/feat/resource-archive 6d91d41과의 동기화 merge는 파일 7개에서 충돌하며, 박성종 님이 fix 브랜치로 push만 하면 직접 반영한다고 해 merge 없이 push한다.",
+    "blocked_by": "demo 검사의 corepack pnpm -r build가 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패한다. #447부터 #453까지 demo/sdk에 build 스크립트가 없다. 근거는 evidence/stop-447/demo.txt. 박성종 님이 10절 demo 명령이나 표를 고친 뒤 다시 시작한다.",
     "next_commands": [
-      "bash .s456-work/tools/live.sh up 447 후 NOSYNC=1 NOPR=1 NA_SPECS=archive-filters SPECS=auth INVERT='real Spring: operator without organization can manage the platform' REC=.s456-work/rec/C447-002.json bash .s456-work/tools/push2.sh feat/resource-archive C447-002",
+      "bash .s456-work/tools/live.sh up 447 후 NOSYNC=1 NOPR=1 NA_SPECS=archive-filters SPECS=auth INVERT='real Spring: operator without organization can manage the platform' REC=.s456-work/rec/C447-002.json bash .s456-work/tools/push2.sh feat/resource-archive C447-002 (10절 demo 명령이 바뀌면 chk.sh demo도 맞춘다)",
       "push 뒤 나머지 rec를 FIXREC_BRANCH=fix/s456-447-t-yang python3 .s456-work/tools/fixrec.py .s456-work/rec/<id>.json 로 기록하고 bash .s456-work/tools/rpush.sh"
     ],
     "screens": "#447 화면 수정 캡처는 evidence/fe-447/before, after에 있다(2734417 빌드). D-108 미터 이름 열, D-241 상태 태그, C447-009 필터 화면.",
@@ -429,10 +429,5 @@
       "live": 5
     }
   },
-  "live_env": {
-    "running": false,
-    "layer": null,
-    "pids": [],
-    "container": null
-  }
+  "live_env": "not running"
 }

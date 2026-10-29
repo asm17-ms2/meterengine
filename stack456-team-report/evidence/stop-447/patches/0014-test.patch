@@ -1,0 +1,60 @@
+From 8e329ff71109c130874dba8cb75f6d4976b981ff Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:51:10 +0900
+Subject: [PATCH 14/21] =?UTF-8?q?test:=20=EC=A7=80=EB=82=9C=20=EC=9B=94=20?=
+ =?UTF-8?q?=EC=9A=94=EA=B8=88=EC=A0=9C=EB=A5=BC=20=EC=82=AD=EC=A0=9C?=
+ =?UTF-8?q?=ED=95=98=EB=A9=B4=20=EC=9D=B4=EB=B2=88=20=EB=8B=AC=EC=9D=80=20?=
+ =?UTF-8?q?=EB=82=A8=EA=B8=B0=EA=B3=A0=20=EB=8B=A4=EC=9D=8C=20=EB=8B=AC?=
+ =?UTF-8?q?=EB=B6=80=ED=84=B0=20=EB=B9=A0=EC=A7=80=EB=8A=94=EC=A7=80=20?=
+ =?UTF-8?q?=EB=B3=B8=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 지난 월 요금제 삭제 시험은 삭제 뒤 지난달 금액 하나만 봤다. 지난달 금액은 보관 시작 월이 이번 달이든 다음 달이든, 삭제가 아무것도 하지 않든 같아서, 지난 월 요금제를 이번 달부터 빼거나 삭제가 그냥 돌아가는 회귀를 잡지 못했다.
+
+변경 사항
+
+- 삭제 뒤 price_plan의 archived_from이 다음 달인지, 이번 달 금액에 기본료가 남는지(1100), 다음 달 금액에서 기본료가 빠지는지(1000)를 단언한다.
+- 시험 이름을 다음 달부터 뺀다는 뜻으로 바꿨다. 운영 코드는 바꾸지 않았다.
+
+검증
+
+- PricePlanService.delete가 지난 월 요금제만 이번 달부터 보관하게 바꾸면 새 단언이 expected: "2026-11" but was: "2026-10"으로, 지난 월 요금제 삭제를 그냥 돌아가게 바꾸면 expected: "2026-11" but was: null로 실패했다. 옛 시험은 두 변이에서 모두 통과했다. 변이를 되돌린 뒤 pricing 패키지 시험 63건 통과.
+---
+ .../pricing/VersionedPricingIntegrationTest.java         | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+index 5f1033e5..2f00d374 100644
+--- a/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java
+@@ -132,7 +132,7 @@ class VersionedPricingIntegrationTest {
+   }
+ 
+   @Test
+-  void 지난_월_요금제_등록은_거절하고_삭제해도_지난달_요금제를_보존한다() {
++  void 지난_월_요금제_등록은_거절하고_삭제하면_다음_달부터_뺀다() {
+     legacyRate();
+     UUID id =
+         jdbcTemplate.queryForObject(
+@@ -151,7 +151,14 @@ class VersionedPricingIntegrationTest {
+             error ->
+                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
+     pricePlanService.delete(organizationId, id);
++    entityManager.flush();
++    assertThat(
++            jdbcTemplate.queryForObject(
++                "SELECT archived_from FROM price_plan WHERE id=?", String.class, id))
++        .isEqualTo(month.plusMonths(1).toString());
+     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
++    assertThat(amount(month, "100")).isEqualTo(1100);
++    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+   }
+ 
+   @Test
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,43 @@
+From cc2baea5495e60d67b6dfe90a7bd41c1c927f7e1 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:49:02 +0900
+Subject: [PATCH 02/21] =?UTF-8?q?fix:=20=EB=AF=B8=ED=84=B0=20=EB=AA=A9?=
+ =?UTF-8?q?=EB=A1=9D=20=EC=9D=B4=EB=A6=84=20=EC=97=B4=EC=9D=B4=20=ED=8F=AD?=
+ =?UTF-8?q?=200=EC=9C=BC=EB=A1=9C=20=EC=A0=91=ED=9E=88=EC=A7=80=20?=
+ =?UTF-8?q?=EC=95=8A=EA=B2=8C=20=ED=91=9C=20=EC=B5=9C=EC=86=8C=20=ED=8F=AD?=
+ =?UTF-8?q?=EC=9D=84=20=EB=84=93=ED=9E=8C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 미터 표는 고정 레이아웃에 가로 스크롤 최소 폭 1090을 쓰는데, 폭을 정한 열의 합이 관리 상태 / 적용 열이 더해지며 1155가 됐다. 폭이 없는 이름 열은 남는 폭만 받아 1024에서 1440 같은 흔한 노트북 폭에서 0이 됐다. 운영자는 미터 표시 이름을 보지 못하고, 폭 0인 이름 정렬 머리글이 탭 정지로 남아 키보드 포커스 표시가 사라졌다.
+
+변경 사항
+
+- 표 최소 폭을 1090에서 1340으로 올린다. 이름 열은 고객 표처럼 폭 없이 두어 관리 권한에서 약 185px, 읽기 전용에서 약 295px를 받는다. 표 영역이 좁으면 가로 스크롤된다. 다른 열 폭, 고정 열, 열 순서, 정렬 키는 그대로다.
+
+검증
+
+- 보이는 변경이라 실화면 캡처로 따로 확인한다. lint, tsc, build, 단위 시험 23건 통과.
+---
+ .../src/components/billable-metrics/BillableMetricsTable.tsx    | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/frontend/src/components/billable-metrics/BillableMetricsTable.tsx b/frontend/src/components/billable-metrics/BillableMetricsTable.tsx
+index 8f9d8bb0..b9670373 100644
+--- a/frontend/src/components/billable-metrics/BillableMetricsTable.tsx
++++ b/frontend/src/components/billable-metrics/BillableMetricsTable.tsx
+@@ -16,7 +16,7 @@ import type { ListCapabilities } from "@/lib/api/capabilities";
+ import type { ListQuery } from "@/lib/list-query";
+ import { metricAggregationLabel, metricCalculationFormula } from "@/lib/billable-metric-calculation";
+ 
+-const MIN_WIDTH = 1090;
++const MIN_WIDTH = 1340;
+ 
+ function DimensionPropertyTags({
+   dimensionProperties,
+-- 
+2.54.0 (Apple Git-157)
+

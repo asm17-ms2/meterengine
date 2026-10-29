@@ -1,0 +1,184 @@
+From ec9581a9ec0004c05cef77155f5e25fbcafc02bb Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:10:08 +0900
+Subject: [PATCH 13/21] =?UTF-8?q?test:=20=ED=86=A0=EC=8A=A4=20=ED=82=A4?=
+ =?UTF-8?q?=EB=A5=BC=20=EB=B0=94=EA=BE=BC=20=EB=92=A4=EC=97=90=EB=8F=84=20?=
+ =?UTF-8?q?=EB=B0=94=EA=BE=B8=EA=B8=B0=20=EC=A0=84=20=EA=B2=B0=EC=A0=9C?=
+ =?UTF-8?q?=EC=9D=98=20=ED=99=95=EC=9D=B8,=20=EC=B7=A8=EC=86=8C=20?=
+ =?UTF-8?q?=ED=99=95=EC=9D=B8,=20=EC=9B=B9=ED=9B=85=EC=9D=B4=20=EC=9D=B4?=
+ =?UTF-8?q?=EC=A0=84=20=ED=82=A4=EB=A5=BC=20=EC=93=B0=EB=8A=94=EC=A7=80=20?=
+ =?UTF-8?q?=EC=8B=9C=ED=97=98=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 확인 작업, 취소 확인, 웹훅은 결제를 요청한 시각의 토스 키(키 이력)로 토스를 조회한다. 이 경로를 실제 키 이력으로 시험한 것이 없었고, 시도 뒤에 키가 바뀐 경우를 본다는 기존 시험은 이력 없이 updated_at만 바꿔 키 없음으로 건너뛰는 경로를 탔다. 404 처리 분기는 실행되지 않았는데 pending이 맞아 통과했다. 그래서 이력 대신 현재 키를 쓰거나 이력 조회 조건이 틀어져도 모든 시험이 통과했다.
+
+변경 사항
+
+- 기존 시험은 이름을 실제로 타는 경로(키 이력 없이 현재 키만 바뀌면 토스를 부르지 않고 pending)에 맞추고, 쓰이지 않던 404 stub 대신 토스를 부르지 않는지 검증한다.
+- 확인 작업: 키 저장 서비스로 키를 바꿔 이력을 만든 뒤, 바꾸기 전에 요청한 pending 시도는 이전 키로 404를 받아 NOT_FOUND_PAYMENT로 실패하고, pending 취소는 이전 키로 조회해 done이 되며, 새 키로는 두 조회를 하지 않는지 본다.
+- 웹훅: 같은 키 교체 뒤 받은 웹훅이 이전 키로 결제를 재조회해 pending 시도를 done으로 바꾸고 새 키로는 조회하지 않는지 본다.
+- 운영 코드는 바꾸지 않았다.
+
+검증
+
+- 키 이력 조회가 현재 키를 돌려주게 한 변이를 새 시험 셋이 잡았다(NeverWantedButInvoked findPaymentByOrderId, 시도가 failed 대신 pending, 웹훅 expected: 200 but was: 500). 같은 변이에서 기존 확인과 웹훅 시험 33건은 모두 통과했다. 이력 조회 조건을 틀리게 한 변이와 취소 확인만 현재 키를 쓰게 한 변이도 새 시험이 잡았다. 되돌린 뒤 payment, archive 패키지 시험 319건 통과.
+---
+ .../TossPaymentsWebhookIntegrationTest.java   | 28 ++++++++++
+ ...PaymentAttemptConfirmationServiceTest.java | 51 +++++++++++++++++--
+ 2 files changed, 76 insertions(+), 3 deletions(-)
+
+diff --git a/backend/src/test/java/com/meterengine/payment/TossPaymentsWebhookIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/TossPaymentsWebhookIntegrationTest.java
+index 5abd8ca0..845dc7cb 100644
+--- a/backend/src/test/java/com/meterengine/payment/TossPaymentsWebhookIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/TossPaymentsWebhookIntegrationTest.java
+@@ -3,6 +3,7 @@ package com.meterengine.payment;
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.mockito.ArgumentMatchers.any;
+ import static org.mockito.ArgumentMatchers.anyString;
++import static org.mockito.ArgumentMatchers.eq;
+ import static org.mockito.Mockito.never;
+ import static org.mockito.Mockito.times;
+ import static org.mockito.Mockito.verify;
+@@ -18,8 +19,10 @@ import com.meterengine.invoice.repository.InvoiceRepository;
+ import com.meterengine.payment.client.TossPaymentsClient;
+ import com.meterengine.payment.client.TossPaymentsPayment;
+ import com.meterengine.payment.client.TossPaymentsResult;
++import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
+ import com.meterengine.payment.entity.TossPaymentsCredential;
+ import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
++import com.meterengine.payment.service.TossPaymentsCredentialService;
+ import io.micrometer.core.instrument.MeterRegistry;
+ import java.time.OffsetDateTime;
+ import java.util.ArrayList;
+@@ -54,6 +57,7 @@ class TossPaymentsWebhookIntegrationTest {
+   @Autowired private JdbcTemplate jdbcTemplate;
+   @Autowired private InvoiceRepository invoiceRepository;
+   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
++  @Autowired private TossPaymentsCredentialService tossPaymentsCredentialService;
+   @Autowired private MeterRegistry meterRegistry;
+ 
+   @MockitoBean private TossPaymentsClient tossPaymentsClient;
+@@ -202,6 +206,30 @@ class TossPaymentsWebhookIntegrationTest {
+     verifyNoInteractions(tossPaymentsClient);
+   }
+ 
++  @Test
++  void 키를_바꾼_뒤에_받은_웹훅도_바꾸기_전에_요청한_시도는_이전_키로_재조회해_done으로_바꾼다() {
++    Attempt attempt = attempt("pending");
++    String paymentKey = paymentKey(attempt);
++    String newSecretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
++    when(tossPaymentsClient.findPaymentByOrderId(eq(newSecretKey), anyString()))
++        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
++    tossPaymentsCredentialService.update(
++        attempt.organizationId(),
++        "test",
++        new UpdateTossPaymentsCredentialRequest(TEST_CLIENT_KEY, newSecretKey));
++    when(tossPaymentsClient.findPayment(TEST_SECRET_KEY, paymentKey))
++        .thenReturn(found(attempt, paymentKey, "DONE"));
++
++    assertThat(
++            receive(attempt.organizationId(), webhookBody(attempt.attemptId(), paymentKey, "DONE")))
++        .hasStatusOk();
++
++    assertThat(attemptRow(attempt))
++        .containsEntry("status", "done")
++        .containsEntry("payment_key", paymentKey);
++    verify(tossPaymentsClient, never()).findPayment(eq(newSecretKey), anyString());
++  }
++
+   @Test
+   void 재조회_결과의_orderId가_시도와_다르거나_토스가_거절하면_200이고_바뀌는_것이_없다() {
+     Attempt attempt = attempt("pending");
+diff --git a/backend/src/test/java/com/meterengine/payment/service/PaymentAttemptConfirmationServiceTest.java b/backend/src/test/java/com/meterengine/payment/service/PaymentAttemptConfirmationServiceTest.java
+index b907e8f1..31c2bde4 100644
+--- a/backend/src/test/java/com/meterengine/payment/service/PaymentAttemptConfirmationServiceTest.java
++++ b/backend/src/test/java/com/meterengine/payment/service/PaymentAttemptConfirmationServiceTest.java
+@@ -14,6 +14,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
+ import com.meterengine.payment.client.TossPaymentsPayment;
+ import com.meterengine.payment.client.TossPaymentsResult;
+ import com.meterengine.payment.dto.PaymentJobResult;
++import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
+ import com.meterengine.payment.entity.TossPaymentsCredential;
+ import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+ import io.micrometer.core.instrument.MeterRegistry;
+@@ -44,6 +45,7 @@ class PaymentAttemptConfirmationServiceTest {
+   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
+   @Autowired private MeterRegistry meterRegistry;
+   @Autowired private PaymentAttemptConfirmationService paymentAttemptConfirmationService;
++  @Autowired private TossPaymentsCredentialService tossPaymentsCredentialService;
+ 
+   @MockitoBean private TossPaymentsClient tossPaymentsClient;
+ 
+@@ -111,19 +113,62 @@ class PaymentAttemptConfirmationServiceTest {
+   }
+ 
+   @Test
+-  void 시도_뒤에_키가_바뀌었으면_없음_실패_지연이_지난_404여도_pending으로_둔다() {
++  void 키_이력_없이_현재_키만_시도_뒤에_바뀌었으면_토스를_부르지_않고_pending으로_둔다() {
+     Organization organization = organization();
+     UUID attemptId = pendingAttempt(organization, Duration.ofMinutes(11));
+     jdbcTemplate.update(
+         "UPDATE toss_payments_credential SET updated_at = now() WHERE organization_id = ?",
+         organization.organizationId());
+-    when(tossPaymentsClient.findPaymentByOrderId(organization.secretKey(), attemptId.toString()))
+-        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
+ 
+     PaymentJobResult result = paymentAttemptConfirmationService.confirm();
+ 
+     assertThat(attemptRow(attemptId)).containsEntry("status", "pending");
+     assertThat(result.processedCount()).isZero();
++    verify(tossPaymentsClient, never())
++        .findPaymentByOrderId(eq(organization.secretKey()), anyString());
++  }
++
++  @Test
++  void 키를_바꾼_뒤에도_바꾸기_전에_요청한_결제와_취소는_이전_키로_확인한다() {
++    Organization organization = organization();
++    UUID pendingAttemptId = pendingAttempt(organization, Duration.ofMinutes(11));
++    UUID doneAttemptId = doneAttempt(organization);
++    UUID cancellationId = pendingCancellation(organization, doneAttemptId, Duration.ofMinutes(3));
++    String transactionKey = "tk_" + cancellationId;
++    String newSecretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
++    when(tossPaymentsClient.findPaymentByOrderId(eq(newSecretKey), anyString()))
++        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
++    tossPaymentsCredentialService.update(
++        organization.organizationId(),
++        "test",
++        new UpdateTossPaymentsCredentialRequest(CLIENT_KEY, newSecretKey));
++    when(tossPaymentsClient.findPaymentByOrderId(
++            organization.secretKey(), pendingAttemptId.toString()))
++        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
++    when(tossPaymentsClient.findPayment(organization.secretKey(), paymentKey(doneAttemptId)))
++        .thenReturn(
++            new TossPaymentsResult.Success<>(
++                new TossPaymentsPayment(
++                    paymentKey(doneAttemptId),
++                    doneAttemptId.toString(),
++                    "PARTIAL_CANCELED",
++                    13200,
++                    8200,
++                    List.of(
++                        new TossPaymentsPayment.Cancel(
++                            transactionKey, 5000, OffsetDateTime.now().minusMinutes(3), "DONE")))));
++
++    paymentAttemptConfirmationService.confirm();
++
++    assertThat(attemptRow(pendingAttemptId))
++        .containsEntry("status", "failed")
++        .containsEntry("failure_code", "NOT_FOUND_PAYMENT");
++    assertThat(cancellationRow(cancellationId))
++        .containsEntry("status", "done")
++        .containsEntry("transaction_key", transactionKey);
++    verify(tossPaymentsClient, never())
++        .findPaymentByOrderId(newSecretKey, pendingAttemptId.toString());
++    verify(tossPaymentsClient, never()).findPayment(eq(newSecretKey), anyString());
+   }
+ 
+   @Test
+-- 
+2.54.0 (Apple Git-157)
+

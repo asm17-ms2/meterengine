@@ -1,0 +1,57 @@
+From d65557d379b1cd74c142e4109dd1311cf6503cf6 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:00:58 +0900
+Subject: [PATCH 17/21] =?UTF-8?q?test:=20=EB=8B=A4=EB=A5=B8=20=EB=8F=84?=
+ =?UTF-8?q?=EC=9E=85=EC=82=AC=EC=9D=98=20=EB=8B=A8=EA=B0=80=20=EB=B3=B5?=
+ =?UTF-8?q?=EC=9B=90=20=EA=B1=B0=EC=A0=88=EC=9D=84=20=EC=8B=A4=EC=A0=9C=20?=
+ =?UTF-8?q?=EB=8F=84=EC=9E=85=EC=82=AC=EB=A1=9C=20=EC=8B=9C=ED=97=98?=
+ =?UTF-8?q?=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 다른 도입사의 단가 복원 시험은 없는 도입사 id를 넘기고 NotFoundException 종류만 봤다. 복원은 도입사를 먼저 잠가 ORGANIZATION_NOT_FOUND로 끝나므로, 단가의 도입사 비교가 빠져도 이 시험은 통과했다.
+
+변경 사항
+
+- 실제 다른 도입사를 만들어 그 id로 복원하면 price_rate_not_found인지 단언하고, 원래 단가가 여전히 보관 상태인지 본다.
+
+검증
+
+- PriceRateService.restore의 도입사 비교를 뺀 변이에서 새 시험이 Expecting code to raise a throwable.로 실패했고, 옛 시험은 통과했다. 변이를 되돌린 뒤 archive, pricing 패키지 시험 73건 통과.
+---
+ .../archive/BusinessArchiveIntegrationTest.java  | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java b/backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java
+index 7d830005..3b7c3f4f 100644
+--- a/backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java
+@@ -151,8 +151,20 @@ class BusinessArchiveIntegrationTest {
+                 Integer.class,
+                 organizationId))
+         .isEqualTo(3);
+-    assertThatThrownBy(() -> rates.restore(UUID.randomUUID(), "tokens", future.id()))
+-        .isInstanceOf(NotFoundException.class);
++    UUID otherOrganizationId =
++        jdbc.queryForObject(
++            "INSERT INTO organization(name) VALUES ('다른 도입사') RETURNING id", UUID.class);
++    assertThatThrownBy(() -> rates.restore(otherOrganizationId, "tokens", future.id()))
++        .isInstanceOfSatisfying(
++            NotFoundException.class,
++            error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_RATE_NOT_FOUND));
++    entityManager.flush();
++    assertThat(
++            jdbc.queryForObject(
++                "SELECT archived_at IS NOT NULL FROM price_rate WHERE id = ?",
++                Boolean.class,
++                future.id()))
++        .isTrue();
+   }
+ 
+   @Test
+-- 
+2.54.0 (Apple Git-157)
+

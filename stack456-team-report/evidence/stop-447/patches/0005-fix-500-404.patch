@@ -1,0 +1,144 @@
+From f766ae8f246d9d8ac1a63dfa589da08305b19834 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 01:50:54 +0900
+Subject: [PATCH 05/21] =?UTF-8?q?fix:=20=EC=A0=80=EC=9E=A5=ED=95=98?=
+ =?UTF-8?q?=EC=A7=80=20=EC=95=8A=EC=9D=80=20=EB=AA=A8=EB=93=9C=EC=9D=98=20?=
+ =?UTF-8?q?=ED=86=A0=EC=8A=A4=ED=8E=98=EC=9D=B4=EB=A8=BC=EC=B8=A0=20?=
+ =?UTF-8?q?=ED=82=A4=EB=A5=BC=20=EB=B3=B4=EA=B4=80=ED=95=98=EB=A9=B4=20500?=
+ =?UTF-8?q?=20=EB=8C=80=EC=8B=A0=20404=EB=A5=BC=20=EB=8F=8C=EB=A0=A4?=
+ =?UTF-8?q?=EC=A4=80=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- DELETE /v1/toss-payments-credentials/{mode}는 그 모드에 키가 없으면 409 code인 toss_payments_credential_missing으로 NotFoundException을 만들었다. BusinessException이 상태가 맞지 않는다며 IllegalArgumentException을 던져, test 키만 저장한 도입사가 live 키를 보관하면 500 internal_server_error와 error 로그가 남았다.
+- 이 경로의 404는 API 문서에도 없었다.
+
+변경 사항
+
+- ErrorCode의 404 묶음에 toss_payments_credential_not_found를 더하고, 키 보관은 키가 없으면 이 code로 404를 낸다. 결제와 카드 등록에서 쓰는 409 toss_payments_credential_missing은 그대로다.
+- 키 보관 API 문서에 204와 404 응답을 적고 backend/openapi.yaml을 다시 만들었다.
+- test 키만 저장한 도입사가 live 키를 보관하면 404이고 test 키는 보관되지 않는지 보는 시험을 더했다.
+
+검증
+
+- 고치기 전 새 시험이 실패했다([HTTP status code] expected: 404 but was: 500). 고친 뒤 payment, archive, global.error 패키지 시험 315건과 OpenApiDocumentTest 22건 통과.
+---
+ backend/openapi.yaml                               | 10 +++++++++-
+ .../com/meterengine/global/error/ErrorCode.java    |  1 +
+ .../TossPaymentsCredentialController.java          | 10 ++++++++++
+ .../service/TossPaymentsCredentialService.java     |  2 +-
+ .../TossPaymentsCredentialIntegrationTest.java     | 14 ++++++++++++++
+ 5 files changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/backend/openapi.yaml b/backend/openapi.yaml
+index c4605bcf..0be1da1a 100644
+--- a/backend/openapi.yaml
++++ b/backend/openapi.yaml
+@@ -4109,7 +4109,7 @@ paths:
+           pattern: test|live
+       responses:
+         "204":
+-          description: No Content
++          description: 보관했다. 본문 없음
+         "401":
+           content:
+             application/json:
+@@ -4127,6 +4127,13 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가\
++            \ 없다"
+         "429":
+           content:
+             application/json:
+@@ -5779,6 +5786,7 @@ components:
+           - payment_method_not_found
+           - payment_method_registration_not_found
+           - payment_attempt_not_found
++          - toss_payments_credential_not_found
+           - method_not_allowed
+           - response_type_not_acceptable
+           - customer_archived
+diff --git a/backend/src/main/java/com/meterengine/global/error/ErrorCode.java b/backend/src/main/java/com/meterengine/global/error/ErrorCode.java
+index 568b60ea..1e9adb16 100644
+--- a/backend/src/main/java/com/meterengine/global/error/ErrorCode.java
++++ b/backend/src/main/java/com/meterengine/global/error/ErrorCode.java
+@@ -38,6 +38,7 @@ public enum ErrorCode {
+   PAYMENT_METHOD_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 카드가 없습니다"),
+   PAYMENT_METHOD_REGISTRATION_NOT_FOUND(HttpStatus.NOT_FOUND, "카드 등록 링크를 찾을 수 없습니다"),
+   PAYMENT_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 시도를 찾을 수 없습니다"),
++  TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "토스페이먼츠 키를 찾을 수 없습니다"),
+ 
+   // 405 Method Not Allowed
+   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
+diff --git a/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java b/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
+index f314a084..966a099a 100644
+--- a/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
++++ b/backend/src/main/java/com/meterengine/payment/controller/TossPaymentsCredentialController.java
+@@ -117,6 +117,16 @@ public class TossPaymentsCredentialController {
+   @Operation(
+       summary = "토스페이먼츠 키 보관",
+       description = "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가 없다")
++  })
+   public void deleteTossPaymentsCredential(
+       @CurrentOrganizationId UUID organizationId,
+       @PathVariable @Pattern(regexp = "test|live") @StorableText String mode) {
+diff --git a/backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java b/backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java
+index c4f9782a..5c9d3460 100644
+--- a/backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java
++++ b/backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java
+@@ -100,7 +100,7 @@ public class TossPaymentsCredentialService {
+     paymentArchiveRepository.lock(organizationId);
+     TossPaymentsCredential credential =
+         find(organizationId, mode)
+-            .orElseThrow(() -> new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
++            .orElseThrow(() -> new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND));
+     if (credential.getArchivedAt() != null) return;
+     credential.archive();
+     auditLogService.record(
+diff --git a/backend/src/test/java/com/meterengine/payment/TossPaymentsCredentialIntegrationTest.java b/backend/src/test/java/com/meterengine/payment/TossPaymentsCredentialIntegrationTest.java
+index 8d59141d..fea5fc54 100644
+--- a/backend/src/test/java/com/meterengine/payment/TossPaymentsCredentialIntegrationTest.java
++++ b/backend/src/test/java/com/meterengine/payment/TossPaymentsCredentialIntegrationTest.java
+@@ -310,6 +310,20 @@ class TossPaymentsCredentialIntegrationTest {
+     verifyNoInteractions(tossPaymentsClient);
+   }
+ 
++  @Test
++  void test_키만_저장한_도입사가_live_키를_보관하면_404_toss_payments_credential_not_found다() {
++    UUID organizationId = insertOrganization();
++    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
++    updateCredential(organizationId, "test", TEST_CLIENT_KEY, TEST_SECRET_KEY);
++
++    MvcTestResult result =
++        withOrganization(mvc.delete().uri("/v1/toss-payments-credentials/live"), organizationId)
++            .exchange();
++
++    assertError(result, 404, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND);
++    assertThat(credentialRow(organizationId, "test")).containsEntry("archived_at", null);
++  }
++
+   @Test
+   void 키가_비어_있으면_400_validation_error다() {
+     UUID organizationId = insertOrganization();
+-- 
+2.54.0 (Apple Git-157)
+

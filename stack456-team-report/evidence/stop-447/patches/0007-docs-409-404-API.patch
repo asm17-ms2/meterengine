@@ -1,0 +1,869 @@
+From 56a230c2de60948d1011f6221471a1888dd071f3 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:03:58 +0900
+Subject: [PATCH 07/21] =?UTF-8?q?docs:=20=EB=B3=B4=EA=B4=80=ED=95=9C=20?=
+ =?UTF-8?q?=EC=9E=90=EC=9B=90=EC=9D=84=20=EA=B1=B0=EC=A0=88=ED=95=98?=
+ =?UTF-8?q?=EB=8A=94=20409=EC=99=80=20=EB=B3=B4=EA=B4=80,=20=EB=B3=B5?=
+ =?UTF-8?q?=EC=9B=90=20=EA=B2=BD=EB=A1=9C=EC=9D=98=20404=EB=A5=BC=20API=20?=
+ =?UTF-8?q?=EB=AC=B8=EC=84=9C=EC=97=90=20=EC=A0=81=EB=8A=94=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 보관 기능이 더한 customer_archived, resource_archived, archive_restoration_conflict가 openapi.yaml에서 ErrorResponse의 code 목록에만 있고 어느 엔드포인트 응답에도 나오지 않았다. 사용량 이벤트 수집은 문서에 없는 409를 내서, 문서를 보고 만든 클라이언트는 보관한 고객의 이벤트를 알 수 없는 오류로 다룬다.
+- 고객과 미터의 보관, 조회, 복원 경로에는 404 설명이 없었고, 단가 조합 보관의 204는 지웠다고, 웹훅 엔드포인트 보관은 삭제해 목록에서 숨긴다고 적혀 있었다.
+
+변경 사항
+
+- 이벤트 수집, 고객 수정, 미터 수정, 단가 등록, 요금제 등록, 웹훅 엔드포인트 수정, 카드 등록 링크 생성과 조회, 빌링키 발급의 409에 서버가 내는 보관 code를 적었다. 단가와 요금제 등록의 409에는 같은 응답인 지난 월 등록 거절 code도 함께 적었다.
+- 단가와 요금제 버전 복원에 404와 409 archive_restoration_conflict를, 고객 조회, 보관, 복원과 미터 보관, 복원에 404를 적었다.
+- 단가 조합 보관의 204를 보관했다로, 웹훅 엔드포인트 DELETE의 요약과 설명을 보관 동작(기본 목록에서 빠지고 단건 조회와 status=archived 목록으로 조회된다)에 맞췄다.
+- 응답 코드와 동작은 바꾸지 않았다. backend/openapi.yaml을 다시 만들었다.
+
+검증
+
+- OpenApiDocumentTest에 더한 시험 셋이 고치기 전 실패했다(409 응답이 없고, 404 응답이 없고, expected: "보관했다. 본문 없음" but was: "지웠다. 본문 없음"). 고친 뒤 OpenApiDocumentTest 25건과 backend 전체 시험 1119건 통과.
+---
+ backend/openapi.yaml                          | 135 +++++++++++++++---
+ .../controller/CustomerController.java        |  39 ++++-
+ .../event/controller/EventController.java     |  10 +-
+ .../controller/BillableMetricController.java  |  21 +++
+ .../controller/BillingKeyController.java      |   6 +-
+ .../PaymentMethodRegistrationController.java  |  12 +-
+ .../controller/PricePlanController.java       |  38 +++++
+ .../controller/PriceRateController.java       |  35 ++++-
+ .../controller/WebhookEndpointController.java |  20 ++-
+ .../global/OpenApiDocumentTest.java           | 115 +++++++++++++++
+ 10 files changed, 405 insertions(+), 26 deletions(-)
+
+diff --git a/backend/openapi.yaml b/backend/openapi.yaml
+index 0be1da1a..486ec5c5 100644
+--- a/backend/openapi.yaml
++++ b/backend/openapi.yaml
+@@ -418,7 +418,7 @@ paths:
+           type: string
+       responses:
+         "204":
+-          description: No Content
++          description: 보관했다. 본문 없음
+         "401":
+           content:
+             application/json:
+@@ -436,6 +436,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
+         "429":
+           content:
+             application/json:
+@@ -565,6 +571,7 @@ paths:
+                 $ref: "#/components/schemas/ErrorResponse"
+           description: |
+             code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
++            code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
+         "429":
+           content:
+             application/json:
+@@ -603,7 +610,7 @@ paths:
+           type: string
+       responses:
+         "204":
+-          description: 지웠다. 본문 없음
++          description: 보관했다. 본문 없음
+         "400":
+           content:
+             application/json:
+@@ -770,6 +777,16 @@ paths:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+           description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: |
++            code=resource_archived: 보관한 미터다. 미터를 복원한 뒤 등록한다.
++            code=price_rate_history_immutable: effective_from이 이번 달보다 앞이다.
++            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
++            code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
+         "429":
+           content:
+             application/json:
+@@ -862,7 +879,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/PriceRateResponse"
+-          description: OK
++          description: 복원한 단가 버전. 보관하지 않은 버전이면 그대로 돌려준다
+         "401":
+           content:
+             application/json:
+@@ -880,6 +897,19 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없다"
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 보관하\
++            지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다"
+         "429":
+           content:
+             application/json:
+@@ -913,7 +943,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/BillableMetricResponse"
+-          description: OK
++          description: 복원한 미터. 보관하지 않은 미터면 그대로 돌려준다
+         "401":
+           content:
+             application/json:
+@@ -931,6 +961,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
+         "429":
+           content:
+             application/json:
+@@ -1076,7 +1112,7 @@ paths:
+           format: uuid
+       responses:
+         "204":
+-          description: No Content
++          description: 보관했다. 본문 없음
+         "401":
+           content:
+             application/json:
+@@ -1094,6 +1130,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=customer_not_found: 그런 고객이 없다"
+         "429":
+           content:
+             application/json:
+@@ -1126,7 +1168,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/CustomerResponse"
+-          description: OK
++          description: 고객
+         "401":
+           content:
+             application/json:
+@@ -1144,6 +1186,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=customer_not_found: 그런 고객이 없다"
+         "429":
+           content:
+             application/json:
+@@ -1218,6 +1266,12 @@ paths:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+           description: "code=customer_not_found: 그런 고객이 없다"
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다"
+         "429":
+           content:
+             application/json:
+@@ -1408,8 +1462,9 @@ paths:
+             application/json:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+-          description: "code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가\
+-            \ 없다"
++          description: |
++            code=customer_archived: 보관한 고객이다.
++            code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
+         "429":
+           content:
+             application/json:
+@@ -1443,7 +1498,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/CustomerResponse"
+-          description: OK
++          description: 복원한 고객. 보관하지 않은 고객이면 그대로 돌려준다
+         "401":
+           content:
+             application/json:
+@@ -1461,6 +1516,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=customer_not_found: 그런 고객이 없다"
+         "429":
+           content:
+             application/json:
+@@ -1640,6 +1701,13 @@ paths:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+           description: "code=customer_not_found: customer_id가 가리키는 고객이 없다"
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된\
++            \ transaction_id면 거절하지 않고 200 duplicate=true로 답한다"
+         "429":
+           content:
+             application/json:
+@@ -3266,8 +3334,9 @@ paths:
+             application/json:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+-          description: "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼\
+-            츠 키가 없다"
++          description: |
++            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
++            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
+       security: []
+       summary: 카드 등록 링크 조회
+       tags:
+@@ -3321,8 +3390,9 @@ paths:
+             application/json:
+               schema:
+                 $ref: "#/components/schemas/ErrorResponse"
+-          description: "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼\
+-            츠 키가 없다"
++          description: |
++            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
++            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
+         "503":
+           content:
+             application/json:
+@@ -3663,7 +3733,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/PricePlanResponse"
+-          description: Created
++          description: 저장된 요금제. 같은 고객 범위와 시작 월의 버전을 덮어쓴 경우에도 201이다
+         "401":
+           content:
+             application/json:
+@@ -3681,6 +3751,15 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: |
++            code=price_plan_history_immutable: effective_from이 이번 달보다 앞이다.
++            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
++            code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
+         "429":
+           content:
+             application/json:
+@@ -3763,7 +3842,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/PricePlanResponse"
+-          description: OK
++          description: 복원한 요금제 버전. 보관하지 않은 버전이면 그대로 돌려준다
+         "401":
+           content:
+             application/json:
+@@ -3781,6 +3860,19 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "404":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=price_plan_not_found: 그런 id의 요금제 버전이 없다"
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 보관하지 않은\
++            \ 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다"
+         "429":
+           content:
+             application/json:
+@@ -4590,7 +4682,8 @@ paths:
+       - webhook-endpoint-controller
+   /v1/webhook-endpoints/{id}:
+     delete:
+-      description: 발송을 중지하고 목록에서 숨긴다. 과거 전송 기록은 보존한다.
++      description: "발송을 중지하고 비활성으로 보관한다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와\
++        \ status=archived 목록으로 조회된다. 과거 전송 기록은 보존한다. 반복 요청은 204다."
+       operationId: deleteWebhookEndpoint
+       parameters:
+       - in: path
+@@ -4633,7 +4726,7 @@ paths:
+               schema:
+                 type: integer
+                 format: int32
+-      summary: 웹훅 엔드포인트 삭제
++      summary: 웹훅 엔드포인트 보관
+       tags:
+       - webhook-endpoint-controller
+     get:
+@@ -4707,7 +4800,7 @@ paths:
+             '*/*':
+               schema:
+                 $ref: "#/components/schemas/WebhookEndpointResponse"
+-          description: OK
++          description: 바뀐 엔드포인트
+         "401":
+           content:
+             application/json:
+@@ -4725,6 +4818,12 @@ paths:
+             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+             code=organization_not_active: 도입사가 활성 상태가 아니다.
+             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
++        "409":
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/ErrorResponse"
++          description: "code=resource_archived: 보관한 엔드포인트다. 복원한 뒤 고친다"
+         "429":
+           content:
+             application/json:
+diff --git a/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java b/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
+index d9fc058e..e3f18ef7 100644
+--- a/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
++++ b/backend/src/main/java/com/meterengine/customer/controller/CustomerController.java
+@@ -94,6 +94,16 @@ public class CustomerController {
+   @GetMapping("/{id}")
+   @ReadAccess
+   @Operation(summary = "고객 조회")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "고객"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=customer_not_found: 그런 고객이 없다")
++  })
+   public CustomerResponse getCustomer(
+       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+     return CustomerResponse.from(customerService.get(organizationId, id));
+@@ -124,7 +134,14 @@ public class CustomerController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=customer_not_found: 그런 고객이 없다")
++        description = "code=customer_not_found: 그런 고객이 없다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다")
+   })
+   public CustomerResponse updateCustomer(
+       @CurrentOrganizationId UUID organizationId,
+@@ -137,6 +154,16 @@ public class CustomerController {
+   @PostMapping("/{id}/restorations")
+   @AdminAccess
+   @Operation(summary = "고객 복원")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "복원한 고객. 보관하지 않은 고객이면 그대로 돌려준다"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=customer_not_found: 그런 고객이 없다")
++  })
+   public CustomerResponse restoreCustomer(
+       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+     return CustomerResponse.from(customerService.restore(organizationId, id));
+@@ -148,6 +175,16 @@ public class CustomerController {
+   @Operation(
+       summary = "고객 보관",
+       description = "새 수집과 신규 등록을 중단한다. 기존 이벤트, 청구, 결제 이력은 유지한다. 반복 요청은 204다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=customer_not_found: 그런 고객이 없다")
++  })
+   public void deleteCustomer(@CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+     customerService.delete(organizationId, id);
+   }
+diff --git a/backend/src/main/java/com/meterengine/event/controller/EventController.java b/backend/src/main/java/com/meterengine/event/controller/EventController.java
+index 1d2dbdcc..5fd3d8ee 100644
+--- a/backend/src/main/java/com/meterengine/event/controller/EventController.java
++++ b/backend/src/main/java/com/meterengine/event/controller/EventController.java
+@@ -77,7 +77,15 @@ public class EventController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=customer_not_found: customer_id가 가리키는 고객이 없다")
++        description = "code=customer_not_found: customer_id가 가리키는 고객이 없다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description =
++            "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된 transaction_id면 거절하지 않고 200 duplicate=true로 답한다")
+   })
+   public IngestEventResponse ingestEvent(
+       @CurrentOrganizationId UUID organizationId, @Valid @RequestBody IngestEventRequest request) {
+diff --git a/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java b/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
+index f0f43d66..8311be9d 100644
+--- a/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
++++ b/backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java
+@@ -122,6 +122,7 @@ public class BillableMetricController {
+         description =
+             """
+             code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
++            code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
+             """)
+   })
+   public BillableMetricResponse updateBillableMetric(
+@@ -152,6 +153,16 @@ public class BillableMetricController {
+   @PostMapping("/{code}/restorations")
+   @AdminAccess
+   @Operation(summary = "미터 복원", description = "다음 달부터 집계를 재개한다. 보관한 기간을 소급 집계하지 않는다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "복원한 미터. 보관하지 않은 미터면 그대로 돌려준다"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
++  })
+   public BillableMetricResponse restoreBillableMetric(
+       @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
+     return billableMetricService.restore(organizationId, code);
+@@ -163,6 +174,16 @@ public class BillableMetricController {
+   @Operation(
+       summary = "미터 보관",
+       description = "현재 월까지 집계를 유지하고 다음 달부터 중단한다. 이벤트와 단가는 유지한다. 반복 요청은 204다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
++  })
+   public void deleteBillableMetric(
+       @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
+     billableMetricService.delete(organizationId, code);
+diff --git a/backend/src/main/java/com/meterengine/payment/controller/BillingKeyController.java b/backend/src/main/java/com/meterengine/payment/controller/BillingKeyController.java
+index ae15b65e..9d8f4c6c 100644
+--- a/backend/src/main/java/com/meterengine/payment/controller/BillingKeyController.java
++++ b/backend/src/main/java/com/meterengine/payment/controller/BillingKeyController.java
+@@ -68,7 +68,11 @@ public class BillingKeyController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다"),
++        description =
++            """
++            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
++            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
++            """),
+     @ApiResponse(
+         responseCode = "503",
+         content =
+diff --git a/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodRegistrationController.java b/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodRegistrationController.java
+index f4609461..2f0d8861 100644
+--- a/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodRegistrationController.java
++++ b/backend/src/main/java/com/meterengine/payment/controller/PaymentMethodRegistrationController.java
+@@ -65,7 +65,11 @@ public class PaymentMethodRegistrationController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다")
++        description =
++            """
++            code=customer_archived: 보관한 고객이다.
++            code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
++            """)
+   })
+   public PaymentMethodRegistrationResponse createPaymentMethodRegistration(
+       @CurrentOrganizationId UUID organizationId,
+@@ -106,7 +110,11 @@ public class PaymentMethodRegistrationController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다")
++        description =
++            """
++            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
++            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
++            """)
+   })
+   public PaymentMethodRegistrationResponse getPaymentMethodRegistration(
+       @Parameter(description = "카드 등록 링크를 만들 때 받은 token.") @PathVariable @StorableText
+diff --git a/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java b/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
+index 3d89103f..6e4b88e7 100644
+--- a/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
++++ b/backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java
+@@ -1,5 +1,6 @@
+ package com.meterengine.pricing.controller;
+ 
++import com.meterengine.global.error.ErrorResponse;
+ import com.meterengine.global.security.AdminAccess;
+ import com.meterengine.global.security.CurrentOrganizationId;
+ import com.meterengine.global.security.ReadAccess;
+@@ -10,6 +11,10 @@ import com.meterengine.pricing.dto.ListPricePlansResponse;
+ import com.meterengine.pricing.dto.PricePlanResponse;
+ import com.meterengine.pricing.service.PricePlanService;
+ import io.swagger.v3.oas.annotations.Operation;
++import io.swagger.v3.oas.annotations.media.Content;
++import io.swagger.v3.oas.annotations.media.Schema;
++import io.swagger.v3.oas.annotations.responses.ApiResponse;
++import io.swagger.v3.oas.annotations.responses.ApiResponses;
+ import jakarta.validation.Valid;
+ import java.time.YearMonth;
+ import java.util.UUID;
+@@ -40,6 +45,21 @@ public class PricePlanController {
+   @Operation(
+       summary = "기본료와 최소 과금 요금제 등록",
+       description = "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "201", description = "저장된 요금제. 같은 고객 범위와 시작 월의 버전을 덮어쓴 경우에도 201이다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description =
++            """
++            code=price_plan_history_immutable: effective_from이 이번 달보다 앞이다.
++            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
++            code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
++            """)
++  })
+   public PricePlanResponse createPricePlan(
+       @CurrentOrganizationId UUID organizationId,
+       @Valid @RequestBody CreatePricePlanRequest request) {
+@@ -71,6 +91,24 @@ public class PricePlanController {
+   @Operation(
+       summary = "요금제 버전 복원",
+       description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "복원한 요금제 버전. 보관하지 않은 버전이면 그대로 돌려준다"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=price_plan_not_found: 그런 id의 요금제 버전이 없다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description =
++            "code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 보관하지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다")
++  })
+   public PricePlanResponse restorePricePlan(
+       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+     return pricePlanService.restore(organizationId, id);
+diff --git a/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java b/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
+index 2f23e5ff..eaa2644b 100644
+--- a/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
++++ b/backend/src/main/java/com/meterengine/pricing/controller/PriceRateController.java
+@@ -69,7 +69,20 @@ public class PriceRateController {
+             @Content(
+                 mediaType = "application/json",
+                 schema = @Schema(implementation = ErrorResponse.class)),
+-        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
++        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description =
++            """
++            code=resource_archived: 보관한 미터다. 미터를 복원한 뒤 등록한다.
++            code=price_rate_history_immutable: effective_from이 이번 달보다 앞이다.
++            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
++            code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
++            """)
+   })
+   public PriceRateResponse createPriceRate(
+       @CurrentOrganizationId UUID organizationId,
+@@ -89,7 +102,7 @@ public class PriceRateController {
+           빈 객체 {}는 기본 단가다. 현재 월 계산과 버전 이력, 미래 예약은 유지한다.
+           """)
+   @ApiResponses({
+-    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
++    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
+     @ApiResponse(
+         responseCode = "400",
+         content =
+@@ -146,6 +159,24 @@ public class PriceRateController {
+   @Operation(
+       summary = "단가 버전 복원",
+       description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "복원한 단가 버전. 보관하지 않은 버전이면 그대로 돌려준다"),
++    @ApiResponse(
++        responseCode = "404",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없다"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description =
++            "code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 보관하지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다")
++  })
+   public PriceRateResponse restorePriceRate(
+       @CurrentOrganizationId UUID organizationId,
+       @PathVariable @StorableText String code,
+diff --git a/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java b/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
+index 70cc259d..97154d6b 100644
+--- a/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
++++ b/backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java
+@@ -1,5 +1,6 @@
+ package com.meterengine.webhook.controller;
+ 
++import com.meterengine.global.error.ErrorResponse;
+ import com.meterengine.global.security.AdminAccess;
+ import com.meterengine.global.security.CurrentOrganizationId;
+ import com.meterengine.global.security.ReadAccess;
+@@ -12,6 +13,10 @@ import com.meterengine.webhook.dto.WebhookEndpointResponse;
+ import com.meterengine.webhook.service.WebhookDeliveryService;
+ import com.meterengine.webhook.service.WebhookEndpointService;
+ import io.swagger.v3.oas.annotations.Operation;
++import io.swagger.v3.oas.annotations.media.Content;
++import io.swagger.v3.oas.annotations.media.Schema;
++import io.swagger.v3.oas.annotations.responses.ApiResponse;
++import io.swagger.v3.oas.annotations.responses.ApiResponses;
+ import jakarta.validation.Valid;
+ import jakarta.validation.constraints.Max;
+ import jakarta.validation.constraints.Min;
+@@ -75,6 +80,16 @@ public class WebhookEndpointController {
+   @PutMapping("/{id}")
+   @AdminAccess
+   @Operation(summary = "웹훅 엔드포인트 수정")
++  @ApiResponses({
++    @ApiResponse(responseCode = "200", description = "바뀐 엔드포인트"),
++    @ApiResponse(
++        responseCode = "409",
++        content =
++            @Content(
++                mediaType = "application/json",
++                schema = @Schema(implementation = ErrorResponse.class)),
++        description = "code=resource_archived: 보관한 엔드포인트다. 복원한 뒤 고친다")
++  })
+   public WebhookEndpointResponse updateWebhookEndpoint(
+       @CurrentOrganizationId UUID organizationId,
+       @PathVariable UUID id,
+@@ -85,7 +100,10 @@ public class WebhookEndpointController {
+   @DeleteMapping("/{id}")
+   @AdminAccess
+   @ResponseStatus(HttpStatus.NO_CONTENT)
+-  @Operation(summary = "웹훅 엔드포인트 삭제", description = "발송을 중지하고 목록에서 숨긴다. 과거 전송 기록은 보존한다.")
++  @Operation(
++      summary = "웹훅 엔드포인트 보관",
++      description =
++          "발송을 중지하고 비활성으로 보관한다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회된다. 과거 전송 기록은 보존한다. 반복 요청은 204다.")
+   public void deleteWebhookEndpoint(
+       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+     webhookEndpointService.delete(organizationId, id);
+diff --git a/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java b/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
+index ff7164f0..f41cc0ac 100644
+--- a/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
++++ b/backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java
+@@ -251,6 +251,121 @@ class OpenApiDocumentTest {
+     assertErrorResponse(responses, "409", "code=last_owner_required");
+   }
+ 
++  @Test
++  void 보관한_자원을_쓰는_경로는_409_보관_code를_ErrorResponse로_문서화한다() {
++    JsonNode paths = root().path("paths");
++
++    assertErrorResponse(
++        paths.path("/v1/events").path("post").path("responses"), "409", "code=customer_archived");
++    assertErrorResponse(
++        paths.path("/v1/customers/{id}").path("put").path("responses"),
++        "409",
++        "code=customer_archived");
++    assertErrorResponse(
++        paths.path("/v1/billable-metrics/{code}").path("put").path("responses"),
++        "409",
++        "code=resource_archived");
++    assertErrorResponse(
++        paths.path("/v1/billable-metrics/{code}/price-rates").path("post").path("responses"),
++        "409",
++        "code=resource_archived",
++        "code=customer_archived",
++        "code=archive_restoration_conflict");
++    assertErrorResponse(
++        paths
++            .path("/v1/billable-metrics/{code}/price-rates/{id}/restorations")
++            .path("post")
++            .path("responses"),
++        "409",
++        "code=archive_restoration_conflict");
++    assertErrorResponse(
++        paths.path("/v1/price-plans").path("post").path("responses"),
++        "409",
++        "code=customer_archived",
++        "code=archive_restoration_conflict");
++    assertErrorResponse(
++        paths.path("/v1/price-plans/{id}/restorations").path("post").path("responses"),
++        "409",
++        "code=archive_restoration_conflict");
++    assertErrorResponse(
++        paths.path("/v1/webhook-endpoints/{id}").path("put").path("responses"),
++        "409",
++        "code=resource_archived");
++    assertErrorResponse(
++        paths
++            .path("/v1/customers/{id}/payment-method-registrations")
++            .path("post")
++            .path("responses"),
++        "409",
++        "code=customer_archived");
++    assertErrorResponse(
++        paths.path("/v1/payment-method-registrations/{token}").path("get").path("responses"),
++        "409",
++        "code=customer_archived");
++    assertErrorResponse(
++        paths
++            .path("/v1/payment-method-registrations/{token}/billing-keys")
++            .path("post")
++            .path("responses"),
++        "409",
++        "code=customer_archived");
++  }
++
++  @Test
++  void 보관과_복원_경로는_없는_대상의_404_code를_ErrorResponse로_문서화한다() {
++    JsonNode paths = root().path("paths");
++
++    for (String method : List.of("get", "delete")) {
++      assertErrorResponse(
++          paths.path("/v1/customers/{id}").path(method).path("responses"),
++          "404",
++          "code=customer_not_found");
++    }
++    assertErrorResponse(
++        paths.path("/v1/customers/{id}/restorations").path("post").path("responses"),
++        "404",
++        "code=customer_not_found");
++    assertErrorResponse(
++        paths.path("/v1/billable-metrics/{code}").path("delete").path("responses"),
++        "404",
++        "code=billable_metric_not_found");
++    assertErrorResponse(
++        paths.path("/v1/billable-metrics/{code}/restorations").path("post").path("responses"),
++        "404",
++        "code=billable_metric_not_found");
++    assertErrorResponse(
++        paths
++            .path("/v1/billable-metrics/{code}/price-rates/{id}/restorations")
++            .path("post")
++            .path("responses"),
++        "404",
++        "code=price_rate_not_found");
++    assertErrorResponse(
++        paths.path("/v1/price-plans/{id}/restorations").path("post").path("responses"),
++        "404",
++        "code=price_plan_not_found");
++  }
++
++  @Test
++  void 보관_경로의_설명은_지우거나_숨긴다고_하지_않는다() {
++    JsonNode paths = root().path("paths");
++    JsonNode webhookDelete = paths.path("/v1/webhook-endpoints/{id}").path("delete");
++
++    assertThat(
++            paths
++                .path("/v1/billable-metrics/{code}/price-rates")
++                .path("delete")
++                .path("responses")
++                .path("204")
++                .path("description")
++                .asText())
++        .isEqualTo("보관했다. 본문 없음");
++    assertThat(webhookDelete.path("summary").asText()).isEqualTo("웹훅 엔드포인트 보관");
++    assertThat(webhookDelete.path("description").asText())
++        .contains("status=archived")
++        .doesNotContain("숨긴다");
++  }
++
+   // ---------------------------------------------------------------------------
+   // 손으로 잡아 준 스키마
+   // ---------------------------------------------------------------------------
+-- 
+2.54.0 (Apple Git-157)
+

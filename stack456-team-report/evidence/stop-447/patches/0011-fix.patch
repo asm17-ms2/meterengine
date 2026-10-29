@@ -1,0 +1,170 @@
+From f69fd31b6d793ca0c9cffc3a0f7ee58288505079 Mon Sep 17 00:00:00 2001
+From: skytre0 <yangsj0714@gmail.com>
+Date: Thu, 29 Oct 2026 02:00:29 +0900
+Subject: [PATCH 11/21] =?UTF-8?q?fix:=20=EA=B2=B0=EC=A0=9C=20=EB=B3=B4?=
+ =?UTF-8?q?=EA=B4=80=20=EC=9E=A0=EA=B8=88=EC=9D=B4=20=EA=B0=99=EC=9D=80=20?=
+ =?UTF-8?q?=EB=8F=84=EC=9E=85=EC=82=AC=EC=9D=98=20=EC=9D=B4=EB=B2=A4?=
+ =?UTF-8?q?=ED=8A=B8=20=EC=88=98=EC=A7=91=EC=9D=84=20=EB=A7=89=EC=A7=80=20?=
+ =?UTF-8?q?=EC=95=8A=EA=B2=8C=20=ED=95=9C=EB=8B=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+왜
+
+- 카드 등록 완료, 토스 키 저장, 카드와 키 보관은 organization 행을 FOR UPDATE로 잠갔다. event, audit_log처럼 organization을 참조하는 행을 넣을 때 외래 키 검사가 거는 FOR KEY SHARE가 이 잠금과 충돌해, 잠금을 쥔 트랜잭션이 끝날 때까지 그 도입사의 이벤트 수집이 기다렸다. 같은 충돌로 고객 보관과 카드 등록 완료 사이에 교착도 생길 수 있었다.
+
+변경 사항
+
+- 잠금을 FOR NO KEY UPDATE로 바꿨다. 잠금 호출부끼리와 다른 FOR UPDATE 잠금과는 그대로 충돌하고, 외래 키 검사의 FOR KEY SHARE와는 충돌하지 않는다.
+- 잠금을 쥔 동안 이벤트 삽입이 바로 끝나는지와 카드 보관이 잠금을 기다리는지 보는 시험을 더했다.
+
+검증
+
+- 고치기 전 새 이벤트 삽입 시험이 실패했다(TimeoutException). 고친 뒤 키 저장, 카드 재등록, 카드 보관 경합 시험 셋이 그대로 통과하고, 잠금을 FOR KEY SHARE로 약하게 바꾸는 변이는 이 셋이 모두 잡았다. payment, archive, customer, event 패키지 시험 412건 통과.
+---
+ .../repository/PaymentArchiveRepository.java  |  2 +-
+ .../PaymentArchiveConcurrencyTest.java        | 81 +++++++++++++++++--
+ 2 files changed, 75 insertions(+), 8 deletions(-)
+
+diff --git a/backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java b/backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java
+index 9c5f9071..91fa05a9 100644
+--- a/backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java
++++ b/backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java
+@@ -24,7 +24,7 @@ public class PaymentArchiveRepository {
+ 
+   public void lock(UUID organizationId) {
+     jdbcTemplate.queryForObject(
+-        "SELECT id FROM organization WHERE id = ? FOR UPDATE", UUID.class, organizationId);
++        "SELECT id FROM organization WHERE id = ? FOR NO KEY UPDATE", UUID.class, organizationId);
+   }
+ 
+   public void credential(UUID organizationId, String mode) {
+diff --git a/backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java b/backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java
+index 6ffdb136..680ff628 100644
+--- a/backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java
++++ b/backend/src/test/java/com/meterengine/payment/PaymentArchiveConcurrencyTest.java
+@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
+ import static org.mockito.Mockito.when;
+ 
+ import com.meterengine.TestcontainersConfiguration;
++import com.meterengine.event.repository.EventRepository;
+ import com.meterengine.payment.client.TossPaymentsBilling;
+ import com.meterengine.payment.client.TossPaymentsClient;
+ import com.meterengine.payment.client.TossPaymentsResult;
+@@ -20,6 +21,7 @@ import com.meterengine.payment.repository.PaymentArchiveRepository;
+ import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+ import com.meterengine.payment.service.BillingKeyService;
+ import com.meterengine.payment.service.PaymentMethodRegistrationService;
++import com.meterengine.payment.service.PaymentMethodService;
+ import com.meterengine.payment.service.TossPaymentsCredentialService;
+ import java.time.OffsetDateTime;
+ import java.util.UUID;
+@@ -49,6 +51,8 @@ class PaymentArchiveConcurrencyTest {
+   @Autowired private BillingKeyRepository billingKeyRepository;
+   @Autowired private BillingKeyService billingKeyService;
+   @Autowired private PaymentMethodRegistrationService paymentMethodRegistrationService;
++  @Autowired private PaymentMethodService paymentMethodService;
++  @Autowired private EventRepository eventRepository;
+   @MockitoBean private TossPaymentsClient tossPaymentsClient;
+   private UUID organizationId;
+   private UUID customerId;
+@@ -118,6 +122,65 @@ class PaymentArchiveConcurrencyTest {
+         .containsExactlyInAnyOrder("A001****", "B002****");
+   }
+ 
++  @Test
++  void 카드_보관도_같은_도입사의_잠금이_풀릴_때까지_기다린다() throws Exception {
++    OffsetDateTime before = OffsetDateTime.now().minusDays(1);
++    billingKeyRepository.saveAndFlush(
++        new BillingKey(
++            organizationId,
++            customerId,
++            "test",
++            "billing-A001",
++            "61",
++            "A001****",
++            before,
++            "v1",
++            before));
++    when(tossPaymentsClient.deleteBillingKey(any(), any()))
++        .thenReturn(new TossPaymentsResult.Success<>(null));
++    race(() -> {}, () -> paymentMethodService.delete(organizationId, customerId));
++    assertThat(
++            jdbcTemplate.queryForObject(
++                "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id = ? AND customer_id = ?",
++                Boolean.class,
++                organizationId,
++                customerId))
++        .isTrue();
++  }
++
++  @Test
++  void 도입사_잠금을_쥐고_있어도_그_도입사의_이벤트_수집은_기다리지_않는다() throws Exception {
++    CountDownLatch locked = new CountDownLatch(1);
++    CountDownLatch release = new CountDownLatch(1);
++    CompletableFuture<Void> holder =
++        CompletableFuture.runAsync(
++            () ->
++                new TransactionTemplate(transactionManager)
++                    .executeWithoutResult(
++                        status -> {
++                          paymentArchiveRepository.lock(organizationId);
++                          locked.countDown();
++                          awaitRelease(release);
++                        }));
++    try {
++      assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
++      CompletableFuture<Integer> ingestion =
++          CompletableFuture.supplyAsync(
++              () ->
++                  eventRepository.insertIfAbsent(
++                      organizationId,
++                      UUID.randomUUID().toString(),
++                      customerId,
++                      "tokens",
++                      "{}",
++                      OffsetDateTime.now()));
++      assertThat(ingestion.get(2, TimeUnit.SECONDS)).isEqualTo(1);
++    } finally {
++      release.countDown();
++    }
++    holder.get(10, TimeUnit.SECONDS);
++  }
++
+   private void update(String suffix) {
+     tossPaymentsCredentialService.update(
+         organizationId,
+@@ -144,13 +207,7 @@ class PaymentArchiveConcurrencyTest {
+                           paymentArchiveRepository.lock(organizationId);
+                           first.run();
+                           saved.countDown();
+-                          try {
+-                            if (!release.await(10, TimeUnit.SECONDS))
+-                              throw new IllegalStateException("release timed out");
+-                          } catch (InterruptedException exception) {
+-                            Thread.currentThread().interrupt();
+-                            throw new IllegalStateException(exception);
+-                          }
++                          awaitRelease(release);
+                         }));
+     try {
+       assertThat(saved.await(10, TimeUnit.SECONDS)).isTrue();
+@@ -164,4 +221,14 @@ class PaymentArchiveConcurrencyTest {
+       release.countDown();
+     }
+   }
++
++  private static void awaitRelease(CountDownLatch release) {
++    try {
++      if (!release.await(10, TimeUnit.SECONDS))
++        throw new IllegalStateException("release timed out");
++    } catch (InterruptedException exception) {
++      Thread.currentThread().interrupt();
++      throw new IllegalStateException(exception);
++    }
++  }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
