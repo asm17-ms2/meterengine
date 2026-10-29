@@ -80,7 +80,21 @@ public class InvoiceViewLinkService {
   @Transactional
   public InvoiceViewLinkSecretResponse create(
       UUID organizationId, UUID invoiceId, Integer days, boolean allowPaymentRetry) {
+    return create(organizationId, invoiceId, days, allowPaymentRetry, null);
+  }
+
+  @Transactional
+  public InvoiceViewLinkSecretResponse create(
+      UUID organizationId,
+      UUID invoiceId,
+      Integer days,
+      boolean allowPaymentRetry,
+      String principalMode) {
     requireInvoice(organizationId, invoiceId);
+    String mode = paymentSettingService.get(organizationId).mode();
+    if (allowPaymentRetry && principalMode != null && !principalMode.equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
     String token = SecureTokens.generate(TOKEN_PREFIX);
     OffsetDateTime now = OffsetDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
     InvoiceViewLink link =
@@ -90,7 +104,7 @@ public class InvoiceViewLinkService {
                 organizationId,
                 invoiceId,
                 SecureTokens.hash(token),
-                paymentSettingService.get(organizationId).mode(),
+                mode,
                 now,
                 now.plusDays(days == null ? 30 : days),
                 allowPaymentRetry));

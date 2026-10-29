@@ -1,6 +1,7 @@
 package com.meterengine.invoiceview.controller;
 
 import com.meterengine.global.security.AdminAccess;
+import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,9 +49,11 @@ public class InvoiceViewLinkController {
       description =
           "로그인 없이 인보이스 하나를 조회하는 링크를 만든다."
               + " token은 발급 응답에만 제공하고 해시만 저장한다. 기본 30일, 최대 90일이며 폐기할 수 있다."
-              + " 결제 상태는 발급 당시 test/live 모드로 조회한다. 링크를 가진 사람이 조회할 수 있으므로 고객에게만 전달한다.")
+              + " 결제 상태는 발급 당시 test/live 모드로 조회한다. 링크를 가진 사람이 조회할 수 있으므로 고객에게만 전달한다."
+              + " 재시도를 허용하는 링크를 API 키로 만들면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면 409 payment_mode_mismatch다.")
   public InvoiceViewLinkSecretResponse createInvoiceViewLink(
       @CurrentOrganizationId UUID organizationId,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @PathVariable UUID id,
       @Valid @RequestBody(required = false) CreateInvoiceViewLinkRequest request,
       HttpServletResponse response) {
@@ -58,7 +62,8 @@ public class InvoiceViewLinkController {
         organizationId,
         id,
         request == null ? null : request.expiresInDays(),
-        request != null && request.allowPaymentRetry());
+        request != null && request.allowPaymentRetry(),
+        principal.mode());
   }
 
   @GetMapping("/v1/invoices/{id}/view-links")
