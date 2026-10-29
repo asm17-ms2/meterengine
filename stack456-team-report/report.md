@@ -2,7 +2,7 @@
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37)
 정할 것: 5건 (Ck3-451-02, Nk3-011, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T21:20:17+09:00
+상태: running, 갱신 2026-10-29T21:21:06+09:00
 
 ## 층별 상태
 

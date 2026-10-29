@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T21:20:17+09:00",
+  "updated_at": "2026-10-29T21:21:06+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -13012,7 +13012,7 @@
       ],
       "fails_without_fix": true,
       "top_head": "main af15d7f5 same",
-      "decision": "fix: 0fe7d2a 백스톱 설계를 확정하고, root에 환경 목록 변수를 두고 두 SUT README 지우기 절에 환경을 먼저 빼는 단계를 넣는다",
+      "decision": "fix(일부): 환경 목록 변수와 SUT를 지우기 전 환경 빼기 절차를 더했다. 04:00 백스톱 확정(Q14)은 AWS 적용 상태 확인이 필요해 정하지 않고 PR #495에서 박성종 님 몫으로 남겼다",
       "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
@@ -13114,7 +13114,7 @@
       ],
       "fails_without_fix": false,
       "top_head": "main af15d7f5 same",
-      "decision": "fix: 감지를 끌 때 variables.tf 기본값을 바꾸는 PR로 남기도록 README 복구 절을 고친다",
+      "decision": "fix(일부): 감지를 끄는 결정을 기본값 PR로 남기는 복구 절차를 적었다. 04:00 백스톱 확정(Q14)은 정하지 않고 PR #495에서 박성종 님 몫으로 남겼다",
       "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
