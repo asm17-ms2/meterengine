@@ -15,6 +15,7 @@ import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.service.BillableMetricService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -39,6 +40,17 @@ import org.springframework.web.bind.annotation.RestController;
 @EnvironmentReady
 @RequestMapping("/v1/billable-metrics")
 public class BillableMetricController {
+  private static final String INVALID_UPDATE =
+      """
+      code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다. If-Match가 큰따옴표로 감싼 version이 아니어도 이 코드이며 errors의 field는 If-Match다. PATCH에서 If-Match를 빼도 같다.
+      code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+      """;
+  private static final String UPDATE_CONFLICT =
+      """
+      code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
+      code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
+      code=resource_version_conflict: If-Match의 version이 지금 version과 다르다. 다시 조회한 뒤 고친다.
+      """;
 
   private final BillableMetricService billableMetricService;
   private final IdempotencyService idempotencyService;
@@ -65,7 +77,17 @@ public class BillableMetricController {
           같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "등록된 미터"),
+    @ApiResponse(
+        responseCode = "201",
+        description = "등록된 미터",
+        headers =
+            @Header(
+                name = "Idempotency-Replayed",
+                description = "같은 Idempotency-Key의 최초 응답을 다시 돌려줄 때만 true로 붙는다",
+                schema =
+                    @Schema(
+                        type = "string",
+                        allowableValues = {"true"}))),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -74,7 +96,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
+            code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다. Idempotency-Key가 비었거나 255자를 넘어도 이 코드다.
             code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
             """),
     @ApiResponse(
@@ -86,6 +108,7 @@ public class BillableMetricController {
         description =
             """
             code=billable_metric_already_exists: 같은 code의 미터가 이미 있다.
+            code=idempotency_conflict: 같은 Idempotency-Key를 다른 요청 본문에 썼다.
             """)
   })
   public ResponseEntity<BillableMetricResponse> createBillableMetric(
@@ -121,11 +144,7 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
-            """),
+        description = INVALID_UPDATE),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -139,11 +158,7 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
-            code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
-            """)
+        description = UPDATE_CONFLICT)
   })
   public BillableMetricResponse updateBillableMetric(
       @CurrentOrganizationId UUID organizationId,
@@ -160,6 +175,30 @@ public class BillableMetricController {
       summary = "버전을 확인한 미터 수정",
       description =
           "조회한 version을 큰따옴표로 감싼 If-Match 헤더가 필수다. 다른 요청이 먼저 수정했으면 409다. PUT과 같은 전체 필드를 보낸다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "바뀐 미터"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = INVALID_UPDATE),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = UPDATE_CONFLICT)
+  })
   public BillableMetricResponse updateConditionalBillableMetric(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,

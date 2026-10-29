@@ -20,6 +20,7 @@ import com.meterengine.global.validation.VersionPrecondition;
 import com.meterengine.idempotency.service.IdempotencyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -47,6 +48,15 @@ import org.springframework.web.bind.annotation.RestController;
 @EnvironmentReady
 @RequestMapping("/v1/customers")
 public class CustomerController {
+  private static final String INVALID_UPDATE =
+      """
+      code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘거나, 경로의 UUID 형식이 틀렸다. If-Match가 큰따옴표로 감싼 version이 아니어도 이 코드이며 errors의 field는 If-Match다. PATCH에서 If-Match를 빼도 같다.
+      """;
+  private static final String UPDATE_CONFLICT =
+      """
+      code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다.
+      code=resource_version_conflict: If-Match의 version이 지금 version과 다르다. 다시 조회한 뒤 고친다.
+      """;
 
   private final CustomerService customerService;
   private final CustomerRegistrationService customerRegistrationService;
@@ -102,12 +112,30 @@ public class CustomerController {
           billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "등록된 고객"),
+    @ApiResponse(
+        responseCode = "201",
+        description = "등록된 고객",
+        headers =
+            @Header(
+                name = "Idempotency-Replayed",
+                description = "같은 Idempotency-Key의 최초 응답을 다시 돌려줄 때만 true로 붙는다",
+                schema =
+                    @Schema(
+                        type = "string",
+                        allowableValues = {"true"}))),
     @ApiResponse(
         responseCode = "200",
         description =
             "같은 external_id로 이미 등록한 고객. 조회(read) 권한이 없으면 id, external_id, version만 채우고 name,"
-                + " billing_email, created_at, archived_at은 null이다"),
+                + " billing_email, created_at, archived_at은 null이다",
+        headers =
+            @Header(
+                name = "Idempotency-Replayed",
+                description = "같은 Idempotency-Key의 최초 응답을 다시 돌려줄 때만 true로 붙는다",
+                schema =
+                    @Schema(
+                        type = "string",
+                        allowableValues = {"true"}))),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -115,8 +143,10 @@ public class CustomerController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=customer_archived: 같은 external_id의 고객을 보관했다. POST /v1/customers/{id}/restorations로"
-                + " 복원한 뒤 다시 보낸다."),
+            """
+            code=customer_archived: 같은 external_id의 고객을 보관했다. POST /v1/customers/{id}/restorations로 복원한 뒤 다시 보낸다.
+            code=idempotency_conflict: 같은 Idempotency-Key를 다른 요청 본문에 썼다.
+            """),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -125,7 +155,7 @@ public class CustomerController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘는다.
+            code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘는다, Idempotency-Key가 비었거나 255자를 넘는다.
             """)
   })
   public ResponseEntity<CustomerResponse> createCustomer(
@@ -191,8 +221,7 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            "code=validation_error: name이 비었거나 255자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았거나, billing_email이 이메일 형식이 아니거나(@ 뒤 도메인에 점이 있어야 한다) 254자를 넘거나, 경로의 UUID 형식이 틀렸다"),
+        description = INVALID_UPDATE),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -206,7 +235,7 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다")
+        description = UPDATE_CONFLICT)
   })
   public CustomerResponse updateCustomer(
       @CurrentOrganizationId UUID organizationId,
@@ -228,6 +257,30 @@ public class CustomerController {
       summary = "버전을 확인한 고객 수정",
       description =
           "조회한 version을 If-Match 헤더에 큰따옴표로 감싸 보낸다. 바뀐 버전이면 409이며 원래 데이터는 유지한다. 이름/이메일을 모두 보내는 조건부 수정이다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "바뀐 고객"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = INVALID_UPDATE),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: 그런 고객이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = UPDATE_CONFLICT)
+  })
   public CustomerResponse updateConditionalCustomer(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable UUID id,

@@ -48,6 +48,38 @@ class OpenApiDocumentTest {
   private static final Set<String> HTTP_METHODS =
       Set.of("get", "put", "post", "delete", "patch", "head", "options", "trace");
 
+  private static final List<String> WORKSPACE_LOOKUPS =
+      List.of(
+          "/v1/customers/search",
+          "/v1/billable-metrics/search",
+          "/v1/billable-metric-prices/search",
+          "/v1/usage/search",
+          "/v1/invoices/draft/search",
+          "/v1/invoices/search",
+          "/v1/customers/options",
+          "/v1/billable-metrics/options",
+          "/v1/usage/months",
+          "/v1/invoices/months",
+          "/v1/billable-metric-prices/months");
+  private static final List<String> WORKSPACE_EXPORTS =
+      List.of(
+          "/v1/customers/export",
+          "/v1/billable-metrics/export",
+          "/v1/billable-metric-prices/export",
+          "/v1/usage/export",
+          "/v1/invoices/draft/export",
+          "/v1/invoices/export");
+  private static final List<String> CUSTOMER_CHECKED_SEARCHES =
+      List.of(
+          "/v1/billable-metric-prices/search",
+          "/v1/billable-metric-prices/export",
+          "/v1/usage/search",
+          "/v1/usage/export",
+          "/v1/invoices/draft/search",
+          "/v1/invoices/draft/export",
+          "/v1/invoices/search",
+          "/v1/invoices/export");
+
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -192,6 +224,62 @@ class OpenApiDocumentTest {
     JsonNode responses = root().path("paths").path("/v1/customers").path("post").path("responses");
     assertErrorResponse(responses, "409", "code=customer_archived");
     assertThat(responses.path("200").path("description").asText()).contains("read");
+  }
+
+  @Test
+  void 검색_결과_CSV는_바이트가_아닌_문자열로_문서화한다() {
+    for (String path : WORKSPACE_EXPORTS) {
+      JsonNode schema =
+          getResponses(path).path("200").path("content").path("text/csv").path("schema");
+      assertThat(schema.path("type").asText()).as(path).isEqualTo("string");
+      assertThat(schema.has("format")).as(path).isFalse();
+    }
+  }
+
+  @Test
+  void 작업_공간_조회는_잘못된_조건의_400을_문서화한다() {
+    List<String> paths = new ArrayList<>(WORKSPACE_LOOKUPS);
+    paths.addAll(WORKSPACE_EXPORTS);
+    for (String path : paths)
+      assertErrorResponse(getResponses(path), "400", "code=validation_error");
+  }
+
+  @Test
+  void 검색_결과_CSV의_400은_10000행_상한을_적는다() {
+    for (String path : WORKSPACE_EXPORTS)
+      assertThat(getResponses(path).path("400").path("description").asText())
+          .as(path)
+          .contains("10000");
+  }
+
+  @Test
+  void 고객을_확인하는_검색과_CSV는_없는_고객의_404를_문서화한다() {
+    for (String path : CUSTOMER_CHECKED_SEARCHES)
+      assertErrorResponse(getResponses(path), "404", "code=customer_not_found");
+  }
+
+  @Test
+  void 고객과_미터_수정은_버전_충돌_409와_If_Match_형식_400을_문서화한다() {
+    for (String path : List.of("/v1/customers/{id}", "/v1/billable-metrics/{code}")) {
+      for (String method : List.of("put", "patch")) {
+        JsonNode responses = root().path("paths").path(path).path(method).path("responses");
+        assertErrorResponse(responses, "409", "code=resource_version_conflict");
+        assertErrorResponse(responses, "400", "If-Match");
+        assertThat(responses.has("404")).as("%s %s 404", method, path).isTrue();
+      }
+    }
+  }
+
+  @Test
+  void 멱등_생성은_재시도_키_충돌_409와_재생_헤더를_문서화한다() {
+    for (String path : List.of("/v1/customers", "/v1/billable-metrics")) {
+      JsonNode responses = root().path("paths").path(path).path("post").path("responses");
+      assertErrorResponse(responses, "409", "code=idempotency_conflict");
+      assertErrorResponse(responses, "400", "Idempotency-Key");
+      assertThat(responses.path("201").path("headers").has("Idempotency-Replayed"))
+          .as(path)
+          .isTrue();
+    }
   }
 
   @Test
@@ -695,6 +783,10 @@ class OpenApiDocumentTest {
   }
 
   // ---------------------------------------------------------------------------
+
+  private JsonNode getResponses(String path) {
+    return root().path("paths").path(path).path("get").path("responses");
+  }
 
   private static void assertErrorResponse(JsonNode responses, String status, String... codes) {
     JsonNode response = responses.path(status);
