@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T18:49:44+09:00",
+  "updated_at": "2026-10-29T19:59:05+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -3379,8 +3379,8 @@
       "id": "Ck2-007",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 retry()는 지금도 엔드포인트가 있는지만 본 뒤 UPDATE 건수가 0이면 409 webhook_delivery_not_retryable을 던집니다. UPDATE 조건에는 전송 id, status='failed', 엔드포인트 enabled, deleted_at IS NULL이 함께 들어 있습니다. 그래서 없는 전송 id나 다른 엔드포인트의 전송 id로 불러도 404가 아니라 409를 받습니다. error-handling.md에는 code 하나가 (상태, 의미) 하나만 가리키고 존재 여부는 서비스가 조회해서 막으라고 적혀 있고, 같은 패키지의 엔드포인트 조회도 없는 id에는 404 webhook_endpoint_not_found를 씁니다. 스택 squash 가운데 이 메서드를 바꾼 커밋은 없고, #453은 저장소 쿼리에 environment_scope_id만 더했습니다. 비활성 엔드포인트 경우를 webhook_endpoint_disabled로 가르는 일은 Q9(C444-001 발송 일시 중지 의미)에서 바로 그 시험 기대값(WebhookIntegrationTest 383행)이 바뀐다고 적어 둔 주제입니다. 그래서 이 수정에서는 빼고 없는 전송 id를 404로 가르는 부분만 고칩니다.",
       "evidence": [
@@ -3391,23 +3391,32 @@
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:81,89,90 @ af15d7f5",
         "docs/contributing/error-handling.md:5,7,35 @ af15d7f5",
         "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:379-383 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:147-158 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:147-158 @ af15d7f5",
+        "WebhookIntegrationTest.없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다: 실패 (ConflictException이 났다)",
+        "커밋 401978e6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "401978e623e625386f2667df218bbf960c92c1f7"
+      ],
+      "tests": [
+        "WebhookIntegrationTest, OpenApiDocumentTest 통과",
+        "WebhookIntegrationTest.없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:81,89,90: WEBHOOK_DELIVERY_NOT_FOUND 없음",
         "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:379-383: 비활성 경우가 not_retryable을 단정, Q9가 바꾼다고 적은 시험",
         "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:147-158: 재시도 오류 응답 문서 없음",
         "git log af15d7f5 -- WebhookDeliveryService.java: 828ea613(#444)만 있음, pinned_head 81651ed의 retry()와 같음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "D-188",
@@ -3660,8 +3669,8 @@
       "id": "D-045",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 웹훅 목록(page.tsx:45)은 여전히 archived_at과 enabled만 보고 문구를 정해서, 발송이 계속 실패하는 수신 주소도 '발송 중'으로 나온다. 넘길 때 head 81651ed의 page.tsx:36과 판단이 같고, 목록 응답 WebhookEndpointResponse와 목록 SQL에도 발송 결과가 없어 main에서 고쳐지지 않았다. 반박할 길을 찾아봤지만 콘솔 개요 화면에는 웹훅 실패 표시가 없고, failed_webhook_count는 전체 도입사를 합친 운영자 전용 /admin에만 있으며, 연속 실패 시 자동 중지하는 코드도 없다. 같은 수신 주소가 상세 화면에서는 '발송 실패'와 '재시도 대기'로 나오고 목록에서는 '발송 중'으로 나와 같은 상태가 두 곳에서 다르게 보인다. 이미 있는 발송 내역 API(최신순, size 지원)를 목록 화면에서 수신 주소마다 1건씩 부르면 화면 파일 하나만 바꿔 고칠 수 있다. 그래서 공개 이름 변경이나 파일 셋 이상 구조 변경이 필요 없고, Q9의 '일시 중지' 문구도 건드리지 않으므로 confirmed로 둔다.",
       "evidence": [
@@ -3678,26 +3687,39 @@
         "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:134-144 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:144 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:86 @ af15d7f5",
-        "frontend/e2e/contract-server.mjs:95 @ af15d7f5"
+        "frontend/e2e/contract-server.mjs:95 @ af15d7f5",
+        "auth.contract.spec.ts a webhook receiver whose latest delivery is failing is flagged in the list: 실패 (최근 발송 실패 문구 없음)",
+        "auth.contract.spec.ts a webhook receiver whose latest delivery is failing is flagged in the list(리뷰 반영): 실패 (새 전송이 실패를 가리고 진행 중 시도가 정상 주소에 표시됨)",
+        "커밋 82b2aee8",
+        "커밋 bc4767c7"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "82b2aee8d92fdd8b1688225d3589eda107ce1923",
+        "bc4767c77d3b711bfde45239abd2dfb7ea95a052"
+      ],
+      "tests": [
+        "frontend lint, build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts a webhook receiver whose latest delivery is failing is flagged in the list: 실패 확인 뒤 통과",
+        "auth.contract.spec.ts a webhook receiver whose latest delivery is failing is flagged in the list(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "C444-002",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:123-132 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:147-158 @ af15d7f5",
@@ -3718,25 +3740,39 @@
         "deploy/caddy/Caddyfile:60-64 @ af15d7f5",
         "deploy/grafana/provisioning/alerting/alerting.yml:398-422 @ af15d7f5",
         "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:410-411 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:75 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:75 @ af15d7f5",
+        "WebhookIntegrationTest.한_도입사의_전송이_밀려_있어도_다른_도입사의_전송이_다음_차례에_나간다: 실패 (밀린 도입사 전송이 먼저 모두 나감)",
+        "커밋 4a3dd20a",
+        "커밋 86009762"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "4a3dd20a83949693a3f042fda017a5b5c422ea37",
+        "8600976256f141584dab9610d97c6454c1959a63"
+      ],
+      "tests": [
+        "com.meterengine.webhook 시험 전체 통과",
+        "EXPLAIN 비교: Sort에서 Incremental Sort(Presorted Key next_attempt_at)로, com.meterengine.webhook 시험 통과",
+        "WebhookIntegrationTest.한_도입사의_전송이_밀려_있어도_다른_도입사의_전송이_다음_차례에_나간다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): claim이 가장 오래 차례를 받지 못한 도입사 환경의 전송부터 꺼내게 한다. 직렬 발송과 15초 예산은 그대로 둔다. 새 오류 코드와 대기 상한은 더하지 않는다",
-      "decision_question": "도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 엔드포인트별 대기 전송 상한(시험 통보와 재시도를 새 409 오류 코드로 거절, 상한 값 포함)을 둘지, 발송 루프를 도입사별 공정 소비와 병렬 발송으로 바꿀지, 둘 다 할지 정한다."
+      "decision_question": "도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 엔드포인트별 대기 전송 상한(시험 통보와 재시도를 새 409 오류 코드로 거절, 상한 값 포함)을 둘지, 발송 루프를 도입사별 공정 소비와 병렬 발송으로 바꿀지, 둘 다 할지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "decision": "fix: claim이 가장 오래 차례를 받지 못한 도입사 환경의 전송부터 꺼내게 한다. 직렬 발송과 15초 예산은 그대로 둔다. 새 오류 코드와 대기 상한은 더하지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "G-140",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 deliver는 claim, send, complete를 한 건씩 직렬로 돌고, 15초 실행 예산은 101행 루프 조건에서 claim 전에만 본다. WebhookClient.send는 Future.get으로 최대 15초 막히므로 응답 없는 주소 한 건이 걸리면 그 실행은 1건으로 끝나고, 실행은 30초 슬롯과 fixedDelay 30초로 하나씩만 돈다. claim은 엔드포인트나 도입사를 가리지 않아 응답 없는 엔드포인트 10곳의 전송이 앞에 서면 같은 큐의 다른 도입사 payment_succeeded와 09:00 unbilled_usage_detected가 수 분 늦고, RETRY_SECONDS(60, 300, 1800, 7200, 28800) 재시도마다 다시 실행을 차지한다. 프록시나 다른 층에서 막는 장치는 없고 10분 적체 알림만 있는데, 그 알림 문구가 느린 수신 주소를 원인으로 짚고 #444에서 팀 리드가 15초 send 뒤 한 실행에 claim 1번만 한다고 단언하는 시험을 함께 두어 직렬 발송과 알림 대응이 의도한 설계로 보인다. 병렬 발송으로 바꾸려면 그 시험 기대를 바꾸고 WebhookClaim에 엔드포인트 id를 더하는 등 파일 셋에 걸친 구조 변경이 필요하며, 동시 수와 엔드포인트별 1건, 연속 실패 처리를 C444-002와 함께 정해야 해서 needs-decision으로 둔다.",
       "evidence": [
@@ -3751,25 +3787,33 @@
         "backend/src/test/java/com/meterengine/webhook/service/WebhookDeliveryServiceTest.java:29-63 @ af15d7f5",
         "deploy/grafana/provisioning/alerting/alerting.yml:398-422 @ af15d7f5",
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:75 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:410-411 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:410-411 @ af15d7f5",
+        "커밋 7c90dba1"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "7c90dba16f50f5f2aed589c97134c5de1677cef3"
+      ],
+      "tests": [
+        "문서 변경. WebhookClient 요청 15초, WebhookDeliveryService 실행 15초와 100건을 코드에서 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(doc): 병렬 발송은 하지 않는다(박성종 님의 직렬 발송 설계 유지). C444-002의 공정 소비로 도입사 사이 지연을 줄이고, 느린 수신 주소가 실행 하나를 쓰는 동작을 README에 적는다",
-      "decision_question": "웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건)와 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정하고, 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 정한다."
+      "decision_question": "웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건)와 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정하고, 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 정한다.",
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "doc: 병렬 발송은 하지 않는다(박성종 님의 직렬 발송 설계 유지). C444-002의 공정 소비로 도입사 사이 지연을 줄이고, 느린 수신 주소가 실행 하나를 쓰는 동작을 README에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "Ck2-005",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 OperationsService.java:52는 넘길 때 head와 같은 줄로, 기간과 엔드포인트 조건 없이 webhook_delivery의 failed를 모두 센다. 이것은 실수가 아니라 박성종 님이 80a3ef1f(main 828ea613)에서 OperationsController.java:25-26에 '결제 실패는 최근 24시간이고 웹훅 실패는 현재 failed 상태인 전송이다'라고 적어 둔 의도된 의미라서, 24시간 창으로 바꾸거나 보관된 엔드포인트의 실패를 빼는 것은 기록된 결정을 뒤집는 일이다. 지적의 '한 번 생기면 영원히 남는다'는 main에서 약해졌다. #447(d6072d70)이 삭제를 보관으로 바꾸고 복원 경로(WebhookEndpointService.java:160-170)를 더해서, 복원한 뒤 다시 켜면 재시도(WebhookDeliveryRepository.java:192)로 failed를 되돌릴 수 있다. 다만 도입사가 복원하지 않으면 그 행은 계속 숫자에 남고, 화면 문구(page.tsx:12)의 '재시도 상한에 도달한 전송'도 endpoint_disabled나 blocked_address 같은 즉시 종결 실패까지 세는 실제 집계와 맞지 않는다. 순차 스캔은 운영자 화면의 count 한 번이고 측정된 해가 없으므로, 부분 색인은 집계 의미를 정한 뒤 새 V__로 같이 판단한다.",
       "evidence": [
@@ -3781,22 +3825,32 @@
         "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:192 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:160-170 @ af15d7f5",
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:42-43 @ af15d7f5",
-        "frontend/src/app/admin/page.tsx:12 @ af15d7f5"
+        "frontend/src/app/admin/page.tsx:12 @ af15d7f5",
+        "WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 (expected: 1L but was: 2L)",
+        "커밋 95c8ae95"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "95c8ae95c37a958b057e4f6087f2589af56b7180"
+      ],
+      "tests": [
+        "WebhookIntegrationTest, OperatorAccountIntegrationTest, OpenApiDocumentTest 통과",
+        "WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): failed_webhook_count는 지금 정의(현재 failed)를 유지하되 보관한 수신 주소의 전송은 뺀다. 설명에 적는다. 꺼 둔 주소(Q9)는 건드리지 않는다",
       "decision_question": "운영 현황 failed_webhook_count를 지금처럼 현재 failed 전체로 둘지, 최근 24시간(last_attempted_at 기준) failed로 바꿀지, 보관되지 않은 엔드포인트의 failed만 셀지 정한다(Ck2-010과 같은 결정).",
       "evidence_notes": [
         "git log -S '웹훅 실패는 현재 failed': 80a3ef1f SEONGJONG PARK, main 828ea613 (#444)",
         "git log -S 'public void restore' WebhookEndpointRepository.java: d6072d70 (#447)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: failed_webhook_count는 지금 정의(현재 failed)를 유지하되 보관한 수신 주소의 전송은 뺀다. 설명에 적는다. 꺼 둔 주소(Q9)는 건드리지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "Ck2-006",
@@ -3916,8 +3970,8 @@
       "id": "Ck2-010",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 OperationsService.java:52는 넘길 때 head와 한 글자도 다르지 않아서, 결제 실패는 최근 24시간만 세고 웹훅 실패는 지금 failed인 전송을 기간 없이 모두 셉니다. 지적의 '영영 빠지지 않는다'는 조금 과장입니다. #447부터는 보관한 엔드포인트를 복원하고(WebhookEndpointService.java:160-166) 다시 켠 뒤 재시도하면 빠지기 때문입니다. 그래도 도입사가 그렇게 하지 않으면 보관했거나 꺼 둔 엔드포인트의 endpoint_disabled 실패는 숫자에 계속 남습니다. 재시도는 켜져 있고 보관되지 않은 엔드포인트만 받고(WebhookDeliveryRepository.java:192), 행을 지울 길도 없습니다(V28 FK와 DELETE 차단 트리거). 다만 기간 없이 센다는 점은 박성종 님이 80a3ef1f에서 OperationsController @Operation 설명에 '결제 실패는 최근 24시간이고 웹훅 실패는 현재 failed 상태인 전송'이라고 일부러 나눠 적은 공개 계약입니다. 24시간 창으로 바꿀지, 활성 엔드포인트만 셀지 고르는 일은 이 계약을 뒤집는 결정이고, 꺼 둔 엔드포인트의 실패를 뺄지는 Q9(C444-001)의 일시 중지 의미에 걸립니다. 그래서 needs-decision으로 둡니다. 화면 문구 '재시도 상한에 도달한 전송'(admin/page.tsx:12)이 상한 전에 끝나는 blocked_address, endpoint_disabled(WebhookDeliveryRepository.java:79-83)와 맞지 않는 점은 결정에 맞춰 함께 고칩니다.",
       "evidence": [
@@ -3932,22 +3986,32 @@
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:36,53,67-68 @ af15d7f5",
         "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:357-383 @ af15d7f5",
         "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:387-405 @ af15d7f5",
-        "frontend/src/app/admin/page.tsx:12 @ af15d7f5"
+        "frontend/src/app/admin/page.tsx:12 @ af15d7f5",
+        "WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 (expected: 1L but was: 2L)",
+        "커밋 95c8ae95"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "95c8ae95c37a958b057e4f6087f2589af56b7180"
+      ],
+      "tests": [
+        "WebhookIntegrationTest, OperatorAccountIntegrationTest, OpenApiDocumentTest 통과",
+        "WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): Ck2-005와 같은 결정",
       "decision_question": "운영 현황 failed_webhook_count를 지금처럼 현재 failed 전체로 둘지, 최근 24시간(last_attempted_at) failed로 바꿀지, 보관되지 않은 활성 엔드포인트의 failed만 셀지 정한다(꺼 둔 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다).",
       "evidence_notes": [
         "git log af15d7f5 -- OperationsService.java: 828ea613(#444) 하나뿐, 이후 변경 없음",
         "git show 80a3ef1f -- OperationsController.java: '웹훅 실패는 현재 failed 상태인 전송' 설명을 SEONGJONG PARK이 작성"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: Ck2-005와 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "Ck2-011",
@@ -6257,8 +6321,8 @@
       "id": "G-092",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "수집 요청을 감사에서 빼는 코드는 넘길 때 head에 이미 있었고 main에서도 RequestAuditFilter.java:63-66에 그대로 있다. 그래서 수집량만큼 행이 는다는 원래 시나리오는 main에서 성립하지 않는다. 남는 것은 수집 밖의 모든 /v1 요청(익명 401, 잘못된 Bearer 401, API 키 429, 로그인과 가입 429, 방화벽 400)이 finally에서 REQUIRES_NEW로 audit_log에 들어가고, V25 트리거가 DELETE와 TRUNCATE를 막아 보존 기간을 둘 길이 없다는 점이다. 공개 Caddy의 /v1/*에도 호출 제한이 없어 막아 주는 층이 없고, 플랫폼 조회는 organizationId에 null을 넘겨 getTotalElements가 익명 행까지 테이블 전체를 센다. 행이 느는 속도는 수집량이 아니라 익명과 관리 요청 양을 따르므로 high보다는 낮다. 고치려면 감사 대상(README 271행이 수집 밖 모든 /v1 요청을 남긴다고 적은 기준)이나 보존 방식(트리거, 파티션), 또는 공개 DTO의 total 필드를 바꿔야 해서 scope_notes대로 Q3 결정 대기다.",
       "evidence": [
@@ -6273,18 +6337,30 @@
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:57-64 @ af15d7f5",
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:105-110 @ af15d7f5",
         "backend/src/main/java/com/meterengine/audit/dto/ListAuditLogsResponse.java:7 @ af15d7f5",
-        "backend/README.md:271 @ af15d7f5"
+        "backend/README.md:271 @ af15d7f5",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L)",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 (expected: 0L but was: 1L)",
+        "커밋 794b0f8a"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "794b0f8a8e43c81112c795dfec5bce104cb6bcbc"
+      ],
+      "tests": [
+        "com.meterengine.audit, com.meterengine.global.security 시험 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 확인 뒤 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): 주체 없는 요청 가운데 로그인과 가입 밖의 401과 429는 audit_log에 남기지 않고 지표와 요청 로그로 센다. 로그인과 가입 실패, 주체가 있는 실패는 계속 남긴다. 파티션은 두지 않는다",
-      "decision_question": "수집 밖 /v1 요청 가운데 주체 없는 401, 429, 방화벽 400을 지울 수 없는 audit_log에 계속 남길지, 남긴다면 occurred_at 파티션과 트리거 완화 같은 보존 방식을 새 V__로 두고 플랫폼 조회의 전체 total을 다음 페이지 유무로 바꿀지 정한다."
+      "decision_question": "수집 밖 /v1 요청 가운데 주체 없는 401, 429, 방화벽 400을 지울 수 없는 audit_log에 계속 남길지, 남긴다면 occurred_at 파티션과 트리거 완화 같은 보존 방식을 새 V__로 두고 플랫폼 조회의 전체 total을 다음 페이지 유무로 바꿀지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: 주체 없는 요청 가운데 로그인과 가입 밖의 401과 429는 audit_log에 남기지 않고 지표와 요청 로그로 센다. 로그인과 가입 실패, 주체가 있는 실패는 계속 남긴다. 파티션은 두지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "C448-001",
@@ -6336,10 +6412,10 @@
       "id": "G-095",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:38-40 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/ReadAccess.java:13 @ af15d7f5",
@@ -6357,27 +6433,38 @@
         "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:144,147,167,196-198 @ af15d7f5",
         "backend/src/test/java/com/meterengine/audit/AuditTargetIntegrationTest.java:86,92,120-129 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventProvenanceIntegrationTest.java:43,71 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:28 @ bc7e538"
+        "backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:28 @ bc7e538",
+        "AuditQueryAndRequestIntegrationTest.감사조회는_로그인_세션만_할_수_있고_read_API_키는_403이다: 실패 (expected: 403 but was: 200)",
+        "커밋 e956665a"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e956665ac74cc63a773ae0abf612e957cdedcfd1"
+      ],
+      "tests": [
+        "com.meterengine.audit, com.meterengine.global, EventProvenanceIntegrationTest 통과",
+        "AuditQueryAndRequestIntegrationTest.감사조회는_로그인_세션만_할_수_있고_read_API_키는_403이다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): GET /v1/audit-logs를 API 키 목록, 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힌다",
-      "decision_question": "도입사 감사 조회 GET /v1/audit-logs를 API 키 목록과 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 도입사 서버가 read API 키로 계속 읽게 둘지 정한다."
+      "decision_question": "도입사 감사 조회 GET /v1/audit-logs를 API 키 목록과 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 도입사 서버가 read API 키로 계속 읽게 둘지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "decision": "fix: GET /v1/audit-logs를 API 키 목록, 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힌다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "C448-002",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:91-100 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/ApiCredentialAuthenticationFilter.java:48-52 @ af15d7f5",
@@ -6389,18 +6476,31 @@
         "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:38-44 @ af15d7f5",
         "deploy/caddy/Caddyfile:60-64 @ af15d7f5",
         "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:312-324 @ af15d7f5",
-        "backend/README.md:271 @ af15d7f5"
+        "backend/README.md:271 @ af15d7f5",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L)",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 (expected: 0L but was: 1L)",
+        "커밋 794b0f8a"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "794b0f8a8e43c81112c795dfec5bce104cb6bcbc"
+      ],
+      "tests": [
+        "com.meterengine.audit, com.meterengine.global.security 시험 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 확인 뒤 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): G-092와 같은 결정",
-      "decision_question": "주체 없는 /v1 실패 요청(미인증 401, 잘못된 Bearer 401)을 audit_log에 계속 남길지, 빼고 요청 로그로만 볼지, 남기되 감사 필터 앞 IP 호출 제한이나 보존 기간을 둘지 정한다."
+      "decision_question": "주체 없는 /v1 실패 요청(미인증 401, 잘못된 Bearer 401)을 audit_log에 계속 남길지, 빼고 요청 로그로만 볼지, 남기되 감사 필터 앞 IP 호출 제한이나 보존 기간을 둘지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "decision": "fix: G-092와 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "G-159",
@@ -6430,8 +6530,8 @@
       "id": "G-169",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "수집 요청은 넘길 때 head와 main 모두 RequestAuditFilter.java:63-66에서 상태와 관계없이 감사에서 빠진다. 그래서 수집 요청마다 커밋이 하나 더 늘어 test-storage 기준선이 흔들린다는 부분은 main에서 성립하지 않는다. 남는 것은 수집 밖 /v1 요청의 401과 429다. RateLimitFilter가 API 키 한도 초과로 429를 쓰고 돌아오면 감사 필터 finally가 그 상태로 행을 쓰고, 로그인과 가입 호출 제한의 429도 컨트롤러 안에서 나서 같은 행을 남기므로 호출 제한이 DB 쓰기를 막지 못한다. 인증 없는 요청은 V26이 허용한 anonymous 행으로 남고 V25 트리거 때문에 지울 수 없다. 원인이 C448-002와 같고 고치려면 감사 대상이나 보존 방식을 바꿔야 해서 Q3 결정 대기다.",
       "evidence": [
@@ -6443,18 +6543,30 @@
         "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql:37-43 @ af15d7f5",
         "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:38-44 @ af15d7f5",
         "backend/README.md:120 @ af15d7f5",
-        "backend/README.md:271 @ af15d7f5"
+        "backend/README.md:271 @ af15d7f5",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L)",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 (expected: 0L but was: 1L)",
+        "커밋 794b0f8a"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "794b0f8a8e43c81112c795dfec5bce104cb6bcbc"
+      ],
+      "tests": [
+        "com.meterengine.audit, com.meterengine.global.security 시험 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 확인 뒤 통과",
+        "AuditQueryAndRequestIntegrationTest.주체_없는_429는_로그인과_가입만_요청_감사에_남긴다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): G-092와 같은 결정",
-      "decision_question": "수집 밖 /v1 요청의 401과 429(API 키 한도, 로그인과 가입 호출 제한)를 audit_log 행으로 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 파티션 단위 삭제를 허용하는 보존 방식을 새 V__로 둘지 정한다."
+      "decision_question": "수집 밖 /v1 요청의 401과 429(API 키 한도, 로그인과 가입 호출 제한)를 audit_log 행으로 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 파티션 단위 삭제를 허용하는 보존 방식을 새 V__로 둘지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: G-092와 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "X-024",
@@ -6602,8 +6714,8 @@
       "id": "Ck1-448-04",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적은 사실이다. 운영자 감사 조회는 도입사 인수가 없고 서비스에 organizationId로 null을 넘기며(AuditLogController 116행), 검색어 q가 보는 열은 action, target_type, target_id, detail.request_id, detail.route뿐이라 한 도입사의 기록만 골라낼 길이 없다. 다만 잘못된 출력이 나오는 실패 경로가 아니라 기능 공백이고, 문서나 다른 운영자 목록 API에 도입사 조건이 있어야 한다는 근거도 없다. 고치려면 공개 API GET /v1/operations/audit-logs에 새 조회 인수를 더하고, 서비스의 도입사 조건이 요청 문맥의 환경 조건과 묶여 있어(57-64행) 운영자용 분기를 따로 만들어야 하며, /admin/audit 화면 필터와 openapi.yaml까지 바뀌어 시험을 빼고 파일 셋 이상이 바뀐다. 프론트에서 organization_id 조회 키는 이미 작업 공간 범위로 보존되므로(workspace-href.ts 9-10행) 새 키 이름도 정해야 한다. 그래서 제품 결정이 필요하다.",
       "evidence": [
@@ -6616,21 +6728,34 @@
         "frontend/src/components/workspace/AuditScreen.tsx:63 @ af15d7f5",
         "frontend/src/lib/workspace-href.ts:9-10 @ af15d7f5",
         "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:185-195 @ af15d7f5",
-        "frontend/README.md:175 @ af15d7f5"
+        "frontend/README.md:175 @ af15d7f5",
+        "AuditQueryAndRequestIntegrationTest.운영자_감사조회의_검색어로_도입사_id를_찾는다: 실패 (expected: 2 but was: 0)",
+        "커밋 262352b5",
+        "커밋 6039fada"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "262352b58258e72a8edc2d8e88aedd4e89eb3797",
+        "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+      ],
+      "tests": [
+        "com.meterengine.audit, OpenApiDocumentTest 통과",
+        "OpenApiDocumentTest 통과(설명 정정)",
+        "AuditQueryAndRequestIntegrationTest.운영자_감사조회의_검색어로_도입사_id를_찾는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): 새 조회 인수 없이 운영자 감사 조회의 q 검색 대상에 organization_id를 넣는다",
       "decision_question": "운영자 감사 조회 GET /v1/operations/audit-logs에 선택 인수(도입사 id)를 더하고 /admin/audit에 도입사 필터를 둘지, 둔다면 작업 공간 범위로 쓰이는 organization_id와 겹치지 않는 조회 키 이름을 무엇으로 할지(또는 q 검색 대상에 organization_id를 넣는 것으로 갈음할지) 정한다.",
       "evidence_notes": [
         "git log af15d7f5 -- AuditLogController.java: 3446fbe3 #448, 94a48a20 #453 (운영자 조회의 도입사 조건은 두 커밋 모두 없음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: 새 조회 인수 없이 운영자 감사 조회의 q 검색 대상에 organization_id를 넣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "D-152",
@@ -8518,8 +8643,8 @@
       "id": "G-165",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 저장단 대시보드에서 수집 API 패널 넷(초당 요청 수, 평균 처리 시간, p99와 p50, 5xx 오류율)의 식이 모두 uri=\"/v1/events\",method=\"POST\"로 고정되어 있다. #450이 이 파일을 바꿨지만 중복률 분모 한 줄(232행)만 고쳤고 수집 패널의 uri 조건은 그대로다. 백엔드는 POST /v1/event-batches를 열어 두었고 RequestAuditFilter도 두 경로를 함께 수집 경로로 보며, SDK는 묶음 전송에 이 경로를 쓴다. 그래서 배치 수집이 느려지거나 5xx를 내도 저장단 대시보드의 지연과 오류율 패널에는 나타나지 않는다. SLO 대시보드와 경보는 uri!~\"/actuator.*\" 전체 집계라 배치 경로도 섞여 잡히지만, 수집 경로만 따로 보는 패널은 비어 있어 반박 근거가 되지 못한다.",
       "evidence": [
@@ -8532,17 +8657,23 @@
         "backend/src/main/java/com/meterengine/event/controller/EventBatchController.java:29 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:32 @ af15d7f5",
         "demo/sdk/src/meter-engine-client.ts:136 @ af15d7f5",
-        "deploy/grafana/dashboards/meterengine-slo.json:76 @ af15d7f5"
+        "deploy/grafana/dashboards/meterengine-slo.json:76 @ af15d7f5",
+        "test_dashboards.test_ingestion_panels_cover_single_and_batch_ingestion_per_uri: 실패 (uri 조건이 /v1/events뿐)",
+        "커밋 73572595"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "7357259560e51e7a05d0bdc5e0655d149d709837"
+      ],
+      "tests": [
+        "deploy/tests test_dashboards 통과, promtool check rules 5개 성공",
+        "test_dashboards.test_ingestion_panels_cover_single_and_batch_ingestion_per_uri: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/grafana/dashboards/meterengine-storage.json:56: 패널 제목 POST /v1/events",
         "backend/src/main/java/com/meterengine/event/controller/EventBatchController.java:29: @PostMapping(\"/v1/event-batches\"",
@@ -8550,7 +8681,10 @@
         "demo/sdk/src/meter-engine-client.ts:136: SDK가 POST /v1/event-batches로 묶음 전송",
         "git show ec13ca29 -- deploy/grafana/dashboards/meterengine-storage.json: #450은 232행 중복률 분모만 바꿈",
         "deploy/grafana/dashboards/meterengine-slo.json:76: 전체 집계 5xx라 수집 경로 구분 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "D-247",
@@ -11940,8 +12074,8 @@
       "id": "Ck1-454-01",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 Caddyfile은 두 log 블록(9~11줄, 48~50줄)에 같은 정규식을 세 줄씩 복사해 두었고, RequestLogFilter는 같은 경로 목록을 다른 정규식으로 따로 들고 있다. 넘길 때 head(dac784b)와 main 사이에 두 파일의 차이가 없으므로 main에서 고쳐지지 않았다. 결과가 갈렸다는 것도 코드에서 바로 보인다. 백엔드는 경로를 끝까지 디코딩한 뒤 가리기 때문에 /v1/payment%2Dmethod-registrations/<토큰>, /v1/%6Frganization-invitations/<토큰>, ;x=1, /./ 같은 변형도 가리고, 이를 시험으로 지킨다. 반면 Caddy 정규식은 디코딩하지 않고 글자 그대로의 접두사와 바로 뒤의 / 만 맞춰 보므로, 이런 요청의 토큰은 프록시 오류 로그와 (켜져 있으면) 접속 로그에 그대로 남는다. /./ 경우에는 REDACTED 뒤에 토큰이 붙은 채로 남는다. 자리표시가 REDACTED와 {token}으로 다르고 하위 경로를 남기는지도 다르지만, 이 둘은 새는 문제가 아니라 형식 차이다.",
       "evidence": [
@@ -11953,17 +12087,28 @@
         "backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:208 @ af15d7f5",
         "backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:223 @ af15d7f5",
         "backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:281 @ af15d7f5",
-        "deploy/tests/test_logging.py:26 @ af15d7f5"
+        "deploy/tests/test_logging.py:26 @ af15d7f5",
+        "test_logging.test_variant_paths_do_not_leak_tokens_into_logs: 실패 (인코딩 경로의 토큰이 로그에 남음)",
+        "test_logging.test_variant_paths_do_not_leak_tokens_into_logs(리뷰 반영): 실패 (등록 경로 바로 뒤 점 세그먼트의 토큰이 남음)",
+        "커밋 04284935",
+        "커밋 52a27da0"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "042849355d5df227f98040993db20d9ce22bcdf8",
+        "52a27da06166db48873a7a381c06493d8f6cb405"
+      ],
+      "tests": [
+        "deploy/tests test_logging 5개 통과, caddy fmt 차이 없음",
+        "순서를 바꿔 돌려도 test_logging 통과",
+        "test_logging.test_variant_paths_do_not_leak_tokens_into_logs: 실패 확인 뒤 통과",
+        "test_logging.test_variant_paths_do_not_leak_tokens_into_logs(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:9: - 전역 log의 request>uri 가림. 디코딩 없이 글자 그대로의 접두사 뒤에 바로 / 가 와야 맞고, ${2}로 나머지 경로를 남긴다",
         "deploy/caddy/Caddyfile:10: , deploy/caddy/Caddyfile:11 @ af15d7f5 - 같은 정규식을 Referer, Location에 복사",
@@ -11975,14 +12120,17 @@
         "backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:281: - ;x=1, %3Bx, /./, %2570 변형(281~284줄)도 백엔드는 가린다",
         "deploy/tests/test_logging.py:26: - Caddy 시험은 글자 그대로의 경로(26~32줄)만 쓰고, 184~187줄의 기대값도 그 경로만 본다",
         "git diff dac784b af15d7f5 -- deploy/caddy/Caddyfile backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java 결과가 비어 있다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "Ck1-454-02",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 운영 compose는 백엔드에 호출 제한 설정 가운데 ENABLED와 TRUSTED_PROXIES 두 개만 넘기고, 로그인과 가입의 한도 넷과 창 둘은 넘기지 않는다. deploy.sh는 Parameter Store 값을 모두 env 파일에 쓰지만, compose의 --env-file은 compose 파일 안의 변수 치환에만 쓰이고 environment에 적지 않은 값은 컨테이너에 들어가지 않는다. 그래서 backend README가 안내하는 METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT 같은 값을 deploy README의 규칙(파라미터 이름이 대문자 환경변수 이름이 된다)대로 Parameter Store에 넣어도 백엔드는 application.properties 기본값을 그대로 쓰고, 경고도 나오지 않는다. 운영에서 한도를 일부러 고정한다는 기록은 deploy README와 #454 커밋 어디에도 없어 의도된 설계로 볼 근거를 찾지 못했다. 넘길 때 head(dac784b)와 main의 compose 20~21줄이 같아 main에서 고쳐지지 않았다. 고칠 자리는 compose의 백엔드 environment 블록이고 deploy.sh나 Ck1-454-03이 다루는 롤백과 네트워크 줄은 건드리지 않는다.",
       "evidence": [
@@ -11992,17 +12140,23 @@
         "backend/README.md:122 @ af15d7f5",
         "deploy/README.md:400 @ af15d7f5",
         "deploy/deploy.sh:294 @ af15d7f5",
-        "deploy/deploy.sh:489 @ af15d7f5"
+        "deploy/deploy.sh:489 @ af15d7f5",
+        "test_trusted_proxies.test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default: 실패 (LOGIN_IP_LIMIT 등 누락)",
+        "커밋 2c62eb10"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "2c62eb10c9dd8dfdb5f67f6e7067b7be52ce3d9b"
+      ],
+      "tests": [
+        "deploy/tests test_trusted_proxies 3개 통과",
+        "test_trusted_proxies.test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/compose.prod.yml:20: METERENGINE_AUTH_RATE_LIMIT_ENABLED만 넘김",
         "deploy/compose.prod.yml:21: METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES만 넘김, 나머지 여섯은 environment에 없음",
@@ -12012,7 +12166,10 @@
         "deploy/deploy.sh:294: , deploy/deploy.sh:301 @ af15d7f5 (모든 파라미터를 env 파일에 씀",
         "deploy/deploy.sh:489: env 파일을 --env-file로만 넘겨 치환에만 쓰임",
         "git show dac784b:deploy/compose.prod.yml 20~21줄과 main 20~21줄이 같음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "Ck1-454-04",
@@ -12452,10 +12609,10 @@
       "id": "U12-B1",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "deploy/caddy/Caddyfile:76-78 @ af15d7f5",
         "deploy/caddy/Caddyfile:57 @ af15d7f5",
@@ -12467,17 +12624,23 @@
         "backend/src/main/resources/application.properties:49-54 @ af15d7f5",
         "deploy/tests/test_logging.py:122-143 @ af15d7f5",
         "deploy/README.md:389 @ af15d7f5",
-        "frontend/src/app/(public)/actions.ts:21,53 @ af15d7f5"
+        "frontend/src/app/(public)/actions.ts:21,53 @ af15d7f5",
+        "test_logging.test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts: 실패 (internal=True에서 보낸 값 유지)",
+        "커밋 56f4f940"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "56f4f9401abd01841d8df8de6810cd1486373b00"
+      ],
+      "tests": [
+        "deploy/tests test_logging 4개 통과",
+        "test_logging.test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:76-78: http://:8081 { import backend }, 헤더를 손대지 않음",
         "deploy/caddy/Caddyfile:57: 공개 사이트만 request_header X-MeterEngine-Client-IP {remote_host}",
@@ -12490,7 +12653,11 @@
         "deploy/tests/test_logging.py:122-143: 내부 사이트가 호스트 호출자의 헤더를 보존하는 것을 기대값으로 둠",
         "deploy/README.md:389: '내부 8081 사이트는 프론트 서버가 전달한 값을 유지한다'고만 적음",
         "frontend/src/app/(public)/actions.ts:21,53: 와 frontend/src/lib/api/transport.ts:100 @ af15d7f5 (프론트가 받은 헤더를 그대로 전달, 범위 밖 남는 경로"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "C455-002",
@@ -13022,8 +13189,8 @@
       "id": "NT-inho-003",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다",
       "reason": "main에서도 WebhookClient는 TLS 인증서 오류, DNS 실패, 연결 거부(모두 IOException)와 전송 작업 안의 예상하지 못한 예외(ExecutionException)를 모두 connection_error로 돌려준다. 이 값은 전송 기록 API의 failure_reason과 시도 기록에 그대로 나가고, 콘솔은 이를 '연결 실패' 하나로 보여 주므로 도입사는 인증서 문제나 우리 쪽 예외를 자기 수신 서버의 연결 문제와 가를 수 없다. WebhookClient, V28, 콘솔 화면, 시험 모두 #444 squash(828ea613) 뒤로 바뀐 적이 없어 고쳐지지 않았고, 지적 자체는 맞다. 다만 main 시험이 지금 동작을 일부러 고정한다(예상하지 못한 예외와 인증서 호스트 불일치를 connection_error로 기대). 이는 Ck2-004 수정에서 저장 사유는 그대로 두고 운영자 로그로만 원인을 가르기로 한 범위다. 값을 나누려면 도입사에게 보이는 API 값 집합을 넓히고, 배포된 V28은 고칠 수 없으니 새 V__로 시도 표 CHECK를 바꾸고, 콘솔 라벨까지 운영 파일 셋 이상을 바꿔야 한다. 또 main에서 needs-decision으로 남은 Ck2-011(failure_reason 정본)과 같은 주제라 함께 정해야 한다.",
@@ -13035,17 +13202,21 @@
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:51 @ af15d7f5",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:10 @ af15d7f5",
         "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:155-171 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:247-282 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:247-282 @ af15d7f5",
+        "커밋 76f72154"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "76f721542633d215204474ec390ad78f9ff6ba1a"
+      ],
+      "tests": [
+        "문서 변경. WebhookClient의 connection_error 분기와 로그 줄을 코드에서 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(doc): failure_reason은 connection_error 하나로 두고 원인은 운영자 로그로 가른다. README에 적는다",
       "decision_question": "웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(새 V__로 시도 표 CHECK 교체, 전송 기록 API 값 집합 확장, 콘솔 라벨 추가), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:71-73: ExecutionException, 곧 전송 작업 안의 예상하지 못한 예외를 connection_error로 반환",
@@ -13058,14 +13229,18 @@
         "backend/src/test/java/com/meterengine/webhook/client/WebhookClientTest.java:247-282: 인증서 호스트 불일치를 connection_error로 기대하는 시험",
         "git log --oneline af15d7f5 -- WebhookClient.java V28__create_webhook_tables.sql integrations/[id]/page.tsx WebhookClientTest.java: 828ea613 하나뿐",
         "Ck2-011 main 판정 needs-decision (.s456-work/judge/main/results.json n=13, failure_reason 정본 주제)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "doc: failure_reason은 connection_error 하나로 두고 원인은 운영자 로그로 가른다. README에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
     },
     {
       "id": "NT-inho-004",
       "merged_ids": [],
       "layer": 448,
-      "branch": "feat/request-audit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "title": "감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다",
       "reason": "main에서도 /audit를 조건 없이 열면 action 조건이 비어 모든 기록을 최신순으로 보여 주고, RequestAuditFilter가 수집을 뺀 모든 /v1 요청(화면이 부르는 GET 포함)을 api_request_completed로 남기므로 화면을 볼 때마다 쌓인 요청 기록이 기본 목록 앞을 채운다. 감사 조회 API는 action 한 값 일치만 받아서 'API 요청만 빼기'를 화면 코드만으로 고를 수 없다. #448 이후 main 커밋(#450, #453)도 조회 조건을 바꾸지 않아 이미 고쳐진 것은 아니다. 고치려면 GET /v1/audit-logs와 /v1/operations/audit-logs에 새 조회 파라미터를 더하는 공개 API 계약 변경과 openapi.yaml 갱신이 필요하다. 또 #448(박성종 님)의 화면 설명, 조회 기록 안내 문구, frontend README가 이 화면을 변경 기록과 API 요청 기록을 함께 보는 곳으로 정해 두어서, 기본 보기를 변경 기록으로 바꾸면 그 의도를 뒤집게 된다.",
@@ -13086,8 +13261,10 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(keep): 감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다",
-      "decision_question": "감사 조회 API 두 곳에 API 요청 기록을 빼는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면 기본 보기를 변경 기록으로 바꿀지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다."
+      "decision_question": "감사 조회 API 두 곳에 API 요청 기록을 빼는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면 기본 보기를 변경 기록으로 바꿀지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다.",
+      "decision": "keep: 감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/492",
+      "question": "세션이 지금 동작을 유지하기로 정하고 근거를 PR #492 본문에 적었다(감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다."
     },
     {
       "id": "NT-inho-005",
@@ -13246,6 +13423,83 @@
     }
   ],
   "checks": [
+    {
+      "kind": "static",
+      "command": "deploy/grafana 대시보드 JSON 파싱, 바뀐 PromQL 5식 promtool check rules(prom/prometheus:v3, --network none), caddy fmt 비교",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -p 'test_*.py' (caddy:2.11.7-alpine, docker compose config)",
+      "result": "pass",
+      "detail": "OK, Linux flock 시험 10개는 macOS라 건너뜀",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
+      "result": "not-applicable",
+      "detail": "NT-inho-006, NT-inho-007과 같은 이유로 실패(PR #471 머지 전). #471 명세 변경을 잠시 얹으면 두 명세 모두 통과",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 10개(aggregation, archive-filters, auth, customer-payment-retry, events, invoice-links, operator-create, people, permissions, query-workspace), 브랜치 백엔드와 프론트",
+      "result": "pass",
+      "detail": "10개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "not-applicable",
+      "detail": "9개 중 7개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "66 passed",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 79, pass 79, fail 0",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass",
+      "detail": "BUILD SUCCESSFUL, tests 1382, openapi.yaml 변화 없음",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be"
+    },
     {
       "kind": "frontend",
       "command": "프론트 변경 없음",
@@ -16936,6 +17190,11 @@
       "branch": "fix/s456-t-inho-billing-api",
       "sha": "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6",
       "at": "2026-10-29T18:48:32+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-webhook-audit-ops",
+      "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be",
+      "at": "2026-10-29T19:59:04+09:00"
     }
   ],
   "usage_log": [],
@@ -16984,7 +17243,8 @@
     "448": "https://github.com/asm17-ms2/meterengine/pull/469",
     "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471",
     "events-query": "https://github.com/asm17-ms2/meterengine/pull/488",
-    "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491"
+    "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491",
+    "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492"
   },
   "final_checks": [
     {

@@ -1,20 +1,20 @@
-미완료 141건, 결과: 끝 상태 235/372건 (fixed 201, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597)
-정할 것: 2건 (Ck3-451-02, Nk3-011). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+미완료 124건, 결과: 끝 상태 250/372건 (fixed 216, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad)
+정할 것: 3건 (Ck3-451-02, Nk3-011, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T18:49:44+09:00
+상태: running, 갱신 2026-10-29T19:59:05+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
-| #444 | fix/s456-444-t-inho | 40 | 26 | 0 | 7 | 0 | 0 | 7 |
+| #444 | fix/s456-444-t-inho | 40 | 32 | 0 | 7 | 0 | 0 | 1 |
 | #446 | fix/s456-446-t-inho | 50 | 27 | 0 | 7 | 0 | 0 | 16 |
-| #448 | feat/request-audit | 24 | 17 | 1 | 1 | 0 | 0 | 5 |
-| #450 | fix/s456-t-inho-events-query | 38 | 27 | 0 | 2 | 0 | 0 | 9 |
+| #448 | fix/s456-t-inho-webhook-audit-ops | 24 | 22 | 1 | 1 | 0 | 0 | 0 |
+| #450 | fix/s456-t-inho-events-query | 38 | 28 | 0 | 2 | 0 | 0 | 8 |
 | #451 | feat/billing-queries | 96 | 28 | 0 | 6 | 2 | 0 | 60 |
-| #454 | feat/auth-rate-limit | 19 | 0 | 1 | 4 | 0 | 0 | 14 |
+| #454 | feat/auth-rate-limit | 19 | 3 | 1 | 4 | 0 | 0 | 11 |
 | #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
 | #447 | fix/s456-t-inho-billing-api | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
@@ -102,13 +102,19 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck2-002 | #444 | c5fb0e0 | 웹훅 수신 주소의 DNS 조회를 트랜잭션 밖에서 한다 | 수신_주소의_DNS_조회는_트랜잭션_밖에서_해_DB_커넥션을_쥐지_않는다: 실패 Expecting actual [true, true] to contain exactly (and in same order) [false, false] |
 | Ck2-003 | #444 | f0aa95b | 밀린 웹훅 발송을 지표로 내고 10분 넘게 밀리면 경보한다 | 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다: 실패 error: cannot find symbol method measure() (적체를 세어 지표로 내는 경로가 없다) |
 | Ck2-004 | #444 | ed25d3e | 웹훅 전송 실패의 예외를 로그에 남긴다 | 전송_중_예상하지_못한_예외는_원인과_함께_ERROR로_남긴다: 실패 Expecting actual "" to contain "ERROR" |
+| Ck2-007 | #444 | 401978e | main의 retry()는 지금도 엔드포인트가 있는지만 본 뒤 UPDATE 건수가 0이면 409 webhook_delivery_not_retryable을 던집니다. UPDATE 조건에는 전송 id, status='failed', 엔드포인트 enable | WebhookIntegrationTest.없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다: 실패 (ConflictException이 났다) |
 | D-044 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-088 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-195 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-252 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | X-028 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
+| D-045 | #444 | 82b2aee, bc4767c | main의 웹훅 목록(page.tsx:45)은 여전히 archived_at과 enabled만 보고 문구를 정해서, 발송이 계속 실패하는 수신 주소도 '발송 중'으로 나온다. 넘길 때 head 81651ed의 page.tsx:36과 판단이 같고, 목록  | auth.contract.spec.ts a webhook receiver whose latest delivery is failing is flagged in the list: 실패 (최근 발송 실패 문구 없음) |
+| C444-002 | #444 | 4a3dd20, 8600976 | 보안 지적 수정 | WebhookIntegrationTest.한_도입사의_전송이_밀려_있어도_다른_도입사의_전송이_다음_차례에_나간다: 실패 (밀린 도입사 전송이 먼저 모두 나감) |
+| G-140 | #444 | 7c90dba | main에서도 deliver는 claim, send, complete를 한 건씩 직렬로 돌고, 15초 실행 예산은 101행 루프 조건에서 claim 전에만 본다. WebhookClient.send는 Future.get으로 최대 15초 막히므로 응답 없 | 없음(문서 변경. WebhookClient 요청 15초, WebhookDeliveryService 실행 15초와 100건을 코드에서 확인) |
+| Ck2-005 | #444 | 95c8ae9 | main의 OperationsService.java:52는 넘길 때 head와 같은 줄로, 기간과 엔드포인트 조건 없이 webhook_delivery의 failed를 모두 센다. 이것은 실수가 아니라 박성종 님이 80a3ef1f(main 828ea61 | WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 (expected: 1L but was: 2L) |
 | Ck2-006 | #444 | 37556b4 | 웹훅 전송 기록 목록을 받치는 색인을 둔다 | 전송기록_목록을_엔드포인트별_최신순으로_읽는_색인이_있다: 실패 EmptyResultDataAccessException: Incorrect result size: expected 1, actual 0 |
 | Ck2-008 | #444 | a4a3660 | openapi.yaml이 웹훅 통보 종류의 최소 개수와 받는 값을 적는다 | 웹훅_엔드포인트_요청의_통보_종류는_하나_이상이고_서버가_받는_값만_적는다: 실패 [CreateWebhookEndpointRequest] expected: 1 but was: 0 |
+| Ck2-010 | #444 | 95c8ae9 | main의 OperationsService.java:52는 넘길 때 head와 한 글자도 다르지 않아서, 결제 실패는 최근 24시간만 세고 웹훅 실패는 지금 failed인 전송을 기간 없이 모두 셉니다. 지적의 '영영 빠지지 않는다'는 조금 과장입니다 | WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 (expected: 1L but was: 2L) |
 | Ck2-011 | #444 | eb1780b | 웹훅 전송 실패 사유 CHECK를 V52로 더한다(결정: 문자열과 CHECK 관례 유지) | SchemaConstraintTest.웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다: 실패 expected 1, actual 0 |
 | Ck2-013 | #444 | 40089ce | SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다 | SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다) |
 | D-035 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
@@ -148,10 +154,15 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Nk3-001 | #446 | 42b996d | sum 전용 우회 경로를 지운다 | BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 expected: 800 but was: 0 |
 | Nk3-003 | #446 | 5588b4f | 호출처 없는 옛 기간 판정 메서드를 지운다 | 없음(git grep 호출 없음, pricing 시험: 통과) |
 | C447-011 | #447 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
+| G-092 | #448 | 794b0f8 | 수집 요청을 감사에서 빼는 코드는 넘길 때 head에 이미 있었고 main에서도 RequestAuditFilter.java:63-66에 그대로 있다. 그래서 수집량만큼 행이 는다는 원래 시나리오는 main에서 성립하지 않는다. 남는 것은 수집 밖의 모 | AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L) |
 | C448-001 | #448 | 1164c20 | 운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다 | 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다 |
+| G-095 | #448 | e956665 | 보안 지적 수정 | AuditQueryAndRequestIntegrationTest.감사조회는_로그인_세션만_할_수_있고_read_API_키는_403이다: 실패 (expected: 403 but was: 200) |
+| C448-002 | #448 | 794b0f8 | 보안 지적 수정 | AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L) |
+| G-169 | #448 | 794b0f8 | 수집 요청은 넘길 때 head와 main 모두 RequestAuditFilter.java:63-66에서 상태와 관계없이 감사에서 빠진다. 그래서 수집 요청마다 커밋이 하나 더 늘어 test-storage 기준선이 흔들린다는 부분은 main에서 성립하지 | AuditQueryAndRequestIntegrationTest.주체_없는_401은_요청_감사에_남기지_않는다: 실패 (expected: 0L but was: 1L) |
 | X-024 | #448 | 80a3ad0 | 감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다 | an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다) |
 | Ck1-448-01 | #448 | 1003ba5 | 감사 조회의 기간 조건이 저장할 수 없는 연도면 500 대신 400을 낸다 | 감사조회의_잘못된_필터와_기간은_400이다: 실패 [HTTP status code] expected: 400 but was: 500 (to=+300000-01-01T00:00:00Z) |
 | Ck1-448-03 | #448 | d0edd0f | README에 감사 조회 API와 감사 화면, X-Request-ID를 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. AuditLogController의 두 GET 매핑, RequestAuditFilter의 X-Request-ID 헤더와 수집 제외, NavMenu.tsx와 Operator) |
+| Ck1-448-04 | #448 | 262352b, 6039fad | main에서도 지적은 사실이다. 운영자 감사 조회는 도입사 인수가 없고 서비스에 organizationId로 null을 넘기며(AuditLogController 116행), 검색어 q가 보는 열은 action, target_type, target_id | AuditQueryAndRequestIntegrationTest.운영자_감사조회의_검색어로_도입사_id를_찾는다: 실패 (expected: 2 but was: 0) |
 | D-152 | #448 | 80a3ad0 | 감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다 | an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다) |
 | GA-B1 | #448 | b0bf0b1 | 요청 감사가 퍼센트 인코딩한 경로도 디코딩해 /v1 요청으로 본다 | 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다: 실패 Wanted but not invoked |
 | X-007 | #448 | 6d30dca | 감사 기록 화면에 빠진 행동 이름 15개를 더하고 남기지 않는 행동은 조건에서 뺀다 | every audit action the backend records has a label on the audit screen: 실패 SyntaxError: does not provide an export named 'AUDIT_ACTIONS' (실화면 요약 줄에 payment_sett |
@@ -185,6 +196,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | C450-002 | #450 | db6bbd5 | 보안 지적 수정 | CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패 |
 | C450-003 | #450 | db6bbd5 | 고객 등록의 보관 409를 문서화하고 시험한다 | OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패 |
 | G-127 | #450 | cdb63ae | 월 목록에서 네 자리 연도로 열 수 없는 달을 뺀다 | EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 actual ["55835-03", "2026-10"] |
+| G-165 | #450 | 7357259 | main의 저장단 대시보드에서 수집 API 패널 넷(초당 요청 수, 평균 처리 시간, p99와 p50, 5xx 오류율)의 식이 모두 uri="/v1/events",method="POST"로 고정되어 있다. #450이 이 파일을 바꿨지만 중복률 분모 한 | test_dashboards.test_ingestion_panels_cover_single_and_batch_ingestion_per_uri: 실패 (uri 조건이 /v1/events뿐) |
 | Ck3-451-01 | #451 | 4f705cd | main에서도 고객 등록 응답(이름, billing_email)을 idempotent_request.response_body에 기한 없이 저장한다. 지우는 코드가 없고 created_at 열을 읽는 곳도 없어서, 넘길 때 head와 같은 상태로 남아  | OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 (설명 없음) |
 | D-186 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | X-038 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
@@ -211,6 +223,10 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-126 | #451 | 3568cc3, d904aaf | CSV 내보내기 원본 속성 합계를 32MB로 묶는다 | EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 expected: 400 but was: 200 |
 | Nk3-008 | #451 | c93b2d3 | 개요 미수금 정의를 적는다(결정: 이름과 값 유지) | 없음(OpenApiDocumentTest: 통과, 설명과 DashboardService, WorkspaceQueryService 대조) |
 | Nk3-010 | #451 | ec1bc7f | main에서도 WorkspaceQueryController에는 @ApiResponse가 하나도 없고, OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 검색, 내보내기의 400 validation_err | OpenApiDocumentTest 새 시험 6개: 실패 (400, 404, 409 응답과 재생 헤더 없음, CSV format byte) |
+| Ck1-454-01 | #454 | 0428493, 52a27da | main의 Caddyfile은 두 log 블록(9~11줄, 48~50줄)에 같은 정규식을 세 줄씩 복사해 두었고, RequestLogFilter는 같은 경로 목록을 다른 정규식으로 따로 들고 있다. 넘길 때 head(dac784b)와 main 사이에  | test_logging.test_variant_paths_do_not_leak_tokens_into_logs: 실패 (인코딩 경로의 토큰이 로그에 남음) |
+| Ck1-454-02 | #454 | 2c62eb1 | main의 운영 compose는 백엔드에 호출 제한 설정 가운데 ENABLED와 TRUSTED_PROXIES 두 개만 넘기고, 로그인과 가입의 한도 넷과 창 둘은 넘기지 않는다. deploy.sh는 Parameter Store 값을 모두 env 파일에 | test_trusted_proxies.test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default: 실패 (LOGIN_IP_LIMIT 등 누락) |
+| U12-B1 | #454 | 56f4f94 | 보안 지적 수정 | test_logging.test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts: 실패 (internal=True에서 보낸 값 유지) |
+| NT-inho-003 | #444 | 76f7215 | main에서도 WebhookClient는 TLS 인증서 오류, DNS 실패, 연결 거부(모두 IOException)와 전송 작업 안의 예상하지 못한 예외(ExecutionException)를 모두 connection_error로 돌려준다. 이 값은 전 | 없음(문서 변경. WebhookClient의 connection_error 분기와 로그 줄을 코드에서 확인) |
 | NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
 | NT-inho-007 | #442 | 3373654 | mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471) | mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5 |
 | NT-inho-009 | #442 | 62a2f0f | 워크스페이스 계약 명세가 비밀값을 복사한 뒤 닫는다 | workspace.contract.spec.ts 발급 중 닫기, 키 한도: 실패 dialog toHaveCount(0) @ af15d7f5 |
@@ -221,6 +237,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- |
 | Ck3-451-02 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | Nk3-011 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(draft_invoice는 read API 키 호환 때문에 응답에 남긴다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
+| NT-inho-004 | #448 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #492 본문에 적었다(감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 
 ## 막힌 것
 
@@ -233,8 +250,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | --- | --- | --- | --- |
 | NT-inho-001 | #443 | open | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
 | NT-inho-002 | #444 | already-fixed | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
-| NT-inho-003 | #444 | open | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
-| NT-inho-004 | #448 | open | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
+| NT-inho-003 | #444 | fixed | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
+| NT-inho-004 | #448 | needs-decision | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
 | NT-inho-005 | #448 | already-fixed | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
 | NT-inho-006 | #451 | fixed | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
 | NT-inho-007 | #442 | fixed | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
