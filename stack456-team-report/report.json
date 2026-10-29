@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T16:20:47+09:00",
+  "updated_at": "2026-10-29T16:27:12+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -28,7 +28,8 @@
     "fix/s456-t-yang-toss-key": "ffa9cd3",
     "fix/s456-t-yang-audit-env": "04c93d9",
     "fix/s456-t-yang-ops-metrics": "6152c0b",
-    "fix/s456-t-yang-readme": "6da19c6"
+    "fix/s456-t-yang-readme": "6da19c6",
+    "fix/s456-t-yang-e2e": "b78630c"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -636,24 +637,26 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718의 OrganizationPeopleService.invitations()는 초대 목록을 읽는 메서드인데, docs/contributing/naming.md 37행 서비스 메서드 동사 표는 읽기를 list, find, get으로 정해 이를 어긴다. MemberNamingConventionTest 56행이 서비스 메서드를 소문자 한 낱말로 묶고 같은 서비스의 list(principal, organizationId)가 이미 소속 목록에 쓰여서 listInvitations도 list도 쓸 수 없고, 정점 0fe7d2a에서도 같은 코드가 남아 있다. 지적의 다른 부분인 소속 생성과 복원 중복(OrganizationMemberService.create 50~89행과 accept 271~283행)은 두 파일에서 눈으로 보이지만, 앞선 검증대로 지금 결과 차이는 없다. 규칙을 지키는 수정은 초대 메서드를 새 OrganizationInvitationService로 옮기는 것이고, 새 서비스, OrganizationPeopleService, OrganizationPeopleController, OrganizationInvitationController 넷을 바꿔 유지보수 분류의 파일 셋 이상 기준에 걸린다. 쓰지 않는 2인자 list를 지우고 invitations를 list로 바꾸는 두 파일 안도 있으나, 인자 수만 다른 list가 소속과 초대를 따로 돌려주게 되어 지적이 짚은 오버로드 문제를 키운다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. invitations()가 naming.md 37행 읽기 동사 표를 벗어나는 것은 맞지만 서비스 안쪽 이름이고, 밖으로 나가는 operationId는 listOrganizationInvitations로 규칙을 지킨다. 규칙대로 고치려면 초대 메서드 다섯 개를 새 서비스로 옮겨야 한다. 그러면 lockOwner, requireMember, activeOrganization 권한 검사를 두 서비스가 나눠 써야 해서, 동작 이득 없이 권한 경로가 흔들린다. 소속 생성과 복원의 중복도 main에서 결과가 같다. 대표 승격은 활성 대표가 없을 때만 일어나는데, 초대는 대표만 만들 수 있고 마지막 대표는 보관할 수 없다. 감사 detail의 organization_role은 읽는 코드가 없다. 초대 기능을 다음에 넓힐 때 서비스를 나눈다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:151-160 @ 72e8718",
-        "docs/contributing/naming.md:37 @ 72e8718",
-        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:56 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:106-114 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:152 @ 0fe7d2a"
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:154-163 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:223-228 @ af15d7f",
+        "docs/contributing/naming.md:37 @ af15d7f",
+        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:41-56 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationMemberService.java:62-88 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:274-286 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:307-336 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:345-351 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "초대 메서드(invitations, invite, revoke, preview, accept)를 새 OrganizationInvitationService로 옮겨 목록 읽기를 list로 부를지(파일 넷), 아니면 쓰지 않는 2인자 list를 지우고 invitations를 인자 수만 다른 list로 바꿀지, 아니면 그대로 둘지 정한다.",
       "propagation_note": "정점 0fe7d2a에서 invitations 사용처는 OrganizationPeopleController.java:115 하나뿐이고 OrganizationPeopleService는 위층에서 바뀌지 않았다. 컨트롤러는 23b1844가 두 줄 바꿨으니 서비스를 옮기면 위층 컨트롤러의 호출과 주입 필드도 같이 맞춘다."
     },
     {
@@ -661,48 +664,58 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "층 sha 72e8718의 workspace-actions.ts에 위층 기능 분기가 false 상수로 그대로 있다: 57행 if (false && version 검사), 58행 isPaymentRequest = false와 67-68행 결제 미확인 분기, 62행 ifMatch: false ?, 64행 isEmptyResponse: false, 73, 75행 if (false) redirect, 80행 false ? 시험 통보 문구, 82행 /payment-method-registrations/ 경로, 63행 이 층에 case가 없는 createPaymentCancellation, createCustomer 멱등 키. 반박을 시도했지만 각 위층 head(81651ed, 54bb1d5, 8babc3d, 17cc788)가 바로 이 false를 실제 조건으로 바꾸고, 0f1d1bf(#443)는 #442와 같은 줄을 그대로 가져 이 상수들이 #442 단독으로는 도달할 수 없는 코드라는 것이 확인된다. integrations/page.tsx:21도 #453에서야 생기는 업무 환경 전환을 안내하며, 정점 0fe7d2a에서는 같은 줄이 environment === \"legacy\" 조건 안에 있다. 런타임 피해는 없고 #442 단독 화면의 안내 문구와 리뷰 가능성에 그친다. 바뀌는 파일은 #442의 두 파일이라 이 층에서 고친다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 스택이 main에 한 번에 머지돼 해소됐다. #442 단독으로는 도달할 수 없던 false 상수 분기는 main에서 모두 실제 조건이다. 94행 version 검사, 95행 isPaymentRequest, 98-101행 timeoutMs, ifMatch, idempotencyKey, isEmptyResponse, 104행 결제 미확인 분기, 112, 114행 보관 redirect, 119행 시험 통보 문구가 그렇다. integrations/page.tsx의 업무 환경 전환 안내도 #453이 environment === \"legacy\" 조건 안으로 옮겨, 32행에서 전환 기능이 있는 그 환경에서만 보인다. 스택이 한 번에 머지되어 층별로 지우고 다시 더하는 안은 의미가 없고 고칠 것도 남지 않았다.",
       "evidence": [
-        "frontend/src/app/(console)/workspace-actions.ts:57-58,62-64 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:73,75,80,82 @ 72e8718",
-        "frontend/src/app/(console)/integrations/page.tsx:21 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:97,104,113,120 @ 0fe7d2a",
-        "frontend/src/app/(console)/integrations/page.tsx:29 @ 0fe7d2a"
+        "frontend/src/app/(console)/workspace-actions.ts:94-101 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:104-105 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:112-121 @ af15d7f",
+        "frontend/src/app/(console)/integrations/page.tsx:32 @ af15d7f",
+        "커밋 828ea613",
+        "커밋 42e5ceaa",
+        "커밋 d6072d70",
+        "커밋 f53222e7",
+        "커밋 94a48a20",
+        "커밋 af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
-      },
-      "question": "workspace-actions.ts의 위층 기능 분기(false 상수, isPaymentRequest, 결제 상태 처리)를 #442에서 지우고 #445, #446, #447, #449가 각자 다시 더하게 할지, 스택을 한 번에 머지하는 전제(Q4)로 그대로 둘지 정한다(G-038과 같은 결정이다)."
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      }
     },
     {
       "id": "G-027",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "docs/contributing/naming.md 41줄은 URL 경로를 'kebab-case 복수 명사, 동사 없음'으로 정했다. 그런데 72e8718의 OrganizationInvitationController 38줄은 @PostMapping(\"/accept\")라는 동사 세그먼트를 쓰고, SecurityConfig 61줄의 permitAll 매처와 프론트 actions.ts 48줄의 호출도 같은 경로를 쓴다. 정점 0fe7d2a에서도 같은 경로가 그대로 남았고, #449 이후에는 /revoke, /lookup, /export, /search 같은 동사 경로가 더 생겨 이 층에서만 고쳐서는 규칙 정합이 끝나지 않는다. 고치려면 공개 API 경로를 바꾸고 백엔드 컨트롤러, SecurityConfig, openapi.yaml, 프론트 호출, 두 통합 시험 클래스에 걸쳐 바꿔야 하므로 판정 규칙 4에 따라 결정 대기로 둔다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 공개 경로 POST /v1/organization-invitations/{token}/accept와 POST /v1/invoices/{id}/view-links/{view_link_id}/revoke는 바꾸지 않는다. 두 경로는 main에 배포된 공개 계약이고 동작 결함이 없는 이름 문제다. 고치려면 컨트롤러, SecurityConfig 매처, openapi.yaml, 화면 호출, 통합 시험을 함께 바꿔야 하고 배포 순서에 따라 옛 화면의 호출이 404가 될 수 있어 이름을 맞추는 이득보다 비용이 크다. naming.md의 동사 없음 규칙은 그대로 둔다. 새 상태 전이 경로는 main에 이미 있는 /restorations, /cancellations, /retries 같은 명사 하위 리소스나 DELETE로 만든다. 팀 이름 규칙의 예외를 받아들이는 결정이라 두 사람을 리뷰어로 둔다. 다른 사람 영역이나 팀 전체에 걸려 박성종 님, 문인호 님께 Slack으로 알린다.",
       "evidence": [
-        "docs/contributing/naming.md:41 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:38 @ 72e8718",
-        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:61 @ 72e8718",
-        "frontend/src/app/organization-invitations/[token]/actions.ts:48 @ 72e8718",
-        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:75,87 @ 0fe7d2a"
+        "docs/contributing/naming.md:41 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:87 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:70 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:49 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:75 @ af15d7f",
+        "frontend/src/app/(console)/invoices/view-link-actions.ts:32 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:221 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/controller/PaymentCancellationController.java:41 @ af15d7f",
+        "backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:147 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:263 @ af15d7f",
+        "커밋 1b2c555d",
+        "커밋 c04a6bb4"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "초대 수락 경로 POST /v1/organization-invitations/{token}/accept를 명사 하위 리소스(/acceptance)로 바꾸고 위층의 /revoke, /lookup, /export, /search 동사 경로도 같은 기준으로 맞출지, 아니면 naming.md에 상태 전이 동사 경로를 예외로 적을지 정한다.",
       "propagation_note": "바꾸기로 하면 #442에서 OrganizationInvitationController.java의 @PostMapping, SecurityConfig.java permitAll 매처, OrganizationPeopleIntegrationTest와 UserPermissionsIntegrationTest의 경로, frontend/src/app/organization-invitations/[token]/actions.ts의 `${path}/accept`, backend/openapi.yaml을 함께 고친다. 위층에서는 #448의 backend/src/test/java/com/meterengine/global/security/RequestLogFilterTest.java:222 @ 0fe7d2a와 각 층의 openapi.yaml 재생성이 필요하다. 다른 동사 경로는 EventController.java:212, EventExportController.java:38, EventIssueController.java:34, EventRejectionController.java:34, InvoiceViewLinkController.java:75,87, WorkspaceQueryController.java:46,101 @ 0fe7d2a다."
     },
     {
@@ -712,16 +725,22 @@
       ],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): main의 1b2c555d(#442)가 compose.prod.yml에서 프론트의 METERENGINE_API_KEY와 도입사 변수, 백엔드의 FRONTEND_API_KEY와 FRONTEND_ORGANIZATION_ID를 지웠고 deploy/tests/test_console_key_env.py가 이를 지킨다. 그래서 배포는 이 값 없이 뜨고, 운영 백엔드는 값이 비어 콘솔 키를 더 만들지 않는다. 남은 질문(Q5)은 스택 이전 SHA로 되돌리는 배포를 지원하는 쪽으로 정했다. 그래서 SSM 파라미터 세 개와 이미 만든 '프론트 콘솔' 키, 그리고 SUT가 옛 SHA도 배포할 때 쓰는 measurements terraform의 같은 파라미터는 지금 지우지 않는다(이유는 deploy/README.md 411-418행). 롤백 기간이 끝난 뒤의 키 폐기와 SSM 삭제는 코드가 아니라 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "frontend/src/lib/config.ts:3-5 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/BootstrapService.java:75-83 @ af15d7f",
+        "backend/README.md:169 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f",
+        "deploy/deploy.sh:489 @ af15d7f",
+        "measurements/test-slo/README.md:76 @ af15d7f",
+        "measurements/test-slo/sut/terraform/parameters.tf:45-46 @ af15d7f",
+        "measurements/test-slo/sut/terraform/parameters.tf:100-105 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -734,12 +753,11 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다."
     },
     {
       "id": "G-042",
@@ -866,24 +884,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 정규식 /^me_invite_[A-Za-z0-9]{32}$/이 actions.ts 17, 24, 31행, [token]/page.tsx 19행, continue/page.tsx 11행 다섯 곳에 있고, me_invitation_flow 쿠키 이름과 옵션이 actions.ts 18, 25, 50행에, 이름만 continue/page.tsx 10행에 따로 있어 복사는 맞다. 지금 다섯 곳의 글자는 서로 같고 정점 0fe7d2a도 같아서 현재 실패 경로는 없고, 위험은 형식이나 path, maxAge를 바꿀 때만 생긴다. 이 지적을 고치려면 세 화면 파일(actions.ts, [token]/page.tsx, continue/page.tsx)을 모두 바꾸고 공용 파일을 하나 더해야 해서 common-brief 유지보수 분류의 파일 둘 상한을 넘으므로 needs-decision이다. 또 쿠키 이름을 공용 상수로 모으는 부분은 brief의 건드리지 않을 id G-055(+G-070, Q7)가 막아 둔 변경과 겹친다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. main에서 초대 토큰 정규식 여섯 곳(session-actions.ts 포함)과 me_invitation_flow 쿠키를 만들고 지우는 옵션 세 곳은 글자까지 같고, 백엔드의 @Pattern과 SecureTokens 형식과도 맞아 지금 실패하는 경로가 없다. 토큰 형식을 바꾸려면 백엔드와 이미 발급한 링크까지 함께 다뤄야 하므로, 프론트 상수 하나로 모아도 그 위험은 줄지 않는다. 동작은 그대로인데 새 파일 하나와 기존 파일 넷을 바꿔야 하는 정리라 이득이 작아 그대로 둔다.",
       "evidence": [
-        "frontend/src/app/organization-invitations/[token]/actions.ts:17-18,24-25,31,50 @ 72e8718",
-        "frontend/src/app/organization-invitations/[token]/page.tsx:19 @ 72e8718",
-        "frontend/src/app/organization-invitations/continue/page.tsx:10-11 @ 72e8718",
-        "frontend/src/app/organization-invitations/[token]/actions.ts:17-18,24-25,31,50 @ 0fe7d2a",
-        "frontend/src/app/organization-invitations/continue/page.tsx:10-11 @ 0fe7d2a"
+        "frontend/src/app/organization-invitations/[token]/actions.ts:15-31 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:51 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:19 @ af15d7f",
+        "frontend/src/app/organization-invitations/continue/page.tsx:10-11 @ af15d7f",
+        "frontend/src/app/session-actions.ts:22 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:83 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:185 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "초대 토큰 형식 검사와 me_invitation_flow 쿠키 설정, 삭제를 초대 화면 공용 모듈 하나로 모을지(새 파일 하나와 세 화면 파일을 바꾸고, 쿠키 이름 상수화는 Q7 G-055와 겹친다) 정한다.",
       "propagation_note": "정점까지 정규식과 쿠키 줄은 그대로다. e5fca11(#451)이 continue/page.tsx의 이웃 줄(링크 대상)만 바꿔서, 모으기로 하면 위층을 다시 쌓을 때 작은 충돌이 날 수 있다. 백엔드 OrganizationInvitationController.java 36, 45행의 @Pattern과 SecureTokens.generate(\"me_invite_\")가 같은 형식에 묶여 있다."
     },
     {
@@ -952,24 +971,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 동의 판은 consents.ts 1행의 FE 상수 하나뿐이다. 백엔드 CreateSignupConsentRequest는 비어 있지 않은 255자 이하 문자열이면 받고, SignupService.validate는 문서 종류만 본다. consent_required는 판과 무관한 boolean이며 SessionConsentService.accept는 이 값이 false이면 바로 돌아가므로, 상수만 올려서는 기존 사용자에게 다시 동의를 받을 길이 없다. 고치려면 백엔드 설정에 현재 판을 두고, 가입, 초대 수락, 세션 동의의 검증과 세션 응답의 consent_required 계산을 바꾸고, 판을 내려 주는 공개 API 필드를 더해야 한다. 이는 main부터 있던 '화면이 보여 준 판을 그대로 싣는다' 계약을 뒤집고 파일 셋 이상과 openapi.yaml이 바뀌는 일이며, 정식 약관 전에 운영 가입을 열지도 함께 정해야 한다. 정점 0fe7d2a에서도 이 파일들은 그대로이고 바꾼 위층 커밋은 없다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 동의 문서 판을 백엔드가 관리하도록 지금 바꾸지 않는다. 화면이 보여 준 판을 그대로 싣는 설계를 유지한다. 지금 판은 2026-10-26-preview 하나뿐이고, frontend/README.md에 정식 약관은 서비스 공개 전에 확정한다고 적혀 있다. consent 행마다 document_version이 남으므로 정식 판을 들일 때 재동의 대상을 데이터로 가릴 수 있다. 판 검증, 재동의 계산, 판을 내려 주는 API는 정식 약관이 정해질 때 한 슬라이스로 만든다. 그때는 consent_required와 다른 기준을 둔다. C442-002 수정이 이 표시를 초기 비밀번호 교체에도 쓰기 때문이다. 운영 가입은 승인 전 pending 도입사만 만들므로 열어 둔다. 다만 운영 정책 결정이라 박성종 님을 리뷰어로 둔다. 다른 사람 영역이나 팀 전체에 걸려 박성종 님께 Slack으로 알린다.",
       "evidence": [
-        "frontend/src/lib/auth/consents.ts:1 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/dto/CreateSignupConsentRequest.java:17-20 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:37 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/SignupService.java:117-124 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/entity/UserAccount.java:105-115 @ 72e8718"
+        "frontend/src/lib/auth/consents.ts:1 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/dto/CreateSignupConsentRequest.java:17 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:37 @ af15d7f",
+        "frontend/README.md:214 @ af15d7f",
+        "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:65 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:74-76 @ af15d7f",
+        "backend/README.md:246 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "동의 문서의 현재 판을 백엔드가 관리하도록 바꿔서 판이 다른 가입이나 동의 요청을 400으로 막고 consent_required를 '현재 판 동의 없음'으로 계산할지, 그리고 정식 약관이 정해지기 전에 운영 도메인에서 가입을 열어 둘지 정한다.",
       "propagation_note": "CONSENT_VERSION 상수는 정점 0fe7d2a의 real e2e 여러 곳(aggregation, archive-filters, customer-payment-retry, environment-cycle, events 등 frontend/e2e/*.real.spec.ts)에서 가입 요청의 판으로 쓰인다. 상수를 없애거나 서버에서 받게 바꾸면 그 파일들도 같이 고쳐야 한다. 결제 수단 등록의 consent_document_version(CreateBillingKeyRequest, #445 이후)도 같은 방식으로 판을 그대로 받는다."
     },
     {
@@ -1427,16 +1447,19 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 보안 지적의 핵심인, 프론트 컨테이너와 백엔드 환경에 쓰지 않는 admin 키가 들어가는 문제는 main의 1b2c555d(#442)가 compose.prod.yml에서 주입을 지워 없앴고 deploy/tests/test_console_key_env.py가 이를 지킨다. 남은 키 원문은 SSM SecureString과 권한 600인 서버 env 파일에만 있다. 같은 파일에 DB 비밀번호와 암호화 키가 있으므로, 스택 이전 SHA로 되돌리는 배포를 지원하는 동안 두어도 노출 범위가 넓어지지 않는다. 그래서 SSM 파라미터 세 개, 이미 만든 '프론트 콘솔' 키, measurements terraform의 같은 파라미터는 지금 지우지 않고, 롤백 기간 뒤의 키 폐기와 SSM 삭제는 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "frontend/src/lib/config.ts:3-5 @ af15d7f",
+        "deploy/deploy.sh:286-288 @ af15d7f",
+        "deploy/deploy.sh:489 @ af15d7f",
+        "backend/README.md:169 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -1449,10 +1472,9 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
-      },
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      }
     },
     {
       "id": "C442-016",
@@ -2469,16 +2491,18 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): main의 1b2c555d(#442)가 compose.prod.yml에서 프론트의 세 변수와 백엔드의 FRONTEND_API_KEY, FRONTEND_ORGANIZATION_ID를 지웠고 deploy/tests/test_console_key_env.py가 이를 지킨다. 그래서 .env에 값이 없어도 배포가 뜨고 운영 백엔드는 콘솔 키를 더 만들지 않으며, backend/README.md 169행도 이 키를 프론트가 쓰지 않는다고 적는다. 남은 질문(Q5)은 스택 이전 SHA로 되돌리는 배포를 지원하는 쪽으로 정했다. 따라서 SSM 파라미터 세 개, 이미 만든 '프론트 콘솔' 키, measurements terraform의 같은 파라미터는 지금 지우지 않고(deploy/README.md 411-418행), 롤백 기간 뒤의 폐기와 삭제는 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "frontend/src/lib/config.ts:3-5 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/BootstrapService.java:75-83 @ af15d7f",
+        "backend/README.md:169 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -2491,36 +2515,38 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다."
     },
     {
       "id": "G-010",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 SessionConsentService.accept는 동의 검증만 쓰려고 SignupService.validate(\"\", accepted)를 부르고, Consent 행을 만드는 반복이 SignupService.create(MICROS 절삭), OrganizationAccountService.register(절삭), SessionConsentService.accept(절삭 없음, java.util.UUID 정규 이름)에 갈라져 있어 같은 코드가 세 곳에서 어긋난 것이 눈으로 확인된다. InvitationConsentRequest도 CreateSignupConsentRequest와 달리 Consent.DOCUMENT_PATTERN, DOCUMENT_VERSION_MAX_LENGTH 대신 리터럴과 255를 쓰고 @Schema가 없다. 다만 지금 validatePassword는 최대 바이트만 보므로 빈 문자열이 통과해 현재 실패 경로는 없고, organization 패키지는 72e8718에서 account를 하나도 import하지 않아 Consent 상수를 직접 참조하면 의존 방향이 뒤집힌다. 지적대로 검증과 저장을 한 컴포넌트로 모으려면 SignupService, OrganizationAccountService, SessionConsentService 세 파일 이상을 바꿔야 해서 유지보수 분류 규칙상 needs-decision이다. 정점 0fe7d2a에서도 다섯 파일 모두 72e8718..0fe7d2a 사이 커밋이 없어 같다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. InvitationConsentRequest의 리터럴은 main에서도 Consent.DOCUMENT_PATTERN, DOCUMENT_VERSION_MAX_LENGTH와 값이 같다. 마지막 검사는 가입, 초대 수락, 세션 동의 세 경로 모두 SignupService.validate의 REQUIRED_DOCUMENTS로 같다. validatePassword는 최대 바이트만 보므로 빈 문자열 때문에 실패하는 경로가 없고, 세션 동의 경로는 OrganizationPeopleIntegrationTest 94-95행이 확인한다. 세션 동의만 MICROS로 절삭하지 않지만 agreed_at을 읽는 코드가 없어 결과가 같다. 검증과 저장을 한 컴포넌트로 모으려면 account 서비스 셋을 바꿔야 하는데, 동작 이득 없이 범위만 커진다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:42-50 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/SignupService.java:110-124 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/SignupService.java:90-100 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:83-92 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/dto/InvitationConsentRequest.java:9-12 @ 72e8718"
+        "backend/src/main/java/com/meterengine/account/service/SessionConsentService.java:38-50 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:110-124 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SignupService.java:90-100 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:82-93 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/dto/InvitationConsentRequest.java:9-12 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/entity/Consent.java:16-18 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/entity/Consent.java:71 @ af15d7f",
+        "backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java:94-95 @ af15d7f",
+        "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:51-58 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "필수 동의 검증과 Consent 저장을 account 쪽 한 컴포넌트로 모아 SignupService, OrganizationAccountService, SessionConsentService 세 경로가 부르게 할지(InvitationConsentRequest의 리터럴은 organization이 account를 import하지 않는 방향을 지키려면 상수를 organization.api로 옮겨야 한다), 아니면 이번 스택에서는 고치지 않을지 정한다.",
       "propagation_note": "정점 0fe7d2a에서 SignupService.validate 호출은 OrganizationAccountService.java:83과 SessionConsentService.java:42 두 곳뿐이고 consentRepository 저장도 SignupService.java:90, OrganizationAccountService.java:86, SessionConsentService.java:44 그대로라 #442에서 고치면 위층은 merge로 그대로 따라간다. InvitationConsentRequest는 AcceptOrganizationInvitationRequest.java:13 @ 0fe7d2a에서만 쓰인다."
     },
     {
@@ -2578,24 +2604,25 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 OrganizationAccounts.revoke(20행)는 UserSessionRepository.detachMembership(21-28행)만 부르고, 그 쿼리는 세션의 organization_id를 비우며 revoked_at을 채워 세션을 끝내는데, 두 이름 어디에도 세션이 없고 같은 일을 층마다 revoke와 detachMembership으로 다르게 부른다. 호출부 OrganizationPeopleService 145-146행은 organizationAccounts.revoke 다음에 member.revoke가 와서 서로 다른 대상(세션, 소속)에 같은 동사를 쓰므로 docs/contributing/naming.md 원칙 13-14행(호출부만 보고 대상을 안다, 다른 개념에 다른 낱말)에 어긋나는 것이 눈으로 보인다. 다만 원문 failure_scenario의 호출 삭제는 OrganizationPeopleIntegrationTest 282-283행이 보관 뒤 /v1/sessions/current 401을 확인해 잡으므로 실제 회귀 위험은 낮고, lockOwner와 requireMember의 boolean 인자는 규칙 조항보다 취향에 가깝다. 정점 0fe7d2a에서도 네 파일이 같고 72e8718..0fe7d2a 사이 이 파일을 바꾼 커밋이 없다. 고치려면 시험을 빼고 OrganizationAccounts, OrganizationAccountService, OrganizationPeopleService, UserSessionRepository 네 파일의 이름을 바꿔야 해서 유지보수 분류 셋 이상 규칙에 따라 needs-decision으로 둔다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. OrganizationAccountService는 @Service라서, MemberNamingConventionTest 41-56행이 공개 메서드 이름을 소문자 한 낱말로 묶는다. 그래서 포트 메서드에 revokeSessions 같은 이름을 쓸 수 없다. revoke는 세션의 revoked_at을 채우는 상태 전이 동사라 규칙 안이다. 정리하다 호출을 지우는 회귀는 OrganizationPeopleIntegrationTest 315-316행이 보관 뒤 /v1/sessions/current 401로 잡는다. lockOwner, requireMember, activeOrganization의 boolean 인자는 한 클래스 안의 private 메서드라, 이름을 나눠 얻는 이득이 작고 동작 차이도 없다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/organization/api/OrganizationAccounts.java:20 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/repository/UserSessionRepository.java:21-28 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:145-146 @ 72e8718",
-        "docs/contributing/naming.md:13-14 @ 72e8718",
-        "backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java:282-283 @ 72e8718"
+        "backend/src/main/java/com/meterengine/organization/api/OrganizationAccounts.java:20 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/OrganizationAccountService.java:97-101 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/repository/UserSessionRepository.java:21-28 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:145-147 @ af15d7f",
+        "backend/src/test/java/com/meterengine/global/MemberNamingConventionTest.java:41-56 @ af15d7f",
+        "backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java:294-316 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:307-336 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "#442에서 OrganizationAccounts.revoke와 UserSessionRepository.detachMembership을 세션 폐기를 드러내는 이름(revokeSessions 등)으로 바꾸고 requireMember, activeOrganization의 boolean 인자를 메서드로 나누는 본문 파일 4개 이름 정리를 할지, 담당자 판단으로 두고 넘어갈지 정한다.",
       "propagation_note": "정점 0fe7d2a에서도 OrganizationAccounts.java:20, OrganizationAccountService.java:98-99, UserSessionRepository.java:25, OrganizationPeopleService.java:145, 304-320이 그대로이고 git grep으로 본 사용처는 이 네 파일뿐이며 시험에서 이 이름을 부르는 곳이 없다. #442에서 이름을 바꾸면 위층은 merge로 그대로 따라오고 따로 맞출 호출부가 없다."
     },
     {
@@ -2631,24 +2658,29 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "층 72e8718과 정점 0fe7d2a 모두에서 CurrentSession 4인자, 5인자 생성자, ApiKeyService.list(UUID)와 create 5인자, OrganizationMemberService.create 3인자, OrganizationPeopleService.list 2인자와 invite 3인자, 요청 DTO 네 개의 짧은 생성자, OrganizationInvitation 6인자 생성자(7인자 안의 위임 말고는)를 부르는 곳이 없고, 호출부는 모두 전체 인자판(SessionService 145, 238행, ApiKeyController 103행, OrganizationController 174행, OrganizationPeopleController 56, 124행)만 쓴다. 남은 오버로드의 기본값도 갈라져 OrganizationInvitation 6인자는 필드 기본값 ADMIN을, CreateOrganizationInvitationRequest 1인자와 invite 3인자는 READ를, CurrentSession 4인자는 역할 null과 빈 스코프를 넣는다. SessionService 8인자 생성자는 SessionServiceTest 65행만 부르며 초대 저장소에 null을 넘기고, 운영 코드 115행이 그 null을 분기해 단위 시험은 초대 분기를 거치지 못한다. 다만 원문의 '@Autowired가 빠지면 조용히 403'은 생성자가 둘이면 기동 실패로 드러나 근거가 없고, 판정은 유지보수 근거로만 한다. 지적대로 지우면 시험을 빼고 11개 파일이 바뀌어 common-brief 6절 5번의 유지보수 분류 두 파일 상한을 넘으므로 needs-decision이다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 지적한 짧은 오버로드와 생성자는 main에서도 부르는 곳이 없다. 운영 코드는 전체 인자판만 쓰므로, 갈라진 기본값(OrganizationInvitation 6인자의 ADMIN, CurrentSession 4인자의 역할 null)은 실행 결과에 닿지 않는다. SessionService의 null 분기는 SessionServiceTest가 쓰는 8인자 생성자에서만 닿는다. 운영 경로인 초대 대기 사용자 로그인은 UserPermissionsIntegrationTest 350-354행이 확인한다. 모두 지우려면 시험을 포함해 11개가 넘는 파일을 바꿔야 해서, 동작 변화 없는 정리치고 리뷰 비용이 크다. 해당 파일을 다음에 고치는 PR에서 함께 지운다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/account/service/CurrentSession.java:16-31 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/service/SessionService.java:115-117 @ 72e8718",
-        "backend/src/test/java/com/meterengine/account/service/SessionServiceTest.java:65-73 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/entity/OrganizationInvitation.java:28-57 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/dto/CreateOrganizationInvitationRequest.java:20-26 @ 72e8718"
+        "backend/src/main/java/com/meterengine/account/service/CurrentSession.java:16-31 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:60-79 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/SessionService.java:113-119 @ af15d7f",
+        "backend/src/test/java/com/meterengine/account/service/SessionServiceTest.java:64-73 @ af15d7f",
+        "backend/src/test/java/com/meterengine/organization/UserPermissionsIntegrationTest.java:350-354 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/entity/OrganizationInvitation.java:28 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/entity/OrganizationInvitation.java:44-57 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:187-196 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationMemberService.java:43-47 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationController.java:176 @ af15d7f",
+        "backend/src/main/java/com/meterengine/apikey/controller/ApiKeyController.java:67 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "#442에서 아무도 부르지 않는 오버로드와 생성자를 11개 파일(CurrentSession, SessionService, ApiKeyService, OrganizationMemberService, OrganizationPeopleService, 요청 DTO 넷, OrganizationInvitation, ApiKeySecretResponse)에서 한 번에 지울지, CurrentSession과 SessionService의 null 분기 둘만 지울지, 그대로 둘지 정한다.",
       "propagation_note": "ApiKeySecretResponse 9인자 생성자를 지우면 #453 23b1844가 같은 생성자 본문을 고쳐 반영 merge에서 충돌하므로 #453에서 그 생성자를 함께 지우고 0fe7d2a의 ApiKeyIntegrationTest.java 126행 호출을 11인자로 바꾼다. ApiKeyService.list(UUID), create 5인자와 나머지 짧은 오버로드는 git grep 0fe7d2a에서 부르는 곳이 없어 위층 빌드는 깨지지 않는다. SessionService와 SessionServiceTest는 정점까지 바뀐 커밋이 없어 그대로 따라간다."
     },
     {
@@ -2785,16 +2817,18 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "프론트 lib/config.ts는 API 키와 도입사 변수를 읽지 않는데 compose.prod.yml은 백엔드 23-24행과 프론트 68-70행에서 이 값들을 필수(:?)로 넣어, 쓰이지 않는 admin 콘솔 키가 BootstrapService로 계속 만들어진다. 정점도 같다. brief가 허락한 범위(compose 줄과 필수 표시, README 줄)를 고쳐 커밋했고, 남은 SSM 파라미터 삭제, 기존 키 폐기, terraform 정리는 롤백 범위 결정(Q5)에 걸려 needs-decision으로 둔다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): main의 1b2c555d(#442)가 compose.prod.yml에서 프론트의 세 변수와 백엔드의 FRONTEND_API_KEY, FRONTEND_ORGANIZATION_ID를 지웠고 deploy/tests/test_console_key_env.py가 이를 지킨다. 그래서 프론트 컨테이너 환경에 키가 없고, ORGANIZATION_NAME이 없어도 배포가 뜬다. 운영 도입사에 운영자를 소속시켜 로그인 콘솔로 쓰는 절차는 backend/README.md 171-213행에 있다. 남은 질문(Q5)은 롤백을 지원하는 쪽으로 정해, SSM 파라미터 세 개와 이미 만든 '프론트 콘솔' 키, measurements terraform의 같은 파라미터는 지금 두고(deploy/README.md 411-418행), 롤백 기간 뒤의 폐기와 삭제는 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "backend/README.md:169 @ af15d7f",
+        "backend/README.md:171-213 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f",
+        "measurements/test-slo/README.md:76 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -2807,12 +2841,11 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "summary": "compose의 콘솔 키와 도입사 변수 제거",
-      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다.",
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+      "propagation_note": "반영 때 compose.prod.yml이 충돌한다: #449 7ce9d36이 프론트 METERENGINE_API_KEY 줄 뒤에 METERENGINE_PUBLIC_ORIGIN을, #454 a39db70과 21feb94가 백엔드 환경에 호출 제한과 신뢰 프록시 줄을 더했다. 정점 기준 지울 줄은 x-backend 24-26행과 frontend 86-88행이다. #449 deploy/tests/test_public_origin.py와 #454 test_trusted_proxies.py의 DUMMY_ENV에서 FRONTEND_API_KEY, ORGANIZATION_ID, ORGANIZATION_NAME을 빼도 되고, 남겨도 compose가 읽지 않아 통과한다. #452(C452-003)의 compose 정리와 같은 줄을 다룬다."
     },
     {
       "id": "G-034",
@@ -2844,24 +2877,31 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718의 ErrorCode.java에는 #442 백엔드 코드가 한 번도 던지지 않는 위층 code 33개(토스와 결제 14-16행, 69-76행, 110행, 웹훅과 요금제 77-87행 등)가 있고, git grep으로 backend/src와 frontend/src에서 ErrorCode.java 밖의 사용처가 0건임을 확인했다. 이 값들은 오류 code의 정본을 openapi.yaml이 낸다는 error-handling.md 'code' 절에 따라 openapi.yaml 2964-3039행 enum으로 계약에 나가므로 문서와 코드가 어긋난다. workspace-actions.ts 57-62행, 73행, 75행, 80행에는 if (false && ...), const isPaymentRequest = false, if (false) redirect(...) 같은 상수 false 분기가 눈으로 보이고, 정점 0fe7d2a 98행에서는 같은 자리에 실제 조건이 들어와 있어 위층 기능의 자리 표시임이 드러난다. 고치려면 ErrorCode.java, openapi.yaml, workspace-actions.ts 세 파일을 바꿔야 하고, ErrorCode는 #443~#449에서 바뀌지 않아 #442에서 지우면 위로 반영할 때 #444, #445, #446, #447, #449, #450 빌드가 깨지므로 각 층(비담당 #444 #446 #450 포함)이 code를 다시 더해야 해서 needs-decision으로 둔다. 같은 ErrorCode 부분을 G-018이 따로 지적하지만 G-038은 workspace-actions.ts 죽은 분기까지 포함한다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 스택이 main에 한 번에 머지돼 해소됐다. 질문은 #442에 미리 들어온 위층 오류 code 33개와 workspace-actions.ts의 상수 false 분기를 어느 층이 가질지였다. 스택 14개 층이 main에 모두 들어와 층 소유를 다시 가를 일이 없다. main에서 33개 가운데 32개는 각 기능 서비스가 실제로 던진다(예: TossPaymentsCredentialService 196행, WebhookEndpointService 75행, PricePlanService 162행, EventQueryService 97행, InvoiceViewLinkService 131행). workspace-actions.ts의 false 자리는 #444, #445, #447, #451 커밋이 실제 조건으로 바꿔 상수 false가 남아 있지 않다. 남은 CUSTOMER_HAS_PRICING과 구역 주석 문제는 G-018에서 고친다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:14-16 @ 72e8718",
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:69-87 @ 72e8718",
-        "backend/openapi.yaml:2970,3025 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:57-62 @ 72e8718",
-        "frontend/src/app/(console)/workspace-actions.ts:98 @ 0fe7d2a"
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:14-16 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:196 @ af15d7f",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookEndpointService.java:75 @ af15d7f",
+        "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:162 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:97 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:131 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:94-101 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:112-114 @ af15d7f",
+        "커밋 828ea613",
+        "커밋 42e5ceaa",
+        "커밋 d6072d70",
+        "커밋 f53222e7",
+        "커밋 af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "#442에 미리 들어온 위층 오류 code 33개와 workspace-actions.ts의 상수 false 분기를 #442에서 지우고 #444, #445, #446, #447, #449, #450이 각자 code와 분기를 다시 더하게 할지, 스택을 한 번에 머지하는 전제(Q4)로 보고 그대로 둘지 정한다.",
       "propagation_note": "ErrorCode.java는 72e8718..0fe7d2a 사이에 8bb17c3(#450)만 바꾸므로 #442에서 지운 줄이 #443~#449로 그대로 반영되어 사용처가 있는 층의 빌드가 깨진다. 지운다면 다시 더할 층은 #444 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED; #445 INVALID_TOSS_PAYMENTS_CREDENTIAL, PAYMENT_METHOD_REJECTED, TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE, PAYMENT_METHOD_NOT_FOUND, PAYMENT_METHOD_REGISTRATION_NOT_FOUND, PAYMENT_ATTEMPT_NOT_FOUND, PAYMENT_RESULT_UNCONFIRMED, TOSS_PAYMENTS_CREDENTIAL_MISSING, PAYMENT_METHOD_MISSING, PAYMENT_MODE_MISMATCH, PAYMENT_ATTEMPT_NOT_CANCELABLE, PAYMENT_ATTEMPT_FULLY_CANCELED, PAYMENT_CANCELLATION_AMOUNT_EXCEEDED, PAYMENT_CANCELLATION_IN_PROGRESS, PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT, TOSS_PAYMENTS_UNAVAILABLE; #446 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND; #447 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT; #449 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE; #450 EVENT_NOT_FOUND이고 각 층 openapi.yaml을 다시 만든다. CUSTOMER_HAS_PRICING은 정점에서도 쓰이지 않는다. workspace-actions.ts는 80a3ef1(#444), 4ace811(#445), 614d3bc(#446), 2ec5d85(#447), 8bb17c3(#450), e5fca11(#451)이 false 자리를 실제 조건으로 바꿨으므로 #442에서 줄을 지우면 이 층들에 반영 충돌이 나고, 각 층이 자기 operation 조건 줄을 다시 넣어야 한다."
     },
     {
@@ -2900,24 +2940,22 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 frontend/README.md 161행은 화면이 부르는 백엔드 오퍼레이션이 src/lib/api/에 있다고 적지만, origin/main에는 lib/api 밖 /v1/ 리터럴이 없고 이 층에는 9개 파일에 29개가 있어 문서와 코드가 어긋난다. 같은 PUT /v1/sessions/current/organization을 session-actions.ts 27-33행은 401이면 /login?reason=expired로 보내고 초대 actions.ts 58-59행은 모든 실패를 수락 완료 안내로 돌려, 같은 호출의 처리가 두 곳에서 갈라졌다(GET /v1/sessions/current도 session.ts 20행과 초대 page.tsx 24행에 따로 있다). 다만 초대 쪽은 방금 수락에 쓴 토큰이나 새로 만든 토큰이라 401이 나기 어려워 실제 동작 결함보다는 유지보수 문제다. 정점 0fe7d2a에서 인용한 줄은 그대로이고 lib/api 밖 리터럴은 31개 파일 97개로 늘었으며, README 161행은 #452 커밋 29a78d0이 지웠다. 고치려면 lib/api 함수로 모으며 session.ts, 초대 page와 actions, session-actions, admin/actions 등 셋 넘는 파일을 바꿔야 하는 유지보수 분류라 needs-decision이다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 문서와 코드가 어긋난 원인은 #442 README의 '화면이 부르는 백엔드 오퍼레이션은 src/lib/api/에 있다'는 줄이었는데, #452(c5dfb1a4)가 이 줄을 지워 main에서는 풀렸다. lib/api 밖에 있는 백엔드 경로 리터럴 100개(31개 파일)를 operationId 이름의 함수로 모으려면 문인호 님 층 파일까지 걸친 큰 변경이 되는데, 그만큼 막아 주는 결함이 없어 지금 구조를 받아들인다. 초대 수락 뒤 도입사 전환만 401을 따로 처리하지 않는다. 하지만 방금 수락이나 로그인으로 받은 토큰이라 401이 나기 어렵고, 실패해도 도입사 선택 화면으로 안내하므로 고치지 않는다.",
       "evidence": [
-        "frontend/README.md:161 @ 72e8718",
-        "frontend/src/app/organization-invitations/[token]/actions.ts:58-59 @ 72e8718",
-        "frontend/src/app/session-actions.ts:27-33 @ 72e8718",
-        "frontend/src/lib/auth/session.ts:20 @ 72e8718",
-        "커밋 29a78d0"
+        "커밋 c5dfb1a4",
+        "frontend/README.md:127 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/actions.ts:59-60 @ af15d7f",
+        "frontend/src/app/session-actions.ts:29-34 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "src/lib/api 밖 백엔드 경로 리터럴(층 29개, 정점 97개)을 operationId 이름의 lib/api 함수로 모으고 401 처리를 한 곳에 둘지, 지금 구조를 인정하고 #442 README 161행만 고칠지(#452 29a78d0은 이 줄을 이미 지웠다) 정한다.",
       "propagation_note": "모으기로 하면 정점 0fe7d2a의 사용처는 git grep '\"/v1/\\|`/v1/' 0fe7d2a -- frontend/src ':!frontend/src/lib/api'로 31개 파일이 나오고, 그중 sessions/current는 account/consents/actions.ts:15, organization-invitations/[token]/actions.ts:58, organization-invitations/[token]/page.tsx:24, session-actions.ts:15,27, lib/auth/session.ts:20이다. #444 이후 층의 workspace-actions.ts(35개), exports/[resource]/route.ts(7개), payments/[id]/page.tsx(5개) 등 다른 사람 층 파일도 걸린다. README만 고치기로 하면 #442의 161행을 고치고 #452는 29a78d0에서 이미 지웠으니 위층 merge 때 충돌만 맞추면 된다."
     },
     {
@@ -2950,24 +2988,24 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "72e8718에서 workspaceHref는 옵션이 없으면 month와 customer_id를 이어받고(workspace-href.ts:11은 inheritFilters가 false일 때만 멈춘다), 그 함수를 감싼 ScopedLink는 같은 이름의 inheritFilters를 false로 기본 지정해 반대로 동작한다. 그래서 NavMenu.tsx:23은 ScopedLink에 workspaceHref(item.href, search)를 다시 넣어 두 번 적용하고, 정점에서는 ConsoleShell.tsx:49가 ScopedLink 안에서 { inheritFilters: false }를 중복 명시하며 #443 f671a4f의 LinkButton이 같은 기본값과 로직을 복사했다. 지금은 호출부마다 의도한 주소가 나와 실패 경로는 없지만, 같은 옵션의 기본값이 두 파일에서 갈라진 것은 코드로 보인다. 기본값을 하나로 맞추면 공용 함수 workspaceHref의 계약이 바뀌어 정점의 ConsoleShell.tsx:57 진행 순서 링크, NavMenu, workspace-href.test.mjs:54-59처럼 기본 상속에 기대는 위층(#443, #451, #453) 호출부와 시험이 함께 바뀌므로, 파일 셋 이상과 여러 층에 걸친 변경이라 어느 기본값으로 맞출지 정해야 한다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. main의 모든 호출부는 의도한 주소를 만든다. workspaceHref 함수의 기본값은 사이드바나 진행 순서 링크처럼 기간과 고객을 이어받는 쓰임에, ScopedLink와 LinkButton의 기본값은 도입사와 환경 범위만 넘기는 쓰임에 맞춰져 있다. workspace-href.test.mjs는 inheritFilters를 true로 준 경우와 false로 준 경우를 각각 고정해 둔다. 기본값을 하나로 맞추려면 #443의 ConsoleShell, LinkButton과 #453의 시험까지 바꿔야 하는데 사용자가 보는 차이는 없어 그대로 둔다.",
       "evidence": [
-        "frontend/src/components/workspace/ScopedLink.tsx:10,14 @ 72e8718",
-        "frontend/src/lib/workspace-href.ts:4,11 @ 72e8718",
-        "frontend/src/components/shell/NavMenu.tsx:23 @ 72e8718",
-        "frontend/src/components/shell/ConsoleShell.tsx:49,57 @ 0fe7d2a",
-        "frontend/src/components/screen/LinkButton.tsx:12,18 @ 0fe7d2a"
+        "frontend/src/lib/workspace-href.ts:13 @ af15d7f",
+        "frontend/src/components/workspace/ScopedLink.tsx:10-14 @ af15d7f",
+        "frontend/src/components/screen/LinkButton.tsx:12-18 @ af15d7f",
+        "frontend/src/components/shell/NavMenu.tsx:24 @ af15d7f",
+        "frontend/src/components/shell/ConsoleShell.tsx:74 @ af15d7f",
+        "frontend/e2e/workspace-href.test.mjs:67-92 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "workspaceHref의 inheritFilters 기본값을 ScopedLink, LinkButton과 같은 상속 안 함으로 바꾸고, 기본 상속에 기대는 위층 호출부(NavMenu, ConsoleShell 진행 순서 링크, workspace-href.test.mjs)에 inheritFilters: true를 명시하게 할지.",
       "propagation_note": "상속 안 함으로 맞추면 #442에서는 workspace-href.ts:11을 inheritFilters !== true일 때 멈추게 하고 NavMenu.tsx:23을 <Link inheritFilters href={item.href}>로 바꾼다(그 밖의 #442 호출부는 organization_id만 담은 source라 결과가 같다). 위층에서는 NavMenu.tsx:24(0fe7d2a)를 같은 꼴로, ConsoleShell.tsx:57 WORKFLOW 링크(/usage, /pricing, /billing, /payments)에 inheritFilters: true를 넣고 :49의 중복 { inheritFilters: false }를 빼며, workspace-href.test.mjs:54-59(#453 23b1844)에 inheritFilters: true를 명시해야 한다. LinkButton.tsx(#443 f671a4f)는 이미 기본값 false라 동작은 맞고 ScopedLink 로직 복사본 정리는 #443 몫이다."
     },
     {
@@ -3118,16 +3156,17 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 인터넷에 노출된 Next 서버 환경변수로 admin 키가 샐 수 있다는 지적은 main의 1b2c555d(#442)가 프론트와 백엔드 환경에서 키 주입을 지워 해소됐다. deploy/tests/test_console_key_env.py가 두 컨테이너 환경에 키가 없는지 확인한다. 남은 키 원문은 SSM SecureString과 권한 600인 서버 env 파일에만 있고, 같은 파일의 DB 비밀번호와 암호화 키보다 권한이 크지 않아 롤백 지원 기간 동안 두기로 정했다(deploy/README.md 411-418행). 롤백 기간 뒤의 '프론트 콘솔' 키 폐기와 SSM 삭제는 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "deploy/deploy.sh:286-288 @ af15d7f",
+        "deploy/deploy.sh:489 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -3140,26 +3179,28 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
-      },
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      }
     },
     {
       "id": "G-160",
       "merged_ids": [],
       "layer": 442,
       "branch": "feat/account-permissions",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "보안 지적. 판정 근거는 evidence 줄이고 자세한 경로는 공개 보고에 두지 않는다. 수정과 남은 결정은 G-039와 같다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 프론트 컨테이너에 만료 없는 admin 키가 들어가는 문제는 main의 1b2c555d(#442)가 compose.prod.yml에서 주입과 필수 표시를 지워 해소됐고, deploy/tests/test_console_key_env.py가 이를 지킨다. 지금 SHA의 백엔드는 키를 받지 않으므로 test-storage에서 비밀번호를 돌려도 새 콘솔 키가 쌓이지 않는다. 다만 measurements terraform의 파라미터는 SUT가 옛 SHA를 배포할 때 필요해 남긴다. 롤백 지원(Q5) 때문에 SSM 파라미터 세 개와 이미 만든 '프론트 콘솔' 키도 지금은 두고(deploy/README.md 411-418행), 롤백 기간 뒤의 폐기와 삭제는 운영 조작이어서 배포 담당이 맡는다.",
       "evidence": [
-        "deploy/compose.prod.yml:22-24,68-70 @ 72e8718",
-        "frontend/src/lib/config.ts:1-5 @ 72e8718",
-        "backend/src/main/resources/application.properties:21-22 @ 72e8718",
-        "backend/README.md:146 @ 72e8718",
-        "deploy/compose.prod.yml:24-26,86-88 @ 0fe7d2a",
-        "test_compose_runs_without_the_console_api_key_and_organization: 실패 compose config failed: required variable FRONTEND_API_KEY is missing a value"
+        "커밋 1b2c555d",
+        "deploy/compose.prod.yml:12-32 @ af15d7f",
+        "deploy/compose.prod.yml:77-90 @ af15d7f",
+        "deploy/tests/test_console_key_env.py:20-36 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/service/BootstrapService.java:75-83 @ af15d7f",
+        "deploy/README.md:411-418 @ af15d7f",
+        "measurements/test-storage/README.md:179 @ af15d7f",
+        "measurements/test-slo/README.md:76 @ af15d7f",
+        "measurements/test-slo/sut/terraform/parameters.tf:100-105 @ af15d7f"
       ],
       "commits": [
         "b25b1e4e336d"
@@ -3172,10 +3213,9 @@
       "fails_without_fix": true,
       "top_head": "same 7ce9d36 21feb94 9089702 a39db70 23b1844",
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
-      },
-      "question": "롤백 범위(Q5)가 정해지면 SSM 파라미터 organization-id, organization-name, frontend-api-key를 지우고 이미 만든 '프론트 콘솔' 키를 폐기하며 measurements terraform의 같은 파라미터를 정리할지 정한다."
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      }
     },
     {
       "id": "G-187",
@@ -5564,25 +5604,23 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "PriceRate의 applies와 stops(72-83행)는 PricePlan의 applies와 stops(59-70행)와 본문이 같다. ChargeService(54-70행)와 BillableMetricPriceService(57-73행)는 같은 단가 버전 선택 규칙(가장 늦은 effective_from으로 merge한 뒤 applies가 아니면 제거)을 따로 갖고 있다. 요금제 선택은 ChargeService(71-77행)와 콘솔 activePlan(PricingWorkspace 25행)에 따로 있고, 둘은 이미 갈라졌다(Nk3-006). C447-002를 고칠 때도 stops 두 벌을 같이 바꿔야 해서, 사본이 어긋날 위험이 실제로 있다. 하나로 모으려면 시험을 빼고도 PriceRate, PricePlan, ChargeService, BillableMetricPriceService를 함께 바꿔야 한다. 이는 유지보수 분류의 파일 셋 이상 기준에 걸리고, 정점 0fe7d2a도 같다(PriceRate 81-86행, PricePlan 68-73행).",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 보관 효력 판정과 버전 선택 규칙을 공용 부품으로 모으지 않는다. main에서 PricePlan과 PriceRate의 applies, stops는 본문이 같고 C447-002 수정도 두 벌에 같이 들어갔으며, ChargeService와 BillableMetricPriceService의 선택 규칙도 같은 식이라 지금 어긋난 사본은 없다. 실제로 어긋났던 곳은 백엔드 밖의 콘솔과 demo였고 Nk3-006에서 따로 고치며, 언어가 달라 백엔드 부품으로 묶이지도 않는다. 동작이 바뀌지 않는 정리에 문인호 님 영역의 ChargeService, BillableMetricPriceService까지 네 파일을 바꾸는 비용이 이득보다 커서 그대로 두고, 리뷰어로 지정해 확인받는다. 다른 사람 영역이나 팀 전체에 걸려 문인호 님께 Slack으로 알린다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:72-83 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java:59-70 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:54-77 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:57-73 @ 5371d1e",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:25 @ 5371d1e"
+        "backend/src/main/java/com/meterengine/pricing/entity/PricePlan.java:62-73 @ af15d7f",
+        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:75-86 @ af15d7f",
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:55-84 @ af15d7f",
+        "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:61-80 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "propagation_note": "정점에서는 23b1844가 같은 파일에 환경 분리를 더했지만, 사본의 본문은 같다(0fe7d2a ChargeService.java 61-84행, BillableMetricPriceService.java 68-80행). 모으면 #453의 listScoped 갈래도 같은 부품을 거치게 맞춘다.",
-      "question": "단가와 요금제의 보관 효력 판정(applies, stops)과 버전 선택 규칙을 공용 부품 하나로 모을지 정해야 합니다. 모으면 PriceRate, PricePlan, ChargeService, BillableMetricPriceService를 함께 바꾸고, Nk3-006의 요금제 조회도 그 부품을 쓰게 합니다."
+      "propagation_note": "정점에서는 23b1844가 같은 파일에 환경 분리를 더했지만, 사본의 본문은 같다(0fe7d2a ChargeService.java 61-84행, BillableMetricPriceService.java 68-80행). 모으면 #453의 listScoped 갈래도 같은 부품을 거치게 맞춘다."
     },
     {
       "id": "Ck3-447-03",
@@ -5638,25 +5676,25 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "5371d1e에서 미터는 보관할 때 다음 달을 inactive_from 열과 감사 detail 키 inactive_from에 담고(BillableMetric.java:65-66, BillableMetricService.java:196), 단가와 요금제는 같은 방식으로 정한 보관 효력 월을 archived_from으로 불러(PriceRate.java:51-52) naming.md 원칙의 같은 개념에 같은 낱말 조항에 어긋난다. 미터 집계 판정(BillableMetricUsageService.java:72-77)은 archivedAt, activeFrom, billable_metric_period만 보므로 inactive_from이 응답, 화면, 감사 기록에만 쓰인다는 뒷부분도 사실이다. 다만 판정에 쓰지 않는 것은 기간 표를 정본으로 둔 설계라 계산이 틀리는 경로는 없고, 이름 불일치만 남는다. 맞추려면 V43이 만든 DB 열(내용 변경과 새 V__ 추가 모두 금지), API 응답 필드 inactive_from, 감사 detail 키, 프론트 타입 같은 공개 이름을 바꿔야 하므로 needs-decision이다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 미터의 inactive_from을 archived_from으로 바꾸지 않는다. 미터는 보관했다가 복원하면 같은 행의 active_from을 새로 잡는 활성 기간 모델이라 inactive_from이 active_from의 짝이고, 단가와 요금제의 archived_from은 바뀌지 않는 버전의 효력 기간 위에 얹는 보관 효력이라 다른 개념에 다른 낱말로 볼 수 있다. 맞추려 해도 적용된 V43 열 이름은 그대로 둘 수밖에 없어 API 필드, 이미 쌓인 감사 detail 키, 프론트 타입이 열 이름과 갈리고 외부 클라이언트가 깨지는 반면, 계산이 틀리는 경로는 없다. 이름 규칙 해석이 걸린 팀 전체 결정이라 두 분을 리뷰어로 지정한다. 다른 사람 영역이나 팀 전체에 걸려 박성종 님, 문인호 님께 Slack으로 알린다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/metric/entity/BillableMetric.java:65-66 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/pricing/entity/PriceRate.java:51-52 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:196 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:72-77 @ 5371d1e",
-        "docs/contributing/naming.md:14 @ 5371d1e"
+        "backend/src/main/java/com/meterengine/metric/entity/BillableMetric.java:78-105 @ af15d7f",
+        "backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:19-20 @ af15d7f",
+        "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:216 @ af15d7f",
+        "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:4 @ af15d7f",
+        "backend/src/main/java/com/meterengine/pricing/dto/PricePlanResponse.java:15 @ af15d7f",
+        "docs/contributing/naming.md:14 @ af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "propagation_note": "정점 0fe7d2a에서도 미터는 inactive_from, 단가와 요금제는 archived_from이다. 이름을 바꾸기로 하면 위층 사용처를 함께 맞춘다: backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:20,36,50,68, backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:172,342(열 이름을 그대로 두면 rs.getString만 유지), BillableMetricService.java:217 감사 키, frontend/src/lib/api/billable-metrics.ts:20,30, frontend/src/app/(console)/billable-metrics/state.ts:17, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:45, BillableMetricsTable.tsx:124, 시험 BusinessArchiveIntegrationTest.java:131, BillableMetricServiceTest.java:305, 그리고 backend/openapi.yaml 재생성.",
-      "question": "미터 보관 효력 월의 공개 이름(API 응답 필드와 감사 detail 키 inactive_from)을 단가와 요금제의 archived_from으로 맞출지, 맞춘다면 V43이 만든 DB 열 inactive_from은 그대로 두고 API와 감사 키만 바꿀지 정한다."
+      "propagation_note": "정점 0fe7d2a에서도 미터는 inactive_from, 단가와 요금제는 archived_from이다. 이름을 바꾸기로 하면 위층 사용처를 함께 맞춘다: backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:20,36,50,68, backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:172,342(열 이름을 그대로 두면 rs.getString만 유지), BillableMetricService.java:217 감사 키, frontend/src/lib/api/billable-metrics.ts:20,30, frontend/src/app/(console)/billable-metrics/state.ts:17, frontend/src/components/billable-metrics/BillableMetricsSection.tsx:45, BillableMetricsTable.tsx:124, 시험 BusinessArchiveIntegrationTest.java:131, BillableMetricServiceTest.java:305, 그리고 backend/openapi.yaml 재생성."
     },
     {
       "id": "Ck3-447-06",
@@ -5688,25 +5726,26 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "5371d1e에서 V42가 customer.external_id 열과 유일 인덱스를 만들고 Customer와 CustomerResponse가 그 값을 읽어 응답에 내보내지만, CreateCustomerRequest에 external_id가 없고 CustomerService.create도 생성자에 값을 넘기지 않아 #447에는 값을 쓰는 경로가 없다(CustomerRepository의 external_id 조회 메서드도 쓰는 곳이 없다). 그래서 고객 등록 패널과 조율 담당 커밋 03574b9의 createCustomer 본문이 보내는 external_id는 조용히 버려지고 응답과 목록에는 늘 null이 보이며, 쓰는 경로는 #450의 8bb17c3(7b1d1e5 CreateCustomerRequest:21-22)에서야 생긴다. 고치려면 V42와 응답 필드, 화면 입력을 #450으로 옮기거나(층 옮기기이고 #453의 V45가 V42 인덱스를 지운다) #450의 등록 경로를 #447로 앞당겨야 해서, DB 열이나 DTO 필드와 파일 셋 이상을 바꾸는 구조 결정이 필요하다. 화면 본문에서 external_id를 빼는 안은 03574b9의 의도를 거스른다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 스택이 main에 한 번에 머지돼 해소됐다. #447에 external_id 열과 응답 필드만 있고 값을 쓰는 경로가 없던 것은 층 사이의 공백이었다. #450(ec13ca29)이 머지되어 main에는 쓰는 경로가 있다. CreateCustomerRequest 21-22행이 external_id를 받고, CustomerController 128행이 CustomerRegistrationService.create로 넘긴다. create는 insertIfAbsent로 저장하고, 같은 값이 이미 있으면 기존 고객을 돌려준다. 화면의 createCustomer 본문(workspace-actions.ts 47행)이 보내는 값도 이제 저장되며, CD도 af15d7f 한 번만 돌아 운영에서 값이 버려지는 구간은 없었다. 앞당기거나 옮길 일이 없고 이미 적용된 V42는 그대로 둔다.",
       "evidence": [
-        "backend/src/main/resources/db/migration/V42__add_customer_external_id.sql:1-3 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:12-20 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:48-50 @ 5371d1e",
-        "frontend/src/app/(console)/workspace-actions.ts:42 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:21-22 @ 7b1d1e5"
+        "backend/src/main/java/com/meterengine/customer/dto/CreateCustomerRequest.java:21-22 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:115-128 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/service/CustomerRegistrationService.java:36-48 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/repository/CustomerRegistrationRepository.java:17-32 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:47 @ af15d7f",
+        "커밋 ec13ca29",
+        "커밋 af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "propagation_note": "앞당기는 안이면 #450 8bb17c3의 CustomerRegistrationService, CustomerRegistrationRepository(ON CONFLICT 멱등 등록)와 CreateCustomerRequest가 충돌하므로 #450에서 그 등록 경로로 합친다(#450은 T-yang 담당이 아니다). V42를 옮기거나 지우는 안은 #453 V45__create_organization_environments.sql:37-39가 customer_organization_external_id_unique를 지우므로 쓸 수 없다. 정점 사용처: CustomerController, CustomerRegistrationService, CustomerRegistrationRepository, CustomerRepository, query 패키지(WorkspaceQueryRepository, WorkspaceQueryService, SearchParameters), event 저장소(EventRepository, EventIssueRepository), frontend customers 화면과 workspace-actions.ts, ResourceSearchControls.tsx, lib/api/customers.ts, demo/bridge/state.py, demo/core/api_client.py, demo/sdk.",
-      "question": "#447의 외부 고객 ID(V42, Customer.externalId, CustomerResponse.external_id, 고객 등록 패널 입력)를 쓰는 경로 없이 둔 채 #450에서 완성되는 것으로 받아들일지, #450 8bb17c3의 external_id 등록 경로를 #447로 앞당길지 정한다."
+      "propagation_note": "앞당기는 안이면 #450 8bb17c3의 CustomerRegistrationService, CustomerRegistrationRepository(ON CONFLICT 멱등 등록)와 CreateCustomerRequest가 충돌하므로 #450에서 그 등록 경로로 합친다(#450은 T-yang 담당이 아니다). V42를 옮기거나 지우는 안은 #453 V45__create_organization_environments.sql:37-39가 customer_organization_external_id_unique를 지우므로 쓸 수 없다. 정점 사용처: CustomerController, CustomerRegistrationService, CustomerRegistrationRepository, CustomerRepository, query 패키지(WorkspaceQueryRepository, WorkspaceQueryService, SearchParameters), event 저장소(EventRepository, EventIssueRepository), frontend customers 화면과 workspace-actions.ts, ResourceSearchControls.tsx, lib/api/customers.ts, demo/bridge/state.py, demo/core/api_client.py, demo/sdk."
     },
     {
       "id": "Ck3-447-08",
@@ -5737,25 +5776,27 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "키 버전을 고르는 본체는 TossPaymentsCredentialService.historical(87-92행) 하나지만, 결제의 기준 시각을 골라 historical을 부르는 일은 확인 둘, 취소, 웹훅 네 곳에 따로 있고, 취소를 다루는 PaymentCancellationService 278-285행과 PaymentAttemptConfirmationService 175-182행은 시도 조회까지 같은 8줄이다. 정점에서는 23b1844(#453)가 기준 시각을 credentialUpdatedAt 우선으로 바꾸면서 같은 삼항식을 호출부마다 복사했고 결제와 재시도는 active와 갈라져, 규칙을 바꿀 때 호출부마다 손으로 옮겨야 한다는 점이 드러났다. 다만 #447에서는 네 곳이 같은 시도의 requestedAt을 넘겨 확인과 취소가 다른 키를 쓰는 경로는 아직 없다. 고치려면 서비스에 시도 단위 메서드를 두고 호출부 세 파일(취소, 확인, 웹훅)을 바꿔야 해 유지보수 분류의 파일 셋 이상에 걸린다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 키 버전 선택을 시도 단위 메서드로 더 모으지 않는다. main에서는 94a48a20이 고르는 본체를 TossPaymentsCredentialService의 historical(확인, 취소, 웹훅, 대사용)과 chargeable(새 결제와 카드 등록용)로 나눠 두었고, 확인 둘, 취소, 웹훅 네 곳은 모두 credentialUpdatedAt이 없으면 requestedAt을 쓰는 같은 식으로 historical을 불러 확인과 취소가 다른 키를 쓰는 경로가 없다. 남은 호출부(재시도, 재시도 자격, 미청구 확인)는 credential_updated_at이 없는 이전 행에 현재 키를 쓰는 등 일부러 다르게 골라 메서드 하나로 묶이지 않는다. 동작이 바뀌지 않는 결제 경로 정리에 일곱 파일을 바꾸는 위험이 이득보다 커서 그대로 둔다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:87-92 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:278-285 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:175-182 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsWebhookService.java:71-73 @ 5371d1e",
-        "커밋 23b1844"
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:91-107 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:117-123 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:191-197 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:287-293 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsWebhookService.java:81-87 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:113-123 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:446-456 @ af15d7f",
+        "커밋 94a48a20"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "propagation_note": "모으기로 하면 정점에서는 credentialUpdatedAt ?: requestedAt(카드 등록은 createdAt) 선택까지 그 메서드로 옮기고, git grep -n 'tossPaymentsCredentialService.historical(' 0fe7d2a가 보이는 PaymentAttemptConfirmationService 118,192, TossPaymentsWebhookService 82, PaymentCancellationService 288, PaymentAttemptService 143,192-196, PaymentRetryService 115-122, PaymentRetryEligibilityService 78,98, PaymentMethodRegistrationService 147,162를 맞춘다. #453 G-103 diff가 PaymentRetryService, PaymentAttemptService, PaymentMethodRegistrationService의 같은 호출부를 바꾸므로 그 뒤에 한다.",
-      "question": "결제별 키 버전 선택(기준 시각 고르기와 historical 호출)을 TossPaymentsCredentialService의 시도 단위 메서드 하나로 모으는 일을 #447에서 호출부 세 파일까지 바꿔 할지, 기준 시각이 credentialUpdatedAt으로 바뀌는 #453에서 G-103 수정과 함께 할지 정한다."
+      "propagation_note": "모으기로 하면 정점에서는 credentialUpdatedAt ?: requestedAt(카드 등록은 createdAt) 선택까지 그 메서드로 옮기고, git grep -n 'tossPaymentsCredentialService.historical(' 0fe7d2a가 보이는 PaymentAttemptConfirmationService 118,192, TossPaymentsWebhookService 82, PaymentCancellationService 288, PaymentAttemptService 143,192-196, PaymentRetryService 115-122, PaymentRetryEligibilityService 78,98, PaymentMethodRegistrationService 147,162를 맞춘다. #453 G-103 diff가 PaymentRetryService, PaymentAttemptService, PaymentMethodRegistrationService의 같은 호출부를 바꾸므로 그 뒤에 한다."
     },
     {
       "id": "Ck3-447-10",
@@ -5830,25 +5871,28 @@
       "merged_ids": [],
       "layer": 447,
       "branch": "feat/resource-archive",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "#446(c27b229)까지는 취소, 확인, 웹훅이 현재 키(find)를 썼고 키 저장은 옛 키를 남기지 않고 덮어썼다. #447은 이 셋을 historical로 바꿔 현재 키의 updated_at이 결제 시각보다 뒤면 이력 표만 보는데(TossPaymentsCredentialService 89-91행), V43은 이력 표를 빈 채로 만들고 옛 키는 이미 덮어써져 채울 값도 없다. 그래서 #445가 먼저 배포된 동안 키를 바꾼 도입사의 그 전 결제는 취소가 toss_payments_credential_missing으로 실패하고(PaymentCancellationService 286-294행), 확인은 계속 건너뛰어 pending으로 남는다. 이 창은 main 머지마다 배포하는 cd.yml 아래에서 층마다 머지할 때만 생기고 한 번에 머지하면 V31과 V43이 같이 들어가 생기지 않으므로, 넣을지는 Q4(배포 단위)에 달린 호환 수정이다. 정점도 historical이 같고 V48이 payment_attempt.credential_updated_at을 채우지 않아 기존 결제는 requestedAt으로 같은 길을 탄다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "결정(머지 뒤 지침): 스택이 main에 한 번에 머지돼 해소됐다. 이 문제는 #445, #446이 #447 없이 운영에 배포되어 있는 동안 키를 바꾼 경우에만 생긴다. 실제로는 스택 14개 커밋이 8초 안에 main에 들어갔고 CD는 af15d7f에서 한 번(run 40821245872)만 돌아, V31과 V43이 같은 배포로 적용되었다. 그래서 이력 없이 덮어쓴 옛 키는 운영에 있을 수 없다. main의 키 저장은 154행에서 덮어쓰기 전에 옛 키를 이력 표에 남기므로 그 뒤 결제는 historical()이 맞는 키를 찾는다. 스택 이전 결제는 MockPaymentGateway로 만들어져 도입사 키와 관계가 없으므로, 현재 키로 돌아가는 대체를 넣어도 맞는 키가 되지 않는다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:89-91 @ 5371d1e",
-        "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:40-42 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:286-294 @ 5371d1e",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentCancellationService.java:278-279 @ c27b229",
-        ".github/workflows/cd.yml:12-14 @ 5371d1e"
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:91-96 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:145-157 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:31-39 @ af15d7f",
+        "backend/src/main/resources/db/migration/V31__create_toss_payments_credential_and_payment_setting_tables.sql:1 @ af15d7f",
+        "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:40-42 @ af15d7f",
+        ".github/workflows/cd.yml:12-31 @ af15d7f",
+        "커밋 42e5ceaa",
+        "커밋 d6072d70",
+        "커밋 af15d7f"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "5371d1e",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "propagation_note": "정점 TossPaymentsCredentialService.historical(90-95행)도 같은 줄을 고친다. #453 G-103 diff는 historical()에 archived_at 조건을 넣지 않기로 했으니 이 대체와 겹치지 않는다.",
-      "question": "Q4에서 층마다 배포하기로 하면, #447 이전에 바뀐 키로 한 결제를 위해 historical()이 덮는 이력이 없을 때 현재 키로 돌아가게(#446 동작) 할지 정한다."
+      "propagation_note": "정점 TossPaymentsCredentialService.historical(90-95행)도 같은 줄을 고친다. #453 G-103 diff는 historical()에 archived_at 조건을 넣지 않기로 했으니 이 대체와 겹치지 않는다."
     },
     {
       "id": "Ck3-447-13",
@@ -6136,15 +6180,34 @@
         "G-188"
       ],
       "layer": 449,
-      "branch": "feat/customer-invoices",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 customer-payment-retry 명세 beforeAll이 /private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json을 바꿀 길 없이 읽고, 이 명세와 invoice-links 명세의 sql()은 meterengine-0696-e2e 컨테이너 이름을 박아 둔다. 저장소에는 이 파일과 컨테이너를 만드는 스크립트가 없고 frontend/README.md에도 안내가 없어, 다른 기계에서는 ENOENT나 No such container로 실패한다. 묶인 G-188 가운데 mvp 설정의 toss-state.json 경로는 #442 squash(1b2c555d)가 tmpdir로 바꿔 main에서 풀렸지만, 원인이 같은 명세 쪽 고정값은 그대로 남아 대표 판정을 따른다.",
+      "evidence": [
+        "frontend/e2e/customer-payment-retry.real.spec.ts:37 @ af15d7f",
+        "frontend/e2e/customer-payment-retry.real.spec.ts:58 @ af15d7f",
+        "frontend/e2e/invoice-links.real.spec.ts:54 @ af15d7f",
+        "frontend/playwright.mvp.config.ts:10 @ af15d7f",
+        "frontend/README.md:193-212 @ af15d7f",
+        "customer-payment-retry.real.spec.ts: 실패 Command failed: docker exec -i meterengine-0696-e2e (컨테이너 이름을 바꾼 환경, 고치기 전)",
+        "커밋 6eacbc5"
+      ],
+      "commits": [
+        "6eacbc56"
+      ],
+      "tests": [
+        "고친 뒤 E2E_DB_CONTAINER, E2E_BACKEND_ENV_FILE로 다른 이름 컨테이너에서 통과, 기본값으로도 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서도 customer-payment-retry 명세 beforeAll이 /private/tmp/me"
     },
     {
       "id": "C449-008",
@@ -6471,19 +6534,22 @@
       "merged_ids": [],
       "layer": 449,
       "branch": "feat/customer-invoices",
-      "status": "needs-decision",
-      "verdict": "confirmed",
-      "reason": "공개 조회는 PublicAccess이고 성공한 조회마다 invoice_viewed 감사 행을 쓰며, RateLimitFilter는 API 키만, #454 호출 제한은 로그인과 가입만 다뤄 이 경로에 제한이 없다는 지적은 main에서도 맞다. 그러나 #448의 RequestAuditFilter가 익명 요청을 포함한 모든 /v1 요청과 거절된 요청에도 감사 행을 남기므로 이 경로만 제한하거나 invoice_viewed를 줄여도 감사 테이블 증가는 남는다. 익명 요청 전체의 호출 제한을 어디에 어떤 기준으로 둘지는 팀 전체에 거는 결정이고, 기존 auth_request_rate_limit 표를 쓰려면 새 마이그레이션도 필요하다.",
+      "status": "refuted",
+      "verdict": "refuted",
+      "reason": "결정(머지 뒤 지침): 바꾸지 않는다. 바꾸지 않는다. RequestAuditFilter는 #448 설계대로 보안 필터 맨 앞에서 모든 /v1 요청을 감사한다. 익명 요청의 401과 404, 제한에 걸린 429도 기록하므로 이 경로만 제한해도 감사 행은 계속 늘고, 토큰이 없어도 같은 증가를 만들 수 있다. 유효 토큰으로 늘어나는 양은 요청당 invoice_viewed 한 행과 색인 조회 몇 번이고, 토큰은 32자 무작위값이며 최대 90일 뒤 만료되고 도입사가 폐기할 수 있다. 익명 요청 전체를 제한하려면 Caddy 플러그인 이미지(배포 영역)를 쓰거나, 감사 필터 앞에 IP 필터를 두고 모든 공개 중계가 IP를 넘겨야 한다. 둘 다 팀 전체에 걸리는 변경이라 낮은 심각도에 비해 비용과 정상 사용자를 막을 위험이 커서 지금은 두지 않는다. 다른 사람 영역이나 팀 전체에 걸려 박성종 님, 문인호 님께 Slack으로 알린다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:202-207 @ af15d7f",
-        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:87-98 @ af15d7f",
-        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:39-43 @ af15d7f",
-        "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96 @ af15d7f",
-        "backend/src/main/java/com/meterengine/account/controller/SignupController.java:86 @ af15d7f",
-        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:78-83 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/security/SecurityConfig.java:91-100 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/security/RequestAuditFilter.java:67-94 @ af15d7f",
         "backend/src/main/java/com/meterengine/audit/service/RequestAuditService.java:30 @ af15d7f",
-        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:313-317 @ af15d7f",
-        "deploy/caddy/Caddyfile:60-64 @ af15d7f",
+        "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:311-317 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:202-207 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:249-257 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:125-142 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/dto/CreateInvoiceViewLinkRequest.java:12 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:39-43 @ af15d7f",
+        "deploy/compose.prod.yml:44 @ af15d7f",
+        "deploy/caddy/Caddyfile:57-64 @ af15d7f",
+        "frontend/src/app/invoice-links/lookup/route.ts:33 @ af15d7f",
         "backend/src/main/resources/db/migration/V49__create_auth_request_rate_limits.sql:2 @ af15d7f"
       ],
       "commits": [],
@@ -6492,8 +6558,7 @@
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
-      },
-      "question": "인증 없는 /v1 요청(공개 인보이스 조회와 재시도 포함)에 호출 제한을 둘지, 둔다면 Caddy와 백엔드 필터 중 어디에서 IP와 토큰 중 무엇을 기준으로 어떤 한도로 둘지 정해 주세요."
+      }
     },
     {
       "id": "D-175",
@@ -6816,15 +6881,35 @@
       "id": "C452-006",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 tenant-service.real.spec.ts 244-245행이 이번 달(baseline.month)을 되돌릴 수 없게 확정하고, DraftInvoiceService.preview가 그 달에 확정된 고객을 청구 예정액에서 빼므로 같은 LUMEN_E2E_ENV_FILE로 같은 달에 다시 돌리면 139행 expectedDraft toBeDefined에서 원인 안내 없이 실패한다. README 검증 절(90행)은 실행마다 새로 시드해야 한다는 조건을 적지 않았고, 38행은 이 키를 카드 등록 링크용으로만, 42행은 인보이스 확정을 하지 않는다고 적어 E2E 동작과 어긋난다. main 위 이 파일의 커밋은 c5dfb1a4, 94a48a20뿐이라 고친 커밋이 없다.",
+      "evidence": [
+        "demo/llm-service/e2e/tenant-service.real.spec.ts:244-245 @ af15d7f",
+        "demo/llm-service/e2e/tenant-service.real.spec.ts:137-139 @ af15d7f",
+        "demo/llm-service/e2e/tenant-service.real.spec.ts:86 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java:50-61 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoice/controller/InvoiceController.java:128-131 @ af15d7f",
+        "demo/llm-service/README.md:38,42 @ af15d7f",
+        "demo/llm-service/README.md:90 @ af15d7f",
+        "커밋 163a6c5"
+      ],
+      "commits": [
+        "163a6c58"
+      ],
+      "tests": [
+        "Lumen 실화면은 띄우는 법이 없어 workspace 응답(그 달 본인 고객 인보이스)과 대조, demo typecheck, lint 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서도 tenant-service.real.spec.ts 244-245행이 이번 달(baseline."
     },
     {
       "id": "C452-007",
@@ -7034,15 +7119,32 @@
       "id": "C452-014",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 demo/llm-service/playwright.config.ts outputDir가 /private/tmp/meterengine-llm-tenant-2026-10-27/results로 박혀 환경변수로 바꿀 수 없고, helpers.ts ARTIFACT_DIR 기본값도 같은 날짜 고정 경로라 metering-recovery 명세 45행과 screenshot()이 그 경로를 만든다. /private가 없는 Linux 일반 사용자 환경에서는 mkdir가 EACCES로 실패하고, README 검증 절에는 LUMEN_E2E_ARTIFACT_DIR도 우회 방법도 없다. main에서 이 경로를 고친 커밋은 없다.",
+      "evidence": [
+        "demo/llm-service/playwright.config.ts:12 @ af15d7f",
+        "demo/llm-service/e2e/helpers.ts:8,81 @ af15d7f",
+        "demo/llm-service/e2e/metering-recovery.real.spec.ts:45 @ af15d7f",
+        "demo/llm-service/README.md:90 @ af15d7f",
+        "커밋 8dbbd99"
+      ],
+      "commits": [
+        "8dbbd99d"
+      ],
+      "tests": [
+        "Lumen 실화면은 띄우는 법이 없어 playwright test --list로 설정 읽기 확인, demo typecheck, lint 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main의 demo/llm-service/playwright.config.ts outputDir가 /priv"
     },
     {
       "id": "C452-015",
@@ -7364,43 +7466,99 @@
       "id": "C453-009",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 mvp.real.spec.ts 145행이 now+1시간 미래 이벤트를 보내고 151-152행이 month 없이 unbilled-events를 불러 future_timestamp.event_count 1을 단언한다. UnbilledEventService.get은 month가 없으면 KST 현재 달을 쓰고 findFutureTimestamps는 occurred_at이 그 달 끝(endAt) 미만인 행만 세므로, KST 월말 마지막 1시간에 돌면 이벤트가 다음 달로 넘어가 0건이 되어 단언이 깨진다. 이 파일은 94a48a20(#453) 뒤 바뀐 커밋이 없다.",
+      "evidence": [
+        "frontend/e2e/mvp.real.spec.ts:145 @ af15d7f",
+        "frontend/e2e/mvp.real.spec.ts:151-152 @ af15d7f",
+        "frontend/e2e/mvp.real.spec.ts:36 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/service/UnbilledEventService.java:29-32 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/service/UnbilledEventService.java:38-48 @ af15d7f",
+        "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:65-71 @ af15d7f",
+        "커밋 320bc27"
+      ],
+      "commits": [
+        "320bc27b"
+      ],
+      "tests": [
+        "바뀐 단언은 main에서 앞 단계(발급 키 창)에 막혀 실행되지 않는다. UnbilledEventService의 month 범위와 대조, lint, typecheck 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서도 mvp.real.spec.ts 145행이 now+1시간 미래 이벤트를 보내고 151-152행이"
     },
     {
       "id": "C453-011",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 query-workspace.real.spec.ts는 playwright.config.ts projects(auth 두 개), payment와 workspace 설정(계약 명세 하나씩), playwright.mvp.config.ts scenarios(10개) 어디에도 없고, git grep으로도 이 파일 밖에서 이름이 나오지 않아 어떤 명령으로도 돌지 않는다. spec이 찾는 버튼과 레이블은 main 화면 코드에 모두 있어 버린 명세로 보기 어렵고, QUERY_FRONTEND_URL 기본값 33147은 mvp 설정 baseURL과 같다.",
+      "evidence": [
+        "frontend/playwright.mvp.config.ts:10,16 @ af15d7f",
+        "frontend/playwright.config.ts:18-21 @ af15d7f",
+        "frontend/playwright.payment.config.ts:5 @ af15d7f",
+        "frontend/playwright.workspace.config.ts:10 @ af15d7f",
+        "frontend/e2e/query-workspace.real.spec.ts:7 @ af15d7f",
+        "frontend/playwright.mvp.config.ts:23 @ af15d7f",
+        "커밋 b78630c"
+      ],
+      "commits": [
+        "b78630cf"
+      ],
+      "tests": [
+        "playwright -c playwright.mvp.config.ts --list에 나오고 query-workspace.real.spec.ts 1건 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서도 query-workspace.real.spec.ts는 playwright.config.ts p"
     },
     {
       "id": "C453-012",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-e2e",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 permissions.real.spec.ts beforeAll도 같은 /private/tmp 고정 JSON을 환경변수 없이 읽고, sql()은 meterengine-0696-e2e 컨테이너를 박아 두어 키 지문 비교와 만료 키 조작이 그 컨테이너에 묶인다. 이 명세는 playwright.mvp.config.ts 시나리오 목록에 들어 있지만 README에 준비 절차가 없다. C449-005와 원인은 같고 이 파일만 #453이 들였으므로 따로 둔다.",
+      "evidence": [
+        "frontend/e2e/permissions.real.spec.ts:37-38 @ af15d7f",
+        "frontend/e2e/permissions.real.spec.ts:59 @ af15d7f",
+        "frontend/playwright.mvp.config.ts:10 @ af15d7f",
+        "frontend/README.md:193-212 @ af15d7f",
+        "permissions.real.spec.ts: 실패 Command failed: docker exec -i meterengine-0696-e2e (컨테이너 이름을 바꾼 환경, 고치기 전)",
+        "커밋 82ac370"
+      ],
+      "commits": [
+        "82ac3709"
+      ],
+      "tests": [
+        "고친 뒤 E2E_DB_CONTAINER, E2E_BACKEND_ENV_FILE로 다른 이름 컨테이너에서 통과, 기본값으로도 통과",
+        "b78630c 검사: frontend lint, typecheck, build, 단위 시험, demo 검사 통과"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main의 permissions.real.spec.ts beforeAll도 같은 /private/tmp 고정"
     },
     {
       "id": "D-204",
@@ -12156,6 +12314,78 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "customer-payment-retry.real.spec.ts 통과(기본 컨테이너 이름). 컨테이너 이름을 바꾼 환경에서도 E2E_DB_CONTAINER, E2E_BACKEND_ENV_FILE로 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "invoice-links.real.spec.ts 통과(기본 컨테이너 이름). 컨테이너 이름을 바꾼 환경에서도 E2E_DB_CONTAINER, E2E_BACKEND_ENV_FILE로 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(기본 컨테이너 이름). 컨테이너 이름을 바꾼 환경에서도 E2E_DB_CONTAINER, E2E_BACKEND_ENV_FILE로 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "main 기준선 실패: mvp.real.spec.ts 130행 locator.click Timeout(2db50b4 확인창, 문인호 님이 고침). 기준선과 같은 단계라 나빠지지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace; playwright test -c playwright.mvp.config.ts --list",
+      "detail": "query-workspace 1건 통과, mvp 설정 목록에 나온다"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm -r typecheck && lint && test && build; cd llm-service && corepack pnpm exec playwright test --list",
+      "detail": "모두 성공. Lumen 실화면 명세는 띄우는 법이 없어 목록만 확인"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -12588,6 +12818,11 @@
       "branch": "fix/s456-t-yang-readme",
       "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
       "at": "2026-10-29T16:20:31+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "at": "2026-10-29T16:25:47+09:00"
     }
   ],
   "usage_log": [],
@@ -12615,7 +12850,9 @@
     "2026-10-29 16:10 KST: 박성종 님 머지 뒤 지침(#논의 스택 스레드 15:49)을 양성지 님이 붙여 넣어 반영한다. 주제 브랜치는 push하면 바로 main으로 PR을 연다. 300줄 상한은 적용하지 않고 주제별로만 나눈다. needs-decision은 세션이 근거를 PR 본문에 적고 정해서 고치며, 다른 사람 영역이나 팀 전체에 걸리면 그 사람을 리뷰어로 지정한다. 같은 파일을 건드리면 나중에 머지하는 PR이 main을 받는다. 그래서 문인호 님 쪽 파일도 필요하면 고치되, 문인호 님이 고치기로 한 environment-cycle, mvp 명세 실패(NT-yang-002, 003)는 겹치지 않게 그대로 둔다.",
     "2026-10-29 16:10 KST: 연 PR: #472 fix/s456-t-yang-invoice-retry, #473 fix/s456-t-yang-public-invoice, #474 fix/s456-t-yang-lumen, #475 fix/s456-t-yang-demo-bridge-web, #476 fix/s456-t-yang-toss-key, #477 fix/s456-t-yang-audit-env(문인호 님 리뷰어 지정). 리뷰어는 CODEOWNERS가 붙였다.",
     "2026-10-29: #478 fix/s456-t-yang-ops-metrics(G-133)를 열고 경보 결정 때문에 박성종 님과 문인호 님을 리뷰어로 지정했다.",
-    "2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다."
+    "2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다.",
+    "2026-10-29: #480 fix/s456-t-yang-e2e(C449-005, C453-012, C452-014, C452-006, C453-009, C453-011)를 열었다.",
+    "2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다."
   ],
   "final_checks": [
     {
