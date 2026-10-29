@@ -264,7 +264,7 @@ public class OrganizationPeopleService {
           || request.name() == null
           || request.name().isBlank()
           || request.password() == null
-          || request.password().length() < 8
+          || request.password().length() < OrganizationPerson.PASSWORD_MIN_LENGTH
           || request.consents() == null)
         throw new InvalidRequestException(ErrorCode.VALIDATION_ERROR);
       List<MembershipConsent> accepted =
