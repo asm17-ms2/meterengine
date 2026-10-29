@@ -1,5 +1,5 @@
 결과: 끝 상태 328/328건 (fixed 261, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 1, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 1개(마지막 1cd2190)
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b)
 정할 것: 1건 (G-187). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -142,7 +142,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C445-002 | #445 | ad5872e | 결제 설정과 토스 키 변경의 키 모드 검사 | test_API_키로_live로_바꾸면_409_payment_mode_mismatch이고_설정을_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 200 |
 | C445-005 | #445 | ab25813 | 카드 등록 링크 생성의 키 모드 검사 | API_키의_모드가_결제_모드와_다르면_링크를_만들지_않고_409이고_같으면_만든다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | Ck2-016 | #445 | fdf3b2c | 예약 작업 스레드 수를 작업 수 이상으로 | 예약_스레드_풀은_예약_작업_수_이상이다: 실패 Expecting actual: 2 to be greater than or equal to: 4 |
-| Ck2-017 | #445 | 1cd2190 | 새 마이그레이션이나 공개 API 없이, 이미 있는 scheduled_job_run 기록을 워터마크로 써서 실 | 없음(backend build 시험 1379건 통과(1cd2190)) |
+| Ck2-017 | #445 | 1cd2190, 8edf94b | 새 마이그레이션이나 공개 API 없이, 이미 있는 scheduled_job_run 기록을 워터마크로 써서 실 | 없음(backend build 시험 1379건 통과(1cd2190); #490 리뷰 p4 반영 뒤 backend build 시험 1381건 통과(8edf94b)) |
 | D-042 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-085 | #445 | 3db6a0e | 카드, 키 없을 때 결제 버튼 대신 준비 안내 | a payment can be requested only with the mode's Toss key and a registered card: 실패 ERR_MODULE_NOT_FOUND card-state.ts |
 | D-105 | #445 | 4f5aa20 | 결제 모드 변경 버튼만 패널 폭 전체 | 없음(보이는 변경: 실화면 도입사 설정 1440, 390 폭 고치기 전과 뒤 캡처(evidence/fe-445/before, after). 고친 뒤 버튼이 내용 폭이다; lint, build 통과) |
@@ -471,3 +471,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #489 fix/s456-t-yang-pricing-archive(Nk3-006, Ck3-447-03, Ck3-447-06)를 열고 문인호 님을 리뷰어로 지정했다.
 - 2026-10-29: #490 fix/s456-t-yang-reconcile-catchup(Ck2-017)를 열고 문인호 님을 리뷰어로 지정했다.
 - 2026-10-29: G-187 수정(fix/s456-t-yang-ci-tests a9ce8d1, .github/workflows/ci.yml 등)은 로컬 커밋까지 했으나 push가 거절됐다. gh OAuth 토큰에 workflow 권한이 없어 워크플로 파일을 바꾸는 push를 GitHub가 막았다. 우회하지 않고 사용자에게 권한 갱신(gh auth refresh -s workflow)을 요청했다. G-187은 그때까지 needs-decision으로 둔다.
+- 2026-10-29: #490 박성종 님 리뷰 p4(성공 기록 없이 첫 대사가 실패하면 다음 실행이 첫 실패일을 건너뜀)를 받아 가장 이른 실행의 창부터 맞추게 고쳤다(8edf94b).
