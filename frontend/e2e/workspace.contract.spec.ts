@@ -269,3 +269,16 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
     expect(call.size).toBeUndefined();
   }
 });
+
+test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다", async ({ page }) => {
+  await page.goto("/invoices");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await form.locator("summary").click();
+  await form.getByLabel("최소 금액 (원)").fill("5000");
+  await form.getByLabel("최대 금액 (원)").fill("100");
+  await form.getByRole("button", { name: "조건 적용", exact: true }).click();
+  await expect(form.getByRole("alert")).toHaveText("최대 금액은 최소 금액보다 작을 수 없습니다.");
+  await expect(form.getByLabel("최대 금액 (원)")).toBeFocused();
+  expect(new URL(page.url()).searchParams.get("min_amount")).toBeNull();
+});
+

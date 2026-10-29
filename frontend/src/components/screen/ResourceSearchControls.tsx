@@ -13,7 +13,7 @@ import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { QueryOption } from "@/lib/api/search";
 import { PAGE_SIZE_OPTIONS, type ListQuery, type ListQueryOverrides } from "@/lib/list-query";
-import { submittedResourceParameters } from "@/lib/resource-query";
+import { resourceRangeErrors, submittedResourceParameters, type ResourceRangeError } from "@/lib/resource-query";
 
 // 네이티브 입력칸의 min-height와 같게 맞춰 조회 줄의 아래 선을 하나로 둔다.
 const FILTER_CONTROL_HEIGHT = 44;
@@ -67,6 +67,8 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
   ].filter(Boolean).length;
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(appliedAdvancedCount > 0);
 
+  const [rangeErrors, setRangeErrors] = useState<ResourceRangeError[]>([]);
+
   function change(overrides: ListQueryOverrides) {
     setDraft(current => ({ ...current, ...overrides }));
   }
@@ -87,7 +89,28 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
     const data = new FormData(event.currentTarget);
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const parameters = submittedResourceParameters(data, submitter instanceof HTMLButtonElement ? { name: submitter.name, value: submitter.value } : undefined);
+    const errors = resourceRangeErrors(parameters);
+    setRangeErrors(errors);
+    if (errors.length) {
+      const field = event.currentTarget.elements.namedItem(errors[0].field);
+      if (field instanceof HTMLInputElement) {
+        const disclosure = field.closest("details");
+        if (disclosure) disclosure.open = true;
+        setIsAdvancedOpen(true);
+        field.focus();
+      }
+      return;
+    }
     router.push(`${pathname}${parameters.size ? `?${parameters}` : ""}`);
+  }
+
+  function rangeErrorProps(field: ResourceRangeError["field"]) {
+    return rangeErrors.some(error => error.field === field) ? { "aria-invalid": true, "aria-describedby": `${formId}-${field}-error` } : {};
+  }
+
+  function rangeErrorText(field: ResourceRangeError["field"]) {
+    const error = rangeErrors.find(candidate => candidate.field === field);
+    return error ? <span role="alert" className="field-error" id={`${formId}-${field}-error`}>{error.message}</span> : null;
   }
 
   async function loadMetrics(q = metricSearchText.current) {
@@ -119,9 +142,9 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
         <div className="workspace-actions" style={{ marginTop: 12 }}>
           <label className="workspace-field"><span>정렬 기준</span><select name="sort" value={draft.sort ?? SORTS[resource][0].value} onChange={event => change({ sort: event.target.value })}>{SORTS[resource].map(sort => <option key={sort.value} value={sort.value}>{sort.label}</option>)}</select></label>
           <label className="workspace-field"><span>정렬 방향</span><select name="order" value={draft.order ?? (resource === "invoices" ? "desc" : "asc")} onChange={event => change({ order: event.target.value as ListQuery["order"] })}><option value="asc">오름차순</option><option value="desc">내림차순</option></select></label>
-          {capabilities.amount && <><label className="workspace-field"><span>최소 금액 (원)</span><input type="number" name="min_amount" min="0" step="1" value={draft.minAmount ?? ""} onChange={event => change({ minAmount: event.target.value })} /></label><label className="workspace-field"><span>최대 금액 (원)</span><input type="number" name="max_amount" min="0" step="1" value={draft.maxAmount ?? ""} onChange={event => change({ maxAmount: event.target.value })} /></label></>}
+          {capabilities.amount && <><label className="workspace-field"><span>최소 금액 (원)</span><input type="number" name="min_amount" min="0" step="1" value={draft.minAmount ?? ""} onChange={event => change({ minAmount: event.target.value })} /></label><label className="workspace-field"><span>최대 금액 (원)</span><input type="number" name="max_amount" min="0" step="1" value={draft.maxAmount ?? ""} onChange={event => change({ maxAmount: event.target.value })} {...rangeErrorProps("max_amount")} />{rangeErrorText("max_amount")}</label></>}
           {capabilities.mode && (!query.environment || query.environment === "legacy") && <label className="workspace-field"><span>결제 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 결제 환경</option><option value="test">테스트</option><option value="live">실제</option></select></label>}
-          {resource === "invoices" && <><label className="workspace-field"><span>확정 시각 시작 (KST)</span><input type="datetime-local" step="1" name="from" value={draft.from ?? ""} onChange={event => change({ from: event.target.value })} /></label><label className="workspace-field"><span>확정 시각 종료 전 (KST)</span><input type="datetime-local" step="1" name="to" value={draft.to ?? ""} onChange={event => change({ to: event.target.value })} /></label></>}
+          {resource === "invoices" && <><label className="workspace-field"><span>확정 시각 시작 (KST)</span><input type="datetime-local" step="1" name="from" value={draft.from ?? ""} onChange={event => change({ from: event.target.value })} /></label><label className="workspace-field"><span>확정 시각 종료 전 (KST)</span><input type="datetime-local" step="1" name="to" value={draft.to ?? ""} onChange={event => change({ to: event.target.value })} {...rangeErrorProps("to")} />{rangeErrorText("to")}</label></>}
           {capabilities.size && <label className="workspace-field"><span>페이지 크기</span><select aria-label="페이지 크기" name="size" value={draft.size} onChange={event => change({ size: Number(event.target.value) })}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건씩</option>)}</select></label>}
         </div>
       </details>
