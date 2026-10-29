@@ -12,11 +12,13 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   if (!result.ok) return <><WorkspaceHeader title="과금 운영" kicker="도입사 콘솔" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
   const data = result.data;
   const unresolved = data.unresolved_invoice_payments;
+  const paymentModeName = data.payment_mode === "test" ? "테스트" : "실결제";
+  const missingSettings = [!data.supplier_configured && "공급자 정보 미입력", !data.payment_configured && `토스페이먼츠 ${paymentModeName} 키 미등록`].filter(Boolean);
   const steps = [
     { title: "과금할 고객 연결", detail: `${data.customer_count}명의 고객`, isComplete: data.customer_count > 0, href: "/customers" },
     { title: "사용량과 요금 정의", detail: `${data.billable_metric_count}개 미터. 단가와 적용 월을 확인하세요.`, isComplete: data.billable_metric_count > 0, href: `/pricing?month=${month}` },
     { title: "서버 연동 키 발급", detail: "ingest와 read 권한으로 수집과 고객 화면을 연결하세요.", isComplete: data.active_api_key_count > 0, href: "/integrations" },
-    { title: "공급자와 결제 설정", detail: `현재 결제 모드: ${data.payment_mode === "test" ? "테스트" : "실결제"}`, isComplete: data.supplier_configured && data.payment_configured, href: "/settings" },
+    { title: "공급자와 결제 설정", detail: `${missingSettings.length ? `${missingSettings.join(", ")}. ` : ""}현재 결제 모드: ${paymentModeName}`, isComplete: data.supplier_configured && data.payment_configured, href: "/settings" },
   ];
   const formatMoney = (value: number) => `${new Intl.NumberFormat("ko-KR").format(value)}원`;
   return <>

@@ -43,6 +43,12 @@ test("overview keeps the selected month and shows unresolved invoices from every
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
+  await login(page, "member@contract.local", "/overview");
+  const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
+  await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 결제 모드: 테스트", { exact: true })).toBeVisible();
+});
+
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
   expect((await request.get("/health")).status()).toBe(200);
   for (const path of ["/customers?q=abc", "/admin/users", "/organizations"]) {
