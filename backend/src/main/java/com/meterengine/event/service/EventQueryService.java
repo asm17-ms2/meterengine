@@ -15,10 +15,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class EventQueryService implements EventPresence {
+  private static final TypeReference<Map<String, Object>> PROPERTIES = new TypeReference<>() {};
   private static final int MAX_EXPORT_ROWS = 10000;
 
   // 원본 속성은 백엔드와 프론트 프록시가 응답 본문으로 여러 벌 들고 있어 합계를 묶는다.
@@ -113,7 +115,7 @@ public class EventQueryService implements EventPresence {
     try {
       if (!jsonMapper.readTree(properties).isObject())
         throw EventSearch.invalid("properties", "속성 조건은 JSON 객체여야 합니다");
-      if (!new StorableJsonValidator().isValid(jsonMapper.readValue(properties, Map.class), null))
+      if (!new StorableJsonValidator().isValid(jsonMapper.readValue(properties, PROPERTIES), null))
         throw EventSearch.invalid("properties", "속성 조건에 저장할 수 없는 문자나 숫자가 있습니다");
     } catch (tools.jackson.core.JacksonException exception) {
       throw EventSearch.invalid("properties", "속성 조건을 JSON 객체로 읽을 수 없습니다");
