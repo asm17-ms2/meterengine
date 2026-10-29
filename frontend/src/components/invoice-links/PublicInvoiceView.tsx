@@ -22,6 +22,7 @@ const UNREADY_MESSAGES = {
   invalid: { title: "사용할 수 없는 조회 링크입니다", description: "링크가 만료되었거나 폐기되었을 수 있습니다. 청구서를 보낸 담당자에게 새 링크를 요청해 주세요." },
   unavailable: { title: "청구서를 불러오지 못했습니다", description: "잠시 후 다시 조회해 주세요. 계속 연결되지 않으면 청구서를 보낸 담당자에게 문의해 주세요." },
 };
+const RETRY_FAILED = "다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
 const LINE_NAMES: Record<string, string> = { base_fee: "기본료", minimum_adjustment: "최소 과금 조정" };
 
 type ViewState = { kind: "loading" } | { kind: "missing" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoice; revision: number };
@@ -50,6 +51,7 @@ export function PublicInvoiceView() {
       if (!response.ok) {
         if (response.status === 404) { try { sessionStorage.removeItem(STORAGE_KEY); } catch {} tokenRef.current = ""; }
         setView({ kind: response.status === 404 ? "invalid" : "unavailable" });
+        if (isRefresh && response.status !== 404) setFeedback(RETRY_FAILED);
         return;
       }
       const invoice = await response.json() as PublicInvoice;
@@ -57,7 +59,11 @@ export function PublicInvoiceView() {
       setView({ kind: "ready", invoice, revision: requestId });
       setPaymentRequestState("idle");
       if (isRefresh) setFeedback("최신 결제 상태를 조회했습니다.");
-    } catch { if (!signal?.aborted && requestId === requestRef.current) setView({ kind: "unavailable" }); }
+    } catch {
+      if (signal?.aborted || requestId !== requestRef.current) return;
+      setView({ kind: "unavailable" });
+      if (isRefresh) setFeedback(RETRY_FAILED);
+    }
     finally { if (requestId === requestRef.current) setIsRefreshing(false); }
   }
 
@@ -90,6 +96,8 @@ export function PublicInvoiceView() {
     window.addEventListener("hashchange", openLink);
     return () => { controller?.abort(); window.removeEventListener("hashchange", openLink); };
   }, []);
+
+  function retryLoad() { setFeedback(""); void load(tokenRef.current, true); }
 
   async function copy() {
     try {
@@ -126,10 +134,10 @@ export function PublicInvoiceView() {
   return <main id="main-content" className={styles.frame}>
     <header className={styles.brand}><strong>MeterEngine</strong><span>청구서 조회</span></header>
     {view.kind === "loading" ? <section className={styles.message} aria-live="polite" aria-busy="true"><h1>청구서를 불러오고 있습니다</h1><p>확정 청구와 최신 결제 상태를 확인하고 있습니다.</p></section>
-      : !invoice ? <section className={styles.message}>
+      : !invoice ? <section className={styles.message} aria-busy={isRefreshing}>
         <h1>{unready?.title}</h1>
         <p>{unready?.description}</p>
-        {view.kind === "unavailable" && <button type="button" onClick={() => load(tokenRef.current)}>다시 조회</button>}
+        {view.kind === "unavailable" && <><button type="button" onClick={retryLoad} disabled={isRefreshing}>{isRefreshing ? "조회 중" : "다시 조회"}</button><p role="status" className={styles.retryStatus}>{feedback}</p></>}
       </section> : <article className={styles.invoice} aria-busy={isRefreshing}>
         <div className={styles.heading}><div><h1>{formatKoreanMonth(invoice.month)} 청구서</h1><p>{invoice.customer_name}님께 {invoice.organization_name}에서 발행한 청구서입니다.</p></div><div className={styles.actions}><button type="button" onClick={() => load(tokenRef.current, true)} disabled={isRefreshing || paymentRequestState === "submitting"}>{isRefreshing ? "조회 중" : "결제 상태 새로 조회"}</button><button type="button" onClick={copy}>조회 링크 복사</button></div></div>
         {invoice.payment.mode === "test" && <p className={styles.testNotice}>테스트 모드의 청구 내역입니다. 실제 결제 내역과 구분해 확인해 주세요.</p>}

@@ -342,6 +342,14 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     await page.setViewportSize({ width: 390, height: 844 });
     await assertLayout(page, "public-unavailable-mobile.png");
     await page.unroute("**/invoice-links/lookup");
+    let releaseOutage = () => {};
+    const outage = new Promise<void>(resolve => { releaseOutage = resolve; });
+    await page.route("**/invoice-links/lookup", async route => { await outage; await route.fulfill({ status: 503, contentType: "application/json", body: '{"message":"local outage fixture"}' }); });
+    await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
+    await expect(page.getByRole("button", { name: "조회 중", exact: true })).toBeDisabled();
+    releaseOutage();
+    await expect(page.locator("main").getByRole("status")).toHaveText("다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    await page.unroute("**/invoice-links/lookup");
     await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);

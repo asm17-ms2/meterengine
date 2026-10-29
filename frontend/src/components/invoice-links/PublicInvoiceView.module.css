@@ -12,6 +12,7 @@
 .frame button:disabled { opacity: .6; cursor: wait; }
 .frame button:focus-visible, .tableScroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .message button { margin-top: 24px; }
+.message .retryStatus { margin-top: 12px; color: var(--ink); }
 .testNotice { background: #f7f4ff; border: 1px solid #b5a8ec; border-radius: 6px; padding: 14px 18px; color: #48358f; margin: 28px 0 0; }
 .feedback { color: #176d59; margin: 20px 0 0; }
 .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; padding: 28px 0; margin: 32px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
