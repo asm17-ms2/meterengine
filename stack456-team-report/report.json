@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T17:56:29+09:00",
+  "updated_at": "2026-10-29T18:06:32+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -37,7 +37,8 @@
     "fix/s456-t-yang-auth-session": "34e8959",
     "fix/s456-t-yang-month-picker": "6dd3dc9",
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
-    "fix/s456-t-yang-pricing-archive": "a937f8f"
+    "fix/s456-t-yang-pricing-archive": "a937f8f",
+    "fix/s456-t-yang-reconcile-catchup": "1cd2190"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -4942,26 +4943,38 @@
       "id": "Ck2-017",
       "merged_ids": [],
       "layer": 445,
-      "branch": "feat/billing-payments",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "reconcile()은 실행 시각과 관계없이 그날 04:00 KST를 슬롯으로 잡고(PaymentJobScheduler.java:65-74), ScheduledJobRunService.run은 그 슬롯 행이 이미 있으면 성공, 실패 상태와 관계없이 작업을 건너뛰며, 대사 창은 슬롯에서만 계산한 고정 하루라 다음 날 실행은 앞날 창을 보지 않는다. 토스 거래 조회가 거절이나 Unknown이면 그 키는 FAILED로만 세고 끝나고, 날짜를 받아 다시 돌리는 API, 명령, 런북은 층 sha와 정점 어디에도 없어 실패를 막는 근거를 찾지 못했다(backend/README와 deploy/README에도 경보 표와 04:00 실행 안내뿐이다). 정점 0fe7d2a의 스케줄러는 같은 코드이고, 대사 서비스와 슬롯 선점을 바꾼 위층 커밋 23b1844, 35e8bf3, 00c3032도 창 계산과 선점 방식은 그대로 두었다. 고치려면 키별 워터마크로 밀린 날을 따라잡기(새 테이블이나 열이 필요해 새 V__ 파일 금지에 걸린다)와 날짜를 받는 운영자 재실행 API 추가(새 공개 API, 권한 범위, openapi.yaml, 런북) 중 하나를 골라야 해서 결정이 필요하다.",
+      "reason": "결정(머지 뒤 지침): 새 마이그레이션이나 공개 API 없이, 이미 있는 scheduled_job_run 기록을 워터마크로 써서 실패하거나 빠진 날을 다음 실행이 자동으로 따라잡게 하기로 정한다. 대사는 마지막으로 실패 없이 끝난 슬롯(status succeeded, failed_count 0)부터 이번 슬롯까지를 한 창으로 맞추고 최대 7일로 묶으며, 불일치 기록은 UNIQUE NULLS NOT DISTINCT와 insertIfAbsent로 행과 지표가 늘지 않아 겹쳐 돌려도 안전하다. 키별 워터마크는 새 V__가 필요하고, 날짜를 받는 운영자 재실행 API는 권한, openapi.yaml, 런북이 더 들어 고르지 않았다. 공유 예약 작업 서비스에 조회 메서드를 더하므로 작업 영역 담당 문인호 님을 리뷰어로 둔다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ b10f8c7",
-        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:47-53 @ b10f8c7",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:83-85 @ b10f8c7",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:124-127 @ b10f8c7",
-        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-74 @ 0fe7d2a"
+        "backend/src/main/java/com/meterengine/payment/config/PaymentJobScheduler.java:65-75 @ af15d7f",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:47-53 @ af15d7f",
+        "backend/src/main/java/com/meterengine/scheduling/repository/ScheduledJobRunRepository.java:14-31 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:88-112 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:290-293 @ af15d7f",
+        "backend/src/main/resources/db/migration/V23__create_scheduled_job_run_table.sql:5-18 @ af15d7f",
+        "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:122 @ af15d7f",
+        "backend/src/test/java/com/meterengine/payment/PaymentReconciliationIntegrationTest.java:263-281 @ af15d7f",
+        "backend/README.md:326 @ af15d7f",
+        "PaymentReconciliationIntegrationTest 거래_목록이_거절된_날의_토스에만_있는_거래를_다음_실행이_남긴다: 옛 하루 창으로 되돌리면 실패 expected processedCount=1 but was 0(행 없음). 새 시험 셋은 고치기 전 메서드가 없어 컴파일 실패",
+        "커밋 1cd2190"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "1cd21900"
+      ],
+      "tests": [
+        "backend build 시험 1379건 통과(1cd2190)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "b10f8c7",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
       "propagation_note": "어느 안을 고르든 #453 23b1844가 PaymentReconciliationService.reconcile을 환경별로 나눴으므로 재실행이나 따라잡기 경로를 #453 head의 환경 구분 코드에도 맞춰야 한다. 슬롯을 cron 예정 시각에서 계산하는 부분은 PaymentJobScheduler.java 한 파일이며 위층에서 이 파일을 바꾼 커밋은 없다.",
-      "question": "실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다."
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "새 마이그레이션이나 공개 API 없이, 이미 있는 scheduled_job_run 기록을 워터마크로 써서 실"
     },
     {
       "id": "D-042",
@@ -13403,6 +13416,30 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "1cd21900465d78892aaa22b433a1b1dd43b5cd30",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1379개 실패 0, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "1cd21900465d78892aaa22b433a1b1dd43b5cd30",
+      "kind": "screen",
+      "result": "not-applicable",
+      "command": "실화면 명세",
+      "detail": "화면과 API 응답이 바뀌지 않는 예약 작업 변경이라 돌리지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "1cd21900465d78892aaa22b433a1b1dd43b5cd30",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -13885,6 +13922,11 @@
       "branch": "fix/s456-t-yang-pricing-archive",
       "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
       "at": "2026-10-29T17:56:29+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "1cd21900465d78892aaa22b433a1b1dd43b5cd30",
+      "at": "2026-10-29T18:06:32+09:00"
     }
   ],
   "usage_log": [],
@@ -13923,7 +13965,8 @@
     "2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다.",
     "2026-10-29: #487 fix/s456-t-yang-sidebar-nav(D-179)를 열고 문인호 님을 리뷰어로 지정했다.",
     "2026-10-29: #476 박성종 님 리뷰 p4(대사 버전 실패 격리 시험이 실패 버전을 실제로 부르지 않음)를 받아 현재 키 실패 뒤 옛 키 대사를 보는 시험을 더했다(cce95ba). 시험만 바뀌어 프론트와 실화면 검사는 다시 돌리지 않았다.",
-    "2026-10-29: #489 fix/s456-t-yang-pricing-archive(Nk3-006, Ck3-447-03, Ck3-447-06)를 열고 문인호 님을 리뷰어로 지정했다."
+    "2026-10-29: #489 fix/s456-t-yang-pricing-archive(Nk3-006, Ck3-447-03, Ck3-447-06)를 열고 문인호 님을 리뷰어로 지정했다.",
+    "2026-10-29: #490 fix/s456-t-yang-reconcile-catchup(Ck2-017)를 열고 문인호 님을 리뷰어로 지정했다."
   ],
   "final_checks": [
     {
