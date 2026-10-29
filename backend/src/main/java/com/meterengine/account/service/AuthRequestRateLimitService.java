@@ -11,7 +11,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -58,7 +57,7 @@ public class AuthRequestRateLimitService {
       int accountLimit,
       Duration window) {
     if (!authRateLimitProperties.enabled()) return;
-    String account = email.strip().toLowerCase(Locale.ROOT);
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
     authRequestRateLimitRepository.cleanExpired();
     long retryAfter =
         authRequestRateLimitRepository.consume(

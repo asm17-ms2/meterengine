@@ -28,6 +28,11 @@ public class AuthRequestRateLimitRepository {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  // 로그인 조회(lower(email))와 같은 DB 규칙으로 계정 키를 정규화해야 대소문자 변형이 다른 계정 키가 되지 않는다.
+  public String normalizeAccount(String email) {
+    return jdbcTemplate.queryForObject("SELECT lower(?)", String.class, email.strip());
+  }
+
   // 거절된 시도도 저장하며, 로그인/가입 트랜잭션이 실패해도 카운터는 유지한다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public long consume(

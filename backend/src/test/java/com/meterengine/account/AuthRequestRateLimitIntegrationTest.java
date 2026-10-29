@@ -78,6 +78,15 @@ class AuthRequestRateLimitIntegrationTest {
   }
 
   @Test
+  void 계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다() {
+    String email = email();
+    String variant = email.replace("limit-", "l\u0130mit-");
+    assertThat(login(email, "203.0.113.20", null)).hasStatus(401);
+    assertThat(login(variant, "203.0.113.20", null)).hasStatus(401);
+    assertLimited(login(email, "203.0.113.20", null));
+  }
+
+  @Test
   void 신뢰하지_않는_헤더를_바꾸어도_계정이_다른_로그인의_IP_한도는_늘어나지_않는다() {
     for (int index = 0; index < 3; index++) {
       assertThat(login(email(), "203.0.113.4", "198.51.100." + (index + 1))).hasStatus(401);

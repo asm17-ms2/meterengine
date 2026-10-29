@@ -94,6 +94,7 @@ class AuthRequestRateLimitServiceTest {
   @Test
   void 이메일과_IP의_해시만_카운터에_전달하고_대기시간을_유지한다() {
     var service = service(List.of());
+    when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
     when(repository.consume(anyString(), any(), any(), anyInt(), anyInt(), anyLong()))
         .thenReturn(23L);
     assertThatThrownBy(() -> service.login("  User@Example.COM  ", request("203.0.113.10")))
@@ -116,6 +117,7 @@ class AuthRequestRateLimitServiceTest {
   @Test
   void 가입은_가입_한도와_창으로_센다() {
     var service = service(List.of());
+    when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
     service.signup("  User@Example.COM  ", request("203.0.113.10"));
     verify(repository)
         .consume(
