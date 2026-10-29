@@ -363,6 +363,17 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 기본료와_최소_사용료는_청구할_때_10원_미만을_버린다() {
+    rate(null, month, null, "per_unit", BigDecimal.ONE, null);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(null, month, null, 9999L, 15005L));
+    assertThat(amount(month, "100")).isEqualTo(100 + (15000 - 100) + 9990);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(customerId, month, null, 5L, 0L));
+    assertThat(amount(month, "100")).isEqualTo(100);
+  }
+
+  @Test
   void 구간_기본료_최소조정은_실제_인보이스로_확정되고_조회된다() {
     rate(null, month, null, "graduated", null, tiers());
     pricePlanService.create(

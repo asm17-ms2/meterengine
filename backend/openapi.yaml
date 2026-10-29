@@ -6243,7 +6243,8 @@ paths:
       tags:
       - price-plan-controller
     post:
-      description: 사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다.
+      description: "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다. 청구할 때 기본료와\
+        \ 최소 사용료는 10원 미만을 버린 값을 쓰며, 버린 기본료가 0원이면 기본료 라인이 생기지 않는다."
       operationId: createPricePlan
       requestBody:
         content:
@@ -8782,6 +8783,9 @@ components:
         outstanding_amount:
           type: integer
           format: int64
+          description: "선택한 달 인보이스 가운데 미납(unpaid), 결과 확인 중(pending), 결제 실패(failed)의\
+            \ 청구액 합계. 인보이스 검색의 outstanding_amount는 결과 확인 중이 있으면 null이고 미납과 실패만 더해\
+            \ 뜻이 다르다"
         payment_configured:
           type: boolean
         payment_mode:
