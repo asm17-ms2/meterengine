@@ -71,9 +71,13 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
         cls.docker("run", "--rm", "-d", "--name", cls.upstream, "--network", cls.network,
                    "--network-alias", "frontend", "--network-alias", "backend-blue",
                    "-v", cls.mount, IMAGE, "caddy", "run", "--adapter", "caddyfile", "--config", "/etc/caddy/Upstreamfile")
+        cls.frontend_address = cls.docker(
+            "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+            cls.upstream).stdout.strip()
         cls.docker("run", "--rm", "-d", "--name", cls.proxy, "--network", cls.network,
                    "-p", "127.0.0.1::443", "-p", "127.0.0.1::8081",
-                   "-e", "SITE_DOMAIN=localhost", "-e", "SITE_ALIASES=", "-v", cls.mount,
+                   "-e", "SITE_DOMAIN=localhost", "-e", "SITE_ALIASES=",
+                   "-e", f"FRONTEND_ADDRESS={cls.frontend_address}", "-v", cls.mount,
                    IMAGE, "caddy", "run", "--config", "/etc/caddy/Caddyfile")
         cls.public_port = cls.port("443/tcp")
         cls.internal_port = cls.port("8081/tcp")
@@ -119,7 +123,7 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_public_proxy_overwrites_client_ip_but_internal_proxy_preserves_it(self):
+    def test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts(self):
         for internal in (False, True):
             connection = (http.client.HTTPConnection("127.0.0.1", self.internal_port, timeout=12)
                           if internal else http.client.HTTPSConnection(
@@ -134,13 +138,16 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 observed = response.getheader("X-Observed-Client-IP")
                 response.read()
-                if internal:
-                    self.assertEqual(observed, "203.0.113.77")
-                else:
-                    self.assertNotEqual(observed, "203.0.113.77")
-                    ipaddress.ip_address(observed)
+                self.assertNotEqual(observed, "203.0.113.77", f"internal={internal}")
+                ipaddress.ip_address(observed)
             finally:
                 connection.close()
+
+    def test_internal_proxy_preserves_client_ip_sent_by_frontend(self):
+        result = self.docker("exec", self.upstream, "wget", "-S", "-qO", "/dev/null",
+                             "--header", "X-MeterEngine-Client-IP: 203.0.113.77",
+                             f"http://{self.proxy}:8081/__client_ip")
+        self.assertIn("x-observed-client-ip: 203.0.113.77", (result.stdout + result.stderr).lower())
 
     def test_source_configuration_validates_on_caddy_2_11_7(self):
         version = self.docker("run", "--rm", "--network", "none", IMAGE, "caddy", "version")
