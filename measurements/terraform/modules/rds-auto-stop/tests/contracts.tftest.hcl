@@ -76,3 +76,21 @@ run "disabled_detector" {
     error_message = "The detector must support an explicit operational disable."
   }
 }
+
+run "name_prefix_fits_iam_role_names" {
+  command = plan
+
+  variables {
+    name_prefix = "a23456789-123456789-123456789-1234567890b"
+  }
+}
+
+run "name_prefix_too_long_for_iam_role_names" {
+  command = plan
+
+  variables {
+    name_prefix = "a23456789-123456789-123456789-1234567890bc"
+  }
+
+  expect_failures = [var.name_prefix]
+}
