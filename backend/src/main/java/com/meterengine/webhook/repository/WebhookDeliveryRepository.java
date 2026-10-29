@@ -41,21 +41,29 @@ public class WebhookDeliveryRepository {
     return claim(List.of());
   }
 
-  // 이번 차례에 이미 꺼낸 도입사 환경은 뒤로 미뤄, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
+  // 이번 차례에 이미 꺼낸 도입사 환경을 먼저 빼고 찾아, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
+  // 제외를 정렬이 아닌 조건으로 둬야 대기 전송 색인 순서로 읽다가 첫 행에서 멈춘다.
   public Optional<WebhookClaim> claim(List<WebhookClaim> servedThisTurn) {
-    UUID[] servedOrganizations =
-        servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new);
-    UUID[] servedScopes =
-        servedThisTurn.stream().map(WebhookDeliveryRepository::scope).toArray(UUID[]::new);
+    if (!servedThisTurn.isEmpty()) {
+      Optional<WebhookClaim> unserved =
+          claim(
+              " AND (organization_id, environment_scope_id) NOT IN (SELECT * FROM unnest(?::uuid[], ?::uuid[]))",
+              MAX_ATTEMPTS,
+              servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new),
+              servedThisTurn.stream().map(WebhookDeliveryRepository::scope).toArray(UUID[]::new));
+      if (unserved.isPresent()) return unserved;
+    }
+    return claim("", MAX_ATTEMPTS);
+  }
+
+  private Optional<WebhookClaim> claim(String exclusion, Object... arguments) {
     return jdbcTemplate
         .query(
             """
         WITH picked AS (
           SELECT id FROM webhook_delivery WHERE status = 'pending'
-            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()
-          ORDER BY (organization_id, environment_scope_id) IN (SELECT * FROM unnest(?::uuid[], ?::uuid[])),
-            next_attempt_at, id
-          LIMIT 1 FOR UPDATE SKIP LOCKED
+            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()%s
+          ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
         ), claimed AS (
           UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
             last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() + interval '2 minutes',
@@ -65,7 +73,8 @@ public class WebhookDeliveryRepository {
         SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload
         FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.environment_scope_id = c.environment_scope_id AND e.id = c.webhook_endpoint_id
         JOIN webhook_event v ON v.organization_id = c.organization_id AND v.environment_scope_id = c.environment_scope_id AND v.id = c.webhook_event_id
-        """,
+        """
+                .formatted(exclusion),
             (rs, rowNum) ->
                 new WebhookClaim(
                     rs.getObject("id", UUID.class),
@@ -80,9 +89,7 @@ public class WebhookDeliveryRepository {
                     rs.getInt("attempt_count"),
                     rs.getObject("last_attempted_at", OffsetDateTime.class),
                     rs.getObject("environment_id", UUID.class)),
-            MAX_ATTEMPTS,
-            servedOrganizations,
-            servedScopes)
+            arguments)
         .stream()
         .findFirst();
   }
