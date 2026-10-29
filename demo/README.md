@@ -455,7 +455,7 @@ node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test --ol
 | `web/` | 테스트 웹 (`@meterengine/demo-web`) |
 | `llm-service/` | Lumen LLM 서비스 예제 (`@meterengine/llm-service`) |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` | `sdk/`, `web/`, `llm-service/`를 묶는 pnpm workspace |
-| `eslint-naming-rules.mjs` | `sdk/`와 `web/`이 같이 쓰는 식별자 이름 규칙(`@typescript-eslint/naming-convention`) |
+| `eslint-naming-rules.mjs` | `sdk/`, `web/`, `llm-service/`가 같이 쓰는 식별자 이름 규칙(`@typescript-eslint/naming-convention`) |
 | `sample-events.csv`, `sample-events-edge.csv` | 샘플 이벤트와 경계 케이스 |
 | `logs/` | 전송 기록 (gitignore) |
 
