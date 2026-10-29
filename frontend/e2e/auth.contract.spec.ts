@@ -763,3 +763,19 @@ test("screen titles use the same size whichever header component draws them", as
   const customersTitle = await page.getByRole("heading", { level: 1, name: "고객" }).evaluate(element => getComputedStyle(element).fontSize);
   expect(membersTitle).toBe(customersTitle);
 });
+
+test("operator list titles use the shared screen title size", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "operator@contract.local", "/admin");
+  await expect(page).toHaveURL(url => url.pathname === "/admin");
+  for (const path of ["/admin/organizations", "/admin/users"]) {
+    await page.goto(path);
+    const sizes = await page.getByRole("heading", { level: 1 }).evaluate(element => [getComputedStyle(element).fontSize, getComputedStyle(document.documentElement).getPropertyValue("--screen-title-size").trim()]);
+    expect(sizes[0], path).toBe(sizes[1]);
+  }
+});
+
+test("registering a customer is the primary action in the customer list title row", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("button", { name: "고객 등록", exact: true })).toHaveClass(/ant-btn-primary/);
+});

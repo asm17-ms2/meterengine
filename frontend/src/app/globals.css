@@ -76,7 +76,7 @@ p { line-height: 1.7; }
 .operator-nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
 .operator-nav a[aria-current], .status-tabs a[aria-current] { color: var(--blue); font-weight: 650; text-decoration: underline; text-decoration-thickness: 2px; }
 .operator-content { max-width: 1080px; margin: 0 auto; padding: 40px 32px; }
-.page-heading { margin-bottom: 32px; }
+.page-heading { margin-bottom: 32px; }.page-heading h1 { font-size: var(--screen-title-size); }
 .status-tabs { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 24px; }
 .status-tabs a { font-size: 14px; color: var(--muted); text-decoration: none; padding: 8px 0; }
 .organization-list { display: grid; gap: 16px; }
