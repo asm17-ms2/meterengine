@@ -294,6 +294,21 @@ test("모델 작업 임대가 만료돼도 새 작업 결과만 outbox와 함께
   assert.equal(store.claimOutbox(NOW + 60002)?.event.timestamp, old.generation.createdAt);
 });
 
+test("실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  let now = Date.parse("2026-10-31T14:59:30Z");
+  let calls = 0;
+  const provider: GenerationProvider = { async generate() { calls++; if (calls === 1) throw new Error("provider down"); return { output: "응답", inputTokens: 2, outputTokens: 3 }; } };
+  const fake = clientFixture();
+  const service = new LumenService({ config: config(), store, client: fake.client, provider, now: () => now });
+  const body = { requestId: randomUUID(), modelId: "lumen-fast", prompt: "월말 요청" };
+  await assert.rejects(() => service.generate(ACCOUNT_A, body), error => error instanceof ServiceError && error.status === 503);
+  now = Date.parse("2026-10-31T15:00:10Z");
+  await service.generate(ACCOUNT_A, body);
+  assert.deepEqual(fake.events.map(event => event.timestamp), ["2026-10-31T14:59:30.000Z"]);
+});
+
 test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다", async t => {
   const store = new LumenStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
   t.after(() => store.close());
