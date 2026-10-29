@@ -215,6 +215,15 @@ test("saving a webhook endpoint keeps its existing description", async ({ page, 
   }).toBe("운영 알림 수신기");
 });
 
+test("the audit list marks rejected requests and keeps entries compact", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "member@contract.local", "/audit");
+  await expect(page.locator(".audit-entry")).toHaveCount(12);
+  const tops = await page.locator(".audit-entry").evaluateAll(entries => entries.map(entry => entry.getBoundingClientRect().top));
+  expect(Math.max(...tops.slice(1).map((top, index) => top - tops[index]))).toBeLessThanOrEqual(80);
+  await expect(page.locator(".audit-summary .ant-tag", { hasText: "요청 거절/오류 (403)" })).toHaveCount(1);
+});
+
 test("a meter form with input asks before Escape throws it away", async ({ page }) => {
   await login(page, "member@contract.local", "/billable-metrics");
   await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
