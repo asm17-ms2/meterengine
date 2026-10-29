@@ -144,7 +144,7 @@ class AuditQueryAndRequestIntegrationTest {
   void 감사조회는_도입사와_read권한을_지키며_필터와_안정정렬과_페이지를_제공한다() {
     UUID first = UUID.randomUUID();
     UUID second = UUID.randomUUID();
-    String read = TestCredentials.issueApiKey(jdbcTemplate, first, "read");
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, first);
     String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
     TestCredentials.issueApiKey(jdbcTemplate, second, "read");
     String target = UUID.randomUUID().toString();
@@ -157,7 +157,7 @@ class AuditQueryAndRequestIntegrationTest {
     MvcTestResult firstPage =
         mvc.get()
             .uri("/v1/audit-logs")
-            .header(AUTHORIZATION, read)
+            .header(AUTHORIZATION, member)
             .queryParam("action", "customer_created")
             .queryParam("q", target)
             .queryParam("actor_type", "system")
@@ -169,7 +169,7 @@ class AuditQueryAndRequestIntegrationTest {
     MvcTestResult next =
         mvc.get()
             .uri("/v1/audit-logs")
-            .header(AUTHORIZATION, read)
+            .header(AUTHORIZATION, member)
             .queryParam("action", "customer_created")
             .queryParam("q", target)
             .queryParam("size", "1")
@@ -180,7 +180,7 @@ class AuditQueryAndRequestIntegrationTest {
     assertThat((String) JsonPath.read(body(next), "$.audit_logs[0].id")).isNotEqualTo(firstId);
     assertThat((String) JsonPath.read(body(next), "$.audit_logs[0].organization_id"))
         .isEqualTo(first.toString());
-    assertThat(mvc.get().uri("/v1/operations/audit-logs").header(AUTHORIZATION, read).exchange())
+    assertThat(mvc.get().uri("/v1/operations/audit-logs").header(AUTHORIZATION, member).exchange())
         .hasStatus(403);
     assertThat(
             mvc.get()
@@ -199,9 +199,21 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
-  void 감사조회는_발생시각과_id로_정렬하고_정렬방향을_지킨다() {
+  void 감사조회는_로그인_세션만_할_수_있고_read_API_키는_403이다() {
     UUID organizationId = UUID.randomUUID();
     String read = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+
+    assertThat(mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, read).exchange())
+        .hasStatus(403);
+    assertThat(mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, member).exchange())
+        .hasStatusOk();
+  }
+
+  @Test
+  void 감사조회는_발생시각과_id로_정렬하고_정렬방향을_지킨다() {
+    UUID organizationId = UUID.randomUUID();
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
     String target = UUID.randomUUID().toString();
     String prefix = UUID.randomUUID().toString().substring(0, 35);
     String smaller = prefix + "1";
@@ -211,14 +223,14 @@ class AuditQueryAndRequestIntegrationTest {
     insertAudit(smaller, "2026-10-01T00:01:00Z", organizationId, target);
     insertAudit(earliest, "2026-10-01T00:00:00Z", organizationId, target);
 
-    assertThat(auditIds(read, target, "occurred_at_asc"))
+    assertThat(auditIds(member, target, "occurred_at_asc"))
         .containsExactly(earliest, smaller, larger);
-    assertThat(auditIds(read, target, null)).containsExactly(larger, smaller, earliest);
+    assertThat(auditIds(member, target, null)).containsExactly(larger, smaller, earliest);
   }
 
   @Test
   void 감사조회의_잘못된_필터와_기간은_400이다() {
-    String read = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID(), "read");
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID());
     for (Map<String, String> invalid :
         List.of(
             Map.of("page", "-1"),
@@ -230,14 +242,14 @@ class AuditQueryAndRequestIntegrationTest {
             Map.of("from", "2026-99-99"),
             Map.of("to", "+300000-01-01T00:00:00Z"),
             Map.of("from", "2026-10-02", "to", "2026-10-01"))) {
-      var request = mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, read);
+      var request = mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, member);
       invalid.forEach(request::queryParam);
       assertThat(request.exchange()).as(invalid.toString()).hasStatus(400);
     }
     assertThat(
             mvc.get()
                 .uri("/v1/audit-logs")
-                .header(AUTHORIZATION, read)
+                .header(AUTHORIZATION, member)
                 .queryParam("from", "2026-10-01T00:00:00+09:00")
                 .queryParam("to", "2026-10-31T23:59:59+09:00")
                 .exchange())
@@ -431,7 +443,7 @@ class AuditQueryAndRequestIntegrationTest {
   void API경로_부분검색은_도입사를_격리하고_다른detail을_검색하지_않는다() {
     UUID first = UUID.randomUUID();
     UUID second = UUID.randomUUID();
-    String read = TestCredentials.issueApiKey(jdbcTemplate, first, "read");
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, first);
     TestCredentials.issueApiKey(jdbcTemplate, second, "read");
     String suffix = UUID.randomUUID().toString();
     String route = "/v1/customers/" + suffix + "/{id}";
@@ -457,7 +469,7 @@ class AuditQueryAndRequestIntegrationTest {
     MvcTestResult result =
         mvc.get()
             .uri("/v1/audit-logs")
-            .header(AUTHORIZATION, read)
+            .header(AUTHORIZATION, member)
             .queryParam("q", "/CUSTOMERS/" + suffix)
             .exchange();
     assertThat(result).hasStatusOk().bodyJson().extractingPath("$.total").isEqualTo(1);
@@ -466,7 +478,7 @@ class AuditQueryAndRequestIntegrationTest {
     assertThat(
             mvc.get()
                 .uri("/v1/audit-logs")
-                .header(AUTHORIZATION, read)
+                .header(AUTHORIZATION, member)
                 .queryParam("q", unrelatedDetail)
                 .exchange())
         .hasStatusOk()

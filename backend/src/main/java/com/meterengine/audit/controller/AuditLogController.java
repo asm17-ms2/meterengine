@@ -5,8 +5,8 @@ import com.meterengine.audit.service.AuditLogQueryService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.MemberReadAccess;
 import com.meterengine.global.security.OperatorAccess;
-import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,8 +37,10 @@ public class AuditLogController {
 
   @GetMapping("/v1/audit-logs")
   @EnvironmentReady
-  @ReadAccess
-  @Operation(summary = "현재 도입사 감사 기록 조회")
+  @MemberReadAccess
+  @Operation(
+      summary = "현재 도입사 감사 기록 조회",
+      description = "로그인 세션 전용이다. 사람과 키 관리 이력, 요청 기록을 담아 API 키로는 조회할 수 없다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다"),
     @ApiResponse(
