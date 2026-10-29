@@ -57,9 +57,10 @@ export function PublicInvoiceView() {
 
   useEffect(() => {
     let controller: AbortController | null = null;
-    function openLink() {
-      const fragment = window.location.hash.slice(1);
-      if (fragment === "main-content") return;
+    function openLink(event?: HashChangeEvent) {
+      const hash = window.location.hash.slice(1);
+      if (hash === "main-content" && event) return;
+      const fragment = hash === "main-content" ? "" : hash;
       requestRef.current += 1;
       if (fragment) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       let token = fragment;

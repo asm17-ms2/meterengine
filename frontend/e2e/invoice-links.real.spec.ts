@@ -254,6 +254,11 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await page.reload();
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
+    await page.getByRole("link", { name: "본문으로 이동", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(`${FRONTEND_URL}/invoice-links#main-content`);
+    await page.reload();
+    await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect((await customer.cookies()).find(cookie => cookie.name === "me_session")).toBeUndefined();
     const paymentId = randomUUID();
     sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local browser link fixture', 'done', 'local-browser-link-payment-${paymentId}', clock_timestamp(), clock_timestamp()); INSERT INTO payment_cancellation (id, organization_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${paymentId}', 'test', 400, 'local browser link fixture', 'done', 'local-browser-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
