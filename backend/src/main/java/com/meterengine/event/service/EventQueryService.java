@@ -7,8 +7,10 @@ import com.meterengine.event.dto.ListEventsResponse;
 import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.validation.StorableJsonValidator;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -102,6 +104,8 @@ public class EventQueryService implements EventPresence {
     try {
       if (!jsonMapper.readTree(properties).isObject())
         throw EventSearch.invalid("properties", "속성 조건은 JSON 객체여야 합니다");
+      if (!new StorableJsonValidator().isValid(jsonMapper.readValue(properties, Map.class), null))
+        throw EventSearch.invalid("properties", "속성 조건에 저장할 수 없는 문자나 숫자가 있습니다");
     } catch (tools.jackson.core.JacksonException exception) {
       throw EventSearch.invalid("properties", "속성 조건을 JSON 객체로 읽을 수 없습니다");
     }

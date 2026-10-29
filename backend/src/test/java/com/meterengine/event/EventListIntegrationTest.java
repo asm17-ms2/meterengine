@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -492,6 +495,48 @@ class EventListIntegrationTest {
         .extractingPath("$.errors[*].field")
         .asArray()
         .containsExactly("month");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"{\"k\":\"\\u0000\"}", "{\"k\":\"\\ud800\"}", "{\"k\":1e200000}"})
+  void DB가_받지_못할_속성_조건은_500이_아니라_400이다(String properties) {
+    UUID organizationId = insertOrganization("도입사");
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/events")
+            .param("month", AUGUST)
+            .param("properties", properties)
+            .header(AUTHORIZATION, authorization(organizationId))
+            .exchange();
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly("properties");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"2026-01-01,+300000-01-01T00:00:00Z,to", "-5000-01-01T00:00:00Z,2026-01-01,from"})
+  void DB_시각_범위를_넘는_기간은_500이_아니라_400이다(String from, String to, String field) {
+    UUID organizationId = insertOrganization("도입사");
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/events")
+            .param("from", from)
+            .param("to", to)
+            .header(AUTHORIZATION, authorization(organizationId))
+            .exchange();
+
+    assertThat(result)
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[*].field")
+        .asArray()
+        .containsExactly(field);
   }
 
   // ---------------------------------------------------------------------------
