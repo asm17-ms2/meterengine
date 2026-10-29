@@ -40,8 +40,12 @@ jobs:
               - 'demo/**'
               - '.node-version'
               - '.github/workflows/ci.yml'
+            # deploy 시험이 읽는 바깥 파일도 넣는다
             deploy:
               - 'deploy/**'
+              - '.github/workflows/cd.yml'
+              - 'measurements/test-slo/k6/README.md'
+              - 'measurements/*/sut/scripts/sut-deploy.sh'
               - '.github/workflows/ci.yml'
             terraform:
               - 'measurements/terraform/**'
@@ -123,7 +127,11 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r lint
       - run: pnpm -r test
-      - run: python3 -m unittest -v
+      # 콘솔 시험은 textual이 있어야 돌고 없으면 건너뛴다
+      - run: |
+          python3 -m venv "$RUNNER_TEMP/demo-venv"
+          "$RUNNER_TEMP/demo-venv/bin/pip" install --quiet "textual==8.2.8"
+          "$RUNNER_TEMP/demo-venv/bin/python" -m unittest -v
 
   deploy:
     name: deploy
