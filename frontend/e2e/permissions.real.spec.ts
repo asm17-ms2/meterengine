@@ -10,6 +10,8 @@ const OUTPUT = process.env.PERMISSIONS_EVIDENCE_DIR ?? "/private/tmp/meterengine
 const PASSWORD = "local-permissions-e2e-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const BACKEND_ENV_FILE = process.env.E2E_BACKEND_ENV_FILE ?? "/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json";
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? "meterengine-0696-e2e";
 const SECRET_GROUPS: Set<string>[] = [];
 const CONSENTS = CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION }));
 const READ = /^조회 \(read\):/;
@@ -34,7 +36,7 @@ test.beforeAll(() => {
     const url = new URL(value);
     if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) throw new Error("권한 검증은 로컬 HTTP 서버에서만 실행합니다.");
   }
-  const env = JSON.parse(readFileSync("/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json", "utf8"));
+  const env = JSON.parse(readFileSync(BACKEND_ENV_FILE, "utf8"));
   if (env.TOSSPAYMENTS_BASE_URL !== "http://127.0.0.1:38447") throw new Error("격리된 PG 대역 설정을 확인하지 못했습니다.");
 });
 test.afterAll(() => {
@@ -56,7 +58,7 @@ function result(name: string, value: unknown) { writeFileSync(`${OUTPUT}/${name}
 function authorization(token: string): Headers { return { Authorization: `Bearer ${token}` }; }
 function uuid(value: string) { if (!/^[a-f\d-]{36}$/i.test(value)) throw new Error("검증 UUID가 잘못됐습니다."); return value; }
 function sql(statement: string) {
-  return execFileSync("docker", ["exec", "-i", "meterengine-0696-e2e", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 async function current(request: APIRequestContext, headers: Headers) {
   const response = await request.get(`${API_URL}/v1/sessions/current`, { headers });
