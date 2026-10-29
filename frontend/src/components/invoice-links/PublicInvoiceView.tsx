@@ -25,6 +25,11 @@ const UNREADY_MESSAGES = {
 };
 const RETRY_FAILED = "다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
 
+function LineLabel({ line }: { line: PublicInvoice["lines"][number] }) {
+  const tier = publicInvoiceLineTier(line);
+  return <><strong>{publicInvoiceLineName(line)}</strong>{Object.keys(line.dimension_values).length > 0 && <small>{formatDimensionValues(line.dimension_values)}</small>}{tier && <small>{tier}</small>}</>;
+}
+
 type ViewState = { kind: "loading" } | { kind: "missing" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoice; revision: number };
 
 export function PublicInvoiceView() {
@@ -145,8 +150,8 @@ export function PublicInvoiceView() {
         <p role="status" className={styles.feedback} style={feedback ? undefined : { margin: 0 }}>{feedback}</p>
         <dl className={styles.details}><div><dt>청구서 번호</dt><dd>{invoice.invoice_number}</dd></div><div><dt>확정 시각 (KST)</dt><dd>{formatKstDateTime(invoice.finalized_at)}</dd></div><div><dt>공급자</dt><dd>{invoice.organization_name}</dd></div><div><dt>고객</dt><dd>{invoice.customer_name}</dd></div></dl>
         <section className={styles.section} aria-labelledby="invoice-items-title"><h2 id="invoice-items-title">청구 항목</h2>
-          <p id="invoice-line-scroll-hint" className={styles.scrollHint}>단가와 공급가액은 표를 좌우로 이동해 확인할 수 있습니다.</p>
-          <div className={styles.tableScroll} role="region" aria-label="청구 항목 상세" aria-describedby="invoice-line-scroll-hint" tabIndex={0}><table><caption className={styles.srOnly}>확정 시점의 수량과 단가, 10원 미만을 버린 항목별 공급가액</caption><thead><tr><th scope="col">항목</th><th scope="col">수량</th><th scope="col">단가</th><th scope="col">공급가액</th></tr></thead><tbody>{invoice.lines.map((line, index) => <tr key={index}><th scope="row"><strong>{publicInvoiceLineName(line)}</strong>{Object.keys(line.dimension_values).length > 0 && <small>{formatDimensionValues(line.dimension_values)}</small>}{publicInvoiceLineTier(line) && <small>{publicInvoiceLineTier(line)}</small>}</th><td>{formatDecimal(line.quantity)}{formatQuantityBasis(line.quantity_numerator, line.quantity_denominator) && <small>{formatQuantityBasis(line.quantity_numerator, line.quantity_denominator)}</small>}</td><td>{formatKrw(line.unit_price)}</td><td>{formatKrw(line.amount)}</td></tr>)}</tbody></table></div>
+          <div className={styles.tableScroll} role="region" aria-label="청구 항목 상세" tabIndex={0}><table><caption className={styles.srOnly}>확정 시점의 수량과 단가, 10원 미만을 버린 항목별 공급가액</caption><thead><tr><th scope="col">항목</th><th scope="col">수량</th><th scope="col">단가</th><th scope="col">공급가액</th></tr></thead><tbody>{invoice.lines.map((line, index) => <tr key={index}><th scope="row"><LineLabel line={line} /></th><td>{formatDecimal(line.quantity)}{formatQuantityBasis(line.quantity_numerator, line.quantity_denominator) && <small>{formatQuantityBasis(line.quantity_numerator, line.quantity_denominator)}</small>}</td><td>{formatKrw(line.unit_price)}</td><td>{formatKrw(line.amount)}</td></tr>)}</tbody></table></div>
+          <ol className={styles.lineRecords} aria-labelledby="invoice-items-title">{invoice.lines.map((line, index) => <li key={index}><div className={styles.recordHead}><span><LineLabel line={line} /></span><strong>{formatKrw(line.amount)}</strong></div><p>수량 {formatDecimal(line.quantity)}{formatQuantityBasis(line.quantity_numerator, line.quantity_denominator) && ` (${formatQuantityBasis(line.quantity_numerator, line.quantity_denominator)})`} / 단가 {formatKrw(line.unit_price)}</p></li>)}</ol>
           <dl className={styles.totals}><div><dt>공급가액</dt><dd>{formatKrw(invoice.supply_amount)}</dd></div><div><dt>부가세</dt><dd>{formatKrw(invoice.tax_amount)}</dd></div><div className={styles.total}><dt>확정 청구액</dt><dd>{formatKrw(invoice.total_amount)}</dd></div></dl>
           <p className={styles.hint}>항목별 공급가액은 수량에 단가를 곱한 금액에서 10원 미만을 버린 값입니다. 수량과 금액은 확정 시점의 기록입니다. 이후 요금 변경이나 결제 취소로 바뀌지 않습니다. 이 화면은 세금계산서나 결제 영수증이 아닙니다.</p>
         </section>
