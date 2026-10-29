@@ -56,6 +56,10 @@ public class WorkspaceQueryRepository {
         LEFT JOIN rates r ON r.organization_id = bm.organization_id AND r.environment_scope_id = bm.environment_scope_id AND r.billable_metric_code = bm.code
         WHERE bm.organization_id = p.organization_id
           AND bm.environment_id IS NOT DISTINCT FROM p.environment_id
+          AND ((bm.archived_at IS NULL AND bm.active_from <= p.period)
+            OR EXISTS (SELECT 1 FROM billable_metric_period mp
+              WHERE mp.organization_id = bm.organization_id AND mp.environment_scope_id = bm.environment_scope_id
+                AND mp.billable_metric_code = bm.code AND mp.active_from <= p.period AND mp.active_until > p.period))
         GROUP BY bm.organization_id, bm.environment_scope_id, bm.code
       )
       """;

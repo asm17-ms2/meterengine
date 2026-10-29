@@ -136,6 +136,27 @@ class WorkspaceQueryIntegrationTest {
   }
 
   @Test
+  void 가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다() {
+    metric("restored", "복원 미터", "type-restored");
+    jdbc.update(
+        "UPDATE billable_metric SET active_from='2026-11' WHERE organization_id=? AND code='restored'",
+        organizationId);
+    period("restored", "0001-01", "2026-10");
+    metric("retired", "보관 미터", "type-retired");
+    jdbc.update(
+        "UPDATE billable_metric SET archived_at=now(), inactive_from='2026-11' WHERE organization_id=? AND code='retired'",
+        organizationId);
+    period("retired", "0001-01", "2026-11");
+    JsonNode october = data(get("/v1/billable-metric-prices/search?month=2026-10&status=all"));
+    assertThat(october.get("items").findValuesAsString("billable_metric_code"))
+        .containsExactly("retired");
+    assertThat(october.get("summary").get("no_rate_count").asInt()).isEqualTo(1);
+    JsonNode november = data(get("/v1/billable-metric-prices/search?month=2026-11&status=all"));
+    assertThat(november.get("items").findValuesAsString("billable_metric_code"))
+        .containsExactly("restored");
+  }
+
+  @Test
   void 보관한_최신_단가_버전은_이전_단가를_되살리지_않는다() {
     metric("alpha", "대상", "type-alpha");
     rate("alpha", "2026-01", 1, null);
@@ -366,6 +387,16 @@ class WorkspaceQueryIntegrationTest {
         code,
         name,
         type);
+  }
+
+  private void period(String metric, String from, String until) {
+    jdbc.update(
+        "INSERT INTO billable_metric_period (id,organization_id,billable_metric_code,active_from,active_until) VALUES (?,?,?,?,?)",
+        UUID.randomUUID(),
+        organizationId,
+        metric,
+        from,
+        until);
   }
 
   private void rate(String metric, String from, long price, String archivedFrom) {
