@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T15:45:25+09:00",
+  "updated_at": "2026-10-29T15:54:30+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -24,7 +24,8 @@
     "fix/s456-t-yang-invoice-retry": "59e548e",
     "fix/s456-t-yang-public-invoice": "22943db",
     "fix/s456-t-yang-lumen": "62e8eee",
-    "fix/s456-t-yang-demo-bridge-web": "c1ee7a8"
+    "fix/s456-t-yang-demo-bridge-web": "c1ee7a8",
+    "fix/s456-t-yang-toss-key": "ffa9cd3"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -7121,15 +7122,35 @@
         "G-106"
       ],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-toss-key",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 reconcileCredential은 현재 키 뒤에 이력 표의 모든 버전을 기간이나 활동 조건 없이 오래된 순으로 돌고, 한 버전의 거래 목록 조회가 거절되면 145행에서 바로 FAILED를 돌려 뒤 버전을 대사하지 않는다. 폐기된 옛 키 하나가 매일 failed 항목을 남겨 예약 작업 실패 경보를 울리고, 그보다 새 은퇴 버전(청구 키 고정으로 결제가 계속 나는 버전)의 불일치는 매일 놓친다. af15d7f 뒤 main에 이 코드를 바꾼 커밋은 없다. G-106도 같은 원인이다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:133-148 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:151-156 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:99-101 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:201-206 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:94-109 @ af15d7f",
+        "backend/src/main/java/com/meterengine/scheduling/service/ScheduledJobRunService.java:106 @ af15d7f",
+        "deploy/grafana/provisioning/alerting/alerting.yml:169-174 @ af15d7f",
+        "대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1",
+        "커밋 d255870"
+      ],
+      "commits": [
+        "d2558707"
+      ],
+      "tests": [
+        "./gradlew build 통과(ffa9cd3, 시험 1378개)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "대사의 옛 키 버전 실패 격리"
     },
     {
       "id": "C453-002",
@@ -7233,15 +7254,32 @@
       "id": "C453-008",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-toss-key",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 확인 작업은 pending 취소를 PaymentEnvironments.call로 원본 환경에 묶고 원 시도의 credential_updated_at으로 키 버전을 고르지만, 이 두 동작을 지키는 시험이 없다. 환경 통합 시험은 pending 결제 시도 확인과 재시도만 다루고, 취소 확인 단위 시험의 pending 취소는 environment_id 없는 기존 범위 행이며 키 교체도 없다. 래퍼를 빼거나 기준 시각을 requestedAt으로 되돌려도 실패하는 시험이 없다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:87-105 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptConfirmationService.java:186-197 @ af15d7f",
+        "backend/src/test/java/com/meterengine/payment/PaymentEnvironmentIntegrationTest.java:449-493 @ af15d7f",
+        "backend/src/test/java/com/meterengine/payment/service/PaymentAttemptConfirmationServiceTest.java:581-594 @ af15d7f",
+        "요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다: 실패 status pending (환경 래퍼 제거 변이와 키 기준 시각 변이)",
+        "커밋 ffa9cd3"
+      ],
+      "commits": [
+        "ffa9cd3e"
+      ],
+      "tests": [
+        "./gradlew build 통과(ffa9cd3, 시험 1378개)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "취소 확인의 환경과 키 버전 시험"
     },
     {
       "id": "C453-009",
@@ -7428,15 +7466,37 @@
       "id": "U10-B1",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-toss-key",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보관된 키로 토스 승인이 나가는 부분은 94a48a20의 approveScoped chargeable()로 막혔다. 그러나 retryCandidate의 active() 확인은 여전히 트랜잭션과 도입사 잠금 밖에서 한 번뿐이고 insertRetryAttempt는 키 상태를 다시 보지 않아, 확인 직후(NOT_FOUND_PAYMENT 후보는 토스 주문 조회 동안) 보관이 커밋되면 보관 뒤에 새 시도 행이 생긴다. 그 시도는 toss_payments_credential_missing으로 failed가 되어 payment_failed 웹훅을 내보내고 재시도 가능 코드라 시도 수를 하나 쓰며 skipped가 아닌 processed로 센다. 수동 결제는 insertPending 안에서 prepare()로 active()를 다시 보므로 재시도 경로만 느슨하다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:104-111 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:128-139 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:142-179 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:175-189 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:274-290 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:606-616 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryPolicy.java:13-24 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentAttemptService.java:526-531 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/TossPaymentsCredentialService.java:109-117 @ af15d7f",
+        "재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다: 실패 Expected size: 1 but was: 2",
+        "커밋 82f5ad6"
+      ],
+      "commits": [
+        "82f5ad6c"
+      ],
+      "tests": [
+        "./gradlew build 통과(ffa9cd3, 시험 1378개)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "자동 재시도 저장 직전 키 보관 재확인"
     },
     {
       "id": "U10-B2",
@@ -11807,6 +11867,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "ffa9cd3ecbd898cba565c3ab7baf965a6d50d6f9",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1378개 실패 0, openapi.yaml 변경 없음(main 기준선도 통과)"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "ffa9cd3ecbd898cba565c3ab7baf965a6d50d6f9",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -12219,6 +12295,11 @@
       "branch": "fix/s456-t-yang-demo-bridge-web",
       "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
       "at": "2026-10-29T15:45:13+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "ffa9cd3ecbd898cba565c3ab7baf965a6d50d6f9",
+      "at": "2026-10-29T15:54:18+09:00"
     }
   ],
   "usage_log": [],

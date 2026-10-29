@@ -1,5 +1,5 @@
-미완료 38건, 결과: 끝 상태 290/328건 (fixed 203, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8)
+미완료 34건, 결과: 끝 상태 294/328건 (fixed 207, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3)
 정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -11,7 +11,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
 | #449 | 24 | 11 | 1 | 3 | 1 | 6 | 2 |
 | #452 | 19 | 12 | 0 | 3 | 0 | 0 | 4 |
-| #453 | 39 | 0 | 1 | 4 | 1 | 1 | 32 |
+| #453 | 39 | 4 | 1 | 4 | 1 | 1 | 28 |
 
 ## 고친 것
 
@@ -180,6 +180,9 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C452-009 | #452 | 600c74c | Lumen 청구 오류 문구 | 부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.' |
 | C452-012 | #452 | 0b402fd | 재생성 사용량 시각 시험 | 실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다: 실패 (이벤트 시각을 지금 시각으로 바꾼 변이) |
 | C452-013 | #452 | 5c83728 | 계정별 재전송 격리 시험 보강 | 한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이) |
+| C453-001 | #453 | d255870 | 대사의 옛 키 버전 실패 격리 | 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1 |
+| C453-008 | #453 | ffa9cd3 | 취소 확인의 환경과 키 버전 시험 | 요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다: 실패 status pending (환경 래퍼 제거 변이와 키 기준 시각 변이) |
+| U10-B1 | #453 | 82f5ad6 | 자동 재시도 저장 직전 키 보관 재확인 | 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다: 실패 Expected size: 1 but was: 2 |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
