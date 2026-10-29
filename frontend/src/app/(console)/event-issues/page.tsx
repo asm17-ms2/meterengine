@@ -11,6 +11,7 @@ import { CustomerFilterField } from "@/components/screen/CustomerFilterField";
 import { customerOptions } from "@/lib/api/search";
 import { readListQuery } from "@/lib/list-query";
 import { CAPABILITIES } from "@/lib/api/capabilities";
+import { reasonHints } from "@/lib/event-issue-hints";
 
 type IssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
 const REASONS: Record<IssueReason, string> = { unknown_event_type: "연결할 미터 없음", invalid_target_property: "집계할 수량 확인 필요", unpriced_usage: "적용 단가 없음" };
@@ -44,9 +45,11 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
       </form>
       {result.ok ? <>
         <p role="status">선택 조건 전체 문제 {result.data.total.toLocaleString("ko-KR")}건. 미터 없음 {result.data.summary.unknown_event_type}건, 수량 확인 {result.data.summary.invalid_target_property}건, 단가 없음 {result.data.summary.unpriced_usage}건.</p>
-        <p className="muted">{formatKstDateTime(result.data.cutoff_at)} KST 기준입니다. 해당 월 전체의 미래 이벤트 {result.data.warnings.future_event_count}건과 음수 이벤트-미터 조합 {result.data.warnings.negative_event_metric_count}건은 위 문제 건수와 별도로 확인합니다.</p>
+        {(result.data.summary.unknown_event_type > 0 || result.data.summary.unpriced_usage > 0) && <p className="workspace-actions">{result.data.summary.unknown_event_type > 0 && <Link href="/billable-metrics">미터 등록하기</Link>}{result.data.summary.unpriced_usage > 0 && <Link href={`/pricing?month=${month}${params.customer_id ? `&customer_id=${encodeURIComponent(params.customer_id)}` : ""}`}>단가 등록하기</Link>}</p>}
+        {rows.length > 0 && <ul className="field-hint">{reasonHints(rows).map(({ reason: hintReason, hint }) => <li key={hintReason}>{REASONS[hintReason]}: {hint}</li>)}</ul>}
+        <p className="muted">{formatKstDateTime(result.data.cutoff_at)} KST 기준입니다. 해당 월 전체의 미래 이벤트 {result.data.warnings.future_event_count}건{result.data.warnings.future_event_count > 0 && <> (<Link href={`/events?month=${month}`}>시각 확인</Link>)</>}과 음수 이벤트-미터 조합 {result.data.warnings.negative_event_metric_count}건{result.data.warnings.negative_event_metric_count > 0 && <> (<Link href={`/billing?month=${month}`}>청구 검토에서 확인</Link>)</>}은 위 문제 건수와 별도로 확인합니다.</p>
         <WorkspaceTable serverPaged rows={rows} columns={[
-          { key: "transaction_id", label: "전송 ID", hrefPrefix: `/events?month=${month}${params.customer_id ? `&customer_id=${encodeURIComponent(params.customer_id)}` : ""}&transaction_id=`, hrefKey: "transaction_id" }, { key: "reason_label", label: "문제" }, { key: "action_hint", label: "확인할 내용" }, { key: "customer_name", label: "고객" }, { key: "type", label: "이벤트 유형" }, { key: "billable_metric_code", label: "미터" }, { key: "target_property", label: "수량 속성" }, { key: "occurred_at", label: "발생 시각", isDate: true },
+          { key: "transaction_id", label: "전송 ID", hrefPrefix: `/events?month=${month}${params.customer_id ? `&customer_id=${encodeURIComponent(params.customer_id)}` : ""}&transaction_id=`, hrefKey: "transaction_id" }, { key: "reason_label", label: "문제" }, { key: "customer_name", label: "고객" }, { key: "type", label: "이벤트 유형" }, { key: "billable_metric_code", label: "미터" }, { key: "target_property", label: "수량 속성" }, { key: "occurred_at", label: "발생 시각", isDate: true },
         ]} empty="선택한 조건에서 미터, 수량 또는 단가 연결 문제가 발견되지 않았습니다." />
         <nav className="workspace-pagination" aria-label="진단 결과 페이지">{page > 0 && <Link href={pageHref(page - 1)}>이전</Link>}<span>{page + 1}페이지</span>{(page + 1) * size < result.data.total && <Link href={pageHref(page + 1)}>다음</Link>}</nav>
       </> : <WorkspaceError message={result.error.message} />}
