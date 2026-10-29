@@ -81,7 +81,10 @@ public class AuditLogController {
 
   @GetMapping("/v1/operations/audit-logs")
   @OperatorAccess
-  @Operation(summary = "플랫폼 감사 기록 조회")
+  @Operation(
+      summary = "플랫폼 감사 기록 조회",
+      description =
+          "q는 action, target_type, target_id, detail의 request_id와 route에 더해 organization_id도 부분 일치로 찾는다. 한 도입사의 기록만 보려면 그 id를 q로 보낸다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다"),
     @ApiResponse(

@@ -211,6 +211,27 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
+  void 운영자_감사조회의_검색어로_도입사_id를_찾는다() {
+    UUID organizationId = UUID.randomUUID();
+    UUID otherOrganizationId = UUID.randomUUID();
+    String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
+    insertAudit(UUID.randomUUID().toString(), "2026-10-01T00:00:00Z", organizationId, "first");
+    insertAudit(UUID.randomUUID().toString(), "2026-10-01T00:01:00Z", organizationId, "second");
+    insertAudit(UUID.randomUUID().toString(), "2026-10-01T00:02:00Z", otherOrganizationId, "x");
+
+    assertThat(
+            mvc.get()
+                .uri("/v1/operations/audit-logs")
+                .header(AUTHORIZATION, operator)
+                .queryParam("q", organizationId.toString().toUpperCase())
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.total")
+        .isEqualTo(2);
+  }
+
+  @Test
   void 감사조회는_발생시각과_id로_정렬하고_정렬방향을_지킨다() {
     UUID organizationId = UUID.randomUUID();
     String member = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);

@@ -4617,6 +4617,8 @@ paths:
       - operations-controller
   /v1/operations/audit-logs:
     get:
+      description: "q는 action, target_type, target_id, detail의 request_id와 route에\
+        \ 더해 organization_id도 부분 일치로 찾는다. 한 도입사의 기록만 보려면 그 id를 q로 보낸다."
       operationId: listOperationsAuditLogs
       parameters:
       - in: query
