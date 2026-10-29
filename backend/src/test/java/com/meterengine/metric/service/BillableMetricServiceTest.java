@@ -254,9 +254,7 @@ class BillableMetricServiceTest {
 
     update("chat_completion", "token");
 
-    verify(eventService, never()).exists(any(), any(), any());
-    verify(billableMetricRepository, never())
-        .existsByOrganizationIdAndEventTypeAndTargetProperty(any(), any(), any());
+    verify(eventService, never()).exists(any(), any());
   }
 
   @Test
