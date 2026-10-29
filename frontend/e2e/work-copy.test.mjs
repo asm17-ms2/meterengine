@@ -20,3 +20,9 @@ test("unit prices say they are per billed quantity, not per raw usage", () => {
   for (const label of ["</strong> / 과금 수량 1</p>", '"과금 수량 1당 단가"', "<span>과금 수량 1당 단가 (원)</span>"]) assert.ok(pricing.includes(label), label);
 });
 
+test("the pricing CSS module does not rely on global class selectors that the module hashes away", () => {
+  const css = source("components/pricing/pricing.module.css");
+  assert.ok(!css.includes(".tierEditorRow>.ant-btn") && !css.includes(".tierEditorRow .workspace-field"));
+  assert.ok(css.includes(".tierEditorRow label{font-size:12px}"));
+});
+
