@@ -153,14 +153,25 @@ public class WebhookDeliveryService {
   }
 
   private void countExpiredLeases() {
-    int expired = webhookDeliveryRepository.expireLeases();
-    if (expired == 0) {
+    Map<String, Integer> expired = webhookDeliveryRepository.expireLeases();
+    if (expired.isEmpty()) {
       return;
     }
-    meterRegistry
-        .counter("meterengine.webhook.delivery", "result", "failed", "reason", "lease_expired")
-        .increment(expired);
-    logger.warn("{} webhook deliveries failed because their last attempt lease expired", expired);
+    expired.forEach(
+        (environment, count) ->
+            meterRegistry
+                .counter(
+                    "meterengine.webhook.delivery",
+                    "result",
+                    "failed",
+                    "reason",
+                    "lease_expired",
+                    "environment",
+                    environment)
+                .increment(count));
+    logger.warn(
+        "{} webhook deliveries failed because their last attempt lease expired",
+        expired.values().stream().mapToInt(Integer::intValue).sum());
   }
 
   private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {
@@ -170,8 +181,19 @@ public class WebhookDeliveryService {
     }
     String reason = outcome.failureReason() == null ? "none" : outcome.failureReason();
     String result = "pending".equals(status.get()) ? "retry" : status.get();
+    String environment =
+        claim.environmentId() == null
+            ? "legacy"
+            : webhookDeliveryRepository.environmentOf(claim.environmentId());
     meterRegistry
-        .counter("meterengine.webhook.delivery", "result", result, "reason", reason)
+        .counter(
+            "meterengine.webhook.delivery",
+            "result",
+            result,
+            "reason",
+            reason,
+            "environment",
+            environment)
         .increment();
     if ("failed".equals(result)) {
       logger.warn(

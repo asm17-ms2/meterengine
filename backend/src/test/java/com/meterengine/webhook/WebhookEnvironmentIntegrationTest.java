@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.service.OperationsService;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
@@ -19,6 +20,7 @@ import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import com.meterengine.webhook.service.WebhookEventService;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -52,6 +54,8 @@ class WebhookEnvironmentIntegrationTest {
   @Autowired WebhookDeliveryRepository deliveryRepository;
   @Autowired PlatformTransactionManager transactions;
   @Autowired WebApplicationContext application;
+  @Autowired MeterRegistry meterRegistry;
+  @Autowired OperationsService operations;
   private UUID organization;
   private String session;
   private HttpServer receiver;
@@ -113,6 +117,39 @@ class WebhookEnvironmentIntegrationTest {
                 organization))
         .isEqualTo(3);
     assertThat(BusinessEnvironmentContext.current()).isNull();
+    for (String environment : List.of("legacy", "test", "live")) {
+      assertThat(
+              meterRegistry
+                  .find("meterengine.webhook.delivery")
+                  .tags("result", "done", "environment", environment)
+                  .counter())
+          .as(environment)
+          .isNotNull();
+    }
+  }
+
+  @Test
+  void 운영_현황의_웹훅_실패_수는_test_환경_전송을_세지_않는다() {
+    for (String mode : List.of("test", "live")) {
+      BusinessEnvironmentContext.run(
+          scope(mode),
+          () -> {
+            create();
+            new TransactionTemplate(transactions)
+                .executeWithoutResult(
+                    status ->
+                        events.publish(
+                            organization,
+                            WebhookEventType.PAYMENT_SUCCEEDED,
+                            Map.of("source", mode)));
+          });
+    }
+    long before = operations.get().failedWebhookCount();
+    jdbc.update(
+        "UPDATE webhook_delivery SET status='failed', failure_reason='timeout', next_attempt_at=NULL"
+            + " WHERE organization_id=?",
+        organization);
+    assertThat(operations.get().failedWebhookCount()).isEqualTo(before + 1);
   }
 
   @Test

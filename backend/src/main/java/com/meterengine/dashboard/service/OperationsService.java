@@ -45,11 +45,14 @@ public class OperationsService {
         count("select count(*) from organization where status = 'pending'"),
         count("select count(*) from organization where status = 'active'"),
         count("select count(*) from user_account"),
-        count("select count(*) from payment_attempt where status = 'pending'"),
+        count("select count(*) from payment_attempt where status = 'pending' and mode = 'live'"),
         count(
-            "select count(*) from payment_attempt where status = 'failed' and requested_at >= now()"
-                + " - interval '24 hours'"),
-        count("select count(*) from webhook_delivery where status = 'failed'"),
+            "select count(*) from payment_attempt where status = 'failed' and mode = 'live' and"
+                + " requested_at >= now() - interval '24 hours'"),
+        count(
+            "select count(*) from webhook_delivery d where d.status = 'failed' and not exists"
+                + " (select 1 from organization_environment e where e.id = d.environment_id and"
+                + " e.mode = 'test')"),
         jobs);
   }
 

@@ -292,7 +292,7 @@ groups:
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max by (mode) (meterengine_payment_stale_pending)
+              expr: max by (mode) (meterengine_payment_stale_pending{mode="live"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -321,8 +321,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (mode) (meterengine_payment_retry_exhausted_total unless meterengine_payment_retry_exhausted_total offset 1h) > 0)
-                or (sum by (mode) (increase(meterengine_payment_retry_exhausted_total[1h])) > 0)
+                (sum by (mode) (meterengine_payment_retry_exhausted_total{mode="live"} unless meterengine_payment_retry_exhausted_total{mode="live"} offset 1h) > 0)
+                or (sum by (mode) (increase(meterengine_payment_retry_exhausted_total{mode="live"}[1h])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -351,8 +351,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (mode) (meterengine_payment_reconciliation_mismatch_total unless meterengine_payment_reconciliation_mismatch_total offset 1h) > 0)
-                or (sum by (mode) (increase(meterengine_payment_reconciliation_mismatch_total[1h])) > 0)
+                (sum by (mode) (meterengine_payment_reconciliation_mismatch_total{mode="live"} unless meterengine_payment_reconciliation_mismatch_total{mode="live"} offset 1h) > 0)
+                or (sum by (mode) (increase(meterengine_payment_reconciliation_mismatch_total{mode="live"}[1h])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -381,8 +381,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum (meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
-                or (sum (increase(meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled"}[15m])) > 0)
+                (sum (meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled",environment!="test"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
+                or (sum (increase(meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled",environment!="test"}[15m])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
