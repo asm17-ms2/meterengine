@@ -151,6 +151,7 @@ input, textarea { caret-color: var(--blue); }
 .workspace-panel h2 + p { margin-top: -10px; }
 .workspace-panel .workspace-heading > div { display: grid; gap: 8px; }
 .workspace-field input, .workspace-field textarea, .workspace-field select, .organization-picker select, .month-apply { border-color: var(--control-border); min-height: 44px; }
+.workspace-field .ant-picker-input > input, .workspace-field .ant-select input { min-height: 0; }
 .workspace-field input[aria-invalid=true], .workspace-field textarea[aria-invalid=true], .workspace-field select[aria-invalid=true] { border-color: #b72c3c; }
 .workspace-field input::placeholder, .workspace-field textarea::placeholder { color: #5a6578; opacity: 1; }
 .workspace-field label { line-height: 1.6; }

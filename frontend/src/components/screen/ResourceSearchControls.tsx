@@ -4,7 +4,7 @@ import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search"
 
 import { useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Button, Select } from "antd";
+import { Button, ConfigProvider, Select } from "antd";
 import { queryOptionsAction } from "@/app/query-options-actions";
 import { CustomerFilter, type CustomerOption } from "@/components/screen/CustomerFilter";
 import { MonthPicker } from "@/components/screen/MonthPicker";
@@ -14,6 +14,9 @@ import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { QueryOption } from "@/lib/api/search";
 import { PAGE_SIZE_OPTIONS, type ListQuery, type ListQueryOverrides } from "@/lib/list-query";
 import { submittedResourceParameters } from "@/lib/resource-query";
+
+// 네이티브 입력칸의 min-height와 같게 맞춰 조회 줄의 아래 선을 하나로 둔다.
+const FILTER_CONTROL_HEIGHT = 44;
 
 export type SearchResource = "customers" | "billable-metrics" | "billable-metric-prices" | "usage" | "billing" | "invoices";
 
@@ -100,6 +103,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
 
   return <div className="resource-search">
     <p className="field-hint" id={`${formId}-hint`}>조건을 함께 선택한 뒤 조건 적용을 누르세요.</p>
+    <ConfigProvider theme={{ token: { controlHeight: FILTER_CONTROL_HEIGHT } }}>
     <form id={formId} method="get" className="workspace-actions" aria-label="조회 조건" aria-describedby={`${formId}-hint`} onSubmit={apply} onInvalidCapture={revealInvalid}>
       <EnvironmentInput />
       {Object.entries(draft.preservedParameters ?? {}).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
@@ -123,6 +127,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
       </details>
       <Button type="primary" htmlType="submit">조건 적용</Button>
     </form>
+    </ConfigProvider>
     {optionError && <p role="status">미터 선택지를 불러오지 못했습니다. 다시 열어 조회하세요.</p>}
   </div>;
 }

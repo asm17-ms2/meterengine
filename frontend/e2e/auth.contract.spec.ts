@@ -278,6 +278,17 @@ test("list screens keep the disclosure marker on the advanced filter summary", a
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
 
+test("filter row controls on a list screen share one height", async ({ page }) => {
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await expect(form.locator(".ant-picker").first()).toBeVisible();
+  const heights = await form.evaluate(element => Array.from(element.querySelectorAll(":scope > .workspace-field .ant-picker, :scope > .workspace-field .ant-select, :scope > .workspace-field > select, :scope > .workspace-field > input:not([type=hidden]), :scope > button[type=submit]"))
+    .map(control => ({ name: control.className || control.tagName, height: Math.round(control.getBoundingClientRect().height) })));
+  expect(heights.length).toBeGreaterThanOrEqual(3);
+  for (const control of heights) expect(control.height, control.name).toBe(44);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
