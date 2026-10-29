@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T20:01:52+09:00",
+  "updated_at": "2026-10-29T20:53:58+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -38,7 +38,8 @@
     "fix/s456-t-yang-month-picker": "6dd3dc9",
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
     "fix/s456-t-yang-pricing-archive": "a937f8f",
-    "fix/s456-t-yang-reconcile-catchup": "8edf94b"
+    "fix/s456-t-yang-reconcile-catchup": "8edf94b",
+    "fix/s456-t-yang-ci-tests": "a9ce8d1"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3368,26 +3369,41 @@
       "id": "G-187",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-ci-tests",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718의 ci.yml frontend 잡은 pnpm install, lint, build만 돌리고, 이 층이 더한 node 단위 시험 permissions.test.mjs와 대역 서버로 도는 Playwright 계약 명세 auth.contract.spec.ts(package.json test:e2e:contract)를 부르는 단계가 없다. 틀렸다고 보려고 cd.yml과 다른 워크플로를 찾았지만 cd.yml은 이미지 빌드와 배포만 하고, workflows README도 ci.yml을 backend 빌드와 테스트, frontend lint와 빌드로만 적어 제외 근거나 대신 돌리는 곳이 없다. 정점 0fe7d2a에서도 ci.yml은 72e8718..0fe7d2a 사이에 바뀐 커밋이 없어 같고, 그 사이 위층이 더한 계약 명세, demo, deploy/tests, rds-auto-stop terraform 시험도 필수 체크에서 돌지 않는다. 고치려면 .github/workflows/ci.yml에 잡을 더해야 하고 이는 팀 전체에 거는 제약이라 Discussion 합의 대상이므로 needs-decision으로 둔다.",
+      "reason": "결정(머지 뒤 지침): CI가 저장소에 이미 있는 hermetic 시험(프론트 node 단위와 계약 명세 3종, demo의 pnpm과 Python 시험, deploy unittest, rds-auto-stop terraform test와 ASL 시험)을 돌리게 하기로 정한다. 지금 필수 체크는 lint와 build만 봐서 결제수단 등록 콜백, workspace 격리, Caddy 로그 마스킹이 깨져도 초록으로 머지되고 cd.yml이 그대로 배포한다. 팀 규칙도 어기면 실패해야 하는 제약은 CI 검사에 두라고 하고(comments.md:20), 추가하는 시험은 모두 외부 계정 없이 돌며(terraform은 mock_provider) 바뀐 경로에서만 돌아 비용이 작다. CI와 필수 체크는 팀 전체 제약이라 박성종, 문인호 두 사람을 리뷰어로 두고, 새 잡을 main 룰셋 필수 체크에 넣는 설정은 PR 본문에서 박성종 님에게 요청한다.",
       "evidence": [
-        ".github/workflows/ci.yml:79-81 @ 72e8718",
-        ".github/workflows/ci.yml:79-81 @ 0fe7d2a",
-        "frontend/e2e/permissions.test.mjs:1-5 @ 72e8718",
-        "frontend/playwright.config.ts:18-23 @ 72e8718",
-        "docs/contributing/pull-request.md:7 @ 72e8718"
+        ".github/workflows/ci.yml:28-35 @ af15d7f",
+        ".github/workflows/ci.yml:79-81 @ af15d7f",
+        ".github/workflows/README.md:7 @ af15d7f",
+        "docs/contributing/pull-request.md:7 @ af15d7f",
+        "docs/contributing/comments.md:20 @ af15d7f",
+        "frontend/package.json:12-13 @ af15d7f",
+        "frontend/playwright.config.ts:18-21 @ af15d7f",
+        "frontend/playwright.payment.config.ts:5 @ af15d7f",
+        "frontend/playwright.workspace.config.ts:10 @ af15d7f",
+        "demo/README.md:69 @ af15d7f",
+        "deploy/README.md:113 @ af15d7f",
+        "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:1-3 @ af15d7f",
+        "커밋 a9ce8d1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "a9ce8d11"
+      ],
+      "tests": [
+        "CI 설정이라 고치기 전 실패하는 시험은 없다. PR #494의 CI 실행(run 40868392114)에서 새 단계가 돌았다: frontend 단위 79건, auth 계약 65건, 카드 등록 계약 6건 통과, 업무 계약 7 통과 2 실패(main 기준선, #481이 고침), demo sdk 82, llm-service 36, web 85, Python 328건, deploy 39건 skip 없이 통과, terraform mock 2건과 ASL 27건 통과",
+        "main 새 checkout 트리에서 같은 명령 통과, actionlint 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다).",
-      "propagation_note": "ci.yml은 #442부터 #455까지 바뀌지 않았다. 합의되면 ci.yml 한 곳에 잡을 더하면 되고, 정점 기준 대상은 frontend/e2e/*.test.mjs, contract 프로젝트 3종(auth, payment, workspace 설정), demo의 pnpm과 python 시험, deploy/tests, measurements/terraform/modules/rds-auto-stop/tests다. paths-filter에 demo, deploy, measurements를 더하고 workflows README 표도 같이 고친다."
+      "propagation_note": "ci.yml은 #442부터 #455까지 바뀌지 않았다. 합의되면 ci.yml 한 곳에 잡을 더하면 되고, 정점 기준 대상은 frontend/e2e/*.test.mjs, contract 프로젝트 3종(auth, payment, workspace 설정), demo의 pnpm과 python 시험, deploy/tests, measurements/terraform/modules/rds-auto-stop/tests다. paths-filter에 demo, deploy, measurements를 더하고 workflows README 표도 같이 고친다.",
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "CI가 저장소에 이미 있는 hermetic 시험(프론트 node 단위와 계약 명세 3종, demo의 pnpm"
     },
     {
       "id": "X-000",
@@ -13572,6 +13588,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
+      "kind": "ci",
+      "result": "pass",
+      "command": "PR #494 GitHub Actions CI(run 40868392114)",
+      "detail": "backend, demo, deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(2db50b4, #481이 고침)"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -14074,6 +14106,11 @@
       "branch": "fix/s456-t-yang-env-ui",
       "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
       "at": "2026-10-29T20:01:52+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
+      "at": "2026-10-29T20:53:58+09:00"
     }
   ],
   "usage_log": [],
@@ -14117,7 +14154,8 @@
     "2026-10-29: G-187 수정(fix/s456-t-yang-ci-tests a9ce8d1, .github/workflows/ci.yml 등)은 로컬 커밋까지 했으나 push가 거절됐다. gh OAuth 토큰에 workflow 권한이 없어 워크플로 파일을 바꾸는 push를 GitHub가 막았다. 우회하지 않고 사용자에게 권한 갱신(gh auth refresh -s workflow)을 요청했다. G-187은 그때까지 needs-decision으로 둔다.",
     "2026-10-29: #490 박성종 님 리뷰 p4(성공 기록 없이 첫 대사가 실패하면 다음 실행이 첫 실패일을 건너뜀)를 받아 가장 이른 실행의 창부터 맞추게 고쳤다(8edf94b).",
     "2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f).",
-    "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b)."
+    "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).",
+    "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다."
   ],
   "final_checks": [
     {

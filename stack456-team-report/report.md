@@ -1,12 +1,12 @@
-결과: 끝 상태 328/328건 (fixed 261, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 1, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b)
-정할 것: 1건 (G-187). 로컬 DB 다시 만들기: 없음
+결과: 끝 상태 328/328건 (fixed 262, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 1개(마지막 a9ce8d1)
+정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 113 | 9 | 17 | 1 | 3 | 0 |
+| #442 | 143 | 114 | 9 | 17 | 0 | 3 | 0 |
 | #445 | 68 | 59 | 0 | 9 | 0 | 0 | 0 |
 | #447 | 35 | 27 | 5 | 3 | 0 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
@@ -97,6 +97,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | G-060 | #442 | 50a9a03 | 운영자 도입사 조회에 status 필터 | the operator organization list asks the backend for the selected status: 실패 Expected value "/v1/organizations?status=pending", Received ["/v1/organizations", .. |
 | G-066 | #442 | e4b7522 | 운영자 사용자 화면의 도입사 목록 곱 렌더 제거 | the operator user list sends the active organizations once instead of once per user: 실패 Expected < 100, Received 930 |
 | G-068 | #442 | c6327b2 | frontend README를 세션 로그인과 새 화면에 맞춤 | 없음(문서 변경: dev-state.ts, transport.ts, session.ts, proxy.ts, 각 page.tsx와 문장을 대조했다. frontend lint, build 통과) |
+| G-187 | #442 | a9ce8d1 | CI가 저장소에 이미 있는 hermetic 시험(프론트 node 단위와 계약 명세 3종, demo의 pnpm | 없음(CI 설정이라 고치기 전 실패하는 시험은 없다. PR #494의 CI 실행(run 40868392114)에서 새 단계가 돌았다: frontend 단위 79건, auth 계약 65건, 카드 등록 계약 6건 통과, 업무) |
 | X-000 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | X-004 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | X-008 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
@@ -231,7 +232,6 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
-| G-187 | #442 | CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다). |
 
 ## 막힌 것
 
@@ -474,3 +474,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #490 박성종 님 리뷰 p4(성공 기록 없이 첫 대사가 실패하면 다음 실행이 첫 실패일을 건너뜀)를 받아 가장 이른 실행의 창부터 맞추게 고쳤다(8edf94b).
 - 2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f).
 - 2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).
+- 2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.
