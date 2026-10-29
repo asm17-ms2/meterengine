@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T19:59:05+09:00",
+  "updated_at": "2026-10-29T20:45:19+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -12175,8 +12175,8 @@
       "id": "Ck1-454-04",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 서비스는 한도 확인보다 먼저 매 요청마다 cleanExpired 트랜잭션과 consume 트랜잭션을 따로 열고, 429는 consume가 끝난 뒤에야 던진다. consume의 upsert는 이미 한도를 넘어 attempts가 limit+1로 고정된 행에도 WHERE 없이 DO UPDATE를 실행하므로, 값이 바뀌지 않아도 같은 IP 행을 잠그고 새 행 버전을 쓴다. 이 잠금은 같은 트랜잭션에서 계정 행 upsert와 커밋이 끝날 때까지 유지되어, 한 IP의 동시 요청은 한 행에서 줄을 서고 기다리는 동안 각자 풀 연결을 쥔다. 풀 크기는 설정하지 않아 Hikari 기본값 10이고 데이터 소스가 하나뿐이며, Caddy에도 앞단 제한이 없어서 이 대기가 수집 API를 포함한 다른 모든 요청의 연결 대기로 번진다. #454 이후 이 두 파일을 바꾼 main 커밋이 없어 넘길 때 head와 코드가 같고, API 키 제한은 메모리 토큰 버킷이라 이런 문제가 없다. 이미 한도에 닿은 행은 잠금 없이 읽어 바로 거절하면 카운터 의미를 그대로 둔 채 막을 수 있다.",
       "evidence": [
@@ -12188,17 +12188,23 @@
         "backend/src/main/java/com/meterengine/account/repository/AuthRequestRateLimitRepository.java:45-55 @ af15d7f5",
         "backend/src/main/resources/application.properties:25-26 @ af15d7f5",
         "deploy/caddy/Caddyfile:24 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:28,46 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:28,46 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다: 실패 (카운터 행 xmin이 바뀜)",
+        "커밋 8453b90d"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8453b90da24e926e1215e8f52185651a5b836aa1"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:62: 거절 여부와 상관없이 매 요청 cleanExpired 쓰기 트랜잭션",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:63-72: consume로 쓴 뒤에야 429를 던진다",
@@ -12210,16 +12216,19 @@
         "deploy/caddy/Caddyfile:24: 로그인과 가입 경로에 앞단 호출 제한 없이 그대로 reverse_proxy",
         "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:28,46: API 키 제한은 메모리 버킷이라 DB 연결을 쓰지 않는다. 대조용",
         "git log af15d7f5 -- AuthRequestRateLimitService.java AuthRequestRateLimitRepository.java: e96ef293 하나뿐이고 dac784b 저장소 파일과 main이 같다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "C454-002",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61 @ af15d7f5",
@@ -12232,17 +12241,31 @@
         "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:40 @ af15d7f5",
         "backend/src/main/resources/application.properties:13 @ af15d7f5",
         "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:58 @ af15d7f5",
-        "backend/README.md:120 @ af15d7f5"
+        "backend/README.md:120 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 (expected: 401 but was: 429)",
+        "AuthRequestRateLimitIntegrationTest.IP_한도를_넘은_로그인은_계정_한도에_세지_않는다: 실패 (expected: 0L but was: 1L)",
+        "AuthRequestRateLimitIntegrationTest.앞_계정_한도가_거절한_요청은_다음_계정_한도에_세지_않는다(리뷰 반영): 실패 (expected: 1L but was: 3L)",
+        "AuthRequestRateLimitIntegrationTest.줄바꿈을_넣은_이메일로_다른_사람의_계정_IP_한도를_채울_수_없다(리뷰 반영): 실패 (expected: 401 but was: 429)",
+        "커밋 89332438",
+        "커밋 66054cb5"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8933243850345602631fab37c779c9a9fdc2cf07",
+        "66054cb553bf2aa0d2c60740feae762964a2306a"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.IP_한도를_넘은_로그인은_계정_한도에_세지_않는다: 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.앞_계정_한도가_거절한_요청은_다음_계정_한도에_세지_않는다(리뷰 반영): 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.줄바꿈을_넣은_이메일로_다른_사람의_계정_IP_한도를_채울_수_없다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(fix): 로그인 계정 한도를 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에 세지 않는다",
       "decision_question": "로그인 계정 한도를 지금처럼 이메일 하나로 모든 IP가 공유할지, 표적 잠금을 줄이려고 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꿀지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96: 비밀번호 확인인 97행 sessionService.create보다 먼저 한도 검사",
@@ -12256,16 +12279,21 @@
         "backend/src/main/resources/application.properties:13: 세션 ttl 12h",
         "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:58: 다른 IP에서 같은 계정 한도 공유를 시험으로 고정",
         "backend/README.md:120: IP별, 계정별 고정 구간 한도와 정상 로그인 계산을 설계로 기술"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "decision": "fix: 로그인 계정 한도를 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에 세지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "C454-005",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/account/repository/AuthRequestRateLimitRepository.java:40 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/repository/AuthRequestRateLimitRepository.java:41 @ af15d7f5",
@@ -12275,17 +12303,31 @@
         "backend/README.md:120 @ af15d7f5",
         "deploy/caddy/Caddyfile:60 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:40 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:58 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:58 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 (expected: 401 but was: 429)",
+        "AuthRequestRateLimitIntegrationTest.IP_한도를_넘은_로그인은_계정_한도에_세지_않는다: 실패 (expected: 0L but was: 1L)",
+        "AuthRequestRateLimitIntegrationTest.앞_계정_한도가_거절한_요청은_다음_계정_한도에_세지_않는다(리뷰 반영): 실패 (expected: 1L but was: 3L)",
+        "AuthRequestRateLimitIntegrationTest.줄바꿈을_넣은_이메일로_다른_사람의_계정_IP_한도를_채울_수_없다(리뷰 반영): 실패 (expected: 401 but was: 429)",
+        "커밋 89332438",
+        "커밋 66054cb5"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8933243850345602631fab37c779c9a9fdc2cf07",
+        "66054cb553bf2aa0d2c60740feae762964a2306a"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.IP_한도를_넘은_로그인은_계정_한도에_세지_않는다: 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.앞_계정_한도가_거절한_요청은_다음_계정_한도에_세지_않는다(리뷰 반영): 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.줄바꿈을_넣은_이메일로_다른_사람의_계정_IP_한도를_채울_수_없다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(fix): C454-002와 같은 결정",
       "decision_question": "로그인 계정 한도를 지금처럼 이메일 하나로 모든 IP가 공유하고 성공과 IP 초과 시도까지 셀지, (계정, IP) 쌍 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에서 뺄지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/repository/AuthRequestRateLimitRepository.java:40: IP 버킷 증가",
@@ -12296,16 +12338,21 @@
         "backend/README.md:120: 정상 로그인도 계산한다고 기술",
         "deploy/caddy/Caddyfile:60: /v1/* 로그인 호출 제한 없음",
         "backend/src/main/java/com/meterengine/global/security/RateLimitFilter.java:40: API_KEY 주체만 제한"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "decision": "fix: C454-002와 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "C454-008",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/repository/UserAccountRepository.java:15 @ af15d7f5",
@@ -12316,17 +12363,23 @@
         "backend/src/main/java/com/meterengine/account/config/AuthRateLimitProperties.java:11 @ af15d7f5",
         "deploy/caddy/Caddyfile:60 @ af15d7f5",
         "backend/src/test/java/com/meterengine/TestcontainersConfiguration.java:15 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:61 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:61 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401)",
+        "커밋 09a1e244"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "09a1e24400c1092bda6c6104248c30b2c3d5b64f"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61: String account = email.strip().toLowerCase(Locale.ROOT",
         "backend/src/main/java/com/meterengine/account/repository/UserAccountRepository.java:15: lower(u.email) = lower(:email",
@@ -12338,14 +12391,18 @@
         "deploy/caddy/Caddyfile:60: /v1/*는 호출 제한 없이 백엔드로 넘김",
         "backend/src/test/java/com/meterengine/TestcontainersConfiguration.java:15: 시험 DB는 postgres:18",
         "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:61: ASCII toUpperCase 변형만 확인"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "Ck1-454-05",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 로그인(POST /v1/sessions)과 가입 신청(POST /v1/signups)의 429 응답은 설명 문구에만 Retry-After를 적고 headers 정의가 없다. 실제 서버는 AuthRequestRateLimitService가 retryAfter를 실은 TooManyRequestsException을 던지고 GlobalExceptionHandler가 Retry-After 헤더를 붙여 보내므로, 문서와 실제 응답이 어긋난다. 다른 429는 OpenApiConfig가 Retry-After 헤더(필수, integer)를 붙이지만 @PublicAccess 경로는 그 전에 바로 반환해서 이 두 곳만 빠진다. 생성된 openapi.yaml에서 429 응답 89개 가운데 87개만 Retry-After 헤더가 있고 빠진 두 개가 이 두 경로다. 넘길 때 head(dac784b)와 main의 해당 어노테이션이 같아서 이후 커밋으로 고쳐지지 않았다. 문서를 보고 클라이언트를 만드는 도입사는 이 두 경로에서만 대기 시간을 읽는 코드를 만들지 못한다.",
       "evidence": [
@@ -12358,17 +12415,23 @@
         "backend/openapi.yaml:341 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:72 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:65 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:280 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:280 @ af15d7f5",
+        "OpenApiDocumentTest.로그인과_가입의_429는_Retry_After_헤더를_적는다: 실패 (헤더 정의 없음)",
+        "커밋 9353ab37"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "9353ab37e2221ae01daef659880047c1a5a3a133"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 통과",
+        "OpenApiDocumentTest.로그인과_가입의_429는_Retry_After_헤더를_적는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:87: 429 ApiResponse에 headers 없음, 92행 설명에만 Retry-After 언급",
         "backend/src/main/java/com/meterengine/account/controller/SignupController.java:77: 429 ApiResponse에 headers 없음, 82행 설명에만 언급",
@@ -12380,7 +12443,10 @@
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:72: retryAfter를 실어 던짐",
         "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:65: 실제 응답에 Retry-After 헤더를 붙임",
         "backend/src/test/java/com/meterengine/account/AuthRequestRateLimitIntegrationTest.java:280: 런타임 헤더는 시험이 확인하지만 OpenApiDocumentTest에는 429 헤더 검사가 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "Ck1-454-06",
@@ -12433,10 +12499,10 @@
       "id": "C454-003",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/repository/UserAccountRepository.java:15 @ af15d7f5",
@@ -12444,60 +12510,80 @@
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:9 @ af15d7f5",
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:20 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/config/AuthRateLimitProperties.java:12 @ af15d7f5",
-        "deploy/caddy/Caddyfile:60 @ af15d7f5"
+        "deploy/caddy/Caddyfile:60 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401)",
+        "커밋 09a1e244"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "09a1e24400c1092bda6c6104248c30b2c3d5b64f"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:9: email VARCHAR NOT NULL, 콜레이션 지정 없음",
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:20: lower(email) 고유 색인",
         "backend/src/main/java/com/meterengine/account/config/AuthRateLimitProperties.java:12: loginAccountLimit 10"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "C454-007",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:67 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/repository/UserAccountRepository.java:15 @ af15d7f5",
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96 @ af15d7f5",
         "backend/src/test/java/com/meterengine/TestcontainersConfiguration.java:15 @ af15d7f5",
-        "deploy/caddy/Caddyfile:60 @ af15d7f5"
+        "deploy/caddy/Caddyfile:60 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401)",
+        "커밋 09a1e244"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "09a1e24400c1092bda6c6104248c30b2c3d5b64f"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:67: SecureTokens.hash(account)로 카운터 식별"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "X-088",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "frontend/next.config.ts:3 @ af15d7f5",
         "frontend/next.config.ts:11 @ af15d7f5",
@@ -12506,17 +12592,23 @@
         "frontend/src/proxy.ts:21 @ af15d7f5",
         "deploy/caddy/Caddyfile:70-72 @ af15d7f5",
         "frontend/src/app/payment-method-registrations/layout.tsx:3-7 @ af15d7f5",
-        "frontend/src/components/payment-registration/CardRegistration.tsx:69-74 @ af15d7f5"
+        "frontend/src/components/payment-registration/CardRegistration.tsx:69-74 @ af15d7f5",
+        "auth.contract.spec.ts every page refuses framing and MIME sniffing ...: 실패 (Received: undefined)",
+        "커밋 d7e08efb"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d7e08efb6655915b1faf1d95f6e94ca9579d8da3"
+      ],
+      "tests": [
+        "frontend lint, build 통과, test:e2e:contract 67개, payment 계약 6개 통과",
+        "auth.contract.spec.ts every page refuses framing and MIME sniffing ...: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/next.config.ts:3: poweredByHeader 설정이 없어 X-Powered-By: Next.js가 기본으로 붙는다",
         "frontend/next.config.ts:11: headers()의 source가 /invoice-links/:path* 하나뿐",
@@ -12526,7 +12618,11 @@
         "deploy/caddy/Caddyfile:70-72: reverse_proxy frontend:3000만 있고 보안 헤더 지시어가 없다",
         "frontend/src/app/payment-method-registrations/layout.tsx:3-7: metadata는 referrer와 robots만 정한다",
         "frontend/src/components/payment-registration/CardRegistration.tsx:69-74: 프레이밍당하면 노리게 될 동의 체크박스와 등록 버튼"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "G-099",
@@ -12534,8 +12630,8 @@
         "G-179"
       ],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 초대 수락 서버 액션은 새 계정으로 수락한 뒤 POST /v1/sessions로 자동 로그인하는데, 이 호출에 clientIp를 넘기지 않는다. 같은 /v1/sessions를 부르는 loginAction과 가입 액션은 x-meterengine-client-ip 값을 넘기고 transport.ts가 X-MeterEngine-Client-IP 헤더로 실어 보낸다. 프론트는 내부 8081 Caddy를 거쳐 백엔드를 부르고, 이 사이트는 헤더를 덮어쓰지 않으며, 백엔드는 접속 상대가 신뢰 프록시(기본 172.30.0.8/29, Caddy 172.30.0.10)일 때 헤더가 있어야만 실제 IP를 쓴다. 그래서 초대 수락 자동 로그인은 모두 Caddy 주소 하나의 login 한도(기본 5분 100회)를 나눠 쓰고, 넘으면 수락은 됐는데 '로그인 화면에서 도입사로 이동하세요'로 떨어진다. 넘길 때 head 이후 이 파일을 바꾼 main 커밋은 #451뿐이고 이 줄은 그대로라 고쳐지지 않았다. 원 지적의 '로그에서 실제 IP를 알 수 없다'는 이 수정과 관계없고, 한 함수로 모으는 정리는 최소 수정 밖이라 넣지 않는다.",
       "evidence": [
@@ -12550,24 +12646,33 @@
         "deploy/caddy/Caddyfile:76 @ af15d7f5",
         "deploy/compose.prod.yml:21 @ af15d7f5",
         "deploy/compose.prod.yml:82 @ af15d7f5",
-        "backend/src/main/resources/application.properties:49 @ af15d7f5"
+        "backend/src/main/resources/application.properties:49 @ af15d7f5",
+        "auth.contract.spec.ts the automatic login after accepting an invitation sends the visitor's client address: 실패 (Received: undefined)",
+        "커밋 4b6b732c"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "4b6b732c09119512cd6881ec14cb53d11817b761"
+      ],
+      "tests": [
+        "frontend lint, build 통과, test:e2e:contract 66개 통과",
+        "auth.contract.spec.ts the automatic login after accepting an invitation sends the visitor's client address: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "G-101",
       "merged_ids": [],
       "layer": 454,
-      "branch": "feat/auth-rate-limit",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 RequestLogFilter는 X-Forwarded-For 첫 값을 client_address로 찍고, 로그인과 가입 한도는 신뢰 프록시 대역에서 온 X-MeterEngine-Client-IP로 IP를 센다. 운영에서 콘솔 로그인은 프론트 서버가 caddy:8081을 거쳐 부르는데, 프론트는 X-MeterEngine-Client-IP만 보내고 Caddy 전역 설정에 trusted_proxies가 없어 X-Forwarded-For는 프론트 주소(172.30.0.11)로 채워진다. 429는 GlobalExceptionHandler가 로그 없이 돌려주고, 요청 감사 행은 anonymous라 IP가 없으며, Caddy 접속 로그 기본값은 discard이고 Next 요청 로그도 꺼져 있다. RequestLogFilter는 넘길 때 head(dac784b)와 main이 한 글자도 다르지 않고, 후속 PR에서 이 파일이나 429 경로를 고친 커밋이 없다. 요청 로그 판정을 한도와 같은 공용 빈으로 옮기는 안은 파일 넷에 걸친 구조 변경이라, 가장 작은 수정으로 429를 낼 때 한도가 센 IP와 걸린 한도 종류를 WARN 한 줄로 남기는 계획을 적는다.",
       "evidence": [
@@ -12580,17 +12685,27 @@
         "deploy/caddy/Caddyfile:4-19,57,76-78 @ af15d7f5",
         "deploy/compose.prod.yml:21,82,89 @ af15d7f5",
         "frontend/src/app/(public)/actions.ts:21-22 @ af15d7f5",
-        "deploy/deploy.sh:16 @ af15d7f5"
+        "deploy/deploy.sh:16 @ af15d7f5",
+        "AuthRequestRateLimitIntegrationTest.한도에_걸린_요청은_센_클라이언트_주소와_걸린_한도를_이메일_없이_로그에_남긴다: 실패 (limit, retry_after 로그 없음)",
+        "AuthRequestRateLimitIntegrationTest.계정과_IP_쌍_한도에_걸린_요청은_로그에_쌍_한도라고_남긴다(리뷰 반영): 실패 (limit=login_account_ip 없음)",
+        "커밋 5a91d920",
+        "커밋 abc82c50"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "5a91d9203a26657eb62506fd033030f6e9887296",
+        "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+      ],
+      "tests": [
+        "com.meterengine.account 시험 통과",
+        "AuthRequestRateLimitIntegrationTest.한도에_걸린_요청은_센_클라이언트_주소와_걸린_한도를_이메일_없이_로그에_남긴다: 실패 확인 뒤 통과",
+        "AuthRequestRateLimitIntegrationTest.계정과_IP_쌍_한도에_걸린_요청은_로그에_쌍_한도라고_남긴다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:123-139: X-Forwarded-For 첫 값을 client_address로 씀, 신뢰 판정 없음",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:75-86: 신뢰 프록시면 X-MeterEngine-Client-IP로 셈",
@@ -12603,7 +12718,10 @@
         "frontend/src/app/(public)/actions.ts:21-22: ; frontend/src/lib/api/transport.ts:100 @ af15d7f5 (X-MeterEngine-Client-IP만 보내고 X-Forwarded-For는 보내지 않음",
         "deploy/deploy.sh:16: ; frontend/next.config.ts:5 @ af15d7f5 (Caddy 접속 로그 discard, Next 요청 로그 끔",
         "git diff dac784b af15d7f5 -- RequestLogFilter.java 결과 비어 있음, git log af15d7f5 -- RequestLogFilter.java 는 e96ef293(#454), f46a475a 뿐"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     },
     {
       "id": "U12-B1",
@@ -13363,8 +13481,8 @@
       "id": "NT-inho-008",
       "merged_ids": [],
       "layer": 454,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-inho-auth-security",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "X-088 원문은 운영 Caddyfile에 HSTS도 더하자고 제안한다. main의 Caddyfile 사이트 블록에는 Strict-Transport-Security 헤더가 없다. 하지만 HSTS는 한 번 내보내면 브라우저가 max-age 동안 HTTPS를 강제해서 되돌릴 수 없다. 그래서 범위 지시에 따라 X-088 수정에서 떼어 결정 항목으로 둔다. deploy 설정을 바꾸는 일이라 담당자가 max-age와 함께 정해야 한다.",
       "evidence": [
@@ -13380,12 +13498,14 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(keep): HSTS는 되돌릴 수 없어 이번에 더하지 않는다. 배포 도메인 기준이 정해진 뒤 따로 정한다",
       "decision_question": "운영 Caddyfile에 HSTS를 더할지와 max-age를 얼마로 할지 정한다.",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:43-73: 사이트 블록에 header Strict-Transport-Security 지시어가 없다",
         "deploy/caddy/Caddyfile:1: HTTPS 리다이렉트는 Caddy가 자동으로 맡는다"
-      ]
+      ],
+      "decision": "keep: HSTS는 되돌릴 수 없어 이번에 더하지 않는다. 배포 도메인 기준이 정해진 뒤 따로 정한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493",
+      "question": "세션이 HSTS를 이번에 더하지 않기로 정하고 근거를 PR #493 본문에 적었다. 배포 도메인 기준과 max-age를 정할 때 박성종 님이 따로 결정한다."
     },
     {
       "id": "NT-inho-009",
@@ -13420,9 +13540,97 @@
       "top_head": "main af15d7f5 same",
       "summary": "워크스페이스 계약 명세가 비밀값을 복사한 뒤 닫는다",
       "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
+    },
+    {
+      "id": "NT-inho-010",
+      "merged_ids": [],
+      "layer": 454,
+      "branch": "main",
+      "status": "needs-decision",
+      "verdict": "confirmed",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. 이 변경 전부터 있던 동작이고 배포에 IPv6 클라이언트 주소가 들어오는지에 달려 있어 PR #493에 넣지 않았다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:97-137 @ abc82c50"
+      ],
+      "commits": [],
+      "tests": [],
+      "behavior_change": false,
+      "title": "인증 호출 제한의 IPv6 주소 묶음(PR #493 두 번째 리뷰에서 나옴)",
+      "question": "인증 호출 제한에서 IPv6 클라이언트 주소를 접두 대역(/64 등)으로 묶어 셀지. 운영 배포에 IPv6가 들어오는지 먼저 확인해야 한다.",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     }
   ],
   "checks": [
+    {
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
+      "result": "not-applicable",
+      "detail": "NT-inho-006, NT-inho-007과 같은 이유로 실패(PR #471 머지 전). #471 명세 변경을 잠시 얹으면 두 명세 모두 통과",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 10개(aggregation, archive-filters, auth, customer-payment-retry, events, invoice-links, operator-create, people, permissions, query-workspace), 브랜치 백엔드와 프론트",
+      "result": "pass",
+      "detail": "10개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "not-applicable",
+      "detail": "9개 중 7개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "67 passed",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 79, pass 79, fail 0",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass",
+      "detail": "BUILD SUCCESSFUL, tests 1385, openapi.yaml 변화 없음",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8"
+    },
     {
       "kind": "static",
       "command": "deploy/grafana 대시보드 JSON 파싱, 바뀐 PromQL 5식 promtool check rules(prom/prometheus:v3, --network none), caddy fmt 비교",
@@ -17195,6 +17403,11 @@
       "branch": "fix/s456-t-inho-webhook-audit-ops",
       "sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be",
       "at": "2026-10-29T19:59:04+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-auth-security",
+      "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8",
+      "at": "2026-10-29T20:45:18+09:00"
     }
   ],
   "usage_log": [],
@@ -17244,7 +17457,8 @@
     "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471",
     "events-query": "https://github.com/asm17-ms2/meterengine/pull/488",
     "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491",
-    "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492"
+    "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492",
+    "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493"
   },
   "final_checks": [
     {

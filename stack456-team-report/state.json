@@ -1,14 +1,14 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T19:59:05+09:00",
+  "updated_at": "2026-10-29T20:45:19+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": null,
     "step": "next-pr",
-    "branch": "fix/s456-t-inho-auth-security"
+    "branch": "fix/s456-t-inho-demo-infra"
   },
   "finished_ids": [
     "C443-000",
@@ -258,7 +258,18 @@
     "G-156",
     "Ck1-454-01",
     "Ck1-454-02",
+    "Ck1-454-04",
+    "C454-002",
+    "C454-005",
+    "C454-008",
+    "Ck1-454-05",
     "Ck1-454-06",
+    "C454-003",
+    "C454-007",
+    "X-088",
+    "G-099",
+    "G-179",
+    "G-101",
     "U12-B1",
     "Nk4-005",
     "NT-inho-002",
@@ -267,7 +278,9 @@
     "NT-inho-005",
     "NT-inho-006",
     "NT-inho-007",
-    "NT-inho-009"
+    "NT-inho-008",
+    "NT-inho-009",
+    "NT-inho-010"
   ],
   "open_ids": [
     "X-012",
@@ -370,17 +383,6 @@
     "X-083",
     "X-092",
     "X-093",
-    "Ck1-454-04",
-    "C454-002",
-    "C454-005",
-    "C454-008",
-    "Ck1-454-05",
-    "C454-003",
-    "C454-007",
-    "X-088",
-    "G-099",
-    "G-179",
-    "G-101",
     "C455-002",
     "C455-003",
     "C455-005",
@@ -418,6 +420,12 @@
       "local_sha": "6039fada1d1a152cdc42fe9d49a4beb9669510be",
       "unpushed": [],
       "pr": "https://github.com/asm17-ms2/meterengine/pull/492"
+    },
+    "fix/s456-t-inho-auth-security": {
+      "origin_sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8",
+      "local_sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8",
+      "unpushed": [],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/493"
     }
   },
   "usage": {

@@ -1,8 +1,8 @@
-미완료 124건, 결과: 끝 상태 250/372건 (fixed 216, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad)
-정할 것: 3건 (Ck3-451-02, Nk3-011, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+미완료 112건, 결과: 끝 상태 261/372건 (fixed 227, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5)
+정할 것: 5건 (Ck3-451-02, Nk3-011, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T19:59:05+09:00
+상태: running, 갱신 2026-10-29T20:45:19+09:00
 
 ## 층별 상태
 
@@ -14,7 +14,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | #448 | fix/s456-t-inho-webhook-audit-ops | 24 | 22 | 1 | 1 | 0 | 0 | 0 |
 | #450 | fix/s456-t-inho-events-query | 38 | 28 | 0 | 2 | 0 | 0 | 8 |
 | #451 | feat/billing-queries | 96 | 28 | 0 | 6 | 2 | 0 | 60 |
-| #454 | feat/auth-rate-limit | 19 | 3 | 1 | 4 | 0 | 0 | 11 |
+| #454 | feat/auth-rate-limit | 19 | 14 | 1 | 4 | 0 | 0 | 0 |
 | #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
 | #447 | fix/s456-t-inho-billing-api | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
@@ -225,6 +225,16 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Nk3-010 | #451 | ec1bc7f | main에서도 WorkspaceQueryController에는 @ApiResponse가 하나도 없고, OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 검색, 내보내기의 400 validation_err | OpenApiDocumentTest 새 시험 6개: 실패 (400, 404, 409 응답과 재생 헤더 없음, CSV format byte) |
 | Ck1-454-01 | #454 | 0428493, 52a27da | main의 Caddyfile은 두 log 블록(9~11줄, 48~50줄)에 같은 정규식을 세 줄씩 복사해 두었고, RequestLogFilter는 같은 경로 목록을 다른 정규식으로 따로 들고 있다. 넘길 때 head(dac784b)와 main 사이에  | test_logging.test_variant_paths_do_not_leak_tokens_into_logs: 실패 (인코딩 경로의 토큰이 로그에 남음) |
 | Ck1-454-02 | #454 | 2c62eb1 | main의 운영 compose는 백엔드에 호출 제한 설정 가운데 ENABLED와 TRUSTED_PROXIES 두 개만 넘기고, 로그인과 가입의 한도 넷과 창 둘은 넘기지 않는다. deploy.sh는 Parameter Store 값을 모두 env 파일에 | test_trusted_proxies.test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default: 실패 (LOGIN_IP_LIMIT 등 누락) |
+| Ck1-454-04 | #454 | 8453b90 | main의 서비스는 한도 확인보다 먼저 매 요청마다 cleanExpired 트랜잭션과 consume 트랜잭션을 따로 열고, 429는 consume가 끝난 뒤에야 던진다. consume의 upsert는 이미 한도를 넘어 attempts가 limit+1로 | AuthRequestRateLimitIntegrationTest.이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다: 실패 (카운터 행 xmin이 바뀜) |
+| C454-002 | #454 | 8933243, 66054cb | 보안 지적 수정 | AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 (expected: 401 but was: 429) |
+| C454-005 | #454 | 8933243, 66054cb | 보안 지적 수정 | AuthRequestRateLimitIntegrationTest.다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다: 실패 (expected: 401 but was: 429) |
+| C454-008 | #454 | 09a1e24 | 보안 지적 수정 | AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401) |
+| Ck1-454-05 | #454 | 9353ab3 | main에서도 로그인(POST /v1/sessions)과 가입 신청(POST /v1/signups)의 429 응답은 설명 문구에만 Retry-After를 적고 headers 정의가 없다. 실제 서버는 AuthRequestRateLimitService가 | OpenApiDocumentTest.로그인과_가입의_429는_Retry_After_헤더를_적는다: 실패 (헤더 정의 없음) |
+| C454-003 | #454 | 09a1e24 | 보안 지적 수정 | AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401) |
+| C454-007 | #454 | 09a1e24 | 보안 지적 수정 | AuthRequestRateLimitIntegrationTest.계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다: 실패 (expected: 429 but was: 401) |
+| X-088 | #454 | d7e08ef | 보안 지적 수정 | auth.contract.spec.ts every page refuses framing and MIME sniffing ...: 실패 (Received: undefined) |
+| G-099 | #454 | 4b6b732 | main의 초대 수락 서버 액션은 새 계정으로 수락한 뒤 POST /v1/sessions로 자동 로그인하는데, 이 호출에 clientIp를 넘기지 않는다. 같은 /v1/sessions를 부르는 loginAction과 가입 액션은 x-meterengin | auth.contract.spec.ts the automatic login after accepting an invitation sends the visitor's client address: 실패 (Received: undefined) |
+| G-101 | #454 | 5a91d92, abc82c5 | main에서도 RequestLogFilter는 X-Forwarded-For 첫 값을 client_address로 찍고, 로그인과 가입 한도는 신뢰 프록시 대역에서 온 X-MeterEngine-Client-IP로 IP를 센다. 운영에서 콘솔 로그인은 프 | AuthRequestRateLimitIntegrationTest.한도에_걸린_요청은_센_클라이언트_주소와_걸린_한도를_이메일_없이_로그에_남긴다: 실패 (limit, retry_after 로그 없음) |
 | U12-B1 | #454 | 56f4f94 | 보안 지적 수정 | test_logging.test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts: 실패 (internal=True에서 보낸 값 유지) |
 | NT-inho-003 | #444 | 76f7215 | main에서도 WebhookClient는 TLS 인증서 오류, DNS 실패, 연결 거부(모두 IOException)와 전송 작업 안의 예상하지 못한 예외(ExecutionException)를 모두 connection_error로 돌려준다. 이 값은 전 | 없음(문서 변경. WebhookClient의 connection_error 분기와 로그 줄을 코드에서 확인) |
 | NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
@@ -238,6 +248,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck3-451-02 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | Nk3-011 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(draft_invoice는 read API 키 호환 때문에 응답에 남긴다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | NT-inho-004 | #448 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #492 본문에 적었다(감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
+| NT-inho-008 | #454 | 세션이 HSTS를 이번에 더하지 않기로 정하고 근거를 PR #493 본문에 적었다. 배포 도메인 기준과 max-age를 정할 때 박성종 님이 따로 결정한다. |
+| NT-inho-010 | #454 | 인증 호출 제한에서 IPv6 클라이언트 주소를 접두 대역(/64 등)으로 묶어 셀지. 운영 배포에 IPv6가 들어오는지 먼저 확인해야 한다. |
 
 ## 막힌 것
 
@@ -255,8 +267,9 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | NT-inho-005 | #448 | already-fixed | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
 | NT-inho-006 | #451 | fixed | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
 | NT-inho-007 | #442 | fixed | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
-| NT-inho-008 | #454 | open | 운영 Caddyfile에 HSTS가 없다(X-088에서 떼어 낸 결정 항목) |
+| NT-inho-008 | #454 | needs-decision | 운영 Caddyfile에 HSTS가 없다(X-088에서 떼어 낸 결정 항목) |
 | NT-inho-009 | #442 | fixed | 워크스페이스 계약 명세 두 시험이 API 키 발급 뒤 복사 없이 닫아 main에서도 실패한다 |
+| NT-inho-010 | #454 | needs-decision | 인증 호출 제한의 IPv6 주소 묶음(PR #493 두 번째 리뷰에서 나옴) |
 
 ## 돌리지 못한 검사
 
