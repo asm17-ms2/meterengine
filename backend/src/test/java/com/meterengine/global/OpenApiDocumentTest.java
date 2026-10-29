@@ -648,6 +648,23 @@ class OpenApiDocumentTest {
 
   // ---------------------------------------------------------------------------
 
+  @Test
+  void 로그인과_가입의_429는_Retry_After_헤더를_적는다() {
+    for (String path : List.of("/v1/sessions", "/v1/signups")) {
+      JsonNode header =
+          root()
+              .path("paths")
+              .path(path)
+              .path("post")
+              .path("responses")
+              .path("429")
+              .path("headers")
+              .path("Retry-After");
+      assertThat(header.path("required").asBoolean()).as(path).isTrue();
+      assertThat(header.path("schema").path("type").asText()).as(path).isEqualTo("integer");
+    }
+  }
+
   private static void assertErrorResponse(JsonNode responses, String status, String... codes) {
     JsonNode response = responses.path(status);
     assertThat(
