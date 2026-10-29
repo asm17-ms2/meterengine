@@ -2,6 +2,7 @@ package com.meterengine.event.service;
 
 import com.meterengine.customer.api.CustomerDirectory;
 import com.meterengine.event.dto.EventIssuesResponse;
+import com.meterengine.event.dto.UnbilledEventsResponse;
 import com.meterengine.event.repository.EventIssueRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
@@ -94,6 +95,8 @@ public class EventIssueService {
         new EventIssuesResponse.Warnings(
             "organization_month",
             warnings.futureTimestamp().eventCount(),
-            warnings.negativeQuantity().eventCount()));
+            warnings.negativeQuantity().billableMetrics().stream()
+                .mapToLong(UnbilledEventsResponse.MetricCount::eventCount)
+                .sum()));
   }
 }

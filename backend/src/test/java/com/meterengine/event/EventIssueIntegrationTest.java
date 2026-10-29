@@ -216,6 +216,12 @@ class EventIssueIntegrationTest {
   }
 
   @Test
+  void 음수_경고는_이벤트와_미터_조합_수를_센다() {
+    metric("tokens-peak", "usage", "max", "tokens", "{model}");
+    assertThat(number(body(get(read, "")), "$.warnings.negative_event_metric_count")).isEqualTo(2);
+  }
+
+  @Test
   void 사유와_페이지_입력이_잘못되면_구체적인_400으로_거절한다() {
     for (String suffix :
         List.of("&reason=unknown", "&page=-1", "&size=101", "&customer_id=bad", "&from=2026-10-01"))

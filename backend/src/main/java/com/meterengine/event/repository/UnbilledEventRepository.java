@@ -82,26 +82,29 @@ public class UnbilledEventRepository {
 
   private MetricCounts metricCounts(
       UUID organizationId, OffsetDateTime startAt, OffsetDateTime cutoffAt, String condition) {
+    String matched =
+        " FROM event e JOIN billable_metric m ON"
+            + " m.organization_id = e.organization_id AND m.environment_scope_id ="
+            + " e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
+            + " AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul',"
+            + " 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE"
+            + " p.organization_id = m.organization_id AND p.environment_scope_id ="
+            + " m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <="
+            + " to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until"
+            + " > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))) WHERE"
+            + " e.organization_id = ? AND e.environment_scope_id = ? AND"
+            + " e.occurred_at >= ? AND e.occurred_at < ? AND ("
+            + condition
+            + ")";
+    Object[] parameters = {organizationId, BusinessEnvironmentContext.scopeId(), startAt, cutoffAt};
     List<MetricCount> counts =
         jdbcTemplate.query(
-            "SELECT m.code, count(*) AS event_count FROM event e JOIN billable_metric m ON"
-                + " m.organization_id = e.organization_id AND m.environment_scope_id ="
-                + " e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
-                + " AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul',"
-                + " 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE"
-                + " p.organization_id = m.organization_id AND p.environment_scope_id ="
-                + " m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <="
-                + " to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until"
-                + " > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))) WHERE"
-                + " e.organization_id = ? AND e.environment_scope_id = ? AND"
-                + " e.occurred_at >= ? AND e.occurred_at < ? AND ("
-                + condition
-                + ") GROUP BY m.code ORDER BY m.code",
+            "SELECT m.code, count(*) AS event_count" + matched + " GROUP BY m.code ORDER BY m.code",
             (rs, rowNum) -> new MetricCount(rs.getString("code"), rs.getLong("event_count")),
-            organizationId,
-            BusinessEnvironmentContext.scopeId(),
-            startAt,
-            cutoffAt);
-    return new MetricCounts(counts.stream().mapToLong(MetricCount::eventCount).sum(), counts);
+            parameters);
+    Long eventCount =
+        jdbcTemplate.queryForObject(
+            "SELECT count(DISTINCT e.transaction_id)" + matched, Long.class, parameters);
+    return new MetricCounts(eventCount == null ? 0 : eventCount, counts);
   }
 }
