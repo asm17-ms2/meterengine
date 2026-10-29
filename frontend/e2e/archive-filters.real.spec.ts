@@ -131,7 +131,8 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await remove(`/v1/customers/${oldCustomer.id}`);
       for (const [code, name] of [[activeMetricCode, activeMetricName], [archivedMetricCode, archivedMetricName]]) {
         await post("/v1/billable-metrics", { code, name, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] });
-        await post("/v1/events", { transaction_id: randomUUID(), customer_id: activeCustomerId, type: code, properties: { units: 1 }, occurred_at: new Date().toISOString() });
+        const event = await request.post(`${API_URL}/v1/events`, { headers, data: { transaction_id: randomUUID(), customer_id: activeCustomerId, type: code, properties: { units: 1 }, timestamp: new Date().toISOString() } });
+        expect(event.status()).toBe(200);
       }
       await remove(`/v1/billable-metrics/${archivedMetricCode}`);
       const oldRate = await post(`/v1/billable-metrics/${activeMetricCode}/price-rates`, { dimension_values: {}, unit_price: 123, effective_from: currentMonth });
