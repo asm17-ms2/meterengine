@@ -81,3 +81,11 @@ test("a meter shows both its name and code on the usage screen and on customer d
   assert.ok(usage.includes("const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip("));
   assert.ok(detail.includes("metric: `${metric.name} (${metric.code})`"));
 });
+
+test("customer detail and overview write months and times in the shared Korean format", () => {
+  const detail = source("app/(console)/customers/[id]/page.tsx");
+  const overview = source("app/(console)/overview/page.tsx");
+  assert.ok(detail.includes("<h2>{formatKoreanMonth(month)} 청구와 수납</h2>"));
+  assert.ok(overview.includes("{formatKstDateTime(data.calculated_at)} KST 기준."));
+  assert.ok(!overview.includes("new Date(data.calculated_at).toLocaleString("));
+});
