@@ -40,7 +40,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
         <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />
         <label className="workspace-field"><span>전송 ID, 고객과 유형 검색</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
         <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={size}>{[20, 50, 100].map(value => <option value={value} key={value}>{value}개</option>)}</select></label>
-        <button className="month-apply" type="submit">진단 조회</button>
+        <button className="month-apply" type="submit">조건 적용</button>
       </form>
       {result.ok ? <>
         <p role="status">선택 조건 전체 문제 {result.data.total.toLocaleString("ko-KR")}건. 미터 없음 {result.data.summary.unknown_event_type}건, 수량 확인 {result.data.summary.invalid_target_property}건, 단가 없음 {result.data.summary.unpriced_usage}건.</p>

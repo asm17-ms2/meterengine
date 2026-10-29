@@ -289,6 +289,18 @@ test("filter row controls on a list screen share one height", async ({ page }) =
   for (const control of heights) expect(control.height, control.name).toBe(44);
 });
 
+test("list filters submit with a default 조건 적용 button and reset with 조건 초기화", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const submit = page.locator('form[aria-label="조회 조건"]').getByRole("button", { name: "조건 적용", exact: true });
+  await expect(submit).toBeVisible();
+  await expect(submit).not.toHaveClass(/ant-btn-primary/);
+  await page.context().clearCookies();
+  await login(page, "member@contract.local", "/audit");
+  await expect(page.getByRole("button", { name: "조건 적용", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "조건 초기화", exact: true })).toBeVisible();
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

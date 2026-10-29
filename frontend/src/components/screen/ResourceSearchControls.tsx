@@ -125,7 +125,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
           {capabilities.size && <label className="workspace-field"><span>페이지 크기</span><select aria-label="페이지 크기" name="size" value={draft.size} onChange={event => change({ size: Number(event.target.value) })}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건씩</option>)}</select></label>}
         </div>
       </details>
-      <Button type="primary" htmlType="submit">조건 적용</Button>
+      <Button htmlType="submit">조건 적용</Button>
     </form>
     </ConfigProvider>
     {optionError && <p role="status">미터 선택지를 불러오지 못했습니다. 다시 열어 조회하세요.</p>}

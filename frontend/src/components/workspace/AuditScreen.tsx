@@ -51,7 +51,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
         <div className="workspace-field"><label htmlFor="audit-sort">정렬</label><select id="audit-sort" name="sort" defaultValue={value(query, "sort") || "occurred_at_desc"}><option value="occurred_at_desc">최신 기록부터</option><option value="occurred_at_asc">오래된 기록부터</option></select></div>
         <label className="workspace-field"><span>시작 일시 (KST)</span><input name="from" type="datetime-local" step="1" defaultValue={localTime(value(query, "from"))} /></label>
         <label className="workspace-field"><span>종료 일시 (KST, 미포함)</span><input name="to" type="datetime-local" step="1" defaultValue={localTime(value(query, "to"))} /></label>
-      </div><div className="workspace-actions"><button className="month-apply" type="submit">조건으로 조회</button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
+      </div><div className="workspace-actions"><button className="month-apply" type="submit">조건 적용</button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
     </form></section>
     {!result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST입니다. 조회 요청도 감사 대상이므로 새로 조회하면 기록이 추가됩니다.</p></div>
       {result.data.audit_logs.length === 0 ? <p className="muted">이 조건에 해당하는 기록이 없습니다. 기간이나 행동 조건을 조정하세요.</p> : <div className="audit-list">{result.data.audit_logs.map(log => {
