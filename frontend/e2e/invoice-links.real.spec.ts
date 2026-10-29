@@ -247,6 +247,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await expect(page.getByText(data.invoiceNumber, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
     await expect(page.getByRole("heading", { name: "청구 항목", exact: true })).toBeVisible();
+    await expect(page.getByText("항목별 공급가액은 수량에 단가를 곱한 금액에서 10원 미만을 버린 값입니다.", { exact: false })).toBeVisible();
     await expect(page.getByRole("heading", { name: "결제 내역", exact: true })).toBeVisible();
     await expect(page.getByRole("button")).toHaveText(["결제 상태 새로 조회", "조회 링크 복사"]);
     for (const value of [token, data.token, data.organizationId, data.customerId, data.invoiceId, "공개되면 안 되는 다른 고객"]) expect((await page.content()).includes(value)).toBe(false);
