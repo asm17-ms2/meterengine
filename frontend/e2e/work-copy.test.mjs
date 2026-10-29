@@ -26,3 +26,10 @@ test("the pricing CSS module does not rely on global class selectors that the mo
   assert.ok(css.includes(".tierEditorRow label{font-size:12px}"));
 });
 
+test("the finalization result lists only the first few invoices and points to the invoice list for the rest", () => {
+  const dialog = source("components/billing/InvoiceFinalizeDialog.tsx");
+  assert.ok(dialog.includes("const FINALIZED_PREVIEW_COUNT = 5;"));
+  assert.ok(dialog.includes("state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map("));
+  assert.ok(dialog.includes("인보이스 보기'에서 확인하세요."));
+});
+
