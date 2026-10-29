@@ -26,7 +26,21 @@ public record ApiKeySecretResponse(
         OffsetDateTime expiresAt,
     @Schema(description = "키를 폐기한 시각. 새로 발급한 키는 null") @JsonProperty("revoked_at")
         OffsetDateTime revokedAt,
-    @Schema(description = "키 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다") String secret) {
+    @Schema(description = "키 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다") String secret,
+    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다") @JsonProperty("rate_limit_per_minute")
+        Integer rateLimitPerMinute) {
+  public ApiKeySecretResponse(
+      UUID id,
+      String label,
+      String mode,
+      List<String> scopes,
+      String lastFour,
+      OffsetDateTime createdAt,
+      OffsetDateTime expiresAt,
+      OffsetDateTime revokedAt,
+      String secret) {
+    this(id, label, mode, scopes, lastFour, createdAt, expiresAt, revokedAt, secret, null);
+  }
 
   public static ApiKeySecretResponse from(IssuedApiKey issued) {
     ApiKey apiKey = issued.apiKey();
@@ -39,7 +53,8 @@ public record ApiKeySecretResponse(
         apiKey.getCreatedAt(),
         apiKey.getExpiresAt(),
         apiKey.getRevokedAt(),
-        issued.secret());
+        issued.secret(),
+        apiKey.getRateLimitPerMinute());
   }
 
   @Override

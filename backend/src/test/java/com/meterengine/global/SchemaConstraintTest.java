@@ -808,7 +808,9 @@ class SchemaConstraintTest {
 
   @Test
   void 감사_테이블의_제약과_인덱스는_마이그레이션이_정한_이름으로_있다() {
-    assertThat(constraintNames()).contains("audit_log_pk", "audit_log_organization_fk");
+    assertThat(constraintNames())
+        .contains("audit_log_pk")
+        .doesNotContain("audit_log_organization_fk");
     assertThat(
             jdbcTemplate.queryForList(
                 """

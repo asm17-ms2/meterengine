@@ -3,8 +3,6 @@ package com.meterengine.global.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.meterengine.account.service.SessionService;
-import com.meterengine.apikey.service.ApiKeyService;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +26,8 @@ class ApiCredentialAuthenticationFilterTest {
 
   private static final String SESSION_TOKEN = "me_session_" + "S".repeat(32);
 
-  @Mock private ApiKeyService apiKeyService;
-  @Mock private SessionService sessionService;
+  @Mock private ApiKeyCredentials apiKeyService;
+  @Mock private SessionCredentials sessionService;
 
   private ApiCredentialAuthenticationFilter filter;
 

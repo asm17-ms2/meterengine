@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
@@ -23,11 +24,18 @@ public record CreateApiKeyRequest(
             schema = @Schema(allowableValues = {"ingest", "read", "admin"}))
         @NotEmpty List<@NotNull @StorableText @Pattern(regexp = ApiKey.SCOPE_PATTERN) String> scopes,
     @Schema(
-            description =
-                "키 모드. live면 원문이 me_live_로, test면 me_test_로 시작한다. 지금은 두 모드의 동작이 같아 test 키도 실제 데이터를 바꾸고 인보이스 확정과 결제 시도를 할 수 있다",
+            description = "키 모드. test도 실제 데이터를 다루므로 샌드박스가 아니다. 결제 요청은 도입사의 현재 PG 모드와 같아야 한다",
             allowableValues = {"live", "test"})
         @NotBlank @Pattern(regexp = ApiKey.MODE_PATTERN) @StorableText
         String mode,
     @Schema(description = "이 키로 바꿀 옛 키의 ID. 주면 옛 키는 유예 시간이 지나면 끝난다. 없으면 빼거나 null로 보낸다")
         @JsonProperty("replaced_api_key_id")
-        UUID replacedApiKeyId) {}
+        UUID replacedApiKeyId,
+    @Schema(description = "이 키의 인스턴스별 분당 요청 한도. 양수이며 생략하거나 null이면 무제한이다")
+        @Positive @JsonProperty("rate_limit_per_minute")
+        Integer rateLimitPerMinute) {
+  public CreateApiKeyRequest(
+      String label, List<String> scopes, String mode, UUID replacedApiKeyId) {
+    this(label, scopes, mode, replacedApiKeyId, null);
+  }
+}

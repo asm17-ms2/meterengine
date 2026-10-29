@@ -1,7 +1,5 @@
 package com.meterengine.global.security;
 
-import com.meterengine.account.service.SessionService;
-import com.meterengine.apikey.service.ApiKeyService;
 import com.meterengine.global.error.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,9 +23,9 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
 
   private static final String BEARER_PREFIX = "Bearer ";
 
-  private final ApiKeyService apiKeyService;
+  private final ApiKeyCredentials apiKeyCredentials;
 
-  private final SessionService sessionService;
+  private final SessionCredentials sessionCredentials;
 
   private final ErrorResponseWriter errorResponseWriter;
 
@@ -35,11 +33,11 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
       SecurityContextHolder.getContextHolderStrategy();
 
   public ApiCredentialAuthenticationFilter(
-      ApiKeyService apiKeyService,
-      SessionService sessionService,
+      ApiKeyCredentials apiKeyCredentials,
+      SessionCredentials sessionCredentials,
       ErrorResponseWriter errorResponseWriter) {
-    this.apiKeyService = apiKeyService;
-    this.sessionService = sessionService;
+    this.apiKeyCredentials = apiKeyCredentials;
+    this.sessionCredentials = sessionCredentials;
     this.errorResponseWriter = errorResponseWriter;
   }
 
@@ -65,6 +63,13 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
       return;
     }
     AuthenticatedPrincipal principal = credential.get().principal();
+    request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
+    if (principal.kind() == PrincipalKind.SESSION
+        && sessionCredentials.requiresConsent(principal.userAccountId())
+        && !consentPath(request)) {
+      errorResponseWriter.write(response, ErrorCode.CONSENT_REQUIRED);
+      return;
+    }
     SecurityContext context = securityContextHolderStrategy.createEmptyContext();
     context.setAuthentication(
         UsernamePasswordAuthenticationToken.authenticated(
@@ -75,14 +80,21 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
+  private static boolean consentPath(HttpServletRequest request) {
+    String path = request.getRequestURI();
+    return ("/v1/sessions/current".equals(path)
+            && ("GET".equals(request.getMethod()) || "DELETE".equals(request.getMethod())))
+        || ("/v1/sessions/current/consents".equals(path) && "POST".equals(request.getMethod()));
+  }
+
   private Optional<AuthenticatedCredential> authenticate(String authorization) {
     if (!authorization.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
       return Optional.empty();
     }
     String credential = authorization.substring(BEARER_PREFIX.length());
     if (credential.startsWith(SecureTokens.SESSION_TOKEN_PREFIX)) {
-      return sessionService.authenticate(credential);
+      return sessionCredentials.authenticate(credential);
     }
-    return apiKeyService.authenticate(credential);
+    return apiKeyCredentials.authenticate(credential);
   }
 }
