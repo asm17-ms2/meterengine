@@ -40,7 +40,7 @@ public class EventExportController {
   @Operation(
       summary = "사용량 이벤트 CSV 내보내기",
       description =
-          "이벤트 목록과 같은 월 또는 자유 기간, 고객, 유형, 검색, 속성 조건과 정렬을 적용한다. page와 size는 목록 링크 호환을 위해 받지만 내보내기에는 적용하지 않는다. 조건 전체가 10000행을 넘거나 원본 properties 합계가 32MB를 넘으면 400 validation_error로 거절한다. UTF-8 BOM과 CRLF를 사용하며 문자열의 스프레드시트 수식을 이스케이프한다. include_properties=true를 선택한 경우에만 원본 properties JSON 열을 추가하며 숫자 자릿수를 보존한다.")
+          "이벤트 목록과 같은 월 또는 자유 기간, 고객, 유형, 검색, 속성 조건과 정렬을 적용한다. page와 size는 목록 링크 호환을 위해 받지만 내보내기에는 적용하지 않는다. 조건 전체가 10000행을 넘거나 원본 properties 합계가 32MB를 넘으면 400 validation_error로 거절한다. UTF-8 BOM과 CRLF를 사용하며 문자열의 스프레드시트 수식을 이스케이프한다. include_properties=true를 선택한 경우에만 원본 properties JSON 열을 추가하며 숫자 자릿수를 보존한다. 모르는 조회 조건은 400 validation_error로 거절한다.")
   @ApiResponse(
       responseCode = "200",
       description = "선택한 조건 전체의 이벤트 CSV. 빈 결과도 같은 열 제목을 반환한다.",
