@@ -7,10 +7,10 @@ import com.meterengine.event.dto.UnbilledEventsResponse;
 import com.meterengine.event.repository.EventIssueRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.time.BillingMonth;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class EventIssueService {
-  private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
   private final EventIssueRepository eventIssueRepository;
   private final CustomerDirectory customerDirectory;
   private final UsagePriceDiagnostics usagePriceDiagnostics;
@@ -52,11 +51,10 @@ public class EventIssueService {
       String query,
       int page,
       int size) {
-    OffsetDateTime now = OffsetDateTime.now(clock).atZoneSameInstant(ZONE).toOffsetDateTime();
+    OffsetDateTime now = BillingMonth.now(clock);
     YearMonth month = requestedMonth == null ? YearMonth.from(now) : requestedMonth;
-    OffsetDateTime start = month.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
-    OffsetDateTime end = month.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
-    OffsetDateTime cutoff = now.isBefore(end) ? now : end;
+    OffsetDateTime start = BillingMonth.start(month);
+    OffsetDateTime cutoff = BillingMonth.cutoff(month, now);
     if (customerId != null && !customerDirectory.exists(organizationId, customerId))
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     var groups =

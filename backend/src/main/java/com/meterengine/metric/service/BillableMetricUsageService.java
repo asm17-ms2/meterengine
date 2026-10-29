@@ -3,6 +3,7 @@ package com.meterengine.metric.service;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.time.BillingMonth;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillableMetricUsageService {
 
-  public static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
+  public static final ZoneId BILLING_ZONE = BillingMonth.ZONE;
 
   private final BillableMetricUsageRepository billableMetricUsageRepository;
   private final BillableMetricRepository billableMetricRepository;
@@ -46,9 +47,7 @@ public class BillableMetricUsageService {
   }
 
   public static OffsetDateTime aggregationEnd(YearMonth month, OffsetDateTime now) {
-    OffsetDateTime monthEnd =
-        month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
-    return now.isBefore(monthEnd) ? now : monthEnd;
+    return BillingMonth.cutoff(month, now);
   }
 
   @Transactional(readOnly = true)
@@ -68,7 +67,7 @@ public class BillableMetricUsageService {
       return List.of();
     }
 
-    OffsetDateTime start = month.atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
+    OffsetDateTime start = BillingMonth.start(month);
     OffsetDateTime end = aggregationEnd(month, cutoff);
 
     List<Customer> customers =
