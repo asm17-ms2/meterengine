@@ -109,7 +109,7 @@ export function CustomerFilter({
       notFoundContent={searchError || (isSearching ? "조회 중" : "일치하는 고객이 없습니다")}
       optionRender={(option) => <CustomerLabel name={option.data.label} id={option.data.value} />}
       value={isLoadingOptions ? undefined : onChange ? selectedCustomerId : liveQuery.customerId}
-      onOpenChange={open => { setIsOpen(open); if (!open) scheduleSearch(""); }}
+      onOpenChange={open => { setIsOpen(open); if (!open) scheduleSearch(""); else if (customers.length === 0 && remoteOptions === null) void searchCustomers(""); }}
       onChange={(customerId) => onChange ? onChange(customerId) : push({ customerId })}
       style={{ minWidth: 200 }}
     />

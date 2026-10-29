@@ -279,7 +279,7 @@ test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력�
   await form.getByLabel("최대 금액 (원)").fill("100");
   await form.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(form.getByRole("alert")).toHaveText("최대 금액은 최소 금액보다 작을 수 없습니다.");
-  await expect(form.getByLabel("최대 금액 (원)")).toBeFocused();
+  await expect(form.getByRole("spinbutton", { name: "최대 금액 (원)", exact: true })).toBeFocused();
   expect(new URL(page.url()).searchParams.get("min_amount")).toBeNull();
 });
 
@@ -323,5 +323,12 @@ test("격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 �
   await expect(empty).not.toHaveText("조회 중");
   await expect(empty).not.toHaveText("일치하는 고객이 없습니다");
   await expect(page.locator(".ant-select-item-option")).toHaveCount(0);
+});
+
+test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다", async ({ page, request }) => {
+  await control(request, "customer-options-retry");
+  await page.goto("/invoices");
+  await page.getByRole("combobox", { name: "고객", exact: true }).click();
+  await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
 });
 

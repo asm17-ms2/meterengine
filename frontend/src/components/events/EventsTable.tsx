@@ -116,7 +116,7 @@ export function EventsTable({
   return (
     <>
       {isOpening && <p role="status" className="field-hint">이벤트 상세를 불러오고 있습니다.</p>}
-      <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)} onClick={event => openOnPlainClick(event, row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
+      <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)} data-transaction-id={row.transactionId} onClick={event => openOnPlainClick(event, row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
       <div className="data-desktop-table"><Table<EventRowView>
         rowKey="transactionId"
         columns={columns}

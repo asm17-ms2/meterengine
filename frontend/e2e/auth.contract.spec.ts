@@ -326,6 +326,18 @@ test("phones do not show expand-all controls that only act on the desktop table"
   await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
 });
 
+test("the month picker panel stays inside a phone screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await page.locator('form[aria-label="조회 조건"] .ant-picker').first().click();
+  const panel = page.locator(".ant-picker-dropdown:visible .ant-picker-panel").first();
+  await expect(panel).toBeVisible();
+  const box = await panel.boundingBox();
+  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

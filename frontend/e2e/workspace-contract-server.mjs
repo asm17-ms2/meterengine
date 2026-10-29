@@ -89,6 +89,11 @@ const server = createServer(async (request, response) => {
       const items = ["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario) ? [{ id: "99999999-9999-4999-8999-999999999999", name: "다른 도입사 B의 비공개 고객", external_id: "organization-b-private", billing_email: null, archived_at: null, created_at: NOW, version: 0 }] : [];
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
     }
+    if (current.scenario === "customer-options-retry" && path === "/v1/customers/options") {
+      current.customerOptionQueries.push(new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "");
+      if (current.customerOptionQueries.length === 1) return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
+      return send(response, 200, { items: [{ value: ZERO_CUSTOMER_ID, label: "다시 받은 고객", archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 200, summary: {} });
+    }
     if (current.scenario === "customer-options" && path === `/v1/customers/${FAR_CUSTOMER_ID}`) return send(response, 200, { id: FAR_CUSTOMER_ID, name: "검색으로만 보이는 고객", external_id: null, billing_email: null, archived_at: null, created_at: NOW, version: 0 });
     if (current.scenario === "customer-options" && path === "/v1/customers/options") {
       const q = new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "";
