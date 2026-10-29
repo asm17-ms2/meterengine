@@ -168,6 +168,28 @@ test("격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 
   expect((await readState(request)).keyCalls).toHaveLength(0);
 });
 
+test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다", async ({ page }) => {
+  let nativeDialogs = 0;
+  page.on("dialog", dialog => { nativeDialogs++; void dialog.dismiss(); });
+  await page.goto("/customers");
+  const environment = page.getByRole("combobox", { name: "업무 환경", exact: true });
+  await environment.focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  await environment.click();
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  const confirm = page.getByRole("dialog");
+  await expect(confirm).toContainText("실제 환경으로 전환할까요?");
+  await confirm.getByRole("button", { name: "취소", exact: true }).click();
+  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  await environment.click();
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("environment")).toBe("live");
+  expect(nativeDialogs).toBe(0);
+});
+
 test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 보낸다", async ({ page, request }) => {
   await page.goto("/integrations");
   for (const limit of ["120", ""]) {
