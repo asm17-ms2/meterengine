@@ -25,7 +25,7 @@ public class PaymentArchiveRepository {
 
   public void lock(UUID organizationId) {
     jdbcTemplate.queryForObject(
-        "SELECT id FROM organization WHERE id = ? FOR UPDATE", UUID.class, organizationId);
+        "SELECT id FROM organization WHERE id = ? FOR NO KEY UPDATE", UUID.class, organizationId);
   }
 
   public void credential(UUID organizationId, String mode) {

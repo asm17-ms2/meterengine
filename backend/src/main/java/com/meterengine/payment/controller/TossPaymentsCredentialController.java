@@ -64,7 +64,14 @@ public class TossPaymentsCredentialController {
   })
   public ListTossPaymentsCredentialsResponse listTossPaymentsCredentials(
       @CurrentOrganizationId UUID organizationId,
-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
+          @StorableText
           String status) {
     return tossPaymentsCredentialService.list(organizationId, status);
   }
@@ -125,6 +132,16 @@ public class TossPaymentsCredentialController {
   @Operation(
       summary = "토스페이먼츠 키 보관",
       description = "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가 없다")
+  })
   public void deleteTossPaymentsCredential(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @Pattern(regexp = "test|live") @StorableText String mode) {
