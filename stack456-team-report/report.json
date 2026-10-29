@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T20:45:19+09:00",
+  "updated_at": "2026-10-29T21:20:17+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4166,8 +4166,8 @@
       "id": "Ck2-015",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 demo/eslint-naming-rules.mjs 1-40행은 frontend/eslint.config.mjs 6-45행과 export 한 단어만 빼고 글자까지 같고, 넘길 때 head(81651ed)와 내용이 그대로라 고쳐지지 않았다. 이 사본은 #444(828ea613)가 더했고 그 뒤 두 파일을 바꾼 main 커밋은 없다. demo의 sdk, web, llm-service 세 곳이 이 사본을 import하는데 naming.md 28행은 프론트 이름 규칙 도구로 frontend/eslint.config.mjs만 적고, ci.yml 경로 필터와 job에는 demo가 없어 두 사본이 갈라져도 잡는 검사가 없다. 그래서 중복과 문서 어긋남은 확인된다. 다만 정본을 하나로 모으려면 frontend가 demo를 import하는 쪽은 ci.yml frontend 경로 필터를 바꿔야 하고, demo가 frontend나 저장소 루트 파일을 import하는 쪽은 demo 빌드 문맥에서 이 파일만 복사하는 llm-service Dockerfile 10행과 demo 설정 세 파일을 같이 바꿔야 한다. 정본 위치와 .github/workflows 변경이 걸린 구조 결정이라 needs-decision으로 둔다.",
       "evidence": [
@@ -4179,23 +4179,36 @@
         "demo/llm-service/eslint.config.mjs:5 @ af15d7f5",
         "demo/llm-service/Dockerfile:10 @ af15d7f5",
         "frontend/package.json:12 @ af15d7f5",
-        ".github/workflows/ci.yml:28-35 @ af15d7f5"
+        ".github/workflows/ci.yml:28-35 @ af15d7f5",
+        "naming-rules-sync.test.mjs(변이: 데모 enumMember 형식 변경): 실패 확인",
+        "커밋 67d55c9f",
+        "커밋 aac9c374"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "67d55c9ff3832e71d065c954d3bd6ab12fea411d",
+        "aac9c3746d7911a03201146f438e3d874d863730"
+      ],
+      "tests": [
+        "변이 확인, 되돌린 뒤 frontend 단위 시험 통과",
+        "문서 정정(리뷰 반영): 흐름 정의와 provider 설정에서 값 확인",
+        "naming-rules-sync.test.mjs(변이: 데모 enumMember 형식 변경): 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 사본은 두고 frontend와 demo의 이름 규칙이 같은지 보는 시험만 더한다. ci.yml은 바꾸지 않는다",
       "decision_question": "frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 ci.yml 경로 필터와 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다.",
       "evidence_notes": [
         "frontend/package.json:12: test:unit은 있으나 CI frontend job은 lint와 build만 돌림, .github/workflows/ci.yml:79-81 @ af15d7f5",
         "git log af15d7f5 -- demo/eslint-naming-rules.mjs: 828ea613(#444) 하나뿐",
         "git show 81651ed:demo/eslint-naming-rules.mjs 와 af15d7f5 내용 동일"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: 사본은 두고 frontend와 demo의 이름 규칙이 같은지 보는 시험만 더한다. ci.yml은 바꾸지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "D-093",
@@ -5580,8 +5593,8 @@
       "id": "C446-008",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 서버는 기본료와 최소 사용료 라인의 billable_metric_code를 null로 보낸다. ChargeService.surcharge가 DimensionCharge의 첫 인자에 null을 넣고, DraftInvoiceService와 InvoiceService가 이 값을 응답 DTO에 그대로 옮기며, 전역 NON_NULL 설정이 없어 JSON에 null이 그대로 나간다. V38도 이 두 라인 종류에 billable_metric_code IS NULL을 강제한다. 그런데 SDK InvoiceLineResponse는 여전히 billable_metric_code를 string, line_type을 string으로 선언해 null을 숨기고, 같은 응답을 쓰는 프런트 billing.ts는 이미 string | null과 다섯 값 유니온으로 맞춰 두 타입이 갈라져 있다. #446 뒤 types.ts를 바꾼 main 커밋(#447 #449 #450 #451 #453)도 이 두 줄은 건드리지 않았다. 저장소 안 SDK 사용처(llm-service metricName(code: string | null), contracts.ts metricCode: string | null, CustomerPortal의 line_type 비교)는 null을 받아도 깨지지 않아 타입만 고치면 된다.",
       "evidence": [
@@ -5597,20 +5610,29 @@
         "backend/src/main/resources/db/migration/V38__extend_invoice_line_types.sql:2,8 @ af15d7f5",
         "frontend/src/lib/api/billing.ts:30,38 @ af15d7f5",
         "demo/llm-service/src/lib/service.ts:45,54-55 @ af15d7f5",
-        "demo/llm-service/src/lib/contracts.ts:37 @ af15d7f5"
+        "demo/llm-service/src/lib/contracts.ts:37 @ af15d7f5",
+        "demo/sdk typecheck(meter-engine-client.test.ts 기본료 라인 타입 시험): 실패 (TS2322 null을 string에 넣을 수 없음)",
+        "커밋 d1b34646"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d1b346467c182641a74dec04b12a10074daacfc7"
+      ],
+      "tests": [
+        "demo/sdk typecheck, lint, test 83개 통과, web과 llm-service typecheck 통과",
+        "demo/sdk typecheck(meter-engine-client.test.ts 기본료 라인 타입 시험): 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/application.properties:38: jackson 설정은 이 한 줄뿐이고 NON_NULL 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "C446-009",
@@ -8555,8 +8577,8 @@
       "id": "C450-010",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 _send_batches는 넘길 때 head와 같은 코드이고, build_body_text가 properties 원문을 그대로 이어 붙여 봉투 하나를 만든다. csvio.py는 빈 칸을 빈 문자열로 읽고 예측 단계는 문제를 표시만 한 채 그 행도 보내므로, 빈 칸이나 깨진 JSON 한 행이 있으면 봉투 전체가 JSON으로 읽히지 않아 서버가 400 malformed_request_body를 돌려준다. 서버의 행별 판정(EventBatchService)은 봉투를 읽은 뒤에야 돌기 때문에 이 경우를 막지 못한다. 그러면 162행이 같은 묶음의 정상 행까지 모두 rejected로 세고 172행에서 멈춰 뒤 묶음은 NOT_SENT가 되며, 실패한 묶음이 마지막이면 124행 조건에 걸리지 않아 종료 코드가 0이다. README는 배치 모드도 행별 판정을 기록하고 잘못된 값은 서버가 판정한다고 적었는데 단건 모드와 결과가 갈라진다. 이를 다루는 시험도 없다(test_send_cmd.py의 배치 시험은 전송 끊김과 숫자 자릿수만 본다).",
       "evidence": [
@@ -8571,17 +8593,29 @@
         "backend/src/main/java/com/meterengine/event/dto/IngestEventBatchRequest.java:15 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:166-169 @ af15d7f5",
         "demo/README.md:104,110 @ af15d7f5",
-        "demo/csvdemo/test_send_cmd.py:150-187 @ af15d7f5"
+        "demo/csvdemo/test_send_cmd.py:150-187 @ af15d7f5",
+        "csvdemo.test_send_cmd.test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다: 실패 (세 행 모두 rejected)",
+        "csvdemo.test_send_cmd.test_봉투_전체를_거절한_4xx는_rejected가_아닌_error로_센다: 실패 (rejected로 셈)",
+        "csvdemo.test_send_cmd.test_단건으로_보낸_깨진_행이_인증에_실패하면_같은_묶음의_다음_깨진_행을_보내지_않는다(리뷰 반영): 실패 (다음 깨진 행을 보냄)",
+        "커밋 1b33c580",
+        "커밋 4e083bc6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "1b33c580fa27ad2370d531e4b2c92d00c7f8c50d",
+        "4e083bc620cba7b1d384918e1b25f0d76f3bc838"
+      ],
+      "tests": [
+        "demo python3 -m unittest discover 통과",
+        "csvdemo.test_send_cmd.test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다: 실패 확인 뒤 통과",
+        "csvdemo.test_send_cmd.test_봉투_전체를_거절한_4xx는_rejected가_아닌_error로_센다: 실패 확인 뒤 통과",
+        "csvdemo.test_send_cmd.test_단건으로_보낸_깨진_행이_인증에_실패하면_같은_묶음의_다음_깨진_행을_보내지_않는다(리뷰 반영): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "demo/csvdemo/send_cmd.py:137: properties 원문을 이어 붙여 봉투 생성",
         "demo/csvdemo/send_cmd.py:147-149: 봉투 4xx를 failure로 처리",
@@ -8596,7 +8630,10 @@
         "demo/README.md:104,110: 행별 판정 기록, 잘못된 값도 서버가 판정",
         "demo/csvdemo/test_send_cmd.py:150-187: 깨진 properties 배치 시험 없음",
         "git diff 7b1d1e5 af15d7f5 -- demo/csvdemo/send_cmd.py: _send_batches 변경 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "G-127",
@@ -10800,8 +10837,8 @@
       "id": "C451-010",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 createCustomer는 external_id가 있을 때만 재시도를 켠다(meter-engine-client.ts 169행). 서버 설명대로 external_id를 빼면 매번 새 고객이 생기고 SDK는 Idempotency-Key를 보내지 않으니, 이 조건이 중복 생성을 막는 유일한 장치다. demo 시험 가운데 createCustomer를 부르는 곳은 read-contract.test.ts 17행 하나이고, external_id를 준 정상 응답 경로만 지난다. 카드 등록 링크와 조회 링크에는 응답을 잃으면 다시 보내지 않는지 보는 시험이 있지만 고객 생성에는 없다. 그래서 canRetry 인자를 지워도 SDK 시험은 그대로 통과한다. 지금 동작은 맞으니 지적한 대로 시험 두 개만 더하면 된다. 다만 CI 워크플로가 demo SDK 시험을 돌리지 않아(G-148과 겹침) 더한 시험은 로컬에서만 돈다.",
       "evidence": [
@@ -10811,21 +10848,30 @@
         "demo/sdk/src/read-contract.test.ts:17 @ af15d7f5",
         "demo/sdk/src/read-contract.test.ts:55-63 @ af15d7f5",
         "demo/sdk/src/invoice-view-link.test.ts:47 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:98 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:98 @ af15d7f5",
+        "변이(재시도 조건 true): external_id 없는 createCustomer는 실패해도 다시 보내지 않는다: 실패 확인",
+        "커밋 d6653bf8"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d6653bf897a2191dcb5ee46a4c08b0e204185531"
+      ],
+      "tests": [
+        "변이 확인 두 방향, 되돌린 뒤 demo/sdk test 85개 통과",
+        "변이(재시도 조건 true): external_id 없는 createCustomer는 실패해도 다시 보내지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git grep createCustomer af15d7f5 -- demo: 시험 호출은 read-contract.test.ts:17 하나뿐",
         "git grep Idempotency af15d7f5 -- demo/sdk/src/meter-engine-client.ts: 결과 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "D-034",
@@ -12781,8 +12827,8 @@
       "id": "C455-002",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 루트 README에서 rds_plan_dir는 '계획과 적용' 절의 bash 블록(13, 14행)에서만 정의된다. '복구' 절의 감지 끄기 블록(50~54행)은 이 변수를 다시 정의하지 않고 -out=\"$rds_plan_dir/disable-slo-detector.tfplan\"로 쓴다. 감지 끄기는 적용하고 한참 뒤 장애 대응 중에 하는 일이라 새 셸에서 실행하기 쉽고, 그러면 경로가 /disable-slo-detector.tfplan이 되어 일반 사용자는 계획 파일을 쓰지 못해 실패하고 root 셸은 루트 디렉터리에 기본 umask로 계획 파일을 남긴다. 원래 지적의 스케줄 복원 블록(schedule-before.json 등)은 f891345(04:00 백스톱)에서 지워져 main에 없지만, 감지 끄기 블록 한 곳은 넘길 때 head 0fe7d2a와 main이 글자 그대로 같아 그대로 남았다. 같은 절을 '같은 셸에서 이어서 실행한다'고 적은 문장도 없어 막는 줄을 찾지 못했다.",
       "evidence": [
@@ -12790,17 +12836,21 @@
         "measurements/terraform/rds-auto-stop/README.md:14 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/README.md:48 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/README.md:53 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/README.md:31 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/README.md:31 @ af15d7f5",
+        "커밋 a0a5f215"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a0a5f215bde2a5bface97f1ef323b45f8feac58f"
+      ],
+      "tests": [
+        "문서 변경. 복구 절 명령이 umask와 rds_plan_dir 정의부터 시작하고 감지 끄기가 기본값 PR 절차로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/README.md:13: umask 077, 계획 절에만 있음",
         "measurements/terraform/rds-auto-stop/README.md:14: rds_plan_dir=\"$(mktemp -d)\", 유일한 정의",
@@ -12809,14 +12859,17 @@
         "git grep -n rds_plan_dir af15d7f5 -- measurements: 정의는 14행 하나뿐",
         "measurements/terraform/modules/rds-auto-stop/README.md:31: 같은 묶음의 모듈 README는 블록 안에서 rds_test_dir를 직접 정의해 이 문제가 없음",
         "git show 0fe7d2a:measurements/terraform/rds-auto-stop/README.md 와 main 내용이 같음(53행 그대로)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "C455-003",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 workflow.test.mjs는 넘길 때 head(0fe7d2a)와 한 글자도 다르지 않아 지적한 빈틈이 그대로 남았다. stopDBInstance 가짜 응답은 인자를 보지 않고 늘 성공을 돌려주고, putItem 가짜 응답은 ConditionExpression과 expires_at만 보고 TableName은 보지 않는다. 시험들은 stops 개수와 outcome만 세므로 ASL 153행의 DbInstanceIdentifier나 26행의 TableName 식을 잘못 고쳐 undefined가 나와도 모두 통과한다. 반면 describeDBInstances와 describeEvents는 인자를 검사하므로 같은 방식의 검사가 빠진 것이 눈에 보인다. IAM이 StopDBInstance를 var.db_arn 하나로 묶어 다른 DB를 끄지는 않으니 피해는 작고 심각도 low가 맞다. getSchedule 분기는 main에 없으므로 fix_plan의 (1), (2)만 하면 된다.",
       "evidence": [
@@ -12827,17 +12880,23 @@
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:153 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:26 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/README.md:20 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/iam.tf:5-10 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/iam.tf:5-10 @ af15d7f5",
+        "workflow.test.mjs(변이: 중지 대상 db_arn, 기록 표 db_identifier): 실패 확인",
+        "커밋 24958e08"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "24958e086dca6a060c6e0a1b09fa5c13aaa948f3"
+      ],
+      "tests": [
+        "바꾸기 전 시험은 변이에도 27개 통과, 바꾼 시험은 실패, 되돌린 뒤 27개 통과",
+        "workflow.test.mjs(변이: 중지 대상 db_arn, 기록 표 db_identifier): 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:81-84: rds:stopDBInstance 가짜 응답이 args를 검사하지 않음",
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:64-71: putItem 가짜 응답이 TableName을 검사하지 않음",
@@ -12848,14 +12907,17 @@
         "measurements/terraform/modules/rds-auto-stop/README.md:20: 시험이 실제 ASL 표현식을 실행한다고 적음",
         "measurements/terraform/modules/rds-auto-stop/iam.tf:5-10: StopDBInstance를 var.db_arn 하나로 제한해 피해가 작음",
         "git diff 0fe7d2a af15d7f5 -- tests/workflow.test.mjs 결과 차이 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "C455-005",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적이 그대로 남았다. ci.yml의 paths-filter에는 backend와 frontend 두 필터만 있고 job도 backend, frontend 둘뿐이라, measurements/ 아래만 바꾸는 PR은 두 job이 skip되어 통과로 처리된다. 다른 워크플로(cd.yml, claude-code-review.yml, claude.yml, aws-access-check.yml)에도 measurements나 rds-auto-stop을 가리키는 줄이 없고, workflow.test.mjs와 contracts.tftest.hcl은 모듈 README의 로컬 검사 절차에서만 불린다. ci.yml은 #356, #357 뒤로 스택 squash 어느 것에서도 바뀌지 않아 넘길 때 head(0fe7d2a)와 같다. 고치려면 .github/workflows/ci.yml에 job을 더해야 하고, CI 방식은 팀 전체에 걸리는 제약이라 CONTRIBUTING.md 결정 절에 따라 팀 합의 대상이며 scope_notes도 needs-decision으로 두라고 한다. 같은 종류인 G-187(#442, 양성지 님)과 함께 정하는 것이 맞다.",
       "evidence": [
@@ -12864,17 +12926,21 @@
         "measurements/terraform/modules/rds-auto-stop/README.md:18-38 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/tests/package.json:6 @ af15d7f5",
         ".github/workflows/README.md:7 @ af15d7f5",
-        "CONTRIBUTING.md:10 @ af15d7f5"
+        "CONTRIBUTING.md:10 @ af15d7f5",
+        "커밋 d1e1526a"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d1e1526a8e822e2ee272158d974f1c568cb94ccb"
+      ],
+      "tests": [
+        "CI 단계를 로컬에서 순서대로 실행: npm 27개, fmt, 모듈 mock 4개, root mock 3개 통과, YAML 파싱 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): rds-auto-stop 시험(workflow.test.mjs, contracts.tftest.hcl)을 그 모듈 경로가 바뀔 때만 도는 CI job으로 더한다",
       "decision_question": "rds-auto-stop 테스트(workflow.test.mjs, contracts.tftest.hcl)를 돌리는 job을 CI에 더할지",
       "evidence_notes": [
         ".github/workflows/ci.yml:28-35: filters가 backend/**, frontend/**, .node-version, ci.yml뿐",
@@ -12885,14 +12951,18 @@
         ".github/workflows/README.md:7: , docs/contributing/pull-request.md:7 @ af15d7f5 (필수 체크는 backend, frontend뿐",
         "git log af15d7f5 -- .github/workflows/ci.yml 최신 커밋이 22330443(#357)로 스택 #442~#455 squash 가운데 ci.yml을 바꾼 것 없음, 0fe7d2a:.github/workflows/ci.yml 28-35행과 같음",
         "CONTRIBUTING.md:10: 팀 전체에 제약을 거는 도구나 방식은 들이기 전에 팀이 합의한다"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: rds-auto-stop 시험(workflow.test.mjs, contracts.tftest.hcl)을 그 모듈 경로가 바뀔 때만 도는 CI job으로 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "G-162",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적이 그대로 남아 있다. rds-auto-stop root는 환경을 test-slo와 test-storage로 고정하고(main.tf 6행), 두 환경의 DB를 data source로 읽으며(9-12행), enabled 검증도 두 키를 모두 요구한다(variables.tf 10행). SUT RDS는 deletion_protection이 false라 SUT destroy가 DB를 지우고, 그 뒤에는 data source 조회가 실패해 README의 감지 끄기 plan을 포함한 이 root의 plan, apply, destroy가 모두 멈춘다. 두 SUT README의 지우기 절은 이 root를 언급하지 않는다. f891345가 역할 data source를 지워 원문의 IAM 역할 부분은 사라졌지만 DB data source는 남아 실패 경로는 같고, 넘길 때 head 0fe7d2a와 main의 main.tf, variables.tf는 같다. scope_notes대로 고칠 README와 전제가 Q14(백스톱 확정과 이행 순서)에 걸려 있어 needs-decision으로 둔다.",
       "evidence": [
@@ -12905,17 +12975,26 @@
         "measurements/test-storage/README.md:426-434 @ af15d7f5",
         "measurements/test-storage/sut/terraform/rds.tf:8,43 @ af15d7f5",
         "measurements/test-slo/sut/terraform/rds.tf:43 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/main.tf:46 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/main.tf:46 @ af15d7f5",
+        "rds-auto-stop/tests/environments.tftest.hcl one_environment_can_be_removed_before_its_sut: 실패 (Invalid value for variable)",
+        "커밋 99fe508e",
+        "커밋 aac9c374"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "99fe508e512985e4a9650cd9e6b8af2473584bde",
+        "aac9c3746d7911a03201146f438e3d874d863730"
+      ],
+      "tests": [
+        "root mock 시험 3개 통과, validate, fmt -check 통과",
+        "문서 정정(리뷰 반영): 흐름 정의와 provider 설정에서 값 확인",
+        "rds-auto-stop/tests/environments.tftest.hcl one_environment_can_be_removed_before_its_sut: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 0fe7d2a 백스톱 설계를 확정하고, root에 환경 목록 변수를 두고 두 SUT README 지우기 절에 환경을 먼저 빼는 단계를 넣는다",
       "decision_question": "Q14에서 0fe7d2a 백스톱 설계와 이행 순서를 확정한 뒤, rds-auto-stop root에 환경 목록 변수(environments)를 더하고 두 SUT README 지우기 절에 이 root에서 환경을 먼저 빼는 단계를 넣을지 정한다.",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/main.tf:6: environments = toset([\"test-slo\", \"test-storage\"]) 고정",
@@ -12930,14 +13009,18 @@
         "measurements/terraform/modules/rds-auto-stop/main.tf:46: claims deletion_protection_enabled = true",
         "git diff 0fe7d2a af15d7f5 -- measurements/terraform/rds-auto-stop/main.tf variables.tf: 차이 없음",
         "f891345: root의 역할 data source만 지웠고 DB data source는 남김"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: 0fe7d2a 백스톱 설계를 확정하고, root에 환경 목록 변수를 두고 두 SUT README 지우기 절에 환경을 먼저 빼는 단계를 넣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "G-163",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main(af15d7f5)의 measurements/ 아래 코드는 넘길 때 head(0fe7d2a)와 한 줄도 다르지 않아서, 지적한 실패 경로가 그대로 남아 있다. 두 환경의 sut-start.sh는 RDS가 starting이면 시작 요청을 건너뛰고 쓸 수 있는 상태가 되기만 기다린다. 자동 재기동 중지 흐름이 돌고 있는지는 보지 않는다. 흐름은 RDS-EVENT-0154만 받고, available이 되면 DescribeEvents에서 그 뒤의 중지 기록만 확인한 다음 StopDBInstance를 부른다. 사람이 DB를 쓰려는지 알 신호가 없으니, 자동 재기동 중에 sut-start.sh를 돌리면 측정 도중 DB가 꺼진다. 막는 줄은 찾지 못했고 지적은 맞다. 다만 scope_notes에 따라 고치지 않고 결정 대기로 둔다. 더해야 할 Step Functions 실행 조회는 로컬에서 bash -n으로만 확인할 수 있기 때문이다.",
       "evidence": [
@@ -12949,17 +13032,21 @@
         "measurements/terraform/modules/rds-auto-stop/main.tf:27-39 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:81-103 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:131-157 @ af15d7f5",
-        "measurements/test-slo/README.md:109 @ af15d7f5"
+        "measurements/test-slo/README.md:109 @ af15d7f5",
+        "커밋 c6d20428"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c6d204285a36ea894a475b4c8795887bc2d812b9"
+      ],
+      "tests": [
+        "문서 변경. 상태 기계 이름과 TimeoutSeconds 7200을 모듈에서 확인, AWS 명령은 실행하지 않음"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(doc): 돌려 볼 수 없는 Step Functions 조회는 sut-start.sh에 넣지 않고 README에 수동 확인 절차로 적는다",
       "decision_question": "AWS에서 돌려 보지 않은 Step Functions 실행 조회를 sut-start.sh에 더할지(로컬에서는 bash -n만 확인할 수 있다)",
       "evidence_notes": [
         "measurements/test-slo/sut/scripts/sut-start.sh:13-14: starting이면 시작 요청을 건너뛰고 흐름 상태는 보지 않음",
@@ -12972,14 +13059,18 @@
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:131-157: 0154 뒤 'DB instance stopped' 기록만 보고 StopAutomaticRestart 호출",
         "measurements/test-slo/README.md:109: 자동 재기동을 감지해 바로 끈다고만 쓰고 sut-start.sh와 겹치는 경우는 안내하지 않음",
         "git diff --quiet 0fe7d2a af15d7f5 -- measurements/ 결과 차이 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "doc: 돌려 볼 수 없는 Step Functions 조회는 sut-start.sh에 넣지 않고 README에 수동 확인 절차로 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-001",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 measurements 폴더는 넘길 때 head 0fe7d2a와 글자 하나 다르지 않고, 04:00 백스톱 수정(f8913453)이 #455 squash로 들어왔다. 그래서 제목 뒷부분인 \"되살린 04:00 스케줄을 다시 끈다\"는 main에서 일어나지 않는다. 상태 기계 권한에 scheduler 동작이 없어야 한다는 계약 시험과 스케줄 호출이 0번이라는 흐름 시험이 이를 막는다. 하지만 앞부분은 그대로 남아 있다. 복구 절은 감지를 끄는 결정을 일회성 -var 계획으로만 안내하고, 코드 기본값은 두 환경 모두 true이며 tfvars는 gitignore로 빠지고 validation이 두 키를 모두 요구한다. 그래서 -var 없는 다음 계획이나 다른 환경을 끄는 계획이 끈 규칙을 다시 ENABLED로 돌린다. 지적은 줄어든 형태로 맞지만 이 README의 전제와 이행 순서가 Q14에 걸려 있어 scope_notes대로 needs-decision으로 둔다.",
       "evidence": [
@@ -12992,17 +13083,21 @@
         "measurements/terraform/modules/rds-auto-stop/main.tf:26 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:36-38 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:139-143 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/README.md:4 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/README.md:4 @ af15d7f5",
+        "커밋 a0a5f215"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a0a5f215bde2a5bface97f1ef323b45f8feac58f"
+      ],
+      "tests": [
+        "문서 변경. 복구 절 명령이 umask와 rds_plan_dir 정의부터 시작하고 감지 끄기가 기본값 PR 절차로 바뀐 것을 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 감지를 끌 때 variables.tf 기본값을 바꾸는 PR로 남기도록 README 복구 절을 고친다",
       "decision_question": "Q14에서 0fe7d2a 백스톱 설계를 확정할 때, 감지를 끄는 결정을 variables.tf 기본값을 바꾸는 PR로 남기도록 rds-auto-stop README 복구 절을 고칠지(필요하면 enabled를 끌 환경 집합 변수로 바꿀지) 함께 정한다.",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/README.md:48-54: 복구 절이 -var='enabled={test-slo=false,test-storage=true}' 일회성 계획만 안내한다",
@@ -13016,14 +13111,18 @@
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:139-143: 성공 흐름에서 스케줄 호출 0번",
         "measurements/terraform/modules/rds-auto-stop/README.md:4: 04:00 RDS 중지 스케줄은 백스톱으로 남는다",
         "git diff 0fe7d2a af15d7f5 -- measurements/ 결과가 비어 있다 (main이 넘길 때 head와 같다)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "decision": "fix: 감지를 끌 때 variables.tf 기본값을 바꾸는 PR로 남기도록 README 복구 절을 고친다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-002",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 rds-auto-stop 잠금 파일에는 aws 6.69.0의 h1 해시가 qXrr 값 하나뿐이고, README 계획 절은 init -lockfile=readonly로 시작한다. readonly init은 zh 해시로 zip을 검증해 통과하지만 새 플랫폼의 h1을 기록하지 않는다. 그 뒤 plan은 설치된 공급자 디렉터리를 h1로만 대조할 수 있어서, 작성자와 다른 OS나 CPU에서는 체크섬 불일치로 멈춘다. 복구 절의 감지 끄기 plan도 같은 init 상태를 쓰므로 같이 막힌다. 반박해 보려고 CI나 다른 문서에서 이 root의 잠금 파일을 플랫폼별로 채우는 곳을 찾았지만 없었다. 레포에서 -lockfile=readonly를 쓰는 곳도 이 README 하나다. 이 경로의 파일은 넘길 때 head(0fe7d2a)와 main이 같아 고쳐진 적이 없다. 잠금 파일만 고치면 되므로 README의 백스톱, 이행 순서 문장은 건드리지 않는다.",
       "evidence": [
@@ -13031,17 +13130,21 @@
         "measurements/terraform/rds-auto-stop/README.md:15 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/README.md:16-17 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/README.md:51-53 @ af15d7f5",
-        "measurements/test-slo/README.md:6 @ af15d7f5"
+        "measurements/test-slo/README.md:6 @ af15d7f5",
+        "커밋 8abbcabb"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "8abbcabb10aeee0ac86a7edaaeae2d2cbbdf6dd8"
+      ],
+      "tests": [
+        "잠금 파일 h1 해시 1개에서 4개로, 새 잠금 파일로 init -backend=false와 mock 시험 4개 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/.terraform.lock.hcl:8: h1 해시가 qXrrhlmTiAWFOE/8XyuAQYTDwNCYI6fcH6M1/aveJZg= 하나뿐",
         "measurements/terraform/rds-auto-stop/README.md:15: init -lockfile=readonly",
@@ -13050,14 +13153,17 @@
         "measurements/test-slo/README.md:6: 어느 컴퓨터에서든, 새 컴퓨터에서는 init을 전제",
         "git grep -n lockfile af15d7f5: -lockfile=readonly는 rds-auto-stop/README.md:15 한 곳뿐이고 .github/ 아래에 terraform 실행이 없음",
         "git diff 0fe7d2a af15d7f5 -- measurements/terraform/rds-auto-stop/ 결과가 비어 있음, git log는 af15d7f5(#455) 하나뿐이라 main에서 고친 커밋 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-003",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 measurements/terraform은 넘길 때 head 0fe7d2a와 한 글자도 다르지 않아 지적한 줄이 그대로 남아 있다. EventBridge는 900초, 3회 재시도 뒤 DLQ로 보내고, 상태 기계는 15분이 지난 이벤트를 IgnoredEvent(Succeed)로 끝내므로 DLQ 메시지로 다시 실행하면 아무것도 하지 않고 성공으로 남는다. undelivered 경보는 보이는 메시지가 1 이상이면 ALARM이고 보존이 14일이라, 메시지를 지우지 않으면 그동안 다음 실패에서 새 전이가 생기지 않는다. 그런데 모듈 README는 복구를 root README로 넘기고, root README 복구 절에는 DLQ 확인, 메시지 삭제, 재실행 금지가 없으며, 모듈이 내는 dead_letter_queue_url도 root가 내보내지 않는다. 다만 f891345로 04:00 RDS 중지 스케줄이 상시 백스톱이 되어 DB가 무기한 켜지는 결과는 사라졌고 다음 04:00까지로 줄었으므로 심각도는 low 그대로 문서와 출력 보강만으로 고친다. 04:00 백스톱과 15분 검사, 경보 지표는 바꾸지 않는다.",
       "evidence": [
@@ -13072,17 +13178,26 @@
         "measurements/terraform/rds-auto-stop/README.md:44-54 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/outputs.tf:13-15 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/variables.tf:15-19 @ af15d7f5",
-        "measurements/test-slo/README.md:109 @ af15d7f5"
+        "measurements/test-slo/README.md:109 @ af15d7f5",
+        "rds-auto-stop/tests/environments.tftest.hcl both_environments_by_default: 실패 (Reference to undeclared output value)",
+        "커밋 1e741a9b",
+        "커밋 aac9c374"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1e741a9b2b72f4038cc5244701ce63db2af77fd9",
+        "aac9c3746d7911a03201146f438e3d874d863730"
+      ],
+      "tests": [
+        "root mock 시험 3개, validate, fmt -check 통과",
+        "문서 정정(리뷰 반영): 흐름 정의와 provider 설정에서 값 확인",
+        "rds-auto-stop/tests/environments.tftest.hcl both_environments_by_default: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/main.tf:85: message_retention_seconds = 1209600, 14일",
         "measurements/terraform/modules/rds-auto-stop/main.tf:112-119: dead_letter_config, maximum_event_age_in_seconds = 900, maximum_retry_attempts = 3",
@@ -13097,14 +13212,17 @@
         "measurements/terraform/rds-auto-stop/variables.tf:15-19: alarm_actions 기본값 [], 외부 알림 없음",
         "measurements/test-slo/README.md:109: , measurements/test-slo/sut/terraform/schedule.tf:6-9 @ af15d7f5 (04:00 RDS 중지가 상시 백스톱, 영향은 다음 04:00까지로 줄어듦",
         "git diff 0fe7d2a af15d7f5 -- measurements/terraform 결과 비어 있음 (main에서 고친 커밋 없음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-004",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "반박을 먼저 시도했지만 실패했다. main의 rds-auto-stop 모듈은 넘길 때 head 0fe7d2a와 한 줄도 다르지 않고(#455 squash 하나만 이 모듈을 건드렸다) 설정 키 계약을 검사하는 곳이 여전히 없다. main.tf가 Configure.Assign.config에 키 다섯 개를 넣고 ASL이 $config로 같은 다섯 개를 읽지만, contracts.tftest.hcl은 config.db_arn 하나만 보고 workflow.test.mjs는 main.tf를 읽지 않고 자기 config를 직접 끼워 넣는다. 그래서 main.tf의 claim_table 이름을 바꾸거나 ASL에 새 $config 키를 쓰고 Node 시험 config에만 더해도 두 시험이 모두 통과하고, 실제 0154 실행 때 ClaimEvent의 TableName이 비어 실패한다. 원문의 legacy_scheduler_role_arn 경로는 04:00 백스톱 변경으로 그 키가 빠져 지금은 없지만 claim_table 경로와 새 키 경로는 남아 있다. 렌더링된 정의를 내보내는 모듈 출력 workflow_definition도 root와 시험 어디서도 쓰지 않는다.",
       "evidence": [
@@ -13115,17 +13233,23 @@
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:12-15 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:47 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:64-71 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/outputs.tf:17-19 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/outputs.tf:17-19 @ af15d7f5",
+        "contracts.tftest.hcl scoped_automatic_restart(변이: $config.claim_tables): 실패 확인",
+        "커밋 e0fcdefa"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "e0fcdefa907ae57dd8e028a70ca73a3b16ce6c0a"
+      ],
+      "tests": [
+        "변이 확인, 되돌린 뒤 terraform mock 시험 2개 통과",
+        "contracts.tftest.hcl scoped_automatic_restart(변이: $config.claim_tables): 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/main.tf:10-16: config 키 account_id, region, db_identifier, db_arn, claim_table 주입",
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:16: $config.account_id, region, db_arn, db_identifier 참조",
@@ -13136,7 +13260,10 @@
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:64-71: putItem fake가 TableName을 보지 않음",
         "measurements/terraform/modules/rds-auto-stop/outputs.tf:17-19: workflow_definition 출력, root outputs.tf와 시험 어디에서도 쓰지 않음",
         "git diff 0fe7d2a af15d7f5 -- measurements/ 결과 빈 diff, git log af15d7f5 -- modules/rds-auto-stop 은 af15d7f5 하나뿐"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-005",
@@ -13182,8 +13309,8 @@
       "id": "Nk4-007",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 variables.tf 5행 정규식은 아직 {1,45}이고 6행 오류 문구도 45자를 약속한다. 그런데 main.tf 2행이 접두 뒤에 '-rds-auto-stop'(14자)을 붙이고, iam.tf 41행이 다시 '-workflow'(9자)를 붙여 IAM 역할 이름을 만든다. IAM 역할 이름 한도가 64자라서 실제로 받을 수 있는 접두는 41자까지이고, 42자에서 45자 사이는 모듈 검증을 통과한 뒤 plan에서 공급자 길이 오류로 실패한다. 반박 근거로 지금 호출자 접두가 20자와 24자라 실제 장애는 없고 apply 전에 걸린다는 점을 봤지만, 적어 둔 입력 계약과 실제 계약이 어긋난다는 사실은 그대로 남는다. 넘길 때 head 0fe7d2a와 main의 이 모듈은 diff가 없고, 이 파일을 건드린 main 커밋은 #455 af15d7f5 하나뿐이라 고쳐지지 않았다. 04:00 백스톱 동작과는 무관한 줄이라 범위 안에서 고칠 수 있다.",
       "evidence": [
@@ -13193,17 +13320,23 @@
         "measurements/terraform/modules/rds-auto-stop/iam.tf:41 @ af15d7f5",
         "measurements/terraform/modules/rds-auto-stop/iam.tf:63 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/main.tf:18 @ af15d7f5",
-        "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:6 @ af15d7f5"
+        "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:6 @ af15d7f5",
+        "contracts.tftest.hcl name_prefix_too_long_for_iam_role_names: 실패 (Missing expected failure, IAM 이름 64자 초과)",
+        "커밋 88e3fe81"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "88e3fe818766e6b7d1ab8a7926c762d43d957505"
+      ],
+      "tests": [
+        "terraform mock 시험 4개 통과, fmt -check 통과",
+        "contracts.tftest.hcl name_prefix_too_long_for_iam_role_names: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/variables.tf:5: condition = can(regex(\"^[a-z0-9-]{1,45}$\", var.name_prefix",
         "measurements/terraform/modules/rds-auto-stop/variables.tf:6: error_message가 45자 이내를 약속",
@@ -13213,14 +13346,17 @@
         "measurements/terraform/rds-auto-stop/main.tf:18: 호출자 name_prefix = \"meterengine-${each.key}\", 지금은 20자와 24자라 영향 없음",
         "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:6: 시험은 20자 접두 하나뿐이고 길이 상한 run이 없음",
         "git diff 0fe7d2a af15d7f5 -- measurements/terraform/modules/rds-auto-stop/ 결과 없음, git log af15d7f5 -- 이 모듈은 af15d7f5(#455) 하나"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     },
     {
       "id": "Nk4-008",
       "merged_ids": [],
       "layer": 455,
-      "branch": "feat/rds-auto-stop",
-      "status": "open",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 모듈 README 로컬 검사 절차는 넘길 때 head(0fe7d2a)와 한 글자도 다르지 않고, 여전히 test-slo SUT root의 잠금 파일을 임시 폴더로 복사해 terraform test를 돌린다. 이 모듈을 쓰는 root는 measurements/terraform/rds-auto-stop 하나뿐이고, 그 root는 자기 잠금 파일을 init -lockfile=readonly로 고정해 배포한다. SUT root에는 이 모듈을 부르는 module 블록이 없다. 지금은 두 잠금 파일의 aws 블록이 6.69.0으로 같아 당장 생기는 결함은 없지만, test-slo/loadgen이 이미 6.69.1로 따로 움직였듯 두 파일을 묶는 장치(스크립트나 CI의 terraform 단계)가 없다. 그래서 시험 통과가 배포할 공급자 버전을 검증한다는 보장이 문서상 끊겨 있어 지적은 맞다. README 한 파일의 두 줄만 바꾸면 되고 04:00 백스톱 문장(4행)은 건드리지 않는다.",
       "evidence": [
@@ -13228,17 +13364,21 @@
         "measurements/terraform/modules/rds-auto-stop/README.md:33 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/main.tf:15 @ af15d7f5",
         "measurements/terraform/rds-auto-stop/README.md:15 @ af15d7f5",
-        "measurements/terraform/rds-auto-stop/.terraform.lock.hcl:5 @ af15d7f5"
+        "measurements/terraform/rds-auto-stop/.terraform.lock.hcl:5 @ af15d7f5",
+        "커밋 a3e0439d"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a3e0439d14e7132ea6d73072b72d0406ab7f3b02"
+      ],
+      "tests": [
+        "문서 변경. 바꾼 절차(배포 root 잠금 파일)로 mock 시험 4개 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/README.md:28: 'SUT 잠금 파일의 공급자 버전을 써서 임시 폴더에서 실행한다'",
         "measurements/terraform/modules/rds-auto-stop/README.md:33: 'cp measurements/test-slo/sut/terraform/.terraform.lock.hcl \"$rds_test_dir/\"'",
@@ -13247,7 +13387,10 @@
         "measurements/terraform/rds-auto-stop/.terraform.lock.hcl:5: aws 6.69.0, measurements/test-slo/sut/terraform/.terraform.lock.hcl:5 @ af15d7f5 aws 6.69.0(aws 블록 동일, random 3.9.1 추가), measurements/test-slo/loadgen/terraform/.terraform.lock.hcl:5 @ af15d7f5 aws 6.69.1(잠금 파일이 root마다 따로 움직인 예",
         "git grep -nE 'terraform|tftest' af15d7f5 -- .github/workflows 결과 없음: 두 잠금 파일을 묶는 CI 단계가 없다",
         "git log af15d7f5 -- measurements/terraform/modules/rds-auto-stop/README.md: #455 af15d7f5 하나뿐이라 main에서 고친 커밋이 없다"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/495"
     }
   ],
   "new_findings": [
@@ -13561,6 +13704,52 @@
     }
   ],
   "checks": [
+    {
+      "kind": "static",
+      "command": "terraform fmt -check -recursive measurements/terraform; rds-auto-stop root init -backend=false, validate, terraform test(mock); ci.yml YAML 파싱과 새 job 단계 로컬 실행",
+      "result": "pass",
+      "detail": "root mock 3, validate 성공. plan, apply, AWS 호출 없음",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
+    {
+      "kind": "rds-auto-stop",
+      "command": "npm --prefix measurements/terraform/modules/rds-auto-stop/tests test; terraform fmt -check; 모듈 mock 시험(배포 root 잠금 파일, init -backend=false, terraform test)",
+      "result": "pass",
+      "detail": "흐름 시험 27, 모듈 mock 4. AWS 호출 없음",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 80, fail 0",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
+    {
+      "kind": "demo",
+      "command": "cd demo && corepack pnpm install --frozen-lockfile; sdk, web, llm-service 각각 pnpm lint, pnpm typecheck, pnpm test; python3 -m unittest discover",
+      "result": "pass",
+      "detail": "sdk 85, web 85, llm-service 36, python 331(7 skipped)",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730"
+    },
     {
       "kind": "screen",
       "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
@@ -17408,6 +17597,11 @@
       "branch": "fix/s456-t-inho-auth-security",
       "sha": "abc82c50eb9e25e3864ddd5a7ed444aa83906aa8",
       "at": "2026-10-29T20:45:18+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-demo-infra",
+      "sha": "aac9c3746d7911a03201146f438e3d874d863730",
+      "at": "2026-10-29T21:20:17+09:00"
     }
   ],
   "usage_log": [],
@@ -17458,7 +17652,8 @@
     "events-query": "https://github.com/asm17-ms2/meterengine/pull/488",
     "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491",
     "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492",
-    "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493"
+    "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493",
+    "demo-infra": "https://github.com/asm17-ms2/meterengine/pull/495"
   },
   "final_checks": [
     {

@@ -1,21 +1,21 @@
-미완료 112건, 결과: 끝 상태 261/372건 (fixed 227, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5)
+미완료 97건, 결과: 끝 상태 276/372건 (fixed 242, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37)
 정할 것: 5건 (Ck3-451-02, Nk3-011, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T20:45:19+09:00
+상태: running, 갱신 2026-10-29T21:20:17+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
-| #444 | fix/s456-444-t-inho | 40 | 32 | 0 | 7 | 0 | 0 | 1 |
-| #446 | fix/s456-446-t-inho | 50 | 27 | 0 | 7 | 0 | 0 | 16 |
+| #444 | fix/s456-444-t-inho | 40 | 33 | 0 | 7 | 0 | 0 | 0 |
+| #446 | fix/s456-446-t-inho | 50 | 28 | 0 | 7 | 0 | 0 | 15 |
 | #448 | fix/s456-t-inho-webhook-audit-ops | 24 | 22 | 1 | 1 | 0 | 0 | 0 |
-| #450 | fix/s456-t-inho-events-query | 38 | 28 | 0 | 2 | 0 | 0 | 8 |
-| #451 | feat/billing-queries | 96 | 28 | 0 | 6 | 2 | 0 | 60 |
+| #450 | fix/s456-t-inho-events-query | 38 | 29 | 0 | 2 | 0 | 0 | 7 |
+| #451 | feat/billing-queries | 96 | 29 | 0 | 6 | 2 | 0 | 59 |
 | #454 | feat/auth-rate-limit | 19 | 14 | 1 | 4 | 0 | 0 | 0 |
-| #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
+| #455 | fix/s456-t-inho-demo-infra | 12 | 11 | 0 | 1 | 0 | 0 | 0 |
 | #447 | fix/s456-t-inho-billing-api | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
 ## 고친 것
@@ -117,6 +117,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Ck2-010 | #444 | 95c8ae9 | main의 OperationsService.java:52는 넘길 때 head와 한 글자도 다르지 않아서, 결제 실패는 최근 24시간만 세고 웹훅 실패는 지금 failed인 전송을 기간 없이 모두 셉니다. 지적의 '영영 빠지지 않는다'는 조금 과장입니다 | WebhookIntegrationTest.운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다: 실패 (expected: 1L but was: 2L) |
 | Ck2-011 | #444 | eb1780b | 웹훅 전송 실패 사유 CHECK를 V52로 더한다(결정: 문자열과 CHECK 관례 유지) | SchemaConstraintTest.웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다: 실패 expected 1, actual 0 |
 | Ck2-013 | #444 | 40089ce | SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다 | SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다) |
+| Ck2-015 | #444 | 67d55c9, aac9c37 | main에서도 demo/eslint-naming-rules.mjs 1-40행은 frontend/eslint.config.mjs 6-45행과 export 한 단어만 빼고 글자까지 같고, 넘길 때 head(81651ed)와 내용이 그대로라 고쳐지지 않았다 | naming-rules-sync.test.mjs(변이: 데모 enumMember 형식 변경): 실패 확인 |
 | D-035 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-157 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | C444-008 | #444 | 8008c44 | 콘솔에서 웹훅 수신 주소를 수정해도 기존 설명을 지우지 않는다 | saving a webhook endpoint keeps its existing description: 실패 Expected "운영 알림 수신기" Received "설명 없이 보냄" (PUT 본문에 description이 없다) |
@@ -146,6 +147,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | H3-B2 | #446 | 3be4f3a | 시드 재실행이 percentile을 비운다 | SeedDataTest.백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다: 실패 DataIntegrityViolationException |
 | Nk3-002 | #446 | 85e8d8d | 단가 응답 tiers를 배열로 문서화한다 | OpenApiDocumentTest.단가_응답의_tiers는_구간_객체의_배열이다: 실패 expected array but was |
 | C446-005 | #446 | 349319e | 반올림 시험에 사사오입 판별 자리를 더한다 | 없음(MetricAggregationIntegrationTest: 통과; round를 HALF_EVEN으로 바꾼 변이: 실패) |
+| C446-008 | #446 | d1b3464 | main에서도 서버는 기본료와 최소 사용료 라인의 billable_metric_code를 null로 보낸다. ChargeService.surcharge가 DimensionCharge의 첫 인자에 null을 넣고, DraftInvoiceService와  | demo/sdk typecheck(meter-engine-client.test.ts 기본료 라인 타입 시험): 실패 (TS2322 null을 string에 넣을 수 없음) |
 | C446-011 | #446 | 628658f | 올림 음수 시험이 올림 미터를 쓴다 | 없음(ChargeServiceTest: 통과; 음수 판정을 변환 수량으로 바꾼 변이: 실패) |
 | C446-012 | #446 | 7347579 | 다른 도입사 단가 ID 삭제의 경계를 시험한다 | 없음(VersionedPricingIntegrationTest: 통과; 도입사 비교를 뺀 변이: 실패) |
 | C446-013 | #446 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
@@ -195,6 +197,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | C450-012 | #450 | cfb0e6f | 검색어 % 시험이 실제로 % 한 글자를 보낸다 | 없음(EventIssueIntegrationTest, EventRejectionIntegrationTest: 통과; position을 이스케이프 없는 LIKE로 바꾼 변이: 실패 expected: 0 but was: 3) |
 | C450-002 | #450 | db6bbd5 | 보안 지적 수정 | CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패 |
 | C450-003 | #450 | db6bbd5 | 고객 등록의 보관 409를 문서화하고 시험한다 | OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패 |
+| C450-010 | #450 | 1b33c58, 4e083bc | main의 _send_batches는 넘길 때 head와 같은 코드이고, build_body_text가 properties 원문을 그대로 이어 붙여 봉투 하나를 만든다. csvio.py는 빈 칸을 빈 문자열로 읽고 예측 단계는 문제를 표시만 한 채 그 | csvdemo.test_send_cmd.test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다: 실패 (세 행 모두 rejected) |
 | G-127 | #450 | cdb63ae | 월 목록에서 네 자리 연도로 열 수 없는 달을 뺀다 | EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 actual ["55835-03", "2026-10"] |
 | G-165 | #450 | 7357259 | main의 저장단 대시보드에서 수집 API 패널 넷(초당 요청 수, 평균 처리 시간, p99와 p50, 5xx 오류율)의 식이 모두 uri="/v1/events",method="POST"로 고정되어 있다. #450이 이 파일을 바꿨지만 중복률 분모 한 | test_dashboards.test_ingestion_panels_cover_single_and_batch_ingestion_per_uri: 실패 (uri 조건이 /v1/events뿐) |
 | Ck3-451-01 | #451 | 4f705cd | main에서도 고객 등록 응답(이름, billing_email)을 idempotent_request.response_body에 기한 없이 저장한다. 지우는 코드가 없고 created_at 열을 읽는 곳도 없어서, 넘길 때 head와 같은 상태로 남아  | OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 (설명 없음) |
@@ -215,6 +218,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Nk3-009 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
 | C451-006 | #451 | 01d7cbd, 921d9d0 | 조회 경로와 겹치는 미터 code를 거절한다 | BillableMetricServiceTest.조회_경로와_겹치는_code의_미터는_만들지_않는다: 실패 Expecting code to raise a throwable |
 | C451-009 | #451 | 3c7aae1 | 금액 범위 시험이 합계 기준을 가린다 | 없음(금액 필터를 공급가액으로 바꾼 변이: 실패 expected: 1 but was: 0; WorkspaceQueryIntegrationTest: 통과) |
+| C451-010 | #451 | d6653bf | main에서도 createCustomer는 external_id가 있을 때만 재시도를 켠다(meter-engine-client.ts 169행). 서버 설명대로 external_id를 빼면 매번 새 고객이 생기고 SDK는 Idempotency-Key를  | 변이(재시도 조건 true): external_id 없는 createCustomer는 실패해도 다시 보내지 않는다: 실패 확인 |
 | G-111 | #451 | 4e6ebc7 | main에도 지적이 그대로 남아 있다. 결제 취소는 Idempotency-Key를 UUID로만 받고 충돌하면 payment_cancellation_idempotency_conflict를 돌려주며 재생 헤더가 없다. 고객과 미터 생성이 쓰는 Idempo | OpenApiDocumentTest.결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다: 실패 (400 설명에 Idempotency-Key 없음) |
 | G-118 | #451 | e79f63e | 가격 검색이 그 달에 청구하는 미터만 센다(결정: status 뜻 유지) | WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 actual ["restored", "retired"] |
 | G-121 | #451 | 6198c5d | 빈 검색 CSV도 같은 열 제목을 쓴다 | WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 but was "empty_result" |
@@ -236,6 +240,17 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-099 | #454 | 4b6b732 | main의 초대 수락 서버 액션은 새 계정으로 수락한 뒤 POST /v1/sessions로 자동 로그인하는데, 이 호출에 clientIp를 넘기지 않는다. 같은 /v1/sessions를 부르는 loginAction과 가입 액션은 x-meterengin | auth.contract.spec.ts the automatic login after accepting an invitation sends the visitor's client address: 실패 (Received: undefined) |
 | G-101 | #454 | 5a91d92, abc82c5 | main에서도 RequestLogFilter는 X-Forwarded-For 첫 값을 client_address로 찍고, 로그인과 가입 한도는 신뢰 프록시 대역에서 온 X-MeterEngine-Client-IP로 IP를 센다. 운영에서 콘솔 로그인은 프 | AuthRequestRateLimitIntegrationTest.한도에_걸린_요청은_센_클라이언트_주소와_걸린_한도를_이메일_없이_로그에_남긴다: 실패 (limit, retry_after 로그 없음) |
 | U12-B1 | #454 | 56f4f94 | 보안 지적 수정 | test_logging.test_public_and_internal_proxies_overwrite_client_ip_sent_by_other_hosts: 실패 (internal=True에서 보낸 값 유지) |
+| C455-002 | #455 | a0a5f21 | main의 루트 README에서 rds_plan_dir는 '계획과 적용' 절의 bash 블록(13, 14행)에서만 정의된다. '복구' 절의 감지 끄기 블록(50~54행)은 이 변수를 다시 정의하지 않고 -out="$rds_plan_dir/disable | 없음(문서 변경. 복구 절 명령이 umask와 rds_plan_dir 정의부터 시작하고 감지 끄기가 기본값 PR 절차로 바뀐 것을 확인) |
+| C455-003 | #455 | 24958e0 | main의 workflow.test.mjs는 넘길 때 head(0fe7d2a)와 한 글자도 다르지 않아 지적한 빈틈이 그대로 남았다. stopDBInstance 가짜 응답은 인자를 보지 않고 늘 성공을 돌려주고, putItem 가짜 응답은 Condit | workflow.test.mjs(변이: 중지 대상 db_arn, 기록 표 db_identifier): 실패 확인 |
+| C455-005 | #455 | d1e1526 | main에서도 지적이 그대로 남았다. ci.yml의 paths-filter에는 backend와 frontend 두 필터만 있고 job도 backend, frontend 둘뿐이라, measurements/ 아래만 바꾸는 PR은 두 job이 skip되어  | 없음(CI 단계를 로컬에서 순서대로 실행: npm 27개, fmt, 모듈 mock 4개, root mock 3개 통과, YAML 파싱 확인) |
+| G-162 | #455 | 99fe508, aac9c37 | main에서도 지적이 그대로 남아 있다. rds-auto-stop root는 환경을 test-slo와 test-storage로 고정하고(main.tf 6행), 두 환경의 DB를 data source로 읽으며(9-12행), enabled 검증도 두 키를 | rds-auto-stop/tests/environments.tftest.hcl one_environment_can_be_removed_before_its_sut: 실패 (Invalid value for variable) |
+| G-163 | #455 | c6d2042 | main(af15d7f5)의 measurements/ 아래 코드는 넘길 때 head(0fe7d2a)와 한 줄도 다르지 않아서, 지적한 실패 경로가 그대로 남아 있다. 두 환경의 sut-start.sh는 RDS가 starting이면 시작 요청을 건너뛰고 | 없음(문서 변경. 상태 기계 이름과 TimeoutSeconds 7200을 모듈에서 확인, AWS 명령은 실행하지 않음) |
+| Nk4-001 | #455 | a0a5f21 | main의 measurements 폴더는 넘길 때 head 0fe7d2a와 글자 하나 다르지 않고, 04:00 백스톱 수정(f8913453)이 #455 squash로 들어왔다. 그래서 제목 뒷부분인 "되살린 04:00 스케줄을 다시 끈다"는 main에 | 없음(문서 변경. 복구 절 명령이 umask와 rds_plan_dir 정의부터 시작하고 감지 끄기가 기본값 PR 절차로 바뀐 것을 확인) |
+| Nk4-002 | #455 | 8abbcab | main의 rds-auto-stop 잠금 파일에는 aws 6.69.0의 h1 해시가 qXrr 값 하나뿐이고, README 계획 절은 init -lockfile=readonly로 시작한다. readonly init은 zh 해시로 zip을 검증해 통과하지 | 없음(잠금 파일 h1 해시 1개에서 4개로, 새 잠금 파일로 init -backend=false와 mock 시험 4개 통과) |
+| Nk4-003 | #455 | 1e741a9, aac9c37 | main의 measurements/terraform은 넘길 때 head 0fe7d2a와 한 글자도 다르지 않아 지적한 줄이 그대로 남아 있다. EventBridge는 900초, 3회 재시도 뒤 DLQ로 보내고, 상태 기계는 15분이 지난 이벤트를 Ig | rds-auto-stop/tests/environments.tftest.hcl both_environments_by_default: 실패 (Reference to undeclared output value) |
+| Nk4-004 | #455 | e0fcdef | 반박을 먼저 시도했지만 실패했다. main의 rds-auto-stop 모듈은 넘길 때 head 0fe7d2a와 한 줄도 다르지 않고(#455 squash 하나만 이 모듈을 건드렸다) 설정 키 계약을 검사하는 곳이 여전히 없다. main.tf가 Conf | contracts.tftest.hcl scoped_automatic_restart(변이: $config.claim_tables): 실패 확인 |
+| Nk4-007 | #455 | 88e3fe8 | main의 variables.tf 5행 정규식은 아직 {1,45}이고 6행 오류 문구도 45자를 약속한다. 그런데 main.tf 2행이 접두 뒤에 '-rds-auto-stop'(14자)을 붙이고, iam.tf 41행이 다시 '-workflow'(9자) | contracts.tftest.hcl name_prefix_too_long_for_iam_role_names: 실패 (Missing expected failure, IAM 이름 64자 초과) |
+| Nk4-008 | #455 | a3e0439 | main의 모듈 README 로컬 검사 절차는 넘길 때 head(0fe7d2a)와 한 글자도 다르지 않고, 여전히 test-slo SUT root의 잠금 파일을 임시 폴더로 복사해 terraform test를 돌린다. 이 모듈을 쓰는 root는 mea | 없음(문서 변경. 바꾼 절차(배포 root 잠금 파일)로 mock 시험 4개 통과) |
 | NT-inho-003 | #444 | 76f7215 | main에서도 WebhookClient는 TLS 인증서 오류, DNS 실패, 연결 거부(모두 IOException)와 전송 작업 안의 예상하지 못한 예외(ExecutionException)를 모두 connection_error로 돌려준다. 이 값은 전 | 없음(문서 변경. WebhookClient의 connection_error 분기와 로그 줄을 코드에서 확인) |
 | NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
 | NT-inho-007 | #442 | 3373654 | mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471) | mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5 |
