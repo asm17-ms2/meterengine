@@ -26,3 +26,8 @@ test("mobile invoice cards show the invoice number and the same payment link as 
   assert.equal(invoices.match(/수납과 고객 조회 링크/g)?.length, 1);
 });
 
+test("a truncated customer label offers the full name and id", () => {
+  const label = source("table/CustomerLabel.tsx");
+  assert.ok(label.includes("ellipsis={{ tooltip: `${name} (${id})` }}"));
+});
+
