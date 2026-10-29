@@ -1,11 +1,15 @@
 {
   "package": "T-yang",
   "status": "running",
-  "updated_at": "2026-10-29T15:54:30+09:00",
+  "updated_at": "2026-10-29T16:05:10+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
-  "current": null,
+  "current": {
+    "id": "G-133",
+    "step": "judge",
+    "branch": "main"
+  },
   "finished_ids": [
     "C442-004",
     "C442-005",
@@ -293,6 +297,11 @@
     "C444-012",
     "C453-001",
     "G-106",
+    "C453-002",
+    "C453-005",
+    "G-093",
+    "G-094",
+    "G-130",
     "C453-003",
     "C453-004",
     "C453-006",
@@ -310,11 +319,6 @@
     "C452-011",
     "C452-014",
     "C452-016",
-    "C453-002",
-    "C453-005",
-    "G-093",
-    "G-094",
-    "G-130",
     "C453-009",
     "C453-011",
     "C453-012",
@@ -368,6 +372,11 @@
     "fix/s456-t-yang-toss-key": {
       "origin_sha": "ffa9cd3",
       "local_sha": "ffa9cd3",
+      "unpushed": []
+    },
+    "fix/s456-t-yang-audit-env": {
+      "origin_sha": "04c93d9",
+      "local_sha": "04c93d9",
       "unpushed": []
     }
   },
