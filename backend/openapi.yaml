@@ -8896,11 +8896,14 @@ components:
           - invalid_toss_payments_credential
           - payment_method_rejected
           - toss_payments_test_code_in_live_mode
+          - invalid_webhook_url
+          - invalid_webhook_event_type
           - authentication_required
           - invalid_credentials
           - permission_denied
           - organization_not_active
           - environment_mismatch
+          - consent_required
           - customer_not_found
           - event_not_found
           - billable_metric_not_found
@@ -8909,13 +8912,15 @@ components:
           - invoice_view_link_not_found
           - endpoint_not_found
           - api_key_not_found
-          - api_key_unavailable
           - organization_not_found
           - user_account_not_found
           - payment_method_not_found
           - payment_method_registration_not_found
           - payment_attempt_not_found
           - toss_payments_credential_not_found
+          - price_plan_not_found
+          - webhook_endpoint_not_found
+          - invitation_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
@@ -8949,19 +8954,13 @@ components:
           - webhook_delivery_not_retryable
           - price_rate_history_immutable
           - price_plan_history_immutable
-          - price_plan_not_found
-          - customer_has_pricing
-          - invalid_webhook_url
-          - invalid_webhook_event_type
-          - webhook_endpoint_not_found
           - webhook_endpoint_disabled
           - webhook_endpoint_limit_exceeded
-          - consent_required
-          - invitation_not_found
           - invitation_unavailable
           - last_owner_required
           - owner_scopes_required
           - last_operator_required
+          - api_key_unavailable
           - upload_size_exceeded
           - request_type_not_supported
           - rate_limit_exceeded
