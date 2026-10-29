@@ -2,12 +2,16 @@ import ipaddress
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import unittest
 
 
 COMPOSE_FILE = Path(__file__).resolve().parents[1] / "compose.prod.yml"
+APPLICATION_PROPERTIES = (Path(__file__).resolve().parents[2]
+                          / "backend/src/main/resources/application.properties")
+AUTH_RATE_LIMIT_SETTING = re.compile(r"\$\{(METERENGINE_AUTH_RATE_LIMIT_[A-Z_]+):([^}]*)\}")
 BACKENDS = ("backend-blue", "backend-green")
 DUMMY_ENV = {
     name: "dummy" for name in (
@@ -25,7 +29,8 @@ class TrustedProxyDefaultTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         environment = {**os.environ, **DUMMY_ENV}
-        environment.pop("METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES", None)
+        for name in [name for name in environment if name.startswith("METERENGINE_AUTH_RATE_LIMIT_")]:
+            environment.pop(name)
         result = subprocess.run(
             ["docker", "compose", "-f", str(COMPOSE_FILE), "config", "--format", "json"],
             capture_output=True, text=True, env=environment, timeout=30)
@@ -58,6 +63,16 @@ class TrustedProxyDefaultTest(unittest.TestCase):
                 for band in self.trusted_networks(backend):
                     self.assertFalse(any(band.overlaps(pool) for pool in dynamic),
                                      f"{network} hands out trusted addresses {band} to other containers")
+
+    def test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default(self):
+        defaults = dict(AUTH_RATE_LIMIT_SETTING.findall(APPLICATION_PROPERTIES.read_text()))
+        self.assertGreaterEqual(len(defaults), 8)
+        for backend in BACKENDS:
+            environment = self.config["services"][backend]["environment"]
+            for name, default in defaults.items():
+                self.assertIn(name, environment, f"{backend} drops {name}")
+                if name != "METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES":
+                    self.assertEqual(environment[name], default, f"{backend} {name}")
 
 
 if __name__ == "__main__":

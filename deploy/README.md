@@ -415,6 +415,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
+| `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 
 - 새 파라미터를 등록한다.
