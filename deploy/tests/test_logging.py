@@ -107,7 +107,7 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
         return int(published.rsplit(":", 1)[1])
 
     @classmethod
-    def request(cls, path, internal=False, referer=CALLBACK):
+    def request(cls, path, internal=False, referer=CALLBACK, case=None):
         connection = (http.client.HTTPConnection("127.0.0.1", cls.internal_port, timeout=12)
                       if internal else http.client.HTTPSConnection(
                           "localhost", cls.public_port, timeout=12,
@@ -117,6 +117,7 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
                 "Host": "localhost", "Authorization": AUTHORIZATION, "Cookie": COOKIE,
                 "Proxy-Authorization": PROXY_AUTHORIZATION,
                 "Referer": f"https://localhost{referer}",
+                **({"X-Test-Case": case} if case else {}),
             })
             response = connection.getresponse()
             return response.status, response.read().decode()
@@ -154,6 +155,8 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
             "encoded-token-for-log-privacy-regression": "/payment%2Dmethod-registrations/{}",
             "semicolon-token-for-log-privacy-regression": "/v1/organization-invitations;x/{}/accept",
             "dot-token-for-log-privacy-regression": "/v1/./payment-method-registrations/{}",
+            "segment-dot-value-for-log-privacy-regression": "/payment-method-registrations/./{}",
+            "segment-semicolon-value-for-log-privacy-regression": "/v1/organization-invitations/;x/{}/accept",
         }
         referer_token = "referer-token-for-log-privacy-regression"
         before = len(self.access_entries())
@@ -192,12 +195,12 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
                      (API_PATH, True, CALLBACK), (INVITATION, False, INVITATION),
                      (INVITATION_API, False, INVITATION), (INVITATION_API, True, INVITATION))
         for path, internal, referer in (*protected, (normal, False, CALLBACK)):
-            status, body = self.request(path, internal, referer)
+            status, body = self.request(path, internal, referer, case="success")
             self.assertEqual(status, 200)
             self.assertTrue(body == f"{path}|{AUTHORIZATION}", "Log filters must preserve upstream requests")
         self.docker("stop", self.upstream)
         for path, internal, referer in protected:
-            self.assertIn(self.request(path, internal, referer)[0], (502, 503))
+            self.assertIn(self.request(path, internal, referer, case="success")[0], (502, 503))
 
         deadline = time.monotonic() + 5
         entries = []
@@ -205,12 +208,14 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
             result = self.docker("logs", self.proxy)
             logs = result.stdout + result.stderr
             entries = [json.loads(line) for line in logs.splitlines() if line.startswith("{")]
+            entries = [entry for entry in entries
+                       if entry.get("request", {}).get("headers", {}).get("X-Test-Case") == ["success"]]
             access = [entry for entry in entries if entry.get("logger", "").startswith("http.log.access")]
             errors = [entry for entry in entries if entry.get("logger", "").startswith("http.log.error")]
-            if len(access) >= 10 and len(errors) >= 6:
+            if len(access) >= 9 and len(errors) >= 6:
                 break
             time.sleep(0.05)
-        self.assertGreaterEqual(len(access), 10)
+        self.assertGreaterEqual(len(access), 9)
         self.assertGreaterEqual(len(errors), 6)
         forbidden = (TOKEN, API_TOKEN, AUTH_KEY, CUSTOMER_KEY, STATE, AUTHORIZATION,
                      COOKIE, PROXY_AUTHORIZATION, SET_COOKIE, INVITATION_TOKEN,
