@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T16:40:38+09:00",
+  "updated_at": "2026-10-29T16:53:04+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -30,7 +30,9 @@
     "fix/s456-t-yang-ops-metrics": "6152c0b",
     "fix/s456-t-yang-readme": "6da19c6",
     "fix/s456-t-yang-e2e": "b78630c",
-    "fix/s456-t-yang-env-ui": "b303189"
+    "fix/s456-t-yang-env-ui": "b303189",
+    "fix/s456-t-yang-backend-cleanup": "6b954c5",
+    "fix/s456-t-yang-demo-web-target": "a34c969"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -613,25 +615,39 @@
       "id": "G-008",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 OrganizationPeopleService가 IssuedInvitation, InvitationPreview, AcceptedInvitation을 서비스 안 중첩 레코드로 두고 Jackson 어노테이션을 FQN으로 달며, 두 컨트롤러가 이 레코드를 그대로 HTTP 응답 타입으로 돌려준다. 그래서 openapi.yaml 응답 스키마 이름이 이 셋이 되어 naming.md 39행의 응답 DTO 꼴(<리소스>Response)을 벗어난다. 서비스가 요청 DTO를 받고 응답 DTO를 돌려주는 계층 부분은 main 관례와 같아 지적하지 않고 이름 부분만 맞다고 본다. JSON 본문은 같아서 실행 결함은 없고, 정점 0fe7d2a도 같으며 위층 23b1844는 두 컨트롤러에 @EnvironmentReady만 더했다.",
+      "reason": "결정(머지 뒤 지침): OrganizationPeopleService 안의 IssuedInvitation, InvitationPreview, AcceptedInvitation을 컨트롤러가 그대로 응답 타입으로 쓴다. 그래서 main의 이름 있는 2xx 응답 스키마 가운데 Response가 들어가지 않은 것은 이 셋뿐이고, naming.md 39행 응답 DTO 꼴과 46행 프론트 타입 규칙을 벗어난다. JSON 본문은 그대로이고 SDK와 demo는 이 스키마를 쓰지 않아 깨지는 클라이언트가 없다. 공개 스키마 이름은 쓰는 곳이 늘수록 바꾸기 어려우니 지금 main 선례(ApiKeySecretResponse, InvoiceViewLinkSecretResponse)대로 맞춘다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:368-384 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:120 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:33,42 @ 72e8718",
-        "backend/openapi.yaml:2410,3139,3203 @ 72e8718",
-        "docs/contributing/naming.md:39 @ 72e8718"
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:371-387 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationPeopleController.java:255 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:82 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/controller/OrganizationInvitationController.java:144 @ af15d7f",
+        "backend/openapi.yaml:4791 @ af15d7f",
+        "backend/openapi.yaml:4851 @ af15d7f",
+        "backend/openapi.yaml:4985 @ af15d7f",
+        "docs/contributing/naming.md:39 @ af15d7f",
+        "docs/contributing/naming.md:46 @ af15d7f",
+        "frontend/src/app/organization-invitations/[token]/page.tsx:15 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/dto/InvoiceViewLinkSecretResponse.java:7 @ af15d7f",
+        "커밋 6a03fbf"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "6a03fbf4"
+      ],
+      "tests": [
+        "JSON 본문이 같은 이름 변경: openapi.yaml에서 스키마 이름 셋과 $ref만 바뀌고 속성은 같다",
+        "./gradlew build, frontend lint, typecheck, build 통과(6b954c5)"
+      ],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "OrganizationPeopleService 안의 응답 레코드 셋(IssuedInvitation, InvitationPreview, AcceptedInvitation)을 organization.dto의 *Response 레코드로 옮겨 OpenAPI 스키마 이름을 바꿀지(파일 여섯 개, 공개 스키마 이름 변경) 정한다."
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "OrganizationPeopleService 안의 IssuedInvitation, InvitationPre"
     },
     {
       "id": "G-009",
@@ -2554,26 +2570,41 @@
       "id": "G-011",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 CreateManagedMemberRequest 15~17행과 CreateOrganizationInvitationRequest 15행, AcceptOrganizationInvitationRequest 11~12행은 이메일 패턴, 254, 255, 8, 72를 리터럴로 쓰고 EMAIL_FORMAT_MESSAGE를 빼서, UserAccount 상수를 쓰는 CreateUserAccountRequest와 규칙이 갈라져 있고 GlobalExceptionHandler가 getDefaultMessage를 그대로 내므로 이메일 형식 오류 문구도 경로마다 다르다. NewAccount 그룹은 git grep으로 정의와 선언 두 줄에만 나오고 그 그룹으로 검증하는 곳이 없어 동작하지 않으며, OrganizationPeopleService 256~262행이 길이 8을 리터럴로 다시 검사한다. 빈 동의 목록은 SignupService.validate가 막아 지금 실패 경로는 없고 규칙이 어긋날 수 있는 유지보수 문제다. organization 패키지는 account를 하나도 import하지 않는 한 방향 구조(OrganizationAccounts 포트)라 UserAccount 상수를 바로 쓰면 역방향 의존이 생기고, 수정안대로 global.validation 조합 제약으로 옮기면 새 제약 파일과 DTO 다섯 개, 서비스까지 셋 이상의 파일이 바뀌어 needs-decision이다. 정점 0fe7d2a에서도 세 DTO와 서비스 줄이 같고 72e8718..0fe7d2a 사이에 이 파일들을 바꾼 커밋이 없다.",
+      "reason": "결정(머지 뒤 지침): CreateManagedMemberRequest와 CreateOrganizationInvitationRequest의 @Pattern에는 message가 없다. 그래서 a@b처럼 @Email은 통과하고 패턴만 틀린 이메일을 넣으면 정규식을 담은 기본 문구가 errors[].message로 나가고, 사용자 화면에 필드 오류로 그대로 보인다. 같은 입력에 가입과 운영자 생성은 올바른 형식의 이메일 주소여야 합니다를 돌려주므로 경로마다 결과가 이미 다르고, 원인은 UserAccount 규칙을 리터럴로 베낀 데 있다. organization은 account를 import할 수 없으므로(DomainBoundaryTest) 계정 입력 규칙 상수를 organization.api.OrganizationPerson에 두고, UserAccount 상수가 이를 가리키게 해서 정본을 하나로 만든다. account가 organization.api를 쓰는 방향은 OrganizationAccountService가 이미 쓰는 방향이다. 어디서도 검증하지 않는 NewAccount 그룹은 지운다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/organization/dto/CreateManagedMemberRequest.java:15-17 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/dto/CreateUserAccountRequest.java:13,16,19 @ 72e8718",
-        "backend/src/main/java/com/meterengine/account/entity/UserAccount.java:21-27 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/dto/AcceptOrganizationInvitationRequest.java:11-14 @ 72e8718",
-        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:256-262 @ 72e8718"
+        "backend/src/main/java/com/meterengine/organization/dto/CreateManagedMemberRequest.java:15-17 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/dto/CreateOrganizationInvitationRequest.java:15 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/dto/AcceptOrganizationInvitationRequest.java:11-14 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/entity/UserAccount.java:21-27 @ af15d7f",
+        "backend/src/main/java/com/meterengine/account/dto/CreateUserAccountRequest.java:13 @ af15d7f",
+        "backend/src/main/resources/application.properties:35-36 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:83-89 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:108 @ af15d7f",
+        "frontend/src/app/(console)/members/page.tsx:39-40 @ af15d7f",
+        "backend/src/main/java/com/meterengine/organization/service/OrganizationPeopleService.java:259-265 @ af15d7f",
+        "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:51-58 @ af15d7f",
+        "backend/src/test/java/com/meterengine/customer/CustomerIntegrationTest.java:230-247 @ af15d7f",
+        "직접생성과_초대의_이메일_형식_오류는_가입과_같은_문구다: 실패 [a@b] 정규식 기본 문구가 errors[].message로 나감",
+        "커밋 6b954c5"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6b954c5e"
+      ],
+      "tests": [
+        "./gradlew build 통과(6b954c5, 시험 1377개)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "organization이 account를 import하지 않는 지금 의존 방향을 지키면서 계정 이메일, 이름, 비밀번호 규칙을 global.validation 조합 제약으로 옮겨 account와 organization DTO 다섯 곳과 OrganizationPeopleService가 함께 쓰게 할지 정한다.",
-      "propagation_note": "정점 0fe7d2a에서 NewAccount는 AcceptOrganizationInvitationRequest.java 13-14행에만 있고 위층 사용처가 없다. 72e8718..0fe7d2a 사이에 세 DTO, OrganizationPeopleService, UserAccount를 바꾼 커밋이 없어 #442에서 고치면 위층은 머지로 따라온다. openapi.yaml은 그룹 제약을 반영하지 않아 NewAccount를 지워도 바뀌지 않는다."
+      "propagation_note": "정점 0fe7d2a에서 NewAccount는 AcceptOrganizationInvitationRequest.java 13-14행에만 있고 위층 사용처가 없다. 72e8718..0fe7d2a 사이에 세 DTO, OrganizationPeopleService, UserAccount를 바꾼 커밋이 없어 #442에서 고치면 위층은 머지로 따라온다. openapi.yaml은 그룹 제약을 반영하지 않아 NewAccount를 지워도 바뀌지 않는다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "CreateManagedMemberRequest와 CreateOrganizationInvitationRequ"
     },
     {
       "id": "G-012",
@@ -2688,26 +2719,35 @@
       "id": "G-018",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718의 ErrorCode.java에는 INVALID_TOSS_PAYMENTS_CREDENTIAL, PAYMENT_*, WEBHOOK_*, PRICE_PLAN_* 등 상수 33개가 있는데, git grep으로 찾아 보면 ErrorCode.java 밖의 backend 소스와 시험 어디에서도 쓰이지 않는다. 그런데도 openapi.yaml 오류 code enum에는 그대로 실린다. 이 code를 처음 던지는 층은 #444, #445, #446, #447, #449, #450이고, CUSTOMER_HAS_PRICING은 정점에서도 쓰는 곳이 없다. 구역 주석도 코드와 어긋난다: '// 404 Not Found' 구역의 API_KEY_UNAVAILABLE은 CONFLICT이고, 409 구역 뒤쪽에 FORBIDDEN인 CONSENT_REQUIRED, NOT_FOUND인 INVITATION_NOT_FOUND, PRICE_PLAN_NOT_FOUND, WEBHOOK_ENDPOINT_NOT_FOUND, BAD_REQUEST인 INVALID_WEBHOOK_*가 놓여 있으며, 정점 0fe7d2a도 같다. 수정안대로 각 code를 던지는 PR로 옮기려면 담당이 아닌 #444, #446, #450을 포함한 일곱 층의 ErrorCode.java와 openapi.yaml을 바꿔야 하고 #442에서만 지우면 위층 빌드가 깨진다. 유지보수 분류에서 파일 셋 이상에 걸친 구조 변경이므로 needs-decision이고, 구역 자리 맞추기만은 #442의 두 파일로 끝나 fix_plan에 적었다.",
+      "reason": "결정(머지 뒤 지침): 스택이 main에 한 번에 들어와 위층 code 32개는 각 기능이 실제로 던지므로, code를 층별로 옮기는 안은 의미가 없어졌다. 남은 결함은 둘이다. 첫째, #442가 더한 CUSTOMER_HAS_PRICING은 main 어디에서도 던지지 않는데 openapi.yaml 오류 code 목록에 실려 있다. 둘째, '// 404 Not Found' 구역에 409인 API_KEY_UNAVAILABLE이 있고 '// 409 Conflict' 구역에 400, 403, 404 code 여섯 개가 섞여 구역 주석이 틀리다. CUSTOMER_HAS_PRICING을 지우고 상수를 HTTP 상태 구역으로 옮긴 뒤 순서를 시험으로 고정한다. ErrorCode는 공용 코드이고 새 시험이 모든 사람의 새 code 자리를 제약하므로 두 분을 리뷰어로 둔다.",
       "evidence": [
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:14-16 @ 72e8718",
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:26,35 @ 72e8718",
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:79-94 @ 72e8718",
-        "backend/openapi.yaml:2970-3039 @ 72e8718",
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:85-94 @ 0fe7d2a"
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:86 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:27-37 @ af15d7f",
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:82-98 @ af15d7f",
+        "backend/openapi.yaml:8953 @ af15d7f",
+        "backend/src/test/java/com/meterengine/global/error/ErrorCodeTest.java:8-24 @ af15d7f",
+        "커밋 1b2c555d",
+        "상수는_HTTP_상태_순서로_놓인다: 실패 [ORGANIZATION_NOT_FOUND] 404 to be greater than or equal to 409",
+        "커밋 0c8881a"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "0c8881ad"
+      ],
+      "tests": [
+        "./gradlew build 통과(6b954c5, 시험 1377개)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "ErrorCode에서 #442가 쓰지 않는 위층 code 33개를 각각 처음 던지는 층(#444, #445, #446, #447, #449, #450)으로 옮기고 아무 층도 쓰지 않는 CUSTOMER_HAS_PRICING은 지울지, 아니면 #442에 모아 둔 채 HttpStatus 구역 자리만 #442에서 맞출지 정한다.",
-      "propagation_note": "code를 옮기는 안: #442에서 지운 뒤 위로 반영하면 아래 층에서 컴파일이 깨진다. 각 층이 상수를 다시 더해야 한다. #444는 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED. #445는 토스와 결제 code 16개. #446은 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND. #447은 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT. #449는 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE. #450은 EVENT_NOT_FOUND. #442의 frontend/src/app/(console)/workspace-actions.ts:67은 payment_result_unconfirmed, payment_cancellation_in_progress를 문자열로 비교하므로 함께 볼지 정한다. CUSTOMER_HAS_PRICING은 정점에서도 openapi.yaml:8456과 ErrorCode.java:86에만 있다. 구역만 맞추는 안: #450의 8bb17c3이 ORGANIZATION_NOT_ACTIVE 뒤에 ENVIRONMENT_MISMATCH를, 409 구역 머리에 RESOURCE_VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ENVIRONMENT_NOT_READY를 더했다. 그래서 CONSENT_REQUIRED는 ORGANIZATION_NOT_ACTIVE 앞에, API_KEY_UNAVAILABLE은 409 구역 끝에 둬야 반영 merge 충돌이 줄어든다. 위층마다 openapi.yaml enum 순서가 바뀌므로 반영한 뒤 각 층에서 openapi.yaml을 다시 만든다."
+      "propagation_note": "code를 옮기는 안: #442에서 지운 뒤 위로 반영하면 아래 층에서 컴파일이 깨진다. 각 층이 상수를 다시 더해야 한다. #444는 WEBHOOK_DELIVERY_NOT_RETRYABLE, INVALID_WEBHOOK_URL, INVALID_WEBHOOK_EVENT_TYPE, WEBHOOK_ENDPOINT_NOT_FOUND, WEBHOOK_ENDPOINT_DISABLED, WEBHOOK_ENDPOINT_LIMIT_EXCEEDED. #445는 토스와 결제 code 16개. #446은 PRICE_RATE_HISTORY_IMMUTABLE, PRICE_PLAN_HISTORY_IMMUTABLE, PRICE_PLAN_NOT_FOUND. #447은 CUSTOMER_ARCHIVED, RESOURCE_ARCHIVED, ARCHIVE_RESTORATION_CONFLICT. #449는 INVOICE_VIEW_LINK_NOT_FOUND, PAYMENT_RETRY_UNAVAILABLE, PAYMENT_RETRY_STALE. #450은 EVENT_NOT_FOUND. #442의 frontend/src/app/(console)/workspace-actions.ts:67은 payment_result_unconfirmed, payment_cancellation_in_progress를 문자열로 비교하므로 함께 볼지 정한다. CUSTOMER_HAS_PRICING은 정점에서도 openapi.yaml:8456과 ErrorCode.java:86에만 있다. 구역만 맞추는 안: #450의 8bb17c3이 ORGANIZATION_NOT_ACTIVE 뒤에 ENVIRONMENT_MISMATCH를, 409 구역 머리에 RESOURCE_VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ENVIRONMENT_NOT_READY를 더했다. 그래서 CONSENT_REQUIRED는 ORGANIZATION_NOT_ACTIVE 앞에, API_KEY_UNAVAILABLE은 409 구역 끝에 둬야 반영 merge 충돌이 줄어든다. 위층마다 openapi.yaml enum 순서가 바뀌므로 반영한 뒤 각 층에서 openapi.yaml을 다시 만든다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "스택이 main에 한 번에 들어와 위층 code 32개는 각 기능이 실제로 던지므로, code를 층별로 옮기"
     },
     {
       "id": "G-019",
@@ -7406,31 +7446,41 @@
       "id": "C453-006",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "main에서도 단일 대상(METERENGINE_TARGETS 없음)에 test나 live를 주면 config.ts가 webhook_secret을 넣지 않고 webhook-target.ts가 전역 비밀값을 legacy 대상에만 주어 secret_not_configured로 거절되고, 환경을 비우면 범위가 legacy로 고정돼 환경 키 웹훅은 environment_mismatch나 secret_not_configured로 막힌다. 그런데 README 403행, .env.example 9행과 시험 두 개가 전역 비밀값을 test, live 대상에 쓰지 않는다고 명시한 설계라 코드로 고치려면 팀원이 정한 이 규칙을 단일 대상에서 풀어야 한다. README 400행과 .env.example 3행의 비우면 API 키의 환경을 쓴다는 설명은 웹훅 수신 범위와 어긋난다.",
+      "reason": "결정(머지 뒤 지침): 고친다. 전역 비밀값을 legacy 대상에만 주는 규칙은 METERENGINE_TARGETS의 여러 대상이 비밀값 하나를 나눠 쓰지 않게 하려는 것이다. 단일 대상 설정에는 local 대상 하나만 있으므로, METERENGINE_ENVIRONMENT가 test나 live일 때 METERENGINE_WEBHOOK_SECRET을 그 대상의 webhook_secret으로 넣어도 이 목적은 지켜진다. METERENGINE_TARGETS 경로, legacy 지정 규칙, 서명 전 본문으로 범위를 바꾸지 않는 규칙은 그대로 둔다. README와 .env.example의 비우면 키의 환경을 쓴다는 설명은 API 호출에만 맞으므로, 비우면 웹훅을 legacy 범위로 받는다고 고친다.",
       "evidence": [
         "demo/web/src/lib/config.ts:41-44 @ af15d7f",
         "demo/web/src/lib/webhook-target.ts:11-14 @ af15d7f",
         "demo/web/src/lib/webhook-target.ts:24 @ af15d7f",
-        "demo/web/src/lib/webhook-receipt.ts:53-54 @ af15d7f",
-        "demo/web/src/lib/webhook-receipt.ts:59 @ af15d7f",
+        "demo/web/src/lib/webhook-receipt.ts:53-59 @ af15d7f",
         "backend/src/main/java/com/meterengine/webhook/service/WebhookEventService.java:35-39 @ af15d7f",
-        "demo/web/scripts/send-test-webhook.ts:21-25 @ af15d7f",
-        "demo/README.md:400,403 @ af15d7f",
-        "demo/web/.env.example:3,9 @ af15d7f",
+        "demo/web/src/app/webhooks/page.tsx:30-37 @ af15d7f",
+        "demo/README.md:400 @ af15d7f",
+        "demo/README.md:402-403 @ af15d7f",
+        "demo/web/.env.example:3 @ af15d7f",
+        "demo/web/.env.example:7-9 @ af15d7f",
         "demo/web/src/lib/webhook-target.test.ts:74-86 @ af15d7f",
-        "demo/web/src/lib/webhook-target.test.ts:107-118 @ af15d7f"
+        "demo/web/src/lib/webhook-target.test.ts:107-118 @ af15d7f",
+        "demo/web/src/lib/config.test.ts:64-71 @ af15d7f",
+        "단일 대상에서 환경을 지정하면 전역 비밀값으로 그 환경의 웹훅을 받는다: 실패 actual 400 expected 200",
+        "커밋 a34c969"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "a34c9696"
+      ],
+      "tests": [
+        "demo 검사 통과(a34c969): unittest, pnpm -r typecheck, lint, test(web 86), build, playwright --list"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "단일 대상 설정에서 METERENGINE_ENVIRONMENT가 test나 live이면 METERENGINE_WEBHOOK_SECRET을 그 대상의 웹훅 비밀값으로 쓰게 할지, 아니면 환경 키 웹훅은 지금처럼 METERENGINE_TARGETS로만 받게 두고 README와 .env.example 설명만 고칠지 정해 주세요."
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "고친다. 전역 비밀값을 legacy 대상에만 주는 규칙은 METERENGINE_TARGETS의 여러 대상이 "
     },
     {
       "id": "C453-008",
@@ -12670,6 +12720,86 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1377개 실패 0, openapi.yaml 변경 없음(재생성분은 커밋에 포함)"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 79 pass"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "auth.real.spec.ts 통과(이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "people.real.spec.ts 통과(이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "operator-create.real.spec.ts 통과(이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm -r typecheck && lint && test && build; cd llm-service && corepack pnpm exec playwright test --list",
+      "detail": "모두 성공. web 시험 86건"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -13112,6 +13242,16 @@
       "branch": "fix/s456-t-yang-env-ui",
       "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
       "at": "2026-10-29T16:40:14+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "at": "2026-10-29T16:51:08+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "at": "2026-10-29T16:52:53+09:00"
     }
   ],
   "usage_log": [],
@@ -13142,7 +13282,9 @@
     "2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다.",
     "2026-10-29: #480 fix/s456-t-yang-e2e(C449-005, C453-012, C452-014, C452-006, C453-009, C453-011)를 열었다.",
     "2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다.",
-    "2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다."
+    "2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다.",
+    "2026-10-29: #482 fix/s456-t-yang-backend-cleanup(G-018, G-008, G-011)을 열고 박성종 님과 문인호 님을 리뷰어로 지정했다.",
+    "2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다."
   ],
   "final_checks": [
     {
