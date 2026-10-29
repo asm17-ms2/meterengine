@@ -11,9 +11,15 @@ import { WorkspaceError, WorkspaceTable } from "@/components/workspace/Workspace
 
 export type ApiKeyResponse = { id: string; label: string; mode: string; scopes: string[]; last_four: string; expires_at: string | null; revoked_at: string | null; rate_limit_per_minute: number | null; status: "active" | "revoked" | "expired" };
 type WebhookEndpointResponse = { id: string; url: string; event_types: string[]; enabled: boolean; created_at: string; archived_at?: string | null };
-type WebhookDeliveryResponse = { status: string; attempt_count: number };
+type WebhookAttempt = { attempted_at: string; failure_reason: string | null };
+type WebhookDeliveryResponse = { attempts: WebhookAttempt[] };
 const WEBHOOK_TYPES = [{ value: "payment_succeeded", label: "결제 성공" }, { value: "payment_failed", label: "결제 실패" }, { value: "payment_canceled", label: "결제 취소" }, { value: "unbilled_usage_detected", label: "과금 제외 사용량" }, { value: "webhook_test", label: "시험 통보" }];
-const isFailingDelivery = (delivery: WebhookDeliveryResponse) => delivery.status === "failed" || (delivery.status === "pending" && delivery.attempt_count > 0);
+const RECENT_DELIVERY_COUNT = "20";
+// 새 전송은 아직 시도하지 않았을 수 있어, 최근 전송들에서 기록된 마지막 시도의 결과로 판단한다.
+const isLatestAttemptFailed = (deliveries: WebhookDeliveryResponse[]) => {
+  const latest = deliveries.flatMap(delivery => delivery.attempts).reduce<WebhookAttempt | null>((found, attempt) => !found || Date.parse(attempt.attempted_at) > Date.parse(found.attempted_at) ? attempt : found, null);
+  return latest?.failure_reason != null;
+};
 const KEY_STATUS_OPTIONS = [{ value: "active", label: "사용 중" }, { value: "revoked", label: "폐기됨" }, { value: "expired", label: "만료됨" }, { value: "all", label: "전체" }];
 
 export const metadata: Metadata = { title: "API 키와 통보" };
@@ -27,8 +33,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const [keys, activeKeys, webhooks] = await Promise.all([keyStatus === "active" ? activeKeysRequest : workspaceFetch<{ api_keys: ApiKeyResponse[] }>("/v1/api-keys", { status: keyStatus }), activeKeysRequest, workspaceFetch<{ endpoints: WebhookEndpointResponse[] }>("/v1/webhook-endpoints", { status })]);
   const keyRows = keys.ok ? keys.data.api_keys : [];
   const sendingEndpoints = webhooks.ok ? webhooks.data.endpoints.filter(endpoint => !endpoint.archived_at && endpoint.enabled) : [];
-  const latestDeliveries = await Promise.all(sendingEndpoints.map(async endpoint => ({ id: endpoint.id, result: await workspaceFetch<{ deliveries: WebhookDeliveryResponse[] }>(`/v1/webhook-endpoints/${encodeURIComponent(endpoint.id)}/deliveries`, { page: "0", size: "1" }) })));
-  const failingEndpointIds = new Set(latestDeliveries.filter(({ result }) => result.ok && result.data.deliveries.some(isFailingDelivery)).map(({ id }) => id));
+  const latestDeliveries = await Promise.all(sendingEndpoints.map(async endpoint => ({ id: endpoint.id, result: await workspaceFetch<{ deliveries: WebhookDeliveryResponse[] }>(`/v1/webhook-endpoints/${encodeURIComponent(endpoint.id)}/deliveries`, { page: "0", size: RECENT_DELIVERY_COUNT }) })));
+  const failingEndpointIds = new Set(latestDeliveries.filter(({ result }) => result.ok && isLatestAttemptFailed(result.data.deliveries)).map(({ id }) => id));
   return <>
     <WorkspaceHeader title="API 키와 통보" kicker="도입사 콘솔" description="사용량 전송과 청구 조회에 사용할 서버 연동 키를 관리하고, 처리 결과를 웹훅으로 받으세요." />
     <section className="workspace-panel">
