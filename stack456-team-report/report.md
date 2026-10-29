@@ -1,5 +1,5 @@
-미완료 15건, 결과: 끝 상태 313/328건 (fixed 226, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 21, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c)
+결과: 끝 상태 328/328건 (fixed 241, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 21, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189)
 정할 것: 21건 (G-008, G-050, C442-002, D-136, D-170, D-179, D-236, G-011, G-018, G-054, G-059, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06, D-245, G-183, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -11,7 +11,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #447 | 35 | 22 | 5 | 3 | 5 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
 | #452 | 19 | 16 | 0 | 3 | 0 | 0 | 0 |
-| #453 | 39 | 17 | 1 | 4 | 1 | 1 | 15 |
+| #453 | 39 | 32 | 1 | 4 | 1 | 1 | 0 |
 
 ## 고친 것
 
@@ -192,12 +192,20 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C453-009 | #453 | 320bc27 | main에서도 mvp.real.spec.ts 145행이 now+1시간 미래 이벤트를 보내고 151-152행이 | 없음(바뀐 단언은 main에서 앞 단계(발급 키 창)에 막혀 실행되지 않는다. UnbilledEventService의 month 범위와 대조, lint, typecheck 통과; b78630c 검사: frontend li) |
 | C453-011 | #453 | b78630c | main에서도 query-workspace.real.spec.ts는 playwright.config.ts p | 없음(playwright -c playwright.mvp.config.ts --list에 나오고 query-workspace.real.spec.ts 1건 통과; b78630c 검사: frontend lint, typech) |
 | C453-012 | #453 | 82ac370 | main의 permissions.real.spec.ts beforeAll도 같은 /private/tmp 고정 | permissions.real.spec.ts: 실패 Command failed: docker exec -i meterengine-0696-e2e (컨테이너 이름을 바꾼 환경, 고치기 전) |
+| D-204 | #453 | 4907257 | main의 EnvironmentSwitch.tsx:19는 window.confirm이 false면 안내 없이 | 격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다: 실패 locator.click Test timeout(기본 select에 옵션 선택 불가) |
+| G-044 | #453 | c7898bb | main workspace-actions.ts:29-30과 38은 mutation-scope.ts:8,10의 | 격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다: 실패 Received '열어 둔 화면과 요청의 업무 환경이 다릅니다' |
 | G-133 | #453 | 6152c0b | test 환경 실패를 운영 지표와 경보에서 제외 | 환경별_수신처와_아웃박스와_실제_전송이_독립적이다: 실패 [legacy] Expecting actual not to be null(환경 태그 없음) |
 | G-145 | #453 | ca5e4a1 | 로컬 시드 키는 R__local_credentials.sql 31-41행에서 environment_id 없이 | 없음(문서 변경: BusinessEnvironmentInterceptor 기존 키 검사, R__local_credentials.sql, webhook-receipt.ts, webhook-signature.ts와 대조; 6) |
 | G-175 | #453 | 2ecaca4 | main backend/README.md 308행은 고객 external_id가 도입사 안에서 고유하다고 적 | 없음(문서 변경: V45 organization_environment, 고유 인덱스, event_pk와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo ) |
 | G-189 | #453 | ec42c75 | main frontend/package.json 12행에는 #442 squash 1b2c555d로 test: | 없음(문서 변경: package.json scripts와 세 playwright 설정의 포트와 변수와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험, demo 검) |
 | U10-B1 | #453 | 82f5ad6 | 자동 재시도 저장 직전 키 보관 재확인 | 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다: 실패 Expected size: 1 but was: 2 |
+| X-060 | #453 | 4907257 | main의 EnvironmentSwitch.tsx:17-26은 네이티브 select의 change에서 바로  | 격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다: 실패 locator.click Test timeout(기본 select) |
+| D-014 | #453 | b303189 | main 설정 화면 settings/page.tsx:29,31은 같은 payment_setting.mode를 | 없음(보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다; b303189 검사: frontend lint, t) |
+| D-219 | #453 | b303189 | main에서 '환경'이 업무 환경(environment.ts:8)과 결제 모드 두 뜻으로 쓰인다. 결제 모드 | 없음(보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다; b303189 검사: frontend lint, t) |
+| X-003 | #453 | 3aba86f | main의 ConsoleShell.tsx:75 환경 안내 띠는 className이 고정이고 globals.c | environment.test.mjs: 실패 SyntaxError does not provide an export named 'environmentNoticeClass' |
+| X-033 | #453 | b303189 | 결제 모드 하나가 '현재 결제 환경', 'PG 결제 환경', '연동 모드'(settings/page.tsx: | 없음(보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다; b303189 검사: frontend lint, t) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
+| NT-yang-004 | #442 | 91713b2 | main의 workspace.contract.spec.ts 키 발급 시험 두 개가 이 패키지 커밋 2db50b4(복사 전 닫기 window.confirm) 뒤로 창을 닫지 못해 실패했다. 시험이 그 확인을 받아들이게 고쳤다. | 격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창에서만 보여 준다: 실패 expect(locator).toHaveCount (main 기준선) |
 
 ## 정할 것
 
@@ -244,6 +252,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | NT-yang-001 | #442 | fixed | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
 | NT-yang-002 | #442 | blocked | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
 | NT-yang-003 | #453 | blocked | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
+| NT-yang-004 | #442 | fixed | 업무 계약 명세가 복사 전 닫기 확인에 막혀 실패한다 |
 
 ## 돌리지 못한 검사
 
@@ -451,3 +460,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다.
 - 2026-10-29: #480 fix/s456-t-yang-e2e(C449-005, C453-012, C452-014, C452-006, C453-009, C453-011)를 열었다.
 - 2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다.
+- 2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다.

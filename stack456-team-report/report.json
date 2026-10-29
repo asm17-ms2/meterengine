@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T16:27:12+09:00",
+  "updated_at": "2026-10-29T16:40:38+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -29,7 +29,8 @@
     "fix/s456-t-yang-audit-env": "04c93d9",
     "fix/s456-t-yang-ops-metrics": "6152c0b",
     "fix/s456-t-yang-readme": "6da19c6",
-    "fix/s456-t-yang-e2e": "b78630c"
+    "fix/s456-t-yang-e2e": "b78630c",
+    "fix/s456-t-yang-env-ui": "b303189"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -7564,29 +7565,64 @@
       "id": "D-204",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 EnvironmentSwitch.tsx:19는 window.confirm이 false면 안내 없이 return하므로, 브라우저가 이어지는 대화상자를 막으면 전환이 조용히 취소된다. 확인 문구에도 목적지 환경이 없다. 원문의 '다른 확인은 모두 antd Modal'은 틀렸지만(ActionPanel.tsx:98 등) 화면 이동을 막는 확인은 이것 하나라 결론은 바뀌지 않는다.",
+      "evidence": [
+        "frontend/src/components/workspace/EnvironmentSwitch.tsx:19 @ af15d7f",
+        "frontend/src/components/workspace/ActionPanel.tsx:98 @ af15d7f",
+        "frontend/src/components/shell/AppProviders.tsx:22 @ af15d7f",
+        "frontend/e2e/environment-cycle.real.spec.ts:133-134 @ af15d7f",
+        "격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다: 실패 locator.click Test timeout(기본 select에 옵션 선택 불가)",
+        "커밋 4907257"
+      ],
+      "commits": [
+        "49072570"
+      ],
+      "tests": [
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main의 EnvironmentSwitch.tsx:19는 window.confirm이 false면 안내 없이"
     },
     {
       "id": "G-044",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main workspace-actions.ts:29-30과 38은 mutation-scope.ts:8,10의 도입사, 환경 검사를 인라인으로 다시 하며, 같은 환경 불일치에 '열어 둔 화면과 요청의 업무 환경이 다릅니다'와 '열어 둔 화면의 업무 환경이 바뀌었습니다'로 문구가 갈렸고 environment 필드가 없을 때도 인라인은 legacy로 보고 도우미는 거절한다. 반박을 다시 시도했지만 도우미는 고객, 미터, 청구 액션이 쓰는 살아 있는 코드라 두 사본이 실제로 어긋난 상태다.",
+      "evidence": [
+        "frontend/src/app/(console)/workspace-actions.ts:29-30 @ af15d7f",
+        "frontend/src/app/(console)/workspace-actions.ts:38 @ af15d7f",
+        "frontend/src/lib/auth/mutation-scope.ts:8,10 @ af15d7f",
+        "frontend/src/components/workspace/ActionPanel.tsx:41,113 @ af15d7f",
+        "frontend/e2e/query-workspace.real.spec.ts:209 @ af15d7f",
+        "격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다: 실패 Received '열어 둔 화면과 요청의 업무 환경이 다릅니다'",
+        "커밋 c7898bb"
+      ],
+      "commits": [
+        "c7898bb4"
+      ],
+      "tests": [
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main workspace-actions.ts:29-30과 38은 mutation-scope.ts:8,10의"
     },
     {
       "id": "G-103",
@@ -7856,43 +7892,98 @@
         "D-140"
       ],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 EnvironmentSwitch.tsx:17-26은 네이티브 select의 change에서 바로 confirm과 router.push를 실행한다. Windows와 Linux 브라우저는 닫힌 select에서 화살표마다 change를 내므로 기존 데이터에서 실제 환경으로 가려면 테스트 환경 확인창을 먼저 만나고, 취소하면 처음으로 돌아간다(WCAG 3.2.2). squash 뒤 이 파일을 바꾼 main 커밋은 없다.",
+      "evidence": [
+        "frontend/src/components/workspace/EnvironmentSwitch.tsx:17-26 @ af15d7f",
+        "frontend/src/app/globals.css:300-303 @ af15d7f",
+        "frontend/e2e/environment-cycle.real.spec.ts:133-134 @ af15d7f",
+        "frontend/e2e/environment-cycle.real.spec.ts:145,158 @ af15d7f",
+        "격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다: 실패 locator.click Test timeout(기본 select)",
+        "커밋 4907257"
+      ],
+      "commits": [
+        "49072570"
+      ],
+      "tests": [
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main의 EnvironmentSwitch.tsx:17-26은 네이티브 select의 change에서 바로 "
     },
     {
       "id": "D-014",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main 설정 화면 settings/page.tsx:29,31은 같은 payment_setting.mode를 '현재 결제 환경', '결제 모드 변경', 'PG 결제 환경', '연동 모드'로 부르고, 같은 토스 키 보관 동작도 화면은 'PG 키 보관', 감사 라벨(audit.ts:19)은 '토스 키 보관'이다. naming.md:14의 '같은 개념에 같은 낱말' 원칙과 어긋나고, 상단 업무 환경과 '환경'이라는 낱말이 겹친다.",
+      "evidence": [
+        "frontend/src/app/(console)/settings/page.tsx:29,31 @ af15d7f",
+        "frontend/src/lib/audit.ts:19 @ af15d7f",
+        "docs/contributing/naming.md:14 @ af15d7f",
+        "frontend/e2e/environment-cycle.real.spec.ts:74 @ af15d7f",
+        "frontend/e2e/archive-filters.real.spec.ts:290,292 @ af15d7f",
+        "커밋 b303189"
+      ],
+      "commits": [
+        "b3031891"
+      ],
+      "tests": [
+        "보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다",
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main 설정 화면 settings/page.tsx:29,31은 같은 payment_setting.mode를"
     },
     {
       "id": "D-219",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서 '환경'이 업무 환경(environment.ts:8)과 결제 모드 두 뜻으로 쓰인다. 결제 모드를 설정 화면 '현재 결제 환경'(settings/page.tsx:29), legacy 검색 필터 '결제 환경: 테스트/실제'(ResourceSearchControls.tsx:119), 카드 절 '현재 결제 환경의 카드 관리'(customers/[id]/page.tsx:45), 오류 문구(workspace-action-feedback.ts:23), 시연 안내(ConsoleShell.tsx:74)가 '결제 환경'으로 부르고, 필터 값 '실제'는 업무 환경 '실제 환경'과 겹친다.",
+      "evidence": [
+        "frontend/src/lib/environment.ts:8 @ af15d7f",
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:119 @ af15d7f",
+        "frontend/src/app/(console)/customers/[id]/page.tsx:45 @ af15d7f",
+        "frontend/src/app/(console)/workspace-action-feedback.ts:23 @ af15d7f",
+        "frontend/src/components/shell/ConsoleShell.tsx:74 @ af15d7f",
+        "docs/contributing/naming.md:14 @ af15d7f",
+        "커밋 b303189"
+      ],
+      "commits": [
+        "b3031891"
+      ],
+      "tests": [
+        "보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다",
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main에서 '환경'이 업무 환경(environment.ts:8)과 결제 모드 두 뜻으로 쓰인다. 결제 모드"
     },
     {
       "id": "X-003",
@@ -7906,29 +7997,69 @@
         "D-246"
       ],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 ConsoleShell.tsx:75 환경 안내 띠는 className이 고정이고 globals.css:302 한 규칙뿐이라 세 환경이 같은 보라 띠이며, live만 다른 것은 globals.css:301의 select 테두리다. 결제 취소 모달은 실결제를 밝히지만(payments/[id]/page.tsx:56,63) 되돌릴 수 없는 월 확정 창 제목(InvoiceFinalizeDialog.tsx:109)은 환경을 밝히지 않고, 이를 막는 다른 층이나 백엔드 검사도 없어 실제 피해 경로가 남는다. 다시 로그인하면 legacy로 가는 부분(actions.ts:36)은 legacy 기본값 정책이라 Q13(G-131) 몫으로 두고 이 수정에서 바꾸지 않는다.",
+      "evidence": [
+        "frontend/src/components/shell/ConsoleShell.tsx:75 @ af15d7f",
+        "frontend/src/app/globals.css:301-302 @ af15d7f",
+        "frontend/src/components/billing/InvoiceFinalizeDialog.tsx:109 @ af15d7f",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:56,63 @ af15d7f",
+        "frontend/src/components/workspace/WorkspaceView.tsx:34 @ af15d7f",
+        "frontend/src/components/shell/AppProviders.tsx:12-15 @ af15d7f",
+        "frontend/src/app/(public)/actions.ts:36 @ af15d7f",
+        "environment.test.mjs: 실패 SyntaxError does not provide an export named 'environmentNoticeClass'",
+        "커밋 3aba86f"
+      ],
+      "commits": [
+        "3aba86ff"
+      ],
+      "tests": [
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "main의 ConsoleShell.tsx:75 환경 안내 띠는 className이 고정이고 globals.c"
     },
     {
       "id": "X-033",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "결제 모드 하나가 '현재 결제 환경', 'PG 결제 환경', '연동 모드'(settings/page.tsx:29,31), '결제 환경'(ResourceSearchControls.tsx:119), '결제 모드'(payments/page.tsx:21), '모드'(payments/[id]/page.tsx:135)로 갈리고 값도 '실결제'와 '실제'가 섞여 naming.md:14와 어긋난다. 다만 API 키의 '운영 키'와 '기존 운영 키 (live)'는 integrations/page.tsx:32가 데이터 격리와 다른 개념이라고 밝힌 legacy 키 구분이라 결함으로 보지 않고 수정 범위에서 뺀다.",
+      "evidence": [
+        "frontend/src/app/(console)/settings/page.tsx:29,31 @ af15d7f",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:119 @ af15d7f",
+        "frontend/src/app/(console)/payments/page.tsx:21 @ af15d7f",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:135 @ af15d7f",
+        "frontend/src/app/(console)/integrations/page.tsx:32 @ af15d7f",
+        "frontend/src/components/workspace/WorkspaceView.tsx:34 @ af15d7f",
+        "docs/contributing/naming.md:14 @ af15d7f",
+        "커밋 b303189"
+      ],
+      "commits": [
+        "b3031891"
+      ],
+      "tests": [
+        "보이는 변경(문구): archive-filters 실화면 2건 통과, environment-cycle은 바뀐 문구 단계를 지나 기준선과 같은 개요 제목에서 멈춘다",
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": false,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "결제 모드 하나가 '현재 결제 환경', 'PG 결제 환경', '연동 모드'(settings/page.tsx:"
     }
   ],
   "new_findings": [
@@ -8000,6 +8131,31 @@
       "behavior_change": false,
       "title": "environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다",
       "blocked_reason": "not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다"
+    },
+    {
+      "id": "NT-yang-004",
+      "merged_ids": [],
+      "layer": 442,
+      "branch": "fix/s456-t-yang-env-ui",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 workspace.contract.spec.ts 키 발급 시험 두 개가 이 패키지 커밋 2db50b4(복사 전 닫기 window.confirm) 뒤로 창을 닫지 못해 실패했다. 시험이 그 확인을 받아들이게 고쳤다.",
+      "evidence": [
+        "frontend/e2e/workspace.contract.spec.ts:130-157 @ af15d7f",
+        "격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창에서만 보여 준다: 실패 expect(locator).toHaveCount (main 기준선)",
+        "커밋 2db50b4",
+        "커밋 91713b2"
+      ],
+      "commits": [
+        "91713b22"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 11건 통과(b303189)"
+      ],
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "behavior_change": false,
+      "title": "업무 계약 명세가 복사 전 닫기 확인에 막혀 실패한다"
     }
   ],
   "checks": [
@@ -12386,6 +12542,134 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 80, pass 80"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "인증 계약 65건, 업무 계약 11건 통과(main 기준선은 업무 계약 2건 실패, NT-yang-004로 고침)"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "auth.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "people.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "archive-filters.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "customer-payment-retry.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "invoice-links.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "events.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "query-workspace.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "aggregation.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "operator-create.real.spec.ts 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "main 기준선 실패: 개요 제목 '이번 달 과금 운영' 단언(#451 제목 변경, 문인호 님이 고침)에서 같은 자리에 실패. 그 단언만 로컬에서 풀면 환경 전환을 포함해 1 passed"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "main 기준선 실패: 129행 발급 키 창(2db50b4, 문인호 님이 고침), 같은 자리"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -12823,6 +13107,11 @@
       "branch": "fix/s456-t-yang-e2e",
       "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
       "at": "2026-10-29T16:25:47+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "b303189182396f9dc45fd73959da2e45780f6f06",
+      "at": "2026-10-29T16:40:14+09:00"
     }
   ],
   "usage_log": [],
@@ -12852,7 +13141,8 @@
     "2026-10-29: #478 fix/s456-t-yang-ops-metrics(G-133)를 열고 경보 결정 때문에 박성종 님과 문인호 님을 리뷰어로 지정했다.",
     "2026-10-29: #479 fix/s456-t-yang-readme(C452-011, C452-016, G-145, G-175, G-189, L-002)를 열었다.",
     "2026-10-29: #480 fix/s456-t-yang-e2e(C449-005, C453-012, C452-014, C452-006, C453-009, C453-011)를 열었다.",
-    "2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다."
+    "2026-10-29 16:35 KST: needs-decision 44건을 머지 뒤 지침대로 정했다. 이미 풀린 것 7건(G-039, C442-010, G-007, G-030, G-096, G-160, G-041), 머지로 해소된 것 4건(G-038, G-020, Ck3-447-07, Ck3-447-12)은 already-fixed, 바꾸지 않기로 한 12건(C449-006, G-027, G-067, G-056, G-057, Ck3-447-02, Ck3-447-05, Ck3-447-09, G-009, G-010, G-013, G-017)은 refuted로 두고 reason에 결정과 근거를 적었다. 나머지 21건은 고쳐 PR로 올린다.",
+    "2026-10-29: #481 fix/s456-t-yang-env-ui(D-204, X-060, X-003, D-014, D-219, X-033, G-044, NT-yang-004)를 열고 문인호 님을 리뷰어로 지정했다. open 항목은 모두 끝 상태가 됐다."
   ],
   "final_checks": [
     {
