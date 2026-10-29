@@ -79,7 +79,7 @@ class AuthRequestRateLimitIntegrationTest {
             jdbcTemplate.queryForList(
                 "SELECT attempts FROM auth_request_rate_limit WHERE scope='login_account'",
                 Long.class))
-        .containsExactly(3L, 3L);
+        .containsExactlyInAnyOrder(3L, 2L);
   }
 
   @Test
@@ -113,7 +113,7 @@ class AuthRequestRateLimitIntegrationTest {
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM auth_request_rate_limit WHERE scope='login_account' AND identity_hash=?",
                 Long.class,
-                SecureTokens.hash(victim)))
+                SecureTokens.hash("account\n" + victim)))
         .isZero();
   }
 
@@ -128,6 +128,32 @@ class AuthRequestRateLimitIntegrationTest {
     assertThat(output.getAll())
         .contains("action=login", "client_address=198.51.100.50", "limit=login_ip", "retry_after=")
         .doesNotContain(email);
+  }
+
+  @Test
+  void 앞_계정_한도가_거절한_요청은_다음_계정_한도에_세지_않는다() {
+    Bucket address = new Bucket("login_ip", SecureTokens.hash("203.0.113.50"), 100);
+    byte[] total = SecureTokens.hash(email());
+    List<Bucket> accounts =
+        List.of(
+            new Bucket("login_account", SecureTokens.hash(email()), 1),
+            new Bucket("login_account", total, 5));
+    for (int index = 0; index < 3; index++) repository.consume(address, accounts, 300);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT attempts FROM auth_request_rate_limit WHERE identity_hash=?",
+                Long.class,
+                total))
+        .isOne();
+  }
+
+  @Test
+  void 줄바꿈을_넣은_이메일로_다른_사람의_계정_IP_한도를_채울_수_없다() {
+    String victim = email();
+    for (int index = 0; index < 3; index++) login(victim + "\\n203.0.113.52", "203.0.113.51", null);
+
+    assertThat(login(victim, "203.0.113.52", null)).hasStatus(401);
   }
 
   @Test

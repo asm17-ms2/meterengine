@@ -47,10 +47,10 @@ public class AuthRequestRateLimitService {
         address,
         new Bucket("login_ip", SecureTokens.hash(address), authRateLimitProperties.loginIpLimit()),
         List.of(
-            new Bucket("login_account", SecureTokens.hash(account + "\n" + address), accountLimit),
+            new Bucket("login_account", accountKey("account_ip", account, address), accountLimit),
             new Bucket(
                 "login_account",
-                SecureTokens.hash(account),
+                accountKey("account", account),
                 accountLimit * LOGIN_ACCOUNT_TOTAL_MULTIPLIER)),
         authRateLimitProperties.loginWindow());
   }
@@ -87,6 +87,11 @@ public class AuthRequestRateLimitService {
           ErrorCode.RATE_LIMIT_EXCEEDED, rejection.get().retryAfterSeconds());
     }
     authRequestRateLimitRepository.cleanExpired();
+  }
+
+  // 두 키가 같은 범위를 쓰므로 종류를 앞에 붙여, 줄바꿈을 넣은 이메일이 다른 키와 같아지지 않게 한다.
+  private static byte[] accountKey(String kind, String... parts) {
+    return SecureTokens.hash(kind + "\n" + String.join("\n", parts));
   }
 
   String clientAddress(HttpServletRequest request) {

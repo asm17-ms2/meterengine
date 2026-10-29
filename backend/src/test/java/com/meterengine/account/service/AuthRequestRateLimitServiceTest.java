@@ -118,8 +118,11 @@ class AuthRequestRateLimitServiceTest {
     assertThat(accounts.getValue())
         .usingRecursiveFieldByFieldElementComparator()
         .containsExactly(
-            new Bucket("login_account", SecureTokens.hash("user@example.com\n203.0.113.10"), 10),
-            new Bucket("login_account", SecureTokens.hash("user@example.com"), 100));
+            new Bucket(
+                "login_account",
+                SecureTokens.hash("account_ip\nuser@example.com\n203.0.113.10"),
+                10),
+            new Bucket("login_account", SecureTokens.hash("account\nuser@example.com"), 100));
   }
 
   @Test
