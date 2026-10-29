@@ -34,7 +34,7 @@ import org.springframework.web.context.WebApplicationContext;
 class ScheduledJobNamesIntegrationTest {
   private static final Path ALERTING =
       Path.of("..", "deploy", "grafana", "provisioning", "alerting", "alerting.yml");
-  private static final Pattern JOB_NAME_MATCHER = Pattern.compile("job_name=~\"([a-z_|]+)\"");
+  private static final Pattern JOB_NAME_MATCHER = Pattern.compile("job_name=~?\"([a-z_|]+)\"");
 
   @MockitoBean private ScheduledJobRunService scheduledJobRunService;
   @Autowired private WebApplicationContext context;
@@ -68,6 +68,6 @@ class ScheduledJobNamesIntegrationTest {
             .collect(Collectors.toSet());
 
     assertThat(registeredNames).isEqualTo(listedNames);
-    assertThat(alertedNames).containsAll(registeredNames);
+    assertThat(alertedNames).isEqualTo(registeredNames);
   }
 }
