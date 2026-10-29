@@ -61,6 +61,7 @@ export class LumenStore {
     this.db.exec(`
       PRAGMA journal_mode = WAL;
       CREATE TABLE IF NOT EXISTS account_binding (id TEXT PRIMARY KEY, customer_id TEXT NOT NULL UNIQUE) STRICT;
+      CREATE TABLE IF NOT EXISTS source_binding (id INTEGER PRIMARY KEY CHECK(id=1), source_hash TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS session (token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL, expires_at INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS generation (
         account_id TEXT NOT NULL, id TEXT NOT NULL, request_hash TEXT NOT NULL,
@@ -96,6 +97,19 @@ export class LumenStore {
   }
 
   close(): void { this.db.close(); }
+
+  bindSource(source: string): void {
+    this.transaction(() => {
+      const hash = tokenHash(source);
+      const existing = this.db.prepare("SELECT source_hash FROM source_binding WHERE id=1").get() as { source_hash: string } | undefined;
+      if (existing && existing.source_hash !== hash) throw new Error("저장된 요청의 MeterEngine 연결 설정이 다릅니다. 기존 데이터 파일을 보존하고 별도 데이터 파일을 사용하세요.");
+      if (!existing) {
+        const populated = this.db.prepare("SELECT EXISTS(SELECT 1 FROM generation) OR EXISTS(SELECT 1 FROM metering_outbox) AS populated").get() as { populated: number };
+        if (populated.populated) throw new Error("기존 요청의 MeterEngine 연결 설정을 확인할 수 없습니다. 기존 데이터 파일을 보존하고 별도 데이터 파일을 사용하세요.");
+        this.db.prepare("INSERT INTO source_binding(id,source_hash) VALUES (1,?)").run(hash);
+      }
+    });
+  }
 
   private transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

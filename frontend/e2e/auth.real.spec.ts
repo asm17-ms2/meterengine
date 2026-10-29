@@ -48,7 +48,7 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
 
   await login(page, email, PASSWORD, "/customers");
   await expect(page).toHaveURL(/\/customers(?:\?.*)?$/);
-  await expect(page.getByRole("link", { name: orgName, exact: true })).toContainText(orgName);
+  await expect(page.locator(".organization-link")).toContainText(orgName);
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   expect(cookie.httpOnly).toBeTruthy();
   expect(cookie.secure).toBeTruthy();
@@ -56,15 +56,15 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   expect(await page.evaluate(() => document.cookie)).not.toContain("me_session");
   expect(await page.content()).not.toContain(cookie.value);
   await page.reload();
-  await expect(page.getByRole("link", { name: orgName, exact: true })).toContainText(orgName);
+  await expect(page.locator(".organization-link")).toContainText(orgName);
   await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("E2E 고객");
-  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("cell", { name: "E2E 고객", exact: true })).toBeVisible();
   for (const route of ["/events", "/usage", "/billing", "/invoices", "/billable-metrics", "/billable-metric-prices", "/customers"]) {
     await page.goto(route);
-    await expect(page.getByRole("link", { name: orgName, exact: true })).toContainText(orgName);
+    await expect(page.locator(".organization-link")).toContainText(orgName);
     await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toHaveCount(0);
     await expect(page.locator(".ant-alert-error")).toHaveCount(0);
   }
@@ -81,12 +81,12 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   await page.goto("/organizations");
   await page.getByLabel("접근할 도입사").selectOption(secondOrg.id);
   await page.getByRole("button", { name: "도입사로 이동" }).click();
-  await expect(page).toHaveURL(/\/(?:customers|overview)(?:\?.*)?$/);
-  await expect(page.getByRole("link", { name: secondOrg.name, exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/overview(?:\?.*)?$/);
+  await expect(page.locator(".organization-link")).toContainText(secondOrg.name);
   await page.goto("/customers");
   await expect(page.getByText("E2E 고객", { exact: true })).toHaveCount(0);
   await page.goto("/admin/users");
-  await expect(page).toHaveURL(/\/(?:customers|overview)(?:\?.*)?$/);
+  await expect(page).toHaveURL(/\/overview(?:\?.*)?$/);
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBeFalsy();
@@ -96,7 +96,8 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   await adminContext.close();
 });
 
-test("real Spring: operator without organization can manage the platform", async ({ page, request }) => {
+test("real Spring: operator without organization and mobile keyboard access", async ({ page, request }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
   await login(page, OPERATOR_EMAIL, OPERATOR_PASSWORD);
   await expect(page).toHaveURL(/\/admin$/);
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
@@ -106,7 +107,11 @@ test("real Spring: operator without organization can manage the platform", async
   await expect(page.getByText("소속된 도입사가 없습니다.", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: "운영자 화면으로" }).click();
   await expect(page).toHaveURL(/\/admin$/);
-
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.goto("/signup");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "본문으로 이동" })).toBeFocused();
 });
 
 test("real Spring: role promotion and demotion, irreversible signup rejection", async ({ page, browser, request }) => {

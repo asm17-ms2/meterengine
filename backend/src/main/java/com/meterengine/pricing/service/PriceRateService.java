@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
@@ -60,7 +61,12 @@ public class PriceRateService {
 
   @Transactional(readOnly = true)
   public boolean existsForBillableMetric(UUID organizationId, String code) {
-    return priceRateRepository.existsByOrganizationIdAndBillableMetricCode(organizationId, code);
+    return BusinessEnvironmentContext.environmentId() == null
+        ? priceRateRepository.existsByOrganizationIdAndBillableMetricCode(organizationId, code)
+        : priceRateRepository
+            .listScoped(organizationId, BusinessEnvironmentContext.environmentId())
+            .stream()
+            .anyMatch(rate -> rate.getBillableMetricCode().equals(code));
   }
 
   @Transactional(readOnly = true)
@@ -96,7 +102,9 @@ public class PriceRateService {
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
     BillableMetric metric =
         billableMetricRepository
-            .findById(new BillableMetricId(organizationId, code))
+            .findById(
+                new BillableMetricId(
+                    organizationId, code, BusinessEnvironmentContext.environmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
     if (metric.getArchivedAt() != null) throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     validate(request.dimensionValues(), metric.getDimensionProperties());
@@ -110,9 +118,15 @@ public class PriceRateService {
     validateCustomer(organizationId, request.customerId());
     if (request.customerId() != null) {
       var customer =
-          customerRepository.lock(organizationId, java.util.List.of(request.customerId())).stream()
-              .findFirst()
-              .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+          (BusinessEnvironmentContext.environmentId() == null
+                  ? customerRepository.lock(organizationId, java.util.List.of(request.customerId()))
+                  : customerRepository.lockScoped(
+                      organizationId,
+                      BusinessEnvironmentContext.environmentId(),
+                      java.util.List.of(request.customerId())))
+              .stream()
+                  .findFirst()
+                  .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
       if (customer.getArchivedAt() != null)
         throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     }
@@ -156,7 +170,8 @@ public class PriceRateService {
               start.toString(),
               until,
               model,
-              tiers);
+              tiers,
+              BusinessEnvironmentContext.environmentId());
     else rate.update(request.unitPrice(), until, model, tiers);
     priceRateRepository.saveAndFlush(rate);
     Map<String, Object> detail = detail(rate);
@@ -172,11 +187,14 @@ public class PriceRateService {
         .findForUpdateById(organizationId)
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
     PriceRate rate =
-        priceRateRepository
-            .findById(id)
+        (BusinessEnvironmentContext.environmentId() == null
+                ? priceRateRepository.findById(id)
+                : priceRateRepository.findScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId(), id))
             .filter(
                 value ->
                     value.getOrganizationId().equals(organizationId)
+                        && BusinessEnvironmentContext.matches(value.getEnvironmentId())
                         && value.getBillableMetricCode().equals(code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
     archive(organizationId, rate);
@@ -207,11 +225,14 @@ public class PriceRateService {
         .findForUpdateById(organizationId)
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
     PriceRate rate =
-        priceRateRepository
-            .findById(id)
+        (BusinessEnvironmentContext.environmentId() == null
+                ? priceRateRepository.findById(id)
+                : priceRateRepository.findScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId(), id))
             .filter(
                 value ->
                     value.getOrganizationId().equals(organizationId)
+                        && BusinessEnvironmentContext.matches(value.getEnvironmentId())
                         && value.getBillableMetricCode().equals(code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
     if (rate.getArchivedAt() == null) return PriceRateResponse.from(rate);
@@ -259,14 +280,20 @@ public class PriceRateService {
   }
 
   private List<PriceRate> rates(UUID organizationId) {
-    return priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
-        organizationId);
+    return (BusinessEnvironmentContext.environmentId() == null
+        ? priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            organizationId)
+        : priceRateRepository.listScoped(
+            organizationId, BusinessEnvironmentContext.environmentId()));
   }
 
   private void validateCustomer(UUID organizationId, UUID customerId) {
     if (customerId != null
-        && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId))
-      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+        && !(BusinessEnvironmentContext.environmentId() == null
+            ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
+            : customerRepository
+                .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
+                .isPresent())) throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
   }
 
   private Map<String, Object> parse(String json) {

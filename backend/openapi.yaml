@@ -6,6 +6,12 @@ info:
     요청마다 Authorization 헤더에 Bearer 값으로 API 키(me_live_ 또는 me_test_로 시작)나
     로그인 세션 토큰을 싣는다. 도입사는 키나 세션이 정한다. 헤더가 없으면 401이다.
 
+    X-MeterEngine-Environment: test 또는 live로 업무 환경을 지정한다. 새 키는 발급 환경에 고정된다.
+    기존 데이터와 키는 환경 미지정 범위로 보존하며 자동으로 test/live에 배정하지 않는다.
+    환경 분리가 지원되지 않는 업무는 명시 환경 요청에 409를 반환한다.
+    X-MeterEngine-Organization-Id: 화면의 도입사를 고정하는 선택 UUID 헤더다.
+    인증된 도입사와 다르면 403이며 이 헤더로 인증이나 도입사 전환을 대신할 수 없다.
+
     오류 응답은 code, message, errors로 이뤄진다. 오류별 처리는 code로 분기한다. message는
     code마다 하나인 한국어 문구이고, errors는 틀린 필드를 짚을 수 있는 400에만 실린다.
   title: MeterEngine API
@@ -4888,6 +4894,51 @@ paths:
       summary: 본인의 초대 수락
       tags:
       - organization-invitation-controller
+  /v1/organization/environments:
+    get:
+      description: 기존 미분류 데이터는 두 환경에 복사하거나 귀속시키지 않는다.
+      operationId: listOrganizationEnvironments
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListOrganizationEnvironmentsResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 도입사의 테스트와 실제 환경 조회
+      tags:
+      - organization-environment-controller
   /v1/organization/invitations:
     get:
       operationId: listOrganizationInvitations
@@ -5654,7 +5705,7 @@ paths:
         취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
         토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려준다.
         시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다. API 키의 모드가 취소 대상과 다르면 409다.
-        Idempotency-Key를 주면 같은 도입사의 같은 요청을 다시 보내도 기존 결과를 돌려준다. 같은 키로 다른 요청을 보내면 409다.
+        Idempotency-Key를 주면 같은 도입사와 환경의 같은 요청을 다시 보내도 기존 결과를 돌려준다. 같은 키로 다른 요청을 보내면 409다.
         requested_at과 completed_at은 KST(+09:00)로 나온다.
       operationId: createPaymentCancellation
       parameters:
@@ -5924,7 +5975,7 @@ paths:
   /v1/payment-reconciliation-mismatches:
     get:
       description: |
-        하루치 토스페이먼츠 거래 목록과 MeterEngine의 done 결제 시도, done 취소를 맞춰 보고 남긴 불일치를 돌려준다. 두 결제 모드(test, live)를 모두 담는다.
+        하루치 토스페이먼츠 거래 목록과 MeterEngine의 done 결제 시도, done 취소를 맞춰 보고 남긴 불일치를 돌려준다. 선택한 환경의 기록만 담고, 기존 범위에서는 두 결제 모드를 담는다.
         기간은 불일치를 찾은 시각(detected_at)의 KST 날짜로 거르고, from 날짜 0시부터 to 날짜가 끝날 때까지다.
         detected_at 내림차순이다. transacted_at과 detected_at은 KST(+09:00)로 나온다. 페이지를 나누지 않는다.
       operationId: listPaymentReconciliationMismatches
@@ -5997,7 +6048,8 @@ paths:
   /v1/payment-setting:
     get:
       description: |
-        결제에 쓰는 모드를 돌려준다. 한 번도 바꾸지 않았으면 mode=test, updated_at=null이다.
+        선택한 환경의 결제 모드를 돌려준다. test/live 환경의 모드는 고정이며 updated_at=null이다.
+        기존 범위는 저장한 모드를 쓰고, 바꾼 적 없으면 mode=test다.
         updated_at은 KST(+09:00)로 나온다.
       operationId: getPaymentSetting
       responses:
@@ -6049,7 +6101,8 @@ paths:
       - payment-setting-controller
     put:
       description: |
-        결제에 쓸 모드를 test나 live로 바꾼다. live로 바꾸려면 live 모드의 토스페이먼츠 키가 먼저 저장돼 있어야 한다.
+        기존 범위의 결제 모드를 바꾼다. live로 바꾸려면 live 키가 먼저 저장돼 있어야 한다.
+        test/live 환경은 선택한 환경과 같은 mode만 받는다. 다른 mode는 payment_mode_mismatch로 거절한다.
         로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
         updated_at은 KST(+09:00)로 나온다.
       operationId: updatePaymentSetting
@@ -6647,7 +6700,7 @@ paths:
   /v1/toss-payments-credentials:
     get:
       description: |
-        저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
+        선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
         시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
         verified_at과 updated_at은 KST(+09:00)로 나온다.
       operationId: listTossPaymentsCredentials
@@ -6767,7 +6820,8 @@ paths:
       - toss-payments-credential-controller
     put:
       description: |
-        경로의 mode에 쓸 토스페이먼츠 클라이언트 키와 시크릿 키를 저장한다. 그 모드에 키가 있으면 덮어쓴다.
+        선택한 환경의 토스페이먼츠 클라이언트 키와 시크릿 키를 저장한다.
+        test/live 환경은 경로의 mode가 선택한 환경과 같아야 한다. 그 모드에 키가 있으면 덮어쓴다.
         test 모드는 test_ck_와 test_sk_로, live 모드는 live_ck_와 live_sk_로 시작하는 키만 받는다.
         결제위젯 키(test_gck_, test_gsk_ 등)는 받지 않는다.
         로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
@@ -7430,8 +7484,8 @@ paths:
       tags:
       - webhook-endpoint-controller
     post:
-      description: 서명 비밀값은 이 응답에서만 한 번 돌려준다. 등록 한도는 도입사마다 10개다. 운영에서는 HTTPS와 공개 주소만
-        허용한다.
+      description: 서명 비밀값은 이 응답에서만 한 번 돌려준다. 등록 한도는 도입사의 환경마다 10개다. 운영에서는 HTTPS와 공개
+        주소만 허용한다.
       operationId: createWebhookEndpoint
       requestBody:
         content:
@@ -7918,6 +7972,9 @@ components:
         created_at:
           type: string
           format: date-time
+        environment_id:
+          type: string
+          format: uuid
         expires_at:
           type: string
           format: date-time
@@ -7967,6 +8024,9 @@ components:
         created_at:
           type: string
           format: date-time
+        environment_id:
+          type: string
+          format: uuid
         expires_at:
           type: string
           format: date-time
@@ -9071,8 +9131,21 @@ components:
         finalized_count:
           type: integer
           format: int32
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceResponse"
         month:
           type: string
+        supply_amount:
+          type: integer
+          format: int64
+        tax_amount:
+          type: integer
+          format: int64
+        total_amount:
+          type: integer
+          format: int64
     FutureTimestamp:
       type: object
       properties:
@@ -9444,6 +9517,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ManagedMemberResponse"
+    ListOrganizationEnvironmentsResponse:
+      type: object
+      properties:
+        environments:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationEnvironmentResponse"
     ListOrganizationInvitationsResponse:
       type: object
       properties:
@@ -9629,6 +9709,17 @@ components:
           type: string
         value:
           type: string
+    OrganizationEnvironmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum:
+          - test
+          - live
     OrganizationInvitationResponse:
       type: object
       properties:

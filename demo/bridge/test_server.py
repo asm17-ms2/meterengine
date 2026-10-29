@@ -297,7 +297,7 @@ class LazyOrganizationTest(SenderTestCase):
     def test_확인하면_고객_캐시_scope를_정한다(self):
         sender, client = self.lazy_sender([ORGANIZATION_REPLY])
         sender._send_one(API_REQUEST, "api_request", "sess-1")
-        self.assertEqual(sender.state.scope, "http://localhost:8080|" + ORGANIZATION.id)
+        self.assertEqual(sender.state.scope, sender.config.scope(ORGANIZATION.id))
 
     def test_거부되면_보내지_않고_같은_오류는_한_번만_남긴다(self):
         sender, client = self.lazy_sender([REJECTED_REPLY])

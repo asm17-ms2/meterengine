@@ -130,6 +130,76 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 환경_범위에서도_보관한_고객과_미터와_결제_키는_현황의_설정_완료로_세지_않는다() {
+    UUID organizationId = UUID.randomUUID();
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    UUID environmentId =
+        jdbcTemplate.queryForObject(
+            "select id from organization_environment where organization_id = ? and mode = 'test'",
+            UUID.class,
+            organizationId);
+    jdbcTemplate.update(
+        "insert into customer (id, organization_id, environment_id, name, created_at,"
+            + " archived_at) values (?, ?, ?, '보관 고객', now(), now())",
+        UUID.randomUUID(),
+        organizationId,
+        environmentId);
+    jdbcTemplate.update(
+        "insert into billable_metric (organization_id, environment_id, environment_scope_id, code,"
+            + " name, event_type, aggregation, target_property, archived_at) values (?, ?, ?,"
+            + " 'archived', '보관 미터', 'archived', 'sum', 'quantity', now())",
+        organizationId,
+        environmentId,
+        environmentId);
+    jdbcTemplate.update(
+        "insert into toss_payments_credential (organization_id, environment_id,"
+            + " environment_scope_id, mode, client_key, secret_key, secret_key_last_four,"
+            + " verified_at, updated_at, archived_at) values (?, ?, ?, 'test',"
+            + " 'test_ck_dashboard_mock', 'test_sk_dashboard_mock', 'mock', now(), now(), now())",
+        organizationId,
+        environmentId,
+        environmentId);
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard?month=2026-10")
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .isLenientlyEqualTo(
+            "{\"customer_count\": 0, \"billable_metric_count\": 0, \"payment_configured\":"
+                + " false}");
+
+    jdbcTemplate.update(
+        "insert into customer (id, organization_id, environment_id, name, created_at) values (?,"
+            + " ?, ?, '활성 고객', now())",
+        UUID.randomUUID(),
+        organizationId,
+        environmentId);
+    jdbcTemplate.update(
+        "insert into billable_metric (organization_id, environment_id, environment_scope_id, code,"
+            + " name, event_type, aggregation, target_property) values (?, ?, ?, 'active', '활성"
+            + " 미터', 'active', 'sum', 'quantity')",
+        organizationId,
+        environmentId,
+        environmentId);
+    jdbcTemplate.update(
+        "update toss_payments_credential set archived_at = null where organization_id = ?",
+        organizationId);
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard?month=2026-10")
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .isLenientlyEqualTo(
+            "{\"customer_count\": 1, \"billable_metric_count\": 1, \"payment_configured\": true}");
+  }
+
+  @Test
   void 선택한_월의_집계를_유지하면서_전체_월의_현재_모드_미해결_결제만_보여준다() {
     UUID organizationId = UUID.randomUUID();
     String session = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);

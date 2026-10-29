@@ -2,6 +2,7 @@ package com.meterengine.metric.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
@@ -59,7 +60,10 @@ public class BillableMetricUsageService {
   public List<BillableMetricUsage> aggregate(
       UUID organizationId, YearMonth month, OffsetDateTime cutoff) {
     List<BillableMetric> billableMetrics =
-        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId);
+        (BusinessEnvironmentContext.environmentId() == null
+            ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
+            : billableMetricRepository.listScoped(
+                organizationId, BusinessEnvironmentContext.environmentId()));
     if (billableMetrics.isEmpty()) {
       return List.of();
     }
@@ -68,9 +72,16 @@ public class BillableMetricUsageService {
     OffsetDateTime end = aggregationEnd(month, cutoff);
 
     List<Customer> customers =
-        customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
+        (BusinessEnvironmentContext.environmentId() == null
+            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+            : customerRepository.listScoped(
+                organizationId, BusinessEnvironmentContext.environmentId()));
 
-    var periods = billableMetricPeriodRepository.findByOrganizationId(organizationId);
+    var periods =
+        (BusinessEnvironmentContext.environmentId() == null
+            ? billableMetricPeriodRepository.findByOrganizationId(organizationId)
+            : billableMetricPeriodRepository.listScoped(
+                organizationId, BusinessEnvironmentContext.environmentId()));
     String period = month.toString();
     return billableMetrics.stream()
         .filter(
@@ -125,13 +136,22 @@ public class BillableMetricUsageService {
         && metric.getUnitSize().compareTo(BigDecimal.ONE) == 0
         && "none".equals(metric.getRoundingMode())) {
       var dimensions =
-          billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-              metric.getOrganizationId(),
-              metric.getEventType(),
-              metric.getTargetProperty(),
-              metric.getDimensionProperties(),
-              start,
-              end);
+          (metric.getEnvironmentId() == null
+              ? billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+                  metric.getOrganizationId(),
+                  metric.getEventType(),
+                  metric.getTargetProperty(),
+                  metric.getDimensionProperties(),
+                  start,
+                  end)
+              : billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
+                  metric.getOrganizationId(),
+                  metric.getEnvironmentId(),
+                  metric.getEventType(),
+                  metric.getTargetProperty(),
+                  metric.getDimensionProperties(),
+                  start,
+                  end));
       var totals = new java.util.HashMap<UUID, DimensionUsage>();
       dimensions.forEach(
           (customer, values) ->

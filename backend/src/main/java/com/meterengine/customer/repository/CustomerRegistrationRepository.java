@@ -1,5 +1,6 @@
 package com.meterengine.customer.repository;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,7 +30,7 @@ public class CustomerRegistrationRepository {
             name,
             billingEmail,
             externalId,
-            (UUID) null);
+            BusinessEnvironmentContext.environmentId());
     return !inserted.isEmpty();
   }
 }

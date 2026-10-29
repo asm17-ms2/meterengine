@@ -6,6 +6,7 @@ import com.meterengine.audit.entity.AuditLog;
 import com.meterengine.audit.repository.AuditLogRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.criteria.Predicate;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -55,6 +56,11 @@ public class AuditLogQueryService {
           List<Predicate> filters = new ArrayList<>();
           if (organizationId != null) {
             filters.add(cb.equal(root.get("organizationId"), organizationId));
+            filters.add(
+                BusinessEnvironmentContext.environmentId() == null
+                    ? cb.isNull(root.get("environmentId"))
+                    : cb.equal(
+                        root.get("environmentId"), BusinessEnvironmentContext.environmentId()));
           }
           if (action != null) filters.add(cb.equal(root.get("action"), action));
           if (actorType != null) filters.add(cb.equal(root.get("actorType"), actorType));

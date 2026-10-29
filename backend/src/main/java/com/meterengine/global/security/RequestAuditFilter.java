@@ -108,7 +108,8 @@ public class RequestAuditFilter extends OncePerRequestFilter {
         principal.userSessionId(),
         principal.mode(),
         principal.role(),
-        principal.scopes());
+        principal.scopes(),
+        principal.environmentId());
   }
 
   // 수집은 요청이 많아 요청마다 감사 행을 동기로 쓰면 지연과 DB 쓰기가 크게 늘어 감사에서 뺀다.

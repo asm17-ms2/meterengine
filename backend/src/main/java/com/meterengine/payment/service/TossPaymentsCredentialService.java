@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.error.ServiceUnavailableException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
@@ -83,7 +84,8 @@ public class TossPaymentsCredentialService {
 
   Optional<TossPaymentsCredential> find(UUID organizationId, String mode) {
     return tossPaymentsCredentialRepository.findById(
-        new TossPaymentsCredentialId(organizationId, mode));
+        new TossPaymentsCredentialId(
+            organizationId, mode, BusinessEnvironmentContext.environmentId()));
   }
 
   Optional<TossPaymentsCredential> historical(
@@ -93,12 +95,20 @@ public class TossPaymentsCredentialService {
     return paymentArchiveRepository.historical(organizationId, mode, requestedAt);
   }
 
+  // 새 결제와 카드 등록용이다. 현재 키를 보관했으면 고정한 버전이 있어도 비운다.
+  Optional<TossPaymentsCredential> chargeable(
+      UUID organizationId, String mode, OffsetDateTime pinnedAt) {
+    if (active(organizationId, mode).isEmpty()) return Optional.empty();
+    return historical(organizationId, mode, pinnedAt);
+  }
+
   Optional<TossPaymentsCredential> active(UUID organizationId, String mode) {
     return find(organizationId, mode).filter(credential -> credential.getArchivedAt() == null);
   }
 
   @Transactional
   public void delete(UUID organizationId, String mode) {
+    requireMode(mode);
     paymentArchiveRepository.lock(organizationId);
     TossPaymentsCredential credential =
         find(organizationId, mode)
@@ -123,6 +133,7 @@ public class TossPaymentsCredentialService {
       String mode,
       UpdateTossPaymentsCredentialRequest request,
       String principalMode) {
+    requireMode(mode);
     if (principalMode != null && !principalMode.equals(mode)) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
     }
@@ -133,6 +144,7 @@ public class TossPaymentsCredentialService {
 
   private TossPaymentsCredentialResponse save(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    requireMode(mode);
     paymentArchiveRepository.lock(organizationId);
     OffsetDateTime verifiedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     TossPaymentsCredential credential =
@@ -159,6 +171,13 @@ public class TossPaymentsCredentialService {
         mode,
         Map.of("mode", mode));
     return TossPaymentsCredentialResponse.from(credential);
+  }
+
+  private static void requireMode(String mode) {
+    if (BusinessEnvironmentContext.mode() != null
+        && !BusinessEnvironmentContext.mode().equals(mode)) {
+      throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
   }
 
   private static void checkPrefixes(String mode, UpdateTossPaymentsCredentialRequest request) {

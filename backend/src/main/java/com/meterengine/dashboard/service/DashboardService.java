@@ -2,6 +2,7 @@ package com.meterengine.dashboard.service;
 
 import com.meterengine.dashboard.dto.DashboardResponse;
 import com.meterengine.dashboard.dto.DashboardResponse.DashboardInvoice;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.invoice.service.DraftInvoiceService;
@@ -50,7 +51,10 @@ public class DashboardService {
 
   @Transactional(readOnly = true)
   public DashboardResponse get(UUID organizationId, YearMonth month) {
-    String mode = paymentSettingService.get(organizationId).mode();
+    String mode =
+        BusinessEnvironmentContext.mode() == null
+            ? paymentSettingService.get(organizationId).mode()
+            : BusinessEnvironmentContext.mode();
     var draft = draftInvoiceService.preview(organizationId, month);
     List<InvoicePaymentResponse> payments =
         invoicePaymentService.list(organizationId, month, null, mode).invoicePayments();
@@ -78,37 +82,52 @@ public class DashboardService {
         month.toString(),
         OffsetDateTime.now(clock),
         count(
-            "select count(*) from customer where organization_id = ? and environment_id is null"
-                + " and archived_at is null",
-            organizationId),
-        count(
-            "select count(*) from billable_metric where organization_id = ? and archived_at is null",
-            organizationId),
-        count(
-            "select count(*) from api_key where organization_id = ? and environment_id is null and revoked_at is null and"
-                + " (expires_at is null or expires_at > ?)",
+            "select count(*) from customer where organization_id = ? and environment_id IS NOT"
+                + " DISTINCT FROM ?::uuid and archived_at is null",
             organizationId,
+            BusinessEnvironmentContext.environmentId()),
+        count(
+            "select count(*) from billable_metric where organization_id = ? and environment_id IS"
+                + " NOT DISTINCT FROM ?::uuid and archived_at is null",
+            organizationId,
+            BusinessEnvironmentContext.environmentId()),
+        count(
+            "select count(*) from api_key where organization_id = ? and environment_id IS NOT"
+                + " DISTINCT FROM ?::uuid and revoked_at is null and (expires_at is null or"
+                + " expires_at > ?)",
+            organizationId,
+            BusinessEnvironmentContext.environmentId(),
             OffsetDateTime.now(clock)),
         count(
-            "select count(*) from event where organization_id = ? and environment_id is null and occurred_at >= ? and"
-                + " occurred_at < ?",
+            "select count(*) from event where organization_id = ? and environment_id IS NOT"
+                + " DISTINCT FROM ?::uuid and occurred_at >= ? and occurred_at < ?",
             organizationId,
+            BusinessEnvironmentContext.environmentId(),
             month.atDay(1).atStartOfDay(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime(),
             month
                 .plusMonths(1)
                 .atDay(1)
                 .atStartOfDay(BillableMetricUsageService.BILLING_ZONE)
                 .toOffsetDateTime()),
-        count(
-                "select count(*) from organization where id = ? and business_registration_number is"
-                    + " not null and representative_name is not null and business_address is not"
-                    + " null",
-                organizationId)
+        (BusinessEnvironmentContext.environmentId() == null
+                ? count(
+                    "select count(*) from organization where id = ? and"
+                        + " business_registration_number is not null and representative_name is not"
+                        + " null and business_address is not null",
+                    organizationId)
+                : count(
+                    "select count(*) from organization_environment where organization_id = ? and id"
+                        + " = ? and business_registration_number is not null and"
+                        + " representative_name is not null and business_address is not null",
+                    organizationId,
+                    BusinessEnvironmentContext.environmentId()))
             > 0,
         count(
-                "select count(*) from toss_payments_credential where organization_id = ? and mode ="
-                    + " ? and archived_at is null",
+                "select count(*) from toss_payments_credential where organization_id = ? and"
+                    + " environment_id IS NOT DISTINCT FROM ?::uuid and mode = ? and"
+                    + " archived_at is null",
                 organizationId,
+                BusinessEnvironmentContext.environmentId(),
                 mode)
             > 0,
         mode,
@@ -129,8 +148,11 @@ public class DashboardService {
       UUID organizationId, List<InvoicePaymentResponse> payments, String period) {
     if (payments.isEmpty()) return List.of();
     Map<UUID, Invoice> invoiceById =
-        invoiceRepository.findNewestFirst(organizationId, null, period).stream()
-            .collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
+        (BusinessEnvironmentContext.environmentId() == null
+                ? invoiceRepository.findNewestFirst(organizationId, null, period)
+                : invoiceRepository.findNewestFirstScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId(), null, period))
+            .stream().collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
     return payments.stream()
         .map(
             payment -> {

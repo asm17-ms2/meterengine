@@ -1,6 +1,7 @@
 package com.meterengine.query.repository;
 
 import com.meterengine.customer.dto.CustomerResponse;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.pricing.dto.BillableMetricPricePriceRate;
@@ -28,13 +29,14 @@ public class WorkspaceQueryRepository {
   private static final String PRICE_SCOPE =
       """
       WITH scope AS (
-        SELECT cast(? AS uuid) AS organization_id, cast(? AS uuid) AS customer_id, cast(? AS varchar) AS period
+        SELECT cast(? AS uuid) AS organization_id, cast(? AS uuid) AS customer_id, cast(? AS varchar) AS period, cast(? AS uuid) AS environment_id
       ), eligible AS (
         SELECT pr.*, row_number() OVER (
           PARTITION BY pr.billable_metric_code, pr.dimension_values ORDER BY pr.effective_from DESC, pr.id
         ) AS position
         FROM price_rate pr CROSS JOIN scope p
         WHERE pr.organization_id = p.organization_id
+          AND pr.environment_id IS NOT DISTINCT FROM p.environment_id
           AND pr.customer_id IS NOT DISTINCT FROM p.customer_id
           AND ((pr.effective_from <= p.period
             AND (pr.effective_until IS NULL OR pr.effective_until > p.period)
@@ -50,9 +52,10 @@ public class WorkspaceQueryRepository {
       ), metric_counts AS (
         SELECT bm.*, count(r.id) AS rate_count
         FROM billable_metric bm CROSS JOIN scope p
-        LEFT JOIN rates r ON r.organization_id = bm.organization_id AND r.billable_metric_code = bm.code
+        LEFT JOIN rates r ON r.organization_id = bm.organization_id AND r.environment_scope_id = bm.environment_scope_id AND r.billable_metric_code = bm.code
         WHERE bm.organization_id = p.organization_id
-        GROUP BY bm.organization_id, bm.code
+          AND bm.environment_id IS NOT DISTINCT FROM p.environment_id
+        GROUP BY bm.organization_id, bm.environment_scope_id, bm.code
       )
       """;
   private final JdbcTemplate jdbcTemplate;
@@ -70,10 +73,11 @@ public class WorkspaceQueryRepository {
             "name",
             Set.of("name", "external_id", "created_at", "archived_at", "id", "billing_email"));
     String base =
-        " FROM customer WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM cast(? as uuid)";
+        " FROM customer WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM cast(? as"
+            + " uuid)";
     List<Object> baseValues = new ArrayList<>();
     baseValues.add(organizationId);
-    baseValues.add((UUID) null);
+    baseValues.add(BusinessEnvironmentContext.environmentId());
     StringBuilder where = new StringBuilder(base);
     List<Object> values = new ArrayList<>(baseValues);
     archive(where, values, search.status());
@@ -87,7 +91,8 @@ public class WorkspaceQueryRepository {
     }
     if (search.query() != null) {
       where.append(
-          " AND (lower(name) LIKE ? ESCAPE '!' OR lower(coalesce(external_id, '')) LIKE ? ESCAPE '!' OR lower(coalesce(billing_email, '')) LIKE ? ESCAPE '!')");
+          " AND (lower(name) LIKE ? ESCAPE '!' OR lower(coalesce(external_id, '')) LIKE ? ESCAPE"
+              + " '!' OR lower(coalesce(billing_email, '')) LIKE ? ESCAPE '!')");
       String pattern = pattern(search.query());
       values.add(pattern);
       values.add(pattern);
@@ -134,8 +139,11 @@ public class WorkspaceQueryRepository {
       UUID organizationId, SearchParameters search) {
     String sort =
         search.sortOr("code", Set.of("code", "name", "event_type", "aggregation", "archived_at"));
-    String base = " FROM billable_metric WHERE organization_id = ?";
-    List<Object> baseValues = List.of(organizationId);
+    String base =
+        " FROM billable_metric WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM"
+            + " cast(? as uuid)";
+    List<Object> baseValues =
+        Arrays.asList(organizationId, BusinessEnvironmentContext.environmentId());
     StringBuilder where = new StringBuilder(base);
     List<Object> values = new ArrayList<>(baseValues);
     archive(where, values, search.status());
@@ -145,7 +153,8 @@ public class WorkspaceQueryRepository {
     }
     if (search.query() != null) {
       where.append(
-          " AND (lower(code) LIKE ? ESCAPE '!' OR lower(name) LIKE ? ESCAPE '!' OR lower(event_type) LIKE ? ESCAPE '!')");
+          " AND (lower(code) LIKE ? ESCAPE '!' OR lower(name) LIKE ? ESCAPE '!' OR"
+              + " lower(event_type) LIKE ? ESCAPE '!')");
       String pattern = pattern(search.query());
       values.add(pattern);
       values.add(pattern);
@@ -159,7 +168,9 @@ public class WorkspaceQueryRepository {
     String ordering = sort.equals("archived_at") ? sort : sort + " COLLATE korean";
     List<BillableMetricResponse> metrics =
         jdbcTemplate.query(
-            "SELECT code, name, event_type, aggregation, target_property, dimension_properties, archived_at, active_from, inactive_from, unit_size, rounding_mode, rounding_precision, percentile, version"
+            "SELECT code, name, event_type, aggregation, target_property, dimension_properties,"
+                + " archived_at, active_from, inactive_from, unit_size, rounding_mode,"
+                + " rounding_precision, percentile, version"
                 + where
                 + " ORDER BY "
                 + ordering
@@ -199,6 +210,7 @@ public class WorkspaceQueryRepository {
     scope.add(organizationId);
     scope.add(search.customerId());
     scope.add(search.monthOrCurrent().toString());
+    scope.add(BusinessEnvironmentContext.environmentId());
     StringBuilder where = new StringBuilder(" FROM metric_counts WHERE true");
     List<Object> values = new ArrayList<>(scope);
     archive(where, values, search.status());
@@ -300,13 +312,21 @@ public class WorkspaceQueryRepository {
     String sql =
         switch (resource) {
           case "invoices" ->
-              "SELECT DISTINCT period AS month FROM invoice WHERE organization_id = ? ORDER BY month DESC";
+              "SELECT DISTINCT period AS month FROM invoice WHERE organization_id = ? AND"
+                  + " environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
           case "billable-metric-prices" ->
-              "SELECT DISTINCT effective_from AS month FROM price_rate WHERE organization_id = ? ORDER BY month DESC";
+              "SELECT DISTINCT effective_from AS month FROM price_rate WHERE organization_id = ?"
+                  + " AND environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
           default ->
-              "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_id IS NULL ORDER BY month DESC";
+              "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month"
+                  + " FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM"
+                  + " cast(? as uuid) ORDER BY month DESC";
         };
-    return jdbcTemplate.query(sql, (rs, row) -> rs.getString("month"), organizationId);
+    return jdbcTemplate.query(
+        sql,
+        (rs, row) -> rs.getString("month"),
+        organizationId,
+        BusinessEnvironmentContext.environmentId());
   }
 
   private static BillableMetricResponse metric(ResultSet rs, int row) throws SQLException {

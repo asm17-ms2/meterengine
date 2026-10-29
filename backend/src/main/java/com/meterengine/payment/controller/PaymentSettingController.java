@@ -3,6 +3,7 @@ package com.meterengine.payment.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.PaymentSettingResponse;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/payment-setting")
 public class PaymentSettingController {
 
@@ -38,7 +40,8 @@ public class PaymentSettingController {
       summary = "결제 모드 조회",
       description =
           """
-          결제에 쓰는 모드를 돌려준다. 한 번도 바꾸지 않았으면 mode=test, updated_at=null이다.
+          선택한 환경의 결제 모드를 돌려준다. test/live 환경의 모드는 고정이며 updated_at=null이다.
+          기존 범위는 저장한 모드를 쓰고, 바꾼 적 없으면 mode=test다.
           updated_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -61,7 +64,8 @@ public class PaymentSettingController {
       summary = "결제 모드 변경",
       description =
           """
-          결제에 쓸 모드를 test나 live로 바꾼다. live로 바꾸려면 live 모드의 토스페이먼츠 키가 먼저 저장돼 있어야 한다.
+          기존 범위의 결제 모드를 바꾼다. live로 바꾸려면 live 키가 먼저 저장돼 있어야 한다.
+          test/live 환경은 선택한 환경과 같은 mode만 받는다. 다른 mode는 payment_mode_mismatch로 거절한다.
           로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
           updated_at은 KST(+09:00)로 나온다.
           """)

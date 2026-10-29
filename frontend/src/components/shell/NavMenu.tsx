@@ -12,7 +12,8 @@ const NAV_GROUPS = [
   { label: "워크스페이스", items: [{ href: "/overview", label: "개요" }, { href: "/customers", label: "고객" }] },
   { label: "사용량에서 수납까지", items: [{ href: "/usage", label: "사용량" }, { href: "/events", label: "수집 로그" }, { href: "/event-issues", label: "이벤트 매핑 진단" }, { href: "/event-rejections", label: "수집 거절" }, { href: "/billing", label: "청구 검토" }, { href: "/invoices", label: "확정 인보이스" }, { href: "/payments", label: "수납과 취소" }] },
   { label: "과금과 연동", items: [{ href: "/billable-metrics", label: "미터" }, { href: "/pricing", label: "요금 설계" }, { href: "/integrations", label: "API 키와 통보" }, { href: "/settings", label: "도입사 설정" }] },
-  { label: "관리와 기록", items: [{ href: "/members", label: "사용자 관리" }, { href: "/audit", label: "감사 기록" }] }];
+  { label: "관리와 기록", items: [{ href: "/members", label: "사용자 관리" }, { href: "/audit", label: "감사 기록" }] },
+];
 
 export function NavMenu({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();

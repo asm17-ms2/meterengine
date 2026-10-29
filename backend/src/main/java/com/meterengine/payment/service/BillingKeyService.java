@@ -69,20 +69,41 @@ public class BillingKeyService {
     TossPaymentsBilling billing =
         issue(issuance.secretKey(), request.authKey(), request.customerKey());
     Optional<Replacement> replacement =
-        transactionTemplate.execute(
-            status ->
-                replace(
-                    issuance.registration(),
-                    billing,
-                    request.consentDocumentVersion(),
-                    consentedAt));
+        PaymentEnvironments.call(
+            issuance.registration().getOrganizationId(),
+            issuance.registration().getEnvironmentId(),
+            issuance.registration().getMode(),
+            () ->
+                transactionTemplate.execute(
+                    status ->
+                        replace(
+                            issuance.registration(),
+                            billing,
+                            request.consentDocumentVersion(),
+                            consentedAt)));
     if (replacement.isEmpty()) {
       delete(issuance, billing.billingKey());
       throw new NotFoundException(ErrorCode.PAYMENT_METHOD_REGISTRATION_NOT_FOUND);
     }
     String replacedBillingKey = replacement.get().replacedBillingKey();
     if (replacedBillingKey != null && !replacedBillingKey.equals(billing.billingKey())) {
-      delete(issuance, replacedBillingKey);
+      OffsetDateTime replacedCredentialAt = replacement.get().replacedCredentialUpdatedAt();
+      if (replacedCredentialAt == null) {
+        delete(issuance, replacedBillingKey);
+      } else {
+        paymentMethodRegistrationService
+            .credentialVersion(issuance.registration(), replacedCredentialAt)
+            .ifPresentOrElse(
+                credential ->
+                    delete(
+                        new Issuance(issuance.registration(), credential.getSecretKey()),
+                        replacedBillingKey),
+                () ->
+                    logger.warn(
+                        "replaced billing key deletion skipped without its original credential:"
+                            + " registration_id={}",
+                        issuance.registration().getId()));
+      }
     }
     return replacement.get().paymentMethod();
   }
@@ -94,10 +115,7 @@ public class BillingKeyService {
           ErrorCode.VALIDATION_ERROR,
           List.of(new FieldError("customer_key", CUSTOMER_KEY_MISMATCH_MESSAGE)));
     }
-    String secretKey =
-        paymentMethodRegistrationService
-            .findCredential(registration.getOrganizationId(), registration.getMode())
-            .getSecretKey();
+    String secretKey = paymentMethodRegistrationService.findCredential(registration).getSecretKey();
     return new Issuance(registration, secretKey);
   }
 
@@ -136,6 +154,8 @@ public class BillingKeyService {
                 registration.getCustomerId(),
                 registration.getMode()));
     String replacedBillingKey = existing.map(BillingKey::getBillingKey).orElse(null);
+    OffsetDateTime replacedCredentialAt =
+        existing.map(BillingKey::getCredentialUpdatedAt).orElse(null);
     String replacedCardNumber = existing.map(BillingKey::getCardNumber).orElse(null);
     BillingKey billingKey =
         existing
@@ -152,20 +172,21 @@ public class BillingKeyService {
                       authenticatedAt,
                       consentDocumentVersion,
                       consentedAt);
-                  return found;
+                  return found.pinCredential(registration.getCredentialUpdatedAt());
                 })
             .orElseGet(
                 () ->
                     new BillingKey(
-                        registration.getOrganizationId(),
-                        registration.getCustomerId(),
-                        registration.getMode(),
-                        billing.billingKey(),
-                        billing.card().issuerCode(),
-                        billing.card().number(),
-                        authenticatedAt,
-                        consentDocumentVersion,
-                        consentedAt));
+                            registration.getOrganizationId(),
+                            registration.getCustomerId(),
+                            registration.getMode(),
+                            billing.billingKey(),
+                            billing.card().issuerCode(),
+                            billing.card().number(),
+                            authenticatedAt,
+                            consentDocumentVersion,
+                            consentedAt)
+                        .pinCredential(registration.getCredentialUpdatedAt()));
     BillingKey saved = billingKeyRepository.saveAndFlush(billingKey);
     Map<String, Object> detail = new LinkedHashMap<>();
     detail.put("mode", registration.getMode());
@@ -180,7 +201,9 @@ public class BillingKeyService {
         "payment_method",
         registration.getCustomerId().toString(),
         detail);
-    return Optional.of(new Replacement(PaymentMethodResponse.from(saved), replacedBillingKey));
+    return Optional.of(
+        new Replacement(
+            PaymentMethodResponse.from(saved), replacedBillingKey, replacedCredentialAt));
   }
 
   private void delete(Issuance issuance, String billingKey) {
@@ -228,7 +251,13 @@ public class BillingKeyService {
     }
   }
 
-  record Replacement(PaymentMethodResponse paymentMethod, String replacedBillingKey) {
+  record Replacement(
+      PaymentMethodResponse paymentMethod,
+      String replacedBillingKey,
+      OffsetDateTime replacedCredentialUpdatedAt) {
+    Replacement(PaymentMethodResponse paymentMethod, String replacedBillingKey) {
+      this(paymentMethod, replacedBillingKey, null);
+    }
 
     @Override
     public String toString() {

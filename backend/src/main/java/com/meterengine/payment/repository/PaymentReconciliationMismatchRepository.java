@@ -19,9 +19,9 @@ public interface PaymentReconciliationMismatchRepository
       value =
           """
           INSERT INTO payment_reconciliation_mismatch
-            (id, organization_id, mode, kind, order_id, payment_key, transaction_key,
+            (id, organization_id, environment_id, mode, kind, order_id, payment_key, transaction_key,
              meterengine_amount, toss_payments_amount, transacted_at, detected_at)
-          VALUES (:#{#mismatch.id}, :#{#mismatch.organizationId}, :#{#mismatch.mode},
+          VALUES (:#{#mismatch.id}, :#{#mismatch.organizationId}, :#{#mismatch.environmentId}, :#{#mismatch.mode},
                   :#{#mismatch.kind}, :#{#mismatch.orderId}, :#{#mismatch.paymentKey},
                   :#{#mismatch.transactionKey}, :#{#mismatch.meterengineAmount},
                   :#{#mismatch.tossPaymentsAmount}, :#{#mismatch.transactedAt},
@@ -32,9 +32,11 @@ public interface PaymentReconciliationMismatchRepository
   int insertIfAbsent(PaymentReconciliationMismatch mismatch);
 
   @Query(
-      "select m from PaymentReconciliationMismatch m where m.organizationId = :organizationId"
-          + " and m.detectedAt >= :detectedFrom and m.detectedAt < :detectedTo"
-          + " order by m.detectedAt desc, m.id desc")
+      "select m from PaymentReconciliationMismatch m where m.organizationId = :organizationId and"
+          + " m.environmentId IS NOT DISTINCT FROM"
+          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} and"
+          + " m.detectedAt >= :detectedFrom and m.detectedAt < :detectedTo order by m.detectedAt"
+          + " desc, m.id desc")
   List<PaymentReconciliationMismatch> findDetectedBetween(
       UUID organizationId, OffsetDateTime detectedFrom, OffsetDateTime detectedTo);
 }

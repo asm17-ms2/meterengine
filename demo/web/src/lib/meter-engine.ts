@@ -35,7 +35,7 @@ export function clientFor(name: string, overrides: ClientOverrides = {}): MeterE
   if (target === undefined) {
     throw new Error(`설정에 없는 대상입니다: ${name}`);
   }
-  return new MeterEngineClient({ ...overrides, baseUrl: target.base_url, apiKey: target.api_key });
+  return new MeterEngineClient({ ...overrides, baseUrl: target.base_url, apiKey: target.api_key, environment: target.environment });
 }
 
 function messageOf(error: Error): string {

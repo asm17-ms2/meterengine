@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.global.validation.VersionPrecondition;
 import com.meterengine.metric.dto.BillableMetricResponse;
@@ -72,7 +73,9 @@ public class BillableMetricService {
     List<String> dimensionProperties = dimensionPropertiesOrEmpty(request.dimensionProperties());
     validateDimensionProperties(dimensionProperties);
 
-    BillableMetricId id = new BillableMetricId(organizationId, request.code());
+    BillableMetricId id =
+        new BillableMetricId(
+            organizationId, request.code(), BusinessEnvironmentContext.environmentId());
     if (billableMetricRepository.existsById(id)) {
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     }
@@ -89,7 +92,8 @@ public class BillableMetricService {
             calculation.unitSize(),
             calculation.roundingMode(),
             calculation.roundingPrecision(),
-            calculation.percentile());
+            calculation.percentile(),
+            BusinessEnvironmentContext.environmentId());
     billableMetricRepository.saveAndFlush(billableMetric);
     auditLogService.record(
         organizationId,
@@ -135,7 +139,9 @@ public class BillableMetricService {
 
     BillableMetric billableMetric =
         billableMetricRepository
-            .findById(new BillableMetricId(organizationId, code))
+            .findById(
+                new BillableMetricId(
+                    organizationId, code, BusinessEnvironmentContext.environmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
     VersionPrecondition.requireMatch(expectedVersion, billableMetric.getVersion());
@@ -186,14 +192,21 @@ public class BillableMetricService {
     lock(organizationId);
     BillableMetric billableMetric =
         billableMetricRepository
-            .findById(new BillableMetricId(organizationId, code))
+            .findById(
+                new BillableMetricId(
+                    organizationId, code, BusinessEnvironmentContext.environmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
     if (billableMetric.getArchivedAt() != null) return;
     String cutoff = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
     if (billableMetric.getActiveFrom().compareTo(cutoff) < 0)
       billableMetricPeriodRepository.save(
-          new BillableMetricPeriod(organizationId, code, billableMetric.getActiveFrom(), cutoff));
+          new BillableMetricPeriod(
+              organizationId,
+              code,
+              billableMetric.getActiveFrom(),
+              cutoff,
+              BusinessEnvironmentContext.environmentId()));
     billableMetric.archive(cutoff);
     auditLogService.record(
         organizationId,
@@ -235,14 +248,17 @@ public class BillableMetricService {
   public ListBillableMetricsResponse list(UUID organizationId, String status) {
     ArchiveStatus filter = ArchiveStatus.parse(status);
     return ListBillableMetricsResponse.from(
-        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
-            .filter(metric -> filter.includes(metric.getArchivedAt()))
-            .toList());
+        (BusinessEnvironmentContext.environmentId() == null
+                ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
+                : billableMetricRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream().filter(metric -> filter.includes(metric.getArchivedAt())).toList());
   }
 
   private BillableMetric metric(UUID organizationId, String code) {
     return billableMetricRepository
-        .findById(new BillableMetricId(organizationId, code))
+        .findById(
+            new BillableMetricId(organizationId, code, BusinessEnvironmentContext.environmentId()))
         .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
   }
 

@@ -4,6 +4,7 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.payment.client.TossPaymentsCancelRequest;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsError;
@@ -197,6 +198,11 @@ public class PaymentCancellationService {
       CreatePaymentCancellationRequest request,
       UUID idempotencyKey,
       String principalMode) {
+    if (BusinessEnvironmentContext.environmentId() != null) {
+      paymentAttemptRepository
+          .findByOrganizationIdAndId(organizationId, paymentAttemptId)
+          .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_ATTEMPT_NOT_FOUND));
+    }
     UUID cancellationId =
         idempotencyKey == null ? UUID.randomUUID() : cancellationId(organizationId, idempotencyKey);
     String fingerprint = idempotencyKey == null ? null : fingerprint(paymentAttemptId, request);
@@ -207,7 +213,8 @@ public class PaymentCancellationService {
           paymentCancellationRepository.findById(cancellationId);
       if (existing.isPresent()) {
         PaymentCancellation cancellation = existing.get();
-        if (!organizationId.equals(cancellation.getOrganizationId())
+        if (!BusinessEnvironmentContext.matches(cancellation.getEnvironmentId())
+            || !organizationId.equals(cancellation.getOrganizationId())
             || !fingerprint.equals(cancellation.getIdempotencyFingerprint())) {
           throw new ConflictException(ErrorCode.PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT);
         }
@@ -275,14 +282,15 @@ public class PaymentCancellationService {
     PaymentCancellation cancellation = pending.cancellation();
     UUID cancellationId = cancellation.getId();
     String mode = cancellation.getMode();
+    PaymentAttempt originalAttempt =
+        paymentAttemptRepository.findById(cancellation.getPaymentAttemptId()).orElseThrow();
     Optional<TossPaymentsCredential> credential =
         tossPaymentsCredentialService.historical(
             cancellation.getOrganizationId(),
             mode,
-            paymentAttemptRepository
-                .findById(cancellation.getPaymentAttemptId())
-                .orElseThrow()
-                .getRequestedAt());
+            originalAttempt.getCredentialUpdatedAt() == null
+                ? originalAttempt.getRequestedAt()
+                : originalAttempt.getCredentialUpdatedAt());
     if (credential.isEmpty()) {
       ErrorCode reason = ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING;
       logger.warn(
@@ -349,7 +357,13 @@ public class PaymentCancellationService {
   }
 
   private static UUID cancellationId(UUID organizationId, UUID idempotencyKey) {
-    byte[] value = sha256((organizationId + ":" + idempotencyKey).getBytes(StandardCharsets.UTF_8));
+    String environment =
+        BusinessEnvironmentContext.environmentId() == null
+            ? ""
+            : BusinessEnvironmentContext.environmentId() + ":";
+    byte[] value =
+        sha256(
+            (organizationId + ":" + environment + idempotencyKey).getBytes(StandardCharsets.UTF_8));
     ByteBuffer bytes = ByteBuffer.wrap(value);
     return new UUID(bytes.getLong(), bytes.getLong());
   }

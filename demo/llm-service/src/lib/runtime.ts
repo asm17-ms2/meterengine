@@ -12,7 +12,9 @@ export function getRuntime(): LumenService {
   if (!runtimeState.lumenRuntime) {
     const config = readConfig();
     if (!config.isConfigured) throw new ServiceError(503, "service_not_configured", "서비스 연결 설정이 필요합니다. 운영자에게 문의하세요.");
-    runtimeState.lumenRuntime = new LumenService({ config, store: new LumenStore(config.databasePath, config.accounts) });
+    const store = new LumenStore(config.databasePath, config.accounts);
+    try { runtimeState.lumenRuntime = new LumenService({ config, store }); }
+    catch (error) { store.close(); throw error; }
   }
   return runtimeState.lumenRuntime;
 }

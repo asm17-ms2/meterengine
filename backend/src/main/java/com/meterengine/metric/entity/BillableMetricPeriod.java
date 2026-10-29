@@ -12,6 +12,9 @@ public class BillableMetricPeriod {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(name = "billable_metric_code", nullable = false)
   private String billableMetricCode;
 
@@ -31,11 +34,21 @@ public class BillableMetricPeriod {
     activeUntil = until;
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public String getBillableMetricCode() {
     return billableMetricCode;
   }
 
   public boolean includes(String month) {
     return activeFrom.compareTo(month) <= 0 && activeUntil.compareTo(month) > 0;
+  }
+
+  public BillableMetricPeriod(
+      UUID organizationId, String code, String from, String until, UUID environmentId) {
+    this(organizationId, code, from, until);
+    this.environmentId = environmentId;
   }
 }

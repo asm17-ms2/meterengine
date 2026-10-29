@@ -7,7 +7,7 @@ const OTHER_CUSTOMER_ID = "other-customer";
 
 function client(): Parameters<typeof loadCustomerPortal>[0] {
   return {
-    getCustomer: async () => ({ id: CUSTOMER_ID, name: "고객", billing_email: null, created_at: "2026-10-01T00:00:00Z" }),
+    getCustomer: async () => ({ id: CUSTOMER_ID, name: "고객", version: 0, billing_email: null, created_at: "2026-10-01T00:00:00Z" }),
     aggregateBillableMetricUsages: async () => ({ month: "2026-10", billable_metric_usages: [{ code: "tokens", name: "토큰", event_type: "usage", aggregation: "sum", target_property: "quantity", customers: [{ customer_id: CUSTOMER_ID, customer_name: "고객", quantity: 123, dimension_usages: [] }, { customer_id: OTHER_CUSTOMER_ID, customer_name: "secret-other-name", quantity: 456, dimension_usages: [] }] }] }),
     previewDraftInvoice: async () => ({ month: "2026-10", calculated_at: "2026-10-26T00:00:00Z", total_amount: 999, customers: [{ customer_id: CUSTOMER_ID, customer_name: "고객", amount: 100, lines: [], unpriced_usages: [], negative_usages: [] }, { customer_id: OTHER_CUSTOMER_ID, customer_name: "secret-other-name", amount: 899, lines: [], unpriced_usages: [], negative_usages: [] }] }),
     listInvoices: async () => ({ invoices: [{ id: "invoice-one", invoice_number: "ME-202610-00000001", customer_id: CUSTOMER_ID, customer_name: "고객", month: "2026-10", finalized_at: "2026-10-01T00:00:00Z", supply_amount: 100, tax_amount: 10, total_amount: 110, lines: [] }, { id: "invoice-other", invoice_number: "ME-202610-00000002", customer_id: OTHER_CUSTOMER_ID, customer_name: "secret-other-name", month: "2026-10", finalized_at: "2026-10-01T00:00:00Z", supply_amount: 900, tax_amount: 90, total_amount: 990, lines: [] }] }),

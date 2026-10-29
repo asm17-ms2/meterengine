@@ -3,6 +3,7 @@ package com.meterengine.payment.service;
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.payment.dto.PaymentSettingResponse;
 import com.meterengine.payment.entity.PaymentSetting;
 import com.meterengine.payment.entity.TossPaymentsCredentialId;
@@ -33,6 +34,9 @@ public class PaymentSettingService {
 
   @Transactional(readOnly = true)
   public PaymentSettingResponse get(UUID organizationId) {
+    if (BusinessEnvironmentContext.mode() != null) {
+      return new PaymentSettingResponse(BusinessEnvironmentContext.mode(), null);
+    }
     return paymentSettingRepository
         .findById(organizationId)
         .map(PaymentSettingResponse::from)
@@ -44,6 +48,12 @@ public class PaymentSettingService {
     if (principalMode != null
         && (!principalMode.equals(mode) || !principalMode.equals(findMode(organizationId)))) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+    }
+    if (BusinessEnvironmentContext.mode() != null) {
+      if (!BusinessEnvironmentContext.mode().equals(mode)) {
+        throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
+      }
+      return get(organizationId);
     }
     if (PaymentSetting.LIVE.equals(mode)
         && tossPaymentsCredentialRepository
@@ -70,6 +80,7 @@ public class PaymentSettingService {
 
   @Transactional(readOnly = true)
   String findMode(UUID organizationId) {
+    if (BusinessEnvironmentContext.mode() != null) return BusinessEnvironmentContext.mode();
     return paymentSettingRepository
         .findById(organizationId)
         .map(PaymentSetting::getMode)

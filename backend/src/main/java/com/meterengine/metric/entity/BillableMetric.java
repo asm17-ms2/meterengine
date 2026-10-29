@@ -27,6 +27,13 @@ public class BillableMetric implements Persistable<BillableMetricId> {
   @Column(name = "organization_id")
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
+  @Id
+  @Column(name = "environment_scope_id", nullable = false, updatable = false)
+  private UUID environmentScopeId = new UUID(0, 0);
+
   @Id private String code;
 
   @Version
@@ -178,7 +185,7 @@ public class BillableMetric implements Persistable<BillableMetricId> {
 
   @Override
   public BillableMetricId getId() {
-    return new BillableMetricId(organizationId, code);
+    return new BillableMetricId(organizationId, code, environmentId);
   }
 
   @Override
@@ -208,6 +215,10 @@ public class BillableMetric implements Persistable<BillableMetricId> {
     this.dimensionProperties = List.copyOf(dimensionProperties);
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -234,5 +245,34 @@ public class BillableMetric implements Persistable<BillableMetricId> {
 
   public List<String> getDimensionProperties() {
     return dimensionProperties;
+  }
+
+  public BillableMetric(
+      UUID organizationId,
+      String code,
+      String name,
+      String eventType,
+      String aggregation,
+      String targetProperty,
+      List<String> dimensionProperties,
+      BigDecimal unitSize,
+      String roundingMode,
+      int roundingPrecision,
+      BigDecimal percentile,
+      UUID environmentId) {
+    this(
+        organizationId,
+        code,
+        name,
+        eventType,
+        aggregation,
+        targetProperty,
+        dimensionProperties,
+        unitSize,
+        roundingMode,
+        roundingPrecision,
+        percentile);
+    this.environmentId = environmentId;
+    this.environmentScopeId = environmentId == null ? new UUID(0, 0) : environmentId;
   }
 }

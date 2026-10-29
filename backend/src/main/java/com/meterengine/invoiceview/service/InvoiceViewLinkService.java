@@ -5,6 +5,8 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironment;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.SecureTokens;
 import com.meterengine.invoice.dto.InvoiceResponse;
 import com.meterengine.invoice.repository.InvoiceRepository;
@@ -142,6 +144,10 @@ public class InvoiceViewLinkService {
   @Transactional
   public PublicInvoiceResponse get(String token) {
     InvoiceViewLink link = requireLink(token, false);
+    return inLink(link, () -> getPublic(link));
+  }
+
+  private PublicInvoiceResponse getPublic(InvoiceViewLink link) {
     Organization organization =
         organizationRepository
             .findById(link.getOrganizationId())
@@ -154,6 +160,16 @@ public class InvoiceViewLinkService {
   public PublicInvoiceResponse get(InvoicePaymentRetryAuthorization authorization) {
     InvoiceViewLink link =
         invoiceViewLinkRepository.findById(authorization.actor().id()).orElseThrow();
+    if (!Objects.equals(link.getOrganizationId(), authorization.organizationId())
+        || !Objects.equals(link.getEnvironmentId(), authorization.environmentId())
+        || !Objects.equals(link.getInvoiceId(), authorization.invoiceId())) {
+      throw new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND);
+    }
+    return inLink(link, () -> getAuthorized(link, authorization));
+  }
+
+  private PublicInvoiceResponse getAuthorized(
+      InvoiceViewLink link, InvoicePaymentRetryAuthorization authorization) {
     boolean isUsable =
         link.isUsable(OffsetDateTime.now(clock))
             && organizationRepository
@@ -207,6 +223,10 @@ public class InvoiceViewLinkService {
   @Transactional
   public InvoicePaymentRetryAuthorization get(String token, String version) {
     InvoiceViewLink link = requireLink(token, true);
+    return inLink(link, () -> authorize(link, version));
+  }
+
+  private InvoicePaymentRetryAuthorization authorize(InvoiceViewLink link, String version) {
     if (!link.isAllowPaymentRetry())
       throw new ConflictException(ErrorCode.PAYMENT_RETRY_UNAVAILABLE);
     PaymentRetryEligibility eligibility =
@@ -222,7 +242,8 @@ public class InvoiceViewLinkService {
         eligibility.failedAttemptId(),
         eligibility.attemptCount(),
         new AuditActor("invoice_view_link", link.getId(), link.getOrganizationId()),
-        organizationRepository.findById(link.getOrganizationId()).orElseThrow().getName());
+        organizationRepository.findById(link.getOrganizationId()).orElseThrow().getName(),
+        link.getEnvironmentId());
   }
 
   private InvoiceViewLink requireLink(String token, boolean isLocking) {
@@ -263,12 +284,25 @@ public class InvoiceViewLinkService {
                     + ":"
                     + eligibility.attemptCount()
                     + ":"
-                    + link.getMode()));
+                    + link.getMode()
+                    + (link.getEnvironmentId() == null ? "" : ":" + link.getEnvironmentId())));
   }
 
   private void requireInvoice(UUID organizationId, UUID invoiceId) {
-    if (invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId).isEmpty())
-      throw new NotFoundException(ErrorCode.INVOICE_NOT_FOUND);
+    if ((BusinessEnvironmentContext.environmentId() == null
+            ? invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId)
+            : invoiceRepository.findScoped(
+                organizationId, BusinessEnvironmentContext.environmentId(), invoiceId))
+        .isEmpty()) throw new NotFoundException(ErrorCode.INVOICE_NOT_FOUND);
+  }
+
+  private <T> T inLink(InvoiceViewLink link, java.util.function.Supplier<T> action) {
+    return BusinessEnvironmentContext.run(
+        new BusinessEnvironment(
+            link.getOrganizationId(),
+            link.getEnvironmentId(),
+            link.getEnvironmentId() == null ? null : link.getMode()),
+        action);
   }
 
   private static PublicInvoicePayment publicPayment(InvoicePaymentResponse payment) {

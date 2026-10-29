@@ -6,6 +6,7 @@ import com.meterengine.customer.dto.CustomerRegistration;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRegistrationRepository;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,9 +78,10 @@ public class CustomerRegistrationService {
   }
 
   private List<Customer> externalCustomers(UUID organizationId, String externalId) {
-    return (UUID) null == null
+    return BusinessEnvironmentContext.environmentId() == null
         ? customerRepository.findByOrganizationIdAndExternalIdOrderByNameAscIdAsc(
             organizationId, externalId)
-        : customerRepository.listExternalScoped(organizationId, (UUID) null, externalId);
+        : customerRepository.listExternalScoped(
+            organizationId, BusinessEnvironmentContext.environmentId(), externalId);
   }
 }

@@ -2,12 +2,14 @@ package com.meterengine.dashboard.controller;
 
 import com.meterengine.dashboard.dto.OperationsResponse;
 import com.meterengine.dashboard.service.OperationsService;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class OperationsController {
   private final OperationsService operationsService;
 

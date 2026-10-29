@@ -67,9 +67,32 @@ class ConditionalCreationIntegrationTest {
 
   @Test
   @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
-  void 같은_생성_키는_조직과_작업별로_독립한다() {
+  void 같은_생성_키는_조직과_환경과_작업별로_독립한다() {
     String key = UUID.randomUUID().toString();
+    String session = TestCredentials.issueMemberSession(jdbc, organizationId);
     MvcTestResult legacy = create("/v1/customers", key, "{\"name\":\"환경별 생성\"}");
+    MvcTestResult test =
+        mvc.post()
+            .uri("/v1/customers")
+            .header(AUTHORIZATION, session)
+            .header("X-MeterEngine-Environment", "test")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"환경별 생성\"}")
+            .exchange();
+    MvcTestResult live =
+        mvc.post()
+            .uri("/v1/customers")
+            .header(AUTHORIZATION, session)
+            .header("X-MeterEngine-Environment", "live")
+            .header("Idempotency-Key", key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"환경별 생성\"}")
+            .exchange();
+    assertThat(test).hasStatus(201);
+    assertThat(live).hasStatus(201);
+    assertThat(data(legacy).get("id").asString()).isNotEqualTo(data(test).get("id").asString());
+    assertThat(data(test).get("id").asString()).isNotEqualTo(data(live).get("id").asString());
     assertThat(create("/v1/billable-metrics", key, metricBody("metric-a", "첫 미터"))).hasStatus(201);
     UUID otherOrganization = UUID.randomUUID();
     String otherAuthorization = TestCredentials.issueApiKey(jdbc, otherOrganization);
@@ -87,7 +110,7 @@ class ConditionalCreationIntegrationTest {
                 "SELECT count(*) FROM idempotent_request WHERE key_hash = encode(sha256(convert_to(?,'UTF8')), 'hex')",
                 Integer.class,
                 key))
-        .isEqualTo(3);
+        .isEqualTo(5);
   }
 
   @Test

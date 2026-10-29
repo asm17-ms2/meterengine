@@ -1,5 +1,6 @@
 package com.meterengine.webhook.repository;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.webhook.dto.WebhookEndpointResponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,16 +21,18 @@ public class WebhookEndpointRepository {
 
   public List<WebhookEndpointResponse> findByOrganizationId(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? ORDER BY created_at, id",
+        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? ORDER BY created_at, id",
         (rs, rowNum) -> endpoint(rs),
-        organizationId);
+        organizationId,
+        BusinessEnvironmentContext.scopeId());
   }
 
   public List<WebhookEndpointResponse> findByOrganizationIdAndId(UUID organizationId, UUID id) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND id = ?",
+        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? AND id = ?",
         (rs, rowNum) -> endpoint(rs),
         organizationId,
+        BusinessEnvironmentContext.scopeId(),
         id);
   }
 
@@ -37,9 +40,10 @@ public class WebhookEndpointRepository {
     jdbcTemplate.queryForObject(
         "SELECT id FROM organization WHERE id = ? FOR UPDATE", UUID.class, organizationId);
     return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM webhook_endpoint WHERE organization_id = ? AND deleted_at IS NULL",
+        "SELECT count(*) FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? AND deleted_at IS NULL",
         Integer.class,
-        organizationId);
+        organizationId,
+        BusinessEnvironmentContext.scopeId());
   }
 
   public void insert(
@@ -50,9 +54,10 @@ public class WebhookEndpointRepository {
       List<String> eventTypes,
       String description) {
     jdbcTemplate.update(
-        "INSERT INTO webhook_endpoint (id, organization_id, url, secret, event_types, description) VALUES (?, ?, ?, ?, ?::text[], ?)",
+        "INSERT INTO webhook_endpoint (id, organization_id, environment_id, url, secret, event_types, description) VALUES (?, ?, ?, ?, ?, ?::text[], ?)",
         id,
         organizationId,
+        BusinessEnvironmentContext.environmentId(),
         url,
         secret,
         "{" + String.join(",", eventTypes) + "}",
@@ -67,26 +72,29 @@ public class WebhookEndpointRepository {
       boolean enabled,
       String description) {
     jdbcTemplate.update(
-        "UPDATE webhook_endpoint SET url = ?, event_types = ?::text[], enabled = ?, description = ? WHERE organization_id = ? AND id = ? AND deleted_at IS NULL",
+        "UPDATE webhook_endpoint SET url = ?, event_types = ?::text[], enabled = ?, description = ? WHERE organization_id = ? AND environment_scope_id = ? AND id = ? AND deleted_at IS NULL",
         url,
         "{" + String.join(",", eventTypes) + "}",
         enabled,
         description,
         organizationId,
+        BusinessEnvironmentContext.scopeId(),
         id);
   }
 
   public void delete(UUID organizationId, UUID id) {
     jdbcTemplate.update(
-        "UPDATE webhook_endpoint SET enabled = false, deleted_at = clock_timestamp() WHERE organization_id = ? AND id = ? AND deleted_at IS NULL",
+        "UPDATE webhook_endpoint SET enabled = false, deleted_at = clock_timestamp() WHERE organization_id = ? AND environment_scope_id = ? AND id = ? AND deleted_at IS NULL",
         organizationId,
+        BusinessEnvironmentContext.scopeId(),
         id);
   }
 
   public void restore(UUID organizationId, UUID id) {
     jdbcTemplate.update(
-        "UPDATE webhook_endpoint SET deleted_at = NULL, enabled = false WHERE organization_id = ? AND id = ?",
+        "UPDATE webhook_endpoint SET deleted_at = NULL, enabled = false WHERE organization_id = ? AND environment_scope_id = ? AND id = ?",
         organizationId,
+        BusinessEnvironmentContext.scopeId(),
         id);
   }
 

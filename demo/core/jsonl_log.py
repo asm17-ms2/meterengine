@@ -27,6 +27,8 @@ class RunHeader:
     organization_id: Optional[str]
     csv_path: Optional[str]
     argv: List[str]
+    environment: Optional[str] = None
+    source_fingerprint: Optional[str] = None
 
 
 @dataclass
@@ -73,7 +75,7 @@ class JsonlLogWriter:
     def close(self):
         self._file.close()
 
-    def write_run_header(self, started_at_text, base_url, organization_id, csv_path, argv):
+    def write_run_header(self, started_at_text, base_url, organization_id, csv_path, argv, environment=None, source_fingerprint=None):
         self._write_line(
             json.dumps(
                 {
@@ -84,6 +86,8 @@ class JsonlLogWriter:
                     "organization_id": organization_id,
                     "csv": csv_path,
                     "argv": [redact_api_keys(str(argument)) for argument in argv],
+                    **({"environment": environment} if environment is not None else {}),
+                    **({"source_fingerprint": source_fingerprint} if source_fingerprint is not None else {}),
                 },
                 ensure_ascii=False,
             )
@@ -171,6 +175,9 @@ def read_log(path: str) -> LogReadResult:
             continue
         record_type = data.get("type")
         if record_type == "run":
+            fingerprint = data.get("source_fingerprint")
+            if header is not None and records and fingerprint != header.source_fingerprint and (fingerprint or header.source_fingerprint):
+                raise ValueError("연결 범위가 다른 전송 기록이 섞여 있습니다. 환경별 로그로 나누어 검증하세요")
             header_count += 1
             header = RunHeader(
                 started_at=data.get("started_at"),
@@ -178,6 +185,8 @@ def read_log(path: str) -> LogReadResult:
                 organization_id=data.get("organization_id"),
                 csv_path=data.get("csv"),
                 argv=data.get("argv") or [],
+                environment=data.get("environment"),
+                source_fingerprint=fingerprint,
             )
         elif record_type == "send":
             records.append(

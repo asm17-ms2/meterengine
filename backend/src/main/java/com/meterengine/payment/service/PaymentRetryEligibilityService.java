@@ -1,5 +1,6 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.config.PaymentProperties;
 import com.meterengine.payment.entity.BillingKey;
@@ -46,8 +47,10 @@ public class PaymentRetryEligibilityService {
       return PaymentRetryEligibility.blocked("payment_mode_changed");
     if (paymentAttemptRepository.findActive(organizationId, invoiceId, mode).isPresent())
       return PaymentRetryEligibility.blocked("payment_not_failed");
-    if (invoiceRepository
-        .findByOrganizationIdAndId(organizationId, invoiceId)
+    if ((BusinessEnvironmentContext.environmentId() == null
+            ? invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId)
+            : invoiceRepository.findScoped(
+                organizationId, BusinessEnvironmentContext.environmentId(), invoiceId))
         .filter(invoice -> invoice.getTotalAmount() > 0)
         .isEmpty()) return PaymentRetryEligibility.blocked("payment_not_failed");
     Optional<PaymentAttempt> latest =
@@ -65,9 +68,19 @@ public class PaymentRetryEligibilityService {
     Optional<BillingKey> billingKey =
         billingKeyRepository
             .findById(new BillingKeyId(organizationId, failed.getCustomerId(), mode))
+            .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
             .filter(key -> key.getArchivedAt() == null);
     if (billingKey.isEmpty()) return PaymentRetryEligibility.blocked("payment_method_missing");
-    var credential = tossPaymentsCredentialService.active(organizationId, mode);
+    var credential =
+        BusinessEnvironmentContext.environmentId() == null
+                && failed.getCredentialUpdatedAt() == null
+            ? tossPaymentsCredentialService.active(organizationId, mode)
+            : tossPaymentsCredentialService.chargeable(
+                organizationId,
+                mode,
+                failed.getCredentialUpdatedAt() == null
+                    ? failed.getRequestedAt()
+                    : failed.getCredentialUpdatedAt());
     if (credential.isEmpty()) return PaymentRetryEligibility.blocked("credentials_missing");
     if (paymentAttemptRepository
         .findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(organizationId, invoiceId)
@@ -79,8 +92,20 @@ public class PaymentRetryEligibilityService {
                     && TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(attempt.getFailureCode()))
         .anyMatch(
             attempt ->
-                PaymentRetryPolicy.isUnconfirmable(
-                    attempt, credential.get().getUpdatedAt(), OffsetDateTime.now())))
+                (BusinessEnvironmentContext.environmentId() == null
+                            && attempt.getCredentialUpdatedAt() == null
+                        ? java.util.Optional.of(credential.get())
+                        : tossPaymentsCredentialService.historical(
+                            organizationId,
+                            mode,
+                            attempt.getCredentialUpdatedAt() == null
+                                ? attempt.getRequestedAt()
+                                : attempt.getCredentialUpdatedAt()))
+                    .map(
+                        original ->
+                            PaymentRetryPolicy.isUnconfirmable(
+                                attempt, original.getUpdatedAt(), OffsetDateTime.now()))
+                    .orElse(true)))
       return PaymentRetryEligibility.blocked("payment_result_unconfirmed");
     if (paymentRetryPolicy.nextRetryAt(
             failed.getFailureCode(),

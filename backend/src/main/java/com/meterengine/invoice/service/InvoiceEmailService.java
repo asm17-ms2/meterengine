@@ -55,7 +55,8 @@ class InvoiceEmailService {
             recipientEmail,
             subject,
             templateEngine.process("mail/invoice", context),
-            invoice.getFinalizedAt()));
+            invoice.getFinalizedAt(),
+            invoice.getEnvironmentId()));
   }
 
   private static EmailLine toEmailLine(DraftInvoiceLine draftInvoiceLine) {

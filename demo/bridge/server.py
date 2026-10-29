@@ -86,6 +86,7 @@ class Sender:
         self.writer.write_run_header(
             _now_text(), self.config.base_url, self.organization.id, None,
             ["otel_bridge.py", "serve"],
+            source_fingerprint=ApiClient(self.config.base_url, self.config.api_key).source_fingerprint,
         )
 
     def _ensure_organization(self) -> bool:

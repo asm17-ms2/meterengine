@@ -181,10 +181,10 @@ class EventRejectionIntegrationTest {
   @Test
   void 같은_조직의_기존_테스트_실제_거절을_나누고_다른_조직을_숨긴다() {
     String session = TestCredentials.issueMemberSession(jdbcTemplate, organization);
-    for (String mode : List.of("legacy"))
+    for (String mode : List.of("legacy", "test", "live"))
       assertThat(post(session, mode, "/v1/events", event("same-attempt", UUID.randomUUID())))
           .hasStatus(404);
-    for (String mode : List.of("legacy"))
+    for (String mode : List.of("legacy", "test", "live"))
       assertThat(number(body(get(session, mode, "")), "$.total")).isEqualTo(1);
     assertThat(number(body(get(authorization, null, "")), "$.total")).isEqualTo(1);
     String other = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID(), "read");

@@ -1,5 +1,6 @@
 package com.meterengine.invoiceview.entity;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -12,6 +13,9 @@ public class InvoiceViewLink {
 
   @Column(name = "organization_id", nullable = false, updatable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
 
   @Column(name = "invoice_id", nullable = false, updatable = false)
   private UUID invoiceId;
@@ -58,6 +62,7 @@ public class InvoiceViewLink {
       boolean allowPaymentRetry) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.invoiceId = invoiceId;
     this.tokenHash = tokenHash;
     this.mode = mode;
@@ -68,6 +73,10 @@ public class InvoiceViewLink {
 
   public UUID getId() {
     return id;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public UUID getOrganizationId() {

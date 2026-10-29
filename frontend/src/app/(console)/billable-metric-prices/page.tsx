@@ -12,5 +12,6 @@ export default async function BillableMetricPricesPage({ searchParams }: { searc
   if (typeof params.month === "string") query.set("month", params.month);
   if (typeof params.customer_id === "string") query.set("customer_id", params.customer_id);
   const scope = new URLSearchParams({ organization_id: typeof params.organization_id === "string" ? params.organization_id : session.organization!.id });
+  if (typeof params.environment === "string") scope.set("environment", params.environment);
   redirect(workspaceHref(`/pricing${query.size ? `?${query}` : ""}`, scope));
 }

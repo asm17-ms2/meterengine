@@ -4,6 +4,7 @@ import com.meterengine.event.dto.EventRejectionResponse;
 import com.meterengine.event.dto.EventRejectionsResponse;
 import com.meterengine.event.service.EventRejection;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.PrincipalKind;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -45,7 +46,7 @@ public class EventRejectionRepository {
     List<Object> values = new ArrayList<>();
     for (EventRejection rejection : rejections) {
       values.add(organizationId);
-      values.add((UUID) null);
+      values.add(BusinessEnvironmentContext.environmentId());
       values.add(rejection.transactionId());
       values.add(rejection.customerId());
       values.add(rejection.type());
@@ -81,7 +82,7 @@ public class EventRejectionRepository {
             " WHERE organization_id=? AND environment_id IS NOT DISTINCT FROM ?::uuid AND recorded_at>=? AND recorded_at<?");
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add((UUID) null);
+    parameters.add(BusinessEnvironmentContext.environmentId());
     parameters.add(start);
     parameters.add(end);
     if (customerId != null) {

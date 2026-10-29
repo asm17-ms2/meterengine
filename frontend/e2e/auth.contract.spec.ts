@@ -83,10 +83,10 @@ test("signup sends displayed consent versions without stale Bearer or a password
 test("safe relative return targets and member admin denial", async ({ page }) => {
   for (const returnTo of ["https://example.com", "//example.com/customers", "//[", "/\\example.com", "/%2f%2fexample.com", "/admin/users", "/login", "javascript:alert(1)"]) {
     await login(page, "member@contract.local", returnTo);
-    await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && ["/customers", "/overview"].includes(url.pathname) && url.searchParams.get("organization_id") === ORGANIZATION_ID);
+    await expectTenantUrl(page, "/overview");
   }
   await page.goto("/admin/users");
-  await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && ["/customers", "/overview"].includes(url.pathname) && url.searchParams.get("organization_id") === ORGANIZATION_ID);
+  await expectTenantUrl(page, "/overview");
 });
 
 test("tenant actions recheck session after revocation, independently of route layout", async ({ page, request }) => {
@@ -96,7 +96,7 @@ test("tenant actions recheck session after revocation, independently of route la
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
-  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
@@ -523,18 +523,39 @@ test("suspended tenant blocks mutations but permits switching", async ({ page, r
   await expect(page.getByRole("status")).toContainText("이용 가능 여부");
 });
 
-test("logout keeps the session after a revocation failure and supports retry", async ({ page, request }) => {
+test("network failure is recoverable and logout does not claim success before revocation", async ({ page, request }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "로그아웃을 완료하지 못했습니다" })).toContainText("로그아웃을 완료하지 못했습니다");
   expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
-  await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
-  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(page.locator(".organization-link")).toContainText("계약 테스트 도입사");
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("375px forms and tenant header fit, keyboard focus and menu work", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/login");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "본문으로 이동" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("이메일", { exact: true })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "업무 메뉴 열기" })).toBeFocused();
 });
 
 test("server action replay on a public route cannot create a customer without a session", async ({ page, request }) => {
@@ -543,7 +564,7 @@ test("server action replay on a public route cannot create a customer without a 
   await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("액션 경계 확인");
   const actionRequest = page.waitForRequest(req => req.method() === "POST" && Boolean(req.headers()["next-action"]));
-  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
   const captured = await actionRequest;
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const before = await (await request.get(`${FIXTURE_URL}/__requests`)).json();

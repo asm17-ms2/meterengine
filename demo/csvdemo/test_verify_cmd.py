@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.jsonl_log import JsonlLogWriter
 from csvdemo.render import Console
-from core.api_client import ApiRequestError, ApiResult
+from core.api_client import ApiClient, ApiRequestError, ApiResult
 from csvdemo import verify_cmd
 from csvdemo.expected import BillableMetricMeta, build_expected, dimension_values_key
 from core.model import StoredEvent, parse_rfc3339
@@ -131,11 +131,28 @@ class ApiKeySourceTest(unittest.TestCase):
         source = _load_log_source(Args(self.path), self.console)
         self.assertEqual(source.organization_id, ORGANIZATION_ID)
 
+    def test_로그의_업무_환경을_상속하고_다른_키나_환경은_거절한다(self):
+        client = ApiClient("http://localhost:8080", KEY, environment="test")
+        with JsonlLogWriter(self.path) as writer:
+            writer.write_run_header("2026-08-24T10:00:00+09:00", client.base_url, ORGANIZATION_ID, None, [], environment="test", source_fingerprint=client.source_fingerprint)
+            _send(writer, 1)
+        args = Args(self.path)
+        source = _load_log_source(args, self.console)
+        self.assertEqual(source.client.environment, "test")
+        args.environment = "live"
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertIsNone(_load_log_source(args, self.console))
+        args.environment = "test"
+        args.api_key = "me_test_" + "a" * 32
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertIsNone(_load_log_source(args, self.console))
+
 
 class FakeVerifyClient:
-    def __init__(self, base_url, api_key, timeout_seconds=10.0):
+    def __init__(self, base_url, api_key, timeout_seconds=10.0, environment=None):
         self.base_url = base_url
         self.api_key = api_key
+        self.environment = environment
         self.asked = []
 
     def get_organization(self):

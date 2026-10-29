@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createServer } from "node:http";
 import { test } from "node:test";
 import type { IngestEventRequest } from "@meterengine/sdk";
 import { readConfig } from "./config.ts";
@@ -152,6 +153,68 @@ test("수집 실패 뒤 재기동해도 원래 월과 같은 거래 번호로 �
   assert.equal(recoveredClient.events[0].transaction_id, `lumen:alice:${id}`);
   await recovered.retryMetering(ACCOUNT_A, { requestId: id });
   assert.equal(recoveredClient.events.length, 1);
+});
+
+test("연결 키와 환경을 바꿔 이전 원장과 전송 대기를 재사용하지 못한다", async t => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "lumen-source-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const databasePath = path.join(directory, "test.sqlite");
+  const firstStore = new LumenStore(databasePath, [ACCOUNT_A]);
+  const original = { ...config(databasePath), meterEngineEnvironment: "test" as const };
+  const first = new LumenService({ config: original, store: firstStore, client: clientFixture({ async ingestEvent() { throw new Error("offline"); } }).client, now: () => NOW });
+  await first.generate(ACCOUNT_A, { requestId: randomUUID(), modelId: "lumen-fast", prompt: "보존할 요청" });
+  firstStore.close();
+  for (const changed of [{ meterEngineEnvironment: "live" as const }, { meterEngineApiKey: "another-key" }, { billingApiKey: "another-billing-key" }, { meterEngineBaseUrl: "http://localhost:9090" }]) {
+    const reopened = new LumenStore(databasePath, [ACCOUNT_A]);
+    try { assert.throws(() => new LumenService({ config: { ...original, ...changed }, store: reopened, client: clientFixture().client }), /별도 데이터 파일/); }
+    finally { reopened.close(); }
+  }
+  const same = new LumenStore(databasePath, [ACCOUNT_A]);
+  t.after(() => same.close());
+  const resumedClient = clientFixture();
+  const resumed = new LumenService({ config: original, store: same, client: resumedClient.client, now: () => NOW + 10000 });
+  await resumed.flushMetering();
+  assert.equal(resumedClient.events.length, 1);
+  assert.ok(!readFileSync(databasePath).includes(Buffer.from(original.meterEngineApiKey)));
+});
+
+test("연결 범위가 없는 기존 원장을 새 환경에 자동 배정하지 않는다", t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  store.reserveGeneration(ACCOUNT_A.id, randomUUID(), "lumen-fast", "Fast", "기존 요청", NOW);
+  assert.throws(() => new LumenService({ config: { ...config(), meterEngineEnvironment: "test" }, store, client: clientFixture().client }), /기존 요청의 MeterEngine 연결 설정을 확인할 수 없습니다/);
+});
+
+test("서비스 설정은 명시 환경만 허용하고 생략 시 키의 환경을 사용한다", () => {
+  assert.equal(readConfig({}).meterEngineEnvironment, undefined);
+  for (const environment of ["test", "live"]) assert.equal(readConfig(Object.fromEntries([["METERENGINE_ENVIRONMENT", environment]])).meterEngineEnvironment, environment);
+  assert.throws(() => readConfig(Object.fromEntries([["METERENGINE_ENVIRONMENT", "legacy"]])));
+});
+
+test("같은 고객의 test와 live 서비스가 실제 SDK 전송을 각 환경에만 보낸다", async t => {
+  const events: { environment: string; authorization: string; transactionId: string }[] = [];
+  const backend = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    const event = JSON.parse(body) as { transaction_id: string };
+    events.push({ environment: String(request.headers["x-meterengine-environment"]), authorization: String(request.headers.authorization), transactionId: event.transaction_id });
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ transaction_id: event.transaction_id, duplicate: false }));
+  });
+  await new Promise<void>(resolve => backend.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise<void>((resolve, reject) => backend.close(error => error ? reject(error) : resolve())));
+  const address = backend.address();
+  if (typeof address !== "object" || address === null) throw new Error("로컬 검증 서버가 없습니다");
+  const requestId = randomUUID();
+  for (const environment of ["test", "live"] as const) {
+    const store = new LumenStore(":memory:", [ACCOUNT_A]);
+    try {
+      const service: LumenService = new LumenService({ config: { ...config(), meterEngineBaseUrl: `http://127.0.0.1:${address.port}`, meterEngineApiKey: `local-key-${environment}`, meterEngineEnvironment: environment }, store, now: () => NOW });
+      const generated = await service.generate(ACCOUNT_A, { requestId, modelId: "lumen-fast", prompt: `${environment} 요청` });
+      assert.equal(generated.meteringStatus, "delivered");
+    } finally { store.close(); }
+  }
+  assert.deepEqual(events, ["test", "live"].map(environment => ({ environment, authorization: `Bearer local-key-${environment}`, transactionId: `lumen:alice:${requestId}` })));
 });
 
 test("응답이 유실된 수집도 같은 거래 번호로 다시 보내 중복 판정으로 마친다", async t => {

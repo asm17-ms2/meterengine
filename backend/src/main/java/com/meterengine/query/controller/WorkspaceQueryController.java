@@ -2,6 +2,7 @@ package com.meterengine.query.controller;
 
 import com.meterengine.customer.dto.CustomerResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableJson;
 import com.meterengine.global.validation.UnknownQueryParameterValidator;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 public class WorkspaceQueryController {
   private final WorkspaceQueryService workspaceQueryService;
   private final SearchCsvService searchCsvService;
@@ -43,10 +45,14 @@ public class WorkspaceQueryController {
 
   @GetMapping("/v1/customers/search")
   @ReadAccess
+  @EnvironmentReady
   @Operation(
       summary = "고객 검색과 서버 페이지 조회",
       description =
-          "q, external_id, customer_id, status(active/archived/all), sort(name/external_id/created_at/archived_at/id/billing_email), order, page, size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수다. 페이지는 1부터, size 기본 25/최대 200이다.")
+          "q, external_id, customer_id, status(active/archived/all),"
+              + " sort(name/external_id/created_at/archived_at/id/billing_email), order, page,"
+              + " size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수다. 페이지는 1부터, size 기본"
+              + " 25/최대 200이다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -97,7 +103,8 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "미터 검색과 서버 페이지 조회",
       description =
-          "q, billable_metric_code, status(active/archived/all), sort(code/name/event_type/aggregation/archived_at), order, page, size를 받는다.")
+          "q, billable_metric_code, status(active/archived/all),"
+              + " sort(code/name/event_type/aggregation/archived_at), order, page, size를 받는다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -144,7 +151,9 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "월별 가격 검색과 서버 페이지 조회",
       description =
-          "month, customer_id, billable_metric_code, q, status(미터 보관 상태), sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단가 수, 조건 전체 no_rate_count를 포함한다.")
+          "month, customer_id, billable_metric_code, q, status(미터 보관 상태),"
+              + " sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단가 수, 조건"
+              + " 전체 no_rate_count를 포함한다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -200,7 +209,9 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "고객 단위 사용량 검색과 서버 페이지 조회",
       description =
-          "month, customer_id, billable_metric_code, q, status(고객 보관 상태, 기본 all), sort(customer_name/customer_id/line_count), order, page, size를 받는다. 한 고객의 모든 미터를 같은 페이지에 둔다.")
+          "month, customer_id, billable_metric_code, q, status(고객 보관 상태, 기본 all),"
+              + " sort(customer_name/customer_id/line_count), order, page, size를 받는다. 한 고객의 모든 미터를"
+              + " 같은 페이지에 둔다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -255,7 +266,10 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "청구 예정액 검색과 페이지 독립 요약",
       description =
-          "month, customer_id, billable_metric_code, q, min_amount, max_amount, sort(customer_name/customer_id/amount/line_count), order, page, size를 받는다. amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를 확정하므로 finalization_scope는 month다.")
+          "month, customer_id, billable_metric_code, q, min_amount, max_amount,"
+              + " sort(customer_name/customer_id/amount/line_count), order, page, size를 받는다."
+              + " amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를 확정하므로"
+              + " finalization_scope는 month다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -315,7 +329,11 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "인보이스와 결제 상태 검색",
       description =
-          "customer_id, month, from/to(확정 시각, 날짜 종료일 포함/KST), status, mode, min_amount, max_amount, billable_metric_code, q, sort(month/customer_name/total_amount/finalized_at/invoice_number/status), order, page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립이며 pending이 있으면 outstanding_amount는 null이다.")
+          "customer_id, month, from/to(확정 시각, 날짜 종료일 포함/KST), status, mode, min_amount, max_amount,"
+              + " billable_metric_code, q,"
+              + " sort(month/customer_name/total_amount/finalized_at/invoice_number/status), order,"
+              + " page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립이며 pending이 있으면"
+              + " outstanding_amount는 null이다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -390,6 +408,7 @@ public class WorkspaceQueryController {
 
   @GetMapping("/v1/customers/options")
   @ReadAccess
+  @EnvironmentReady
   @Operation(
       summary = "고객 선택지 검색",
       description =
@@ -515,6 +534,7 @@ public class WorkspaceQueryController {
 
   @GetMapping(value = "/v1/customers/export", produces = "text/csv")
   @ReadAccess
+  @EnvironmentReady
   @Operation(
       summary = "고객 검색 결과 CSV",
       description = "현재 페이지가 아니라 같은 검색 조건의 전체 결과를 내보낸다. 최대 10000행이며 초과하면 범위를 좁히도록 400을 반환한다.")

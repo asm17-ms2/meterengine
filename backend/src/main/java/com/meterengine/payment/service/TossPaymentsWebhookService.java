@@ -61,26 +61,40 @@ public class TossPaymentsWebhookService {
     JsonNode data = event.path("data");
     Optional<PaymentAttempt> attempt =
         parseUuid(stringField(data.path("orderId")))
-            .flatMap(
-                orderId ->
-                    paymentAttemptRepository.findByOrganizationIdAndId(organizationId, orderId));
+            .flatMap(orderId -> paymentAttemptRepository.findUnscoped(organizationId, orderId));
     if (attempt.isEmpty() || !awaitsSettlement(attempt.get())) {
       paymentMetrics.countWebhook(eventType, PaymentMetrics.IGNORED);
       return;
     }
+    PaymentEnvironments.call(
+        organizationId,
+        attempt.get().getEnvironmentId(),
+        attempt.get().getMode(),
+        () -> {
+          receiveAttempt(organizationId, eventType, data, attempt.get());
+          return null;
+        });
+  }
+
+  private void receiveAttempt(
+      UUID organizationId, String eventType, JsonNode data, PaymentAttempt attempt) {
     Optional<TossPaymentsCredential> credential =
         tossPaymentsCredentialService.historical(
-            organizationId, attempt.get().getMode(), attempt.get().getRequestedAt());
+            organizationId,
+            attempt.getMode(),
+            attempt.getCredentialUpdatedAt() == null
+                ? attempt.getRequestedAt()
+                : attempt.getCredentialUpdatedAt());
     if (credential.isEmpty()) {
-      logOutcome(organizationId, attempt.get().getId(), PaymentMetrics.IGNORED, null);
+      logOutcome(organizationId, attempt.getId(), PaymentMetrics.IGNORED, null);
       paymentMetrics.countWebhook(eventType, PaymentMetrics.IGNORED);
       return;
     }
     String outcome =
         reflect(
-            attempt.get(),
+            attempt,
             credential.get().getSecretKey(),
-            lookupPaymentKey(attempt.get(), stringField(data.path("paymentKey"))));
+            lookupPaymentKey(attempt, stringField(data.path("paymentKey"))));
     paymentMetrics.countWebhook(eventType, outcome);
   }
 

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
+import { FontProvider } from "@/components/FontProvider";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import "./globals.css";
+
+const pretendard = localFont({ src: "./fonts/PretendardVariable.woff2", variable: "--font-pretendard", weight: "100 900", display: "swap", fallback: ["Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"] });
 
 export const metadata: Metadata = {
   title: { default: "Lumen | 나의 AI 작업 공간", template: "%s | Lumen" },
@@ -9,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ko"><body><AntdRegistry><a href="#main-content" className="skip-link">본문으로 이동</a>{children}</AntdRegistry></body></html>;
+  return <html lang="ko" className={pretendard.variable}><body><AntdRegistry><FontProvider><a href="#main-content" className="skip-link">본문으로 이동</a>{children}</FontProvider></AntdRegistry></body></html>;
 }

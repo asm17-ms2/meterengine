@@ -17,6 +17,9 @@ public class PricePlan implements Persistable<UUID> {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
+
   @Column(name = "customer_id")
   private UUID customerId;
 
@@ -111,6 +114,10 @@ public class PricePlan implements Persistable<UUID> {
     return isNew;
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -133,5 +140,17 @@ public class PricePlan implements Persistable<UUID> {
 
   public long getMinimumAmount() {
     return minimumAmount;
+  }
+
+  public PricePlan(
+      UUID organizationId,
+      UUID customerId,
+      String effectiveFrom,
+      String effectiveUntil,
+      long baseFee,
+      long minimumAmount,
+      UUID environmentId) {
+    this(organizationId, customerId, effectiveFrom, effectiveUntil, baseFee, minimumAmount);
+    this.environmentId = environmentId;
   }
 }

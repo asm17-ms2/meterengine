@@ -16,7 +16,7 @@ CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample-events-ed
 class RejectingClient:
     created = []
 
-    def __init__(self, base_url, api_key, timeout_seconds=10.0):
+    def __init__(self, base_url, api_key, timeout_seconds=10.0, environment=None):
         self.base_url = base_url
         self.api_key = api_key
         RejectingClient.created.append(api_key)

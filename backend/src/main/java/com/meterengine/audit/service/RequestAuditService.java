@@ -34,8 +34,16 @@ public class RequestAuditService implements RequestAuditRecorder {
     detail.put("status", status);
     detail.put("duration_ms", durationMillis);
     detail.put("request_id", requestId.toString());
+    if (principal != null && principal.environmentId() != null)
+      detail.put("environment_id", principal.environmentId().toString());
     if (!target.idByVariable().isEmpty()) detail.put("path_ids", target.idByVariable());
     if (target.mode() != null) detail.put("mode", target.mode());
-    auditLogService.record(actor, "api_request_completed", "http_request", target.id(), detail);
+    auditLogService.record(
+        actor,
+        "api_request_completed",
+        "http_request",
+        target.id(),
+        detail,
+        principal == null ? null : principal.environmentId());
   }
 }

@@ -6,6 +6,7 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
@@ -126,8 +127,7 @@ public class PaymentAttemptService {
     PaymentCreation creation =
         transactionTemplate.execute(
             status -> {
-              invoiceRepository
-                  .findForUpdate(organizationId, invoiceId)
+              lockInvoice(organizationId, invoiceId)
                   .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
               authorizationCheck.run();
               PaymentCreation checked = prepare(organizationId, invoiceId, principalMode, testCode);
@@ -165,23 +165,39 @@ public class PaymentAttemptService {
   }
 
   PaymentAttemptResponse approve(PaymentAttempt pendingAttempt, String testCode) {
+    return PaymentEnvironments.call(
+        pendingAttempt.getOrganizationId(),
+        pendingAttempt.getEnvironmentId(),
+        pendingAttempt.getMode(),
+        () -> approveScoped(pendingAttempt, testCode));
+  }
+
+  private PaymentAttemptResponse approveScoped(PaymentAttempt pendingAttempt, String testCode) {
     UUID organizationId = pendingAttempt.getOrganizationId();
     UUID attemptId = pendingAttempt.getId();
     String mode = pendingAttempt.getMode();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.active(organizationId, mode);
+        pendingAttempt.getCredentialUpdatedAt() != null
+            ? tossPaymentsCredentialService.chargeable(
+                organizationId, mode, pendingAttempt.getCredentialUpdatedAt())
+            : pendingAttempt.getEnvironmentId() == null
+                ? tossPaymentsCredentialService.active(organizationId, mode)
+                : tossPaymentsCredentialService.chargeable(
+                    organizationId, mode, pendingAttempt.getRequestedAt());
     if (credential.isEmpty()) {
       return failWithoutToss(pendingAttempt, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
     }
     Optional<BillingKey> billingKey =
         findBillingKey(organizationId, pendingAttempt.getCustomerId(), mode);
-    if (billingKey.isEmpty()) {
+    if (billingKey.isEmpty() && pendingAttempt.getBillingKeySnapshot() == null) {
       return failWithoutToss(pendingAttempt, ErrorCode.PAYMENT_METHOD_MISSING);
     }
     TossPaymentsResult<TossPaymentsPayment> result =
         tossPaymentsClient.approveBilling(
             credential.get().getSecretKey(),
-            billingKey.get().getBillingKey(),
+            pendingAttempt.getBillingKeySnapshot() == null
+                ? billingKey.orElseThrow().getBillingKey()
+                : pendingAttempt.getBillingKeySnapshot(),
             new TossPaymentsApproveBillingRequest(
                 pendingAttempt.getCustomerId().toString(),
                 pendingAttempt.getAmount(),
@@ -301,9 +317,21 @@ public class PaymentAttemptService {
       String orderName,
       AuditActor actor) {
     PaymentAttempt attempt =
-        paymentAttemptRepository.saveAndFlush(
-            PaymentAttempt.pending(
-                UUID.randomUUID(), organizationId, customerId, invoiceId, mode, amount, orderName));
+        PaymentAttempt.pending(
+            UUID.randomUUID(), organizationId, customerId, invoiceId, mode, amount, orderName);
+    findBillingKey(organizationId, customerId, mode)
+        .ifPresent(
+            key -> {
+              attempt.pinBillingKey(key.getBillingKey());
+              if (key.getCredentialUpdatedAt() != null)
+                attempt.pinCredential(key.getCredentialUpdatedAt());
+            });
+    if (attempt.getCredentialUpdatedAt() == null) {
+      tossPaymentsCredentialService
+          .active(organizationId, mode)
+          .ifPresent(credential -> attempt.pinCredential(credential.getUpdatedAt()));
+    }
+    paymentAttemptRepository.saveAndFlush(attempt);
     Map<String, Object> detail =
         Map.of("invoice_id", invoiceId, "customer_id", customerId, "mode", mode, "amount", amount);
     if (actor == null) {
@@ -415,25 +443,31 @@ public class PaymentAttemptService {
     return false;
   }
 
-  // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 키가 바뀌었으면 다시 묻지 않는다.
+  // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 그 시도의 키로 물을 수 없으면 다시 묻지 않는다.
   private boolean isConfirmedUncharged(PaymentCreation creation, PaymentAttempt attempt) {
-    boolean credentialChanged =
-        !creation.credential().getUpdatedAt().isBefore(attempt.getRequestedAt());
+    Optional<TossPaymentsCredential> original =
+        attempt.getEnvironmentId() == null && attempt.getCredentialUpdatedAt() == null
+            ? Optional.of(creation.credential())
+            : tossPaymentsCredentialService.historical(
+                attempt.getOrganizationId(),
+                attempt.getMode(),
+                attempt.getCredentialUpdatedAt() == null
+                    ? attempt.getRequestedAt()
+                    : attempt.getCredentialUpdatedAt());
     if (!attempt.getId().equals(creation.latestAttemptId())) {
-      return credentialChanged
-          || isUncharged(
-              attempt.getId(), attempt.getRequestedAt().toInstant(), creation.credential());
+      return original.isEmpty()
+          || !original.get().getUpdatedAt().isBefore(attempt.getRequestedAt())
+          || isUncharged(attempt.getId(), attempt.getRequestedAt().toInstant(), original.get());
     }
-    return !PaymentRetryPolicy.isUnconfirmable(attempt, creation.credential().getUpdatedAt(), now())
-        && isUncharged(
-            attempt.getId(), attempt.getRequestedAt().toInstant(), creation.credential());
+    return original.isPresent()
+        && !PaymentRetryPolicy.isUnconfirmable(attempt, original.get().getUpdatedAt(), now())
+        && isUncharged(attempt.getId(), attempt.getRequestedAt().toInstant(), original.get());
   }
 
   private PaymentCreation prepare(
       UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
     Invoice invoice =
-        invoiceRepository
-            .findForUpdate(organizationId, invoiceId)
+        lockInvoice(organizationId, invoiceId)
             .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
     if (invoice.getTotalAmount() <= 0) {
       throw new ConflictException(ErrorCode.INVOICE_AMOUNT_ZERO);
@@ -489,7 +523,7 @@ public class PaymentAttemptService {
       Runnable authorizationCheck) {
     UUID organizationId = checked.invoice().getOrganizationId();
     UUID invoiceId = checked.invoice().getId();
-    invoiceRepository.findForUpdate(organizationId, invoiceId).orElseThrow();
+    lockInvoice(organizationId, invoiceId).orElseThrow();
     for (UUID attemptId : checked.uncertainAttemptIds().stream().sorted().toList()) {
       paymentAttemptRepository.findForUpdate(organizationId, attemptId).orElseThrow();
     }
@@ -548,14 +582,24 @@ public class PaymentAttemptService {
   }
 
   private Invoice findInvoice(UUID organizationId, UUID invoiceId) {
-    return invoiceRepository
-        .findByOrganizationIdAndId(organizationId, invoiceId)
+    return (BusinessEnvironmentContext.environmentId() == null
+            ? invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId)
+            : invoiceRepository.findScoped(
+                organizationId, BusinessEnvironmentContext.environmentId(), invoiceId))
         .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
+  }
+
+  private Optional<Invoice> lockInvoice(UUID organizationId, UUID invoiceId) {
+    return BusinessEnvironmentContext.environmentId() == null
+        ? invoiceRepository.findForUpdate(organizationId, invoiceId)
+        : invoiceRepository.lockScoped(
+            organizationId, BusinessEnvironmentContext.environmentId(), invoiceId);
   }
 
   private Optional<BillingKey> findBillingKey(UUID organizationId, UUID customerId, String mode) {
     return billingKeyRepository
         .findById(new BillingKeyId(organizationId, customerId, mode))
+        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(key -> key.getArchivedAt() == null);
   }
 

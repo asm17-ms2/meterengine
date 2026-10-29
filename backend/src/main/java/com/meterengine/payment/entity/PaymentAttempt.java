@@ -1,8 +1,10 @@
 package com.meterengine.payment.entity;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -19,6 +21,12 @@ public class PaymentAttempt implements Persistable<UUID> {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id")
+  private UUID environmentId;
+
+  @Column(name = "credential_updated_at")
+  private OffsetDateTime credentialUpdatedAt;
 
   @Column(name = "customer_id", nullable = false)
   private UUID customerId;
@@ -53,6 +61,17 @@ public class PaymentAttempt implements Persistable<UUID> {
   @Column(name = "completed_at")
   private OffsetDateTime completedAt;
 
+  @Transient private String billingKeySnapshot;
+
+  public PaymentAttempt pinBillingKey(String billingKey) {
+    this.billingKeySnapshot = billingKey;
+    return this;
+  }
+
+  public String getBillingKeySnapshot() {
+    return billingKeySnapshot;
+  }
+
   protected PaymentAttempt() {}
 
   private PaymentAttempt(
@@ -66,6 +85,7 @@ public class PaymentAttempt implements Persistable<UUID> {
       OffsetDateTime requestedAt) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.customerId = customerId;
     this.invoiceId = invoiceId;
     this.mode = mode;
@@ -102,6 +122,19 @@ public class PaymentAttempt implements Persistable<UUID> {
   @Override
   public boolean isNew() {
     return true;
+  }
+
+  public OffsetDateTime getCredentialUpdatedAt() {
+    return credentialUpdatedAt;
+  }
+
+  public PaymentAttempt pinCredential(OffsetDateTime credentialUpdatedAt) {
+    this.credentialUpdatedAt = credentialUpdatedAt;
+    return this;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
   }
 
   public UUID getOrganizationId() {

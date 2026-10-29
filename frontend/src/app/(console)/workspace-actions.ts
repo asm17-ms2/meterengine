@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { readEnvironment } from "@/lib/environment";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
@@ -24,11 +26,14 @@ function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_IN
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
   const session = await requireTenantSession();
+  const environment = readEnvironment(text(data, "environment"));
+  if (environment !== readEnvironment((await headers()).get("x-meterengine-environment"))) return { message: "열어 둔 화면과 요청의 업무 환경이 다릅니다. 환경을 확인한 뒤 다시 시도하세요." };
 
   let path: string;
   let method: "POST" | "PUT" | "PATCH" | "DELETE" = "POST";
   let body: unknown;
   const operation = text(data, "operation");
+  if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   if (!text(data, "organization_id") || text(data, "organization_id") !== session.organization?.id) return { message: "열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요." };
   try {
@@ -89,7 +94,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {
-    method, body,
+    method, body, environment,
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
     ifMatch: operation === "updateCustomer" ? `"${text(data, "version")}"` : undefined,
     idempotencyKey: ["createPaymentCancellation", "createCustomer"].includes(operation) ? text(data, "request_id") : undefined,
@@ -103,7 +108,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");
-  const redirectScope = new URLSearchParams({ organization_id: session.organization!.id });
+  const redirectScope = new URLSearchParams({ organization_id: session.organization!.id, environment });
   if (operation === "deleteCustomer") redirect(workspaceHref("/customers?status=archived", redirectScope));
   if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
   if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));

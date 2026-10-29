@@ -2,6 +2,7 @@ package com.meterengine.organization.controller;
 
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.organization.dto.OrganizationResponse;
 import com.meterengine.organization.dto.SupplierResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/organization")
 public class CurrentOrganizationController {
 
