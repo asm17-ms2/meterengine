@@ -131,7 +131,7 @@ class AuditQueryAndRequestIntegrationTest {
         new BusinessEnvironment(organizationId, environmentId, "test"),
         () ->
             requestAuditService.record(
-                null, "GET", "/v1/unknown", 401, 1, anonymous, RequestAuditTarget.empty()));
+                null, "GET", "/v1/unknown", 400, 1, anonymous, RequestAuditTarget.empty()));
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT environment_id FROM audit_log WHERE detail->>'request_id'=?",
@@ -309,20 +309,43 @@ class AuditQueryAndRequestIntegrationTest {
   }
 
   @Test
-  void 미인증실패와_잘못된인증도_기록하고_감사행은_수정할_수_없다() {
+  void 주체_없는_401은_요청_감사에_남기지_않는다() {
     MvcTestResult anonymous = mvc.get().uri("/v1/customers").exchange();
     assertThat(anonymous).hasStatus(401);
-    assertThat(requestAudit(anonymous))
-        .containsEntry("actor_type", "anonymous")
-        .containsEntry("status", "401");
     MvcTestResult invalid =
         mvc.get()
             .uri("/v1/customers")
             .header(AUTHORIZATION, "Bearer invalid-secret-value")
             .exchange();
     assertThat(invalid).hasStatus(401);
-    assertThat(requestAudit(invalid)).containsEntry("actor_type", "anonymous");
-    String requestId = invalid.getResponse().getHeader("X-Request-ID");
+
+    assertThat(requestAuditCount(anonymous)).isZero();
+    assertThat(requestAuditCount(invalid)).isZero();
+  }
+
+  @Test
+  void 주체_없는_429는_로그인과_가입만_요청_감사에_남긴다() {
+    UUID other = UUID.randomUUID();
+    UUID login = UUID.randomUUID();
+    UUID signup = UUID.randomUUID();
+    requestAuditService.record(
+        null, "GET", "/v1/customers", 429, 1, other, RequestAuditTarget.empty());
+    requestAuditService.record(
+        null, "POST", "/v1/sessions", 429, 1, login, RequestAuditTarget.empty());
+    requestAuditService.record(
+        null, "POST", "/v1/signups", 429, 1, signup, RequestAuditTarget.empty());
+
+    assertThat(requestAuditCount(other)).isZero();
+    assertThat(requestAuditCount(login)).isOne();
+    assertThat(requestAuditCount(signup)).isOne();
+  }
+
+  @Test
+  void 요청_감사행은_수정할_수_없다() {
+    String key = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID(), "read");
+    MvcTestResult read = mvc.get().uri("/v1/customers").header(AUTHORIZATION, key).exchange();
+    assertThat(read).hasStatusOk();
+    String requestId = read.getResponse().getHeader("X-Request-ID");
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
@@ -480,6 +503,17 @@ class AuditQueryAndRequestIntegrationTest {
     MvcTestResult result = request.exchange();
     assertThat(result).hasStatusOk();
     return JsonPath.read(body(result), "$.audit_logs[*].id");
+  }
+
+  private long requestAuditCount(MvcTestResult result) {
+    return requestAuditCount(UUID.fromString(result.getResponse().getHeader("X-Request-ID")));
+  }
+
+  private long requestAuditCount(UUID requestId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM audit_log WHERE detail->>'request_id'=?",
+        Long.class,
+        requestId.toString());
   }
 
   private long requestAuditCount() {

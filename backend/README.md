@@ -222,7 +222,7 @@ unset SESSION
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
-- 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다(이벤트 수집 요청은 감사 행을 남기지 않는다).
+- 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다. 이벤트 수집 요청과, 로그인과 가입이 아닌 요청의 주체 없는 401과 429는 감사 행을 남기지 않고 `http.server.requests` 지표와 요청 로그로만 센다.
 - 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
