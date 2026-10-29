@@ -91,7 +91,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   if (!invoice.ok || !attempts.ok) {
     const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
     return <>
-      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"} kicker="도입사 콘솔"
+      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"}
         description={failure?.status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
         <Link href="/payments">수납 목록으로</Link>
       </WorkspaceHeader>
@@ -110,7 +110,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   const state = currentPayment ? PAYMENT_STATES[currentPayment.status] : undefined;
   const canCollect = currentPayment && ["unpaid", "failed"].includes(currentPayment.status);
   return <>
-    <WorkspaceHeader title={invoice.data.customer_name + "의 수납"} kicker="도입사 콘솔"
+    <WorkspaceHeader title={invoice.data.customer_name + "의 수납"}
       description={invoice.data.month + " 청구액 " + formatKrw(invoice.data.total_amount) + ". 확정 금액은 결제와 취소 이후에도 보존됩니다."}>
       <Link href={"/customers/" + invoice.data.customer_id + "?month=" + invoice.data.month}>고객으로 이동</Link>
       <a href="">내역 새로 조회</a>

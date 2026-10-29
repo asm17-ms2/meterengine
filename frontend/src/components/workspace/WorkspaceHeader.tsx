@@ -3,8 +3,8 @@
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 import { readEnvironment } from "@/lib/environment";
 
-export function WorkspaceHeader({ title, description, kicker, children }: { title: string; description: string; kicker?: string; children?: React.ReactNode }) {
-  return <div className="workspace-heading"><div>{kicker && <span className="workspace-kicker">{kicker}</span>}<h1>{title}</h1><p>{description}</p></div>{children && <div className="workspace-actions">{children}</div>}</div>;
+export function WorkspaceHeader({ title, description, children }: { title: string; description: string; children?: React.ReactNode }) {
+  return <div className="workspace-heading"><div><h1>{title}</h1><p>{description}</p></div>{children && <div className="workspace-actions">{children}</div>}</div>;
 }
 
 export function MonthFilter({ month, preserve = ["customer_id", "environment", "organization_id"] }: { month: string; preserve?: string[] }) {

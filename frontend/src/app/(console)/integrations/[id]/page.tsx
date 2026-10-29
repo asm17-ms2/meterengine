@@ -18,7 +18,7 @@ export default async function WebhookDetailPage({ params, searchParams }: { para
   const [endpoint, deliveries] = await Promise.all([workspaceFetch<{ url: string; enabled: boolean; event_types: string[]; description: string | null; archived_at?: string | null }>(`/v1/webhook-endpoints/${encodeURIComponent(id)}`), workspaceFetch<{ total: number; deliveries: WebhookDeliveryResponse[] }>(`/v1/webhook-endpoints/${encodeURIComponent(id)}/deliveries`, { page: String(page), size: "20" })]);
   if (!endpoint.ok || !deliveries.ok) return <WorkspaceError message={!endpoint.ok ? endpoint.error.message : !deliveries.ok ? deliveries.error.message : "조회하지 못했습니다."} />;
   return <>
-    <WorkspaceHeader title="통보 발송 내역" kicker="도입사 콘솔" description={endpoint.data.url}><Link href={`/integrations?status=${endpoint.data.archived_at ? "archived" : "active"}`}>연동 설정으로</Link></WorkspaceHeader>
+    <WorkspaceHeader title="통보 발송 내역" description={endpoint.data.url}><Link href={`/integrations?status=${endpoint.data.archived_at ? "archived" : "active"}`}>연동 설정으로</Link></WorkspaceHeader>
     {endpoint.data.archived_at && <p role="status">보관된 수신 주소입니다. 발송은 중단되며 과거 내역은 유지됩니다.</p>}
     <div className="workspace-actions">
       {endpoint.data.archived_at ? <ActionPanel title="수신 주소 복원" operation="restoreWebhookEndpoint" description="수신 주소를 복원합니다. 발송 상태와 통보 종류를 확인한 뒤 시험 통보로 연결을 점검하세요." fields={[{ name: "id", label: "", type: "hidden", value: id }]} /> : <>

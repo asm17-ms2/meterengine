@@ -33,7 +33,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: metric.name, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];
   const cardRows = cards.ok ? cards.data.payment_methods.filter(method => method.customer_id === id).map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
-    <WorkspaceHeader title={detail.name} kicker="도입사 콘솔" description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
+    <WorkspaceHeader title={detail.name} description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
     <section className="workspace-panel">
       {detail.archived_at && <p role="status">보관된 고객입니다. 과거 내역은 유지되며 복원 전에는 신규 업무와 사용량 수집을 할 수 없습니다.</p>}
       <dl className="detail-strip"><div><dt>외부 고객 ID</dt><dd>{detail.external_id ?? "연결하지 않음"}</dd></div><div><dt>청구 이메일</dt><dd>{detail.billing_email ?? "등록하지 않음"}</dd></div><div><dt>현재 등록 카드</dt><dd>{card.ok ? `${card.data.card_number} (${card.data.mode === "test" ? "테스트 결제" : "실결제"}${card.data.archived_at ? ", 보관" : ""})` : card.error.status === 404 ? "등록 카드 없음" : "조회 실패"}</dd></div></dl>

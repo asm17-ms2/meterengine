@@ -25,7 +25,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const [keys, activeKeys, webhooks] = await Promise.all([keyStatus === "active" ? activeKeysRequest : workspaceFetch<{ api_keys: ApiKeyResponse[] }>("/v1/api-keys", { status: keyStatus }), activeKeysRequest, workspaceFetch<{ endpoints: WebhookEndpointResponse[] }>("/v1/webhook-endpoints", { status })]);
   const keyRows = keys.ok ? keys.data.api_keys : [];
   return <>
-    <WorkspaceHeader title="API 키와 통보" kicker="도입사 콘솔" description="사용량 전송과 청구 조회에 사용할 서버 연동 키를 관리하고, 처리 결과를 웹훅으로 받으세요." />
+    <WorkspaceHeader title="API 키와 통보" description="사용량 전송과 청구 조회에 사용할 서버 연동 키를 관리하고, 처리 결과를 웹훅으로 받으세요." />
     <section className="workspace-panel">
       <div className="workspace-heading"><div><h2>서버 연동 키</h2><p className="field-hint">API 키는 서버의 권한입니다. 사람의 관리 권한은 사용자 관리에서 정합니다.</p></div><ActionPanel title="API 키 발급" operation="createApiKey" description="원문은 발급 직후 한 번만 표시됩니다. 도입사 서버의 비밀 저장소에 보관하세요." fields={[
         { name: "label", label: "키 이름", placeholder: "고객 포털 조회 서버", maxLength: 255 },

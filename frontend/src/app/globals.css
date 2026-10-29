@@ -117,7 +117,6 @@ p { line-height: 1.7; }
 .workflow-nav small { display: block; font-size: 10px; margin-bottom: 3px; }.workflow-nav strong { font-size: 13px; }
 .workspace-content { max-width: 1450px; padding: 32px 38px 70px; display: flex; flex-direction: column; gap: 28px; }
 .workspace-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; flex-wrap: wrap; }.workspace-heading h1 { font-size: var(--screen-title-size); margin: 0 0 4px; }.workspace-heading p { color: #5a6578; margin: 0; max-width: 650px; }
-.workspace-kicker { text-transform: uppercase; font: 11px "SFMono-Regular", Consolas, monospace; letter-spacing: .14em; color: #5746ad; }
 .workspace-panel { padding: 26px; background: #fff; border: 1px solid #dce1eb; border-radius: 9px; min-width: 0; }.workspace-panel h2 { font-size: 17px; margin-bottom: 18px; letter-spacing: -.02em; }.workspace-panel h3 { font-size: 14px; }
 .workspace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .finance-flow { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); background: #fff; border: 1px solid #dce1eb; border-radius: 9px; overflow: hidden; }.finance-flow > div { padding: 28px 24px; border-right: 1px solid #e7eaf1; }.finance-flow > div:last-child { border: 0; }.finance-flow > .is-settled { background: #f0f8f7; }.finance-flow span { display: block; color: #5a6578; font-size: 12px; }.finance-flow strong { display: block; margin: 14px 0 10px; font: 600 clamp(21px,2vw,31px) var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; letter-spacing: -.05em; }.finance-flow small { color: #78839a; }
@@ -144,7 +143,6 @@ input, textarea { caret-color: var(--blue); }
 .workspace-heading > div { min-width: 0; max-width: 100%; }
 .workspace-heading h1, .workspace-heading p, .setup-list li > div, .setup-list strong, .organization-link, .detail-strip dd { overflow-wrap: anywhere; }
 .workspace-heading h1 { letter-spacing: -.03em; text-wrap: balance; }
-.workspace-kicker { display: none; }
 .workspace-panel { display: flex; flex-direction: column; gap: 20px; }
 .workspace-panel > :last-child { margin-bottom: 0; }
 .workspace-panel h2, .workspace-panel .workspace-heading, .workspace-panel > p { margin-bottom: 0; }
