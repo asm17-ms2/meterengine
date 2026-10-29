@@ -73,6 +73,10 @@ public class ScheduledJobRunService {
     return scheduledJobRunRepository.findLastCleanScheduledAt(jobName, before);
   }
 
+  public Optional<OffsetDateTime> earliest(String jobName, OffsetDateTime before) {
+    return scheduledJobRunRepository.findFirstScheduledAt(jobName, before);
+  }
+
   private void refreshLastSuccess(String jobName) {
     scheduledJobRunRepository
         .findLastSucceededFinishedAt(jobName)

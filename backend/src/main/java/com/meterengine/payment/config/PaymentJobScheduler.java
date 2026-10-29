@@ -80,12 +80,19 @@ public class PaymentJobScheduler {
   }
 
   // 실패하거나 빠진 날은 마지막으로 실패 없이 끝난 슬롯부터 최대 7일 전까지 이어서 맞춘다.
+  // 실패 없이 끝난 적이 없으면 가장 이른 실행의 창부터 맞춘다.
   private OffsetDateTime reconciliationStart(OffsetDateTime slot) {
-    OffsetDateTime earliest = slot.minus(MAX_CATCH_UP);
-    return scheduledJobRunService
-        .watermark(RECONCILIATION, slot)
-        .map(clean -> clean.isBefore(earliest) ? earliest : clean)
-        .orElse(slot.minusDays(1));
+    OffsetDateTime limit = slot.minus(MAX_CATCH_UP);
+    OffsetDateTime start =
+        scheduledJobRunService
+            .watermark(RECONCILIATION, slot)
+            .or(
+                () ->
+                    scheduledJobRunService
+                        .earliest(RECONCILIATION, slot)
+                        .map(first -> first.minusDays(1)))
+            .orElse(slot.minusDays(1));
+    return start.isBefore(limit) ? limit : start;
   }
 
   private OffsetDateTime minute() {

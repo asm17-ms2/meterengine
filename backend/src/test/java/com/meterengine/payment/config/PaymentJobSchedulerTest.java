@@ -107,6 +107,21 @@ class PaymentJobSchedulerTest {
     verify(paymentReconciliationService).reconcile(slot, slot.minusDays(7));
   }
 
+  @Test
+  void 성공_기록_없이_첫_대사가_실패했으면_다음_날은_그_실행의_창부터_맞춘다() {
+    OffsetDateTime firstSlot = OffsetDateTime.parse("2026-10-26T04:00+09:00");
+    OffsetDateTime slot = OffsetDateTime.parse("2026-10-27T04:00+09:00");
+    when(scheduledJobRunService.earliest("payment_reconciliation", slot))
+        .thenReturn(Optional.of(firstSlot));
+    when(paymentReconciliationService.reconcile(slot, firstSlot.minusDays(1)))
+        .thenReturn(new PaymentJobResult(2, 3, 1));
+    assertResult("payment_reconciliation", slot);
+
+    paymentJobScheduler.reconcile();
+
+    verify(paymentReconciliationService).reconcile(slot, firstSlot.minusDays(1));
+  }
+
   private void assertResult(String name, OffsetDateTime slot) {
     doAnswer(
             invocation -> {

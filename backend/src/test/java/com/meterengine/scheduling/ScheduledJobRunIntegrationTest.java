@@ -93,6 +93,26 @@ class ScheduledJobRunIntegrationTest {
   }
 
   @Test
+  void 첫_실행이_실패만_남겼으면_기준점은_없고_가장_이른_슬롯은_그_실패다() {
+    String jobName = newJobName();
+    OffsetDateTime failed = SCHEDULED_AT.minusDays(1);
+    assertThatThrownBy(
+            () ->
+                scheduledJobRunService.run(
+                    jobName,
+                    failed,
+                    () -> {
+                      throw new IllegalStateException("실패");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(scheduledJobRunService.watermark(jobName, SCHEDULED_AT)).isEmpty();
+    assertThat(scheduledJobRunService.earliest(jobName, SCHEDULED_AT))
+        .hasValueSatisfying(slot -> assertThat(slot).isAtSameInstantAs(failed));
+    assertThat(scheduledJobRunService.earliest(jobName, failed)).isEmpty();
+  }
+
+  @Test
   void 슬롯이_다르면_둘_다_실행된다() throws Exception {
     String jobName = newJobName();
     AtomicInteger executions = new AtomicInteger();
