@@ -216,6 +216,19 @@ class EventIssueIntegrationTest {
   }
 
   @Test
+  void 확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다() {
+    jdbcTemplate.update(
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,'진단 고객','2026-10',0,0,0,now())",
+        organization,
+        customer);
+    String json = body(get(read, "&reason=unpriced_usage"));
+    assertThat((List<String>) JsonPath.read(json, "$.issues[*].action_hint"))
+        .singleElement()
+        .asString()
+        .contains("확정");
+  }
+
+  @Test
   void 음수_경고는_이벤트와_미터_조합_수를_센다() {
     metric("tokens-peak", "usage", "max", "tokens", "{model}");
     assertThat(number(body(get(read, "")), "$.warnings.negative_event_metric_count")).isEqualTo(2);
