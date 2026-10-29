@@ -140,6 +140,30 @@ class WorkspaceQueryIntegrationTest {
   }
 
   @Test
+  void 기한부_단가를_보관하면_원래_종료월부터_이전_단가를_다시_조회한다() {
+    metric("alpha", "대상", "type-alpha");
+    rate("alpha", "2026-01", 1, null);
+    rate("alpha", "2026-02", 2, "2026-03");
+    jdbc.update(
+        "UPDATE price_rate SET effective_until='2026-04' WHERE organization_id=? AND billable_metric_code='alpha' AND effective_from='2026-02'",
+        organizationId);
+
+    JsonNode archived = data(get("/v1/billable-metric-prices/search?month=2026-03"));
+    assertThat(archived.get("items").get(0).get("price_rates").size()).isZero();
+    assertThat(archived.get("items").get(0).get("rate_count").asInt()).isZero();
+    assertThat(archived.get("summary").get("no_rate_count").asInt()).isEqualTo(1);
+
+    JsonNode expired = data(get("/v1/billable-metric-prices/search?month=2026-04"));
+    JsonNode item = expired.get("items").get(0);
+    assertThat(item.get("price_rates").size()).isEqualTo(1);
+    assertThat(item.get("price_rates").get(0).get("unit_price").asInt()).isEqualTo(1);
+    assertThat(item.get("price_rates").get(0).get("effective_from").asString())
+        .isEqualTo("2026-01");
+    assertThat(item.get("rate_count").asInt()).isEqualTo(1);
+    assertThat(expired.get("summary").get("no_rate_count").asInt()).isZero();
+  }
+
+  @Test
   void 사용량은_고객별로_페이지를_나누고_모든_미터를_함께_반환한다() {
     UUID first = customer("가 고객", "first", false);
     UUID second = customer("나 고객", "second", false);

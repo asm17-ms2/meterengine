@@ -32,9 +32,11 @@ import com.meterengine.payment.service.PaymentAttemptConfirmationService;
 import com.meterengine.payment.service.PaymentReconciliationService;
 import com.meterengine.payment.service.PaymentRetryService;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,7 @@ class PaymentEnvironmentIntegrationTest {
   private static final String LIVE_SECRET = "live_sk_original_environment";
   @Autowired private WebApplicationContext context;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private DataSource dataSource;
   @Autowired private InvoiceRepository invoiceRepository;
   @Autowired private TossPaymentsCredentialRepository credentials;
   @Autowired private BillingKeyRepository billingKeys;
@@ -328,6 +331,76 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss)
         .approveBilling(
             eq(rotated), eq("replacement-card"), any(), eq(attempt.toString()), isNull());
+  }
+
+  @Test
+  void PG키를_교체한_뒤_카드를_보관하면_커밋_후_발급했던_키로_폐기한다() {
+    Payable payable = payable("test");
+    String rotated = "test_sk_replacement_environment";
+    assertThat(putCredential("test", "test", rotated)).hasStatusOk();
+    var committed = new ArrayList<Boolean>();
+    when(toss.deleteBillingKey(anyString(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              try (var connection = dataSource.getConnection();
+                  var statement =
+                      connection.prepareStatement(
+                          "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id=? AND environment_id=? AND customer_id=? AND mode='test'")) {
+                statement.setObject(1, organizationId);
+                statement.setObject(2, environment("test"));
+                statement.setObject(3, payable.customer());
+                try (var rows = statement.executeQuery()) {
+                  assertThat(rows.next()).isTrue();
+                  committed.add(rows.getBoolean(1));
+                }
+              }
+              return new TossPaymentsResult.Success<Void>(null);
+            });
+
+    assertThat(
+            mvc.delete()
+                .uri("/v1/customers/{id}/payment-method", payable.customer())
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatus(204);
+
+    verify(toss).deleteBillingKey(eq(TEST_SECRET), eq("billing-test"));
+    verify(toss, never()).deleteBillingKey(eq(rotated), anyString());
+    assertThat(committed).containsExactly(true);
+  }
+
+  @Test
+  void 원래_PG키_이력이_없으면_카드를_보관해도_다른_키로_폐기하지_않는다() {
+    Payable payable = payable("test");
+    assertThat(putCredential("test", "test", "test_sk_replacement_environment")).hasStatusOk();
+    assertThat(
+            jdbcTemplate.update(
+                "DELETE FROM toss_payments_credential_history WHERE organization_id=? AND environment_id=? AND mode='test' AND updated_at=?",
+                organizationId,
+                environment("test"),
+                KEY_TIME))
+        .isEqualTo(1);
+    when(toss.deleteBillingKey(anyString(), anyString()))
+        .thenReturn(new TossPaymentsResult.Success<>(null));
+
+    assertThat(
+            mvc.delete()
+                .uri("/v1/customers/{id}/payment-method", payable.customer())
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatus(204);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id=? AND environment_id=? AND customer_id=? AND mode='test'",
+                Boolean.class,
+                organizationId,
+                environment("test"),
+                payable.customer()))
+        .isTrue();
+    verify(toss, never()).deleteBillingKey(anyString(), anyString());
   }
 
   @Test

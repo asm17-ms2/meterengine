@@ -112,7 +112,7 @@ public class TossPaymentsCredentialService {
     paymentArchiveRepository.lock(organizationId);
     TossPaymentsCredential credential =
         find(organizationId, mode)
-            .orElseThrow(() -> new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING));
+            .orElseThrow(() -> new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND));
     if (credential.getArchivedAt() != null) return;
     credential.archive();
     auditLogService.record(

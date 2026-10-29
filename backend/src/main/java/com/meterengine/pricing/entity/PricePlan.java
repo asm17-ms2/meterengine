@@ -69,7 +69,7 @@ public class PricePlan implements Persistable<UUID> {
     return archivedFrom != null
         && archivedFrom.compareTo(month) <= 0
         && effectiveFrom.compareTo(archivedFrom) < 0
-        && (effectiveUntil == null || effectiveUntil.compareTo(archivedFrom) > 0);
+        && (effectiveUntil == null || effectiveUntil.compareTo(month) > 0);
   }
 
   @Transient private boolean isNew = true;

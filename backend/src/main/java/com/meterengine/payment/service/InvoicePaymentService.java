@@ -78,7 +78,7 @@ public class InvoicePaymentService {
         done ? invoicePayment.getCanceledAmount() : 0,
         invoicePayment.getAttemptCount(),
         failed ? latestFailureCode : null,
-        failed
+        failed && invoicePayment.getBillingKeyAuthenticatedAt() != null
             ? paymentRetryPolicy.nextRetryAt(
                 latestFailureCode,
                 invoicePayment.getAttemptCount(),

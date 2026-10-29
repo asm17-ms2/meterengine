@@ -81,6 +81,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
            AND bk.customer_id = i.customer_id
            AND bk.mode = :mode
            AND bk.environment_id IS NOT DISTINCT FROM i.environment_id
+           AND bk.archived_at IS NULL
           LEFT JOIN LATERAL (
             SELECT a.id, a.status, a.failure_code, a.completed_at
             FROM payment_attempt a
@@ -160,11 +161,12 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
           FROM payment_attempt a
           JOIN organization o ON o.id = a.organization_id
           LEFT JOIN payment_setting s ON s.organization_id = a.organization_id
-          LEFT JOIN billing_key bk
+          JOIN billing_key bk
             ON bk.organization_id = a.organization_id
            AND bk.customer_id = a.customer_id
            AND bk.mode = a.mode
            AND bk.environment_id IS NOT DISTINCT FROM a.environment_id
+           AND bk.archived_at IS NULL
           CROSS JOIN LATERAL (
             SELECT count(*) AS attempt_count
             FROM payment_attempt c

@@ -70,7 +70,11 @@ public class BillingKeyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다"),
+        description =
+            """
+            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
+            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
+            """),
     @ApiResponse(
         responseCode = "503",
         content =

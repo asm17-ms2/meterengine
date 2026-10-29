@@ -127,6 +127,9 @@ function toServerFieldErrors(
 }
 
 function toFailureState(error: ApiError): BillableMetricFormState {
+  if (error.code === "billable_metric_has_events") {
+    return { status: "failed", message: "수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요." };
+  }
   if (error.code === "billable_metric_already_exists") {
     return { status: "invalid", fieldErrors: { code: error.message } };
   }
