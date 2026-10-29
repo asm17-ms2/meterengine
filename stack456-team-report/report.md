@@ -1,6 +1,6 @@
-미완료 82건, 결과: 끝 상태 246/328건 (fixed 180, refuted 3, already-fixed 17(그중 fixed-above 12), needs-decision 43, blocked 3(그중 no-evidence 0))
+미완료 63건, 결과: 끝 상태 267/328건 (fixed 180, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
 push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7)
-정할 것: 42건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183). 로컬 DB 다시 만들기: 없음
+정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
@@ -9,9 +9,9 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
-| #449 | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
-| #452 | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
-| #453 | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
+| #449 | 24 | 0 | 1 | 3 | 1 | 6 | 13 |
+| #452 | 19 | 0 | 0 | 3 | 0 | 0 | 16 |
+| #453 | 39 | 0 | 1 | 4 | 1 | 1 | 32 |
 
 ## 고친 것
 
@@ -208,6 +208,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | Ck3-447-12 | #447 | Q4에서 층마다 배포하기로 하면, #447 이전에 바뀐 키로 한 결제를 위해 historical()이 덮는 이력이 없을 때 현재 키로 돌아가게(#446 동작) 할지 정한다. |
 | D-245 | #447 | #447에서 쓰이지 않게 된 antd 고객 파일 7개와 customers/actions.ts, state.ts, #451에서 쓰이지 않게 된 antd 가격 파일 6개와 billable-metric-prices/actions.ts, state.ts를 지우고 README의 antd 쓰기 폼 설명을 고칠지, 지운다면 #447과 #451 층마다 지울지 정점에서 한 번에 지울지 정한다. |
 | G-183 | #447 | #447 고객 화면 교체 뒤 쓰이지 않는 components/customers 7개 파일, customers/actions.ts, state.ts와 lib/api/customers.ts의 create/update/deleteCustomer를 지울지, 지운다면 이 파일들을 고친 #451 e5fca11과의 충돌을 어느 층에서 누가 풀지 정한다. |
+| C449-006 | #449 | 인증 없는 /v1 요청(공개 인보이스 조회와 재시도 포함)에 호출 제한을 둘지, 둔다면 Caddy와 백엔드 필터 중 어디에서 IP와 토큰 중 무엇을 기준으로 어떤 한도로 둘지 정해 주세요. |
+| C453-006 | #453 | 단일 대상 설정에서 METERENGINE_ENVIRONMENT가 test나 live이면 METERENGINE_WEBHOOK_SECRET을 그 대상의 웹훅 비밀값으로 쓰게 할지, 아니면 환경 키 웹훅은 지금처럼 METERENGINE_TARGETS로만 받게 두고 README와 .env.example 설명만 고칠지 정해 주세요. |
 
 ## 막힌 것
 
@@ -216,12 +218,16 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | G-012 | #442 | do-not-touch G-031 V26__organization_people_and_invitations: 소속 보관 열 revoked_at(V26:36)을 archived_at으로 맞추려면 V26 내용이나 새 V__ 파일이 필요하다. 열 이름은 공개 이름이기도 하다 |
 | G-019 | #442 | do-not-touch G-031 G-032 V26__organization_people_and_invitations: 감사 인덱스와 anonymous 행위자 변경을 #448로 옮기려면 V26 내용을 바꾸고 #448에 새 V__ 파일을 더해야 한다 |
 | X-057 | #442 | not-owner #444: #442의 두 화면(integrations, members)은 표 앞에 h2를 둬 카드 h3가 건너뛰지 않는다. h2 없이 WorkspaceTable을 처음 부르는 화면은 #444 integrations/[id]이고 같은 건너뜀은 #445 #446 #447 #450 #451 화면에서 생긴다. 지적의 AuthFrame 부분은 원인이 달라 NT-yang-001로 떼어 냈다 |
+| D-216 | #449 | needs-new-migration: 확정 시점 미터 이름을 담을 invoice_line 열이 없다. 필요한 SQL: ALTER TABLE invoice_line ADD COLUMN billable_metric_name varchar(255); 확정 때 채우고 공개 응답에 billable_metric_name을 더한다. 지금 이름을 읽을 때 붙이는 길은 이름을 바꾼 뒤 확정 청구서가 달라져 결정이 필요하다 |
+| G-135 | #453 | do-not-touch M4-B3: 쓰이지 않는 조회 인덱스를 빼거나 고치려면 V48 내용을 바꾸거나 새 V__가 있어야 한다(T-yang brief가 G-135를 do-not-touch로 두라 함). 조회를 environment_scope_id 조건으로 바꾸는 길은 문인호 님 open 파일 WorkspaceQueryRepository를 함께 바꿔야 한다 |
 
 ## 새 지적
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
 | NT-yang-001 | #442 | fixed | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
+| NT-yang-002 | #442 | open | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
+| NT-yang-003 | #453 | open | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
 
 ## 돌리지 못한 검사
 
