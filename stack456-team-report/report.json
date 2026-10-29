@@ -1,8 +1,8 @@
 {
   "package": "T-yang",
   "owner": "양성지",
-  "status": "stopped",
-  "updated_at": "2026-10-29T02:13:56+09:00",
+  "status": "running",
+  "updated_at": "2026-10-29T10:55:34+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -10859,7 +10859,8 @@
     "fix/s456-445-t-yang의 merge 커밋 3326f31은 셸 변수 문제로 메시지가 'chore: origin/ 변경을 받는다'로 비었다(origin/feat/billing-payments를 받은 merge). 이미 push해 고쳐 쓰지 않았고 뒤 merge부터 고쳤다.",
     "origin/feat/billing-payments에 위층 반영으로 V28(create_webhook_tables) 내용이 바뀌어 들어와, 실화면 환경 DB를 다시 만들었다. 이 세션이 바꾼 마이그레이션이 아니다.",
     "2026-10-29 #447 수정 중 멈춤: frontend/e2e/archive-filters.real.spec.ts가 로컬 2734417과 바꾸지 않은 head 5371d1e 모두에서 실패한다(evidence/stop-447/specs.txt). common-brief 10절 표에 없는 실패라 12절대로 stopped로 멈췄다. #447 수정 커밋은 push하지 않았다. 박성종 님과 정한 뒤 넘기기 자료로 받는다.",
-    "#445 fix PR(#467)과 층 PR(#445)에서 마지막 두 push(c76428e, 22dfb35)에 달린 리뷰 댓글은 멈출 때까지 없었다. 박성종 님의 #467 댓글(feat/billing-payments ad9f7fa merge 요청)은 22dfb35에 들어 있다."
+    "#445 fix PR(#467)과 층 PR(#445)에서 마지막 두 push(c76428e, 22dfb35)에 달린 리뷰 댓글은 멈출 때까지 없었다. 박성종 님의 #467 댓글(feat/billing-payments ad9f7fa merge 요청)은 22dfb35에 들어 있다.",
+    "2026-10-29 재개: archive-filters.real.spec.ts가 넘기기 자료 10절 표에 들어가(b334d36) 12절 멈춤이 풀렸다. #447 수정 21건을 fix/s456-447-t-yang에 모았다. origin/feat/resource-archive(5371d1e에서 6d91d41로 움직임)와의 동기화 merge는 backend/openapi.yaml, PaymentMethodRegistrationController, PricePlanController, PriceRateController, PaymentMethodRegistrationIntegrationTest, PaymentAttemptRepositoryTest, PaymentRetryServiceTest에서 충돌한다. 9절대로 충돌은 풀지 않았고, 박성종 님이 fix 브랜치로 push만 하면 직접 반영한다고 해 merge 없이 5371d1e 기반으로 push하며 PR은 열지 않는다."
   ],
   "final_checks": [
     {

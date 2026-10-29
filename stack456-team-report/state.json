@@ -1,17 +1,15 @@
 {
   "package": "T-yang",
-  "status": "stopped",
-  "updated_at": "2026-10-29T02:13:56+09:00",
+  "status": "running",
+  "updated_at": "2026-10-29T10:55:34+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": "#447 실화면 명세 archive-filters.real.spec.ts가 바꾸지 않은 head 5371d1e에서도 실패한다(common-brief 10절 '이미 실패하는 시험' 표에 없음, 12절 멈춤 조건)",
+  "stop_reason": null,
   "resume_hint": {
     "last_finished_id": "C445-014 (#445 층 끝, 마지막 실화면 점검 22dfb35 통과). #447 판정 35건 끝, 그중 수정 아닌 13건 기록",
-    "doing": "#447 수정 21건. 커밋은 모두 로컬에 있고 push 전이다. fix/s456-447-t-yang에 4커밋(01bb890 C447-002, cc2baea D-108과 X-011, 1b50aeb D-241, 2734417 C447-009). 나머지 17건은 세 worktree 브랜치에 커밋돼 있다: worktree-agent-abf7eaa034ab3656f(Nk3-004, D-223, Nk3-005, Ck3-447-10), worktree-agent-ad64b88dbd1bdf994(G-105, C447-008, Ck3-447-13, C447-004, C447-003), worktree-agent-ae85b5ac6fb0b139c(U19-B1, C447-005, C447-007, C447-006, C447-010, Ck3-447-14, G-147, Ck3-447-11). 메시지는 .s456-work/msg/<id>.txt, 기록은 .s456-work/rec/<id>.json. worktree는 clone 아래 .claude/worktrees/에 있다(지우지 않는다).",
-    "blocked_by": "archive-filters.real.spec.ts 실패. 5371d1e의 /customers는 관리 상태를 ArchiveFilter 링크 nav로 그리는데 명세는 같은 이름의 combobox를 기대한다. 근거는 evidence/stop-447/specs.txt. 박성종 님이 이 실패를 넘기기 자료의 10절 표에 더하거나 담당 층에서 고친 뒤 다시 시작한다.",
+    "doing": "#447 수정 21건을 fix/s456-447-t-yang 한 브랜치에 모았다(5371d1e 위 21커밋). 10절 검사 뒤 merge 없이 push한다. origin/feat/resource-archive 6d91d41과의 동기화 merge는 파일 7개에서 충돌해 박성종 님이 반영할 때 푼다.",
+    "blocked_by": null,
     "next_commands": [
-      "git switch fix/s456-447-t-yang && git cherry-pick 01bb890..worktree-agent-abf7eaa034ab3656f 01bb890..worktree-agent-ad64b88dbd1bdf994 01bb890..worktree-agent-ae85b5ac6fb0b139c",
-      "python3 .s456-work/tools/remap.py 01bb890 C447-002 D-108 D-241 C447-009 Nk3-004 D-223 Nk3-005 Ck3-447-10 G-105 C447-008 Ck3-447-13 C447-004 C447-003 U19-B1 C447-005 C447-007 C447-006 C447-010 Ck3-447-14 G-147 Ck3-447-11",
-      "bash .s456-work/tools/live.sh up 447 후 INVERT='real Spring: operator without organization can manage the platform' REC=.s456-work/rec/C447-002.json bash .s456-work/tools/push2.sh feat/resource-archive C447-002 (10절 표가 바뀌면 그에 맞춰 INVERT를 더한다)",
+      "bash .s456-work/tools/live.sh up 447 후 NOSYNC=1 NOPR=1 NA_SPECS=archive-filters SPECS=auth INVERT='real Spring: operator without organization can manage the platform' REC=.s456-work/rec/C447-002.json bash .s456-work/tools/push2.sh feat/resource-archive C447-002",
       "push 뒤 나머지 rec를 FIXREC_BRANCH=fix/s456-447-t-yang python3 .s456-work/tools/fixrec.py .s456-work/rec/<id>.json 로 기록하고 bash .s456-work/tools/rpush.sh"
     ],
     "screens": "#447 화면 수정 캡처는 evidence/fe-447/before, after에 있다(2734417 빌드). D-108 미터 이름 열, D-241 상태 태그, C447-009 필터 화면.",
@@ -393,12 +391,29 @@
     },
     "fix/s456-447-t-yang": {
       "origin_sha": "",
-      "local_sha": "2734417",
+      "local_sha": "84bb5e7",
       "unpushed": [
-        "01bb890 C447-002",
-        "cc2baea D-108 X-011",
-        "1b50aeb D-241",
-        "2734417 C447-009"
+        "01bb890b",
+        "cc2baea5",
+        "1b50aebb",
+        "2734417b",
+        "f766ae8f",
+        "449b06cc",
+        "56a230c2",
+        "4ec2ebdd",
+        "75d30178",
+        "16acaa78",
+        "f69fd31b",
+        "e64caaf2",
+        "ec9581a9",
+        "8e329ff7",
+        "5697a048",
+        "858ef355",
+        "d65557d3",
+        "68d9a5fd",
+        "1f269b5e",
+        "7da6d60e",
+        "84bb5e76"
       ]
     }
   },
