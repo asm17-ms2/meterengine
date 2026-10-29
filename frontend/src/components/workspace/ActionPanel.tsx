@@ -147,6 +147,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     </fieldset>
     {state.isConfirmedFailure && onNewRequest && <Button onClick={onNewRequest}>{resultCopy.retryLabel}</Button>}
     {state.isUnconfirmed && <a href="">{resultCopy.refreshLabel}</a>}
+    {state.isStale && <Button onClick={() => startTransition(() => router.refresh())}>최신 정보 불러오기</Button>}
     {isInline && submitButton}
   </form>;
   if (isInline) return form;
@@ -159,10 +160,12 @@ export function ActionPanel(props: ActionPanelProps) {
   const [requestId, setRequestId] = useState("");
   const triggerId = useId();
   const restoreFocus = () => requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
+  // 최신 정보를 불러와 version이 바뀌면 폼을 새 값으로 다시 그린다.
+  const version = props.fields?.find(field => field.name === "version")?.value ?? "";
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
     <Button id={triggerId} danger={props.isDanger} type={props.triggerType === "link" ? "link" : "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={requestId} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
+    {isOpen && <ActionBody key={`${requestId}-${version}`} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }

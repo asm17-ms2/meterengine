@@ -37,6 +37,11 @@ export function staleCancellationMessage(operation: string, code?: string): stri
   return undefined;
 }
 
+export function staleVersionMessage(operation: string, code?: string): string | undefined {
+  if (operation !== "updateCustomer" || code !== "resource_version_conflict") return undefined;
+  return "다른 사람이 먼저 고객 정보를 바꿨습니다. 최신 정보를 불러와 확인한 뒤 다시 수정하세요.";
+}
+
 export class InputFieldError extends Error {
   readonly field: string;
 

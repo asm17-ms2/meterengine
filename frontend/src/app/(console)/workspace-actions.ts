@@ -9,9 +9,9 @@ import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
-import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage, existingCustomerMessage } from "@/app/(console)/workspace-action-feedback";
+import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, staleVersionMessage, successMessage, unconfirmedMessage, existingCustomerMessage } from "@/app/(console)/workspace-action-feedback";
 
-export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean; nextPath?: string };
+export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean; isStale?: boolean; nextPath?: string };
 
 // 보관한 뒤에는 성공 안내를 보인 다음 그 보관 목록으로 옮긴다.
 const ARCHIVED_LIST_PATHS: Partial<Record<string, string>> = { deleteCustomer: "/customers?status=archived", archiveMember: "/members?status=archived", deleteWebhookEndpoint: "/integrations?status=archived" };
@@ -108,6 +108,8 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       return { isUnconfirmed: true, message: unconfirmedMessage(operation) };
     const staleCancellation = staleCancellationMessage(operation, result.error.code);
     if (staleCancellation) return { isUnconfirmed: true, message: staleCancellation };
+    const staleVersion = staleVersionMessage(operation, result.error.code);
+    if (staleVersion) return { isStale: true, message: staleVersion };
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");

@@ -175,6 +175,29 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
+test("a customer edit that lost a version race offers to load the latest values and then saves", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("처음 이름");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("link", { name: "처음 이름", exact: true }).click();
+  await page.getByRole("button", { name: "고객 정보 수정", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("내가 고친 이름");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { renameCustomersElsewhere: "다른 사람이 고친 이름" } });
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toBeVisible();
+  await dialog.getByRole("button", { name: "최신 정보 불러오기", exact: true }).click();
+  await expect(dialog.getByLabel(/^고객명/)).toHaveValue("다른 사람이 고친 이름");
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toHaveCount(0);
+  await dialog.getByLabel(/^고객명/).fill("다시 고친 이름");
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
+});
+
 test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
