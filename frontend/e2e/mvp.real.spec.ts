@@ -125,6 +125,9 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(keyDialog.locator(".secret-result code")).toBeVisible();
     apiKey = (await keyDialog.locator(".secret-result code").textContent())!;
     expect(apiKey.startsWith("me_test_")).toBe(true);
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await keyDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await expect(keyDialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "수신 주소 등록", exact: true }).click();
     const webhookDialog = page.getByRole("dialog");
@@ -133,6 +136,8 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(webhookDialog.locator(".secret-result code")).toBeVisible();
     const webhookSecret = await webhookDialog.locator(".secret-result code").textContent();
     await request.post(`${PG_URL}/__control`, { data: { webhookSecret, channel: suffix } });
+    await webhookDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await expect(webhookDialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
   });
   const apiHeaders = { Authorization: `Bearer ${apiKey}` };
