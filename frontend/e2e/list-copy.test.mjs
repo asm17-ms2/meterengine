@@ -17,3 +17,12 @@ test("an empty invoice month points to the draft amounts instead of a reset that
   assert.ok(section.includes('resetLabel="청구 예정액 확인"'));
   assert.ok(section.includes('isAllMonths ? "/billing" : `/billing?month=${month}`'));
 });
+
+test("mobile invoice cards show the invoice number and the same payment link as the desktop table", () => {
+  const invoices = source("invoices/InvoicesTable.tsx");
+  const mobile = invoices.slice(invoices.indexOf('className="data-mobile-records"'));
+  assert.ok(mobile.includes("group.invoiceNumber"));
+  assert.ok(mobile.includes("<InvoicePaymentLink"));
+  assert.equal(invoices.match(/수납과 고객 조회 링크/g)?.length, 1);
+});
+
