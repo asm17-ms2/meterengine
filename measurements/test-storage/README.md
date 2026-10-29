@@ -106,7 +106,7 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 
-- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. 자동 중지가 다음 04:00에 다시 끈다.
+- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
 - 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
 
 ```bash
