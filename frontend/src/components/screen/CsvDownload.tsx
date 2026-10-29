@@ -6,6 +6,7 @@ import { Alert, Button } from "antd";
 import { useEffect, useRef, useState } from "react";
 
 import { useTenantAccess } from "@/components/auth/TenantAccess";
+import { filenameFromDisposition } from "@/lib/export-filename";
 import { csvDownloadParameters } from "@/lib/resource-query";
 import type { SearchResource } from "@/components/screen/ResourceSearchControls";
 
@@ -39,7 +40,7 @@ export function CsvDownload({ resource }: { resource: SearchResource | "events" 
       const url = URL.createObjectURL(file);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${resource}.csv`;
+      link.download = filenameFromDisposition(response.headers.get("Content-Disposition"), resource);
       document.body.append(link);
       link.click();
       link.remove();
