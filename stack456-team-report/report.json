@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T15:42:25+09:00",
+  "updated_at": "2026-10-29T15:45:25+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -23,7 +23,8 @@
     "main": "af15d7f",
     "fix/s456-t-yang-invoice-retry": "59e548e",
     "fix/s456-t-yang-public-invoice": "22943db",
-    "fix/s456-t-yang-lumen": "62e8eee"
+    "fix/s456-t-yang-lumen": "62e8eee",
+    "fix/s456-t-yang-demo-bridge-web": "c1ee7a8"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -6691,15 +6692,39 @@
       "id": "C452-002",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main의 CustomerResolver는 캐시가 비면 이름 조회 없이 external_id=name으로 바로 등록하고, 백엔드는 external_id 충돌만 보므로 external_id 없이 만든 옛 고객과 같은 이름의 legacy 고객을 새로 만든다. #453이 scope에 API 키 해시를 더해 옛 state.json의 scope와 늘 달라지므로 업그레이드한 모든 기존 사용자의 고객 캐시가 한 번 비어 이 경로를 탄다. 브리지는 환경 헤더 없이 legacy 키로 보내 옛 고객과 같은 legacy 범위에 새 고객이 생긴다.",
+      "evidence": [
+        "demo/bridge/state.py:355-365 @ af15d7f",
+        "demo/bridge/state.py:367-368 @ af15d7f",
+        "demo/bridge/state.py:132-135 @ af15d7f",
+        "demo/bridge/state.py:255-258 @ af15d7f",
+        "demo/bridge/server.py:59,107 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/service/CustomerRegistrationService.java:37-48 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/repository/CustomerRegistrationRepository.java:22-24 @ af15d7f",
+        "backend/src/main/resources/db/migration/V42__add_customer_external_id.sql:1-3 @ af15d7f",
+        "backend/src/main/java/com/meterengine/customer/repository/CustomerRepository.java:26-28 @ af15d7f",
+        "demo/bridge/test_state.py:318-323 @ af15d7f",
+        "demo/README.md:263 @ af15d7f",
+        "test_외부_ID_없이_만든_옛_고객은_이름으로_이어_받는다: 실패 (고치기 전 새 고객 등록)",
+        "커밋 c6bade8"
+      ],
+      "commits": [
+        "c6bade85"
+      ],
+      "tests": [
+        "demo 검사 통과(c1ee7a8): unittest, pnpm -r typecheck, lint, test, build, playwright --list"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "브리지의 외부 ID 없는 옛 고객 이어 쓰기"
     },
     {
       "id": "C452-004",
@@ -6737,15 +6762,32 @@
       "id": "C452-005",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "포털 첫 시험은 usages[0]의 수량과 JSON에 다른 고객 id와 이름이 없는지만 보는데, loadCustomerPortal이 만드는 사용량 항목에는 customer_id와 customer_name이 들어가지 않는다. 그래서 고객 필터를 지워 다른 고객 항목(456)이 배열 뒤에 붙어도 세 단언이 모두 성립하고, 화면은 usages 전체를 그린다. main에서 시험과 로더 모두 그대로다.",
+      "evidence": [
+        "demo/web/src/lib/customer-portal.test.ts:19-26 @ af15d7f",
+        "demo/web/src/lib/customer-portal.test.ts:11 @ af15d7f",
+        "demo/web/src/lib/customer-portal.ts:67 @ af15d7f",
+        "demo/web/src/components/CustomerPortal.tsx:74 @ af15d7f",
+        "도입사 서버가 조회한 전체 사용량에서도 선택한 고객의 정보만 화면에 전달한다: 실패 actual [['tokens',123],['tokens',456]] (고객 필터 제거 변이)",
+        "커밋 361c229"
+      ],
+      "commits": [
+        "361c2290"
+      ],
+      "tests": [
+        "demo 검사 통과(c1ee7a8): unittest, pnpm -r typecheck, lint, test, build, playwright --list"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "포털 고객 사용량 격리 시험"
     },
     {
       "id": "C452-006",
@@ -6765,15 +6807,37 @@
       "id": "C452-007",
       "merged_ids": [],
       "layer": 452,
-      "branch": "feat/llm-service-demo",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 재현 내용은 .s456-work/security/C452-007/에 둔다.",
+      "evidence": [
+        "demo/web/src/proxy.ts:8 @ af15d7f",
+        "demo/web/src/lib/webhook-handler.ts:6-10 @ af15d7f",
+        "demo/web/src/lib/webhook-receipt.ts:48-52 @ af15d7f",
+        "demo/web/src/lib/webhook-file-store.ts:21-24 @ af15d7f",
+        "demo/web/src/lib/webhook-file-store.ts:27-31 @ af15d7f",
+        "demo/web/src/lib/config.ts:7,44 @ af15d7f",
+        "demo/bridge/server.py:363-370 @ af15d7f",
+        "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:118-133 @ af15d7f",
+        "demo/web/scripts/send-test-webhook.ts:39-48 @ af15d7f",
+        "브라우저 요청과 상한을 넘는 본문은 대상 선택 전에 기록 없이 거절한다: 실패 actual 400 expected 403",
+        "커밋 c1ee7a8"
+      ],
+      "commits": [
+        "c1ee7a86"
+      ],
+      "tests": [
+        "demo 검사 통과(c1ee7a8): unittest, pnpm -r typecheck, lint, test, build, playwright --list"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "웹훅 수신의 브라우저 요청과 본문 상한"
     },
     {
       "id": "C452-008",
@@ -11727,6 +11791,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build; cd llm-service && corepack pnpm exec playwright test --list",
+      "detail": "모두 성공(main 기준선도 통과). web 시험 86건"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -12134,6 +12214,11 @@
       "branch": "fix/s456-t-yang-lumen",
       "sha": "62e8eee3d3f1a24574be44e60cc7812a18c9920e",
       "at": "2026-10-29T15:42:07+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "at": "2026-10-29T15:45:13+09:00"
     }
   ],
   "usage_log": [],
