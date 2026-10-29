@@ -1,11 +1,13 @@
 package com.meterengine.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.query.repository.WorkspaceQueryRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +31,7 @@ class WorkspaceQueryIntegrationTest {
   @Autowired private WebApplicationContext context;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private JsonMapper json;
+  @Autowired private WorkspaceQueryRepository workspaceQueryRepository;
   private MockMvcTester mvc;
   private UUID organizationId;
   private String authorization;
@@ -210,6 +213,26 @@ class WorkspaceQueryIntegrationTest {
                 .asInt())
         .isEqualTo(30);
     assertThat(data(get("/v1/usage/months")).get("months").get(0).asString()).isEqualTo("2026-08");
+  }
+
+  @Test
+  void 사용량_월_목록은_네_자리_연도로_열_수_없는_달을_뺀다() {
+    UUID customer = customer("가 고객", "first", false);
+    event(customer, "type-alpha", 10);
+    jdbc.update(
+        "INSERT INTO event (organization_id,transaction_id,customer_id,type,properties,occurred_at) VALUES (?,?,?,'type-alpha','{}',cast(? AS timestamptz))",
+        organizationId,
+        UUID.randomUUID().toString(),
+        customer,
+        "55835-03-10T00:00:00Z");
+    assertThat(data(get("/v1/usage/months")).get("months").size()).isEqualTo(1);
+    assertThat(data(get("/v1/usage/months")).get("months").get(0).asString()).isEqualTo("2026-08");
+  }
+
+  @Test
+  void 모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다() {
+    assertThatThrownBy(() -> workspaceQueryRepository.months(organizationId, "prices"))
+        .hasMessage("Unknown months resource");
   }
 
   @Test

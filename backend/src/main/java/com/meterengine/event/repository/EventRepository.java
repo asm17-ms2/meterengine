@@ -15,6 +15,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class EventRepository {
 
+  // 월 조회(month)가 네 자리 연도까지만 받아 그 밖의 달은 열 수 없다.
+  public static final String OPENABLE_MONTH_CONDITION =
+      " AND occurred_at < TIMESTAMPTZ '10000-01-01 00:00:00+09'";
+
   private final JdbcTemplate jdbcTemplate;
 
   EventRepository(JdbcTemplate jdbcTemplate) {
@@ -184,7 +188,9 @@ public class EventRepository {
 
   public List<String> findMonths(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_scope_id = ? ORDER BY month DESC",
+        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_scope_id = ?"
+            + OPENABLE_MONTH_CONDITION
+            + " ORDER BY month DESC",
         (rs, rowNum) -> rs.getString("month"),
         organizationId,
         BusinessEnvironmentContext.scopeId());

@@ -1,6 +1,7 @@
 package com.meterengine.query.repository;
 
 import com.meterengine.customer.dto.CustomerResponse;
+import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.dto.BillableMetricResponse;
@@ -317,10 +318,12 @@ public class WorkspaceQueryRepository {
           case "billable-metric-prices" ->
               "SELECT DISTINCT effective_from AS month FROM price_rate WHERE organization_id = ?"
                   + " AND environment_scope_id = ? ORDER BY month DESC";
-          default ->
+          case "usage" ->
               "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month"
-                  + " FROM event WHERE organization_id = ? AND environment_scope_id = ? ORDER BY month"
-                  + " DESC";
+                  + " FROM event WHERE organization_id = ? AND environment_scope_id = ?"
+                  + EventRepository.OPENABLE_MONTH_CONDITION
+                  + " ORDER BY month DESC";
+          default -> throw new IllegalArgumentException("Unknown months resource");
         };
     return jdbcTemplate.query(
         sql,
