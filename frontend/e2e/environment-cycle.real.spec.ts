@@ -72,7 +72,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       await page.getByRole("button", { name: "공급자 정보 저장", exact: true }).click();
       await expect(page.getByText("처리했습니다.", { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "결제 모드 변경", exact: true })).toHaveCount(0);
-      await expect(page.getByText("결제 환경을 바꾸려면 상단 업무 환경을 전환하세요.", { exact: false })).toBeVisible();
+      await expect(page.getByText("결제 모드를 바꾸려면 상단 업무 환경을 전환하세요.", { exact: false })).toBeVisible();
       await page.getByRole("button", { name: "토스 키 저장", exact: true }).click();
       const credentials = page.getByRole("dialog");
       await expect(credentials.locator('input[name="mode"]')).toHaveValue(environment);
