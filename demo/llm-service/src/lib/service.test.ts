@@ -338,6 +338,7 @@ test("조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태�
   assert.equal(result.billing.invoices[0].paidAmount, null);
   assert.equal(result.billing.invoices[0].canceledAmount, null);
   assert.equal(result.billing.invoices[0].amountDue, null);
+  assert.deepEqual(result.usage.metrics.map(metric => [metric.code, metric.quantity, metric.rawQuantity, metric.modelQuantities.length]), [["llm-input-tokens", 0.01, 10, 1]]);
   assert.ok(!JSON.stringify(result).includes("다른 고객 비밀"));
   assert.ok(!JSON.stringify(result).includes("999999"));
 });
