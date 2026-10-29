@@ -5,11 +5,17 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 @Entity
 public class Invoice {
 
   @Id private UUID id;
+
+  @Generated(event = EventType.INSERT)
+  @Column(name = "display_number", nullable = false, insertable = false, updatable = false)
+  private Long displayNumber;
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
@@ -59,6 +65,10 @@ public class Invoice {
 
   public UUID getId() {
     return id;
+  }
+
+  public Long getDisplayNumber() {
+    return displayNumber;
   }
 
   public UUID getOrganizationId() {

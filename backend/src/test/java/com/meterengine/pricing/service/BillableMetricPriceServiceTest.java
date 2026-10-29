@@ -3,6 +3,7 @@ package com.meterengine.pricing.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.pricing.dto.BillableMetricPricePriceRate;
@@ -27,6 +28,7 @@ class BillableMetricPriceServiceTest {
 
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private PriceRateRepository priceRateRepository;
+  @Mock private CustomerRepository customerRepository;
 
   private BillableMetricPriceService billableMetricPriceService;
 
@@ -34,7 +36,10 @@ class BillableMetricPriceServiceTest {
   void setUp() {
     billableMetricPriceService =
         new BillableMetricPriceService(
-            billableMetricRepository, priceRateRepository, JsonMapper.builder().build());
+            billableMetricRepository,
+            priceRateRepository,
+            customerRepository,
+            JsonMapper.builder().build());
   }
 
   @Test

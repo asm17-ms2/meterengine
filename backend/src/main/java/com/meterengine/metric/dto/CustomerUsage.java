@@ -8,4 +8,31 @@ public record CustomerUsage(
     UUID customerId,
     String customerName,
     BigDecimal quantity,
-    List<DimensionUsage> dimensionUsages) {}
+    List<DimensionUsage> dimensionUsages,
+    BigDecimal rawQuantity,
+    BigDecimal rawQuantityNumerator,
+    BigDecimal rawQuantityDenominator) {
+  public CustomerUsage(
+      UUID customerId,
+      String customerName,
+      BigDecimal quantity,
+      List<DimensionUsage> dimensionUsages,
+      BigDecimal rawQuantity) {
+    this(
+        customerId,
+        customerName,
+        quantity,
+        dimensionUsages,
+        rawQuantity,
+        rawQuantity,
+        BigDecimal.ONE);
+  }
+
+  public CustomerUsage(
+      UUID customerId,
+      String customerName,
+      BigDecimal quantity,
+      List<DimensionUsage> dimensionUsages) {
+    this(customerId, customerName, quantity, dimensionUsages, quantity);
+  }
+}

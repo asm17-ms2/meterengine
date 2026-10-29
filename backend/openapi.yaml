@@ -227,13 +227,21 @@ paths:
       - api-key-controller
   /v1/billable-metric-prices:
     get:
-      description: |
-        등록한 미터를 code 오름차순으로 전부 돌려주고, 미터마다 dimension_properties와 조합별 단가를 붙인다.
-        dimension_properties가 빈 배열이면 이벤트 속성에 따라 단가가 갈리지 않는다는 뜻이다.
-        price_rates는 그 미터의 단가 전부를 dimension_values 오름차순으로 실은 배열이고, 단가가 없으면 빈 배열이다.
-        dimension_values가 빈 객체인 요소가 속성 조건 없이 적용되는 기본 단가다.
-        페이지를 나누지 않는다.
+      description: 지정 월에 유효한 조합별 최신 단가를 돌려준다. 월은 기본 이번 달이며 customer_id가 없으면 도입사 공통
+        단가만 조회한다.
       operationId: listBillableMetricPrices
+      parameters:
+      - in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
         "200":
           content:
@@ -325,10 +333,12 @@ paths:
     post:
       description: |
         미터를 등록한다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상이다.
-        aggregation은 sum만 받는다. sum은 이벤트 properties에서 target_property 키의 값을 합산하므로
-        target_property가 필수다.
-        code는 도입사 안에서 유일해야 하고 등록 뒤 바꿀 수 없다.
-        event_type과 target_property의 조합도 도입사 안에서 유일해야 한다.
+        aggregation은 sum, count, count_distinct, min, max, avg, first, last, median, percentile을 받으며 대소문자를 구분하지 않는다.
+        count는 전체 이벤트 수이며 target_property를 지정하지 않는다. count_distinct는 대상 속성의 숫자, 문자열, 불리언 고유값 수다.
+        나머지는 숫자 속성만 집계한다. first와 last는 occurred_at, transaction_id 순서다. median은 50백분위, percentile은 0~100의 percentile이 필수다.
+        집계량을 unit_size(기본 1)로 나눈 뒤 rounding_mode(none, ceil, floor, round)를 rounding_precision(0~12, 기본 0)에 적용한다.
+        round는 사사오입이며 none은 유한소수를 그대로 보존하고 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 보존한다. code는 도입사 안에서 유일하고 등록 뒤 바꿀 수 없다.
+        같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
       operationId: createBillableMetric
       requestBody:
         content:
@@ -350,7 +360,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "401":
           content:
             application/json:
@@ -375,7 +385,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=billable_metric_already_exists: 같은 code의 미터가 이미 있다.
-            code=billable_metric_event_type_target_property_already_exists: event_type과 target_property가 같은 미터가 이미 있다.
         "429":
           content:
             application/json:
@@ -465,11 +474,59 @@ paths:
       summary: 집계 미터 삭제
       tags:
       - billable-metric-controller
+    get:
+      operationId: getBillableMetric
+      parameters:
+      - in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BillableMetricResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터 상세 조회
+      tags:
+      - billable-metric-controller
     put:
       description: |
         미터를 요청 값으로 덮어쓰고 바뀐 미터를 돌려준다. code는 바꿀 수 없다.
-        event_type이나 target_property를 바꾸면 사용량은 새 기준으로 다시 집계된다.
-        옛 기준으로 집계된 이벤트가 한 건이라도 있으면 event_type과 target_property는 바꿀 수 없고 409다.
+        현재 event_type의 이벤트가 한 건이라도 있으면 이름만 바꿀 수 있다. 집계, 대상 속성, 차원, 단위, 반올림, 백분위 변경은 409다.
       operationId: updateBillableMetric
       parameters:
       - description: 고칠 미터의 code.
@@ -498,7 +555,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드나 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=invalid_billable_metric: aggregation이 sum이 아니거나, sum인데 target_property가 없거나, dimension_properties에 같은 키가 두 번 있거나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "401":
           content:
             application/json:
@@ -528,8 +585,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=billable_metric_has_events: 집계된 이벤트가 있어 event_type과 target_property를 바꿀 수 없다.
-            code=billable_metric_event_type_target_property_already_exists: 바꾸려는 event_type과 target_property의 미터가 이미 있다.
+            code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
         "429":
           content:
             application/json:
@@ -550,17 +606,20 @@ paths:
   /v1/billable-metrics/{code}/price-rates:
     delete:
       description: |
-        미터에서 속성 값 조합 하나의 단가를 지운다. dimension_values는 JSON 객체 문자열이고,
-        빈 객체 {}는 기본 단가다. 같은 조합인지는 키 순서와 상관없이 본다.
+        미터에서 속성 값 조합 하나의 공통 단가(customer_id 없음) 가운데 이번 달(Asia/Seoul)에 적용 중인
+        버전을 끝낸다. 이번 달에 시작한 버전은 지우고, 그 전에 시작한 버전은 종료 월을 이번 달로 닫아 남긴다.
+        종료 월은 적용하지 않으므로 이번 달부터 그 단가를 쓰지 않는다. 고객 단가와 다음 달 이후에 시작하는
+        버전은 그대로 둔다. dimension_values는 JSON 객체 문자열이고, 빈 객체 {}는 기본 단가다. 같은 조합인지는
+        키 순서와 상관없이 본다.
       operationId: deletePriceRate
       parameters:
-      - description: 단가를 지울 미터의 code.
+      - description: 단가를 끝낼 미터의 code.
         in: path
         name: code
         required: true
         schema:
           type: string
-      - description: 지울 조합. JSON 객체 문자열이다.
+      - description: 끝낼 조합. JSON 객체 문자열이다.
         in: query
         name: dimension_values
         required: true
@@ -568,7 +627,7 @@ paths:
           type: string
       responses:
         "204":
-          description: 지웠다. 본문 없음
+          description: 이번 달 적용 중인 버전을 지우거나 닫았다. 본문 없음
         "400":
           content:
             application/json:
@@ -598,7 +657,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=price_rate_not_found: 그 미터에 그 조합의 단가가 없다"
+          description: "code=price_rate_not_found: 그 미터에 이번 달 적용 중인 그 조합의 공통 단가가 없\
+            다"
         "429":
           content:
             application/json:
@@ -616,11 +676,67 @@ paths:
       summary: 단가 삭제
       tags:
       - price-rate-controller
+    get:
+      operationId: listPriceRates
+      parameters:
+      - in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListPriceRatesResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 미터 단가 이력 조회
+      tags:
+      - price-rate-controller
     post:
       description: |
         미터에 속성 값 조합별 단가를 넣는다. dimension_values의 키 집합은 미터의 dimension_properties와 같아야 하고,
         키가 없는 미터는 빈 객체 하나만 받는다. 청구는 조합이 정확히 같은 단가만 쓰고 폴백은 없다.
-        같은 조합의 단가가 이미 있으면 unit_price를 덮어쓴다. 수정 엔드포인트는 따로 없다.
+        같은 시작 월과 고객 범위의 버전은 갱신한다. 지난달 이전 버전은 바꿀 수 없다.
+        종료 월은 포함하지 않으며 고객 단가가 공통 단가보다 우선한다.
       operationId: createPriceRate
       parameters:
       - description: 단가를 넣을 미터의 code.
@@ -648,7 +764,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
+            code=validation_error: dimension_values나 unit_price가 없거나, unit_price가 음수거나, effective_until이 시작 월보다 뒤가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
             code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아니다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "401":
           content:
@@ -688,6 +804,59 @@ paths:
                 type: integer
                 format: int32
       summary: 단가 등록
+      tags:
+      - price-rate-controller
+  /v1/billable-metrics/{code}/price-rates/{id}:
+    delete:
+      description: 현재 월 또는 미래 월에 시작하는 버전만 삭제한다. 지난달 이전 단가는 보존한다.
+      operationId: deletePriceRateVersion
+      parameters:
+      - in: path
+        name: code
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 단가 버전 삭제
       tags:
       - price-rate-controller
   /v1/customers:
@@ -2394,6 +2563,99 @@ paths:
       summary: 도입사 사용자 권한 변경
       tags:
       - organization-people-controller
+  /v1/organization/supplier:
+    get:
+      operationId: findSupplier
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SupplierResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 공급자 정보 조회
+      tags:
+      - current-organization-controller
+    put:
+      operationId: updateSupplier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSupplierRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SupplierResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 공급자 정보 수정
+      tags:
+      - current-organization-controller
   /v1/organizations:
     get:
       description: |
@@ -3088,6 +3350,178 @@ paths:
       summary: 결제 모드 변경
       tags:
       - payment-setting-controller
+  /v1/price-plans:
+    get:
+      description: |
+        customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
+        month를 주면 그 달에 적용되는 버전만, 생략하면 모든 버전 이력을 돌려준다. 시작 월 내림차순이다.
+      operationId: listPricePlans
+      parameters:
+      - description: "이 달(yyyy-MM, KST)에 적용되는 버전만 고른다. 생략하면 모든 버전 이력이다."
+        example: 2026-08
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      - description: 이 고객의 요금제만 고른다. 생략하면 도입사 공통 요금제만 나온다.
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListPricePlansResponse"
+          description: 요금제 버전 목록. 조건에 맞는 것이 없으면 price_plans가 빈 배열이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이\
+            \ 아니거나 0001-01부터 9999-12까지의 범위 밖이다"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: customer_id가 가리키는 고객이 이 도입사에 없다"
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 요금제 이력 조회
+      tags:
+      - price-plan-controller
+    post:
+      description: 사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다.
+      operationId: createPricePlan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePricePlanRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PricePlanResponse"
+          description: Created
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 기본료와 최소 과금 요금제 등록
+      tags:
+      - price-plan-controller
+  /v1/price-plans/{id}:
+    delete:
+      operationId: deletePricePlan
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 요금제 버전 삭제
+      tags:
+      - price-plan-controller
   /v1/sessions:
     post:
       description: |
@@ -3493,14 +3927,16 @@ paths:
   /v1/usage:
     get:
       description: |
-        미터마다 type이 그 미터의 event_type과 같은 이벤트를 고객별로 합산해 돌려준다.
+        미터마다 event_type이 같은 이벤트를 설정한 집계 방식으로 계산한다.
         기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
         2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
         지금 이후 시각의 이벤트는 집계에 들지 않는다.
         모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열이다.
         dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값의 조합별로 수량을 나눈 것이고,
-        고객의 quantity는 그 합이다. 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 요소 하나다.
-        properties의 target_property 값이 숫자가 아닌 이벤트는 합계에서 빠진다.
+        고객 전체 수량은 원본 이벤트를 따로 집계하므로 조합별 수량의 합과 다를 수 있다. 청구는 조합별 정확 수량에 단가를 적용한다. none이면 raw_quantity_numerator/(raw_quantity_denominator*unit_size), 반올림 모드이면 처리한 quantity를 사용한다.
+        raw_quantity는 변환 전 집계량, quantity는 unit_size 나눗셈과 반올림을 적용한 결과다.
+        count는 속성과 관계없이 전체 이벤트를 센다. count_distinct는 숫자, 문자열, 불리언 고유값만 세고 나머지는 제외한다.
+        다른 집계는 target_property가 숫자인 이벤트만 계산한다. 차원이 없으면 dimension_values가 빈 객체다.
         금액은 싣지 않는다. 금액은 청구 예정액 조회(GET /v1/invoices/draft)가 준다.
       operationId: aggregateBillableMetricUsages
       parameters:
@@ -4279,13 +4715,25 @@ components:
     BillableMetricPricePriceRate:
       type: object
       properties:
+        customer_id:
+          type: string
+          format: uuid
         dimension_values:
           type: object
           additionalProperties: {}
-          description: 단가가 적용되는 속성 값 조합. 빈 객체는 속성 조건 없이 적용되는 기본 단가다
+        effective_from:
+          type: string
+        effective_until:
+          type: string
+        id:
+          type: string
+          format: uuid
+        model:
+          type: string
+        tiers:
+          $ref: "#/components/schemas/PriceRateTier"
         unit_price:
           type: number
-          description: 그 조합의 단가. 0은 무료라는 뜻이다
     BillableMetricPriceResponse:
       type: object
       properties:
@@ -4318,8 +4766,17 @@ components:
           type: string
         name:
           type: string
+        percentile:
+          type: number
+        rounding_mode:
+          type: string
+        rounding_precision:
+          type: integer
+          format: int32
         target_property:
           type: string
+        unit_size:
+          type: number
     BillableMetricUsageCustomer:
       type: object
       properties:
@@ -4337,7 +4794,16 @@ components:
             $ref: "#/components/schemas/BillableMetricUsageDimensionUsage"
         quantity:
           type: number
-          description: 이벤트 properties의 값을 합산한 수량. 소수 자릿수를 그대로 싣는다. 조합별 수량의 합과 같다
+          description: 고객 전체 이벤트를 집계하고 단위와 반올림을 적용한 수량. 조합별 수량의 합과 다를 수 있다
+        raw_quantity:
+          type: number
+          description: 고객 전체 이벤트의 변환 전 집계량
+        raw_quantity_denominator:
+          type: number
+          description: 변환 전 정확 집계량의 양수 분모
+        raw_quantity_numerator:
+          type: number
+          description: 변환 전 정확 집계량의 분자
     BillableMetricUsageDimensionUsage:
       type: object
       properties:
@@ -4348,7 +4814,16 @@ components:
             없으면 값이 null이다
         quantity:
           type: number
-          description: 그 조합의 이벤트 properties 값을 합산한 수량
+          description: 그 조합의 수량 표시값. 순환소수는 근사치이며 청구는 정확한 분자와 분모를 사용한다
+        raw_quantity:
+          type: number
+          description: 그 조합의 변환 전 집계량
+        raw_quantity_denominator:
+          type: number
+          description: 변환 전 정확 집계량의 양수 분모
+        raw_quantity_numerator:
+          type: number
+          description: 변환 전 정확 집계량의 분자
     BillableMetricUsageResponse:
       type: object
       properties:
@@ -4364,8 +4839,17 @@ components:
           type: string
         name:
           type: string
+        percentile:
+          type: number
+        rounding_mode:
+          type: string
+        rounding_precision:
+          type: integer
+          format: int32
         target_property:
           type: string
+        unit_size:
+          type: number
     CreateApiKeyRequest:
       type: object
       properties:
@@ -4426,8 +4910,23 @@ components:
         name:
           type: string
           minLength: 1
+        percentile:
+          type: number
+          description: percentile 집계에서만 지정하는 백분위 0~100
+        rounding_mode:
+          type: string
+          description: "단위 변환 후 반올림: none, ceil, floor, round. 기본값은 none"
+        rounding_precision:
+          type: integer
+          format: int32
+          description: 반올림할 소수 자릿수 0~12. 기본값은 0
+          maximum: 12
+          minimum: 0
         target_property:
           type: string
+        unit_size:
+          type: number
+          description: 집계량을 나눌 양수 단위. 기본값은 1
       required:
       - aggregation
       - code
@@ -4544,20 +5043,54 @@ components:
           minLength: 0
       required:
       - reason
+    CreatePricePlanRequest:
+      type: object
+      properties:
+        base_fee:
+          type: integer
+          format: int64
+          minimum: 0
+        customer_id:
+          type: string
+          format: uuid
+        effective_from:
+          type: string
+        effective_until:
+          type: string
+        minimum_amount:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - base_fee
+      - minimum_amount
     CreatePriceRateRequest:
       type: object
       properties:
+        customer_id:
+          type: string
+          format: uuid
         dimension_values:
           type: object
           additionalProperties: {}
-          description: "단가가 적용되는 속성 값 조합. 키 집합은 미터의 dimension_properties와 같아야 하고,\
-            \ 빈 객체는 기본 단가다"
+        effective_from:
+          type: string
+        effective_until:
+          type: string
+        model:
+          type: string
+          pattern: per_unit|graduated|volume
+        tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceRateTier"
+          maxItems: 100
+          minItems: 1
         unit_price:
           type: number
           minimum: 0
       required:
       - dimension_values
-      - unit_price
     CreateSessionRequest:
       type: object
       properties:
@@ -4713,7 +5246,8 @@ components:
             $ref: "#/components/schemas/DraftInvoiceLine"
         negative_usages:
           type: array
-          description: 수량 합이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈 배열이다
+          description: 변환 전 집계량이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈
+            배열이다
           items:
             $ref: "#/components/schemas/DraftInvoiceNegativeUsage"
         unpriced_usages:
@@ -4735,10 +5269,22 @@ components:
           additionalProperties: {}
           description: 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값. 같은 조합의 단가를
             곱한다. 미터에 dimension_properties가 없으면 빈 객체다
+        line_type:
+          type: string
         quantity:
           type: number
+          description: 표시용 수량. 금액 계산에는 quantity_numerator/quantity_denominator를 사용한다
+        quantity_denominator:
+          type: number
+          description: 정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다
+        quantity_numerator:
+          type: number
+          description: 금액과 구간 판정에 사용한 정확 청구 수량의 분자
         target_property:
           type: string
+        tier_index:
+          type: integer
+          format: int32
         unit_price:
           type: number
     DraftInvoiceNegativeUsage:
@@ -4991,10 +5537,22 @@ components:
           additionalProperties: {}
           description: 확정할 때 저장한 조합. 이 조합의 단가를 수량에 곱했다. 미터에 dimension_properties가
             없었으면 빈 객체다
+        line_type:
+          type: string
         quantity:
           type: number
+          description: 표시용 수량. 금액 계산에는 quantity_numerator/quantity_denominator를 사용한다
+        quantity_denominator:
+          type: number
+          description: 정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다
+        quantity_numerator:
+          type: number
+          description: 금액과 구간 판정에 사용한 정확 청구 수량의 분자
         target_property:
           type: string
+        tier_index:
+          type: integer
+          format: int32
         unit_price:
           type: number
     InvoicePaymentResponse:
@@ -5062,6 +5620,9 @@ components:
         id:
           type: string
           format: uuid
+        invoice_number:
+          type: string
+          description: 고객에게 표시하는 안정적인 인보이스 번호. 세금계산서나 영수증 번호가 아니다
         lines:
           type: array
           items:
@@ -5203,6 +5764,20 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PaymentReconciliationMismatchResponse"
+    ListPricePlansResponse:
+      type: object
+      properties:
+        price_plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricePlanResponse"
+    ListPriceRatesResponse:
+      type: object
+      properties:
+        price_rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceRateResponse"
     ListTossPaymentsCredentialsResponse:
       type: object
       properties:
@@ -5571,16 +6146,59 @@ components:
           type: string
           format: date-time
           description: 모드를 마지막으로 바꾼 시각. 한 번도 바꾸지 않았으면 null
+    PricePlanResponse:
+      type: object
+      properties:
+        base_fee:
+          type: integer
+          format: int64
+        customer_id:
+          type: string
+          format: uuid
+        effective_from:
+          type: string
+        effective_until:
+          type: string
+        id:
+          type: string
+          format: uuid
+        minimum_amount:
+          type: integer
+          format: int64
     PriceRateResponse:
       type: object
       properties:
         billable_metric_code:
           type: string
+        customer_id:
+          type: string
+          format: uuid
         dimension_values:
           type: object
           additionalProperties: {}
+        effective_from:
+          type: string
+        effective_until:
+          type: string
+        id:
+          type: string
+          format: uuid
+        model:
+          type: string
+        tiers:
+          $ref: "#/components/schemas/PriceRateTier"
         unit_price:
           type: number
+    PriceRateTier:
+      type: object
+      properties:
+        unit_price:
+          type: number
+          minimum: 0
+        up_to:
+          type: number
+      required:
+      - unit_price
     SessionOrganization:
       type: object
       properties:
@@ -5702,6 +6320,15 @@ components:
           enum:
           - member
           - operator
+    SupplierResponse:
+      type: object
+      properties:
+        business_address:
+          type: string
+        business_registration_number:
+          type: string
+        representative_name:
+          type: string
     TossPaymentsCredentialResponse:
       type: object
       properties:
@@ -5756,8 +6383,23 @@ components:
         name:
           type: string
           minLength: 1
+        percentile:
+          type: number
+          description: percentile 집계에서만 지정하는 백분위 0~100
+        rounding_mode:
+          type: string
+          description: "단위 변환 후 반올림: none, ceil, floor, round. 기본값은 none"
+        rounding_precision:
+          type: integer
+          format: int32
+          description: 반올림할 소수 자릿수 0~12. 기본값은 0
+          maximum: 12
+          minimum: 0
         target_property:
           type: string
+        unit_size:
+          type: number
+          description: 집계량을 나눌 양수 단위. 기본값은 1
       required:
       - aggregation
       - event_type
@@ -5835,6 +6477,25 @@ components:
           description: 바꿀 도입사. 사용자가 소속된 도입사여야 한다
       required:
       - organization_id
+    UpdateSupplierRequest:
+      type: object
+      properties:
+        business_address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        business_registration_number:
+          type: string
+          minLength: 1
+          pattern: "[0-9]{10}"
+        representative_name:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - business_address
+      - business_registration_number
+      - representative_name
     UpdateTossPaymentsCredentialRequest:
       type: object
       properties:

@@ -48,3 +48,9 @@ export function readWholeNumber(value: string, field: string, { min, max, messag
   if (!/^\d+$/.test(value) || !Number.isSafeInteger(number) || number < min || number > max) throw new InputFieldError(field, message);
   return number;
 }
+
+export function readBusinessRegistrationNumber(value: string, field: string): string {
+  const digits = value.replace(/[\s-]/g, "");
+  if (!/^\d{10}$/.test(digits)) throw new InputFieldError(field, "사업자등록번호는 숫자 10자리로 입력하세요.");
+  return digits;
+}

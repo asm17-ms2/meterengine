@@ -7,6 +7,7 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,6 +36,18 @@ public class BillableMetric implements Persistable<BillableMetricId> {
   @Column(nullable = false)
   private String aggregation;
 
+  @Column(name = "unit_size", nullable = false)
+  private BigDecimal unitSize = BigDecimal.ONE;
+
+  @Column(name = "rounding_mode", nullable = false)
+  private String roundingMode = "none";
+
+  @Column(name = "rounding_precision", nullable = false)
+  private int roundingPrecision;
+
+  @Column(name = "percentile")
+  private BigDecimal percentile;
+
   @Column(name = "target_property")
   private String targetProperty;
 
@@ -61,6 +74,58 @@ public class BillableMetric implements Persistable<BillableMetricId> {
     this.aggregation = aggregation;
     this.targetProperty = targetProperty;
     this.dimensionProperties = List.copyOf(dimensionProperties);
+  }
+
+  public BillableMetric(
+      UUID organizationId,
+      String code,
+      String name,
+      String eventType,
+      String aggregation,
+      String targetProperty,
+      List<String> dimensionProperties,
+      BigDecimal unitSize,
+      String roundingMode,
+      int roundingPrecision,
+      BigDecimal percentile) {
+    this(organizationId, code, name, eventType, aggregation, targetProperty, dimensionProperties);
+    this.unitSize = unitSize;
+    this.roundingMode = roundingMode;
+    this.roundingPrecision = roundingPrecision;
+    this.percentile = percentile;
+  }
+
+  public void update(
+      String name,
+      String eventType,
+      String aggregation,
+      String targetProperty,
+      List<String> dimensionProperties,
+      BigDecimal unitSize,
+      String roundingMode,
+      int roundingPrecision,
+      BigDecimal percentile) {
+    update(name, eventType, aggregation, targetProperty, dimensionProperties);
+    this.unitSize = unitSize;
+    this.roundingMode = roundingMode;
+    this.roundingPrecision = roundingPrecision;
+    this.percentile = percentile;
+  }
+
+  public BigDecimal getUnitSize() {
+    return unitSize;
+  }
+
+  public String getRoundingMode() {
+    return roundingMode;
+  }
+
+  public int getRoundingPrecision() {
+    return roundingPrecision;
+  }
+
+  public BigDecimal getPercentile() {
+    return percentile;
   }
 
   @PostLoad

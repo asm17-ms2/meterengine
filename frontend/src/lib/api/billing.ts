@@ -21,15 +21,20 @@ export type DraftInvoiceCustomer = {
   amount: number;
   lines: DraftInvoiceLine[];
   unpriced_usages: DraftInvoiceUnpricedUsage[];
+  negative_usages?: DraftInvoiceUnpricedUsage[];
 };
 
 export type DraftInvoiceLine = {
-  billable_metric_code: string;
+  billable_metric_code: string | null;
   target_property: string | null;
   dimension_values: DimensionValues;
   quantity: number;
+  quantity_numerator?: number | null;
+  quantity_denominator?: number | null;
   unit_price: number;
   amount: number;
+  line_type?: "per_unit" | "volume" | "graduated_tier" | "base_fee" | "minimum_adjustment";
+  tier_index?: number;
 };
 
 export type DraftInvoiceUnpricedUsage = {

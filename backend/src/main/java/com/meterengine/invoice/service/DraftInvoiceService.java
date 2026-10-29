@@ -102,7 +102,11 @@ public class DraftInvoiceService {
         dimensionCharge.dimensionValues(),
         dimensionCharge.quantity(),
         dimensionCharge.unitPrice(),
-        dimensionCharge.amount());
+        dimensionCharge.amount(),
+        dimensionCharge.lineType(),
+        dimensionCharge.tierIndex(),
+        dimensionCharge.quantityNumerator(),
+        dimensionCharge.quantityDenominator());
   }
 
   private static DraftInvoiceUnpricedUsage toDraftInvoiceUnpricedUsage(

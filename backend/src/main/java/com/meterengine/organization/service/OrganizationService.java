@@ -6,6 +6,8 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.organization.dto.SupplierResponse;
+import com.meterengine.organization.dto.UpdateSupplierRequest;
 import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.repository.OrganizationRepository;
 import java.util.List;
@@ -61,5 +63,25 @@ public class OrganizationService {
         organizationId.toString(),
         Map.of("from", previousStatus, "to", status));
     return organization;
+  }
+
+  @Transactional(readOnly = true)
+  public SupplierResponse find(UUID organizationId) {
+    return SupplierResponse.from(get(organizationId));
+  }
+
+  @Transactional
+  public SupplierResponse update(UUID organizationId, UpdateSupplierRequest request) {
+    Organization organization =
+        organizationRepository
+            .findForUpdateById(organizationId)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    organization.updateSupplier(
+        request.businessRegistrationNumber(),
+        request.representativeName(),
+        request.businessAddress());
+    auditLogService.record(
+        organizationId, "supplier_updated", "organization", organizationId.toString(), Map.of());
+    return SupplierResponse.from(organization);
   }
 }

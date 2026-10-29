@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { errorMessageForCode, InputFieldError, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
+import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
 import { operationResultCopy } from "../src/lib/workspace-operation-results.ts";
 
 test("each workspace action that shows a toast says what it did", () => {
@@ -18,6 +18,13 @@ test("a whole number outside its range names the field instead of blaming JSON",
   assert.equal(readWholeNumber("1", "rate_limit_per_minute", limit), 1);
   assert.equal(readWholeNumber("2147483647", "rate_limit_per_minute", limit), 2147483647);
   assert.equal(readWholeNumber(String(Number.MAX_SAFE_INTEGER), "amount", { min: 0, max: Number.MAX_SAFE_INTEGER, message: "금액" }), Number.MAX_SAFE_INTEGER);
+});
+
+test("a business registration number keeps only its ten digits and names the field when it is not ten digits", () => {
+  for (const value of ["123-45-67890", " 123 45 67890 ", "1234567890"]) assert.equal(readBusinessRegistrationNumber(value, "business_registration_number"), "1234567890");
+  for (const value of ["12345", "123-45-6789a", "12345678901", ""]) {
+    assert.throws(() => readBusinessRegistrationNumber(value, "business_registration_number"), error => error instanceof InputFieldError && error.field === "business_registration_number" && error.message === "사업자등록번호는 숫자 10자리로 입력하세요.");
+  }
 });
 
 test("an unconfirmed Toss key save points at the saved time, not at payment history", () => {
