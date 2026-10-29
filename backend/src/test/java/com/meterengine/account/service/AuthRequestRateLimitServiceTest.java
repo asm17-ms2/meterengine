@@ -13,11 +13,13 @@ import static org.mockito.Mockito.when;
 import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository.Bucket;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Rejection;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.TooManyRequestsException;
 import com.meterengine.global.security.SecureTokens;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -100,7 +102,8 @@ class AuthRequestRateLimitServiceTest {
   void 로그인은_IP와_계정_IP_쌍과_계정_전체의_해시만_카운터에_전달하고_대기시간을_유지한다() {
     var service = service(List.of());
     when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
-    when(repository.consume(any(), any(), anyLong())).thenReturn(23L);
+    when(repository.consume(any(), any(), anyLong()))
+        .thenReturn(Optional.of(new Rejection("login_account", 23L)));
     assertThatThrownBy(() -> service.login("  User@Example.COM  ", request("203.0.113.10")))
         .isInstanceOfSatisfying(
             TooManyRequestsException.class,

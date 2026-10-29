@@ -21,8 +21,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,6 +46,7 @@ import org.springframework.web.context.WebApplicationContext;
       "meterengine.auth-rate-limit.signup-window=30m",
       "meterengine.auth-rate-limit.trusted-proxies=10.8.0.0/16"
     })
+@ExtendWith(OutputCaptureExtension.class)
 class AuthRequestRateLimitIntegrationTest {
   @Autowired private WebApplicationContext context;
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -111,6 +115,19 @@ class AuthRequestRateLimitIntegrationTest {
                 Long.class,
                 SecureTokens.hash(victim)))
         .isZero();
+  }
+
+  @Test
+  void 한도에_걸린_요청은_센_클라이언트_주소와_걸린_한도를_이메일_없이_로그에_남긴다(CapturedOutput output) {
+    for (int index = 0; index < 3; index++)
+      assertThat(login(email(), "10.8.1.1", "198.51.100.50")).hasStatus(401);
+    String email = email();
+
+    assertLimited(login(email, "10.8.1.1", "198.51.100.50"));
+
+    assertThat(output.getAll())
+        .contains("action=login", "client_address=198.51.100.50", "limit=login_ip", "retry_after=")
+        .doesNotContain(email);
   }
 
   @Test
@@ -229,12 +246,12 @@ class AuthRequestRateLimitIntegrationTest {
   void 정리되지_않은_만료_행은_다음_시도에서_새_창으로_센다() {
     Bucket address = new Bucket("login_ip", SecureTokens.hash("203.0.113.17"), 1);
     List<Bucket> account = List.of(new Bucket("login_account", SecureTokens.hash(email()), 1));
-    assertThat(repository.consume(address, account, 300)).isZero();
-    assertThat(repository.consume(address, account, 300)).isPositive();
+    assertThat(repository.consume(address, account, 300)).isEmpty();
+    assertThat(repository.consume(address, account, 300)).isPresent();
     jdbcTemplate.update(
         "UPDATE auth_request_rate_limit SET expires_at=statement_timestamp()-interval '1 second'");
 
-    assertThat(repository.consume(address, account, 300)).isZero();
+    assertThat(repository.consume(address, account, 300)).isEmpty();
     assertThat(
             jdbcTemplate.queryForList("SELECT attempts FROM auth_request_rate_limit", Long.class))
         .containsOnly(1L);

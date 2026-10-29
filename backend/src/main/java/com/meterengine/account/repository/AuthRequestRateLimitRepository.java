@@ -1,6 +1,7 @@
 package com.meterengine.account.repository;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -44,12 +45,16 @@ public class AuthRequestRateLimitRepository {
   // 거절된 시도도 저장하며, 로그인/가입 트랜잭션이 실패해도 카운터는 유지한다.
   // IP 한도를 넘은 요청은 계정 한도에 세지 않아, 한 IP의 폭주가 남의 계정을 잠그지 못하게 한다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public long consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
+  public Optional<Rejection> consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
     long blocked = take(address, windowSeconds);
-    if (blocked > 0) return blocked;
-    long retryAfter = 0;
-    for (Bucket account : accounts) retryAfter = Math.max(retryAfter, take(account, windowSeconds));
-    return retryAfter;
+    if (blocked > 0) return Optional.of(new Rejection(address.scope(), blocked));
+    Optional<Rejection> rejection = Optional.empty();
+    for (Bucket account : accounts) {
+      long retryAfter = take(account, windowSeconds);
+      if (retryAfter > rejection.map(Rejection::retryAfterSeconds).orElse(0L))
+        rejection = Optional.of(new Rejection(account.scope(), retryAfter));
+    }
+    return rejection;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -84,6 +89,8 @@ public class AuthRequestRateLimitRepository {
   }
 
   public record Bucket(String scope, byte[] identityHash, int limit) {}
+
+  public record Rejection(String scope, long retryAfterSeconds) {}
 
   private record Window(long attempts, long retryAfterSeconds) {
     long retryAfter(int limit) {
