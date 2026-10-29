@@ -81,7 +81,7 @@ export function PricingWorkspace(props: Props) {
         {title:"적용 기간",key:"period",render:(_,row)=>dateRange(row)},
         {title:"기본료",dataIndex:"base_fee",render:(value:number)=>`${MONEY.format(value)}원`},
         {title:"최소 사용료",dataIndex:"minimum_amount",render:(value:number)=>`${MONEY.format(value)}원`},
-        {title:"관리 상태",key:"state",render:(_,row)=><span>{row.archived_at ? `보관됨, ${row.archived_from ?? "다음 달"}부터 중단` : "사용 중"}</span>},
+        {title:"관리 상태",key:"state",render:(_,row)=><><Tag color={row.archived_at ? "default" : "success"}>{row.archived_at ? "보관됨" : "사용 중"}</Tag>{row.archived_at && <p className="field-hint">{row.archived_from ?? "다음 달"}부터 중단</p>}</>},
         ...(canManage ? [{title:"작업",key:"actions",render:(_: unknown, row: PricePlanResponse)=>row.archived_at && !canRestorePlan(row) ? <span className="field-hint">적용 중단이 시작됐거나 대체 버전이 있습니다. 새 버전을 등록하세요.</span> : <ActionPanel title={row.archived_at ? "요금제 버전 복원" : "요금제 버전 보관"} operation={row.archived_at ? "restorePricePlan" : "deletePricePlan"} description={row.archived_at ? "이 요금제 버전을 다시 사용합니다. 적용 기간과 다른 버전의 중복 여부를 확인하세요." : "다음 달부터 이 요금제의 적용을 중단합니다. 현재 월과 과거 청구, 확정 인보이스는 보존되며 보관 목록에서 복원할 수 있습니다."} isDanger={!row.archived_at} fields={[{name:"id",type:"hidden",label:"요금제",value:row.id}]} />}] : []),
       ]} /></details>
     </section>
@@ -90,7 +90,7 @@ export function PricingWorkspace(props: Props) {
       {title:"적용 기간",key:"period",render:(_,rate)=>dateRange(rate)},
       {title:"계산 방식",key:"model",render:(_,rate)=><Tag>{MODEL_LABELS[rate.model]}</Tag>},
       {title:"단가",key:"price",render:(_,rate)=>rate.unit_price !== null ? `${MONEY.format(rate.unit_price)}원` : `${rate.tiers?.length ?? 0}개 구간`},
-      {title:"관리 상태",key:"state",render:(_,rate)=><span>{rate.archived_at ? `보관됨, ${rate.archived_from ?? "다음 달"}부터 중단` : "사용 중"}</span>},
+      {title:"관리 상태",key:"state",render:(_,rate)=><><Tag color={rate.archived_at ? "default" : "success"}>{rate.archived_at ? "보관됨" : "사용 중"}</Tag>{rate.archived_at && <p className="field-hint">{rate.archived_from ?? "다음 달"}부터 중단</p>}</>},
       ...(canManage ? [{title:"작업",key:"actions",render:(_: unknown, rate: PriceRateResponse)=>rate.archived_at && !canRestoreRate(rate) ? <span className="field-hint">적용 중단이 시작됐거나 대체 버전이 있습니다. 새 버전을 등록하세요.</span> : <ActionPanel title={rate.archived_at ? "단가 버전 복원" : "단가 버전 보관"} operation={rate.archived_at ? "restorePriceRate" : "deletePriceRate"} description={rate.archived_at ? "이 단가 버전을 다시 사용합니다. 적용 기간과 같은 조합의 다른 버전을 확인하세요." : "다음 달부터 이 단가 버전의 적용을 중단합니다. 현재 월과 과거 청구, 확정 인보이스는 보존되며 보관 목록에서 복원할 수 있습니다."} isDanger={!rate.archived_at} fields={[{name:"id",label:"단가",type:"hidden",value:rate.id},{name:"code",label:"미터",type:"hidden",value:selectedCode}]} />}] : []),
     ]} /></section>}
     <div className={styles.next}><div><strong>가격 설정이 끝났나요</strong><p>이벤트를 수집한 뒤 청구 예정액에서 실제 적용 금액과 누락된 조합을 확인하세요.</p></div><Link href={`/billing?month=${encodeURIComponent(props.month)}${props.customerId ? `&customer_id=${encodeURIComponent(props.customerId)}` : ""}`}>청구 예정액 확인</Link></div>

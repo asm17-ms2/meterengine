@@ -77,7 +77,15 @@ public class EventController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: customer_id가 가리키는 고객이 없다")
+        description = "code=customer_not_found: customer_id가 가리키는 고객이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된 transaction_id면 거절하지 않고 200 duplicate=true로 답한다")
   })
   public IngestEventResponse ingestEvent(
       @CurrentOrganizationId UUID organizationId, @Valid @RequestBody IngestEventRequest request) {

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.event.repository.EventRepository;
 import com.meterengine.payment.client.TossPaymentsBilling;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsResult;
@@ -20,6 +21,7 @@ import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import com.meterengine.payment.service.BillingKeyService;
 import com.meterengine.payment.service.PaymentMethodRegistrationService;
+import com.meterengine.payment.service.PaymentMethodService;
 import com.meterengine.payment.service.TossPaymentsCredentialService;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -49,6 +51,8 @@ class PaymentArchiveConcurrencyTest {
   @Autowired private BillingKeyRepository billingKeyRepository;
   @Autowired private BillingKeyService billingKeyService;
   @Autowired private PaymentMethodRegistrationService paymentMethodRegistrationService;
+  @Autowired private PaymentMethodService paymentMethodService;
+  @Autowired private EventRepository eventRepository;
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
   private UUID organizationId;
   private UUID customerId;
@@ -118,6 +122,65 @@ class PaymentArchiveConcurrencyTest {
         .containsExactlyInAnyOrder("A001****", "B002****");
   }
 
+  @Test
+  void 카드_보관도_같은_도입사의_잠금이_풀릴_때까지_기다린다() throws Exception {
+    OffsetDateTime before = OffsetDateTime.now().minusDays(1);
+    billingKeyRepository.saveAndFlush(
+        new BillingKey(
+            organizationId,
+            customerId,
+            "test",
+            "billing-A001",
+            "61",
+            "A001****",
+            before,
+            "v1",
+            before));
+    when(tossPaymentsClient.deleteBillingKey(any(), any()))
+        .thenReturn(new TossPaymentsResult.Success<>(null));
+    race(() -> {}, () -> paymentMethodService.delete(organizationId, customerId));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id = ? AND customer_id = ?",
+                Boolean.class,
+                organizationId,
+                customerId))
+        .isTrue();
+  }
+
+  @Test
+  void 도입사_잠금을_쥐고_있어도_그_도입사의_이벤트_수집은_기다리지_않는다() throws Exception {
+    CountDownLatch locked = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    CompletableFuture<Void> holder =
+        CompletableFuture.runAsync(
+            () ->
+                new TransactionTemplate(transactionManager)
+                    .executeWithoutResult(
+                        status -> {
+                          paymentArchiveRepository.lock(organizationId);
+                          locked.countDown();
+                          awaitRelease(release);
+                        }));
+    try {
+      assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+      CompletableFuture<Integer> ingestion =
+          CompletableFuture.supplyAsync(
+              () ->
+                  eventRepository.insertIfAbsent(
+                      organizationId,
+                      UUID.randomUUID().toString(),
+                      customerId,
+                      "tokens",
+                      "{}",
+                      OffsetDateTime.now()));
+      assertThat(ingestion.get(2, TimeUnit.SECONDS)).isEqualTo(1);
+    } finally {
+      release.countDown();
+    }
+    holder.get(10, TimeUnit.SECONDS);
+  }
+
   private void update(String suffix) {
     tossPaymentsCredentialService.update(
         organizationId,
@@ -144,13 +207,7 @@ class PaymentArchiveConcurrencyTest {
                           paymentArchiveRepository.lock(organizationId);
                           first.run();
                           saved.countDown();
-                          try {
-                            if (!release.await(10, TimeUnit.SECONDS))
-                              throw new IllegalStateException("release timed out");
-                          } catch (InterruptedException exception) {
-                            Thread.currentThread().interrupt();
-                            throw new IllegalStateException(exception);
-                          }
+                          awaitRelease(release);
                         }));
     try {
       assertThat(saved.await(10, TimeUnit.SECONDS)).isTrue();
@@ -162,6 +219,16 @@ class PaymentArchiveConcurrencyTest {
       secondWrite.get(10, TimeUnit.SECONDS);
     } finally {
       release.countDown();
+    }
+  }
+
+  private static void awaitRelease(CountDownLatch release) {
+    try {
+      if (!release.await(10, TimeUnit.SECONDS))
+        throw new IllegalStateException("release timed out");
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(exception);
     }
   }
 }

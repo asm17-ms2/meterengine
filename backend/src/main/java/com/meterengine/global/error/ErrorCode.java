@@ -38,6 +38,7 @@ public enum ErrorCode {
   PAYMENT_METHOD_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 카드가 없습니다"),
   PAYMENT_METHOD_REGISTRATION_NOT_FOUND(HttpStatus.NOT_FOUND, "카드 등록 링크를 찾을 수 없습니다"),
   PAYMENT_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 시도를 찾을 수 없습니다"),
+  TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "토스페이먼츠 키를 찾을 수 없습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
@@ -52,8 +53,7 @@ public enum ErrorCode {
       HttpStatus.CONFLICT, "현재 버전과 충돌하거나 보관 기간이 시작되어 복원할 수 없습니다. 새 버전을 등록하세요"),
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
   CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 삭제할 수 없습니다"),
-  BILLABLE_METRIC_HAS_EVENTS(
-      HttpStatus.CONFLICT, "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다"),
+  BILLABLE_METRIC_HAS_EVENTS(HttpStatus.CONFLICT, "집계된 이벤트가 있어 name 밖의 미터 정의를 바꿀 수 없습니다"),
   BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 미터를 삭제할 수 없습니다"),
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
