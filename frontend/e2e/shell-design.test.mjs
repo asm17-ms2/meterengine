@@ -13,3 +13,9 @@ test("workspace headers no longer carry a kicker that is always hidden", () => {
   const callers = sourceFiles().filter(file => readFileSync(file, "utf8").includes("kicker="));
   assert.deepEqual(callers, []);
 });
+
+test("globals.css uses its own color tokens instead of repeating the same literal values", () => {
+  const rules = source("app/globals.css").split("\n").filter(line => !line.startsWith(":root { color-scheme: light;")).join("\n");
+  for (const literal of ["#202b40", "#5a6578", "#dce1eb", "#5746ad", "#f3f5f9", "#7c8799"]) assert.doesNotMatch(rules, new RegExp(`${literal}(?![0-9a-f])`, "i"));
+  assert.doesNotMatch(rules, /background(?:-color)?:\s*#fff\b/i);
+});
