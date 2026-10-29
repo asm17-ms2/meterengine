@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -66,6 +67,10 @@ public class ScheduledJobRunService {
     countRun(jobName, ScheduledJobRun.SUCCEEDED);
     countItems(jobName, result);
     recordSuccess(jobName, finishedAt);
+  }
+
+  public Optional<OffsetDateTime> watermark(String jobName, OffsetDateTime before) {
+    return scheduledJobRunRepository.findLastCleanScheduledAt(jobName, before);
   }
 
   private void refreshLastSuccess(String jobName) {

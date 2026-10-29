@@ -86,8 +86,12 @@ public class PaymentReconciliationService {
   }
 
   public PaymentJobResult reconcile(OffsetDateTime slot) {
-    OffsetDateTime windowEnd = slot.minus(paymentProperties.reconciliationLag());
-    Window window = new Window(windowEnd.minus(WINDOW), windowEnd, slot);
+    return reconcile(slot, slot.minus(WINDOW));
+  }
+
+  public PaymentJobResult reconcile(OffsetDateTime slot, OffsetDateTime fromSlot) {
+    Duration lag = paymentProperties.reconciliationLag();
+    Window window = new Window(fromSlot.minus(lag), slot.minus(lag), slot);
     PaymentJobTally tally = new PaymentJobTally();
     for (TossPaymentsCredentialId credentialId : tossPaymentsCredentialRepository.findAllIds()) {
       try {

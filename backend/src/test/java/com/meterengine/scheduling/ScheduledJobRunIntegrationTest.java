@@ -66,6 +66,33 @@ class ScheduledJobRunIntegrationTest {
   }
 
   @Test
+  void 마지막_깨끗한_슬롯은_실패와_항목_실패와_실행_중_기록을_건너뛴다() {
+    String jobName = newJobName();
+    OffsetDateTime clean = SCHEDULED_AT.minusDays(4);
+    scheduledJobRunService.run(jobName, clean, () -> new ScheduledJobResult(1, 0, 0));
+    scheduledJobRunService.run(
+        jobName, SCHEDULED_AT.minusDays(3), () -> new ScheduledJobResult(1, 0, 1));
+    assertThatThrownBy(
+            () ->
+                scheduledJobRunService.run(
+                    jobName,
+                    SCHEDULED_AT.minusDays(2),
+                    () -> {
+                      throw new IllegalStateException("실패");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+    scheduledJobRunRepository.insertIfAbsent(
+        UUID.randomUUID(), jobName, SCHEDULED_AT.minusDays(1), OffsetDateTime.now());
+    scheduledJobRunService.run(jobName, SCHEDULED_AT, () -> new ScheduledJobResult(1, 0, 0));
+    scheduledJobRunService.run(
+        newJobName(), SCHEDULED_AT.minusDays(1), () -> new ScheduledJobResult(1, 0, 0));
+
+    assertThat(scheduledJobRunService.watermark(jobName, SCHEDULED_AT))
+        .hasValueSatisfying(slot -> assertThat(slot).isAtSameInstantAs(clean));
+    assertThat(scheduledJobRunService.watermark(jobName, clean)).isEmpty();
+  }
+
+  @Test
   void 슬롯이_다르면_둘_다_실행된다() throws Exception {
     String jobName = newJobName();
     AtomicInteger executions = new AtomicInteger();

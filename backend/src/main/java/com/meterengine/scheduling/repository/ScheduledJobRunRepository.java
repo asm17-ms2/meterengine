@@ -29,4 +29,12 @@ public interface ScheduledJobRunRepository extends JpaRepository<ScheduledJobRun
       WHERE run.jobName = :jobName AND run.status = 'succeeded'
       """)
   Optional<OffsetDateTime> findLastSucceededFinishedAt(String jobName);
+
+  @Query(
+      """
+      SELECT max(run.scheduledAt) FROM ScheduledJobRun run
+      WHERE run.jobName = :jobName AND run.status = 'succeeded' AND run.failedCount = 0
+        AND run.scheduledAt < :before
+      """)
+  Optional<OffsetDateTime> findLastCleanScheduledAt(String jobName, OffsetDateTime before);
 }
