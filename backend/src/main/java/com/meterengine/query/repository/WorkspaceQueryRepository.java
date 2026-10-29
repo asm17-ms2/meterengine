@@ -41,7 +41,7 @@ public class WorkspaceQueryRepository {
             AND (pr.archived_from IS NULL OR pr.archived_from > p.period))
             OR (pr.archived_from IS NOT NULL AND pr.archived_from <= p.period
               AND pr.effective_from < pr.archived_from
-              AND (pr.effective_until IS NULL OR pr.effective_until > pr.archived_from)))
+              AND (pr.effective_until IS NULL OR pr.effective_until > p.period)))
       ), rates AS (
         SELECT e.* FROM eligible e CROSS JOIN scope p
         WHERE e.position = 1 AND e.effective_from <= p.period
