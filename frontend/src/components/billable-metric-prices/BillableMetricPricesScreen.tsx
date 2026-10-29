@@ -1,5 +1,7 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { Button, Flex } from "antd";
 import { useCallback, useState } from "react";
 
@@ -42,6 +44,7 @@ export function BillableMetricPricesScreen({
   rows: BillableMetricPriceRowView[];
   total?: number;
 }) {
+  const canManage = useTenantScope("admin");
   const capabilities = PRICE_CAPABILITIES;
   const search = useSearchText(query, capabilities);
   const searchText = search.text;
@@ -114,7 +117,7 @@ export function BillableMetricPricesScreen({
         )}
       </ScreenCard>
 
-      {registering ? (
+      {registering && canManage ? (
         <PriceRateFormDialog
           key={registering.code}
           billableMetricPrice={registering}

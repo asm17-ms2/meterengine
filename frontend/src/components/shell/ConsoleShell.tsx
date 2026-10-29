@@ -60,7 +60,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
     <header ref={headerRef} className="workspace-header">
       <div className="workspace-brand">
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="업무 메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />
-        <Link href={workspaceHref("/customers", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+        <Link href={workspaceHref("/overview", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
         <span className="workspace-divider" />
         <Link href="/organizations" className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span><SwapOutlined aria-hidden="true" /></Link>
       </div>

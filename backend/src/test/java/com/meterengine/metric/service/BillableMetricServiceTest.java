@@ -285,6 +285,38 @@ class BillableMetricServiceTest {
   }
 
   @Test
+  void 잠금_뒤_미터_버전이_바뀌면_먼저_저장된_이름을_보존한다() throws Exception {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    var version = BillableMetric.class.getDeclaredField("version");
+    version.setAccessible(true);
+    doAnswer(
+            invocation -> {
+              stored.update("먼저 바뀐 이름", "chat_completion", "sum", "token", List.of());
+              version.setLong(stored, 1L);
+              return null;
+            })
+        .when(entityManager)
+        .refresh(stored);
+
+    assertThatThrownBy(
+            () ->
+                billableMetricService.update(
+                    ORGANIZATION_ID,
+                    BILLABLE_METRIC_CODE,
+                    new UpdateBillableMetricRequest(
+                        "오래된 폼", "chat_completion", "sum", "token", List.of()),
+                    0L))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.RESOURCE_VERSION_CONFLICT);
+    assertThat(stored.getVersion()).isEqualTo(1L);
+    assertThat(stored.getName()).isEqualTo("먼저 바뀐 이름");
+    verify(entityManager).refresh(stored);
+    verify(billableMetricRepository, never()).flush();
+  }
+
+  @Test
   void 잠금_뒤_다시_읽은_event_type이_다르면_그_이벤트를_다시_확인한다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));

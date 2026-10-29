@@ -10,11 +10,14 @@ const files = dir => readdirSync(dir).flatMap(name => {
 });
 
 test("list filter options ask for archived customers and metrics too", () => {
+  const optionsApi = readFileSync(new URL("../src/lib/api/search.ts", import.meta.url), "utf8");
+  assert.match(optionsApi, /status:\s*"all"/);
   const pages = files(APP).filter(path => readFileSync(path, "utf8").includes("<ListControlsLoader"));
   assert.ok(pages.length > 0);
   for (const path of pages) {
-    const calls = [...readFileSync(path, "utf8").matchAll(/(listCustomers|listBillableMetrics)\(readListQuery\(([^,]*),/g)];
-    assert.ok(calls.length > 0, `${path} loads no filter options`);
+    const source = readFileSync(path, "utf8");
+    const calls = [...source.matchAll(/(listCustomers|listBillableMetrics)\(readListQuery\(([^,]*),/g)];
+    if (calls.length === 0) assert.match(source, /<ListControlsLoader[\s\S]*?resource="/, `${path} loads no filter options`);
     for (const [, name, params] of calls) assert.equal(params.replace(/\s+/g, " "), '{ status: "all" }', `${name} in ${path}`);
   }
 });

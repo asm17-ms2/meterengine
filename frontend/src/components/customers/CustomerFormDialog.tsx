@@ -25,6 +25,7 @@ import { alertIcon } from "@/components/screen/alert-icon";
 import { EnterSubmitButton } from "@/components/screen/EnterSubmitButton";
 import { clearFieldErrors } from "@/components/screen/form-errors";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { useMutationScope } from "@/components/auth/use-mutation-scope";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
 type CustomerFormValues = {
@@ -61,6 +62,8 @@ export function CustomerFormDialog({
   onClose: () => void;
 }) {
   const isEdit = customer !== null;
+  const bindScope = useMutationScope();
+  const requestIdentity = useRef<{ payload: string; key: string } | null>(null);
   const [state, formAction, isPending] = useActionState(
     isEdit ? updateCustomerAction : createCustomerAction,
     CUSTOMER_FORM_IDLE,
@@ -87,7 +90,12 @@ export function CustomerFormDialog({
 
   const submit = (values: CustomerFormValues) => {
     clearFieldErrors(form);
-    startTransition(() => formAction(toCustomerFormData(values, customer?.id)));
+    const data = bindScope(toCustomerFormData(values, customer?.id));
+    if (isEdit) data.set("version", String(customer?.version ?? ""));
+    const payload = JSON.stringify([...data.entries()]);
+    if (!requestIdentity.current || requestIdentity.current.payload !== payload) requestIdentity.current = { payload, key: crypto.randomUUID() };
+    data.set("request_id", requestIdentity.current.key);
+    startTransition(() => formAction(data));
   };
 
   const submitForm = () => form.submit();

@@ -1,4 +1,7 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
+import { toServerParams, type ListQuery } from "@/lib/list-query";
+import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 
@@ -22,4 +25,10 @@ export function listPricePlans(customerId?: string, status = "active"): Promise<
 }
 export function listBillableMetricPrices(month: string, customerId?: string): Promise<Result<ListBillableMetricPricesResponse>> {
   return serverFetch(config.apiBaseUrl, "/v1/billable-metric-prices", { month, customer_id: customerId });
+}
+
+export type PricingSearchResponse = SearchPage<ListBillableMetricPricesResponse["billable_metric_prices"][number] & { billable_metric_name: string; archived_at: string | null; rate_count: number }, { month: string; metric_count: number; no_rate_count: number }>;
+
+export function searchBillableMetricPrices(query: ListQuery): Promise<Result<PricingSearchResponse>> {
+  return serverFetch(config.apiBaseUrl, "/v1/billable-metric-prices/search", toServerParams(query, CAPABILITIES.listBillableMetricPrices));
 }

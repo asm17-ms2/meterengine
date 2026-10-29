@@ -1,11 +1,14 @@
-import type { EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
+import type { SearchParams, SearchPage, UsageSearchSummary, SearchResource, BillableMetricResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
 import { MeterEngineApiError, MeterEngineBatchError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ArchiveStatus, ErrorResponse, IngestEventBatchRequest, IngestEventBatchResponse, IngestEventBatchResult, IngestEventInput, IngestEventRequest, IngestEventResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, UnbilledEventsResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
+import type { ArchiveStatus, ErrorResponse, IngestEventBatchRequest, IngestEventBatchResponse, IngestEventBatchResult, IngestEventInput, IngestEventRequest, IngestEventResponse, ListCustomersResponse, ListEventsParams, EventExportParams, CsvResource, ListEventsResponse, ListEventTypesParams, ListEventTypesResponse, EventResponse, CreateCustomerRequest, CustomerResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, UnbilledEventsResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
 const BATCH_SIZE = 100;
+const LIST_EVENTS_PARAM_KEYS = ["page", "size", "customer_id", "month", "type", "from", "to", "q", "properties", "sort", "order"] as const;
+const EVENT_EXPORT_PARAM_KEYS = [...LIST_EVENTS_PARAM_KEYS, "include_properties"] as const;
+const LIST_EVENT_TYPES_PARAM_KEYS = ["customer_id", "month", "from", "to", "q", "properties"] as const;
 
 export interface MeterEngineClientOptions {
   baseUrl: string;
@@ -101,6 +104,30 @@ export class MeterEngineClient {
     return { results };
   }
 
+  listEvents(params: ListEventsParams = {}): Promise<ListEventsResponse> {
+    return this.request("GET", eventQueryPath("/v1/events", params, LIST_EVENTS_PARAM_KEYS));
+  }
+
+  listEventTypes(params: ListEventTypesParams = {}): Promise<ListEventTypesResponse> {
+    return this.request("GET", eventQueryPath("/v1/events/types", params, LIST_EVENT_TYPES_PARAM_KEYS));
+  }
+
+  getEvent(transactionId: string): Promise<EventResponse> {
+    return this.request("GET", queryPath("/v1/events/lookup", { transaction_id: transactionId }));
+  }
+
+  listCustomers(params: { external_id?: string; status?: ArchiveStatus } = {}): Promise<ListCustomersResponse> {
+    return this.request<ListCustomersResponse>("GET", queryPath("/v1/customers", params));
+  }
+
+  getCustomer(id: string): Promise<CustomerResponse> {
+    return this.request("GET", `/v1/customers/${encodeURIComponent(id)}`);
+  }
+
+  createCustomer(request: CreateCustomerRequest): Promise<CustomerResponse> {
+    return this.request("POST", "/v1/customers", request, undefined, request.external_id !== undefined);
+  }
+
   aggregateBillableMetricUsages(params: { month?: string } = {}): Promise<ListBillableMetricUsagesResponse> {
     return this.request("GET", queryPath("/v1/usage", params));
   }
@@ -167,6 +194,48 @@ export class MeterEngineClient {
 
   getUnbilledEvents(): Promise<UnbilledEventsResponse> {
     return this.request("GET", "/v1/unbilled-events");
+  }
+
+  searchCustomers(params: SearchParams = {}): Promise<SearchPage<CustomerSearchItem>> {
+    return this.request("GET", queryPath("/v1/customers/search", params));
+  }
+
+  searchBillableMetrics(params: SearchParams = {}): Promise<SearchPage<BillableMetricResponse>> {
+    return this.request("GET", queryPath("/v1/billable-metrics/search", params));
+  }
+
+  searchBillableMetricPrices(params: SearchParams = {}): Promise<SearchPage<ListBillableMetricPricesResponse["billable_metric_prices"][number] & { billable_metric_name: string; rate_count: number }>> {
+    return this.request("GET", queryPath("/v1/billable-metric-prices/search", params));
+  }
+
+  searchUsage(params: SearchParams = {}): Promise<SearchPage<CustomerUsageSearchItem, UsageSearchSummary>> {
+    return this.request("GET", queryPath("/v1/usage/search", params));
+  }
+
+  searchDraftInvoices(params: SearchParams = {}): Promise<SearchPage<DraftInvoiceResponse["customers"][number]>> {
+    return this.request("GET", queryPath("/v1/invoices/draft/search", params));
+  }
+
+  searchInvoices(params: SearchParams = {}): Promise<SearchPage<InvoiceSearchItem>> {
+    return this.request("GET", queryPath("/v1/invoices/search", params));
+  }
+
+  getOptions(resource: "customers" | "billable-metrics", params: { q?: string; status?: ArchiveStatus } = {}): Promise<{ items: { value: string; label: string; archived: boolean }[] }> {
+    return this.request("GET", queryPath(`/v1/${resource}/options`, params));
+  }
+
+  getAvailableMonths(resource: "events" | "usage" | "invoices" | "billable-metric-prices"): Promise<{ months: string[] }> {
+    return this.request("GET", `/v1/${resource}/months`);
+  }
+
+  exportCsv(resource: "events", params?: EventExportParams): Promise<string>;
+  exportCsv(resource: SearchResource, params?: SearchParams): Promise<string>;
+  exportCsv(resource: CsvResource, params?: SearchParams | EventExportParams): Promise<string>;
+  exportCsv(resource: CsvResource, params: SearchParams | EventExportParams = {}): Promise<string> {
+    const allowed: CsvResource[] = ["customers", "billable-metrics", "billable-metric-prices", "usage", "invoices/draft", "invoices", "events"];
+    if (!allowed.includes(resource)) throw new Error("지원하지 않는 내보내기 대상입니다");
+    if (resource === "events") return this.request("GET", eventQueryPath("/v1/events/export", params as EventExportParams, EVENT_EXPORT_PARAM_KEYS), undefined, undefined, true, "text");
+    return this.request("GET", queryPath(`/v1/${resource}/export`, params as SearchParams), undefined, undefined, true, "text");
   }
 
   searchEventIssues(params: { month: string; customer_id?: string; reason?: EventIssueReason; q?: string; page?: number; size?: number }): Promise<EventIssueSearchResponse> {
@@ -242,6 +311,15 @@ export class MeterEngineClient {
     }
     return responseType === "text" ? text as T : JSON.parse(text) as T;
   }
+}
+
+function eventQueryPath(path: string, params: EventExportParams, keys: ReadonlyArray<keyof EventExportParams>): string {
+  const query = new URLSearchParams();
+  for (const key of keys) {
+    const value = params[key];
+    if (value !== undefined) query.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  }
+  return query.size === 0 ? path : `${path}?${query}`;
 }
 
 function queryPath(path: string, params: Record<string, string | number | undefined>): string {

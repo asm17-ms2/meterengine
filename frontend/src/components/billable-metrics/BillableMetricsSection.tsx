@@ -30,6 +30,7 @@ export async function BillableMetricsSection({
   const currentMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
   const rows: BillableMetricRowView[] = result.data.billable_metrics.map((billableMetric) => ({
     code: billableMetric.code,
+    version: billableMetric.version,
     name: billableMetric.name,
     eventType: billableMetric.event_type,
     aggregation: billableMetric.aggregation,

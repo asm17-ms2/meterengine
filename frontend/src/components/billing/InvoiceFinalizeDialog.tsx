@@ -11,6 +11,8 @@ import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButto
 import { alertIcon } from "@/components/screen/alert-icon";
 import { LinkButton } from "@/components/screen/LinkButton";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
+import { useMutationScope } from "@/components/auth/use-mutation-scope";
+import { formatKrw } from "@/lib/format";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
 type FinalizeTarget = {
@@ -57,6 +59,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
     FINALIZE_INVOICES_IDLE,
   );
   const isSucceeded = state.status === "succeeded";
+  const bindScope = useMutationScope();
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -85,6 +88,8 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
           </LinkButton>,
         ]}
       >
+        <p>실제 확정 공급가액 {formatKrw(state.supplyAmount)}, 세액 {formatKrw(state.taxAmount)}, 총액 {formatKrw(state.totalAmount)}</p>
+        <ul>{state.invoices.map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
           {state.finalizedCount === 0
             ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.`
@@ -114,7 +119,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
           key="submit"
           type="primary"
           loading={isPending}
-          onClick={() => startTransition(() => formAction(toFinalizeFormData(month)))}
+          onClick={() => startTransition(() => formAction(bindScope(toFinalizeFormData(month))))}
         >
           {isPending ? "확정 중..." : "확정"}
         </Button>,

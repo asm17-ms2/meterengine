@@ -110,6 +110,7 @@ export function UsageTable({
       title: "고객 / 미터",
       ellipsis: true,
       clientSorter: byCustomerName,
+      sortKey: "customer_name",
       onCell: (row) => ({ colSpan: row.kind === "customer" ? 2 : 1 }),
       render: (_, row) => {
         if (row.kind === "customer") {
@@ -145,6 +146,7 @@ export function UsageTable({
       align: "right",
       width: 200,
       clientSorter: byLineCount,
+      sortKey: "line_count",
       render: (_, row) => {
         if (row.kind === "customer") {
           return <Typography.Text type="secondary">집계 라인 {row.lineCount}줄</Typography.Text>;

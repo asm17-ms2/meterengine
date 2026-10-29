@@ -39,7 +39,72 @@ export interface ErrorResponse {
   errors?: FieldError[];
 }
 
+export interface EventResponse {
+  transaction_id: string;
+  customer_id: string;
+  customer_name: string;
+  type: string;
+  occurred_at: string;
+  received_at: string;
+  request_id?: string;
+  actor_type?: string;
+  actor_id?: string;
+  properties: Record<string, unknown>;
+}
+
+export interface ListEventsResponse {
+  events: EventResponse[];
+  month: string | null;
+  from?: string;
+  to?: string;
+  page: number;
+  size: number;
+  total: number;
+}
+
+export interface CustomerResponse {
+  id: string;
+  name: string;
+  billing_email: string | null;
+  created_at: string;
+  version?: number;
+  external_id?: string | null;
+  archived_at?: string | null;
+}
+
+export interface ListCustomersResponse {
+  customers: CustomerResponse[];
+}
+
+export interface ListEventsParams {
+  page?: number;
+  size?: number;
+  customer_id?: string;
+  month?: string;
+  type?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  properties?: Record<string, unknown> | string;
+  sort?: "occurred_at" | "received_at" | "transaction_id" | "customer_name" | "type";
+  order?: "asc" | "desc";
+}
+
+export type ListEventTypesParams = Pick<ListEventsParams, "customer_id" | "month" | "from" | "to" | "q" | "properties">;
+
+export type EventExportParams = ListEventsParams & { include_properties?: boolean };
+
+export interface ListEventTypesResponse {
+  types: string[];
+}
+
 export type ArchiveStatus = "active" | "archived" | "all";
+
+export interface CreateCustomerRequest {
+  name: string;
+  billing_email?: string;
+  external_id?: string;
+}
 
 export type BillableMetricRoundingMode = "none" | "ceil" | "floor" | "round";
 
@@ -264,6 +329,36 @@ export interface UnbilledEventsResponse {
   future_timestamp: { event_count: number; earliest_occurred_at: string | null; latest_occurred_at: string | null };
   negative_quantity: { event_count: number; billable_metrics: Array<{ billable_metric_code: string; event_count: number }> };
 }
+
+export type SearchParams = {
+  page?: number; size?: number; q?: string; sort?: string; order?: "asc" | "desc";
+  status?: string; month?: string; customer_id?: string; external_id?: string; billable_metric_code?: string;
+  from?: string; to?: string; min_amount?: number; max_amount?: number; mode?: "test" | "live";
+};
+
+export type SearchPage<T, Summary = Record<string, unknown>> = {
+  items: T[]; total: number; total_unfiltered: number; page: number; size: number;
+  summary: Summary;
+};
+
+export type UsageSearchSummary = {
+  month: string; customer_count: number; metric_count: number; line_count: number; nonzero_customer_count: number;
+};
+
+export type BillableMetricResponse = BillableMetricCalculation & {
+  code: string; name: string; event_type: string; target_property: string | null;
+  dimension_properties: string[]; archived_at: string | null; version?: number;
+};
+
+export type CustomerSearchItem = CustomerResponse & { version: number };
+
+export type CustomerUsageSearchItem = { customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] };
+
+export type InvoiceSearchItem = { invoice: InvoiceResponse; payment: InvoicePaymentResponse };
+
+export type SearchResource = "customers" | "billable-metrics" | "billable-metric-prices" | "usage" | "invoices/draft" | "invoices";
+
+export type CsvResource = SearchResource | "events";
 
 export type EventIssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
 

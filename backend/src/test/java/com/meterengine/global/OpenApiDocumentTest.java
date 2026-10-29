@@ -424,6 +424,30 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 결제_생성의_409는_활성_중복과_이전_결제_결과_미확정을_구분한다() {
+    JsonNode response =
+        root()
+            .path("paths")
+            .path("/v1/invoices/{id}/payment-attempts")
+            .path("post")
+            .path("responses")
+            .path("409");
+
+    assertThat(response.path("description").asText())
+        .contains("code=invoice_already_paid: 이 결제 모드로 결제 중이거나 결제된 시도가 이미 있다.")
+        .contains(
+            "code=payment_result_unconfirmed: 이전 결제 시도가 미청구로 확인되지 않았다. 이전 결제 결과를 확인한 뒤 다시 요청한다.");
+    assertThat(
+            response.path("content").path("application/json").path("schema").path("$ref").asText())
+        .isEqualTo("#/components/schemas/ErrorResponse");
+    assertThat(json())
+        .bodyJson()
+        .extractingPath("$.components.schemas.ErrorResponse.properties.code.enum")
+        .asArray()
+        .contains("invoice_already_paid", "payment_result_unconfirmed");
+  }
+
+  @Test
   void 오류_응답이_200_스키마를_물려받지_않는다() {
     Map<String, List<String>> schemasByErrorResponse = new TreeMap<>();
     operations()

@@ -112,7 +112,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   return <>
     <WorkspaceHeader title={invoice.data.customer_name + "의 수납"} kicker="도입사 콘솔"
       description={invoice.data.month + " 청구액 " + formatKrw(invoice.data.total_amount) + ". 확정 금액은 결제와 취소 이후에도 보존됩니다."}>
-      <Link href="/customers">고객 목록으로 이동</Link>
+      <Link href={"/customers/" + invoice.data.customer_id + "?month=" + invoice.data.month}>고객으로 이동</Link>
       <a href="">내역 새로 조회</a>
     </WorkspaceHeader>
     {invoice.data.invoice_number && <p className="field-hint">청구서 번호 {invoice.data.invoice_number}</p>}

@@ -8,6 +8,8 @@ import {
 } from "@ant-design/icons";
 import { Select } from "antd";
 import { useState } from "react";
+import { useRef } from "react";
+import { queryOptionsAction } from "@/app/query-options-actions";
 
 import { useListNavigation } from "@/components/screen/use-list-navigation";
 import { CustomerLabel } from "@/components/table/CustomerLabel";
@@ -27,33 +29,62 @@ export function CustomerFilter({
   capabilities,
   customers,
   isLoadingOptions = false,
+  label = "고객",
+  selectedCustomerId,
+  onChange,
+  id,
+  disabled = false,
 }: {
   query: ListQuery;
   capabilities: ListCapabilities;
   customers: CustomerOption[];
   isLoadingOptions?: boolean;
+  label?: string;
+  selectedCustomerId?: string;
+  onChange?: (customerId: string | undefined) => void;
+  id?: string;
+  disabled?: boolean;
 }) {
   const { query: liveQuery, push } = useListNavigation(query, capabilities);
   const [isOpen, setIsOpen] = useState(false);
+  const [remoteOptions, setRemoteOptions] = useState<CustomerOption[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const latestRequest = useRef(0);
+  const searchText = useRef("");
+
+  async function searchCustomers(text: string) {
+    searchText.current = text;
+    const sequence = ++latestRequest.current;
+    setIsSearching(true);
+    const result = await queryOptionsAction("customers", text);
+    if (sequence !== latestRequest.current) return;
+    setIsSearching(false);
+    if (result.ok) { setRemoteOptions(result.data.map(option => ({ value: option.value, label: option.label + (option.archived ? " (보관됨)" : "") }))); setSearchError(""); }
+    else setSearchError(result.error.message);
+  }
 
   if (!capabilities.customer_id) return null;
 
   return (
     <Select<string, CustomerOption>
-      aria-label="고객"
+      disabled={disabled}
+      id={id}
+      aria-label={label}
       allowClear={{
         clearIcon: <CloseCircleFilled aria-hidden aria-label={undefined} />,
         label: "지우기",
       }}
-      showSearch={{ optionFilterProp: ["label", "value"] }}
+      showSearch={{ filterOption: false, onSearch: searchCustomers }}
       placeholder="고객: 전체"
-      loading={isLoadingOptions}
-      suffixIcon={<CustomerFilterIcon isLoading={isLoadingOptions} isOpen={isOpen} />}
-      options={customers}
+      loading={isLoadingOptions || isSearching}
+      suffixIcon={<CustomerFilterIcon isLoading={isLoadingOptions || isSearching} isOpen={isOpen} />}
+      options={remoteOptions ?? customers}
+      notFoundContent={searchError || (isSearching ? "조회 중" : "일치하는 고객이 없습니다")}
       optionRender={(option) => <CustomerLabel name={option.data.label} id={option.data.value} />}
-      value={isLoadingOptions ? undefined : liveQuery.customerId}
-      onOpenChange={setIsOpen}
-      onChange={(customerId) => push({ customerId })}
+      value={isLoadingOptions ? undefined : onChange ? selectedCustomerId : liveQuery.customerId}
+      onOpenChange={open => { setIsOpen(open); if (open) void searchCustomers(searchText.current); else searchText.current = ""; }}
+      onChange={(customerId) => onChange ? onChange(customerId) : push({ customerId })}
       style={{ minWidth: 200 }}
     />
   );

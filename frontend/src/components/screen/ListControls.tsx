@@ -4,6 +4,7 @@ import { CustomerFilter, type CustomerOption } from "@/components/screen/Custome
 import { MonthPicker } from "@/components/screen/MonthPicker";
 import { PageSizeSelect } from "@/components/screen/PageSizeSelect";
 import { TypeFilter } from "@/components/screen/TypeFilter";
+import { ArchiveFilter } from "@/components/workspace/ArchiveFilter";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
 
@@ -28,6 +29,7 @@ export function ListControls({
 }) {
   return (
     <>
+      {capabilities.archive && <ArchiveFilter />}
       {month ? <MonthPicker
           query={query}
           capabilities={capabilities}

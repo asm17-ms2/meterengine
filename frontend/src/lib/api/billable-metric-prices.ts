@@ -1,4 +1,5 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, serverSend, type Result } from "@/lib/api/client";
@@ -15,11 +16,15 @@ export type BillableMetricPricePriceRate = {
 
 export type BillableMetricPriceResponse = {
   billable_metric_code: string;
+  billable_metric_name?: string;
+  archived_at?: string | null;
+  rate_count?: number;
   dimension_properties: string[];
   price_rates: BillableMetricPricePriceRate[];
 };
 
 export type ListBillableMetricPricesResponse = PaginationFields & {
+  summary?: Record<string, unknown>;
   billable_metric_prices: BillableMetricPriceResponse[];
 };
 
@@ -46,11 +51,10 @@ export async function listBillableMetricPrices(
     };
   }
 
-  return serverFetch<ListBillableMetricPricesResponse>(
-    config.apiBaseUrl,
-    "/v1/billable-metric-prices",
-    toServerParams(query, CAPABILITIES.listBillableMetricPrices),
+  const result = await serverFetch<SearchPage<BillableMetricPriceResponse>>(
+    config.apiBaseUrl, "/v1/billable-metric-prices/search", toServerParams(query, CAPABILITIES.listBillableMetricPrices),
   );
+  return result.ok ? { ok: true, data: { ...result.data, billable_metric_prices: result.data.items, page: result.data.page - 1 } } : result;
 }
 
 export async function createPriceRate(

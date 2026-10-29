@@ -1,7 +1,9 @@
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import type { ListCapabilities } from "@/lib/api/capabilities";
+import { readMonth } from "@/lib/month";
 import {
   applyListOverrides,
   buildListHref,
@@ -37,17 +39,19 @@ function readNoPendingQuery() {
 export function useListNavigation(query: ListQuery, capabilities: ListCapabilities) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useWorkspaceSearch();
   const committedSearch = searchParams.toString();
   const urlText = searchParams.get("q") ?? query.q;
+  const organizationId = query.organizationId || searchParams.get("organization_id") || undefined;
+  const month = query.month ?? (searchParams.get("month") ? readMonth(searchParams.get("month")!) : undefined);
   const pending = useSyncExternalStore(subscribePendingQuery, readPendingQuery, readNoPendingQuery);
   const renderedQueryRef = useRef(query);
   const isPendingHere =
     pending !== null && pending.pathname === pathname && pending.committedSearch === committedSearch;
-  const committedQuery = useMemo(() => ({ ...query, q: urlText }), [query, urlText]);
+  const committedQuery = useMemo(() => ({ ...query, q: urlText, organizationId, month }), [query, urlText, organizationId, month]);
   const liveQuery = isPendingHere ? pending.query : committedQuery;
 
-  // 같은 주소로 끝난 이동은 새 query 객체로만 드러나고, 다음 입력보다 먼저 지우려고 layout effect에서 본다.
+  // 같은 주소로 끝난 이동도 다음 입력 전에 임시 필터를 지운다.
   useLayoutEffect(() => {
     const isNewRender = renderedQueryRef.current !== query;
     renderedQueryRef.current = query;

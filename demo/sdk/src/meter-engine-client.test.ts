@@ -440,6 +440,58 @@ test("빈 배열은 호출하지 않고 빈 결과를 돌려준다", async () =>
   assert.equal(calls.length, 0);
 });
 
+test("listEvents는 준 params만 쿼리로 붙인다", async () => {
+  const body = { events: [], month: "2026-10", page: 0, size: 1, total: 0 };
+  const { client, calls } = createClient([json(200, body)]);
+
+  const response = await client.listEvents({ customer_id: CUSTOMER_ID, month: "2026-10", size: 1, type: undefined });
+
+  assert.deepEqual(response, body);
+  const url = new URL(calls[0].url);
+  assert.equal(`${url.origin}${url.pathname}`, `${BASE_URL}/v1/events`);
+  assert.deepEqual(Object.fromEntries(url.searchParams), { customer_id: CUSTOMER_ID, month: "2026-10", size: "1" });
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].headers.get("authorization"), `Bearer ${API_KEY}`);
+  assert.equal(calls[0].headers.get("content-type"), null);
+  assert.equal(calls[0].body, undefined);
+});
+
+test("listEvents에 params가 없으면 쿼리를 붙이지 않는다", async () => {
+  const { client, calls } = createClient([json(200, { events: [], month: "2026-10", page: 0, size: 20, total: 0 })]);
+
+  await client.listEvents();
+
+  assert.equal(calls[0].url, `${BASE_URL}/v1/events`);
+});
+
+test("listCustomers는 GET /v1/customers", async () => {
+  const body = { customers: [{ id: CUSTOMER_ID, name: "가나다", billing_email: null, created_at: "2026-10-01T00:00:00Z" }] };
+  const { client, calls } = createClient([json(200, body)]);
+
+  const response = await client.listCustomers();
+
+  assert.deepEqual(response, body);
+  assert.equal(calls[0].url, `${BASE_URL}/v1/customers`);
+  assert.equal(calls[0].method, "GET");
+});
+
+test("조회도 5xx면 재시도한다", async () => {
+  const { client, calls } = createClient([apiError(503, "internal_server_error"), json(200, { customers: [] })]);
+
+  const response = await client.listCustomers();
+
+  assert.deepEqual(response, { customers: [] });
+  assert.equal(calls.length, 2);
+});
+
+test("baseUrl 끝의 슬래시를 두 번 붙이지 않는다", async () => {
+  const { client, calls } = createClient([json(200, { customers: [] })], { baseUrl: `${BASE_URL}/` });
+
+  await client.listCustomers();
+
+  assert.equal(calls[0].url, `${BASE_URL}/v1/customers`);
+});
+
 test("apiKey에 줄바꿈이 있으면 키를 메시지에 넣지 않고 만들 때 던진다", () => {
   assert.throws(
     () => new MeterEngineClient({ baseUrl: BASE_URL, apiKey: "me_live_SECRET\n" }),

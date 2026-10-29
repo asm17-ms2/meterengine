@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { WorkspaceError } from "@/components/workspace/WorkspaceView";
 

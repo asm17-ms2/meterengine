@@ -10,6 +10,9 @@ export type SortDirection = "asc" | "desc";
 export type ArchiveStatus = "active" | "archived" | "all";
 
 export type ListQuery = {
+  organizationId?: string;
+  archiveParameter?: "metric_status";
+  preservedParameters?: Record<string, string>;
   month?: string;
   from?: string;
   to?: string;
@@ -23,13 +26,18 @@ export type ListQuery = {
   q: string;
   customerId?: string;
   type?: string;
+  metricCode?: string;
+  paymentStatus?: string;
+  minAmount?: string;
+  maxAmount?: string;
+  mode?: "test" | "live";
   devState: DevState;
 };
 
 export type MonthlyListQuery = ListQuery & { month: string };
 
 export type ListQueryOverrides = Partial<
-  Pick<ListQuery, "month" | "from" | "to" | "rangeMode" | "properties" | "status" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type">
+  Pick<ListQuery, "month" | "from" | "to" | "rangeMode" | "properties" | "status" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type" | "metricCode" | "paymentStatus" | "minAmount" | "maxAmount" | "mode">
 >;
 
 export type ListQueryOptions = {
@@ -40,6 +48,7 @@ export type PaginationFields = {
   total?: number;
   page?: number;
   size?: number;
+  total_unfiltered?: number;
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -82,6 +91,10 @@ export function readListQuery(
 ): ListQuery {
   const sort = capabilities.sort ? readFirst(searchParams.sort) : undefined;
   return {
+    
+    organizationId: readFirst(searchParams.organization_id),
+    archiveParameter: capabilities.archiveParameter,
+    preservedParameters: capabilities.preservedParameters ? Object.fromEntries(capabilities.preservedParameters.flatMap(key => { const value = readFirst(searchParams[key]); return value ? [[key, value]] : []; })) : undefined,
     month: options.hasMonth
       ? capabilities.month_all
         ? readMonthOrAll(searchParams.month)
@@ -99,6 +112,11 @@ export function readListQuery(
     q: readFirst(searchParams.q) ?? "",
     customerId: capabilities.customer_id ? readFirst(searchParams.customer_id) : undefined,
     type: capabilities.type ? readFirst(searchParams.type) : undefined,
+    metricCode: capabilities.metric ? readFirst(searchParams.billable_metric_code) : undefined,
+    paymentStatus: capabilities.paymentStatus ? readFirst(searchParams.payment_status) : undefined,
+    minAmount: capabilities.amount ? readFirst(searchParams.min_amount) : undefined,
+    maxAmount: capabilities.amount ? readFirst(searchParams.max_amount) : undefined,
+    mode: capabilities.mode && readFirst(searchParams.mode) === "live" ? "live" : capabilities.mode && readFirst(searchParams.mode) === "test" ? "test" : undefined,
     devState: readDevState(searchParams.state),
   };
 }
@@ -112,8 +130,8 @@ export function toServerParams(
     if (query.from) params.from = rangeEndpoint(query.from, false, query.rangeMode);
     if (query.to) params.to = rangeEndpoint(query.to, true, query.rangeMode);
   } else if (query.month && query.month !== ALL_MONTHS) params.month = query.month;
-  if (capabilities.page && query.page > 0) params.page = String(query.page);
-  if (capabilities.size && query.size !== DEFAULT_PAGE_SIZE) params.size = String(query.size);
+  if (capabilities.page && (query.page > 0 || capabilities.pageBase === 1)) params.page = String(query.page + (capabilities.pageBase ?? 0));
+  if (capabilities.size && (query.size !== DEFAULT_PAGE_SIZE || capabilities.pageBase === 1)) params.size = String(query.size);
   if (capabilities.sort && query.sort) {
     params.sort = query.sort;
     if (query.order) params.order = query.order;
@@ -123,6 +141,11 @@ export function toServerParams(
   if (capabilities.q && query.q.trim() !== "") params.q = query.q.trim();
   if (capabilities.customer_id && query.customerId) params.customer_id = query.customerId;
   if (capabilities.type && query.type) params.type = query.type;
+  if (capabilities.metric && query.metricCode) params.billable_metric_code = query.metricCode;
+  if (capabilities.paymentStatus && query.paymentStatus) params.status = query.paymentStatus;
+  if (capabilities.amount && query.minAmount) params.min_amount = query.minAmount;
+  if (capabilities.amount && query.maxAmount) params.max_amount = query.maxAmount;
+  if (capabilities.mode && query.mode) params.mode = query.mode;
   return params;
 }
 
@@ -144,16 +167,23 @@ export function buildListHref(
 ): string {
   const next = applyListOverrides(query, overrides);
 
-  const params = new URLSearchParams();
+  const params = new URLSearchParams(next.preservedParameters);
+  
+  if (next.organizationId) params.set("organization_id", next.organizationId);
   if (next.from || next.to) {
     if (next.from) params.set("from", next.from);
     if (next.to) params.set("to", next.to);
     if (next.rangeMode === "date") params.set("range_mode", "date");
   } else if (next.month) params.set("month", next.month);
   if (next.properties) params.set("properties", next.properties);
-  if (next.status && next.status !== "active") params.set("status", next.status);
+  if (next.status && (next.status !== "active" || next.archiveParameter)) params.set(next.archiveParameter ?? "status", next.status);
   if (next.customerId) params.set("customer_id", next.customerId);
   if (next.type) params.set("type", next.type);
+  if (next.metricCode) params.set("billable_metric_code", next.metricCode);
+  if (next.paymentStatus) params.set("payment_status", next.paymentStatus);
+  if (next.minAmount) params.set("min_amount", next.minAmount);
+  if (next.maxAmount) params.set("max_amount", next.maxAmount);
+  if (next.mode) params.set("mode", next.mode);
   const searchText = next.q.trim();
   if (searchText) params.set("q", searchText);
   if (next.sort) {

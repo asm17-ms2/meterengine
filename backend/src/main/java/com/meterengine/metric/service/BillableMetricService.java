@@ -8,6 +8,7 @@ import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.validation.ArchiveStatus;
+import com.meterengine.global.validation.VersionPrecondition;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
@@ -115,6 +116,12 @@ public class BillableMetricService {
   @Transactional
   public BillableMetricResponse update(
       UUID organizationId, String code, UpdateBillableMetricRequest request) {
+    return update(organizationId, code, request, null);
+  }
+
+  @Transactional
+  public BillableMetricResponse update(
+      UUID organizationId, String code, UpdateBillableMetricRequest request, Long expectedVersion) {
     Calculation calculation =
         validate(
             request.aggregation(),
@@ -131,6 +138,7 @@ public class BillableMetricService {
             .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
+    VersionPrecondition.requireMatch(expectedVersion, billableMetric.getVersion());
     if (billableMetric.getArchivedAt() != null)
       throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     String checkedEventType = null;
@@ -143,6 +151,7 @@ public class BillableMetricService {
 
     lock(organizationId);
     entityManager.refresh(billableMetric);
+    VersionPrecondition.requireMatch(expectedVersion, billableMetric.getVersion());
     if (billableMetric.getArchivedAt() != null)
       throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     List<String> fields = changedFields(billableMetric, request, calculation, dimensionProperties);
@@ -208,6 +217,7 @@ public class BillableMetricService {
           code,
           Map.of("active_from", start));
     }
+    billableMetricRepository.flush();
     return BillableMetricResponse.from(metric);
   }
 

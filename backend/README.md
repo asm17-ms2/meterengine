@@ -247,7 +247,7 @@ unset SESSION
 | `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/user-accounts` |
 | `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
 | `webhook` | 웹훅 엔드포인트 등록, 수정, 삭제, 서명한 통보 발송과 재시도, 전송 기록 조회, 수동 재시도 | `/v1/webhook-endpoints` |
-| `dashboard` | 운영자의 서비스 운영 현황 조회(도입사 수, 결제와 웹훅 실패, 예약 작업 마지막 성공) | `/v1/operations` |
+| `dashboard` | 도입사의 월별 과금 현황과 전체 월 미해결 결제, 운영자의 서비스 운영 현황(도입사 수, 결제와 웹훅 실패, 예약 작업 마지막 성공) | `/v1/dashboard`, `/v1/operations` |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |

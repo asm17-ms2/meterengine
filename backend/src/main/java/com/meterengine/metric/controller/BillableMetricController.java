@@ -5,6 +5,8 @@ import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
+import com.meterengine.global.validation.VersionPrecondition;
+import com.meterengine.idempotency.service.IdempotencyService;
 import com.meterengine.metric.dto.BillableMetricResponse;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.ListBillableMetricsResponse;
@@ -19,12 +21,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,9 +39,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class BillableMetricController {
 
   private final BillableMetricService billableMetricService;
+  private final IdempotencyService idempotencyService;
 
-  BillableMetricController(BillableMetricService billableMetricService) {
+  BillableMetricController(
+      BillableMetricService billableMetricService, IdempotencyService idempotencyService) {
     this.billableMetricService = billableMetricService;
+    this.idempotencyService = idempotencyService;
   }
 
   @PostMapping
@@ -78,10 +86,20 @@ public class BillableMetricController {
             code=billable_metric_already_exists: 같은 code의 미터가 이미 있다.
             """)
   })
-  public BillableMetricResponse createBillableMetric(
+  public ResponseEntity<BillableMetricResponse> createBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Valid @RequestBody CreateBillableMetricRequest request) {
-    return billableMetricService.create(organizationId, request);
+      @Valid @RequestBody CreateBillableMetricRequest request,
+      @RequestHeader(name = "Idempotency-Key", required = false) @StorableText
+          String idempotencyKey) {
+    return idempotencyService.execute(
+        organizationId,
+        "metric.create",
+        idempotencyKey,
+        request,
+        BillableMetricResponse.class,
+        () ->
+            ResponseEntity.status(HttpStatus.CREATED)
+                .body(billableMetricService.create(organizationId, request)));
   }
 
   @PutMapping("/{code}")
@@ -128,8 +146,25 @@ public class BillableMetricController {
   public BillableMetricResponse updateBillableMetric(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(description = "고칠 미터의 code.") @PathVariable @StorableText String code,
-      @Valid @RequestBody UpdateBillableMetricRequest request) {
-    return billableMetricService.update(organizationId, code, request);
+      @Valid @RequestBody UpdateBillableMetricRequest request,
+      @RequestHeader(name = "If-Match", required = false) @StorableText String ifMatch) {
+    return billableMetricService.update(
+        organizationId, code, request, VersionPrecondition.parse(ifMatch));
+  }
+
+  @PatchMapping("/{code}")
+  @AdminAccess
+  @Operation(
+      summary = "버전을 확인한 미터 수정",
+      description =
+          "조회한 version을 큰따옴표로 감싼 If-Match 헤더가 필수다. 다른 요청이 먼저 수정했으면 409다. PUT과 같은 전체 필드를 보낸다.")
+  public BillableMetricResponse updateConditionalBillableMetric(
+      @CurrentOrganizationId UUID organizationId,
+      @PathVariable @StorableText String code,
+      @Valid @RequestBody UpdateBillableMetricRequest request,
+      @RequestHeader("If-Match") @StorableText String ifMatch) {
+    return billableMetricService.update(
+        organizationId, code, request, VersionPrecondition.parse(ifMatch));
   }
 
   @GetMapping
@@ -152,9 +187,10 @@ public class BillableMetricController {
   @GetMapping("/{code}")
   @ReadAccess
   @Operation(summary = "미터 상세 조회")
-  public BillableMetricResponse getBillableMetric(
+  public ResponseEntity<BillableMetricResponse> getBillableMetric(
       @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
-    return billableMetricService.get(organizationId, code);
+    BillableMetricResponse metric = billableMetricService.get(organizationId, code);
+    return ResponseEntity.ok().eTag(Long.toString(metric.version())).body(metric);
   }
 
   @PostMapping("/{code}/restorations")
