@@ -56,3 +56,13 @@ terraform -chdir=measurements/terraform/rds-auto-stop plan -lock=false \
   -var='enabled={test-slo=false,test-storage=true}' \
   -out="$rds_plan_dir/disable-slo-detector.tfplan"
 ```
+
+## 환경 빼기
+
+SUT 하나를 지우기 전에 그 환경의 감지를 먼저 뺀다. 이 root는 두 SUT의 DB를 data source로 읽어, DB가 없어지면 남은 환경의 감지도 계획을 만들 수 없다.
+
+1. `variables.tf`의 `environments`와 `enabled` 기본값에서 그 환경을 빼는 PR을 올리고 머지한다.
+2. 그 환경의 중복 방지 테이블 `meterengine-<환경>-rds-auto-stop-claims`는 삭제 보호가 있다. 지워도 되는지 승인받은 뒤 `aws dynamodb update-table --table-name <테이블> --no-deletion-protection-enabled`로 보호를 끈다.
+3. 머지된 코드로 `-var` 없이 계획을 만들고, 그 환경의 `module.rds_auto_stop` 자원만 지워지는지 확인한 뒤 승인받아 적용한다.
+4. 그다음 SUT를 지운다.
+

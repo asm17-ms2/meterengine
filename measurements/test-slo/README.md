@@ -154,6 +154,8 @@ aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-slo/db-pa
 
 ## 지우기
 
+지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-slo의 자동 재기동 감지를 먼저 뺀다.
+
 ```bash
 terraform -chdir=measurements/test-slo/sut/terraform destroy
 ```

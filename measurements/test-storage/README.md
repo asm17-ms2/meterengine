@@ -429,6 +429,8 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 - 다른 컴퓨터에서 apply 하지 않는다. 이름이 겹쳐 실패한다.
 - 평소에는 지우지 않고 끈다. 다시 만들면 인증서를 새로 받는다. RDS는 최종 스냅숏 없이 지워진다.
 
+지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-storage의 자동 재기동 감지를 먼저 뺀다.
+
 ```bash
 terraform -chdir=measurements/test-storage/load-generator/terraform destroy
 terraform -chdir=measurements/test-storage/sut/terraform destroy
