@@ -4,16 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.event.controller.EventIssueController;
+import com.meterengine.event.dto.EventIssuesResponse;
+import jakarta.validation.constraints.Pattern;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -232,6 +239,29 @@ class EventIssueIntegrationTest {
   void 음수_경고는_이벤트와_미터_조합_수를_센다() {
     metric("tokens-peak", "usage", "max", "tokens", "{model}");
     assertThat(number(body(get(read, "")), "$.warnings.negative_event_metric_count")).isEqualTo(2);
+  }
+
+  @Test
+  void 이벤트_문제_사유의_조회_조건과_요약_필드가_같다() {
+    String regexp =
+        Arrays.stream(EventIssueController.class.getDeclaredMethods())
+            .flatMap(method -> Arrays.stream(method.getParameters()))
+            .filter(
+                parameter ->
+                    parameter.isAnnotationPresent(Pattern.class)
+                        && parameter
+                            .getAnnotation(Pattern.class)
+                            .regexp()
+                            .contains("unpriced_usage"))
+            .map(parameter -> parameter.getAnnotation(Pattern.class).regexp())
+            .findFirst()
+            .orElseThrow();
+    Set<String> summarized =
+        Arrays.stream(EventIssuesResponse.Summary.class.getDeclaredFields())
+            .filter(field -> field.isAnnotationPresent(JsonProperty.class))
+            .map(field -> field.getAnnotation(JsonProperty.class).value())
+            .collect(Collectors.toSet());
+    assertThat(Set.of(regexp.split("\\|"))).isEqualTo(summarized);
   }
 
   @Test
