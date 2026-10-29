@@ -302,10 +302,10 @@ input, textarea { caret-color: var(--blue); }
 @media (max-width: 767px) { .organization-link { max-width: calc(100vw - 225px); font-size: 12px; } }
 
 .workspace-environment { display: flex; align-items: center; gap: 8px; font-size: 12px; white-space: nowrap; }
-.workspace-environment select { max-width: 180px; min-height: 38px; border: 1px solid var(--control-border); border-radius: 6px; padding: 6px 8px; background: #fff; color: var(--ink); font: inherit; }
-.workspace-environment-live select { border-color: #9a620c; }
+.workspace-environment .ant-select { width: 132px; max-width: 180px; min-height: 38px; }
 .environment-notice { margin: 0; padding: 16px 20px; border: 1px solid #c6c0df; border-radius: 6px; background: #f1eff9; color: #473b70; line-height: 1.6; }
-@media (max-width: 767px) { .workspace-environment { margin-right: auto; gap: 6px; }.workspace-environment select { min-height: 44px; max-width: 170px; } }
+.environment-notice-live { border-color: #9a620c; background: #fff8e9; color: #874d00; }
+@media (max-width: 767px) { .workspace-environment { margin-right: auto; gap: 6px; }.workspace-environment .ant-select { min-height: 44px; max-width: 170px; } }
 
 .workspace-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 20px; padding-top: 20px; }.workspace-pagination a { padding: 10px 12px; min-height: 44px; }
 
