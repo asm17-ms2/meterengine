@@ -1,25 +1,20 @@
 {
   "package": "T-yang",
   "status": "stopped",
-  "updated_at": "2026-10-29T11:06:54+09:00",
+  "updated_at": "2026-10-29T11:20:08+09:00",
   "handover_sha": "98dff660916db04bb2c51faeef07f1f0c77c67ad",
-  "stop_reason": "#447 demo 검사의 마지막 단계 corepack pnpm -r build가 바꾸지 않은 head 5371d1e에서도 실패한다(demo/sdk에 build 스크립트가 없다. common-brief 10절 표에 없음, 12절 멈춤 조건)",
+  "stop_reason": "박성종 님 요청으로 스택 main 머지까지 층 작업을 멈춘다. #447 수정 21건은 fix/s456-447-t-yang(84bb5e7)로 push했고 PR #470에서 박성종 님이 충돌을 풀어 반영한다",
   "resume_hint": {
     "last_finished_id": "C445-014 (#445 층 끝, 마지막 실화면 점검 22dfb35 통과). #447 판정 35건 끝, 그중 수정 아닌 13건 기록",
-    "doing": "#447 수정 21건을 fix/s456-447-t-yang 한 브랜치(84bb5e7, 5371d1e 위 21커밋)에 모았고 push 전이다. 84bb5e7에서 frontend, frontend-unit, screen(계약 60, auth 2, archive-filters 10절로 뺌), backend, forbidden-chars는 통과했고 demo만 실패했다. 21커밋 patch는 보고 브랜치 evidence/stop-447/patches에 있다. origin/feat/resource-archive 6d91d41과의 동기화 merge는 파일 7개에서 충돌하며, 박성종 님이 fix 브랜치로 push만 하면 직접 반영한다고 해 merge 없이 push한다.",
-    "blocked_by": "demo 검사의 corepack pnpm -r build가 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패한다. #447부터 #453까지 demo/sdk에 build 스크립트가 없다. 근거는 evidence/stop-447/demo.txt. 박성종 님이 10절 demo 명령이나 표를 고친 뒤 다시 시작한다.",
+    "doing": "#447 수정 21건 push 끝(84bb5e7, PR #470, base feat/resource-archive). 충돌 해결과 반영은 박성종 님 몫이다.",
+    "blocked_by": "main 머지 뒤 박성종 님이 알릴 새 지침을 기다린다. demo 검사의 corepack pnpm -r build는 demo/sdk에 build 스크립트가 없어 #447부터 실패한다(evidence/stop-447/demo.txt).",
     "next_commands": [
-      "bash .s456-work/tools/live.sh up 447 후 NOSYNC=1 NOPR=1 NA_SPECS=archive-filters SPECS=auth INVERT='real Spring: operator without organization can manage the platform' REC=.s456-work/rec/C447-002.json bash .s456-work/tools/push2.sh feat/resource-archive C447-002 (10절 demo 명령이 바뀌면 chk.sh demo도 맞춘다)",
-      "push 뒤 나머지 rec를 FIXREC_BRANCH=fix/s456-447-t-yang python3 .s456-work/tools/fixrec.py .s456-work/rec/<id>.json 로 기록하고 bash .s456-work/tools/rpush.sh"
+      "main 머지 뒤 박성종 님이 #논의 스택 #456 스레드에 알릴 지침과 붙여 넣기 글을 따른다"
     ],
     "screens": "#447 화면 수정 캡처는 evidence/fe-447/before, after에 있다(2734417 빌드). D-108 미터 이름 열, D-241 상태 태그, C447-009 필터 화면.",
     "reset_at": null
   },
-  "current": {
-    "id": "C447-002",
-    "step": "check",
-    "branch": "fix/s456-447-t-yang"
-  },
+  "current": null,
   "finished_ids": [
     "C442-004",
     "C442-005",
@@ -232,21 +227,6 @@
     "X-006",
     "X-069",
     "X-086",
-    "Nk3-006",
-    "C447-001",
-    "Ck3-447-02",
-    "Ck3-447-03",
-    "Ck3-447-04",
-    "Ck3-447-05",
-    "Ck3-447-06",
-    "Ck3-447-07",
-    "Ck3-447-08",
-    "Ck3-447-09",
-    "Ck3-447-12",
-    "D-245",
-    "G-183"
-  ],
-  "open_ids": [
     "C447-002",
     "C447-003",
     "C447-004",
@@ -260,15 +240,30 @@
     "G-147",
     "Nk3-004",
     "Nk3-005",
+    "Nk3-006",
     "U19-B1",
+    "C447-001",
+    "Ck3-447-02",
+    "Ck3-447-03",
+    "Ck3-447-04",
+    "Ck3-447-05",
+    "Ck3-447-06",
+    "Ck3-447-07",
+    "Ck3-447-08",
+    "Ck3-447-09",
     "Ck3-447-10",
     "Ck3-447-11",
+    "Ck3-447-12",
     "Ck3-447-13",
     "Ck3-447-14",
     "D-108",
     "D-223",
     "D-241",
-    "X-011",
+    "D-245",
+    "G-183",
+    "X-011"
+  ],
+  "open_ids": [
     "C449-003",
     "C449-005",
     "G-188",
@@ -390,31 +385,9 @@
       "unpushed": []
     },
     "fix/s456-447-t-yang": {
-      "origin_sha": "",
+      "origin_sha": "84bb5e7",
       "local_sha": "84bb5e7",
-      "unpushed": [
-        "01bb890b",
-        "cc2baea5",
-        "1b50aebb",
-        "2734417b",
-        "f766ae8f",
-        "449b06cc",
-        "56a230c2",
-        "4ec2ebdd",
-        "75d30178",
-        "16acaa78",
-        "f69fd31b",
-        "e64caaf2",
-        "ec9581a9",
-        "8e329ff7",
-        "5697a048",
-        "858ef355",
-        "d65557d3",
-        "68d9a5fd",
-        "1f269b5e",
-        "7da6d60e",
-        "84bb5e76"
-      ]
+      "unpushed": []
     }
   },
   "usage": {
