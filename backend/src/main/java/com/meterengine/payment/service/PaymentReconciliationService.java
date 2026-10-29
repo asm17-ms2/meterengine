@@ -133,8 +133,8 @@ public class PaymentReconciliationService {
     Map<OffsetDateTime, TossPaymentsCredential> versions = new LinkedHashMap<>();
     versions.put(credential.get().getUpdatedAt(), credential.get());
     for (TossPaymentsCredential historical :
-        paymentArchiveRepository.credentialVersions(
-            credentialId.getOrganizationId(), credentialId.getMode())) {
+        paymentArchiveRepository.credentialVersionsInUse(
+            credentialId.getOrganizationId(), credentialId.getMode(), window.lookbackStartAt())) {
       versions.putIfAbsent(historical.getUpdatedAt(), historical);
     }
     Outcome outcome = Outcome.NOTHING_TO_COMPARE;
@@ -142,8 +142,8 @@ public class PaymentReconciliationService {
       Outcome result =
           reconcileVersion(
               version, window, version.getUpdatedAt().isEqual(credential.get().getUpdatedAt()));
-      if (result == Outcome.FAILED) return result;
-      if (result == Outcome.COMPARED) outcome = result;
+      if (result == Outcome.FAILED || outcome == Outcome.FAILED) outcome = Outcome.FAILED;
+      else if (result == Outcome.COMPARED) outcome = result;
     }
     return outcome;
   }

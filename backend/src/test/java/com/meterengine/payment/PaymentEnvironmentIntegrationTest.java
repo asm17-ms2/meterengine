@@ -24,6 +24,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.client.TossPaymentsTransaction;
+import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.entity.BillingKey;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
@@ -533,6 +534,49 @@ class PaymentEnvironmentIntegrationTest {
                 organizationId))
         .isZero();
     assertThat(BusinessEnvironmentContext.current()).isNull();
+  }
+
+  @Test
+  void 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다() {
+    String oldSecret = "test_sk_reconciliation_revoked";
+    String midSecret = "test_sk_reconciliation_retired";
+    Payable test = payable("test", oldSecret);
+    assertThat(putCredential("test", "test", midSecret)).hasStatusOk();
+    UUID midAttempt = insertAttempt(test, "test", false);
+    OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "reconciled-retired",
+        completed,
+        midAttempt);
+    assertThat(putCredential("test", "test", "test_sk_reconciliation_current")).hasStatusOk();
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    when(toss.listTransactions(eq(oldSecret), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Rejected<>(401, "UNAUTHORIZED_KEY", "폐기한 키"));
+    when(toss.listTransactions(eq(midSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-retired",
+                        "reconciled-retired",
+                        midAttempt.toString(),
+                        "DONE",
+                        completed,
+                        1100))));
+
+    PaymentJobResult result = reconciliation.reconcile(OffsetDateTime.now());
+
+    assertThat(result.failedCount()).isZero();
+    verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
+    verify(toss).listTransactions(eq(midSecret), any(), any(), isNull(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
+                Integer.class,
+                organizationId))
+        .isZero();
   }
 
   private UUID insertAttempt(Payable payable, String mode, boolean failed) {
