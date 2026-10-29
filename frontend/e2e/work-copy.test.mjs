@@ -100,3 +100,11 @@ test("customer detail asks the server for only that customer's cards instead of 
   assert.ok(detail.includes('"/v1/payment-methods", { status: cardStatus, customer_id: id }'));
   assert.ok(!detail.includes("payment_methods.filter(method => method.customer_id === id)"));
 });
+
+test("base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won", () => {
+  const pricing = source("components/pricing/PricingWorkspace.tsx");
+  for (const name of ["base_fee", "minimum_amount"]) {
+    const field = pricing.match(new RegExp(`\\{name:"${name}",[^}]*\\}`))[0];
+    assert.ok(!field.includes("step:10") && field.includes("청구할 때 10원 미만은 버립니다."), field);
+  }
+});

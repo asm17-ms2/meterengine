@@ -80,8 +80,8 @@ export function PricingWorkspace(props: Props) {
       {name:"customer_id",type:"hidden",label:"고객",value:props.customerId},
       {name:"effective_from",type:"month",label:"적용 시작 월",value:props.month < props.currentMonth ? props.currentMonth : props.month},
       {name:"effective_until",type:"month",label:"적용 종료 월",isOptional:true,hint:"이 월부터 적용되지 않습니다. 비워 두면 계속 적용합니다."},
-      {name:"base_fee",type:"number",label:"월 기본료 (원)",value:"0",step:10,hint:"청구할 때 10원 미만은 버립니다."},
-      {name:"minimum_amount",type:"number",label:"월 최소 사용료 (원)",value:"0",step:10,hint:"사용료가 이 금액보다 작으면 차액을 더합니다. 기본료는 별도입니다. 청구할 때 10원 미만은 버립니다."},
+      {name:"base_fee",type:"number",label:"월 기본료 (원)",value:"0",hint:"청구할 때 10원 미만은 버립니다."},
+      {name:"minimum_amount",type:"number",label:"월 최소 사용료 (원)",value:"0",hint:"사용료가 이 금액보다 작으면 차액을 더합니다. 기본료는 별도입니다. 청구할 때 10원 미만은 버립니다."},
     ]} />}</div>
       {plan ? <><div className={styles.planAmounts}><div><span>기본료</span><strong>{planAmount(plan.base_fee)}</strong></div><div><span>최소 사용료</span><strong>{planAmount(plan.minimum_amount)}</strong></div><div><span>적용 기간</span><strong>{dateRange(plan)}</strong>{isInheritedPlan && <Tag>공통 요금제 적용</Tag>}{plan.archived_at && <span className="field-hint">보관, {plan.archived_from ?? "다음 달"}부터 중단</span>}</div></div></> : <p className="muted">이 월에는 기본료와 최소 사용료가 없습니다. 등록한 사용량 단가로만 계산합니다.</p>}
       <p className="field-hint">이력의 관리 상태 필터는 위 가격에 영향을 주지 않습니다. 위 가격은 선택한 월의 실제 적용 기준입니다.</p><PricingHistoryFilter parameterName="plan_status" value={props.planHistoryStatus} label="요금제 관리 상태" /><details className={styles.history} open><summary>요금제 변경 이력 ({historyPlans.length})</summary><Table<PricePlanResponse> size="small" rowKey="id" scroll={{x:650}} pagination={false} dataSource={historyPlans} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={props.planHistoryStatus === "archived" ? "보관된 요금제 이력이 없습니다" : props.planHistoryStatus === "all" ? "등록한 요금제 이력이 없습니다" : "사용 중인 요금제 이력이 없습니다. 보관됨 또는 전체에서 이전 요금제를 확인하세요."} /> }} columns={[
