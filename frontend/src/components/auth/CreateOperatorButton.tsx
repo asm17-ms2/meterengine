@@ -49,7 +49,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
-  return <Modal title="플랫폼 운영자 계정 생성" open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: "4px 4px 4px 0" } }}
+  return <Modal title="플랫폼 운영자 계정 생성" open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }}
     afterOpenChange={isOpen => { if (isOpen) formRef.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus(); }}
     footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={isPending || state.isUnconfirmed}>운영자 계정 생성</Button></div>}
     onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>

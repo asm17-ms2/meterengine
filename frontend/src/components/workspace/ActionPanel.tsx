@@ -144,7 +144,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {isInline && submitButton}
   </form>;
   if (isInline) return form;
-  return <Modal title={title} open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: "4px 4px 4px 0" } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button>{submitButton}</div>} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>{form}</Modal>;
+  return <Modal title={title} open className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button>{submitButton}</div>} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>{form}</Modal>;
 }
 
 export function ActionPanel(props: ActionPanelProps) {

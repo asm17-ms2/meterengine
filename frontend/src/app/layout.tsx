@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 
 import { AppProviders } from "@/components/shell/AppProviders";
 import "./globals.css";
+
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  variable: "--font-pretendard",
+  weight: "100 900",
+  display: "swap",
+  fallback: ["Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   title: { default: "MeterEngine 관리자 콘솔", template: "%s | MeterEngine" },
@@ -15,8 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={pretendard.variable}>
       <body>
+        <a href="#main-content" className="skip-link">본문으로 이동</a>
         <AntdRegistry>
           <AppProviders>{children}</AppProviders>
         </AntdRegistry>

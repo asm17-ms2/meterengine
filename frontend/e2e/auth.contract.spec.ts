@@ -226,6 +226,21 @@ test("the operator user list sends the active organizations once instead of once
   expect(perUserReferences).toBeLessThan(100);
 });
 
+test("the operator's own card keeps both actions on the same top edge when only one shows a disabled reason", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/users");
+  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
+  const attach = card.getByRole("button", { name: "도입사 소속 연결", exact: true });
+  const remove = card.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
+  await expect(attach).toBeEnabled();
+  await expect(remove).toBeDisabled();
+  const attachBox = (await attach.boundingBox())!;
+  const removeBox = (await remove.boundingBox())!;
+  expect(Math.abs(attachBox.y - removeBox.y)).toBeLessThanOrEqual(0.5);
+});
+
 test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
   await page.context().addCookies([{ name: "me_session", value: "stale-session", url: "http://localhost:33148" }]);
   await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
@@ -472,4 +487,171 @@ test("server action replay on a public route cannot create a customer without a 
   expect(after.filter((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toHaveLength(createsBefore);
   await page.goto("/customers");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
+});
+
+test("with reduced motion a workspace dialog becomes visible and closing it releases the page", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await login(page, "member@contract.local", "/members");
+  const trigger = page.getByRole("button", { name: "초대 링크 만들기", exact: true });
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect.poll(() => page.locator(".ant-modal").evaluate(element => getComputedStyle(element).opacity)).toBe("1");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".ant-modal-wrap")).toBeHidden();
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+});
+
+test("the sidebar fits a short screen and scrolls by itself so its last link stays visible", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const sidebar = page.locator(".workspace-sidebar");
+  const sidebarBox = (await sidebar.boundingBox())!;
+  expect(sidebarBox.y + sidebarBox.height).toBeLessThanOrEqual(720);
+  const lastLink = sidebar.locator(".workspace-sidebar-note a").first();
+  await lastLink.focus();
+  const linkBox = (await lastLink.boundingBox())!;
+  expect(linkBox.y + linkBox.height).toBeLessThanOrEqual(720);
+});
+
+test("an antd button shows a focus ring in the brand color", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("비밀번호", { exact: true }).focus();
+  const button = page.getByRole("button", { name: "로그인", exact: true });
+  for (let step = 0; step < 4 && !(await button.evaluate(element => element === document.activeElement)); step++) await page.keyboard.press("Tab");
+  await expect(button).toBeFocused();
+  await expect(button).toHaveCSS("outline-color", "rgb(87, 70, 173)");
+});
+
+test("an unknown address shows a Korean not-found page with a main landmark and a way back", async ({ page }) => {
+  const response = await page.goto("/organization-invitations/abc/def");
+  expect(response!.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1, name: "페이지를 찾을 수 없습니다" })).toBeVisible();
+  await expect(page.locator("main#main-content")).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "홈으로", exact: true })).toHaveAttribute("href", "/");
+});
+
+test("the root error page shows the error digest so a report can be matched with the server log", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
+  await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
+  await expect(main).toContainText(/\([0-9A-Za-z]+\)/);
+});
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }]) {
+  test(`the header height variable matches the real header at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await login(page);
+    await expectTenantUrl(page, "/customers");
+    await expect(page.locator(".workspace-header")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => {
+      const header = document.querySelector(".workspace-header")!.getBoundingClientRect().height;
+      const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
+      return Math.abs(header - variable) <= 1;
+    })).toBe(true);
+  });
+}
+
+test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-scope")).toHaveText("전체 관리");
+  const refresh = page.getByRole("button", { name: "권한 새로 조회", exact: true });
+  await refresh.click();
+  await expect(page.getByText("권한을 다시 조회했습니다.", { exact: true })).toBeVisible();
+});
+
+test("an unchecked antd checkbox has a visible border", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const unchecked = page.getByRole("dialog").locator(".ant-checkbox:not(.ant-checkbox-checked)").first();
+  await expect(unchecked).toHaveCSS("border-top-color", "rgb(124, 135, 153)");
+});
+
+test("a link inside a sentence keeps its underline", async ({ page }) => {
+  for (const path of ["/login", "/signup"]) {
+    await page.goto(path);
+    await expect(page.locator(".auth-switch a")).toHaveCSS("text-decoration-line", "underline");
+  }
+});
+
+test("a long organization name is cut with an ellipsis and keeps the header icon inside the link", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const link = page.locator(".organization-link");
+  const linkBox = (await link.boundingBox())!;
+  const iconBox = (await link.locator(".anticon").boundingBox())!;
+  expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(linkBox.x + linkBox.width + 0.5);
+});
+
+test("sidebar group titles start on the same line as the sidebar label", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const title = page.locator(".workspace-sidebar .ant-menu-item-group-title").first();
+  await expect(title).toHaveCSS("padding-inline-start", "24px");
+  await expect(title).toHaveCSS("font-size", "11px");
+});
+
+test("the guide toggle keeps a name that says what it does instead of a pressed state", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "시연 안내 보기", exact: true }).click();
+  const toggles = page.getByRole("button", { name: "업무 화면으로", exact: true });
+  await expect(toggles).toHaveCount(2);
+  for (const toggle of await toggles.all()) await expect(toggle).not.toHaveAttribute("aria-pressed");
+});
+
+test("the sidebar calls the integrations screen by its menu name", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-sidebar-note").getByRole("link")).toHaveText("API 키와 통보");
+});
+
+test("the login side panel title is smaller than the task title", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/login");
+  const sizes = await page.evaluate(() => [document.querySelector(".auth-intro-title"), document.querySelector("main h1")].map(element => parseFloat(getComputedStyle(element!).fontSize)));
+  expect(sizes[0]).toBeLessThan(sizes[1]);
+});
+
+test("Korean text in the console wraps between words", async ({ page }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator("body")).toHaveCSS("word-break", "keep-all");
+});
+
+test("the home trace example is a named group", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "한 고객, 한 청구 월" })).toBeVisible();
+});
+
+test("a focused field in a workspace dialog keeps its whole focus ring inside the dialog body", async ({ page }) => {
+  await login(page, "member@contract.local", "/members");
+  await page.getByRole("button", { name: "초대 링크 만들기", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator("input:not([type=hidden])").first().focus();
+  const room = await dialog.evaluate(element => {
+    const body = element.querySelector(".ant-modal-body")!;
+    const scroller = [...body.querySelectorAll("*")].find(node => getComputedStyle(node).overflowY === "auto") ?? body;
+    const box = scroller.getBoundingClientRect();
+    const input = document.activeElement!.getBoundingClientRect();
+    return { left: input.left - (box.left + scroller.clientLeft), right: box.left + scroller.clientLeft + scroller.clientWidth - input.right };
+  });
+  expect(room.left).toBeGreaterThanOrEqual(7);
+  expect(room.right).toBeGreaterThanOrEqual(7);
+});
+
+test("screen titles use the same size whichever header component draws them", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "member@contract.local", "/members");
+  const membersTitle = await page.getByRole("heading", { level: 1, name: "사용자 관리" }).evaluate(element => getComputedStyle(element).fontSize);
+  await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
+  const customersTitle = await page.getByRole("heading", { level: 1, name: "고객" }).evaluate(element => getComputedStyle(element).fontSize);
+  expect(membersTitle).toBe(customersTitle);
 });
