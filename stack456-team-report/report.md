@@ -1,22 +1,22 @@
-미완료 193건, 결과: 끝 상태 179/372건 (fixed 127, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+미완료 217건, 결과: 끝 상태 159/372건 (fixed 127, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 0, blocked 0(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654)
-정할 것: 39건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+정할 것: 0건 (없음). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T15:42:04+09:00
+상태: running, 갱신 2026-10-29T16:00:30+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 0 | 16 | 0 | 0 |
-| #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 4 | 11 | 1 | 1 |
-| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 3 | 4 | 4 | 27 |
-| #448 | feat/request-audit | 24 | 17 | 1 | 1 | 5 | 0 | 0 |
-| #450 | feat/event-ingestion | 38 | 0 | 0 | 0 | 0 | 0 | 38 |
-| #451 | feat/billing-queries | 96 | 0 | 0 | 0 | 0 | 0 | 96 |
-| #454 | feat/auth-rate-limit | 19 | 0 | 0 | 0 | 0 | 0 | 19 |
-| #455 | feat/rds-auto-stop | 12 | 0 | 0 | 0 | 0 | 0 | 12 |
-| #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
+| #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 7 | 0 | 0 | 10 |
+| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 7 | 0 | 0 | 31 |
+| #448 | feat/request-audit | 24 | 17 | 1 | 1 | 0 | 0 | 5 |
+| #450 | feat/event-ingestion | 38 | 0 | 0 | 2 | 0 | 0 | 36 |
+| #451 | feat/billing-queries | 96 | 0 | 0 | 6 | 0 | 0 | 90 |
+| #454 | feat/auth-rate-limit | 19 | 0 | 1 | 4 | 0 | 0 | 14 |
+| #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
+| #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 
 ## 고친 것
 
@@ -146,67 +146,24 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
-| X-012 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
-| D-071 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
-| G-075 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
-| G-085 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
-| D-011 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
-| D-065 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
-| G-072 | #443 | 색과 글꼴 값을 TS 모듈 하나에 모아 AppProviders 테마와 :root CSS 변수를 함께 만들고 globals.css, HomePage.module.css는 var()만 쓰게 바꿀지(새 파일과 AppProviders.tsx, layout.tsx, globals.css, HomePage.module.css에 걸친 구조 변경, 박성종 님 f671a4f 디자인), 지금 복제를 둘지 정한다. |
-| G-080 | #443 | WorkspaceHeader의 kicker를 화면에 보이게 할지(globals.css:170 삭제, f671a4f 디자인 되돌림) 아니면 kicker prop과 호출부 인자, .workspace-kicker 두 규칙을 지울지(이 층 4개 파일, 정점 12개 호출 파일)를 D-237과 함께 정한다. |
-| C443-002 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
-| D-039 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
-| D-055 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
-| D-244 | #443 | 색 토큰을 역할 이름(--color-primary, --color-text-secondary 등)으로 다시 짓고 TS 상수 하나에서 antd 테마와 CSS 변수를 함께 만들며 테스트 환경 안내 상자를 한 컴포넌트로 묶을지(#443, #445, #446, #449 파일에 걸친 구조 변경) 정한다. |
-| D-022 | #443 | 워드마크를 공용 컴포넌트 하나로 묶을 때 글꼴을 이미 번들한 Pretendard로 통일할지 브랜드 글꼴을 따로 번들할지, 그리고 로그인, 가입, 도입사 선택, 플랫폼 운영 화면에도 막대 아이콘을 붙일지 정해야 한다. |
-| G-084 | #443 | 로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(6px, 27px)과 콘솔(5px, 23px) 중 어느 비율을 기준으로 할지 정해야 한다. |
-| G-078 | #443 | LinkButton과 ScopedLink의 href 변환을 공용 훅으로 합치고 ConsoleShell의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 정리(#442 NavMenu 23행의 같은 패턴 포함 여부까지)를 #443에서 할지 정한다. |
-| D-237 | #443 | 화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker prop과 admin 화면의 .page-heading을 없애고, ActionPanel(#442)에 버튼 type을 두어 제목 줄 생성 행동을 primary로 통일할지 정한다. |
-| Ck2-007 | #444 | Q9와 상관없는 없는 delivery_id의 404 webhook_delivery_not_found 분리를 먼저 고치고, 비활성 엔드포인트를 재시도할 때 webhook_endpoint_disabled를 돌려줄지는 Q9(발송 일시 중지 의미) 결정에 맞춰 정할지. 새 오류 code 추가는 공개 계약 변경이다. (Q9 발송 일시 중지와 함께 정한다) |
-| D-045 | #444 | 웹훅 목록에 수신 주소별 발송 상태(마지막 발송 결과나 최근 실패 건수)를 보일지, 보인다면 WebhookEndpointResponse에 필드를 더할지 목록 화면이 수신 주소마다 발송 내역 1건을 따로 조회할지 정한다. |
-| C444-002 | #444 | 도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 하려면 무엇을 둘지 정한다. 후보는 시험 통보와 재시도의 도입사별 호출 한도나 엔드포인트별 대기 상한(새 409 오류 코드와 openapi.yaml 변경), 발송 루프의 도입사별 공정 소비와 병렬 발송, 또는 둘 다이고 그 한도 값도 함께 정한다. |
-| G-140 | #444 | 웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건), 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정한다. 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 함께 정한다. |
-| Ck2-005 | #444 | 운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다). (Ck2-010과 같은 결정) |
-| Ck2-009 | #444 | #444 SDK에 미리 들어온 위층 계약(organizationId 헤더, WebhookEvent.environment, POST 본문과 canRetry 기본 true, text 응답, PATCH)을 처음 쓰는 층(#445, #450, #451, #453)으로 옮길지, #442 프론트 transport처럼 미리 담아 둔 채 스택 순서대로 머지할지 정한다. |
-| Ck2-010 | #444 | 운영 현황 failed_webhook_count를 최근 24시간(last_attempted_at) failed로 바꿀지, 삭제되지 않은 엔드포인트의 failed만 셀지, 지금처럼 현재 failed 전체로 둘지 정한다(비활성 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다). |
-| Ck2-011 | #444 | failure_reason 정본으로 WebhookFailureReason enum을 두고 WebhookOutcome, WebhookClient, WebhookDeliveryService, WebhookDeliveryRepository를 함께 바꿀지(운영 파일 다섯), 아니면 저장소의 문자열과 CHECK 관례를 유지하고 V28에서 webhook_delivery.failure_reason에도 같은 CHECK를 거는 것만 할지 정한다. |
-| Ck2-012 | #444 | #444가 발행하지 않는 PAYMENT_* 셋과 UNBILLED_USAGE_DETECTED를 #444에서 빼 발행 코드가 있는 #445, #450으로 옮길지(스택 재분할, #445는 담당 밖), 아니면 #444에 구독 계약을 미리 두는 지금 분할을 유지하고 PR 본문에만 적을지 정한다. |
-| Ck2-015 | #444 | frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 CI 경로 필터와 #452 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다. |
-| G-151 | #444 | 예약 작업 이름을 scheduling 패키지 enum 하나로 모아 #444, #445, #450에 걸쳐 바꾸고 운영 화면을 등록된 작업 목록 기준으로 바꿀지, 아니면 운영 코드는 그대로 두고 등록 이름, 운영 화면 VALUES, 경보 정규식이 일치하는지 보는 시험만 더할지 정한다. |
-| Ck3-446-03 | #446 | line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 내는 변경(엔티티 2개, 서비스 3개, DTO 5개, openapi.yaml)을 #446에서 할지, 미터 aggregation처럼 문자열로 둘지. |
-| Ck3-446-07 | #446 | 단가 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 README 설명이나 감사 검색(detail.billable_metric_code)으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다. |
-| Ck3-446-08 | #446 | #446에서 운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 두 파일 상한의 예외), 아니면 지적 위치인 DraftInvoiceResponse만 지울지 정한다. |
-| Ck3-446-09 | #446 | OrganizationService.find(UUID)가 없으면 예외를 던져 naming.md의 get 뜻인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지 정한다. |
-| G-092 | #448 | Q3: 요청 감사가 수집 밖의 주체 없는 실패 요청(익명 401, 방화벽 400)과 429까지 지울 수 없는 audit_log에 계속 남길지, 남긴다면 보존 기간(occurred_at 파티션과 V25 트리거 변경)과 플랫폼 조회의 전체 count를 어떻게 할지. |
-| G-095 | #448 | 도입사 감사 조회 GET /v1/audit-logs를 #442의 API 키 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 15692f85 시험이 단정한 대로 read API 키에도 열어 둘지 정한다. |
-| C448-002 | #448 | Q3: 주체 없는 /v1 요청(익명 401, 잘못된 Bearer 401)을 지울 수 없는 audit_log에 계속 남길지, 뺄지, 아니면 남기되 감사 필터 앞에 IP 호출 제한이나 occurred_at 기준 보존 기간을 둘지. |
-| G-169 | #448 | Q3: 수집 밖 경로의 401과 429(API 키 한도, 정점 #454 인증 제한)를 지울 수 없는 audit_log에 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 audit_log 보존 기간을 둘지. |
-| Ck1-448-04 | #448 | 운영자 감사 조회 GET /v1/operations/audit-logs에 선택 인수(도입사 id)를 더하고 /admin/audit 화면에 도입사 필터를 둘지, 둔다면 작업 공간 범위로 이미 쓰이는 organization_id와 겹치지 않는 조회 키 이름을 무엇으로 할지 정한다. |
-| NT-inho-001 | #443 | 헤더 안내 토글과 안내 영역의 '시연'이라는 낱말을 도입사 관리자용 업무 안내 문구로 바꿀지 정해야 한다. |
-| NT-inho-003 | #444 | 웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(V28 CHECK, 전송 기록 API 값, 콘솔 라벨 변경), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다. |
-| NT-inho-004 | #448 | 감사 조회 API에 'API 요청 제외'를 고르는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면의 기본 보기를 변경 기록으로 할지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다. |
 
 ## 막힌 것
 
 | id | 층 | 까닭 |
 | --- | --- | --- |
-| Ck2-014 | #444 | not-owner #445: 이 줄을 #444에서 지우기만 하면 위층 반영 때 #445 TossPaymentsConfig가 쓰는 RestClient.Builder 자동 설정 빈과 org.springframework.boot.http.client 클래스가 사라져 #445 컴파일과 기동이 깨진다. 줄을 #445 build.gradle.kts로 옮기는 일은 T-yang 담당 층을 같이 바꿔야 끝난다. |
-| Ck3-446-10 | #446 | needs-new-migration: price_rate에 부분 조건이 없는 도입사 인덱스가 있어야 한다. 필요한 SQL은 CREATE INDEX price_rate_organization_index ON price_rate (organization_id, billable_metric_code); 이다. V36 안에 넣어 고치는 길은 do-not-touch Ck3-446-01에 걸린다. |
-| C446-001 | #446 | sync-conflict #446: backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java, frontend/e2e/auth.contract.spec.ts |
-| G-110 | #446 | not-owner #449: 고치려면 #446 V41__create_invoice_view_links.sql의 invoice_view_link 표와 감사 제약을 #449 V44로 옮겨야 해 양성지 님 층을 같이 바꿔야 한다(T-inho brief: 판정이 맞으면 not-owner #449). |
-| C447-011 | #447 | not-owner #447: 양성지 님 층의 시험이라 판정도 수정도 하지 않는다. C446-013 수정을 #447로 반영할 때 함께 맞춘다. |
 
 ## 새 지적
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
-| NT-inho-001 | #443 | needs-decision | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
+| NT-inho-001 | #443 | open | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
 | NT-inho-002 | #444 | already-fixed | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
-| NT-inho-003 | #444 | needs-decision | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
-| NT-inho-004 | #448 | needs-decision | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
+| NT-inho-003 | #444 | open | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
+| NT-inho-004 | #448 | open | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
 | NT-inho-005 | #448 | already-fixed | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
 | NT-inho-006 | #451 | fixed | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
 | NT-inho-007 | #442 | fixed | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
+| NT-inho-008 | #454 | open | 운영 Caddyfile에 HSTS가 없다(X-088에서 떼어 낸 결정 항목) |
 
 ## 돌리지 못한 검사
 
@@ -323,3 +280,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다.
 - 2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.
 - PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.
+- 2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md
