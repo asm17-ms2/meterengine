@@ -470,3 +470,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #476 박성종 님 리뷰 p4(대사 버전 실패 격리 시험이 실패 버전을 실제로 부르지 않음)를 받아 현재 키 실패 뒤 옛 키 대사를 보는 시험을 더했다(cce95ba). 시험만 바뀌어 프론트와 실화면 검사는 다시 돌리지 않았다.
 - 2026-10-29: #489 fix/s456-t-yang-pricing-archive(Nk3-006, Ck3-447-03, Ck3-447-06)를 열고 문인호 님을 리뷰어로 지정했다.
 - 2026-10-29: #490 fix/s456-t-yang-reconcile-catchup(Ck2-017)를 열고 문인호 님을 리뷰어로 지정했다.
+- 2026-10-29: G-187 수정(fix/s456-t-yang-ci-tests a9ce8d1, .github/workflows/ci.yml 등)은 로컬 커밋까지 했으나 push가 거절됐다. gh OAuth 토큰에 workflow 권한이 없어 워크플로 파일을 바꾸는 push를 GitHub가 막았다. 우회하지 않고 사용자에게 권한 갱신(gh auth refresh -s workflow)을 요청했다. G-187은 그때까지 needs-decision으로 둔다.
