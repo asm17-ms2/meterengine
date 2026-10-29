@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T17:26:16+09:00",
+  "updated_at": "2026-10-29T17:36:54+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -35,7 +35,8 @@
     "fix/s456-t-yang-demo-web-target": "a34c969",
     "fix/s456-t-yang-frontend-cleanup": "395d4b7",
     "fix/s456-t-yang-auth-session": "34e8959",
-    "fix/s456-t-yang-month-picker": "6dd3dc9"
+    "fix/s456-t-yang-month-picker": "6dd3dc9",
+    "fix/s456-t-yang-sidebar-nav": "63a0b57"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -2328,26 +2329,36 @@
       "id": "D-179",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718 NavMenu.tsx 5행과 23행은 사이드바 페이지 이동 링크를 antd Menu의 항목 label로 넣는다. 잠금 파일이 고정한 @rc-component/menu 1.5.0의 lib/Menu.js는 ul에 role menu와 기본값 tabIndex 0을, lib/MenuItem.js는 li에 role menuitem을 붙인다. 그래서 링크 목록이 앱 메뉴로 노출되고, menuitem 안에 a가 중첩되며, ul이 Tab 정지가 된다. 이 가운데 Tab 정지는 X-019 수정(tabIndex={-1} 복원)으로 풀린다. 지적이 든 globals.css 39행의 [tabindex] 외곽선은 #443(f671a4f)에서 생겼다. 남는 role menu 의미 구조는 main(f088399)에서도 같았다. 이를 고치려면 Menu를 nav, ul, li, a 링크 목록으로 바꿔야 하는데, 그러면 #443 디자인 커밋이 넣은 Menu 테마 토큰과 .ant-menu 스타일이 듣지 않게 된다. 이 둘을 CSS로 옮기는 일은 담당이 아닌 층까지 걸친 구조 변경이다.",
+      "reason": "결정(머지 뒤 지침): X-019 수정으로 main에서 ul이 따로 Tab 정지점이 되는 문제는 풀렸다. 하지만 사이드바 페이지 링크 목록은 아직 role=menu와 menuitem으로 노출되고, menuitem 안에 링크가 겹친다(WCAG 4.1.2). antd Menu를 nav 안의 그룹 제목과 ul, li, a 링크 목록으로 바꾸고 aria-current만 남긴다. 지금 모양은 CSS로 옮겨 지킨다. Menu 테마 토큰과 .ant-menu 스타일은 #443 디자인 시스템에서 왔으므로 문인호 님을 리뷰어로 둔다.",
       "evidence": [
-        "frontend/src/components/shell/NavMenu.tsx:5,23 @ 72e8718",
-        "frontend/src/components/shell/NavMenu.tsx:3,25-42 @ f088399",
-        "frontend/pnpm-lock.yaml:601 @ 72e8718",
-        "frontend/src/components/shell/AppProviders.tsx:19 @ 0fe7d2a",
-        "frontend/src/app/globals.css:129-130 @ 0fe7d2a"
+        "frontend/src/components/shell/NavMenu.tsx:24 @ af15d7f",
+        "frontend/src/components/shell/AppProviders.tsx:19 @ af15d7f",
+        "frontend/src/app/globals.css:108-109 @ af15d7f",
+        "frontend/src/components/shell/ConsoleShell.tsx:72 @ af15d7f",
+        "frontend/e2e/auth.contract.spec.ts:178-191 @ af15d7f",
+        "frontend/e2e/auth.contract.spec.ts:687-690 @ af15d7f",
+        "auth.contract the sidebar lists page links in plain lists without menu roles: 실패 getByRole(menu) Expected 0 Received 1",
+        "커밋 63a0b57"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "63a0b57b"
+      ],
+      "tests": [
+        "auth 계약 65건, 단위 79건, 실화면 auth, people, permissions, events, query-workspace, archive-filters 통과(63a0b57)",
+        "바꾸기 전후 데스크톱 사이드바와 모바일 Drawer 계산 스타일 비교 일치(Drawer 세로선 1px만 다름)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "사이드바를 antd Menu 대신 nav 안 그룹 제목과 ul, li, a 링크 목록(aria-current만 유지)으로 바꾸고, #443의 Menu 테마 토큰(itemSelectedBg 등)과 .ant-menu 스타일을 CSS로 옮겨 모양을 지킬지 정한다.",
-      "propagation_note": "하기로 정하면 #442 NavMenu.tsx와 globals.css에 목록 마크업과 스타일을 넣는다. 그다음 #443(f671a4f)에서는 AppProviders.tsx 19행의 Menu 토큰과 globals.css 129-130행의 .ant-menu 규칙을 새 클래스로 옮겨야 한다. 정점 ConsoleShell.tsx 55행 사이드바와 60행 Drawer가 같은 NavMenu를 쓰므로 Drawer 안의 onNavigate 닫힘도 링크 onClick으로 옮긴다."
+      "propagation_note": "하기로 정하면 #442 NavMenu.tsx와 globals.css에 목록 마크업과 스타일을 넣는다. 그다음 #443(f671a4f)에서는 AppProviders.tsx 19행의 Menu 토큰과 globals.css 129-130행의 .ant-menu 규칙을 새 클래스로 옮겨야 한다. 정점 ConsoleShell.tsx 55행 사이드바와 60행 Drawer가 같은 NavMenu를 쓰므로 Drawer 안의 onNavigate 닫힘도 링크 onClick으로 옮긴다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "X-019 수정으로 main에서 ul이 따로 Tab 정지점이 되는 문제는 풀렸다. 하지만 사이드바 페이지 링"
     },
     {
       "id": "D-184",
@@ -13162,6 +13173,86 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 79, pass 79"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "인증 계약 65건 통과. 업무 계약 7 통과 2 실패는 main 기준선과 같은 두 시험(2db50b4, #481이 고침)이라 나빠지지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "auth.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "people.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "events.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "query-workspace.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "archive-filters.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -13629,6 +13720,11 @@
       "branch": "fix/s456-t-yang-month-picker",
       "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
       "at": "2026-10-29T17:26:16+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "at": "2026-10-29T17:36:54+09:00"
     }
   ],
   "usage_log": [],
@@ -13664,7 +13760,8 @@
     "2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다.",
     "2026-10-29: #483 demo-web-target(C453-006), #484 frontend-cleanup(D-245, G-183, G-054, G-059, G-050, 문인호 님 리뷰어)을 열었다.",
     "2026-10-29: #485 fix/s456-t-yang-auth-session(X-104, C442-002)을 열었다. 이미 동의를 마친 직접 생성 계정은 대상이 아니라고 PR 본문에 적었다.",
-    "2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다."
+    "2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다.",
+    "2026-10-29: #487 fix/s456-t-yang-sidebar-nav(D-179)를 열고 문인호 님을 리뷰어로 지정했다."
   ],
   "final_checks": [
     {
