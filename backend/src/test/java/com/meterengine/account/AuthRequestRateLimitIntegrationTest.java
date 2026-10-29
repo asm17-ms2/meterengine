@@ -6,6 +6,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Bucket;
 import com.meterengine.account.service.AuthRequestRateLimitService;
 import com.meterengine.global.error.TooManyRequestsException;
 import com.meterengine.global.security.SecureTokens;
@@ -55,11 +56,11 @@ class AuthRequestRateLimitIntegrationTest {
   }
 
   @Test
-  void 실패한_로그인도_다른_IP에서_같은_계정_한도를_공유하고_차단_감사를_남긴다() throws Exception {
+  void 같은_IP의_실패한_로그인은_대소문자가_달라도_계정_한도를_공유하고_차단_감사를_남긴다() throws Exception {
     String email = email();
     assertThat(login(email, "203.0.113.1", null)).hasStatus(401);
-    assertThat(login(email.toUpperCase(), "203.0.113.2", null)).hasStatus(401);
-    MvcTestResult denied = login(email, "203.0.113.3", null);
+    assertThat(login(email.toUpperCase(), "203.0.113.1", null)).hasStatus(401);
+    MvcTestResult denied = login(email, "203.0.113.1", null);
     assertLimited(denied);
     String requestId = denied.getResponse().getHeader("X-Request-ID");
     String audit =
@@ -69,12 +70,47 @@ class AuthRequestRateLimitIntegrationTest {
             requestId);
     assertThat(audit)
         .contains("429", "/v1/sessions")
-        .doesNotContain(email, "wrong-password", "203.0.113.3");
+        .doesNotContain(email, "wrong-password", "203.0.113.1");
     assertThat(
-            jdbcTemplate.queryForObject(
+            jdbcTemplate.queryForList(
                 "SELECT attempts FROM auth_request_rate_limit WHERE scope='login_account'",
                 Long.class))
-        .isEqualTo(3);
+        .containsExactly(3L, 3L);
+  }
+
+  @Test
+  void 다른_IP의_로그인_실패는_내_IP의_계정_한도를_쓰지_않는다() {
+    String email = email();
+    for (int index = 0; index < 2; index++)
+      assertThat(login(email, "203.0.113.30", null)).hasStatus(401);
+    assertLimited(login(email, "203.0.113.30", null));
+
+    assertThat(login(email, "203.0.113.31", null)).hasStatus(401);
+  }
+
+  @Test
+  void 한_계정의_로그인은_모든_IP를_합쳐_느슨한_상한까지만_받는다() {
+    String email = email();
+    for (int index = 0; index < 20; index++)
+      assertThat(login(email, "203.0.114." + (index + 1), null)).as("시도 %d", index).hasStatus(401);
+
+    assertLimited(login(email, "203.0.114.100", null));
+  }
+
+  @Test
+  void IP_한도를_넘은_로그인은_계정_한도에_세지_않는다() {
+    for (int index = 0; index < 3; index++)
+      assertThat(login(email(), "203.0.113.32", null)).hasStatus(401);
+    String victim = email();
+
+    assertLimited(login(victim, "203.0.113.32", null));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM auth_request_rate_limit WHERE scope='login_account' AND identity_hash=?",
+                Long.class,
+                SecureTokens.hash(victim)))
+        .isZero();
   }
 
   @Test
@@ -129,13 +165,13 @@ class AuthRequestRateLimitIntegrationTest {
     assertThat(signup(email, "203.0.113.7")).hasStatus(409);
     assertLimited(signup(email, "203.0.113.8"));
     assertThat(login(email, "203.0.113.9", null)).hasStatus(401);
-    assertThat(login(email, "203.0.113.10", null)).hasStatus(401);
-    assertLimited(login(email, "203.0.113.11", null));
+    assertThat(login(email, "203.0.113.9", null)).hasStatus(401);
+    assertLimited(login(email, "203.0.113.9", null));
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM auth_request_rate_limit WHERE scope IN ('login_account','signup_account')",
                 Long.class))
-        .isEqualTo(2);
+        .isEqualTo(3);
   }
 
   @Test
@@ -179,14 +215,14 @@ class AuthRequestRateLimitIntegrationTest {
 
   @Test
   void 정리되지_않은_만료_행은_다음_시도에서_새_창으로_센다() {
-    byte[] address = SecureTokens.hash("203.0.113.17");
-    byte[] account = SecureTokens.hash(email());
-    assertThat(repository.consume("login", address, account, 1, 1, 300)).isZero();
-    assertThat(repository.consume("login", address, account, 1, 1, 300)).isPositive();
+    Bucket address = new Bucket("login_ip", SecureTokens.hash("203.0.113.17"), 1);
+    List<Bucket> account = List.of(new Bucket("login_account", SecureTokens.hash(email()), 1));
+    assertThat(repository.consume(address, account, 300)).isZero();
+    assertThat(repository.consume(address, account, 300)).isPositive();
     jdbcTemplate.update(
         "UPDATE auth_request_rate_limit SET expires_at=statement_timestamp()-interval '1 second'");
 
-    assertThat(repository.consume("login", address, account, 1, 1, 300)).isZero();
+    assertThat(repository.consume(address, account, 300)).isZero();
     assertThat(
             jdbcTemplate.queryForList("SELECT attempts FROM auth_request_rate_limit", Long.class))
         .containsOnly(1L);
@@ -239,7 +275,7 @@ class AuthRequestRateLimitIntegrationTest {
     assertThat(limited).hasValue(27);
     assertThat(
             jdbcTemplate.queryForList("SELECT attempts FROM auth_request_rate_limit", Long.class))
-        .containsOnly(6L);
+        .containsExactlyInAnyOrder(6L, 5L, 5L);
   }
 
   private MvcTestResult login(String email, String peer, String forwarded) {

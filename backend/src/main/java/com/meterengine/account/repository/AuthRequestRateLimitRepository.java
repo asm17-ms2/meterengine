@@ -1,5 +1,6 @@
 package com.meterengine.account.repository;
 
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -34,17 +35,14 @@ public class AuthRequestRateLimitRepository {
   }
 
   // 거절된 시도도 저장하며, 로그인/가입 트랜잭션이 실패해도 카운터는 유지한다.
+  // IP 한도를 넘은 요청은 계정 한도에 세지 않아, 한 IP의 폭주가 남의 계정을 잠그지 못하게 한다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public long consume(
-      String action,
-      byte[] addressHash,
-      byte[] accountHash,
-      int addressLimit,
-      int accountLimit,
-      long windowSeconds) {
-    Window address = take(action + "_ip", addressHash, addressLimit, windowSeconds);
-    Window account = take(action + "_account", accountHash, accountLimit, windowSeconds);
-    return Math.max(address.retryAfter(addressLimit), account.retryAfter(accountLimit));
+  public long consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
+    long blocked = take(address, windowSeconds);
+    if (blocked > 0) return blocked;
+    long retryAfter = 0;
+    for (Bucket account : accounts) retryAfter = Math.max(retryAfter, take(account, windowSeconds));
+    return retryAfter;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -60,16 +58,20 @@ public class AuthRequestRateLimitRepository {
         """);
   }
 
-  private Window take(String scope, byte[] hash, int limit, long seconds) {
-    return jdbcTemplate.queryForObject(
-        CONSUME_SQL,
-        (resultSet, rowNumber) ->
-            new Window(resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
-        scope,
-        hash,
-        seconds,
-        (long) limit + 1);
+  private long take(Bucket bucket, long seconds) {
+    return jdbcTemplate
+        .queryForObject(
+            CONSUME_SQL,
+            (resultSet, rowNumber) ->
+                new Window(resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
+            bucket.scope(),
+            bucket.identityHash(),
+            seconds,
+            (long) bucket.limit() + 1)
+        .retryAfter(bucket.limit());
   }
+
+  public record Bucket(String scope, byte[] identityHash, int limit) {}
 
   private record Window(long attempts, long retryAfterSeconds) {
     long retryAfter(int limit) {

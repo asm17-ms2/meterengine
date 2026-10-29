@@ -3,9 +3,8 @@ package com.meterengine.account.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,17 +12,23 @@ import static org.mockito.Mockito.when;
 
 import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Bucket;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.TooManyRequestsException;
 import com.meterengine.global.security.SecureTokens;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 class AuthRequestRateLimitServiceTest {
   private final AuthRequestRateLimitRepository repository =
       mock(AuthRequestRateLimitRepository.class);
+  private final ArgumentCaptor<Bucket> address = ArgumentCaptor.forClass(Bucket.class);
+
+  @SuppressWarnings("unchecked")
+  private final ArgumentCaptor<List<Bucket>> accounts = ArgumentCaptor.forClass(List.class);
 
   @Test
   void 기본값은_직접_peer를_쓰고_외부가_보낸_IP_헤더는_신뢰하지_않는다() {
@@ -92,11 +97,10 @@ class AuthRequestRateLimitServiceTest {
   }
 
   @Test
-  void 이메일과_IP의_해시만_카운터에_전달하고_대기시간을_유지한다() {
+  void 로그인은_IP와_계정_IP_쌍과_계정_전체의_해시만_카운터에_전달하고_대기시간을_유지한다() {
     var service = service(List.of());
     when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
-    when(repository.consume(anyString(), any(), any(), anyInt(), anyInt(), anyLong()))
-        .thenReturn(23L);
+    when(repository.consume(any(), any(), anyLong())).thenReturn(23L);
     assertThatThrownBy(() -> service.login("  User@Example.COM  ", request("203.0.113.10")))
         .isInstanceOfSatisfying(
             TooManyRequestsException.class,
@@ -104,14 +108,15 @@ class AuthRequestRateLimitServiceTest {
               assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
               assertThat(exception.getRetryAfterSeconds()).isEqualTo(23L);
             });
-    verify(repository)
-        .consume(
-            "login",
-            SecureTokens.hash("203.0.113.10"),
-            SecureTokens.hash("user@example.com"),
-            100,
-            10,
-            300);
+    verify(repository).consume(address.capture(), accounts.capture(), eq(300L));
+    assertThat(address.getValue())
+        .usingRecursiveComparison()
+        .isEqualTo(new Bucket("login_ip", SecureTokens.hash("203.0.113.10"), 100));
+    assertThat(accounts.getValue())
+        .usingRecursiveFieldByFieldElementComparator()
+        .containsExactly(
+            new Bucket("login_account", SecureTokens.hash("user@example.com\n203.0.113.10"), 10),
+            new Bucket("login_account", SecureTokens.hash("user@example.com"), 100));
   }
 
   @Test
@@ -119,14 +124,13 @@ class AuthRequestRateLimitServiceTest {
     var service = service(List.of());
     when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
     service.signup("  User@Example.COM  ", request("203.0.113.10"));
-    verify(repository)
-        .consume(
-            "signup",
-            SecureTokens.hash("203.0.113.10"),
-            SecureTokens.hash("user@example.com"),
-            20,
-            3,
-            1800);
+    verify(repository).consume(address.capture(), accounts.capture(), eq(1800L));
+    assertThat(address.getValue())
+        .usingRecursiveComparison()
+        .isEqualTo(new Bucket("signup_ip", SecureTokens.hash("203.0.113.10"), 20));
+    assertThat(accounts.getValue())
+        .usingRecursiveFieldByFieldElementComparator()
+        .containsExactly(new Bucket("signup_account", SecureTokens.hash("user@example.com"), 3));
   }
 
   @Test

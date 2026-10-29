@@ -117,7 +117,7 @@ docker build -t meterengine-backend .
 
 ### 공개 인증 요청 제한
 
-로그인과 가입은 DB에 공유하는 IP별, 계정별 고정 구간 한도를 모두 적용한다. 기본값은 로그인 IP 100회/계정 10회(5분), 가입 IP 20회/계정 3회(30분)다. 정상 로그인도 계산하며, 제한 시 429와 초 단위 `Retry-After`를 반환한다. JSON 파싱과 입력 형식 검증에 실패한 요청은 이 한도에 넣지 않으며 요청 감사에는 남는다.
+로그인과 가입은 DB에 공유하는 IP별, 계정별 고정 구간 한도를 모두 적용한다. 기본값은 로그인 IP 100회/계정 10회(5분), 가입 IP 20회/계정 3회(30분)다. 정상 로그인도 계산하며, 제한 시 429와 초 단위 `Retry-After`를 반환한다. 로그인 계정 한도는 계정과 IP 쌍으로 세고, 모든 IP를 합친 계정 전체 시도는 계정 한도의 10배까지 받는다. IP 한도를 넘은 요청은 계정 한도에 세지 않는다. JSON 파싱과 입력 형식 검증에 실패한 요청은 이 한도에 넣지 않으며 요청 감사에는 남는다.
 
 `METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT`, `LOGIN_ACCOUNT_LIMIT`, `LOGIN_WINDOW`, `SIGNUP_IP_LIMIT`, `SIGNUP_ACCOUNT_LIMIT`, `SIGNUP_WINDOW`는 공통 접두사 `METERENGINE_AUTH_RATE_LIMIT_`를 쓴다. `METERENGINE_AUTH_RATE_LIMIT_ENABLED` 기본값은 true다.
 

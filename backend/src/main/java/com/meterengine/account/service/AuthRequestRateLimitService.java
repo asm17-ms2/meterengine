@@ -2,6 +2,7 @@ package com.meterengine.account.service;
 
 import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Bucket;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.TooManyRequestsException;
 import com.meterengine.global.security.SecureTokens;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthRequestRateLimitService {
   public static final String CLIENT_IP_HEADER = "X-MeterEngine-Client-IP";
+  // 로그인 계정 한도는 계정과 IP 쌍으로 세고, 여러 IP에 나눈 시도는 이 배수의 계정 전체 상한으로 막는다.
+  static final int LOGIN_ACCOUNT_TOTAL_MULTIPLIER = 10;
   private final AuthRequestRateLimitRepository authRequestRateLimitRepository;
   private final AuthRateLimitProperties authRateLimitProperties;
   private final List<Network> trustedProxies;
@@ -30,43 +33,40 @@ public class AuthRequestRateLimitService {
   }
 
   public void login(String email, HttpServletRequest request) {
+    if (!authRateLimitProperties.enabled()) return;
+    String address = clientAddress(request);
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
+    int accountLimit = authRateLimitProperties.loginAccountLimit();
     check(
-        "login",
-        email,
-        request,
-        authRateLimitProperties.loginIpLimit(),
-        authRateLimitProperties.loginAccountLimit(),
+        new Bucket("login_ip", SecureTokens.hash(address), authRateLimitProperties.loginIpLimit()),
+        List.of(
+            new Bucket("login_account", SecureTokens.hash(account + "\n" + address), accountLimit),
+            new Bucket(
+                "login_account",
+                SecureTokens.hash(account),
+                accountLimit * LOGIN_ACCOUNT_TOTAL_MULTIPLIER)),
         authRateLimitProperties.loginWindow());
   }
 
   public void signup(String email, HttpServletRequest request) {
+    if (!authRateLimitProperties.enabled()) return;
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
     check(
-        "signup",
-        email,
-        request,
-        authRateLimitProperties.signupIpLimit(),
-        authRateLimitProperties.signupAccountLimit(),
+        new Bucket(
+            "signup_ip",
+            SecureTokens.hash(clientAddress(request)),
+            authRateLimitProperties.signupIpLimit()),
+        List.of(
+            new Bucket(
+                "signup_account",
+                SecureTokens.hash(account),
+                authRateLimitProperties.signupAccountLimit())),
         authRateLimitProperties.signupWindow());
   }
 
-  private void check(
-      String action,
-      String email,
-      HttpServletRequest request,
-      int addressLimit,
-      int accountLimit,
-      Duration window) {
-    if (!authRateLimitProperties.enabled()) return;
-    String account = authRequestRateLimitRepository.normalizeAccount(email);
+  private void check(Bucket address, List<Bucket> accounts, Duration window) {
     authRequestRateLimitRepository.cleanExpired();
-    long retryAfter =
-        authRequestRateLimitRepository.consume(
-            action,
-            SecureTokens.hash(clientAddress(request)),
-            SecureTokens.hash(account),
-            addressLimit,
-            accountLimit,
-            window.toSeconds());
+    long retryAfter = authRequestRateLimitRepository.consume(address, accounts, window.toSeconds());
     if (retryAfter > 0)
       throw new TooManyRequestsException(ErrorCode.RATE_LIMIT_EXCEEDED, retryAfter);
   }
