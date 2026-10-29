@@ -122,6 +122,7 @@ public class BillableMetricController {
         description =
             """
             code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
+            code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
             """)
   })
   public BillableMetricResponse updateBillableMetric(
@@ -136,7 +137,14 @@ public class BillableMetricController {
   @Operation(summary = "미터 목록 조회")
   public ListBillableMetricsResponse listBillableMetrics(
       @CurrentOrganizationId UUID organizationId,
-      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active") @StorableText
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
+          @StorableText
           String status) {
     return billableMetricService.list(organizationId, status);
   }
@@ -152,6 +160,16 @@ public class BillableMetricController {
   @PostMapping("/{code}/restorations")
   @AdminAccess
   @Operation(summary = "미터 복원", description = "다음 달부터 집계를 재개한다. 보관한 기간을 소급 집계하지 않는다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "복원한 미터. 보관하지 않은 미터면 그대로 돌려준다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
+  })
   public BillableMetricResponse restoreBillableMetric(
       @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
     return billableMetricService.restore(organizationId, code);
@@ -163,6 +181,16 @@ public class BillableMetricController {
   @Operation(
       summary = "미터 보관",
       description = "현재 월까지 집계를 유지하고 다음 달부터 중단한다. 이벤트와 단가는 유지한다. 반복 요청은 204다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
+  })
   public void deleteBillableMetric(
       @CurrentOrganizationId UUID organizationId, @PathVariable @StorableText String code) {
     billableMetricService.delete(organizationId, code);

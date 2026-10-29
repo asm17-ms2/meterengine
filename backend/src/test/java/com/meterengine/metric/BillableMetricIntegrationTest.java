@@ -327,13 +327,16 @@ class BillableMetricIntegrationTest {
     assertThat(post(organizationId, sumBody("token-usage"))).hasStatus(201);
     insertEvent(organizationId, insertCustomer(organizationId));
 
-    assertThat(put(organizationId, "token-usage", updateBody("text_completion", "token")))
+    MvcTestResult result =
+        put(organizationId, "token-usage", updateBody("text_completion", "token"));
+    assertThat(result)
         .hasStatus(409)
         .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
         .bodyJson()
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS.getCode());
+    assertThat(result).bodyJson().extractingPath("$.message").asString().doesNotContain("삭제");
     assertThat(storedEventType(organizationId, "token-usage")).isEqualTo("chat_completion");
   }
 

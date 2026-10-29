@@ -83,7 +83,8 @@ class InvoicePaymentIntegrationTest {
         insertDoneAttempt(organizationId, canceled, "test", FIRST_REQUESTED_AT, FIRST_COMPLETED_AT);
     insertCancellation(organizationId, canceledAttempt, "done", 10000);
     insertCancellation(organizationId, canceledAttempt, "done", 3200);
-    UUID failed = insertInvoice(organizationId, insertCustomer(organizationId, "사"), 12000);
+    UUID failedCustomer = insertCustomer(organizationId, "사");
+    UUID failed = insertInvoice(organizationId, failedCustomer, 12000);
     insertFailedAttempt(
         organizationId,
         failed,
@@ -91,6 +92,7 @@ class InvoicePaymentIntegrationTest {
         "REJECT_CARD_PAYMENT",
         FIRST_REQUESTED_AT,
         FIRST_COMPLETED_AT);
+    insertBillingKey(organizationId, failedCustomer, FIRST_REQUESTED_AT);
 
     assertThat(list(organizationId, ""))
         .hasStatusOk()
@@ -164,7 +166,7 @@ class InvoicePaymentIntegrationTest {
   @Test
   void next_retry_at은_재시도_대상_코드면_채워지고_INVALID_CARD_EXPIRATION이거나_시도_수가_상한이면_null이다() {
     UUID organizationId = insertOrganization();
-    UUID expired = insertInvoice(organizationId, insertCustomer(organizationId, "가"), 12000);
+    UUID expired = insertInvoice(organizationId, insertCardCustomer(organizationId, "가"), 12000);
     insertFailedAttempt(
         organizationId,
         expired,
@@ -173,7 +175,7 @@ class InvoicePaymentIntegrationTest {
         FIRST_REQUESTED_AT,
         FIRST_COMPLETED_AT);
     UUID credentialMissing =
-        insertInvoice(organizationId, insertCustomer(organizationId, "나"), 12000);
+        insertInvoice(organizationId, insertCardCustomer(organizationId, "나"), 12000);
     insertFailedAttempt(
         organizationId,
         credentialMissing,
@@ -181,12 +183,13 @@ class InvoicePaymentIntegrationTest {
         "toss_payments_credential_missing",
         FIRST_REQUESTED_AT,
         FIRST_COMPLETED_AT);
-    UUID serverError = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
+    UUID serverError =
+        insertInvoice(organizationId, insertCardCustomer(organizationId, "다"), 12000);
     insertFailedAttempt(
         organizationId, serverError, "test", "HTTP_500", FIRST_REQUESTED_AT, FIRST_COMPLETED_AT);
     insertFailedAttempt(
         organizationId, serverError, "test", "HTTP_500", SECOND_REQUESTED_AT, SECOND_COMPLETED_AT);
-    UUID exhausted = insertInvoice(organizationId, insertCustomer(organizationId, "라"), 12000);
+    UUID exhausted = insertInvoice(organizationId, insertCardCustomer(organizationId, "라"), 12000);
     insertFailedAttempt(
         organizationId,
         exhausted,
@@ -298,7 +301,8 @@ class InvoicePaymentIntegrationTest {
         "ALREADY_REMOVED_BILLING_KEY",
         FIRST_REQUESTED_AT,
         FIRST_COMPLETED_AT);
-    UUID oldNotFound = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
+    UUID oldNotFound =
+        insertInvoice(organizationId, insertCardCustomer(organizationId, "다"), 12000);
     OffsetDateTime oldFailedAt = OffsetDateTime.now().minusDays(7).minusMinutes(1);
     insertFailedAttempt(
         organizationId,
@@ -307,7 +311,8 @@ class InvoicePaymentIntegrationTest {
         "NOT_FOUND_PAYMENT",
         oldFailedAt.minusSeconds(5),
         oldFailedAt);
-    UUID recentNotFound = insertInvoice(organizationId, insertCustomer(organizationId, "라"), 12000);
+    UUID recentNotFound =
+        insertInvoice(organizationId, insertCardCustomer(organizationId, "라"), 12000);
     OffsetDateTime recentFailedAt = OffsetDateTime.now().minusDays(1);
     insertFailedAttempt(
         organizationId,
@@ -329,6 +334,49 @@ class InvoicePaymentIntegrationTest {
             nextRetryAt -> assertThat(nextRetryAt).isNull(),
             nextRetryAt -> assertThat(nextRetryAt).isNull(),
             nextRetryAt -> assertThat(nextRetryAt).isNotNull());
+  }
+
+  @Test
+  void next_retry_at은_재시도_대상_코드여도_카드를_보관했거나_카드가_없으면_null이다() {
+    UUID organizationId = insertOrganization();
+    UUID active = insertInvoice(organizationId, insertCardCustomer(organizationId, "가"), 12000);
+    insertFailedAttempt(
+        organizationId,
+        active,
+        "test",
+        "REJECT_CARD_PAYMENT",
+        FIRST_REQUESTED_AT,
+        FIRST_COMPLETED_AT);
+    UUID archivedCustomer = insertCardCustomer(organizationId, "나");
+    UUID archived = insertInvoice(organizationId, archivedCustomer, 12000);
+    insertFailedAttempt(
+        organizationId,
+        archived,
+        "test",
+        "REJECT_CARD_PAYMENT",
+        FIRST_REQUESTED_AT,
+        FIRST_COMPLETED_AT);
+    jdbcTemplate.update(
+        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ? AND customer_id = ?",
+        organizationId,
+        archivedCustomer);
+    UUID withoutCard = insertInvoice(organizationId, insertCustomer(organizationId, "다"), 12000);
+    insertFailedAttempt(
+        organizationId,
+        withoutCard,
+        "test",
+        "REJECT_CARD_PAYMENT",
+        FIRST_REQUESTED_AT,
+        FIRST_COMPLETED_AT);
+
+    MvcTestResult listed = list(organizationId, "");
+
+    assertInvoiceIds(listed, active, archived, withoutCard);
+    assertThat(listed)
+        .bodyJson()
+        .extractingPath("$.invoice_payments[*].next_retry_at")
+        .asArray()
+        .containsExactly("2026-10-02T09:00:05+09:00", null, null);
   }
 
   @Test
@@ -515,6 +563,12 @@ class InvoicePaymentIntegrationTest {
   private UUID insertOrganization() {
     return jdbcTemplate.queryForObject(
         "INSERT INTO organization (name) VALUES ('도입사') RETURNING id", UUID.class);
+  }
+
+  private UUID insertCardCustomer(UUID organizationId, String name) {
+    UUID customerId = insertCustomer(organizationId, name);
+    insertBillingKey(organizationId, customerId, FIRST_REQUESTED_AT);
+    return customerId;
   }
 
   private UUID insertCustomer(UUID organizationId, String name) {
