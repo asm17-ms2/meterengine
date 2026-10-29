@@ -69,3 +69,9 @@ test("mobile event links open the drawer in place and closing it returns focus t
   assert.ok(routed.includes("data-transaction-id"));
 });
 
+test("the rejection search keeps its customer id guidance visible below the field", () => {
+  const page = readFileSync(new URL("../src/app/(console)/event-rejections/page.tsx", import.meta.url), "utf8");
+  assert.ok(!page.includes('placeholder="존재하지 않는 고객 ID도 조회할 수 있습니다"'));
+  assert.ok(page.includes('<small className="field-hint">요청에 담긴 고객 ID(UUID)로 찾습니다. 등록되지 않은 ID도 조회됩니다.</small>'));
+});
+
