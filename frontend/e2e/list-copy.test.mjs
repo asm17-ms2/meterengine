@@ -31,3 +31,10 @@ test("a truncated customer label offers the full name and id", () => {
   assert.ok(label.includes("ellipsis={{ tooltip: `${name} (${id})` }}"));
 });
 
+test("the usage quantity header and sort option say they sort by aggregated line count", () => {
+  const usage = source("usage/UsageTable.tsx");
+  const filters = source("screen/ResourceSearchControls.tsx");
+  assert.ok(usage.includes('showSorterTooltip: { title: "집계 라인 수로 정렬" }'));
+  assert.ok(filters.includes('{ value: "line_count", label: "집계 라인 수" }'));
+});
+

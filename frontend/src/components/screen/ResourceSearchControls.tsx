@@ -38,7 +38,7 @@ const SORTS: Record<SearchResource, { value: string; label: string }[]> = {
   customers: [{ value: "name", label: "고객명" }, { value: "external_id", label: "외부 고객 ID" }, { value: "created_at", label: "등록 시각" }],
   "billable-metrics": [{ value: "code", label: "미터 코드" }, { value: "name", label: "미터명" }, { value: "event_type", label: "이벤트 유형" }, { value: "aggregation", label: "집계 방식" }],
   "billable-metric-prices": [{ value: "code", label: "미터 코드" }, { value: "name", label: "미터명" }, { value: "rate_count", label: "단가 수" }],
-  usage: [{ value: "customer_name", label: "고객명" }, { value: "customer_id", label: "고객 ID" }, { value: "line_count", label: "미터 라인 수" }],
+  usage: [{ value: "customer_name", label: "고객명" }, { value: "customer_id", label: "고객 ID" }, { value: "line_count", label: "집계 라인 수" }],
   billing: [{ value: "customer_name", label: "고객명" }, { value: "amount", label: "청구 예정액" }, { value: "line_count", label: "청구 라인 수" }],
   invoices: [{ value: "month", label: "청구 월" }, { value: "customer_name", label: "고객명" }, { value: "total_amount", label: "청구 금액" }, { value: "finalized_at", label: "확정 시각" }, { value: "invoice_number", label: "인보이스 번호" }, { value: "status", label: "수납 상태" }],
 };

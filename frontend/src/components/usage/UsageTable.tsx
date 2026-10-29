@@ -147,6 +147,7 @@ export function UsageTable({
       width: 200,
       clientSorter: byLineCount,
       sortKey: "line_count",
+      showSorterTooltip: { title: "집계 라인 수로 정렬" },
       render: (_, row) => {
         if (row.kind === "customer") {
           return <Typography.Text type="secondary">집계 라인 {row.lineCount}줄</Typography.Text>;
