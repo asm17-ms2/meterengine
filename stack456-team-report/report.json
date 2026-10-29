@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T17:17:23+09:00",
+  "updated_at": "2026-10-29T17:26:16+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -34,7 +34,8 @@
     "fix/s456-t-yang-backend-cleanup": "6b954c5",
     "fix/s456-t-yang-demo-web-target": "a34c969",
     "fix/s456-t-yang-frontend-cleanup": "395d4b7",
-    "fix/s456-t-yang-auth-session": "34e8959"
+    "fix/s456-t-yang-auth-session": "34e8959",
+    "fix/s456-t-yang-month-picker": "6dd3dc9"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -2159,26 +2160,38 @@
       "id": "D-136",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-month-picker",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "같은 월 선택이 MonthFilter의 네이티브 type=month와 네이티브 '조회' 버튼(WorkspaceHeader.tsx:15 @ 72e8718), MonthPicker의 antd DatePicker YYYY-MM(MonthPicker.tsx:51-61 @ 72e8718)으로 갈라져 있고, #445 수납과 취소(payments/page.tsx:15-16 @ 54bb1d5)부터 옆 탭의 청구 검토, 인보이스와 다르게 보인다. 적용과 초기화 문구도 정점 AuditScreen.tsx:65의 '조건으로 조회', '조건 초기화'와 EmptyState.tsx:11의 '필터 초기화'로 갈린다. 이 층의 MonthPicker는 query, capabilities를 받아 바로 이동만 해(MonthPicker.tsx:17-35) 폼 제출용으로 쓰려면 MonthPicker를 고쳐야 하고, 문구 통일은 #448 등 T-inho 층 파일까지 셋 이상에 걸친다. 콘솔 전체의 컨트롤과 문구 한 벌을 정하는 일이라 결정이 필요하다.",
+      "reason": "결정(머지 뒤 지침): 월 선택 컨트롤 불일치는 D-236과 같은 PR에서 MonthPicker로 맞춘다. Firefox와 Safari 데스크톱에서 글자 칸이 되는 문제는 MonthFilter에는 #442 병합 때 pattern과 형식 안내가 이미 들어갔지만(1b2c555d), 수집 화면 세 곳은 pattern이 없어 형식이 틀린 값이 readMonth에서 조용히 이번 달로 바뀌므로 이번 교체로 함께 없어진다. 적용 버튼 이름과 초기화 문구(조건 초기화, 필터 초기화)는 바꾸지 않고, MonthFilter의 조회 버튼도 문구와 모양을 그대로 둬 변경을 컨트롤 교체로 한정한다.",
       "evidence": [
-        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
-        "frontend/src/components/screen/MonthPicker.tsx:17-35,51-61 @ 72e8718",
-        "frontend/src/app/(console)/payments/page.tsx:15-16 @ 54bb1d5",
-        "frontend/src/components/workspace/AuditScreen.tsx:65 @ 0fe7d2a",
-        "frontend/src/components/screen/EmptyState.tsx:11 @ 72e8718"
+        "커밋 1b2c555d",
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:16 @ af15d7f",
+        "frontend/src/lib/month.ts:29-37 @ af15d7f",
+        "frontend/src/app/(console)/event-issues/page.tsx:22 @ af15d7f",
+        "frontend/src/app/(console)/event-rejections/page.tsx:16 @ af15d7f",
+        "frontend/src/app/(console)/payments/page.tsx:20 @ af15d7f",
+        "frontend/src/app/(console)/invoices/page.tsx:51-56 @ af15d7f",
+        "frontend/src/components/workspace/AuditScreen.tsx:54 @ af15d7f",
+        "frontend/src/components/events/EventFilters.tsx:182 @ af15d7f",
+        "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
+        "커밋 6dd3dc9"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6dd3dc98"
+      ],
+      "tests": [
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
-      "propagation_note": "통일하면 #442는 WorkspaceHeader.tsx MonthFilter와 MonthPicker.tsx를 바꾸는데, #451 e5fca11이 MonthPicker.tsx에 onChange, id, label을 따로 더해 반영 merge에서 충돌한다. 위층은 AuditScreen.tsx:65(#448), EventFilters.tsx:182(#451), event-issues/page.tsx:43, event-rejections/page.tsx:33(#450), EmptyState.tsx:11 기본값을 맞춘다."
+      "propagation_note": "통일하면 #442는 WorkspaceHeader.tsx MonthFilter와 MonthPicker.tsx를 바꾸는데, #451 e5fca11이 MonthPicker.tsx에 onChange, id, label을 따로 더해 반영 merge에서 충돌한다. 위층은 AuditScreen.tsx:65(#448), EventFilters.tsx:182(#451), event-issues/page.tsx:43, event-rejections/page.tsx:33(#450), EmptyState.tsx:11 기본값을 맞춘다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "월 선택 컨트롤 불일치는 D-236과 같은 PR에서 MonthPicker로 맞춘다. Firefox와 Safa"
     },
     {
       "id": "D-150",
@@ -2247,25 +2260,38 @@
       "id": "D-170",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-month-picker",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 월 선택 구현이 WorkspaceHeader.tsx:15의 네이티브 type=month(라벨 '청구 월')와 MonthPicker.tsx:51-61의 antd DatePicker(aria-label '조회 기간')로 갈라져 있다. 정점에서는 event-issues/page.tsx:38 '대상 월', PricingWorkspace.tsx:187 '적용 시작 월' 같은 네이티브 입력과 라벨이 더 늘었다. MonthFilter가 MonthPicker를 쓰려면 이 층 MonthPicker가 query, capabilities로 바로 이동만 하는 구조(MonthPicker.tsx:17-35)를 바꿔야 하고, 라벨 통일은 #446, #450, #451(T-inho 층) 파일까지 셋 이상에 걸친다. 어느 라벨로 맞출지도 화면 뜻을 정하는 결정이라 needs-decision으로 둔다.",
+      "reason": "결정(머지 뒤 지침): 컨트롤은 D-236과 같은 PR에서 네이티브 type=month를 MonthPicker로 바꿔 한 가지로 맞춘다. 라벨은 하나로 합치지 않는다. 청구 월, 대상 월, 거절 기록 월, 조회 월은 각각 청구 기준, 진단 대상, 거절이 기록된 시점, 수집 기준이라 뜻이 다르고, 수집 거절 화면은 조회 월이 발생 월이 아닌 거절 기록 월이라고 따로 안내할 만큼 구분이 의도된 것이다. 라벨 텍스트를 그대로 두므로 기존 getByLabel 검사도 유지된다.",
       "evidence": [
-        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
-        "frontend/src/components/screen/MonthPicker.tsx:17-35,51-61 @ 72e8718",
-        "frontend/src/app/(console)/event-issues/page.tsx:38 @ 0fe7d2a",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:187 @ 0fe7d2a"
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:16 @ af15d7f",
+        "frontend/src/components/screen/MonthPicker.tsx:58-70 @ af15d7f",
+        "frontend/src/app/(console)/event-issues/page.tsx:38 @ af15d7f",
+        "frontend/src/app/(console)/event-rejections/page.tsx:28 @ af15d7f",
+        "frontend/src/app/(console)/event-rejections/page.tsx:41 @ af15d7f",
+        "frontend/src/components/events/EventFilters.tsx:158 @ af15d7f",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:189 @ af15d7f",
+        "frontend/e2e/auth.contract.spec.ts:28 @ af15d7f",
+        "frontend/e2e/events.real.spec.ts:127 @ af15d7f",
+        "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
+        "커밋 6dd3dc9"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6dd3dc98"
+      ],
+      "tests": [
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
-      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx와 MonthPicker.tsx(#451 e5fca11이 onChange 모드를 따로 더해 충돌), #446 PricingWorkspace.tsx:187, #450 event-issues/page.tsx:38, event-rejections/page.tsx:28, #451 EventFilters.tsx:158을 바꾼다. EventFilters를 바꾸면 events.real.spec.ts:127,240의 getByLabel('조회 월').fill도 맞춰야 한다."
+      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx와 MonthPicker.tsx(#451 e5fca11이 onChange 모드를 따로 더해 충돌), #446 PricingWorkspace.tsx:187, #450 event-issues/page.tsx:38, event-rejections/page.tsx:28, #451 EventFilters.tsx:158을 바꾼다. EventFilters를 바꾸면 events.real.spec.ts:127,240의 getByLabel('조회 월').fill도 맞춰야 한다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "컨트롤은 D-236과 같은 PR에서 네이티브 type=month를 MonthPicker로 바꿔 한 가지로 맞"
     },
     {
       "id": "D-172",
@@ -2416,26 +2442,39 @@
       "id": "D-236",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-month-picker",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 MonthFilter는 네이티브 type=month와 별도 '조회' 버튼(WorkspaceHeader.tsx:15), MonthPicker는 antd DatePicker YYYY-MM에 '조회 기간' 라벨(MonthPicker.tsx:51-61)로 갈라져 있다. #445에서 수납과 취소(payments/page.tsx:15-16 @ 54bb1d5)는 MonthFilter를, 옆 탭 인보이스(invoices/page.tsx:48-51 @ 54bb1d5)는 ListControls의 MonthPicker를 써서 탭을 옮기면 라벨, 표시 형식, 적용 방식이 바뀐다. 정점에서는 ResourceSearchControls.tsx:107의 '조회 기간'/'적용 월'까지 더해졌다. 통일하려면 MonthPicker 폼 모드와 #446, #450, #451(T-inho 층) 화면까지 셋 이상의 파일과 라벨 결정이 필요해 needs-decision이다.",
+      "reason": "결정(머지 뒤 지침): 월 조회 필터의 컨트롤을 antd MonthPicker 하나로 맞춘다. main에는 MonthPicker의 onChange 모드와 hidden input 방식(ResourceSearchControls.tsx:107)이 이미 있어, CustomerFilterField처럼 감싼 MonthField를 두고 MonthFilter(개요, 수납과 취소, 고객 상세)와 수집 로그, 이벤트 매핑 진단, 수집 거절의 네이티브 type=month를 바꾼다. 요금 설계 등록 모달의 적용 시작 월과 종료 월은 조회 필터가 아니라 min 제약과 필드 오류 문구가 붙은 입력이라 그대로 둔다. 수집 화면 세 곳은 문인호 님 영역이고 공용 컴포넌트와 콘솔 전체 규칙을 정하는 일이라 문인호, 박성종 님을 리뷰어로 지정한다.",
       "evidence": [
-        "frontend/src/components/workspace/WorkspaceHeader.tsx:15 @ 72e8718",
-        "frontend/src/components/screen/MonthPicker.tsx:51-61 @ 72e8718",
-        "frontend/src/app/(console)/payments/page.tsx:15-16 @ 54bb1d5",
-        "frontend/src/app/(console)/invoices/page.tsx:48-51 @ 54bb1d5",
-        "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ 0fe7d2a"
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:10-16 @ af15d7f",
+        "frontend/src/components/screen/MonthPicker.tsx:17-43 @ af15d7f",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ af15d7f",
+        "frontend/src/components/screen/CustomerFilterField.tsx:8-11 @ af15d7f",
+        "frontend/src/components/shell/NavMenu.tsx:13 @ af15d7f",
+        "frontend/src/app/(console)/event-issues/page.tsx:38 @ af15d7f",
+        "frontend/src/app/(console)/event-rejections/page.tsx:28 @ af15d7f",
+        "frontend/src/components/events/EventFilters.tsx:158 @ af15d7f",
+        "frontend/src/components/pricing/PricingWorkspace.tsx:189 @ af15d7f",
+        "frontend/src/lib/field-validation.ts:7 @ af15d7f",
+        "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
+        "커밋 6dd3dc9"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6dd3dc98"
+      ],
+      "tests": [
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
-      "propagation_note": "정점에는 ResourceSearchControls.tsx:107이 hidden input 방식의 MonthPicker를 이미 쓴다(#451 e5fca11). #442에서 MonthFilter를 그 방식으로 바꾸려면 MonthPicker.tsx에 같은 onChange 모드를 더해야 해 #451과 충돌하므로, 결정 뒤 #451 위에서 MonthFilter만 바꾸는 편이 충돌이 적다."
+      "propagation_note": "정점에는 ResourceSearchControls.tsx:107이 hidden input 방식의 MonthPicker를 이미 쓴다(#451 e5fca11). #442에서 MonthFilter를 그 방식으로 바꾸려면 MonthPicker.tsx에 같은 onChange 모드를 더해야 해 #451과 충돌하므로, 결정 뒤 #451 위에서 MonthFilter만 바꾸는 편이 충돌이 적다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "월 조회 필터의 컨트롤을 antd MonthPicker 하나로 맞춘다. main에는 MonthPicker의 "
     },
     {
       "id": "D-250",
@@ -3622,26 +3661,39 @@
       "id": "X-046",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "needs-decision",
+      "branch": "fix/s456-t-yang-month-picker",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "정점 0fe7d2a에서 월 라벨은 '청구 월'(WorkspaceHeader.tsx:16), '조회 기간'/'적용 월'(ResourceSearchControls.tsx:107), '조회 월'(EventFilters.tsx:158), '대상 월'(event-issues/page.tsx:38)로 갈리고, 적용 버튼도 '조회', '조건 적용'(ResourceSearchControls.tsx:124), '이 조건으로 조회'(EventFilters.tsx:182), '조건으로 조회'(AuditScreen.tsx:65), '진단 조회'(event-issues/page.tsx:43)로 갈린다. 컨트롤도 네이티브 month와 antd MonthPicker 두 가지라 지적이 맞다. 이 층 몫은 MonthFilter 하나지만, 통일에는 #446, #448, #450, #451(T-inho 층) 파일과 MonthPicker 폼 모드가 함께 바뀌어 셋 이상의 파일과 문구 결정이 필요하다. 그래서 needs-decision으로 둔다.",
+      "reason": "결정(머지 뒤 지침): 두 컴포넌트로 갈린 문제는 D-236과 같은 PR에서 네이티브 month를 MonthPicker로 바꿔 고친다. 여섯 가지 라벨과 적용, 초기화 버튼 문구는 이 PR에서 바꾸지 않는다. 진단 조회, 거절 기록 조회처럼 버튼이 화면의 동작을 구체적으로 말하는 경우가 많고, 문구를 바꾸면 e2e 6개 파일의 26곳 선택자가 함께 바뀌는데 기능상 얻는 것이 없다. 문구 통일은 필요해지면 별도 주제로 다룬다.",
       "evidence": [
-        "frontend/src/components/workspace/WorkspaceHeader.tsx:16 @ 0fe7d2a",
-        "frontend/src/components/screen/ResourceSearchControls.tsx:107,124 @ 0fe7d2a",
-        "frontend/src/components/events/EventFilters.tsx:158,182 @ 0fe7d2a",
-        "frontend/src/components/workspace/AuditScreen.tsx:65 @ 0fe7d2a",
-        "frontend/src/app/(console)/event-issues/page.tsx:38,43 @ 0fe7d2a"
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:16 @ af15d7f",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:107 @ af15d7f",
+        "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f",
+        "frontend/src/components/events/EventFilters.tsx:158 @ af15d7f",
+        "frontend/src/components/events/EventFilters.tsx:182 @ af15d7f",
+        "frontend/src/components/workspace/AuditScreen.tsx:54 @ af15d7f",
+        "frontend/src/app/(console)/event-issues/page.tsx:43 @ af15d7f",
+        "frontend/src/app/(console)/event-rejections/page.tsx:26 @ af15d7f",
+        "frontend/e2e/events.real.spec.ts:241 @ af15d7f",
+        "frontend/e2e/auth.contract.spec.ts:37 @ af15d7f",
+        "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
+        "커밋 6dd3dc9"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6dd3dc98"
+      ],
+      "tests": [
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+      ],
+      "behavior_change": true,
       "judged_at": {
-        "layer_sha": "72e8718",
-        "top_sha": "0fe7d2a"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
       },
-      "question": "콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다.",
-      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다."
+      "propagation_note": "통일하면 #442 WorkspaceHeader.tsx(.month-apply 버튼 포함), #446 PricingWorkspace.tsx:105,187, #448 AuditScreen.tsx:65, #450 event-issues/page.tsx:38,43, event-rejections/page.tsx:28,33, #451 EventFilters.tsx:158,182와 EmptyState.tsx:11 기본값을 각 층에서 바꾸고, events.real.spec.ts:127,240의 '조회 월' 레이블 검사도 맞춘다.",
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "두 컴포넌트로 갈린 문제는 D-236과 같은 PR에서 네이티브 month를 MonthPicker로 바꿔 고친"
     },
     {
       "id": "X-057",
@@ -13030,6 +13082,86 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 80, pass 80"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "인증 계약 65건 통과. 업무 계약 7 통과 2 실패는 main 기준선과 같은 두 시험(2db50b4, #481이 고침)이라 나빠지지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "events.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "auth.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "customer-payment-retry.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "invoice-links.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "people.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -13492,6 +13624,11 @@
       "branch": "fix/s456-t-yang-auth-session",
       "sha": "34e89596c0c7130bf2021b0847ca8eaef27de04c",
       "at": "2026-10-29T17:17:23+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "6dd3dc981a4036ea92a08564a17b48b6c53d8f60",
+      "at": "2026-10-29T17:26:16+09:00"
     }
   ],
   "usage_log": [],
@@ -13526,7 +13663,8 @@
     "2026-10-29: #482 fix/s456-t-yang-backend-cleanup(G-018, G-008, G-011)을 열고 박성종 님과 문인호 님을 리뷰어로 지정했다.",
     "2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다.",
     "2026-10-29: #483 demo-web-target(C453-006), #484 frontend-cleanup(D-245, G-183, G-054, G-059, G-050, 문인호 님 리뷰어)을 열었다.",
-    "2026-10-29: #485 fix/s456-t-yang-auth-session(X-104, C442-002)을 열었다. 이미 동의를 마친 직접 생성 계정은 대상이 아니라고 PR 본문에 적었다."
+    "2026-10-29: #485 fix/s456-t-yang-auth-session(X-104, C442-002)을 열었다. 이미 동의를 마친 직접 생성 계정은 대상이 아니라고 PR 본문에 적었다.",
+    "2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다."
   ],
   "final_checks": [
     {

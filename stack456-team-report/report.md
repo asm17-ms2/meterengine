@@ -1,12 +1,12 @@
-결과: 끝 상태 328/328건 (fixed 252, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 10, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959)
-정할 것: 10건 (D-136, D-170, D-179, D-236, G-187, X-046, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06). 로컬 DB 다시 만들기: 없음
+결과: 끝 상태 328/328건 (fixed 256, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 6, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 1개(마지막 ffa9cd3), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9)
+정할 것: 6건 (D-179, G-187, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 108 | 9 | 17 | 6 | 3 | 0 |
+| #442 | 143 | 112 | 9 | 17 | 2 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 24 | 5 | 3 | 3 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
@@ -74,12 +74,15 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-091 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-127 | #442 | 2db50b4 | 발급 값 블록을 앞으로 옮기고 포커스, 복사 전 닫기 확인 | an issued secret is shown first and closing before copying asks for confirmation: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | D-128 | #442 | b4b9800 | 업무 대화상자 액션 예외를 잡아 입력 유지 | a workspace action that throws keeps the dialog and its input: 실패 Error: expect(locator).toBeVisible() failed, element(s) not found |
+| D-136 | #442 | 6dd3dc9 | 월 선택 컨트롤 불일치는 D-236과 같은 PR에서 MonthPicker로 맞춘다. Firefox와 Safa | month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceH |
 | D-150 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-154 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
+| D-170 | #442 | 6dd3dc9 | 컨트롤은 D-236과 같은 PR에서 네이티브 type=month를 MonthPicker로 바꿔 한 가지로 맞 | month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceH |
 | D-172 | #442 | 128a1e0 | 업무 대화상자 닫은 뒤 연 버튼으로 포커스 복귀 | closing a workspace dialog returns focus to its trigger: 실패 Error: expect(locator).toBeFocused() failed, Received: inactive |
 | D-184 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-189 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-227 | #442 | ff89f04 | 역할 변경 설명 조사와 역할 이름 수정 | 없음(보이는 변경(문구): 선택지 라벨, 백엔드 역할 값, 마지막 대표관리자 보호와 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
+| D-236 | #442 | 6dd3dc9 | 월 조회 필터의 컨트롤을 antd MonthPicker 하나로 맞춘다. main에는 MonthPicker의  | month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceH |
 | D-250 | #442 | ae1dc84 | 공용 표 작업 열을 fixed end로 고정 | 없음(보이는 변경: 실화면 환경에서 대표관리자로 /members, /integrations를 1440x900, 1024x768, 390x844로 고치기 전과 뒤 캡처(evidence/X-008/before, after).) |
 | D-256 | #442 | 35e43ac | 청구 월 입력에 형식 pattern과 안내 | 없음(보이는 변경: 시험 브라우저가 Chromium뿐이라 type=month가 지원되어 pattern 실패를 재현할 수 없고 이 층에는 MonthFilter를 그리는 화면이 없다. lint, typecheck, build) |
 | D-258 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
@@ -102,6 +105,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-020 | #442 | 50d7032 | 복사 결과 상태 영역을 미리 둠 | copy results are announced through a status region that is already present: 실패 Expected 1, Received 0 |
 | X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
+| X-046 | #442 | 6dd3dc9 | 두 컴포넌트로 갈린 문제는 D-236과 같은 PR에서 네이티브 month를 MonthPicker로 바꿔 고친 | month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceH |
 | X-072 | #442 | 09d27a3 | 표 빈 상태 작은 삽화 | an empty workspace table uses the small empty illustration: 실패 Expected 1, Received 0 |
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | X-104 | #442 | 57c3f7c | 고친다. 로그아웃 요청이 401 밖의 이유로 실패해도 이 브라우저의 me_session 쿠키는 지우고, 로그 | network failure is recoverable and logout does not claim success before revocation: 실패 고치기 전 로그아웃 뒤 /customers에 머물고 me_session 쿠키가 남음 |
@@ -222,12 +226,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
-| D-136 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
-| D-170 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | D-179 | #442 | 사이드바를 antd Menu 대신 nav 안 그룹 제목과 ul, li, a 링크 목록(aria-current만 유지)으로 바꾸고, #443의 Menu 테마 토큰(itemSelectedBg 등)과 .ant-menu 스타일을 CSS로 옮겨 모양을 지킬지 정한다. |
-| D-236 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | G-187 | #442 | CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다). |
-| X-046 | #442 | 콘솔의 월 선택을 antd MonthPicker 하나로 통일하고(폼 제출 화면은 onChange와 hidden input) 월 라벨과 적용, 초기화 버튼 문구를 한 벌로 정할지, 정하면 #442 MonthFilter와 #446, #448, #450, #451 화면을 각 층 담당이 바꾼다. |
 | Ck2-017 | #445 | 실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다. |
 | Nk3-006 | #447 | GET /v1/price-plans에 month를 주면, status와 상관없이 그 달 청구에 적용되는 요금제 버전 하나만 돌려주도록 계약을 바꿀지 정해야 합니다. 바꾸지 않는다면 지금처럼 그 달에 걸친 이력을 status로 걸러 돌려주고, demo verify와 콘솔이 status=all 목록에서 보관 가림을 포함한 청구 규칙으로 직접 고르게 합니다. |
 | Ck3-447-03 | #447 | #447에서 결제 이력 목록을 저장소가 아니라 DTO from(KST 변환)과 서비스의 문서대로 정렬로 만들도록 저장소와 두 서비스를 고칠지, 컨트롤러 설명을 이력 행 순서에 맞게 고칠지, 그리고 교체로 물러난 키와 카드를 보관 목록에 보관으로 보일지 정합니다. |
@@ -465,3 +465,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #483 fix/s456-t-yang-demo-web-target(C453-006)를 열었다.
 - 2026-10-29: #483 demo-web-target(C453-006), #484 frontend-cleanup(D-245, G-183, G-054, G-059, G-050, 문인호 님 리뷰어)을 열었다.
 - 2026-10-29: #485 fix/s456-t-yang-auth-session(X-104, C442-002)을 열었다. 이미 동의를 마친 직접 생성 계정은 대상이 아니라고 PR 본문에 적었다.
+- 2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다.
