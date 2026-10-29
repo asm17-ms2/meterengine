@@ -1,5 +1,5 @@
-미완료 60건, 결과: 끝 상태 270/328건 (fixed 183, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e)
+미완료 50건, 결과: 끝 상태 278/328건 (fixed 191, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db)
 정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -9,7 +9,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
-| #449 | 24 | 3 | 1 | 3 | 1 | 6 | 10 |
+| #449 | 24 | 11 | 1 | 3 | 1 | 6 | 2 |
 | #452 | 19 | 0 | 0 | 3 | 0 | 0 | 16 |
 | #453 | 39 | 0 | 1 | 4 | 1 | 1 | 32 |
 
@@ -160,7 +160,14 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-223 | #447 | 449b06c | 이벤트가 있는 미터를 고칠 때 이름만 바꿀 수 있다고 알린다 | 이벤트가_있는_미터의_event_type을_바꾸면_409이고_미터는_그대로다: 실패 Expecting actual: "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다" not to contain: "삭제" |
 | D-241 | #447 | 1b50aeb | 관리 상태 사용 중이 화면마다 다른 색과 형태 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
 | X-011 | #447 | cc2baea | 미터 목록 이름 열 폭 0 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
+| C449-003 | #449 | 10cae67 | 본문으로 이동 뒤 새로고침하면 공개 청구서 로딩에서 멈춤 | 발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 금액을 검증한다: 실패 expect(locator).toBeVisible() getByText(고객명) not found(본문으로 이동 뒤 새로고침) |
 | C449-008 | #449 | 59e548e | 일반 거절 자동, 고객 재시도 경합 시험 | 일반_거절_뒤_자동_재시도와_고객_재시도가_겹치면_인보이스_잠금을_기다려_새_승인은_한번뿐이다: 실패 expected 2 but was 1 (인보이스 잠금 제거 변이) |
+| D-068 | #449 | 22943db | 모바일 공개 청구서 항목 목록 | 발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 금액을 검증한다: 실패 expect(locator).toBeHidden() getByRole('region', { name: '청구 항목 상세' }) |
+| D-110 | #449 | feef72e | 토큰 없는 공개 청구서 안내 | 조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다: 실패 getByRole('heading', { name: '청구서 조회 정보가 없습니다' }) not found |
+| D-111 | #449 | 9cd255c | 공개 청구서 10원 미만 절사 안내 | 발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 금액을 검증한다: 실패 getByText('항목별 공급가액은 ... 10원 미만을 버린 값입니다.') not found |
+| D-123 | #449 | 26c1d79 | 공개 청구서 다시 조회 진행과 결과 표시 | 조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다: 실패 expect(locator).toBeDisabled() getByRole('button', { name: '조회 중' }) |
+| D-225 | #449 | 3db6ef6 | 최소 사용료와 총량 단가 줄 이름 | public-invoice-lines.test.mjs: 실패 SyntaxError does not provide an export named 'publicInvoiceLineName' |
+| X-080 | #449 | 922afac | 공개 청구서 결제 상태 배지 | 조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다: 실패 toHaveCSS color Expected rgb(169, 35, 52) |
 | C449-002 | #449 | bddcb58 | 재시도 허용 조회 링크 발급의 키 모드 검사 | test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 201 |
 | C449-004 | #449 | a5ec894 | 조회 전용 링크 재시도 거절의 code 확인 | 기존_조회_링크와_옵션을_생략한_링크는_고객의_결제를_허용하지_않는다: 실패 expected payment_retry_unavailable but was payment_retry_stale (허용 플래그 검사 제거 변이) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
@@ -223,14 +230,16 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-057 | #442 | not-owner #444: #442의 두 화면(integrations, members)은 표 앞에 h2를 둬 카드 h3가 건너뛰지 않는다. h2 없이 WorkspaceTable을 처음 부르는 화면은 #444 integrations/[id]이고 같은 건너뜀은 #445 #446 #447 #450 #451 화면에서 생긴다. 지적의 AuthFrame 부분은 원인이 달라 NT-yang-001로 떼어 냈다 |
 | D-216 | #449 | needs-new-migration: 확정 시점 미터 이름을 담을 invoice_line 열이 없다. 필요한 SQL: ALTER TABLE invoice_line ADD COLUMN billable_metric_name varchar(255); 확정 때 채우고 공개 응답에 billable_metric_name을 더한다. 지금 이름을 읽을 때 붙이는 길은 이름을 바꾼 뒤 확정 청구서가 달라져 결정이 필요하다 |
 | G-135 | #453 | do-not-touch M4-B3: 쓰이지 않는 조회 인덱스를 빼거나 고치려면 V48 내용을 바꾸거나 새 V__가 있어야 한다(T-yang brief가 G-135를 do-not-touch로 두라 함). 조회를 environment_scope_id 조건으로 바꾸는 길은 문인호 님 open 파일 WorkspaceQueryRepository를 함께 바꿔야 한다 |
+| NT-yang-002 | #442 | not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다 |
+| NT-yang-003 | #453 | not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다 |
 
 ## 새 지적
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
 | NT-yang-001 | #442 | fixed | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
-| NT-yang-002 | #442 | open | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
-| NT-yang-003 | #453 | open | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
+| NT-yang-002 | #442 | blocked | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
+| NT-yang-003 | #453 | blocked | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
 
 ## 돌리지 못한 검사
 
@@ -431,3 +440,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29 15:00 KST: 박성종 님의 머지 뒤 지침이 아직 없어 양성지 님이 정한 임시 방식으로 재개한다. open 82건만 origin/main에서 판정하고, 고치면 origin/main에서 만든 fix/s456-t-yang-<주제> 브랜치에 커밋해 push만 하고 PR은 열지 않는다. 검사는 10절 kind를 main에서 돌리고, 바꾸지 않은 origin/main 기준선에서도 실패하는 검사는 결과가 기준선보다 나빠지지 않으면 통과로 본다(양성지 님 허락). 문인호 님 open 항목이 가리키는 파일은 건드리지 않는다.
 - 2026-10-29 15:00 KST: check-report.mjs가 지워진 브랜치의 커밋을 origin/<브랜치>에서 찾아 기존 기록 전부를 오류로 막아, 로컬 사본 .s456-work/tools/check-report-main.mjs를 고쳐 쓴다(커밋하지 않음). 고친 것: main에 머지돼 지워진 브랜치 8개는 항목 커밋을 그 브랜치 pushes의 sha로 보고 push의 origin 대조는 건너뛴다. fix/s456-t-yang-* 주제 브랜치는 origin/main 뒤 커밋을 이 세션 커밋으로 본다. 나머지 검사는 그대로다.
 - check-report-main.mjs의 알려진 예외 1건: G-147 커밋 7da6d60을 담은 fix/s456-447-t-yang 84bb5e7의 demo 검사는 corepack pnpm -r build 단계에서 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패했고(바꾸지 않은 head 5371d1e도 같다) 박성종 님 요청으로 push했다. 예전 필터(cr.py)가 이 오류를 감추고 있어, 사본은 오류 대신 주의로 출력한다. 기록(checks의 fail)은 바꾸지 않았다.
+- 2026-10-29 15:33 KST: 문인호 님이 main의 environment-cycle, mvp 실화면 명세를 고치기로 해(#논의 15:25, 박성종 님 15:26) 두 명세 파일(frontend/e2e/environment-cycle.real.spec.ts, frontend/e2e/mvp.real.spec.ts)을 문인호 님 쪽 파일로 보고 건드리지 않는다. 그 파일을 바꿔야 하는 항목은 문인호 님 PR이 main에 들어온 뒤 본다.
