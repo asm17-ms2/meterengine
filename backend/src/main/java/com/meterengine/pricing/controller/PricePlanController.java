@@ -77,6 +77,7 @@ public class PricePlanController {
           """
           customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
           month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+          청구는 보관 효력(archived_from)까지 따져 버전을 고르므로, 그 달 청구에 쓰이는 요금제는 status=all 목록에서 시작 월이 가장 늦은 버전을 보고 고른다. 그 버전이 archived_from부터 멈췄으면 이전 버전으로 돌아가지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(
