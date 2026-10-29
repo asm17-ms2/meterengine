@@ -237,9 +237,9 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
 
     await test.step("월별 전환과 다시 자유 기간으로 복귀", async () => {
       await filters.getByRole("radio", { name: "월별", exact: true }).check();
+      // 직접 쓴 월을 Enter만 눌러 제출해도 그 월로 조회한다.
       await filters.getByLabel("조회 월", { exact: true }).fill(previousMonth);
       await filters.getByLabel("조회 월", { exact: true }).press("Enter");
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
       await expectQuery(page, { ...preserved, month: previousMonth, from: null, to: null, range_mode: null, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
       await expect(page.getByText("총 56건, 이 페이지 50줄", { exact: false })).toBeVisible();
