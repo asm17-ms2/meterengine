@@ -57,6 +57,23 @@ terraform -chdir=measurements/terraform/rds-auto-stop plan -lock=false \
   -out="$rds_plan_dir/disable-slo-detector.tfplan"
 ```
 
+### 전달 실패 경보
+
+EventBridge가 흐름에 넘기지 못한 이벤트는 환경마다 전달 실패 큐(DLQ)에 남고 경보가 울린다. 흐름은 발생한 지 15분이 지난 이벤트를 처리하지 않고 IgnoredEvent로 성공 처리하므로, 큐의 이벤트로 흐름을 다시 실행해도 DB를 끄지 않는다.
+
+```bash
+terraform -chdir=measurements/terraform/rds-auto-stop output dead_letter_queue_urls
+aws sqs receive-message --region ap-northeast-2 --queue-url <큐 URL> \
+  --attribute-names All --message-attribute-names All --max-number-of-messages 10
+aws rds describe-db-instances --region ap-northeast-2 \
+  --db-instance-identifier meterengine-test-slo-db \
+  --query 'DBInstances[0].DBInstanceStatus' --output text
+```
+
+1. 메시지 본문과 오류 속성으로 전달 실패 원인을 본다.
+2. DB가 켜져 있으면 다음 04:00 스케줄 중지를 기다리거나, 승인받은 뒤 `aws rds stop-db-instance`로 끈다. `start-execution`으로 흐름을 다시 실행하지 않는다.
+3. 원인을 고친 뒤 `aws sqs delete-message`로 메시지를 지워 경보를 OK로 되돌린다. 지우지 않으면 경보가 메시지 보관 기간(최대 14일) 동안 ALARM에 머문다.
+
 ## 환경 빼기
 
 SUT 하나를 지우기 전에 그 환경의 감지를 먼저 뺀다. 이 root는 두 SUT의 DB를 data source로 읽어, DB가 없어지면 남은 환경의 감지도 계획을 만들 수 없다.

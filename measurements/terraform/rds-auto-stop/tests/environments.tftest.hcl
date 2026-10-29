@@ -25,6 +25,11 @@ run "both_environments_by_default" {
     condition     = toset(keys(module.rds_auto_stop)) == toset(["test-slo", "test-storage"])
     error_message = "Both test environments must be detected by default."
   }
+
+  assert {
+    condition     = toset(keys(output.dead_letter_queue_urls)) == toset(["test-slo", "test-storage"])
+    error_message = "Operators need each environment's dead-letter queue URL to handle delivery alarms."
+  }
 }
 
 run "one_environment_can_be_removed_before_its_sut" {
