@@ -2,7 +2,7 @@ import "server-only";
 import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { serverFetch, serverSend, type Result } from "@/lib/api/client";
+import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 import { toServerParams, type ListQuery, type PaginationFields } from "@/lib/list-query";
@@ -45,35 +45,4 @@ export async function listCustomers(
     config.apiBaseUrl, "/v1/customers/search", toServerParams(query, CAPABILITIES.listCustomers),
   );
   return result.ok ? { ok: true, data: { ...result.data, customers: result.data.items, page: result.data.page - 1 } } : result;
-}
-
-export async function createCustomer(
-  name: string,
-  billingEmail: string | null,
-  idempotencyKey?: string,
-): Promise<Result<CustomerResponse>> {
-  return serverSend<CustomerResponse>(config.apiBaseUrl, "/v1/customers", {
-    idempotencyKey,
-    method: "POST",
-    body: { name, billing_email: billingEmail },
-  });
-}
-
-export async function updateCustomer(
-  id: string,
-  name: string,
-  billingEmail: string | null,
-  version?: number,
-): Promise<Result<CustomerResponse>> {
-  return serverSend<CustomerResponse>(config.apiBaseUrl, `/v1/customers/${id}`, {
-    method: "PATCH",
-    ifMatch: version === undefined ? undefined : `"${version}"`,
-    body: { name, billing_email: billingEmail },
-  });
-}
-
-export async function deleteCustomer(id: string): Promise<Result<void>> {
-  return serverSend<void>(config.apiBaseUrl, `/v1/customers/${id}`, {
-    method: "DELETE",
-  });
 }
