@@ -183,6 +183,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await dialog.getByRole("button", { name: "토스 키 저장", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await page.goto(`/customers/${customerId}?month=${month}`);
+    await expect(page.getByRole("cell", { name: `MVP 사용 단위 (${metricCode})`, exact: true }).first(), "고객 상세 사용량도 미터 코드를 함께 보인다").toBeVisible();
     await page.getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     const registration = page.getByRole("dialog").getByRole("link", { name: "카드 등록 링크 열기", exact: true });

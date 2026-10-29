@@ -86,7 +86,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
     const label = billableMetricUsage.code;
-    const labelTooltip = [formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
+    const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
 
     for (const customer of billableMetricUsage.customers) {
       let group = customerGroupByCustomerId.get(customer.customer_id);

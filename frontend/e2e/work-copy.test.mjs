@@ -74,3 +74,10 @@ test("every pricing rail meter shows its rate count and the selected meter's for
   assert.ok(pricing.includes("<p>{props.month} / {customerName}</p>{selectedMetric?.aggregation && <p>{metricCalculationFormula("));
   assert.ok(page.includes("{ ...selectedMetric.data, rate_count: metric.rate_count }"));
 });
+
+test("a meter shows both its name and code on the usage screen and on customer detail", () => {
+  const usage = source("lib/api/usage.ts");
+  const detail = source("app/(console)/customers/[id]/page.tsx");
+  assert.ok(usage.includes("const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip("));
+  assert.ok(detail.includes("metric: `${metric.name} (${metric.code})`"));
+});
