@@ -75,3 +75,11 @@ test("the rejection search keeps its customer id guidance visible below the fiel
   assert.ok(page.includes('<small className="field-hint">요청에 담긴 고객 ID(UUID)로 찾습니다. 등록되지 않은 ID도 조회됩니다.</small>'));
 });
 
+test("usage and event screens drop the mismatched sub-tab rows and keep their cross links in the content", () => {
+  const usage = readFileSync(new URL("../src/app/(console)/usage/page.tsx", import.meta.url), "utf8");
+  const events = readFileSync(new URL("../src/app/(console)/events/page.tsx", import.meta.url), "utf8");
+  for (const page of [usage, events]) assert.ok(!page.includes('className="workspace-tabs"'));
+  assert.ok(usage.includes('<Link inheritFilters href="/billing">청구 검토</Link>'));
+  assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 통보</ScopedLink>'));
+});
+

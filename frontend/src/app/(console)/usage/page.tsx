@@ -40,7 +40,6 @@ export default async function UsagePage({
 
   return (
     <CollapseProvider>
-      <nav className="workspace-tabs"><Link inheritFilters href="/usage" aria-current="page">사용량</Link><Link inheritFilters href="/events">수집 로그</Link><Link inheritFilters href="/billing">청구 검토로 이동</Link></nav>
       <ScreenHeader title={`사용량 집계 - ${formatKoreanMonth(month)}`}>
         {usage ? (
           <Suspense fallback={null}>
@@ -81,6 +80,7 @@ export default async function UsagePage({
           <TableSkeleton />
         )}
       </ScreenCard>
+      <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인합니다.</p>
     </CollapseProvider>
   );
 }
