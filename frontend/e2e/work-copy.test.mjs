@@ -57,3 +57,12 @@ test("archive actions show their success message before moving to the archived l
   assert.ok(detail.includes('{ name: "month", label: "", type: "hidden" as const, value: month }'));
 });
 
+
+test("the customer archive action sits with the other customer actions, not in the navigation link row", () => {
+  const lines = source("app/(console)/customers/[id]/page.tsx").split("\n");
+  const actionRow = lines.find(line => line.includes('operation="updateCustomer"'));
+  const navigationRow = lines.find(line => line.includes(">수집 로그 확인</Link>"));
+  assert.ok(actionRow.includes('operation="deleteCustomer"') && actionRow.includes('operation="restoreCustomer"'));
+  assert.ok(!actionRow.includes(">고객별 요금 설계</Link>"));
+  assert.ok(!navigationRow.includes("<ActionPanel") && navigationRow.includes(">고객별 요금 설계</Link>"));
+});
