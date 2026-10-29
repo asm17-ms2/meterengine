@@ -13,4 +13,16 @@ public record WebhookEndpointResponse(
     boolean enabled,
     String description,
     @JsonProperty("created_at") OffsetDateTime createdAt,
-    @JsonInclude(JsonInclude.Include.NON_NULL) String secret) {}
+    @JsonInclude(JsonInclude.Include.NON_NULL) String secret,
+    @JsonProperty("archived_at") OffsetDateTime archivedAt) {
+  public WebhookEndpointResponse(
+      UUID id,
+      String url,
+      List<String> eventTypes,
+      boolean enabled,
+      String description,
+      OffsetDateTime createdAt,
+      String secret) {
+    this(id, url, eventTypes, enabled, description, createdAt, secret, null);
+  }
+}

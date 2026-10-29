@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
@@ -64,9 +65,16 @@ public class PriceRateService {
 
   @Transactional(readOnly = true)
   public ListPriceRatesResponse list(UUID organizationId, String code, UUID customerId) {
+    return list(organizationId, code, customerId, "active");
+  }
+
+  public ListPriceRatesResponse list(
+      UUID organizationId, String code, UUID customerId, String status) {
     validateCustomer(organizationId, customerId);
+    ArchiveStatus filter = ArchiveStatus.parse(status);
     return new ListPriceRatesResponse(
         rates(organizationId).stream()
+            .filter(rate -> filter.includes(rate.getArchivedAt()))
             .filter(
                 rate ->
                     rate.getBillableMetricCode().equals(code)
@@ -83,10 +91,14 @@ public class PriceRateService {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR,
           List.of(new FieldError("model", "요금 모델에 맞는 단가와 마지막 한도 없는 오름차순 구간이 필요합니다")));
+    organizationRepository
+        .findForUpdateById(organizationId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
     BillableMetric metric =
         billableMetricRepository
             .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
+    if (metric.getArchivedAt() != null) throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     validate(request.dimensionValues(), metric.getDimensionProperties());
     YearMonth current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
     YearMonth start = request.effectiveFrom() == null ? current : request.effectiveFrom();
@@ -96,11 +108,29 @@ public class PriceRateService {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR, List.of(new FieldError("effective_until", "시작 월보다 뒤여야 합니다")));
     validateCustomer(organizationId, request.customerId());
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    if (request.customerId() != null) {
+      var customer =
+          customerRepository.lock(organizationId, java.util.List.of(request.customerId())).stream()
+              .findFirst()
+              .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+      if (customer.getArchivedAt() != null)
+        throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
+    }
+    boolean retainedSlot =
+        rates(organizationId).stream()
+            .anyMatch(
+                existing ->
+                    existing.getArchivedAt() != null
+                        && existing.applies(current.toString())
+                        && existing.getBillableMetricCode().equals(code)
+                        && Objects.equals(existing.getCustomerId(), request.customerId())
+                        && existing.getEffectiveFrom().equals(start.toString())
+                        && parse(existing.getDimensionValues())
+                            .equals(PriceRateDimensions.normalize(request.dimensionValues())));
+    if (retainedSlot) throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
     PriceRate rate =
         rates(organizationId).stream()
+            .filter(existing -> existing.getArchivedAt() == null)
             .filter(
                 existing ->
                     existing.getBillableMetricCode().equals(code)
@@ -149,49 +179,67 @@ public class PriceRateService {
                     value.getOrganizationId().equals(organizationId)
                         && value.getBillableMetricCode().equals(code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
-    if (rate.getEffectiveFrom()
-            .compareTo(YearMonth.now(BillableMetricUsageService.BILLING_ZONE).toString())
-        < 0) throw new ConflictException(ErrorCode.PRICE_RATE_HISTORY_IMMUTABLE);
-    priceRateRepository.delete(rate);
-    priceRateRepository.flush();
-    auditLogService.record(
-        organizationId, "price_rate_deleted", "price_rate", id.toString(), detail(rate));
+    archive(organizationId, rate);
   }
 
   @Transactional
   public void delete(UUID organizationId, String code, String dimensionValuesJson) {
     Map<String, Object> dimensionValues = parse(dimensionValuesJson);
-    String current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE).toString();
     organizationRepository
         .findForUpdateById(organizationId)
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
-    List<PriceRate> active =
+    List<PriceRate> matched =
         rates(organizationId).stream()
             .filter(
                 rate ->
                     rate.getBillableMetricCode().equals(code)
                         && rate.getCustomerId() == null
                         && parse(rate.getDimensionValues()).equals(dimensionValues)
-                        && rate.getEffectiveFrom().compareTo(current) <= 0
-                        && (rate.getEffectiveUntil() == null
-                            || rate.getEffectiveUntil().compareTo(current) > 0))
+                        && rate.applies(BillableMetricUsageService.currentMonth().toString()))
             .toList();
-    if (active.isEmpty()) throw new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND);
-    for (PriceRate rate : active) {
-      Map<String, Object> detail = detail(rate);
-      String action;
-      if (rate.getEffectiveFrom().equals(current)) {
-        priceRateRepository.delete(rate);
-        action = "price_rate_deleted";
-      } else {
-        rate.close(current);
-        action = "price_rate_closed";
-        detail.put("previous_effective_until", detail.get("effective_until"));
-        detail.put("effective_until", current);
-      }
-      auditLogService.record(organizationId, action, "price_rate", rate.getId().toString(), detail);
-    }
-    priceRateRepository.flush();
+    if (matched.isEmpty()) throw new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND);
+    matched.forEach(rate -> archive(organizationId, rate));
+  }
+
+  @Transactional
+  public PriceRateResponse restore(UUID organizationId, String code, UUID id) {
+    organizationRepository
+        .findForUpdateById(organizationId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    PriceRate rate =
+        priceRateRepository
+            .findById(id)
+            .filter(
+                value ->
+                    value.getOrganizationId().equals(organizationId)
+                        && value.getBillableMetricCode().equals(code))
+            .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_RATE_NOT_FOUND));
+    if (rate.getArchivedAt() == null) return PriceRateResponse.from(rate);
+    boolean collision =
+        rates(organizationId).stream()
+            .anyMatch(
+                other ->
+                    other.getArchivedAt() == null
+                        && other.getBillableMetricCode().equals(code)
+                        && Objects.equals(other.getCustomerId(), rate.getCustomerId())
+                        && other.getEffectiveFrom().equals(rate.getEffectiveFrom())
+                        && parse(other.getDimensionValues())
+                            .equals(parse(rate.getDimensionValues())));
+    if (collision
+        || rate.getArchivedFrom().compareTo(BillableMetricUsageService.currentMonth().toString())
+            <= 0) throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
+    rate.restore();
+    auditLogService.record(
+        organizationId, "price_rate_restored", "price_rate", id.toString(), detail(rate));
+    return PriceRateResponse.from(rate);
+  }
+
+  private void archive(UUID organizationId, PriceRate rate) {
+    if (rate.getArchivedAt() != null) return;
+    String next = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
+    rate.archive(rate.getEffectiveFrom().compareTo(next) > 0 ? rate.getEffectiveFrom() : next);
+    auditLogService.record(
+        organizationId, "price_rate_archived", "price_rate", rate.getId().toString(), detail(rate));
   }
 
   private Map<String, Object> detail(PriceRate rate) {
@@ -202,6 +250,7 @@ public class PriceRateService {
     detail.put("effective_from", rate.getEffectiveFrom());
     detail.put("effective_until", rate.getEffectiveUntil());
     detail.put("model", rate.getModel());
+    detail.put("archived_from", rate.getArchivedFrom());
     detail.put("unit_price", rate.getUnitPrice());
     detail.put(
         "tiers",

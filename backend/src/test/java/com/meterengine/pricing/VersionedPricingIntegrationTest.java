@@ -9,6 +9,7 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.InvoiceResponse;
 import com.meterengine.invoice.entity.Invoice;
@@ -22,6 +23,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
+import com.meterengine.pricing.dto.PricePlanResponse;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.dto.PriceRateTier;
 import com.meterengine.pricing.service.BillableMetricPriceService;
@@ -127,13 +129,12 @@ class VersionedPricingIntegrationTest {
             ConflictException.class,
             error ->
                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_RATE_HISTORY_IMMUTABLE));
-    assertThatThrownBy(() -> priceRateService.delete(organizationId, "tokens", id))
-        .isInstanceOf(ConflictException.class);
+    priceRateService.delete(organizationId, "tokens", id);
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
   }
 
   @Test
-  void 지난_월_요금제_등록과_삭제는_거절하고_기존_요금제를_보존한다() {
+  void 지난_월_요금제_등록은_거절하고_삭제하면_다음_달부터_뺀다() {
     legacyRate();
     UUID id =
         jdbcTemplate.queryForObject(
@@ -151,12 +152,88 @@ class VersionedPricingIntegrationTest {
             ConflictException.class,
             error ->
                 assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
-    assertThatThrownBy(() -> pricePlanService.delete(organizationId, id))
+    pricePlanService.delete(organizationId, id);
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_from FROM price_plan WHERE id=?", String.class, id))
+        .isEqualTo(month.plusMonths(1).toString());
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+    assertThat(amount(month, "100")).isEqualTo(1100);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+  }
+
+  @Test
+  void 보관한_이번_달_단가는_같은_슬롯_재등록과_소급_복원을_거절한다() {
+    var current = rate(null, month, null, "per_unit", new BigDecimal("2"), null);
+    priceRateService.delete(organizationId, "tokens", current.id());
+    assertThatThrownBy(() -> rate(null, month, null, "per_unit", new BigDecimal("5"), null))
         .isInstanceOfSatisfying(
             ConflictException.class,
             error ->
-                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE));
-    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
+    entityManager.flush();
+    jdbcTemplate.update(
+        "UPDATE price_rate SET archived_from=? WHERE id=?", month.toString(), current.id());
+    entityManager.clear();
+    assertThatThrownBy(() -> priceRateService.restore(organizationId, "tokens", current.id()))
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            error ->
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
+  }
+
+  @Test
+  void 보관한_이번_달_요금제는_같은_슬롯_재등록과_소급_복원을_거절한다() {
+    var current =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, month, null, 100L, 0L));
+    pricePlanService.delete(organizationId, current.id());
+    assertThatThrownBy(
+            () ->
+                pricePlanService.create(
+                    organizationId, new CreatePricePlanRequest(null, month, null, 200L, 0L)))
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            error ->
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
+    entityManager.flush();
+    jdbcTemplate.update(
+        "UPDATE price_plan SET archived_from=? WHERE id=?", month.toString(), current.id());
+    entityManager.clear();
+    assertThatThrownBy(() -> pricePlanService.restore(organizationId, current.id()))
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            error ->
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
+  }
+
+  @Test
+  void 미래_요금제_복원은_목록에_되돌리고_다른_도입사와_같은_슬롯_새_요금제는_거절한다() {
+    YearMonth future = month.plusMonths(2);
+    var plan =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, future, null, 100L, 0L));
+    pricePlanService.delete(organizationId, plan.id());
+    UUID otherOrganizationId =
+        jdbcTemplate.queryForObject(
+            "INSERT INTO organization(name) VALUES ('다른 도입사') RETURNING id", UUID.class);
+    assertThatThrownBy(() -> pricePlanService.restore(otherOrganizationId, plan.id()))
+        .isInstanceOfSatisfying(
+            NotFoundException.class,
+            error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.PRICE_PLAN_NOT_FOUND));
+    assertThat(pricePlanService.restore(organizationId, plan.id()).archivedAt()).isNull();
+    assertThat(pricePlanService.list(organizationId, null, null).pricePlans())
+        .extracting(PricePlanResponse::id)
+        .containsExactly(plan.id());
+    pricePlanService.delete(organizationId, plan.id());
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(null, future, null, 200L, 0L));
+    assertThatThrownBy(() -> pricePlanService.restore(organizationId, plan.id()))
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            error ->
+                assertThat(error.getErrorCode()).isEqualTo(ErrorCode.ARCHIVE_RESTORATION_CONFLICT));
   }
 
   @Test
@@ -173,11 +250,79 @@ class VersionedPricingIntegrationTest {
                 .billableMetricPrices()
                 .getFirst()
                 .priceRates())
-        .isEmpty();
+        .hasSize(1);
     assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
     assertThat(amount(month, "100")).isEqualTo(300);
     priceRateService.delete(organizationId, "tokens", customerRate.id());
     assertThat(amount(month.plusMonths(1), "100")).isEqualTo(3000);
+  }
+
+  @Test
+  void 최신_단가_보관은_과거와_현재를_유지하고_다음월에_구단가로_돌아가지_않는다() {
+    legacyRate();
+    var current = rate(null, month, null, "per_unit", new BigDecimal("20"), null);
+    priceRateService.delete(organizationId, "tokens", current.id());
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1000);
+    assertThat(amount(month, "100")).isEqualTo(2000);
+    assertThat(amount(month.plusMonths(1), "100")).isZero();
+    assertThat(
+            billableMetricPriceService
+                .list(organizationId, month.plusMonths(1), null)
+                .billableMetricPrices()
+                .getFirst()
+                .priceRates())
+        .isEmpty();
+  }
+
+  @Test
+  void 최신_요금제_보관은_다음월에_구요금제를_되살리지_않는다() {
+    legacyRate();
+    jdbcTemplate.update(
+        "INSERT INTO price_plan (organization_id,effective_from,base_fee,minimum_amount) VALUES (?, ?, 100, 0)",
+        organizationId,
+        month.minusMonths(1).toString());
+    var current =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, month, null, 200L, 0L));
+    pricePlanService.delete(organizationId, current.id());
+    assertThat(amount(month.minusMonths(1), "100")).isEqualTo(1100);
+    assertThat(amount(month, "100")).isEqualTo(1200);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+  }
+
+  @Test
+  void 기한부_단가_보관은_원래_종료월부터_구단가로_돌아간다() {
+    legacyRate();
+    var promotion = rate(null, month, month.plusMonths(2), "per_unit", new BigDecimal("20"), null);
+    priceRateService.delete(organizationId, "tokens", promotion.id());
+    assertThat(amount(month, "100")).isEqualTo(2000);
+    assertThat(amount(month.plusMonths(1), "100")).isZero();
+    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1000);
+    assertThat(
+            billableMetricPriceService
+                .list(organizationId, month.plusMonths(2), null)
+                .billableMetricPrices()
+                .getFirst()
+                .priceRates()
+                .getFirst()
+                .unitPrice())
+        .isEqualByComparingTo("10");
+  }
+
+  @Test
+  void 기한부_요금제_보관은_원래_종료월부터_구요금제로_돌아간다() {
+    legacyRate();
+    jdbcTemplate.update(
+        "INSERT INTO price_plan (organization_id,effective_from,base_fee,minimum_amount) VALUES (?, ?, 100, 0)",
+        organizationId,
+        month.minusMonths(1).toString());
+    var promotion =
+        pricePlanService.create(
+            organizationId, new CreatePricePlanRequest(null, month, month.plusMonths(2), 200L, 0L));
+    pricePlanService.delete(organizationId, promotion.id());
+    assertThat(amount(month, "100")).isEqualTo(1200);
+    assertThat(amount(month.plusMonths(1), "100")).isEqualTo(1000);
+    assertThat(amount(month.plusMonths(2), "100")).isEqualTo(1100);
   }
 
   @Test

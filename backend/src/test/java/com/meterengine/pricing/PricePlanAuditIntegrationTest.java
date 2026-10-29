@@ -101,14 +101,14 @@ class PricePlanAuditIntegrationTest {
                 .header(AUTHORIZATION, authorization)
                 .exchange())
         .hasStatus(204);
-    JsonNode detail = details(planId, "price_plan_deleted").getFirst();
+    JsonNode detail = details(planId, "price_plan_archived").getFirst();
     assertSnapshot(detail, customerId, month.plusMonths(3), 900, 3000);
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM price_plan WHERE id=?",
                 Integer.class,
                 UUID.fromString(planId)))
-        .isZero();
+        .isEqualTo(1);
     assertThat(details(planId, "price_plan_created")).hasSize(1);
   }
 
@@ -132,11 +132,10 @@ class PricePlanAuditIntegrationTest {
         .isEqualTo(1);
     assertThat(
             jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM audit_log WHERE organization_id=?",
-                Integer.class,
-                otherOrganizationId))
+                "SELECT count(*) FROM audit_log WHERE organization_id=? AND action NOT LIKE 'api_request_%'",
+                Integer.class, otherOrganizationId))
         .isZero();
-    assertThat(details(planId, "price_plan_deleted")).isEmpty();
+    assertThat(details(planId, "price_plan_archived")).isEmpty();
   }
 
   private String create(UUID scopedCustomerId, YearMonth until, long baseFee, long minimumAmount) {

@@ -7,6 +7,7 @@ import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.MetricAggregation;
+import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
 import java.math.BigDecimal;
@@ -26,14 +27,17 @@ public class BillableMetricUsageService {
   private final BillableMetricUsageRepository billableMetricUsageRepository;
   private final BillableMetricRepository billableMetricRepository;
   private final CustomerRepository customerRepository;
+  private final BillableMetricPeriodRepository billableMetricPeriodRepository;
 
   BillableMetricUsageService(
       BillableMetricUsageRepository billableMetricUsageRepository,
       BillableMetricRepository billableMetricRepository,
-      CustomerRepository customerRepository) {
+      CustomerRepository customerRepository,
+      BillableMetricPeriodRepository billableMetricPeriodRepository) {
     this.billableMetricUsageRepository = billableMetricUsageRepository;
     this.billableMetricRepository = billableMetricRepository;
     this.customerRepository = customerRepository;
+    this.billableMetricPeriodRepository = billableMetricPeriodRepository;
   }
 
   public static YearMonth currentMonth() {
@@ -60,7 +64,17 @@ public class BillableMetricUsageService {
     List<Customer> customers =
         customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
 
+    var periods = billableMetricPeriodRepository.findByOrganizationId(organizationId);
+    String period = month.toString();
     return billableMetrics.stream()
+        .filter(
+            metric ->
+                (metric.getArchivedAt() == null && metric.getActiveFrom().compareTo(period) <= 0)
+                    || periods.stream()
+                        .anyMatch(
+                            interval ->
+                                interval.getBillableMetricCode().equals(metric.getCode())
+                                    && interval.includes(period)))
         .map(billableMetric -> aggregate(billableMetric, customers, start, end))
         .toList();
   }

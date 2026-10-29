@@ -105,7 +105,8 @@ public class PaymentAttemptConfirmationService {
   private boolean confirmAttempt(PaymentAttempt attempt, OffsetDateTime notFoundFailableBefore) {
     UUID attemptId = attempt.getId();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(attempt.getOrganizationId(), attempt.getMode());
+        tossPaymentsCredentialService.historical(
+            attempt.getOrganizationId(), attempt.getMode(), attempt.getRequestedAt());
     if (credential.isEmpty()) {
       logger.warn(
           "payment attempt confirmation skipped without toss payments credential: attempt_id={},"
@@ -172,8 +173,13 @@ public class PaymentAttemptConfirmationService {
       PaymentCancellation cancellation, OffsetDateTime notFoundFailableBefore) {
     UUID cancellationId = cancellation.getId();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(
-            cancellation.getOrganizationId(), cancellation.getMode());
+        tossPaymentsCredentialService.historical(
+            cancellation.getOrganizationId(),
+            cancellation.getMode(),
+            paymentAttemptRepository
+                .findById(cancellation.getPaymentAttemptId())
+                .orElseThrow()
+                .getRequestedAt());
     if (credential.isEmpty()) {
       logger.warn(
           "payment cancellation confirmation skipped without toss payments credential:"

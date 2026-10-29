@@ -1,5 +1,6 @@
 package com.meterengine.webhook.controller;
 
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
@@ -12,6 +13,11 @@ import com.meterengine.webhook.dto.WebhookEndpointResponse;
 import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -47,8 +53,17 @@ public class WebhookEndpointController {
   @ReadAccess
   @Operation(summary = "웹훅 엔드포인트 목록 조회")
   public ListWebhookEndpointsResponse listWebhookEndpoints(
-      @CurrentOrganizationId UUID organizationId) {
-    return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId));
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
+    return new ListWebhookEndpointsResponse(webhookEndpointService.list(organizationId, status));
   }
 
   @GetMapping("/{id}")
@@ -74,6 +89,16 @@ public class WebhookEndpointController {
   @PutMapping("/{id}")
   @AdminAccess
   @Operation(summary = "웹훅 엔드포인트 수정")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "바뀐 엔드포인트"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=resource_archived: 보관한 엔드포인트다. 복원한 뒤 고친다")
+  })
   public WebhookEndpointResponse updateWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable UUID id,
@@ -84,7 +109,10 @@ public class WebhookEndpointController {
   @DeleteMapping("/{id}")
   @AdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "웹훅 엔드포인트 삭제", description = "발송을 중지하고 목록에서 숨긴다. 과거 전송 기록은 보존한다.")
+  @Operation(
+      summary = "웹훅 엔드포인트 보관",
+      description =
+          "발송을 중지하고 비활성으로 보관한다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회된다. 과거 전송 기록은 보존한다. 반복 요청은 204다.")
   public void deleteWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     webhookEndpointService.delete(organizationId, id);
@@ -125,5 +153,13 @@ public class WebhookEndpointController {
       @PathVariable UUID id,
       @PathVariable("delivery_id") UUID deliveryId) {
     webhookDeliveryService.retry(organizationId, id, deliveryId);
+  }
+
+  @PostMapping("/{id}/restorations")
+  @AdminAccess
+  @Operation(summary = "웹훅 엔드포인트 복원", description = "비활성 상태로 복원한다. 주소와 등록 한도를 확인하며 과거 전송 기록을 유지한다.")
+  public WebhookEndpointResponse restoreWebhookEndpoint(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    return webhookEndpointService.restore(organizationId, id);
   }
 }

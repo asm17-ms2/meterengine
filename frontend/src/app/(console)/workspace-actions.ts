@@ -39,8 +39,15 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "createCustomer": path = "/v1/customers"; body = { name: text(data, "name"), billing_email: optional(data, "billing_email"), external_id: optional(data, "external_id") }; break;
       case "archivePaymentMethod": path = `/v1/customers/${identifier(data)}/payment-method`; method = "DELETE"; break;
+      case "archiveTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "DELETE"; break;
+      case "restoreCustomer": path = `/v1/customers/${identifier(data)}/restorations`; break;
+      case "restoreBillableMetric": path = `/v1/billable-metrics/${identifier(data, "code")}/restorations`; break;
+      case "restorePriceRate": path = `/v1/billable-metrics/${identifier(data, "code")}/price-rates/${identifier(data)}/restorations`; break;
+      case "restorePricePlan": path = `/v1/price-plans/${identifier(data)}/restorations`; break;
       case "restoreWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/restorations`; break;
+      case "deleteCustomer": path = `/v1/customers/${identifier(data)}`; method = "DELETE"; break;
       case "createApiKey":
         path = "/v1/api-keys";
         body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute", { min: 1, max: 2147483647, message: "분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요." }) : null };
@@ -59,10 +66,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
         path = "/v1/price-plans";
         body = { customer_id: optional(data, "customer_id"), effective_from: text(data, "effective_from"), effective_until: optional(data, "effective_until"), base_fee: amount(data, "base_fee"), minimum_amount: amount(data, "minimum_amount") };
         break;
+      case "deletePricePlan": path = `/v1/price-plans/${identifier(data)}`; method = "DELETE"; break;
       case "createPriceRate":
         path = `/v1/billable-metrics/${identifier(data, "code")}/price-rates`;
         body = { customer_id: optional(data, "customer_id"), effective_from: text(data, "effective_from"), effective_until: optional(data, "effective_until"), dimension_values: JSON.parse(text(data, "dimension_values") || "{}"), model: text(data, "model"), ...(text(data, "model") === "per_unit" ? { unit_price: text(data, "unit_price") } : { tiers: JSON.parse(text(data, "tiers")) }) };
         break;
+      case "deletePriceRate": path = `/v1/billable-metrics/${identifier(data, "code")}/price-rates/${identifier(data)}`; method = "DELETE"; break;
       case "updateSupplier": path = "/v1/organization/supplier"; method = "PUT"; body = { business_registration_number: readBusinessRegistrationNumber(text(data, "business_registration_number"), "business_registration_number"), representative_name: text(data, "representative_name"), business_address: text(data, "business_address") }; break;
       case "updatePaymentSetting": path = "/v1/payment-setting"; method = "PUT"; body = { mode: text(data, "mode") }; break;
       case "updateTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "PUT"; body = { client_key: text(data, "client_key"), secret_key: text(data, "secret_key") }; break;
@@ -94,7 +103,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   }
   revalidatePath("/", "layout");
   const redirectScope = new URLSearchParams({ organization_id: session.organization!.id });
-  if (false) redirect(workspaceHref("/customers?status=archived", redirectScope));
+  if (operation === "deleteCustomer") redirect(workspaceHref("/customers?status=archived", redirectScope));
   if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
   if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));
   const response = result.data;

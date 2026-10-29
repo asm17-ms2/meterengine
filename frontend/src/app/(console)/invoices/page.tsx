@@ -64,12 +64,12 @@ export default async function InvoicesPage({
               month={monthControl}
               customers={
                 capabilities.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
+                  ? listCustomers(readListQuery({ status: "all" }, CAPABILITIES.listCustomers), "normal", CUSTOMERS_CACHE_TAG)
                   : undefined
               }
               metrics={
                 capabilities.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
+                  ? listBillableMetrics(readListQuery({ status: "all" }, CAPABILITIES.listBillableMetrics), "normal", BILLABLE_METRICS_CACHE_TAG)
                   : undefined
               }
             />

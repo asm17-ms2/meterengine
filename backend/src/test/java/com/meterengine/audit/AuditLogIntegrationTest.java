@@ -107,7 +107,7 @@ class AuditLogIntegrationTest {
             row -> row.get("target_id"))
         .containsExactlyInAnyOrder(
             tuple("price_rate_created", "api_key", apiKeyId, "price_rate", priceRateId),
-            tuple("price_rate_deleted", "api_key", apiKeyId, "price_rate", priceRateId));
+            tuple("price_rate_archived", "api_key", apiKeyId, "price_rate", priceRateId));
     for (Map<String, Object> log : logs) {
       JsonNode detail = jsonMapper.readTree((String) log.get("detail"));
       assertThat(detail.path("unit_price").decimalValue()).isEqualByComparingTo("0.007");
@@ -124,7 +124,7 @@ class AuditLogIntegrationTest {
   }
 
   @Test
-  void 과거_구간_단가를_닫으면_구간과_이전_종료월을_감사에_남긴다() {
+  void 과거_단가_보관은_원래구간과_다음월_중단시점을_감사에_남긴다() {
     UUID organizationId = insertOrganizationWithBillableMetric();
     UUID priceRateId =
         jdbcTemplate.queryForObject(
@@ -146,14 +146,15 @@ class AuditLogIntegrationTest {
         .hasStatus(204);
     List<Map<String, Object>> logs = auditLogsOfTarget(priceRateId.toString());
     assertThat(logs).hasSize(1);
-    assertThat(logs.getFirst().get("action")).isEqualTo("price_rate_closed");
+    assertThat(logs.getFirst().get("action")).isEqualTo("price_rate_archived");
     JsonNode detail = jsonMapper.readTree((String) logs.getFirst().get("detail"));
     assertThat(detail.path("effective_from").asString()).isEqualTo("2000-01");
-    assertThat(detail.path("effective_until").asString())
+    assertThat(detail.path("effective_until").isNull()).isTrue();
+    assertThat(detail.path("archived_from").asString())
         .isEqualTo(
             YearMonth.now(com.meterengine.metric.service.BillableMetricUsageService.BILLING_ZONE)
+                .plusMonths(1)
                 .toString());
-    assertThat(detail.path("previous_effective_until").isNull()).isTrue();
     assertThat(detail.path("unit_price").isNull()).isTrue();
     assertThat(detail.path("tiers").get(0).path("unit_price").decimalValue())
         .isEqualByComparingTo("10");
@@ -432,7 +433,7 @@ class AuditLogIntegrationTest {
         """
         SELECT action, actor_type, actor_id, organization_id, target_type, target_id,
                detail::text AS detail, occurred_at
-        FROM audit_log WHERE organization_id = ?
+        FROM audit_log WHERE organization_id = ? AND action <> 'api_request_completed'
         """,
         organizationId);
   }

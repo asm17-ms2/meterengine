@@ -14,6 +14,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.dto.PaymentJobResult;
+import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -44,6 +45,7 @@ class PaymentAttemptConfirmationServiceTest {
   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
   @Autowired private MeterRegistry meterRegistry;
   @Autowired private PaymentAttemptConfirmationService paymentAttemptConfirmationService;
+  @Autowired private TossPaymentsCredentialService tossPaymentsCredentialService;
 
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
@@ -111,19 +113,62 @@ class PaymentAttemptConfirmationServiceTest {
   }
 
   @Test
-  void 시도_뒤에_키가_바뀌었으면_없음_실패_지연이_지난_404여도_pending으로_둔다() {
+  void 키_이력_없이_현재_키만_시도_뒤에_바뀌었으면_토스를_부르지_않고_pending으로_둔다() {
     Organization organization = organization();
     UUID attemptId = pendingAttempt(organization, Duration.ofMinutes(11));
     jdbcTemplate.update(
         "UPDATE toss_payments_credential SET updated_at = now() WHERE organization_id = ?",
         organization.organizationId());
-    when(tossPaymentsClient.findPaymentByOrderId(organization.secretKey(), attemptId.toString()))
-        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
 
     PaymentJobResult result = paymentAttemptConfirmationService.confirm();
 
     assertThat(attemptRow(attemptId)).containsEntry("status", "pending");
     assertThat(result.processedCount()).isZero();
+    verify(tossPaymentsClient, never())
+        .findPaymentByOrderId(eq(organization.secretKey()), anyString());
+  }
+
+  @Test
+  void 키를_바꾼_뒤에도_바꾸기_전에_요청한_결제와_취소는_이전_키로_확인한다() {
+    Organization organization = organization();
+    UUID pendingAttemptId = pendingAttempt(organization, Duration.ofMinutes(11));
+    UUID doneAttemptId = doneAttempt(organization);
+    UUID cancellationId = pendingCancellation(organization, doneAttemptId, Duration.ofMinutes(3));
+    String transactionKey = "tk_" + cancellationId;
+    String newSecretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
+    when(tossPaymentsClient.findPaymentByOrderId(eq(newSecretKey), anyString()))
+        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
+    tossPaymentsCredentialService.update(
+        organization.organizationId(),
+        "test",
+        new UpdateTossPaymentsCredentialRequest(CLIENT_KEY, newSecretKey));
+    when(tossPaymentsClient.findPaymentByOrderId(
+            organization.secretKey(), pendingAttemptId.toString()))
+        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
+    when(tossPaymentsClient.findPayment(organization.secretKey(), paymentKey(doneAttemptId)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                new TossPaymentsPayment(
+                    paymentKey(doneAttemptId),
+                    doneAttemptId.toString(),
+                    "PARTIAL_CANCELED",
+                    13200,
+                    8200,
+                    List.of(
+                        new TossPaymentsPayment.Cancel(
+                            transactionKey, 5000, OffsetDateTime.now().minusMinutes(3), "DONE")))));
+
+    paymentAttemptConfirmationService.confirm();
+
+    assertThat(attemptRow(pendingAttemptId))
+        .containsEntry("status", "failed")
+        .containsEntry("failure_code", "NOT_FOUND_PAYMENT");
+    assertThat(cancellationRow(cancellationId))
+        .containsEntry("status", "done")
+        .containsEntry("transaction_key", transactionKey);
+    verify(tossPaymentsClient, never())
+        .findPaymentByOrderId(newSecretKey, pendingAttemptId.toString());
+    verify(tossPaymentsClient, never()).findPayment(eq(newSecretKey), anyString());
   }
 
   @Test

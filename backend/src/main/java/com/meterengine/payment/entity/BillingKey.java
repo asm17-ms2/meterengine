@@ -46,6 +46,17 @@ public class BillingKey implements Persistable<BillingKeyId> {
   @Column(name = "consented_at", nullable = false)
   private OffsetDateTime consentedAt;
 
+  @Column(name = "archived_at")
+  private OffsetDateTime archivedAt;
+
+  public OffsetDateTime getArchivedAt() {
+    return archivedAt;
+  }
+
+  public void archive() {
+    if (archivedAt == null) archivedAt = OffsetDateTime.now();
+  }
+
   @Transient private boolean isNew = true;
 
   protected BillingKey() {}
@@ -85,6 +96,7 @@ public class BillingKey implements Persistable<BillingKeyId> {
       OffsetDateTime authenticatedAt,
       String consentDocumentVersion,
       OffsetDateTime consentedAt) {
+    this.archivedAt = null;
     this.billingKey = billingKey;
     this.cardIssuerCode = cardIssuerCode;
     this.cardNumber = cardNumber;

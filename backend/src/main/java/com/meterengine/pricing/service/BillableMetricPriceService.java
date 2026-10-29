@@ -58,9 +58,7 @@ public class BillableMetricPriceService {
         priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
             organizationId)) {
       if (!Objects.equals(rate.getCustomerId(), customerId)
-          || rate.getEffectiveFrom().compareTo(period) > 0
-          || (rate.getEffectiveUntil() != null && rate.getEffectiveUntil().compareTo(period) <= 0))
-        continue;
+          || (!rate.applies(period) && !rate.stops(period))) continue;
       PriceRateKey key =
           new PriceRateKey(
               rate.getBillableMetricCode(),
@@ -72,6 +70,7 @@ public class BillableMetricPriceService {
           (left, right) ->
               left.getEffectiveFrom().compareTo(right.getEffectiveFrom()) >= 0 ? left : right);
     }
+    priceRateByPriceRateKey.values().removeIf(rate -> !rate.applies(period));
     return new ListBillableMetricPricesResponse(
         billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
             .map(
@@ -95,7 +94,9 @@ public class BillableMetricPriceService {
         rate.getEffectiveFrom(),
         rate.getEffectiveUntil(),
         rate.getModel(),
-        rate.getTiers());
+        rate.getTiers(),
+        rate.getArchivedAt(),
+        rate.getArchivedFrom());
   }
 
   private record PriceRateKey(

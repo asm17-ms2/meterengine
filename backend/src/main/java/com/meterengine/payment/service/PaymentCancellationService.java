@@ -276,7 +276,13 @@ public class PaymentCancellationService {
     UUID cancellationId = cancellation.getId();
     String mode = cancellation.getMode();
     Optional<TossPaymentsCredential> credential =
-        tossPaymentsCredentialService.find(cancellation.getOrganizationId(), mode);
+        tossPaymentsCredentialService.historical(
+            cancellation.getOrganizationId(),
+            mode,
+            paymentAttemptRepository
+                .findById(cancellation.getPaymentAttemptId())
+                .orElseThrow()
+                .getRequestedAt());
     if (credential.isEmpty()) {
       ErrorCode reason = ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING;
       logger.warn(

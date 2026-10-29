@@ -3,6 +3,7 @@ package com.meterengine.payment.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.ReadAccess;
+import com.meterengine.global.validation.StorableText;
 import com.meterengine.payment.dto.ListPaymentMethodsResponse;
 import com.meterengine.payment.dto.PaymentMethodResponse;
 import com.meterengine.payment.service.PaymentMethodService;
@@ -83,7 +84,29 @@ public class PaymentMethodController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=validation_error: 요청 값이 올바르지 않다")
   })
-  public ListPaymentMethodsResponse listPaymentMethods(@CurrentOrganizationId UUID organizationId) {
-    return paymentMethodService.list(organizationId);
+  public ListPaymentMethodsResponse listPaymentMethods(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @org.springframework.web.bind.annotation.RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
+    return paymentMethodService.list(organizationId, status);
+  }
+
+  @org.springframework.web.bind.annotation.DeleteMapping("/v1/customers/{id}/payment-method")
+  @com.meterengine.global.security.AdminAccess
+  @org.springframework.web.bind.annotation.ResponseStatus(
+      org.springframework.http.HttpStatus.NO_CONTENT)
+  @Operation(
+      summary = "고객 카드 보관",
+      description = "새 자동 결제를 중단한다. 복원하려면 고객이 카드를 다시 인증해야 한다. 기존 결제와 취소 이력은 유지한다.")
+  public void deletePaymentMethod(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    paymentMethodService.delete(organizationId, id);
   }
 }

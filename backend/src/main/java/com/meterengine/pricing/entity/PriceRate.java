@@ -7,6 +7,7 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Transient;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -43,6 +44,43 @@ public class PriceRate implements Persistable<UUID> {
 
   @JdbcTypeCode(SqlTypes.JSON)
   private String tiers;
+
+  @Column(name = "archived_at")
+  private OffsetDateTime archivedAt;
+
+  @Column(name = "archived_from")
+  private String archivedFrom;
+
+  public OffsetDateTime getArchivedAt() {
+    return archivedAt;
+  }
+
+  public String getArchivedFrom() {
+    return archivedFrom;
+  }
+
+  public void archive(String cutoff) {
+    archivedAt = OffsetDateTime.now();
+    archivedFrom = cutoff;
+  }
+
+  public void restore() {
+    archivedAt = null;
+    archivedFrom = null;
+  }
+
+  public boolean applies(String month) {
+    return effectiveFrom.compareTo(month) <= 0
+        && (effectiveUntil == null || effectiveUntil.compareTo(month) > 0)
+        && (archivedFrom == null || archivedFrom.compareTo(month) > 0);
+  }
+
+  public boolean stops(String month) {
+    return archivedFrom != null
+        && archivedFrom.compareTo(month) <= 0
+        && effectiveFrom.compareTo(archivedFrom) < 0
+        && (effectiveUntil == null || effectiveUntil.compareTo(month) > 0);
+  }
 
   @Transient private boolean isNew = true;
 

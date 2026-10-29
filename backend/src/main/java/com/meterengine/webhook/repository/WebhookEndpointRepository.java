@@ -20,14 +20,14 @@ public class WebhookEndpointRepository {
 
   public List<WebhookEndpointResponse> findByOrganizationId(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND deleted_at IS NULL ORDER BY created_at, id",
+        "SELECT * FROM webhook_endpoint WHERE organization_id = ? ORDER BY created_at, id",
         (rs, rowNum) -> endpoint(rs),
         organizationId);
   }
 
   public List<WebhookEndpointResponse> findByOrganizationIdAndId(UUID organizationId, UUID id) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND id = ? AND deleted_at IS NULL",
+        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND id = ?",
         (rs, rowNum) -> endpoint(rs),
         organizationId,
         id);
@@ -83,6 +83,13 @@ public class WebhookEndpointRepository {
         id);
   }
 
+  public void restore(UUID organizationId, UUID id) {
+    jdbcTemplate.update(
+        "UPDATE webhook_endpoint SET deleted_at = NULL, enabled = false WHERE organization_id = ? AND id = ?",
+        organizationId,
+        id);
+  }
+
   private static WebhookEndpointResponse endpoint(ResultSet rs) throws SQLException {
     return new WebhookEndpointResponse(
         rs.getObject("id", UUID.class),
@@ -91,6 +98,7 @@ public class WebhookEndpointRepository {
         rs.getBoolean("enabled"),
         rs.getString("description"),
         rs.getObject("created_at", OffsetDateTime.class),
-        null);
+        null,
+        rs.getObject("deleted_at", OffsetDateTime.class));
   }
 }

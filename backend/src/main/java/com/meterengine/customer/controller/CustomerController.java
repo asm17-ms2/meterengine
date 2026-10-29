@@ -10,6 +10,7 @@ import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.IngestAccess;
 import com.meterengine.global.security.ReadAccess;
+import com.meterengine.global.validation.StorableText;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -52,8 +54,18 @@ public class CustomerController {
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "고객 목록. 한 명도 없으면 customers가 빈 배열이다")
   })
-  public ListCustomersResponse listCustomers(@CurrentOrganizationId UUID organizationId) {
-    return ListCustomersResponse.from(customerService.list(organizationId));
+  public ListCustomersResponse listCustomers(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
+    return ListCustomersResponse.from(customerService.list(organizationId, status));
   }
 
   @PostMapping
@@ -87,6 +99,24 @@ public class CustomerController {
         customerService.create(organizationId, request.name(), request.billingEmail()));
   }
 
+  @GetMapping("/{id}")
+  @ReadAccess
+  @Operation(summary = "고객 조회")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "고객"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: 그런 고객이 없다")
+  })
+  public CustomerResponse getCustomer(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    return CustomerResponse.from(customerService.get(organizationId, id));
+  }
+
   @PutMapping("/{id}")
   @AdminAccess
   @Operation(
@@ -112,7 +142,14 @@ public class CustomerController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 그런 고객이 없다")
+        description = "code=customer_not_found: 그런 고객이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다")
   })
   public CustomerResponse updateCustomer(
       @CurrentOrganizationId UUID organizationId,
@@ -122,49 +159,41 @@ public class CustomerController {
         customerService.update(organizationId, id, request.name(), request.billingEmail()));
   }
 
-  @DeleteMapping("/{id}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PostMapping("/{id}/restorations")
   @AdminAccess
-  @Operation(
-      summary = "고객 삭제",
-      description =
-          """
-          고객을 지운다. 지운 고객은 목록과 사용량, 청구 예정액에서 빠지고
-          그 id로 보낸 이벤트는 404(customer_not_found)로 거절된다. 지운 고객은 되돌릴 수 없다.
-          사용량 이벤트가 한 건이라도 있는 고객은 지울 수 없고 409다.
-          이미 지운 고객을 다시 지우면 404다.
-          """)
+  @Operation(summary = "고객 복원")
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "지웠다. 본문 없음"),
-    @ApiResponse(
-        responseCode = "400",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 경로의 UUID 형식이 틀렸다"),
+    @ApiResponse(responseCode = "200", description = "복원한 고객. 보관하지 않은 고객이면 그대로 돌려준다"),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 그런 고객이 없다"),
+        description = "code=customer_not_found: 그런 고객이 없다")
+  })
+  public CustomerResponse restoreCustomer(
+      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+    return CustomerResponse.from(customerService.restore(organizationId, id));
+  }
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @AdminAccess
+  @Operation(
+      summary = "고객 보관",
+      description = "새 수집과 신규 등록을 중단한다. 기존 이벤트, 청구, 결제 이력은 유지한다. 반복 요청은 204다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
     @ApiResponse(
-        responseCode = "409",
+        responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=customer_has_events: 사용량 이벤트가 있는 고객이라 지울 수 없다.
-            code=customer_has_payment_attempts: 결제 기록이 있는 고객이라 지울 수 없다.
-            """)
+        description = "code=customer_not_found: 그런 고객이 없다")
   })
-  public void deleteCustomer(
-      @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "지울 고객의 ID.") @PathVariable UUID id) {
+  public void deleteCustomer(@CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
     customerService.delete(organizationId, id);
   }
 }

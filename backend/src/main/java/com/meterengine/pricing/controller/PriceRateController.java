@@ -69,7 +69,20 @@ public class PriceRateController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없다")
+        description = "code=billable_metric_not_found: 그런 code의 미터가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=resource_archived: 보관한 미터다. 미터를 복원한 뒤 등록한다.
+            code=price_rate_history_immutable: effective_from이 이번 달보다 앞이다.
+            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
+            code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
+            """)
   })
   public PriceRateResponse createPriceRate(
       @CurrentOrganizationId UUID organizationId,
@@ -82,17 +95,16 @@ public class PriceRateController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @AdminAccess
   @Operation(
-      summary = "단가 삭제",
+      summary = "단가 조합 보관",
       description =
           """
           미터에서 속성 값 조합 하나의 공통 단가(customer_id 없음) 가운데 이번 달(Asia/Seoul)에 적용 중인
-          버전을 끝낸다. 이번 달에 시작한 버전은 지우고, 그 전에 시작한 버전은 종료 월을 이번 달로 닫아 남긴다.
-          종료 월은 적용하지 않으므로 이번 달부터 그 단가를 쓰지 않는다. 고객 단가와 다음 달 이후에 시작하는
-          버전은 그대로 둔다. dimension_values는 JSON 객체 문자열이고, 빈 객체 {}는 기본 단가다. 같은 조합인지는
+          버전을 보관하고 다음 달부터 효력을 중단한다. 현재 월 계산과 버전 이력, 미래 예약은 유지하고 고객 단가는
+          그대로 둔다. dimension_values는 JSON 객체 문자열이고, 빈 객체 {}는 기본 단가다. 같은 조합인지는
           키 순서와 상관없이 본다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "이번 달 적용 중인 버전을 지우거나 닫았다. 본문 없음"),
+    @ApiResponse(responseCode = "204", description = "이번 달 적용 중인 버전을 보관했다. 본문 없음"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -126,18 +138,59 @@ public class PriceRateController {
   public ListPriceRatesResponse listPriceRates(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,
-      @RequestParam(name = "customer_id", required = false) UUID customerId) {
-    return priceRateService.list(organizationId, code, customerId);
+      @RequestParam(name = "customer_id", required = false) UUID customerId,
+      @Parameter(
+              description = "보관 상태. 생략하면 active",
+              schema =
+                  @Schema(
+                      allowableValues = {"active", "archived", "all"},
+                      defaultValue = "active"))
+          @RequestParam(defaultValue = "active")
+          @StorableText
+          String status) {
+    return priceRateService.list(organizationId, code, customerId, status);
   }
 
   @DeleteMapping("/{id}")
   @AdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "단가 버전 삭제", description = "현재 월 또는 미래 월에 시작하는 버전만 삭제한다. 지난달 이전 단가는 보존한다.")
+  @Operation(
+      summary = "단가 버전 보관",
+      description = "현재 월 효력은 유지하고 다음 달부터 중단한다. 미래 예약은 시작 전 보관되며 버전 이력은 유지한다.")
   public void deletePriceRateVersion(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable @StorableText String code,
       @PathVariable UUID id) {
     priceRateService.delete(organizationId, code, id);
+  }
+
+  @PostMapping("/{id}/restorations")
+  @AdminAccess
+  @Operation(
+      summary = "단가 버전 복원",
+      description = "보관 효력이 시작되기 전이고 대체 버전이 없을 때만 복원한다. 그 밖에는 새 버전을 등록한다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "복원한 단가 버전. 보관하지 않은 버전이면 그대로 돌려준다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            "code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 보관하지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다")
+  })
+  public PriceRateResponse restorePriceRate(
+      @CurrentOrganizationId UUID organizationId,
+      @PathVariable @StorableText String code,
+      @PathVariable UUID id) {
+    return priceRateService.restore(organizationId, code, id);
   }
 }

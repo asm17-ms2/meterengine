@@ -5,7 +5,9 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.error.ServiceUnavailableException;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
@@ -14,6 +16,7 @@ import com.meterengine.payment.dto.TossPaymentsCredentialResponse;
 import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.entity.TossPaymentsCredentialId;
+import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -40,29 +43,74 @@ public class TossPaymentsCredentialService {
 
   private final TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
   private final TossPaymentsClient tossPaymentsClient;
+  private final PaymentArchiveRepository paymentArchiveRepository;
   private final AuditLogService auditLogService;
   private final TransactionTemplate transactionTemplate;
 
   TossPaymentsCredentialService(
       TossPaymentsCredentialRepository tossPaymentsCredentialRepository,
       TossPaymentsClient tossPaymentsClient,
+      PaymentArchiveRepository paymentArchiveRepository,
       AuditLogService auditLogService,
       PlatformTransactionManager platformTransactionManager) {
     this.tossPaymentsCredentialRepository = tossPaymentsCredentialRepository;
     this.tossPaymentsClient = tossPaymentsClient;
+    this.paymentArchiveRepository = paymentArchiveRepository;
     this.auditLogService = auditLogService;
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
 
   @Transactional(readOnly = true)
   public ListTossPaymentsCredentialsResponse list(UUID organizationId) {
-    return ListTossPaymentsCredentialsResponse.from(
-        tossPaymentsCredentialRepository.findByOrganizationIdOrderByModeAsc(organizationId));
+    return list(organizationId, "active");
+  }
+
+  @Transactional(readOnly = true)
+  public ListTossPaymentsCredentialsResponse list(UUID organizationId, String status) {
+    ArchiveStatus filter = ArchiveStatus.parse(status);
+    List<TossPaymentsCredentialResponse> credentials =
+        new ArrayList<>(
+            tossPaymentsCredentialRepository
+                .findByOrganizationIdOrderByModeAsc(organizationId)
+                .stream()
+                .filter(credential -> filter.includes(credential.getArchivedAt()))
+                .map(TossPaymentsCredentialResponse::from)
+                .toList());
+    if (filter != ArchiveStatus.ACTIVE)
+      credentials.addAll(paymentArchiveRepository.credentials(organizationId));
+    return new ListTossPaymentsCredentialsResponse(credentials);
   }
 
   Optional<TossPaymentsCredential> find(UUID organizationId, String mode) {
     return tossPaymentsCredentialRepository.findById(
         new TossPaymentsCredentialId(organizationId, mode));
+  }
+
+  Optional<TossPaymentsCredential> historical(
+      UUID organizationId, String mode, OffsetDateTime requestedAt) {
+    Optional<TossPaymentsCredential> current = find(organizationId, mode);
+    if (current.isEmpty() || !current.get().getUpdatedAt().isAfter(requestedAt)) return current;
+    return paymentArchiveRepository.historical(organizationId, mode, requestedAt);
+  }
+
+  Optional<TossPaymentsCredential> active(UUID organizationId, String mode) {
+    return find(organizationId, mode).filter(credential -> credential.getArchivedAt() == null);
+  }
+
+  @Transactional
+  public void delete(UUID organizationId, String mode) {
+    paymentArchiveRepository.lock(organizationId);
+    TossPaymentsCredential credential =
+        find(organizationId, mode)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND));
+    if (credential.getArchivedAt() != null) return;
+    credential.archive();
+    auditLogService.record(
+        organizationId,
+        "toss_payments_credential_archived",
+        "toss_payments_credential",
+        mode,
+        Map.of("mode", mode));
   }
 
   public TossPaymentsCredentialResponse update(
@@ -85,11 +133,13 @@ public class TossPaymentsCredentialService {
 
   private TossPaymentsCredentialResponse save(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    paymentArchiveRepository.lock(organizationId);
     OffsetDateTime verifiedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     TossPaymentsCredential credential =
         find(organizationId, mode)
             .map(
                 existing -> {
+                  paymentArchiveRepository.credential(organizationId, mode);
                   existing.update(request.clientKey(), request.secretKey(), verifiedAt);
                   return existing;
                 })

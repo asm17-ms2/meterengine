@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
@@ -21,6 +22,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,8 +59,8 @@ class EventServiceTest {
 
   @Test
   void 저장에_성공하면_중복이_아니라고_응답한다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     IngestEventResponse response = eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -69,8 +71,8 @@ class EventServiceTest {
 
   @Test
   void 이미_있는_키라_저장이_건너뛰어지면_중복이라고_응답한다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     assertThat(eventService.ingest(ORGANIZATION_ID, request("tx-1")).duplicate()).isTrue();
@@ -78,8 +80,8 @@ class EventServiceTest {
 
   @Test
   void 저장에_성공하면_stored_건수를_기록한다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -90,8 +92,8 @@ class EventServiceTest {
 
   @Test
   void 저장이_건너뛰어지면_duplicate_건수만_기록한다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(0);
 
     eventService.ingest(ORGANIZATION_ID, request("tx-1"));
@@ -102,8 +104,8 @@ class EventServiceTest {
 
   @Test
   void 받는_기간_밖이지만_이미_저장된_이벤트도_duplicate_건수로_센다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.exists(ORGANIZATION_ID, "tx-1")).thenReturn(true);
     IngestEventRequest oldRequest =
         new IngestEventRequest(
@@ -117,8 +119,8 @@ class EventServiceTest {
 
   @Test
   void 중복_키_예외도_중복_성공으로_바꾸지_않고_그대로_올려_보낸다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     DuplicateKeyException duplicateKey =
         new DuplicateKeyException("duplicate key value violates unique constraint");
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any()))
@@ -130,8 +132,8 @@ class EventServiceTest {
 
   @Test
   void 이_도입사의_고객이_아니면_저장하지_않고_예외를_던진다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(false);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> eventService.ingest(ORGANIZATION_ID, request("tx-1")))
         .isInstanceOf(NotFoundException.class)
@@ -143,8 +145,8 @@ class EventServiceTest {
 
   @Test
   void properties는_판정_없이_그대로_직렬화해_넘긴다() {
-    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
-        .thenReturn(true);
+    when(customerRepository.findByOrganizationIdAndId(ORGANIZATION_ID, CUSTOMER_ID))
+        .thenReturn(Optional.of(new Customer(CUSTOMER_ID, ORGANIZATION_ID, "customer", null)));
     when(eventRepository.insertIfAbsent(any(), any(), any(), any(), any(), any())).thenReturn(1);
 
     eventService.ingest(

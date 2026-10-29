@@ -80,7 +80,7 @@ class TossPaymentsCredentialIntegrationTest {
         """
         {
           "mode": "test", "client_key": "%s", "secret_key_last_four": "YG5R",
-          "verified_at": "%s", "updated_at": "%s"
+          "verified_at": "%s", "updated_at": "%s", "archived_at": null
         }
         """
             .formatted(TEST_CLIENT_KEY, kst(row.get("verified_at")), kst(row.get("updated_at")));
@@ -362,6 +362,20 @@ class TossPaymentsCredentialIntegrationTest {
         ErrorCode.VALIDATION_ERROR);
 
     verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void test_키만_저장한_도입사가_live_키를_보관하면_404_toss_payments_credential_not_found다() {
+    UUID organizationId = insertOrganization();
+    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+    updateCredential(organizationId, "test", TEST_CLIENT_KEY, TEST_SECRET_KEY);
+
+    MvcTestResult result =
+        withOrganization(mvc.delete().uri("/v1/toss-payments-credentials/live"), organizationId)
+            .exchange();
+
+    assertError(result, 404, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND);
+    assertThat(credentialRow(organizationId, "test")).containsEntry("archived_at", null);
   }
 
   @Test

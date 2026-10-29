@@ -41,6 +41,17 @@ public class TossPaymentsCredential implements Persistable<TossPaymentsCredentia
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  @Column(name = "archived_at")
+  private OffsetDateTime archivedAt;
+
+  public OffsetDateTime getArchivedAt() {
+    return archivedAt;
+  }
+
+  public void archive() {
+    if (archivedAt == null) archivedAt = OffsetDateTime.now();
+  }
+
   @Transient private boolean isNew = true;
 
   protected TossPaymentsCredential() {}
@@ -66,6 +77,7 @@ public class TossPaymentsCredential implements Persistable<TossPaymentsCredentia
     if (!clientKey.equals(this.clientKey) || !secretKey.equals(this.secretKey)) {
       this.updatedAt = verifiedAt;
     }
+    this.archivedAt = null;
     this.clientKey = clientKey;
     this.secretKey = secretKey;
     this.secretKeyLastFour = secretKey.substring(secretKey.length() - SECRET_KEY_SUFFIX_LENGTH);

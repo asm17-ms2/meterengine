@@ -10,7 +10,9 @@ public record PricePlanResponse(
     @JsonProperty("effective_from") String effectiveFrom,
     @JsonProperty("effective_until") String effectiveUntil,
     @JsonProperty("base_fee") long baseFee,
-    @JsonProperty("minimum_amount") long minimumAmount) {
+    @JsonProperty("minimum_amount") long minimumAmount,
+    @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
+    @JsonProperty("archived_from") String archivedFrom) {
   public static PricePlanResponse from(PricePlan plan) {
     return new PricePlanResponse(
         plan.getId(),
@@ -18,6 +20,8 @@ public record PricePlanResponse(
         plan.getEffectiveFrom(),
         plan.getEffectiveUntil(),
         plan.getBaseFee(),
-        plan.getMinimumAmount());
+        plan.getMinimumAmount(),
+        plan.getArchivedAt(),
+        plan.getArchivedFrom());
   }
 }

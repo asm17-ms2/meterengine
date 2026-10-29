@@ -6,6 +6,7 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.webhook.client.WebhookAddressPolicy;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
@@ -56,7 +57,15 @@ public class WebhookEndpointService {
 
   @Transactional(readOnly = true)
   public List<WebhookEndpointResponse> list(UUID organizationId) {
-    return webhookEndpointRepository.findByOrganizationId(organizationId);
+    return list(organizationId, "active");
+  }
+
+  @Transactional(readOnly = true)
+  public List<WebhookEndpointResponse> list(UUID organizationId, String status) {
+    ArchiveStatus filter = ArchiveStatus.parse(status);
+    return webhookEndpointRepository.findByOrganizationId(organizationId).stream()
+        .filter(endpoint -> filter.includes(endpoint.archivedAt()))
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -103,7 +112,8 @@ public class WebhookEndpointService {
 
   public WebhookEndpointResponse update(
       UUID organizationId, UUID id, UpdateWebhookEndpointRequest request) {
-    get(organizationId, id);
+    if (get(organizationId, id).archivedAt() != null)
+      throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     validate(request.url(), request.eventTypes());
     return transactionOperations.execute(status -> updateEndpoint(organizationId, id, request));
   }
@@ -128,10 +138,10 @@ public class WebhookEndpointService {
 
   @Transactional
   public void delete(UUID organizationId, UUID id) {
-    get(organizationId, id);
+    if (get(organizationId, id).archivedAt() != null) return;
     webhookEndpointRepository.delete(organizationId, id);
     auditLogService.record(
-        organizationId, "webhook_endpoint_deleted", "webhook_endpoint", id.toString(), Map.of());
+        organizationId, "webhook_endpoint_archived", "webhook_endpoint", id.toString(), Map.of());
   }
 
   @Transactional
@@ -144,6 +154,19 @@ public class WebhookEndpointService {
         WebhookEventType.WEBHOOK_TEST,
         Map.of("message", "Webhook connection test"),
         id);
+  }
+
+  @Transactional
+  public WebhookEndpointResponse restore(UUID organizationId, UUID id) {
+    WebhookEndpointResponse endpoint = get(organizationId, id);
+    if (endpoint.archivedAt() == null) return endpoint;
+    validate(endpoint.url(), endpoint.eventTypes());
+    if (webhookEndpointRepository.countAndLock(organizationId) >= 10)
+      throw new ConflictException(ErrorCode.WEBHOOK_ENDPOINT_LIMIT_EXCEEDED);
+    webhookEndpointRepository.restore(organizationId, id);
+    auditLogService.record(
+        organizationId, "webhook_endpoint_restored", "webhook_endpoint", id.toString(), Map.of());
+    return get(organizationId, id);
   }
 
   private void validate(String url, List<String> eventTypes) {

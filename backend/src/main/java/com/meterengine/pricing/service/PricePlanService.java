@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
@@ -43,10 +44,19 @@ public class PricePlanService {
 
   @Transactional(readOnly = true)
   public ListPricePlansResponse list(UUID organizationId, YearMonth month, UUID customerId) {
+    return list(organizationId, month, customerId, "active");
+  }
+
+  public ListPricePlansResponse list(
+      UUID organizationId, YearMonth month, UUID customerId, String status) {
     validateCustomer(organizationId, customerId);
+    ArchiveStatus filter = ArchiveStatus.parse(status);
     return new ListPricePlansResponse(
         pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
-            .filter(plan -> Objects.equals(plan.getCustomerId(), customerId))
+            .filter(
+                plan ->
+                    Objects.equals(plan.getCustomerId(), customerId)
+                        && filter.includes(plan.getArchivedAt()))
             .filter(
                 plan ->
                     month == null
@@ -59,6 +69,9 @@ public class PricePlanService {
 
   @Transactional
   public PricePlanResponse create(UUID organizationId, CreatePricePlanRequest request) {
+    organizationRepository
+        .findForUpdateById(organizationId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
     YearMonth current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
     YearMonth start = request.effectiveFrom() == null ? current : request.effectiveFrom();
     if (start.isBefore(current))
@@ -67,14 +80,28 @@ public class PricePlanService {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR, List.of(new FieldError("effective_until", "시작 월보다 뒤여야 합니다")));
     validateCustomer(organizationId, request.customerId());
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    if (request.customerId() != null) {
+      var customer =
+          customerRepository.lock(organizationId, java.util.List.of(request.customerId())).stream()
+              .findFirst()
+              .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+      if (customer.getArchivedAt() != null)
+        throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
+    }
+    if (pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+        .anyMatch(
+            value ->
+                value.getArchivedAt() != null
+                    && value.applies(current.toString())
+                    && Objects.equals(value.getCustomerId(), request.customerId())
+                    && value.getEffectiveFrom().equals(start.toString())))
+      throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
     PricePlan plan =
         pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
             .filter(
                 value ->
-                    Objects.equals(value.getCustomerId(), request.customerId())
+                    value.getArchivedAt() == null
+                        && Objects.equals(value.getCustomerId(), request.customerId())
                         && value.getEffectiveFrom().equals(start.toString()))
             .findFirst()
             .orElse(null);
@@ -108,13 +135,38 @@ public class PricePlanService {
             .findById(id)
             .filter(value -> value.getOrganizationId().equals(organizationId))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_PLAN_NOT_FOUND));
-    if (plan.getEffectiveFrom()
-            .compareTo(YearMonth.now(BillableMetricUsageService.BILLING_ZONE).toString())
-        < 0) throw new ConflictException(ErrorCode.PRICE_PLAN_HISTORY_IMMUTABLE);
-    pricePlanRepository.delete(plan);
-    pricePlanRepository.flush();
+    if (plan.getArchivedAt() != null) return;
+    String next = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
+    plan.archive(plan.getEffectiveFrom().compareTo(next) > 0 ? plan.getEffectiveFrom() : next);
     auditLogService.record(
-        organizationId, "price_plan_deleted", "price_plan", id.toString(), detail(plan));
+        organizationId, "price_plan_archived", "price_plan", id.toString(), detail(plan));
+  }
+
+  @Transactional
+  public PricePlanResponse restore(UUID organizationId, UUID id) {
+    organizationRepository
+        .findForUpdateById(organizationId)
+        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    PricePlan plan =
+        pricePlanRepository
+            .findById(id)
+            .filter(value -> value.getOrganizationId().equals(organizationId))
+            .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_PLAN_NOT_FOUND));
+    if (plan.getArchivedAt() == null) return PricePlanResponse.from(plan);
+    boolean collision =
+        pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+            .anyMatch(
+                other ->
+                    other.getArchivedAt() == null
+                        && Objects.equals(other.getCustomerId(), plan.getCustomerId())
+                        && other.getEffectiveFrom().equals(plan.getEffectiveFrom()));
+    if (collision
+        || plan.getArchivedFrom().compareTo(BillableMetricUsageService.currentMonth().toString())
+            <= 0) throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
+    plan.restore();
+    auditLogService.record(
+        organizationId, "price_plan_restored", "price_plan", id.toString(), detail(plan));
+    return PricePlanResponse.from(plan);
   }
 
   private static Map<String, Object> detail(PricePlan plan) {
@@ -124,6 +176,7 @@ public class PricePlanService {
     detail.put("effective_until", plan.getEffectiveUntil());
     detail.put("base_fee", plan.getBaseFee());
     detail.put("minimum_amount", plan.getMinimumAmount());
+    detail.put("archived_from", plan.getArchivedFrom());
     return detail;
   }
 

@@ -3,12 +3,15 @@ package com.meterengine.metric.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.meterengine.event.service.EventService;
+import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.event.api.EventPresence;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
@@ -21,8 +24,12 @@ import com.meterengine.metric.dto.ListBillableMetricsResponse;
 import com.meterengine.metric.dto.UpdateBillableMetricRequest;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
+import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.pricing.service.PriceRateService;
+import com.meterengine.organization.entity.Organization;
+import com.meterengine.organization.repository.OrganizationRepository;
+import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -41,15 +49,27 @@ class BillableMetricServiceTest {
   private static final String BILLABLE_METRIC_CODE = "token-usage";
 
   @Mock private BillableMetricRepository billableMetricRepository;
-  @Mock private EventService eventService;
-  @Mock private PriceRateService priceRateService;
+  @Mock private EventPresence eventService;
+  @Mock private BillableMetricPeriodRepository periodRepository;
+  @Mock private OrganizationRepository organizationRepository;
+  @Mock private AuditLogService auditLogService;
+  @Mock private EntityManager entityManager;
 
   private BillableMetricService billableMetricService;
 
   @BeforeEach
   void setUp() {
     billableMetricService =
-        new BillableMetricService(billableMetricRepository, eventService, priceRateService);
+        new BillableMetricService(
+            billableMetricRepository,
+            eventService,
+            periodRepository,
+            organizationRepository,
+            auditLogService,
+            entityManager);
+    org.mockito.Mockito.lenient()
+        .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
+        .thenReturn(Optional.of(org.mockito.Mockito.mock(Organization.class)));
   }
 
   @Test
@@ -234,7 +254,7 @@ class BillableMetricServiceTest {
 
     update("chat_completion", "token");
 
-    verify(eventService, never()).existsWithNumericProperty(any(), any(), any());
+    verify(eventService, never()).exists(any(), any(), any());
     verify(billableMetricRepository, never())
         .existsByOrganizationIdAndEventTypeAndTargetProperty(any(), any(), any());
   }
@@ -250,6 +270,52 @@ class BillableMetricServiceTest {
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
     assertThat(stored.getEventType()).isEqualTo("chat_completion");
+  }
+
+  @Test
+  void 이벤트_유무는_도입사_잠금_전에_확인한다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+
+    update("embedding", "chars");
+
+    InOrder order = inOrder(eventService, organizationRepository);
+    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
+    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+  }
+
+  @Test
+  void 잠금_뒤_다시_읽은_event_type이_다르면_그_이벤트를_다시_확인한다() {
+    BillableMetric stored = storedBillableMetric();
+    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
+    doAnswer(
+            invocation -> {
+              stored.update(
+                  "토큰 사용량",
+                  "legacy_completion",
+                  "sum",
+                  "token",
+                  List.of(),
+                  BigDecimal.ONE,
+                  "none",
+                  0,
+                  null);
+              return null;
+            })
+        .when(entityManager)
+        .refresh(stored);
+    when(eventService.exists(ORGANIZATION_ID, "chat_completion")).thenReturn(false);
+    when(eventService.exists(ORGANIZATION_ID, "legacy_completion")).thenReturn(true);
+
+    assertThatThrownBy(() -> update("embedding", "chars"))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
+    InOrder order = inOrder(eventService, organizationRepository, entityManager);
+    order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
+    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+    order.verify(entityManager).refresh(stored);
+    order.verify(eventService).exists(ORGANIZATION_ID, "legacy_completion");
   }
 
   @Test
@@ -284,42 +350,15 @@ class BillableMetricServiceTest {
   }
 
   @Test
-  void 이벤트가_집계된_미터는_삭제할_수_없다() {
+  void 미터를_보관해도_행과_현재_월_효력은_유지한다() {
     BillableMetric stored = storedBillableMetric();
     when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(eventService.existsWithNumericProperty(ORGANIZATION_ID, "chat_completion", "token"))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
-    verify(billableMetricRepository, never()).delete(any());
-  }
-
-  @Test
-  void 단가가_붙은_미터는_삭제할_수_없다() {
-    BillableMetric stored = storedBillableMetric();
-    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-    when(priceRateService.existsForBillableMetric(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .thenReturn(true);
-
-    assertThatThrownBy(() -> billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE))
-        .isInstanceOf(ConflictException.class)
-        .extracting(exception -> ((BusinessException) exception).getErrorCode())
-        .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_PRICE_RATE);
-    verify(billableMetricRepository, never()).delete(any());
-  }
-
-  @Test
-  void 이벤트와_단가가_없는_미터는_삭제된다() {
-    BillableMetric stored = storedBillableMetric();
-    when(billableMetricRepository.findById(stored.getId())).thenReturn(Optional.of(stored));
-
     billableMetricService.delete(ORGANIZATION_ID, BILLABLE_METRIC_CODE);
-
-    verify(billableMetricRepository).delete(stored);
-    verify(billableMetricRepository).flush();
+    assertThat(stored.getArchivedAt()).isNotNull();
+    assertThat(stored.getInactiveFrom())
+        .isEqualTo(BillableMetricUsageService.currentMonth().plusMonths(1).toString());
+    verify(billableMetricRepository, never()).delete(any());
+    verify(periodRepository).save(any());
   }
 
   private BillableMetric storedBillableMetric() {

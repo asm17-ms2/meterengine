@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArchiveFilter } from "@/components/workspace/ArchiveFilter";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable, type WorkspaceRowActions } from "@/components/workspace/WorkspaceView";
@@ -6,13 +7,15 @@ import { listOrganizationInvitations, listOrganizationMembers } from "@/lib/api/
 import { requireTenantSession } from "@/lib/auth/session";
 import { hasScope } from "@/lib/auth/permissions";
 import { scopeField } from "@/lib/auth/scope-fields";
+import { readArchiveStatus } from "@/lib/list-query";
 
 export const metadata: Metadata = { title: "사용자 관리" };
 
-export default async function MembersPage() {
+export default async function MembersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const session = await requireTenantSession();
   const isOwner = session.organization_role === "owner" && hasScope(session.scopes, "admin");
-  const [members, invitations] = await Promise.all([listOrganizationMembers(), isOwner ? listOrganizationInvitations() : Promise.resolve(null)]);
+  const status = readArchiveStatus((await searchParams).status);
+  const [members, invitations] = await Promise.all([listOrganizationMembers(status), isOwner ? listOrganizationInvitations() : Promise.resolve(null)]);
   const actions: WorkspaceRowActions = {};
   if (members.ok && isOwner) for (const member of members.data.members) {
     if (member.status !== "active") continue;
@@ -36,7 +39,7 @@ export default async function MembersPage() {
         <ActionPanel title="초대 링크 만들기" operation="createOrganizationInvitation" description="메일 발송 없이 링크를 복사해 전달합니다. 지정한 이메일로 48시간 안에 한 번 수락할 수 있습니다. 같은 이메일로 다시 발급해도 이전 링크는 취소하기 전까지 유효하니, 링크를 잃었다면 초대 이력에서 이전 초대를 먼저 취소하세요. 링크를 받은 사람이 새 계정을 설정하므로 초대할 사람에게만 전달하세요." label="초대 링크 발급" fields={[{ name: "email", label: "초대할 이메일", type: "email", maxLength: 254 }, scopeField()]} />
       </div> : <p className="field-hint">사용자 추가와 권한 변경은 대표관리자에게 요청하세요.</p>}
     </section>
-    <section className="workspace-panel"><h2>도입사 사용자</h2>{members.ok ? <WorkspaceTable label="도입사 사용자" rows={members.data.members} rowKey="user_account_id" columns={[{ key: "name", label: "이름" }, { key: "email", label: "이메일" }, { key: "organization_role", label: "도입사 역할", isStatus: true }, { key: "scopes", label: "업무 권한" }, { key: "status", label: "접근 상태", isStatus: true }, { key: "created_at", label: "소속 시각", isDate: true }, { key: "revoked_at", label: "보관 시각", isDate: true }]} rowActions={actions} empty="등록된 도입사 사용자가 없습니다." /> : <WorkspaceError message={members.error.message} status={members.error.status} />}</section>
+    <section className="workspace-panel"><h2>도입사 사용자</h2><ArchiveFilter label="사용자 관리 상태" />{members.ok ? <WorkspaceTable label="도입사 사용자" rows={members.data.members} rowKey="user_account_id" columns={[{ key: "name", label: "이름" }, { key: "email", label: "이메일" }, { key: "organization_role", label: "도입사 역할", isStatus: true }, { key: "scopes", label: "업무 권한" }, { key: "status", label: "접근 상태", isStatus: true }, { key: "created_at", label: "소속 시각", isDate: true }, { key: "revoked_at", label: "보관 시각", isDate: true }]} rowActions={actions} empty={status === "archived" ? "보관된 소속이 없습니다. 소속을 보관하면 이 목록에서 확인할 수 있습니다." : status === "all" ? "등록된 도입사 사용자가 없습니다." : "사용 중인 소속이 없습니다. 보관 목록을 확인하거나 관리자를 추가하세요."} /> : <WorkspaceError message={members.error.message} status={members.error.status} />}</section>
     {isOwner && <section className="workspace-panel"><h2>초대 이력</h2>{invitations?.ok ? <WorkspaceTable label="초대 이력" rows={invitations.data.invitations} columns={[{ key: "email", label: "초대한 이메일" }, { key: "scopes", label: "참여 권한" }, { key: "status", label: "상태", isStatus: true, statusLabels: { pending: "초대 대기", accepted: "수락 완료", revoked: "초대 취소", expired: "만료" } }, { key: "created_at", label: "발급 시각", isDate: true }, { key: "expires_at", label: "만료 시각", isDate: true }, { key: "accepted_at", label: "수락 시각", isDate: true }]} rowActions={invitationActions} empty="발급한 초대가 없습니다. 링크를 만들거나 계정을 직접 생성하세요." /> : invitations && <WorkspaceError message={invitations.error.message} status={invitations.error.status} />}</section>}
   </>;
 }

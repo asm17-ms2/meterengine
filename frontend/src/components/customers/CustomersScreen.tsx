@@ -1,5 +1,7 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { Button } from "antd";
 import { useCallback, useState } from "react";
 
@@ -39,6 +41,8 @@ export function CustomersScreen({
   query: ListQuery;
   capabilities: ListCapabilities;
 }) {
+  const canManage = useTenantScope("admin");
+  const canCreate = useTenantScope("ingest");
   const search = useSearchText(query, capabilities);
   const searchText = search.text;
   const [sortSelection, setSortSelection] = useState<ClientSortSelection | undefined>(undefined);
@@ -60,9 +64,9 @@ export function CustomersScreen({
       <ScreenHeader
         title="고객"
         extra={
-          <Button type="primary" onClick={openCreate}>
+          canCreate ? <Button type="primary" onClick={openCreate}>
             고객 등록
-          </Button>
+          </Button> : undefined
         }
       >
         총 <b>{visibleRows.length}</b>명
@@ -88,7 +92,7 @@ export function CustomersScreen({
           <EmptyState
             title="등록된 고객이 없습니다"
             body="이 도입사에 등록된 고객이 없습니다. 고객 등록으로 첫 고객을 추가하세요."
-            action={<Button onClick={openCreate}>고객 등록</Button>}
+            action={canCreate ? <Button onClick={openCreate}>고객 등록</Button> : undefined}
           />
         ) : visibleRows.length === 0 ? (
           <EmptyState
@@ -112,11 +116,11 @@ export function CustomersScreen({
         )}
       </ScreenCard>
 
-      {form ? (
+      {form && (form.customer ? canManage : canCreate) ? (
         <CustomerFormDialog customer={form.customer} onClose={closeForm} />
       ) : null}
 
-      {deleting ? (
+      {deleting && canManage ? (
         <CustomerDeleteDialog customer={deleting} onClose={closeDelete} />
       ) : null}
     </>

@@ -17,7 +17,9 @@ public record PriceRateResponse(
     @JsonProperty("effective_from") String effectiveFrom,
     @JsonProperty("effective_until") String effectiveUntil,
     String model,
-    @JsonRawValue @Schema(type = "array", implementation = PriceRateTier.class) String tiers) {
+    @JsonRawValue @Schema(type = "array", implementation = PriceRateTier.class) String tiers,
+    @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
+    @JsonProperty("archived_from") String archivedFrom) {
   public static PriceRateResponse from(PriceRate rate) {
     return new PriceRateResponse(
         rate.getId(),
@@ -28,6 +30,8 @@ public record PriceRateResponse(
         rate.getEffectiveFrom(),
         rate.getEffectiveUntil(),
         rate.getModel(),
-        rate.getTiers());
+        rate.getTiers(),
+        rate.getArchivedAt(),
+        rate.getArchivedFrom());
   }
 }
