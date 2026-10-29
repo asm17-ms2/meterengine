@@ -150,6 +150,7 @@ test("격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창�
   expect(state.keyCount).toBe(1);
   expect(state.keyCalls).toHaveLength(1);
   expect(state.keyCalls[0].rateLimitPerMinute).toBeNull();
+  page.once("dialog", confirm => void confirm.accept());
   await closeDialog(dialog);
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.locator(".secret-result code")).toHaveCount(0);
@@ -165,6 +166,7 @@ test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 
     await dialog.getByLabel(/^분당 요청 한도/).fill(limit);
     await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
     await expect(dialog.locator(".secret-result code")).toBeVisible();
+    page.once("dialog", confirm => void confirm.accept());
     await closeDialog(dialog);
   }
   const state = await readState(request);
