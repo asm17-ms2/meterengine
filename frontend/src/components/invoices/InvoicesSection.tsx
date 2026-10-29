@@ -1,3 +1,4 @@
+import { INVOICE_PAYMENT_STATUSES } from "@/lib/invoice-payment-status";
 import {
   InvoicesTable,
   type InvoiceGroupView,
@@ -108,7 +109,8 @@ function toInvoiceGroupView(invoice: InvoiceResponse, payment?: InvoicePaymentRe
   return {
     id: invoice.id,
     invoiceNumber: invoice.invoice_number,
-    paymentStatus: payment ? ({ unpaid: "미납", pending: "결과 확인 중", paid: "납부 완료", failed: "결제 실패", partially_canceled: "부분 취소", canceled: "전액 취소" }[payment.status] ?? payment.status) : undefined,
+    paymentStatus: payment ? (INVOICE_PAYMENT_STATUSES[payment.status]?.label ?? payment.status) : undefined,
+    paymentStatusColor: payment ? (INVOICE_PAYMENT_STATUSES[payment.status]?.color ?? "default") : undefined,
     canceledAmount: payment ? formatKrw(payment.canceled_amount) : undefined,
     customerId: invoice.customer_id,
     customerName: invoice.customer_name,
