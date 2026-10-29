@@ -13,3 +13,10 @@ test("pricing history money columns are right aligned numbers", () => {
   const pricing = source("components/pricing/PricingWorkspace.tsx");
   for (const column of ['{title:"기본료",dataIndex:"base_fee",align:"right"', '{title:"최소 사용료",dataIndex:"minimum_amount",align:"right"', '{title:"단가",key:"price",align:"right"']) assert.ok(pricing.includes(column), column);
 });
+
+test("unit prices say they are per billed quantity, not per raw usage", () => {
+  const pricing = source("components/pricing/PricingWorkspace.tsx");
+  for (const stale of ["/ 사용량 1<", "원 / 1<", '"사용량 1당 단가"', "<span>사용량 1당 단가 (원)</span>"]) assert.ok(!pricing.includes(stale), stale);
+  for (const label of ["</strong> / 과금 수량 1</p>", '"과금 수량 1당 단가"', "<span>과금 수량 1당 단가 (원)</span>"]) assert.ok(pricing.includes(label), label);
+});
+

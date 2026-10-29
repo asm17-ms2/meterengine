@@ -87,7 +87,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect.poll(() => new URL(page.url()).searchParams.get("metric")).toBe(metricCode);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const rateDialog = page.getByRole("dialog");
-    await rateDialog.getByLabel("사용량 1당 단가 (원)", { exact: true }).fill("100");
+    await rateDialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("100");
     await rateDialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(rateDialog).toHaveCount(0);
     await page.getByRole("button", { name: "요금제 버전 등록", exact: true }).click();

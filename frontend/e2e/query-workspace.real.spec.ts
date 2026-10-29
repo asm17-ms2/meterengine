@@ -203,7 +203,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("per_unit");
-    await dialog.getByLabel("사용량 1당 단가 (원)", { exact: true }).fill("999");
+    await dialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("999");
     await context.addCookies([{ name: "me_session", value: tenantB.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
     await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("도입사가 바뀌었습니다");
