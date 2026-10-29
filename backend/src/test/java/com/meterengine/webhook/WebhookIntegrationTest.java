@@ -385,6 +385,29 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 한_도입사의_전송이_밀려_있어도_다른_도입사의_전송이_다음_차례에_나간다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    List<String> backlog = new ArrayList<>();
+    for (int i = 0; i < 3; i++)
+      backlog.add(webhookEndpointService.test(organizationId, endpoint.id()).toString());
+    UUID otherOrganizationId = UUID.randomUUID();
+    TestCredentials.issueApiKey(jdbcTemplate, otherOrganizationId, "admin");
+    WebhookEndpointResponse otherEndpoint =
+        webhookEndpointService.create(
+            otherOrganizationId,
+            new CreateWebhookEndpointRequest(endpoint.url(), List.of("payment_succeeded"), null));
+    String other = webhookEndpointService.test(otherOrganizationId, otherEndpoint.id()).toString();
+
+    webhookDeliveryService.deliver();
+
+    assertThat(received)
+        .extracting(Received::id)
+        .containsExactly(backlog.get(0), other, backlog.get(1), backlog.get(2));
+  }
+
+  @Test
   void 없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다() {
     assertThatThrownBy(
             () -> webhookDeliveryService.retry(organizationId, endpoint.id(), UUID.randomUUID()))

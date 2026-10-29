@@ -38,13 +38,24 @@ public class WebhookDeliveryRepository {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public Optional<WebhookClaim> claim() {
+    return claim(List.of());
+  }
+
+  // 이번 차례에 이미 꺼낸 도입사 환경은 뒤로 미뤄, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
+  public Optional<WebhookClaim> claim(List<WebhookClaim> servedThisTurn) {
+    UUID[] servedOrganizations =
+        servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new);
+    UUID[] servedScopes =
+        servedThisTurn.stream().map(WebhookDeliveryRepository::scope).toArray(UUID[]::new);
     return jdbcTemplate
         .query(
             """
         WITH picked AS (
           SELECT id FROM webhook_delivery WHERE status = 'pending'
             AND attempt_count < ? AND next_attempt_at <= clock_timestamp()
-          ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+          ORDER BY (organization_id, environment_scope_id) IN (SELECT * FROM unnest(?::uuid[], ?::uuid[])),
+            next_attempt_at, id
+          LIMIT 1 FOR UPDATE SKIP LOCKED
         ), claimed AS (
           UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
             last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() + interval '2 minutes',
@@ -69,7 +80,9 @@ public class WebhookDeliveryRepository {
                     rs.getInt("attempt_count"),
                     rs.getObject("last_attempted_at", OffsetDateTime.class),
                     rs.getObject("environment_id", UUID.class)),
-            MAX_ATTEMPTS)
+            MAX_ATTEMPTS,
+            servedOrganizations,
+            servedScopes)
         .stream()
         .findFirst();
   }
