@@ -1,7 +1,10 @@
 package com.meterengine.event.service;
 
 import com.meterengine.event.dto.Event;
+import com.meterengine.global.time.BillingMonth;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -11,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class EventCsvService {
+  private static final DateTimeFormatter TIMESTAMP =
+      DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ssXXX");
   private final EventQueryService eventQueryService;
 
   EventCsvService(EventQueryService eventQueryService) {
@@ -47,8 +52,8 @@ public class EventCsvService {
                   cell(event.customerId()),
                   cell(event.customerName()),
                   cell(event.type()),
-                  cell(event.occurredAt()),
-                  cell(event.receivedAt()),
+                  cell(timestamp(event.occurredAt())),
+                  cell(timestamp(event.receivedAt())),
                   cell(event.requestId()),
                   cell(event.actorType()),
                   cell(event.actorId())));
@@ -60,6 +65,10 @@ public class EventCsvService {
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"events.csv\"")
         .header(HttpHeaders.CACHE_CONTROL, "no-store")
         .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static String timestamp(OffsetDateTime value) {
+    return value == null ? null : value.atZoneSameInstant(BillingMonth.ZONE).format(TIMESTAMP);
   }
 
   private static String cell(Object value) {

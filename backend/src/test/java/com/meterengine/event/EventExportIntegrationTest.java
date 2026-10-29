@@ -245,6 +245,13 @@ class EventExportIntegrationTest {
   }
 
   @Test
+  void 발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다() {
+    insert("kst-boundary", customerId, null, "usage", "{}", "2026-10-01T00:00:00+09:00");
+    String csv = body(get(authorization, null, "&q=kst-boundary"));
+    assertThat(csv).contains("\"2026-10-01T00:00:00+09:00\"").doesNotContain("2026-09-30T15:00Z");
+  }
+
+  @Test
   void 잘못된_속성과_기간과_정렬과_미지원_조건을_거절한다() {
     for (String suffix :
         new String[] {
