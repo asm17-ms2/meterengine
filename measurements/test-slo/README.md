@@ -89,6 +89,14 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 
 ## 켜고 끄기
 
+켜기 전에 RDS 자동 재기동을 처리하는 흐름이 돌고 있지 않은지 확인한다. 돌고 있으면 측정 도중에 그 흐름이 DB를 끌 수 있으니, 결과가 0이 될 때까지 기다린 뒤 켠다(흐름은 최대 2시간 돈다).
+
+```bash
+aws stepfunctions list-executions --region ap-northeast-2 \
+  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-slo-rds-auto-stop \
+  --status-filter RUNNING --query 'length(executions)'
+```
+
 ```bash
 measurements/test-slo/sut/scripts/sut-start.sh
 measurements/test-slo/sut/scripts/sut-stop.sh
