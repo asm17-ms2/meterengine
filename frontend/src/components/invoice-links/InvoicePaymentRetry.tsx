@@ -25,10 +25,12 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
   const controllerRef = useRef<AbortController | null>(null);
   const isSubmissionPendingRef = useRef(false);
   const confirmationRef = useRef<HTMLHeadingElement>(null);
+  const retryTitleRef = useRef<HTMLHeadingElement>(null);
   const startButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
   useEffect(() => { if (isConfirming) confirmationRef.current?.focus(); }, [isConfirming]);
+  useEffect(() => { if (isSubmitting || hasUnconfirmedResult) retryTitleRef.current?.focus(); }, [isSubmitting, hasUnconfirmedResult]);
 
   async function submit() {
     if (!isConfirming || isSubmissionPendingRef.current || hasUnconfirmedResult || !canRetryInvoicePayment(invoice)) return;
@@ -74,11 +76,11 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
   if (invoice.payment.status !== "failed") return null;
   if (!canRetryInvoicePayment(invoice)) return <p className={styles.unavailable}>{invoicePaymentRetryUnavailableMessage(invoice.payment_retry?.reason)}</p>;
 
-  return <section className={styles.retry} aria-labelledby="invoice-payment-retry-title" aria-busy={isSubmitting}>
-    <h3 id="invoice-payment-retry-title">{hasUnconfirmedResult ? "결제 상태 확인" : "실패한 결제 다시 시도"}</h3>
+  return <section className={styles.retry} aria-labelledby="invoice-payment-retry-title">
+    <h3 id="invoice-payment-retry-title" ref={retryTitleRef} tabIndex={-1}>{hasUnconfirmedResult ? "결제 상태 확인" : "실패한 결제 다시 시도"}</h3>
     {!isSubmitting && !hasUnconfirmedResult && <p>청구서를 보낸 도입사가 이 링크에서의 재시도를 허용했습니다. 현재 등록된 카드로 {formatKrw(invoice.total_amount)}을 다시 결제할 수 있습니다.</p>}
     {message && <p role="alert" className={styles.error}>{message}</p>}
-    {isSubmitting ? <p role="status">결제 요청을 처리하고 있습니다. 결과가 나올 때까지 다시 결제를 요청하지 마세요.</p>
+    {isSubmitting ? <p>결제 요청을 처리하고 있습니다. 결과가 나올 때까지 다시 결제를 요청하지 마세요.</p>
       : hasUnconfirmedResult ? <button type="button" onClick={onRefresh}>결제 상태 새로 조회</button>
         : !isConfirming ? <button ref={startButtonRef} type="button" onClick={() => setIsConfirming(true)}>결제 다시 시도</button>
           : <div className={styles.confirmation}>

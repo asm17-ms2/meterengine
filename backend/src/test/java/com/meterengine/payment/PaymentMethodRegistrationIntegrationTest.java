@@ -191,6 +191,30 @@ class PaymentMethodRegistrationIntegrationTest {
   }
 
   @Test
+  void 키를_보관하면_발급한_링크도_조회와_발급이_409이고_토스를_부르지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    String token = createToken(organizationId, customerId);
+    assertThat(
+            withOrganization(
+                    mvc.delete().uri("/v1/toss-payments-credentials/{mode}", "test"),
+                    organizationId)
+                .exchange())
+        .hasStatus(204);
+
+    assertError(getRegistration(token), 409, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
+    assertError(
+        createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION),
+        409,
+        ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
+
+    verifyNoInteractions(tossPaymentsClient);
+    assertThat(countBillingKeys(customerId)).isZero();
+    assertThat(registrationRow(customerId).get("used_at")).isNull();
+  }
+
+  @Test
   void 공개_조회는_X_Organization_Id_없이_200이고_token은_싣지_않는다() {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);

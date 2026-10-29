@@ -237,6 +237,64 @@ class PaymentEnvironmentIntegrationTest {
   }
 
   @Test
+  void PG키를_보관하면_발급한_등록링크도_조회와_빌링키_발급을_거절하고_토스를_부르지_않는다() {
+    Payable payable = invoice("test");
+    in(
+        "test",
+        () ->
+            credentials.saveAndFlush(
+                new TossPaymentsCredential(
+                    organizationId,
+                    "test",
+                    "test_ck_original_environment",
+                    TEST_SECRET,
+                    KEY_TIME)));
+    MvcTestResult created =
+        post("test", "/v1/customers/" + payable.customer() + "/payment-method-registrations", null);
+    assertThat(created).hasStatus(201);
+    String token = JsonPath.read(body(created), "$.token");
+    assertThat(
+            mvc.delete()
+                .uri("/v1/toss-payments-credentials/test")
+                .header("Authorization", session)
+                .header("X-MeterEngine-Environment", "test")
+                .exchange())
+        .hasStatus(204);
+    assertThat(mvc.get().uri("/v1/payment-method-registrations/{token}", token).exchange())
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("toss_payments_credential_missing");
+    assertThat(
+            mvc.post()
+                .uri("/v1/payment-method-registrations/{token}/billing-keys", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"auth_key\":\"auth-key\",\"customer_key\":\""
+                        + payable.customer()
+                        + "\",\"consent_document_version\":\"2026-10-01\"}")
+                .exchange())
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("toss_payments_credential_missing");
+    verify(toss, never()).issueBillingKey(anyString(), anyString(), anyString());
+    verify(toss, never()).deleteBillingKey(anyString(), anyString());
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM billing_key WHERE customer_id=?",
+                Integer.class,
+                payable.customer()))
+        .isZero();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT used_at FROM payment_method_registration WHERE customer_id=?",
+                OffsetDateTime.class,
+                payable.customer()))
+        .isNull();
+  }
+
+  @Test
   void 새_PG키로_등록한_카드를_저장해도_옛_카드는_발급했던_키로_삭제한다() {
     Payable payable = payable("test");
     String rotated = "test_sk_replacement_environment";

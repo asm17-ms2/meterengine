@@ -58,34 +58,11 @@ public class DashboardService {
     var draft = draftInvoiceService.preview(organizationId, month);
     List<InvoicePaymentResponse> payments =
         invoicePaymentService.list(organizationId, month, null, mode).invoicePayments();
-    Map<UUID, Invoice> invoiceById =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? invoiceRepository.findNewestFirst(organizationId, null, month.toString())
-                : invoiceRepository.findNewestFirstScoped(
-                    organizationId,
-                    BusinessEnvironmentContext.environmentId(),
-                    null,
-                    month.toString()))
-            .stream().collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
     List<DashboardInvoice> invoicePayments =
-        payments.stream()
-            .map(
-                payment -> {
-                  Invoice invoice = invoiceById.get(payment.invoiceId());
-                  return new DashboardInvoice(
-                      payment.invoiceId(),
-                      invoice.getCustomerId(),
-                      invoice.getCustomerName(),
-                      invoice.getPeriod(),
-                      payment.status(),
-                      payment.mode(),
-                      payment.amount(),
-                      payment.canceledAmount(),
-                      payment.attemptCount(),
-                      payment.lastFailureCode(),
-                      payment.nextRetryAt(),
-                      payment.completedAt());
-                })
+        dashboardInvoices(organizationId, payments, month.toString());
+    List<InvoicePaymentResponse> unresolved =
+        invoicePaymentService.list(organizationId, null, null, mode).invoicePayments().stream()
+            .filter(payment -> OUTSTANDING.contains(payment.status()))
             .toList();
     long collected =
         payments.stream()
@@ -163,7 +140,38 @@ public class DashboardService {
         draft.customers().stream().mapToLong(c -> c.unpricedUsages().size()).sum(),
         draft.customers().stream().mapToLong(c -> c.negativeUsages().size()).sum(),
         invoicePayments,
+        dashboardInvoices(organizationId, unresolved, null),
         draft);
+  }
+
+  private List<DashboardInvoice> dashboardInvoices(
+      UUID organizationId, List<InvoicePaymentResponse> payments, String period) {
+    if (payments.isEmpty()) return List.of();
+    Map<UUID, Invoice> invoiceById =
+        (BusinessEnvironmentContext.environmentId() == null
+                ? invoiceRepository.findNewestFirst(organizationId, null, period)
+                : invoiceRepository.findNewestFirstScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId(), null, period))
+            .stream().collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
+    return payments.stream()
+        .map(
+            payment -> {
+              Invoice invoice = invoiceById.get(payment.invoiceId());
+              return new DashboardInvoice(
+                  payment.invoiceId(),
+                  invoice.getCustomerId(),
+                  invoice.getCustomerName(),
+                  invoice.getPeriod(),
+                  payment.status(),
+                  payment.mode(),
+                  payment.amount(),
+                  payment.canceledAmount(),
+                  payment.attemptCount(),
+                  payment.lastFailureCode(),
+                  payment.nextRetryAt(),
+                  payment.completedAt());
+            })
+        .toList();
   }
 
   private long count(String sql, Object... arguments) {
