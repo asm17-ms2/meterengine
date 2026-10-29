@@ -35,44 +35,6 @@ public class BillableMetricUsageRepository {
       Map<UUID, DimensionUsage> totalByCustomerId,
       Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId) {}
 
-  public Map<UUID, List<DimensionUsage>> sumQuantityByCustomerIdAndDimensionValues(
-      UUID organizationId,
-      String eventType,
-      String targetProperty,
-      List<String> dimensionProperties,
-      OffsetDateTime start,
-      OffsetDateTime end) {
-    return sumQuantityByCustomerIdAndDimensionValues(
-        organizationId, null, eventType, targetProperty, dimensionProperties, start, end);
-  }
-
-  public Map<UUID, List<DimensionUsage>> sumQuantityByCustomerIdAndDimensionValues(
-      UUID organizationId,
-      UUID environmentId,
-      String eventType,
-      String targetProperty,
-      List<String> dimensionProperties,
-      OffsetDateTime start,
-      OffsetDateTime end) {
-    return aggregate(
-            new BillableMetric(
-                organizationId,
-                "",
-                "",
-                eventType,
-                "sum",
-                targetProperty,
-                dimensionProperties,
-                BigDecimal.ONE,
-                "none",
-                0,
-                null,
-                environmentId),
-            start,
-            end)
-        .dimensionUsagesByCustomerId();
-  }
-
   public AggregatedQuantities aggregate(
       BillableMetric metric, OffsetDateTime start, OffsetDateTime end) {
     if (!MetricAggregation.SUPPORTED.contains(metric.getAggregation()))
