@@ -157,6 +157,17 @@ test("격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창�
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
 });
 
+test("격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다", async ({ page, request }) => {
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("바뀐 환경");
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = "test"; });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(0);
+});
+
 test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 보낸다", async ({ page, request }) => {
   await page.goto("/integrations");
   for (const limit of ["120", ""]) {
