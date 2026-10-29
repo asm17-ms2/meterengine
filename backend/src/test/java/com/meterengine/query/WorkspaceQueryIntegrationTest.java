@@ -2,11 +2,13 @@ package com.meterengine.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.query.repository.WorkspaceQueryRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ class WorkspaceQueryIntegrationTest {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private JsonMapper json;
   @Autowired private WorkspaceQueryRepository workspaceQueryRepository;
+  @MockitoSpyBean private InvoiceRepository invoiceRepository;
   private MockMvcTester mvc;
   private UUID organizationId;
   private String authorization;
@@ -257,7 +261,7 @@ class WorkspaceQueryIntegrationTest {
     UUID first = customer("가 고객", "first", false);
     UUID second = customer("나 고객", "second", false);
     UUID invoice = invoice(first, "가 고객", 100, "2026-08-05T23:59:59+09:00");
-    invoice(second, "나 고객", 200, "2026-08-06T00:00:00+09:00");
+    UUID secondInvoice = invoice(second, "나 고객", 200, "2026-08-06T00:00:00+09:00");
     JsonNode page = data(get("/v1/invoices/search?size=1"));
     assertThat(page.get("total").asInt()).isEqualTo(2);
     assertThat(page.get("summary").get("total_amount").asInt()).isEqualTo(330);
@@ -265,12 +269,26 @@ class WorkspaceQueryIntegrationTest {
     assertThat(day.get("total").asInt()).isEqualTo(1);
     assertThat(day.get("items").get(0).get("invoice").get("id").asString())
         .isEqualTo(invoice.toString());
-    assertThat(data(get("/v1/invoices/search?min_amount=200&max_amount=300")).get("total").asInt())
-        .isEqualTo(1);
+    JsonNode totalRange = data(get("/v1/invoices/search?min_amount=210&max_amount=230"));
+    assertThat(totalRange.get("total").asInt()).isEqualTo(1);
+    assertThat(totalRange.get("items").get(0).get("invoice").get("id").asString())
+        .isEqualTo(secondInvoice.toString());
     assertThat(get("/v1/invoices/search?status=bogus")).hasStatus(400);
     assertThat(get("/v1/invoices/search?min_amount=300&max_amount=200")).hasStatus(400);
     assertThat(data(get("/v1/invoices/months")).get("months").get(0).asString())
         .isEqualTo("2026-08");
+  }
+
+  @Test
+  void 인보이스_검색은_고객과_월_조건을_조회에_넘긴다() {
+    UUID first = customer("가 고객", "first", false);
+    invoice(first, "가 고객", 100, "2026-08-05T23:59:59+09:00");
+    assertThat(
+            data(get("/v1/invoices/search?month=2026-08&customer_id=" + first))
+                .get("total")
+                .asInt())
+        .isEqualTo(1);
+    verify(invoiceRepository).findNewestFirst(organizationId, first, "2026-08");
   }
 
   @Test
