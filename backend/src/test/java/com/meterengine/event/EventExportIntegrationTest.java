@@ -232,12 +232,13 @@ class EventExportIntegrationTest {
   }
 
   @Test
-  void 원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다() {
+  void 원문_속성을_포함할_때만_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다() {
     jdbcTemplate.update(
         "INSERT INTO event(organization_id,transaction_id,customer_id,type,properties,occurred_at) SELECT ?, 'large-' || sequence, ?, 'usage', jsonb_build_object('blob', repeat('x', 9 * 1024 * 1024)), '2026-10-02T00:00:00+09:00'::timestamptz FROM generate_series(1,4) sequence",
         organizationId,
         customerId);
-    assertThat(get(authorization, null, ""))
+    assertThat(get(authorization, null, "")).hasStatusOk();
+    assertThat(get(authorization, null, "&include_properties=true"))
         .hasStatus(400)
         .bodyJson()
         .extractingPath("$.errors[0].field")

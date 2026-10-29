@@ -27,7 +27,8 @@ public class EventCsvService {
       EventSearch search,
       String type,
       boolean includeProperties) {
-    List<Event> events = eventQueryService.export(organizationId, customerId, search, type);
+    List<Event> events =
+        eventQueryService.export(organizationId, customerId, search, type, includeProperties);
     List<String> columns =
         new ArrayList<>(
             List.of(

@@ -76,13 +76,19 @@ public class EventQueryService implements EventPresence {
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-  public List<Event> export(UUID organizationId, UUID customerId, EventSearch search, String type) {
+  public List<Event> export(
+      UUID organizationId,
+      UUID customerId,
+      EventSearch search,
+      String type,
+      boolean includeProperties) {
     validate(organizationId, customerId, search);
     if (eventRepository.count(organizationId, customerId, type, search) > MAX_EXPORT_ROWS) {
       throw EventSearch.invalid("export", "10000행 이하가 되도록 검색 범위를 좁혀 주세요");
     }
-    if (eventRepository.sumPropertiesBytes(organizationId, customerId, type, search)
-        > MAX_EXPORT_PROPERTIES_BYTES) {
+    if (includeProperties
+        && eventRepository.sumPropertiesBytes(organizationId, customerId, type, search)
+            > MAX_EXPORT_PROPERTIES_BYTES) {
       throw EventSearch.invalid("export", "원본 속성이 32MB 이하가 되도록 검색 범위를 좁혀 주세요");
     }
     return eventRepository.findPage(organizationId, customerId, type, search, 0, MAX_EXPORT_ROWS);
