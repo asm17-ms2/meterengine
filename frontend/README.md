@@ -219,7 +219,7 @@ E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
 
-결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 토스페이먼츠 주소를 `http://127.0.0.1:38447`로 두고 띄운다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 
