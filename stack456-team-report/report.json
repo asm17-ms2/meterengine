@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T22:40:13+09:00",
+  "updated_at": "2026-10-29T23:41:27+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5314,8 +5314,8 @@
       "id": "D-070",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 미터 목록 section은 workspace-panel과 styles.meterRail을 같이 단다. globals.css의 .workspace-panel이 display:flex와 flex-direction:column을 주는데, pricing.module.css의 900px 이하 규칙은 .meterRail에 display, gap, flex-wrap만 주고 방향을 되돌리지 않는다. CSS 로드 순서가 어떻든 flex-direction을 선언한 곳이 .workspace-panel뿐이라 세로 열이 남고, 칩 배치를 노린 button{width:auto;min-width:145px;flex:1}은 쓸모가 없어 버튼이 한 줄씩 쌓인다. 넘긴 뒤 이 파일을 바꾼 main 커밋은 #451 f53222e7 하나인데 1행의 .unitPrice 글꼴만 바꿨고 900px 규칙은 그대로다. 페이지 크기를 50까지 고를 수 있어 모바일에서 단가 카드가 더 멀리 밀릴 수 있다. 원 지적의 선택 칸 테두리 379px 넘침은 앞선 재현에서 보이지 않아 근거에서 뺐다.",
       "evidence": [
@@ -5323,17 +5323,27 @@
         "frontend/src/app/globals.css:148 @ af15d7f5",
         "frontend/src/components/pricing/pricing.module.css:1 @ af15d7f5",
         "frontend/src/components/pricing/pricing.module.css:4 @ af15d7f5",
-        "frontend/e2e/query-workspace.real.spec.ts:56 @ af15d7f5"
+        "frontend/e2e/query-workspace.real.spec.ts:56 @ af15d7f5",
+        "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패",
+        "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패",
+        "커밋 80d87456"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "80d874563be5ced9f76d716bb565ae495b88ace0"
+      ],
+      "tests": [
+        "build 통과",
+        "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "H3-B2",
@@ -5436,8 +5446,8 @@
       "id": "X-018",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 요금제 변경 이력 표(84행)와 단가 변경 이력 표(92행)는 Table locale.emptyText에 문자열을 바로 넣는다. 설치된 antd 6.6.7의 table/style/empty.js는 이 자리(tr.ant-table-placeholder)에 colorTextDisabled를 준다. AppProviders.tsx 17행 테마는 colorText, colorTextSecondary, colorTextDescription, colorTextPlaceholder만 덮고 colorTextDisabled는 덮지 않아 흰 배경에서 #bfbfbf, 대비 약 1.84:1로 WCAG 1.4.3 기준 4.5:1에 못 미친다. 반박을 시도했지만 globals.css와 pricing.module.css에는 .ant-table-placeholder 색을 바꾸는 규칙이 없고, 문구는 장식이 아니라 '보관됨 또는 전체에서 확인하세요' 같은 다음 행동 안내다. 같은 빈 상태를 WorkspaceView.tsx 63행은 Empty PRESENTED_IMAGE_SIMPLE로 감싸 .ant-empty-normal의 colorTextDescription(#5a6578)을 쓰므로 두 곳이 갈라져 있다. 이 파일을 바꾼 #447, #451, #453 squash 뒤에도 같은 코드가 남아 있다.",
       "evidence": [
@@ -5447,22 +5457,32 @@
         "frontend/src/components/workspace/WorkspaceView.tsx:63 @ af15d7f5",
         "frontend/package.json:19 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:76 @ c27b229",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:82 @ c27b229"
+        "frontend/src/components/pricing/PricingWorkspace.tsx:82 @ c27b229",
+        "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패",
+        "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패",
+        "커밋 28c0fda5"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "28c0fda5ff0a677597f8acb6cf67c0ad53075b82"
+      ],
+      "tests": [
+        "tsc, lint, build 통과",
+        "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/package.json:19: antd 6.6.7",
         "frontend/node_modules/antd/es/table/style/empty.js (tr.ant-table-placeholder color: token.colorTextDisabled)",
         "frontend/node_modules/antd/es/empty/style/index.js:39-43 (&-normal color: colorTextDescription)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "C446-002",
@@ -5638,8 +5658,8 @@
       "id": "C446-009",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "반박하려고 요금 설계 화면이나 API 어딘가에서 기본료와 최소 사용료 절사를 막거나 안내하는지 찾아봤지만 나오지 않았다. main의 ChargeService.apply는 여전히 최소 사용료와 기본료에 trim(amount - amount % 10)을 걸고, CreatePricePlanRequest는 @Min(0)만 검사하며 화면의 amount 파서도 0 이상 정수만 본다. 요금 설계 화면은 현재 요금제와 이력 표에 저장값을 MONEY.format으로 그대로 보이고, 입력 필드에는 10원 단위 안내가 없다. 화면의 10원 절사 안내(73행)는 사용량 라인만 말한다. 그래서 기본료 9,995원은 이 화면에 9,995원, 청구 예정액과 인보이스의 기본료 라인에는 9,990원으로 나온다. #447, #451, #453이 이 파일을 바꿨지만 줄만 옮겨졌고 문제는 그대로다.",
       "evidence": [
@@ -5654,17 +5674,33 @@
         "backend/src/main/java/com/meterengine/pricing/dto/CreatePricePlanRequest.java:14-15 @ af15d7f5",
         "frontend/src/app/(console)/workspace-actions.ts:23 @ af15d7f5",
         "frontend/src/app/(console)/workspace-actions.ts:73 @ af15d7f5",
-        "frontend/src/components/billing/BillingSection.tsx:123 @ af15d7f5"
+        "frontend/src/components/billing/BillingSection.tsx:123 @ af15d7f5",
+        "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 (모듈 없음)",
+        "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won: 실패 (step 10이 9995를 막음)",
+        "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 (모듈 없음)",
+        "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won: 실패 (step 10이 9995를 막음)",
+        "커밋 3879ac37",
+        "커밋 331761ee"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "3879ac37c4fe0143c7e4a7510a7ca585edaff2c3",
+        "331761ee17fdafc3e986e9b0b78d5cd35cc7d0ae"
+      ],
+      "tests": [
+        "단위, tsc, lint, build 통과",
+        "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won",
+        "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 확인 뒤 통과",
+        "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "C446-010",
@@ -5882,8 +5918,8 @@
       "id": "D-146",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 pricing.module.css 2행에 .tierEditorRow .workspace-field{font-size:12px}가, 1행 480px 미디어에 .tierEditorRow>.ant-btn{grid-column:3}이 넘길 때 head c27b229와 똑같이 남아 있다. 이 파일은 CSS 모듈이고 frontend/src 어디에도 :global이 없으며 next.config.ts에도 CSS 모듈 설정 변경이 없어서 workspace-field와 ant-btn은 지역 클래스로 해시된다. 실제 라벨은 PricingWorkspace.tsx 195행에서 styles가 아닌 문자열 className=\"workspace-field\"로 붙어 있어 2행 규칙에 맞지 않는다. 그래서 1행 .tierEditorRow label{font-size:11px}(명시도 0,1,1)가 globals.css 124행 .workspace-field{font-size:13px}를 이기고, 구간 편집기의 끝 수량, 1당 단가 라벨이 의도한 12px이 아닌 11px로 남는다. 이 파일을 바꾼 main 커밋은 #446과 #451뿐이고 #451은 .unitPrice strong 글꼴만 바꿨다. 보이는 크기 문제라 화면 확인이 필요하다.",
       "evidence": [
@@ -5891,17 +5927,24 @@
         "frontend/src/components/pricing/pricing.module.css:1 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:195 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:26 @ af15d7f5",
-        "frontend/src/app/globals.css:124 @ af15d7f5"
+        "frontend/src/app/globals.css:124 @ af15d7f5",
+        "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패",
+        "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패",
+        "커밋 b9774121"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "b97741215b64f98db8663e0fbc6d0a6b53fa9b87"
+      ],
+      "tests": [
+        "build 통과",
+        "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/pricing/pricing.module.css:2: .tierEditorRow .workspace-field{font-size:12px}, :global 없음",
         "frontend/src/components/pricing/pricing.module.css:1: .tierEditorRow label{font-size:11px}와 480px 미디어의 .tierEditorRow>.ant-btn{grid-column:3}",
@@ -5909,14 +5952,17 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:26: import styles from \"./pricing.module.css\"",
         "frontend/src/app/globals.css:124: .workspace-field{font-size:13px}",
         "git grep -n \":global\" af15d7f5 -- frontend/src 결과 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-230",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 단가 화면이 같은 개념을 서로 다른 말로 적는다. 단일 단가는 PricingWorkspace.tsx:110에서 '{금액}원 / 사용량 1', 구간 단가는 112행에서 '{금액}원 / 1'이고, 입력 라벨(195행)과 오류 라벨(134행)은 '사용량 1당 단가'다. 실제로 단가를 곱하는 수량은 unit_size로 나누고 반올림한 값이고, 미터 화면 예시(billable-metric-calculation.ts:67)와 백엔드 설명(BillableMetricUsageController.java:48)은 이것을 '과금 수량'이라 부른다. 그래서 unit_size가 1000인 미터에서는 '사용량 1'이 원본 사용량 1개로 읽혀 단가를 1000배 잘못 이해할 수 있다. 반박하려고 보니 왼쪽 미터 목록 70행이 계산식을 보여 주고 75행 안내문이 단위와 반올림을 말하지만, 단가 표기의 용어가 어긋나는 문제는 그대로 남는다. 넘길 때 head c27b229의 93, 95, 122행 문구가 #447, #451, #453을 거쳐 main에 그대로 남아 있어 고쳐지지 않았다.",
       "evidence": [
@@ -5929,17 +5975,27 @@
         "backend/src/main/java/com/meterengine/metric/controller/BillableMetricUsageController.java:47-48 @ af15d7f5",
         "frontend/e2e/query-workspace.real.spec.ts:206 @ af15d7f5",
         "frontend/e2e/mvp.real.spec.ts:90 @ af15d7f5",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:93,95,122 @ c27b229"
+        "frontend/src/components/pricing/PricingWorkspace.tsx:93,95,122 @ c27b229",
+        "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패",
+        "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패",
+        "커밋 0b1b15b1"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "0b1b15b1029b41bee143e4ac3f5636f046f1465a"
+      ],
+      "tests": [
+        "lint, build 통과",
+        "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "G-107",
@@ -6208,8 +6264,8 @@
       "id": "X-052",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 PricingWorkspace.tsx 29행 MONEY는 여전히 maximumFractionDigits 8이고, 단가 이력 표(96행), 단일 단가(110행), 구간 단가(112행)가 이것으로 단가를 보여 준다. 단가 입력은 step any이고 submit의 구간 검사(154행)에도 소수 자릿수 상한이 없으며, 백엔드 CreatePriceRateRequest와 PriceRateTier는 @Digits(fraction = MAX_FRACTION_DIGITS)라 8자리를 넘는 단가가 그대로 저장된다. 그래서 0.000000001원 단가는 요금 화면에서 0원으로 보이고, 같은 단가가 단가 목록(BillableMetricPricesSection.tsx 22행)과 청구 화면에서는 formatKrw(10자리)로 0.000000001원으로 보여 화면마다 갈린다. #446 뒤 이 파일을 바꾼 #447, #451, #453 squash에도 단가 표시나 자릿수 검사 변경은 없어 이미 고쳐진 것이 아니다. 청구 금액 계산은 백엔드 BigDecimal이라 맞으므로 low가 맞고, 유효 숫자 15자리를 넘는 JSON number 정밀도 손실은 화면 포맷으로 못 고치는 백엔드 범위라 이번 수정에 넣지 않는다.",
       "evidence": [
@@ -6224,17 +6280,36 @@
         "frontend/src/components/billable-metric-prices/BillableMetricPricesSection.tsx:22 @ af15d7f5",
         "frontend/src/components/billing/BillingSection.tsx:198 @ af15d7f5",
         "backend/src/main/java/com/meterengine/pricing/dto/CreatePriceRateRequest.java:23-27 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/pricing/dto/PriceRateTier.java:17-21 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/pricing/dto/PriceRateTier.java:17-21 @ af15d7f5",
+        "price-rate.test.mjs unit prices the screen can show exactly are accepted and finer ones are sent to the API instead: 실패 (export 없음)",
+        "unit prices typed in other number input forms are judged by their value: 실패 (.5, 1e3을 막음)",
+        "a unit price whose decimals the screen would round away is sent to the API: 실패 (큰 정수부 단가 통과)",
+        "price-rate.test.mjs unit prices the screen can show exactly are accepted and finer ones are sent to the API instead: 실패 (export 없음)",
+        "unit prices typed in other number input forms are judged by their value: 실패 (.5, 1e3을 막음)",
+        "a unit price whose decimals the screen would round away is sent to the API: 실패 (큰 정수부 단가 통과)",
+        "커밋 ceaabfd9",
+        "커밋 db915039"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "ceaabfd99ad286a37bef77b3d2ece49e37cd46e7",
+        "db91503962d9aec7301e69603d25f5494678bd06"
+      ],
+      "tests": [
+        "단위, tsc, lint, build 통과",
+        "unit prices typed in other number input forms are judged by their value; a unit price whose decimals the screen would round away is sent to the API",
+        "price-rate.test.mjs unit prices the screen can show exactly are accepted and finer ones are sent to the API instead: 실패 확인 뒤 통과",
+        "unit prices typed in other number input forms are judged by their value: 실패 확인 뒤 통과",
+        "a unit price whose decimals the screen would round away is sent to the API: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-067",
@@ -6242,8 +6317,8 @@
         "D-205"
       ],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 InvoiceFinalizeDialog.tsx 44-45행이 대상이 0곳일 때 버튼을 비활성으로 만들고 사유는 title 속성으로만 넘기며, InvoiceFinalizeButton.tsx 18행은 그 값을 antd Button의 title로만 그린다. 비활성 버튼은 Tab 순서에서 빠지고 터치에는 마우스 올리기가 없어서 키보드와 태블릿 사용자는 버튼에 붙은 사유를 볼 수 없다. 같은 저장소의 ReviewAction.tsx 13행과 AttachOrganizationButton.tsx 42행은 비활성 사유를 field-hint 글자로 보이고 aria-describedby로 버튼과 이어 두어, 비활성 사유 표시 방식이 두 갈래로 나뉜 것을 눈으로 확인할 수 있다. 반박 시도로 확정됨 배지와 0원 고객 안내 같은 다른 단서를 봤지만 버튼 단위 사유는 여전히 title뿐이다. #446과 #451이 두 파일을 바꿨지만 title 줄은 그대로라 이미 고쳐진 것은 아니다. 또 초안 조회가 실패하면 InvoiceFinalizeSection.tsx 19행과 25행 때문에 대상 수가 0이 되어 맞지 않는 사유가 붙으므로, 사유를 보이게 할 때 이 경우도 같이 막아야 한다.",
       "evidence": [
@@ -6259,24 +6334,34 @@
         "frontend/src/app/(console)/billing/page.tsx:68 @ af15d7f5",
         "frontend/src/app/(console)/billing/page.tsx:72 @ af15d7f5",
         "frontend/e2e/workspace.contract.spec.ts:234 @ af15d7f5",
-        "frontend/e2e/workspace-contract-server.mjs:97 @ af15d7f5"
+        "frontend/e2e/workspace-contract-server.mjs:97 @ af15d7f5",
+        "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패",
+        "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패",
+        "커밋 58c8297f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "58c8297fd3b99e2668aa10464915b065f975ba7b"
+      ],
+      "tests": [
+        "tsc, lint, build 통과",
+        "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-077",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 PricingWorkspace.tsx 86, 87행 요금제 변경 이력 표의 기본료, 최소 사용료 열과 96행 단가 변경 이력 표의 단가 열에 align이 없습니다. 그래서 antd 기본값인 왼쪽 정렬로 그려지고, 값이 꾸밈 없는 문자열이라 tabular-nums도 걸리지 않습니다. 같은 콘솔의 WorkspaceView.tsx 64행은 isMoney, isNumber 열을 right로 두고 31행에서 numeric span으로 감싸며, BillingTable.tsx 229, 237행도 단가와 금액 열을 right로 둡니다. 같은 관례가 두 곳 이상에서 갈라진 것이라 design 분류에서 눈으로 확인할 근거가 됩니다. 반박을 시도했지만 pricing.module.css와 globals.css에 이력 표 정렬을 덮는 규칙이 없고, #447, #451, #453이 이 파일을 바꿨어도 세 열의 코드는 넘길 때 head(c27b229 78, 79, 86행)와 같습니다.",
       "evidence": [
@@ -6288,17 +6373,27 @@
         "frontend/src/components/billing/BillingTable.tsx:229 @ af15d7f5",
         "frontend/src/components/billing/BillingTable.tsx:237 @ af15d7f5",
         "frontend/src/app/globals.css:127 @ af15d7f5",
-        "frontend/src/components/table/NumberText.tsx:17 @ af15d7f5"
+        "frontend/src/components/table/NumberText.tsx:17 @ af15d7f5",
+        "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패",
+        "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패",
+        "커밋 28c0fda5"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "28c0fda5ff0a677597f8acb6cf67c0ad53075b82"
+      ],
+      "tests": [
+        "tsc, lint, build 통과",
+        "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-102",
@@ -11337,8 +11432,8 @@
       "id": "D-034",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 사용량 화면은 미터 줄 라벨을 code로 만들고(usage.ts:88), 같은 aggregateBillableMetricUsages 응답을 쓰는 고객 상세는 metric.name만 보여 준다(customers/[id]/page.tsx:33). 넘길 때 head 17cc788과 main 사이에 이 파일들은 바뀐 것이 없다. 같은 사용량 화면의 과금 미터 필터 옵션도 이름(WorkspaceQueryService.java:109)이라, 한 데이터가 두 화면에서 서로 다른 열쇠로 나오는 것이 코드로 바로 보인다. 원문의 고칠 방법(사용량 표에 이름을 굵게, 코드를 아래에)은 양성지 님의 MS2-461(#355) 결정인 '표의 미터 이름은 code만 보이고 자세한 내용은 마우스를 올리면 보인다'를 뒤집으므로 쓰지 않는다. 대신 표 라벨은 code로 두고 툴팁에 미터명을 더하며, 고객 상세 미터 열은 요금 설계(PricingWorkspace.tsx:186)에 이미 있는 '이름 (코드)' 형식으로 맞추면 두 결정을 건드리지 않고 대조가 된다.",
       "evidence": [
@@ -11347,17 +11442,24 @@
         "frontend/src/app/(console)/customers/[id]/page.tsx:33 @ af15d7f5",
         "frontend/src/app/(console)/customers/[id]/page.tsx:27 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:109 @ af15d7f5",
-        "frontend/src/components/pricing/PricingWorkspace.tsx:70 @ af15d7f5"
+        "frontend/src/components/pricing/PricingWorkspace.tsx:70 @ af15d7f5",
+        "a meter shows both its name and code on the usage screen and on customer detail: 실패 (한 화면은 코드, 다른 화면은 이름만)",
+        "a meter shows both its name and code on the usage screen and on customer detail: 실패 (한 화면은 코드, 다른 화면은 이름만)",
+        "커밋 ce5972fc"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "ce5972fc29a0c36da748df31a9a0881441e0404c"
+      ],
+      "tests": [
+        "a meter shows both its name and code on the usage screen and on customer detail",
+        "a meter shows both its name and code on the usage screen and on customer detail: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/lib/api/usage.ts:88: 사용량 라벨 = billableMetricUsage.code",
         "frontend/src/lib/api/usage.ts:89: 툴팁에 미터명 없음",
@@ -11367,14 +11469,18 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:70: , :186 @ af15d7f5 (요금 설계는 이름과 코드를 함께 표시",
         "a5f32467 (#355, MS2-461) 커밋 본문: 미터 이름은 code만 보인다, 자세한 내용은 마우스를 올리면 보인다",
         "git diff 17cc788 af15d7f5 -- usage.ts, customers/[id]/page.tsx, components/usage, MeterLabel.tsx, meter-items.ts 결과 없음 (main에서 고쳐지지 않음)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "사용량 툴팁에 미터명, 고객 상세에 이름 (코드)를 보인다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-057",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 개요 화면에서 '공급자와 결제 설정' 단계는 여전히 supplier_configured와 payment_configured를 함께 봐서 완료 여부를 정하지만, 설명에는 '현재 결제 모드: 테스트'만 나온다. 백엔드에서 두 값은 서로 따로 정해진다. 공급자 값은 사업자등록번호, 대표자명, 사업장 주소가 모두 있어야 참이고, 결제 값은 현재 모드의 보관되지 않은 토스 키가 있어야 참이다. 같은 목록의 다른 단계는 완료 기준이 되는 값(고객 수, 미터 수)을 설명에 보여 주는데, 이 단계만 완료 기준과 상관없는 결제 모드를 보여 줘서 둘 중 무엇이 빠졌는지 알 수 없다. 미완료 목록은 제목, 설명, /settings 링크만 보여 주므로 화면 다른 곳에서도 이유가 드러나지 않는다. 이 파일은 #451(f53222e7) 뒤로 바뀐 적이 없고 넘길 때 head 17줄과 main 19줄이 같아 고쳐지지 않았다. 문구가 코드로 정해지므로 화면을 찍지 않아도 확인된다.",
       "evidence": [
@@ -11384,17 +11490,24 @@
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:115 @ af15d7f5",
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:126 @ af15d7f5",
         "frontend/src/app/(console)/settings/page.tsx:28 @ af15d7f5",
-        "frontend/e2e/contract-server.mjs:86 @ af15d7f5"
+        "frontend/e2e/contract-server.mjs:86 @ af15d7f5",
+        "the overview setup step says which supplier and payment settings are missing: 실패 (빠진 설정을 밝히지 않음)",
+        "the overview setup step says which supplier and payment settings are missing: 실패 (빠진 설정을 밝히지 않음)",
+        "커밋 4ee27ae2"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "4ee27ae213143587682dad2229b5a327d0c648f9"
+      ],
+      "tests": [
+        "the overview setup step says which supplier and payment settings are missing",
+        "the overview setup step says which supplier and payment settings are missing: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/overview/page.tsx:19: detail은 payment_mode만 쓰고 isComplete는 supplier_configured && payment_configured",
         "frontend/src/app/(console)/overview/page.tsx:16: , frontend/src/app/(console)/overview/page.tsx:17 @ af15d7f5 (다른 단계는 완료 기준 값 customer_count, billable_metric_count를 설명에 보여 준다",
@@ -11404,7 +11517,11 @@
         "frontend/src/app/(console)/settings/page.tsx:28: 설정 화면은 공급자 항목별로 '미등록'을 따로 보여 준다",
         "frontend/e2e/contract-server.mjs:86: 대시보드 fixture가 supplier_configured=false, payment_configured=false",
         "git log af15d7f5 -- overview/page.tsx: f53222e7(#451) 하나뿐, 17cc788:overview/page.tsx:17과 main :19의 해당 단계 줄이 같다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "공급자와 결제 설정 단계에 빠진 설정을 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-102",
@@ -11412,8 +11529,8 @@
         "X-099"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 두 부분이 그대로 남았다. 고객 상세의 소제목은 아직 원시 값으로 '2026-10 청구와 수납'을 그리는데, 월이 들어간 다른 콘솔 제목(청구 검토, 사용량, 인보이스, 개요)은 formatKoreanMonth로 '2026년 10월'을 쓴다. 개요 하단의 산출 시각도 toLocaleString이라 '2026. 10. 27. 오후 6:52:20 기준'처럼 12시간제에 시간대 표기가 없고, 같은 계산 시각을 청구 검토 화면은 formatKstStamp로, 수집 문제 화면은 formatKstDateTime에 KST를 붙여 24시간제로 보인다. 두 파일은 #451에서 들어온 뒤 바뀐 적이 없어서 넘길 때 head 17cc788과 main의 해당 줄이 같다. 문장 안의 원시 월(수납 상세 설명, UsageSection 본문)은 main에 원래 있던 관례라 이 수정에서 빼고, 가입 승인 카드 신청일(admin/organizations)은 G-059 묶음에서 다루므로 넣지 않는다. 합쳐진 X-099도 같은 줄(고객 상세 43행)이 원인이라 같은 판정이다.",
       "evidence": [
@@ -11424,17 +11541,24 @@
         "frontend/src/app/(console)/overview/page.tsx:33 @ af15d7f5",
         "frontend/src/app/(console)/event-issues/page.tsx:47 @ af15d7f5",
         "frontend/src/components/billing/BillingCalculatedStamp.tsx:14 @ af15d7f5",
-        "frontend/src/lib/format.ts:22 @ af15d7f5"
+        "frontend/src/lib/format.ts:22 @ af15d7f5",
+        "customer detail and overview write months and times in the shared Korean format: 실패 (원시 월과 로케일 시각)",
+        "customer detail and overview write months and times in the shared Korean format: 실패 (원시 월과 로케일 시각)",
+        "커밋 31f0e9f8"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "31f0e9f87689105890b24a337d18313aa39bb598"
+      ],
+      "tests": [
+        "customer detail and overview write months and times in the shared Korean format",
+        "customer detail and overview write months and times in the shared Korean format: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/customers/[id]/page.tsx:43: <h2>{month} 청구와 수납</h2>, 원시 YYYY-MM",
         "frontend/src/app/(console)/billing/page.tsx:58: 청구 예정액 - ${formatKoreanMonth(month)}",
@@ -11445,7 +11569,11 @@
         "frontend/src/components/billing/BillingCalculatedStamp.tsx:14: 같은 calculated_at을 formatKstStamp로 표시",
         "frontend/src/lib/format.ts:22: formatKstDateTime), frontend/src/lib/format.ts:37 @ af15d7f5 (formatKoreanMonth",
         "git log af15d7f5 -- customers/[id]/page.tsx overview/page.tsx: f53222e7 (#451) 하나뿐, 17cc788의 같은 줄과 동일"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "고객 상세 월 소제목과 개요 산출 시각을 공용 표기로 맞춘다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-113",
@@ -11544,8 +11672,8 @@
       "id": "D-121",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 page.tsx 39행은 고른 미터만 상세 응답(BillableMetricResponse)으로 바꾸는데, 이 응답에는 aggregation이 있고 rate_count가 없다. 나머지 미터는 검색 응답(PriceSearchResponse)이라 rate_count만 있고 aggregation이 없다. PricingWorkspace.tsx 70행은 aggregation 유무로 둘째 줄을 계산식과 '등록 단가 N개'로 가르므로, 고른 미터만 계산식이 나오고 단가 개수는 사라진다. 다른 미터를 고르면 이전 카드가 단가 개수로 돌아가 같은 목록에서 줄의 뜻이 선택 여부로 바뀐다. 취향이 아니라 두 파일의 데이터 모양 차이에서 나오는 확정 동작이고, #451 이후 #453이 이 두 파일을 건드렸지만 이 분기는 그대로라 아직 고쳐지지 않았다. 계산식을 오른쪽 단가 패널로 옮기는 자리가 바뀌므로 고친 뒤 화면을 한 번 찍어 본다.",
       "evidence": [
@@ -11556,24 +11684,35 @@
         "frontend/src/lib/api/billable-metrics.ts:11-21 @ af15d7f5",
         "frontend/src/lib/api/pricing.ts:30 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:69 @ 17cc788",
-        "frontend/src/app/(console)/pricing/page.tsx:39 @ 17cc788"
+        "frontend/src/app/(console)/pricing/page.tsx:39 @ 17cc788",
+        "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 (고른 미터만 계산식)",
+        "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 (고른 미터만 계산식)",
+        "커밋 951fc97f"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "951fc97f2357cf61296f33f639c7d98af38b42d2"
+      ],
+      "tests": [
+        "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel",
+        "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "미터 목록 둘째 줄을 등록 단가 수로 맞추고 계산식은 단가 패널로 옮긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-125",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 성공 모달은 넘길 때 head(17cc788)와 같은 코드로, 92행이 state.invoices 전체를 개수 제한 없이 ul로 그리고 71행 Modal에는 본문 높이 제한(styles.body maxHeight, overflowY)이 없다. 백엔드 확정 API는 그 달 금액이 0원이 아닌 고객을 한 번에 모두 확정하고 확정한 인보이스 전부를 응답에 싣기 때문에 고객 수만큼 줄이 생긴다. 67행 useInitialFocus가 맨 아래 '닫기' 버튼에 focus하므로 목록이 길면 모달이 아래로 스크롤되어 확정 건수 제목과 금액 문단이 화면 밖으로 밀린다. 같은 저장소의 다른 모달 여러 곳(AttachOrganizationButton, ActionPanel, CreateOperatorButton, ReviewAction 등)은 본문에 maxHeight와 overflowY를 두는 관례를 따르는데 이 모달만 빠져 있어 눈으로 확인할 근거가 있다. 반박을 시도했지만 Esc와 닫기 아이콘으로 닫을 수는 있다는 점 말고 막는 줄이 없고, 실화면 시험은 모두 1건만 확정해서 드러나지 않는다. #451 이후 이 파일을 바꾼 main 커밋이 없어 아직 고쳐지지 않았다.",
       "evidence": [
@@ -11585,17 +11724,27 @@
         "backend/src/main/java/com/meterengine/invoice/service/InvoiceFinalizationService.java:64 @ af15d7f5",
         "frontend/src/components/auth/AttachOrganizationButton.tsx:43 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:151 @ af15d7f5",
-        "frontend/e2e/mvp.real.spec.ts:166 @ af15d7f5"
+        "frontend/e2e/mvp.real.spec.ts:166 @ af15d7f5",
+        "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패",
+        "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패",
+        "커밋 ffb168f6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "ffb168f676f8705a65df9d6975ab742dea438584"
+      ],
+      "tests": [
+        "lint, tsc, build 통과",
+        "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-143",
@@ -11683,8 +11832,8 @@
         "D-018"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 고객 상세 화면 46행은 넘길 때 head(17cc788)와 글자까지 같아서, '수집 로그 확인'과 '고객 목록으로' 이동 링크 바로 옆에 빨간 '고객 보관' 버튼이 한 줄로 붙어 있다. 반박을 시도했지만 보관 버튼은 확인 창을 한 번 거칠 뿐 같은 줄 배치는 그대로라 막지 못한다. 다른 상세 화면인 연동 상세는 이동 링크를 머리글에 두고 보관 버튼을 동작 버튼 줄 끝에 두어서, 같은 종류의 화면 두 곳의 배치가 갈라져 있다. 합쳐진 D-018 가운데 버튼과 링크의 세로 정렬은 #443(be67d816)에서 .workspace-actions에 align-items: center가 들어가 고쳐졌고, 수납 상세 머리글의 두 링크도 WorkspaceHeader가 한 묶음으로 감싸서 흩어지지 않는다. 그래서 남은 것은 고객 상세의 위험 작업 배치 하나이고, 고칠 파일은 이 화면 하나다.",
       "evidence": [
@@ -11694,21 +11843,38 @@
         "frontend/src/app/(console)/integrations/[id]/page.tsx:27 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:163 @ af15d7f5",
         "frontend/src/app/globals.css:125 @ af15d7f5",
-        "frontend/src/components/workspace/WorkspaceHeader.tsx:7 @ af15d7f5"
+        "frontend/src/components/workspace/WorkspaceHeader.tsx:7 @ af15d7f5",
+        "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 (보관 버튼이 이동 링크 줄에 있음)",
+        "restoring a customer returns focus to the same button, now offering to archive: 실패 (포커스 없음)",
+        "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 (보관 버튼이 이동 링크 줄에 있음)",
+        "restoring a customer returns focus to the same button, now offering to archive: 실패 (포커스 없음)",
+        "커밋 bd15060f",
+        "커밋 acad05ad"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "bd15060f92c56db22f95eea4cde22dc57f0aec1d",
+        "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+      ],
+      "tests": [
+        "the customer archive action sits with the other customer actions, not in the navigation link row",
+        "restoring a customer returns focus to the same button, now offering to archive",
+        "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 확인 뒤 통과",
+        "restoring a customer returns focus to the same button, now offering to archive: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:125: D-018 정렬 부분은 be67d816에서 고쳐짐",
         "frontend/src/components/workspace/WorkspaceHeader.tsx:7: D-018 수납 상세 머리글 링크 묶음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "고객 보관 버튼을 이동 링크 줄에서 빼 고객 작업 줄 끝에 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "D-231",
@@ -12058,8 +12224,8 @@
       "id": "G-178",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 상세 화면은 GET /v1/payment-methods를 status만 넘겨 부르고, 받은 도입사 전체 목록을 화면에서 customer_id로 거른다. 백엔드 목록 API는 customer_id 조건도 페이지도 없고 설명에 '페이지를 나누지 않는다'고 적혀 있으며, 보관됨과 전체 보기에서는 billing_key_history를 조직, 모드, 환경으로만 걸러 LIMIT 없이 더한다. 반박을 시도했다. 빌링키는 고객과 모드마다 하나라 사용 중 목록은 고객 수만큼만 커지고, 지금 시연 규모에서는 화면 결과도 틀리지 않는다. 그래도 응답 크기가 도입사 전체 고객 수와 카드 교체 이력에 비례하는 경로는 남아 있고, 기본 5초 시간 제한에 걸리면 카드 영역이 오류로 보인다. 넘길 때 head(17cc788)와 main의 이 줄이 같고 #451 뒤로 이 파일을 바꾼 main 커밋이 없어 고쳐지지 않았다. 규모가 커질 때의 비용 문제라 심각도는 low 그대로다.",
       "evidence": [
@@ -12070,17 +12236,28 @@
         "backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java:85 @ af15d7f5",
         "backend/src/main/java/com/meterengine/payment/service/PaymentMethodService.java:92 @ af15d7f5",
         "backend/src/main/java/com/meterengine/payment/repository/PaymentArchiveRepository.java:63 @ af15d7f5",
-        "frontend/src/lib/api/transport.ts:33 @ af15d7f5"
+        "frontend/src/lib/api/transport.ts:33 @ af15d7f5",
+        "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 (다른 고객 카드 포함)",
+        "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 (다른 고객 카드 포함)",
+        "커밋 416fb268"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "416fb268c8d659e50102cc84c1989ce67ec1d254"
+      ],
+      "tests": [
+        "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다; customer detail asks the server for only that customer's cards instead of filtering every card",
+        "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "카드 목록 API에 customer_id 조건을 더하고 고객 상세가 쓴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "Nk3-008",
@@ -12255,8 +12432,8 @@
         "D-158"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 상세는 고객 조회가 실패하면 30행에서 WorkspaceError만 그리고 바로 끝난다. WorkspaceError는 이제 status를 받아 404에서 다시 시도 없는 '찾을 수 없습니다' 안내를 보이지만, 고객 상세는 status를 넘기지 않아 늘 '데이터를 불러오지 못했습니다'와 router.refresh만 하는 '다시 시도' 버튼으로 간다. 이 분기에는 제목(h1)도 '고객 목록으로' 링크도 없다. main 백엔드는 고객 조회를 업무 환경으로 걸러 다른 환경이나 다른 도입사, 잘못된 id에 404 '고객을 찾을 수 없습니다'를 주므로 다시 시도해도 같은 결과다. 같은 상황의 수납 상세(payments/[id] 91~99행)는 404 제목, 설명, '수납 목록으로' 링크, status 전달을 이미 갖춰 두 상세 화면이 갈라져 있다. 보관된 고객은 200으로 와서 정상 화면이 보관 안내와 목록 링크를 보이므로 D-158의 보관 고객 경로만은 해당하지 않고, 수신 주소 상세(integrations/[id] 19행)의 같은 패턴은 이전 판정대로 D-255 몫이다.",
       "evidence": [
@@ -12267,17 +12444,24 @@
         "frontend/src/app/(console)/payments/[id]/page.tsx:91-99 @ af15d7f5",
         "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:50-55 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:28 @ af15d7f5",
-        "frontend/src/app/(console)/customers/[id]/page.tsx:46 @ af15d7f5"
+        "frontend/src/app/(console)/customers/[id]/page.tsx:46 @ af15d7f5",
+        "a missing customer says it was not found and links back to the customer list without a retry: 실패 (제목과 목록 링크 없음)",
+        "a missing customer says it was not found and links back to the customer list without a retry: 실패 (제목과 목록 링크 없음)",
+        "커밋 214e22f6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "214e22f625087a64d8ac1aecc714f1f34809617a"
+      ],
+      "tests": [
+        "a missing customer says it was not found and links back to the customer list without a retry",
+        "a missing customer says it was not found and links back to the customer list without a retry: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/customers/[id]/page.tsx:30: if (!customer.ok) return <WorkspaceError message={customer.error.message} />, status 없음, 머리글과 목록 링크 없음",
         "frontend/src/components/workspace/WorkspaceView.tsx:13-14: status가 403/404일 때만 다시 시도 없는 안내, 없으면 ErrorAlert",
@@ -12287,14 +12471,18 @@
         "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:50-55: 업무 환경 범위로 조회, 없으면 CUSTOMER_NOT_FOUND",
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:28: CUSTOMER_NOT_FOUND 404 '고객을 찾을 수 없습니다'",
         "frontend/src/app/(console)/customers/[id]/page.tsx:46: '고객 목록으로' 링크는 정상 분기에만 있음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "없는 고객 상세에 찾을 수 없음 제목과 고객 목록 링크를 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-027",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 개요의 '결제 실패 N건' 항목은 '수납 확인' 링크로 /payments?month={month}만 보낸다. 수납 목록 화면은 month만 읽고 그 달 확정 인보이스 전부에 수납 상태를 붙여 20행씩 클라이언트 페이지로 보여 줄 뿐, 상태 필터나 정렬이 없다. 그래서 실패 행이 다른 상태 행 사이에 섞이고 운영자가 페이지를 넘기며 찾아야 한다. 반박을 시도했다. #451 squash가 개요에 '미해결 결제' 표를 더했지만 이 표는 전체 청구 월의 결제 전, 결과 확인 중, 실패를 함께 보여 주고, 선택한 달 기준인 실패 건수와 그 링크는 여전히 거르지 않은 목록으로 간다. 같은 수납 상태 필터가 확정 인보이스 화면에는 있고(payment_status) 수납 목록에는 없어 두 화면이 갈라진 것도 코드로 확인된다.",
       "evidence": [
@@ -12309,24 +12497,43 @@
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:63 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:112 @ af15d7f5",
         "frontend/src/lib/api/capabilities.ts:24 @ af15d7f5",
-        "frontend/src/lib/list-query.ts:118 @ af15d7f5"
+        "frontend/src/lib/list-query.ts:118 @ af15d7f5",
+        "the payments list can show only the month's failed payments and go back to all of them: 실패 (상태로 거를 수 없음)",
+        "changing the month on the payments list keeps the customer carried in from other screens: 실패 (customer_id 빠짐)",
+        "the payments list can show only the month's failed payments and go back to all of them: 실패 (상태로 거를 수 없음)",
+        "changing the month on the payments list keeps the customer carried in from other screens: 실패 (customer_id 빠짐)",
+        "커밋 3bb093e5",
+        "커밋 f76f1edf",
+        "커밋 02b3f101"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "3bb093e5eeeb96fdf72ee4cc42e15beef0c54950",
+        "f76f1edf1ccd9bc6b8f20906b4bc124d123eb4b8",
+        "02b3f10168ecf3f82d748268c5ce357e30750297"
+      ],
+      "tests": [
+        "the payments list can show only the month's failed payments and go back to all of them; the overview failed payment item opens the payments list filtered to failures",
+        "changing the month on the payments list keeps the customer carried in from other screens",
+        "the payments list can show only the month's failed payments and go back to all of them: 실패 확인 뒤 통과",
+        "changing the month on the payments list keeps the customer carried in from other screens: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "결제 실패 항목이 실패만 거른 수납 목록으로 잇는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-050",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 백엔드는 같은 external_id가 이미 있으면 새 고객을 만들지 않고 기존 고객을 200으로 돌려주며 이름과 이메일을 바꾸지 않는다. 프론트의 transport.ts 성공 결과는 {ok, data}뿐이라 200과 201을 가르지 못하고, workspace-actions.ts는 응답 내용을 보지 않은 채 isSuccess와 successMessage(\"createCustomer\")를 돌려준다. createCustomer는 SUCCESS_MESSAGES에 없어서 문구는 여전히 '처리했습니다.'이고, ActionPanel은 성공 토스트를 띄운 뒤 창을 닫는다. 반박할 근거로 고객 등록 창 설명에 '같은 ID로 다시 요청하면 기존 고객을 돌려줍니다'라는 사전 안내가 있기는 하다. 하지만 이번 제출이 기존 고객에 걸렸다는 결과 안내는 없어서 실패 경로가 그대로 남는다. 성공 문구를 작업별로 나눈 #442 모듈(workspace-action-feedback.ts)이 들어왔어도 이 경우를 구분하는 코드는 없고, contract-server.mjs는 같은 외부 ID에도 늘 201을 돌려줘서 시험으로도 잡히지 않는다.",
       "evidence": [
@@ -12339,17 +12546,27 @@
         "frontend/src/app/(console)/workspace-action-feedback.ts:11 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:60 @ af15d7f5",
         "frontend/src/app/(console)/customers/page.tsx:22 @ af15d7f5",
-        "frontend/e2e/contract-server.mjs:84 @ af15d7f5"
+        "frontend/e2e/contract-server.mjs:84 @ af15d7f5",
+        "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 (export 없음)",
+        "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 (export 없음)",
+        "커밋 21ee4a0e"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "21ee4a0ecd62b0b70d13b1003db554a1befba942"
+      ],
+      "tests": [
+        "단위, tsc, lint, build, test:e2e:contract 통과",
+        "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-071",
@@ -12445,8 +12662,8 @@
       "id": "X-092",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "고객 정보 수정 대화상자는 페이지가 그릴 때 받은 version을 숨은 입력으로 들고 있다가 If-Match로 보낸다. 409 resource_version_conflict가 오면 workspaceAction은 실패 분기에서 메시지만 돌려주고 revalidatePath는 성공했을 때만 부른다. 그래서 화면이 다시 그려지지 않고 version과 배경 값이 옛 값으로 남아, 다시 저장해도 닫았다 열어도 같은 충돌이 난다. 문구는 백엔드의 '다시 조회한 뒤 수정하세요'인데 대화상자에는 닫기와 저장뿐이다. 새로 조회 링크는 isUnconfirmed일 때만 나오고 그마저 전체 새로고침이다. 넘길 때 head(17cc788) 뒤로 #453이 이 파일들을 바꿨지만 충돌 처리는 더하지 않았고, 충돌 코드를 다루는 메시지 표나 시험도 main에 없다.",
       "evidence": [
@@ -12459,24 +12676,35 @@
         "frontend/src/components/workspace/ActionPanel.tsx:147 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:151 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:164 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:51 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:51 @ af15d7f5",
+        "a customer edit that lost a version race offers to load the latest values and then saves: 실패 (다시 불러올 버튼 없음)",
+        "a customer edit that lost a version race offers to load the latest values and then saves: 실패 (다시 불러올 버튼 없음)",
+        "커밋 ccfa2508"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "ccfa250871cae6e4ae2891040285d90196b826e1"
+      ],
+      "tests": [
+        "a customer edit that lost a version race offers to load the latest values and then saves",
+        "a customer edit that lost a version race offers to load the latest values and then saves: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "버전 충돌 시 최신 정보 불러오기 버튼으로 폼을 새 값으로 다시 그린다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "X-093",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-work-screens",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 보관, 소속 보관, 수신 주소 보관은 성공하면 결과를 돌려주지 않고 서버에서 바로 redirect한다. ActionPanel은 결과가 isSuccess일 때만 message.success를 띄우고 redirect 오류는 unstable_rethrow로 다시 던지므로 이 세 작업만 완료 안내가 없다. 같은 화면의 복원, 초대 취소 같은 작업은 successMessage를 돌려받아 토스트를 띄워 흐름마다 피드백이 갈라진다. 또 redirectScope에는 organization_id와 environment만 있고 고객 보관 폼에는 id만 실려, 고객 상세에서 보던 월이 /customers 이동 뒤 사라지고 목록의 고객 링크가 현재 월로 돌아간다. environment=legacy가 붙는 부분은 workspace-href 시험이 고정한 의도라 문제가 아니고, 넘길 때 head 17cc788의 107-110행과 main 111-114행이 같은 구조라 고쳐진 커밋은 없다. 데이터 영향이 없는 화면 피드백 문제라 low다.",
       "evidence": [
@@ -12494,17 +12722,28 @@
         "frontend/src/lib/workspace-href.ts:19 @ af15d7f5",
         "frontend/src/app/(console)/workspace-action-feedback.ts:1 @ af15d7f5",
         "frontend/e2e/people.real.spec.ts:163 @ af15d7f5",
-        "frontend/src/app/(console)/workspace-actions.ts:107 @ 17cc788"
+        "frontend/src/app/(console)/workspace-actions.ts:107 @ 17cc788",
+        "archiving a customer, a member or a receiver confirms what happened: 실패 (성공 문구 없음)",
+        "archiving a customer, a member or a receiver confirms what happened: 실패 (성공 문구 없음)",
+        "커밋 8cc84f91"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "8cc84f91dbb23965387165a9412335f0ce29bcf0"
+      ],
+      "tests": [
+        "archiving a customer, a member or a receiver confirms what happened; archive actions show their success message before moving to the archived list with the viewed month",
+        "archiving a customer, a member or a receiver confirms what happened: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보관 뒤 성공 안내를 보이고 조회 월을 지킨 보관 목록으로 옮긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },
     {
       "id": "C454-001",
@@ -14229,6 +14468,68 @@
     }
   ],
   "checks": [
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 브랜치 백엔드",
+      "result": "pass",
+      "detail": "12개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "not-applicable",
+      "detail": "11개 중 9개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "69 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 100, fail 0",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build (백엔드 마지막 변경 커밋 416fb268, 이후 백엔드 변경 없음)",
+      "result": "pass",
+      "detail": "openapi.yaml 다시 만든 뒤 변경 없음",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
     {
       "kind": "screen",
       "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 main 백엔드(origin/main 9df2768e merge 뒤 environment-cycle, mvp 재실행)",
@@ -18186,6 +18487,11 @@
       "branch": "fix/s456-t-inho-list-screens",
       "sha": "58be8156bda30f006d7de4b3ff986ac41e9100ac",
       "at": "2026-10-29T22:40:13+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99",
+      "at": "2026-10-29T23:41:27+09:00"
     }
   ],
   "usage_log": [],
@@ -18238,7 +18544,8 @@
     "webhook-audit-ops": "https://github.com/asm17-ms2/meterengine/pull/492",
     "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493",
     "demo-infra": "https://github.com/asm17-ms2/meterengine/pull/495",
-    "list-screens": "https://github.com/asm17-ms2/meterengine/pull/496"
+    "list-screens": "https://github.com/asm17-ms2/meterengine/pull/496",
+    "work-screens": "https://github.com/asm17-ms2/meterengine/pull/498"
   },
   "final_checks": [
     {
