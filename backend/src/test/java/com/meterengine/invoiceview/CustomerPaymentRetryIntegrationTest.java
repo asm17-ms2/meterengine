@@ -83,7 +83,11 @@ class CustomerPaymentRetryIntegrationTest {
         .extractingPath("$.payment_retry.reason")
         .isEqualTo("link_read_only");
     assertThat(lookup(token)).bodyJson().extractingPath("$.payment_retry.version").isNull();
-    assertThat(retry(token, "0".repeat(64))).hasStatus(409);
+    assertThat(retry(token, "0".repeat(64)))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("payment_retry_unavailable");
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT allow_payment_retry FROM invoice_view_link WHERE id=?",
