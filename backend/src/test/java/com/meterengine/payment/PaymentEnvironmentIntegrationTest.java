@@ -494,6 +494,75 @@ class PaymentEnvironmentIntegrationTest {
   }
 
   @Test
+  void 요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다() {
+    Payable live = payable("live");
+    payable("test");
+    assertThat(putCredential("live", "live", "live_sk_rotated_environment")).hasStatusOk();
+    jdbcTemplate.update(
+        "UPDATE toss_payments_credential SET updated_at = now() - interval '20 minutes' WHERE"
+            + " organization_id=? AND environment_id=? AND mode='live'",
+        organizationId,
+        environment("live"));
+    UUID attempt = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id,"
+            + " invoice_id, mode, amount, order_name, status, payment_key, requested_at,"
+            + " completed_at, credential_updated_at) VALUES (?, ?, ?, ?, ?, 'live', 1100, '사용료',"
+            + " 'done', 'cancel-confirm-live', now() - interval '10 minutes', now() - interval '9"
+            + " minutes', ?)",
+        attempt,
+        organizationId,
+        environment("live"),
+        live.customer(),
+        live.invoice(),
+        KEY_TIME);
+    UUID cancellation = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO payment_cancellation (id, organization_id, environment_id,"
+            + " payment_attempt_id, mode, amount, reason, status, requested_at) VALUES (?, ?, ?,"
+            + " ?, 'live', 400, '부분 취소', 'pending', now() - interval '3 minutes')",
+        cancellation,
+        organizationId,
+        environment("live"),
+        attempt);
+    when(toss.findPayment(eq(LIVE_SECRET), eq("cancel-confirm-live")))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                new TossPaymentsPayment(
+                    "cancel-confirm-live",
+                    attempt.toString(),
+                    "PARTIAL_CANCELED",
+                    1100,
+                    700,
+                    List.of(
+                        new TossPaymentsPayment.Cancel(
+                            "cancel-transaction-live",
+                            400,
+                            OffsetDateTime.now().minusMinutes(2),
+                            "DONE")))));
+    assertThat(BusinessEnvironmentContext.current()).isNull();
+
+    confirmation.confirm();
+
+    assertThat(BusinessEnvironmentContext.current()).isNull();
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT status, transaction_key FROM payment_cancellation WHERE id=?",
+                cancellation))
+        .containsEntry("status", "done")
+        .containsEntry("transaction_key", "cancel-transaction-live");
+    verify(toss, never()).findPayment(eq("live_sk_rotated_environment"), anyString());
+    verify(toss, never()).findPayment(eq(TEST_SECRET), anyString());
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT environment_id FROM webhook_event WHERE organization_id=? AND"
+                    + " type='payment_canceled'",
+                UUID.class,
+                organizationId))
+        .containsExactly(environment("live"));
+  }
+
+  @Test
   void 대사는_교체전_키도_사용하고_다른_환경의_거래를_불일치로_기록하지_않는다() {
     String originalSecret = "test_sk_reconciliation_original";
     Payable test = payable("test", originalSecret);
