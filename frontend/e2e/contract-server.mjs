@@ -12,6 +12,7 @@ let customers = [];
 let failures = {};
 let bulk = false;
 let apiKeys = [];
+let unresolvedInvoicePayments = [];
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
@@ -30,6 +31,8 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
+    if (body.reset) unresolvedInvoicePayments = [];
+    if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
@@ -80,7 +83,7 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/customers") {
       if (req.method === "POST") { const customer = { id: crypto.randomUUID(), name: body.name, external_id: body.external_id ?? null, version: 0, billing_email: body.billing_email, created_at: new Date().toISOString() }; customers.push(customer); result = { status: 201, body: customer }; }
       else result = { status: 200, body: { customers } };
-    } else if (path === "/v1/dashboard") result = { status: 200, body: { month: "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], draft_invoice: { customers: [] } } };
+    } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
     else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };
     else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: apiKeys } };
@@ -90,6 +93,7 @@ const server = createServer(async (req, res) => {
       result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
     }
     else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [] } };
+    else if (path === "/v1/audit-logs" && req.method === "GET") result = { status: 200, body: { page: 0, size: 20, total: 12, audit_logs: Array.from({ length: 12 }, (_, index) => ({ id: bulkId("aaaaaaaa-aaaa-4aaa-8aaa-", index), occurred_at: new Date(Date.UTC(2026, 9, 1, 0, index)).toISOString(), organization_id: organizations[0].id, actor_type: "user_account", actor_id: "44444444-4444-4444-8444-444444444444", action: "api_request_completed", target_type: "http_request", target_id: "", detail: { method: "GET", route: "/v1/customers", status: index === 0 ? 403 : 200, duration_ms: 3 } })) } };
     else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "GET") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, description: "운영 알림 수신기", created_at: new Date().toISOString(), archived_at: null } };
     else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}` && req.method === "PUT") result = { status: 200, body: { id: WEBHOOK_ENDPOINT_ID, url: body.url, event_types: body.event_types, enabled: body.enabled, description: body.description ?? null, created_at: new Date().toISOString(), archived_at: null } };
     else if (path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}/deliveries` && req.method === "GET") result = { status: 200, body: { total: 2, deliveries: [

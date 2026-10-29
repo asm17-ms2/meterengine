@@ -16,7 +16,9 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.web.servlet.HandlerMapping;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(OutputCaptureExtension.class)
 class RequestAuditFilterTest {
@@ -79,6 +81,43 @@ class RequestAuditFilterTest {
   @Test
   void 배치_수집_요청은_감사기록을_남기지_않고_요청식별자만_돌려준다() throws Exception {
     assertIngestionSkipsAudit("/v1/event-batches");
+  }
+
+  @Test
+  void 퍼센트_인코딩한_v1_경로도_요청식별자와_감사기록을_남긴다() throws Exception {
+    RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/%761/customers");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    new RequestAuditFilter(recorder, new SimpleMeterRegistry())
+        .doFilter(request, response, (incoming, outgoing) -> response.setStatus(200));
+
+    assertThat(response.getHeader("X-Request-ID")).isNotBlank();
+    verify(recorder).record(isNull(), eq("GET"), anyString(), eq(200), anyLong(), any(), any());
+  }
+
+  @Test
+  void 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다() throws Exception {
+    RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/%761/events");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    new RequestAuditFilter(recorder, new SimpleMeterRegistry())
+        .doFilter(request, response, (incoming, outgoing) -> response.setStatus(200));
+
+    verify(recorder).record(isNull(), eq("POST"), anyString(), eq(200), anyLong(), any(), any());
+  }
+
+  @Test
+  void 방화벽이_거절한_퍼센트_인코딩_v1_경로도_익명_400으로_감사한다() throws Exception {
+    RequestAuditRecorder recorder = mock(RequestAuditRecorder.class);
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/%761/customers%3Bx");
+
+    new JsonRequestRejectedHandler(new ErrorResponseWriter(JsonMapper.builder().build()), recorder)
+        .handle(request, new MockHttpServletResponse(), new RequestRejectedException("rejected"));
+
+    verify(recorder)
+        .record(isNull(), eq("GET"), eq("/v1/{unmatched}"), eq(400), anyLong(), any(), any());
   }
 
   @Test

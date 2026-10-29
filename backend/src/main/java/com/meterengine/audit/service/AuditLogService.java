@@ -47,6 +47,16 @@ public class AuditLogService {
       String targetType,
       String targetId,
       Map<String, Object> detail) {
+    record(actor, action, targetType, targetId, detail, BusinessEnvironmentContext.environmentId());
+  }
+
+  void record(
+      AuditActor actor,
+      String action,
+      String targetType,
+      String targetId,
+      Map<String, Object> detail,
+      UUID environmentId) {
     auditLogRepository.save(
         new AuditLog(
             UUID.randomUUID(),
@@ -58,7 +68,7 @@ public class AuditLogService {
             targetType,
             targetId,
             jsonMapper.writeValueAsString(detail == null ? Map.of() : detail),
-            BusinessEnvironmentContext.environmentId()));
+            environmentId));
   }
 
   private static AuditActor currentActor(AuditActor fallback) {

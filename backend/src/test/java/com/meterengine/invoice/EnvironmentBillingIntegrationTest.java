@@ -324,6 +324,47 @@ class EnvironmentBillingIntegrationTest {
   }
 
   @Test
+  void 전체_월_미해결_결제도_현재_환경의_과거_청구만_보여준다() {
+    Map<String, UUID> customers = new java.util.HashMap<>();
+    Map<String, Long> amounts = Map.of("legacy", 1100L, "test", 2200L, "live", 3300L);
+    String previous = MONTH.minusMonths(1).toString();
+    for (String mode : List.of("legacy", "test", "live")) {
+      UUID customer =
+          UUID.fromString(
+              ok(post(mode, "/v1/customers", "{\"name\":\"" + mode + "-customer\"}"))
+                  .get("id")
+                  .asString());
+      customers.put(mode, customer);
+      long total = amounts.get(mode);
+      long supply = total * 10 / 11;
+      jdbc.update(
+          "INSERT INTO invoice (id,organization_id,environment_id,customer_id,customer_name,"
+              + " period,supply_amount,tax_amount,total_amount,finalized_at)"
+              + " VALUES (?,?,?,?,?,?,?,?,?,now())",
+          UUID.randomUUID(),
+          organizationId,
+          mode.equals("legacy") ? null : environment(mode),
+          customer,
+          mode + "-customer",
+          previous,
+          supply,
+          total - supply,
+          total);
+    }
+    for (String mode : List.of("legacy", "test", "live")) {
+      JsonNode dashboard = ok(get(mode, "/v1/dashboard?month=" + MONTH));
+      assertThat(dashboard.get("invoice_payments").size()).isZero();
+      JsonNode unresolved = dashboard.get("unresolved_invoice_payments");
+      assertThat(unresolved.size()).isEqualTo(1);
+      assertThat(unresolved.get(0).get("month").asString()).isEqualTo(previous);
+      assertThat(unresolved.get(0).get("customer_id").asString())
+          .isEqualTo(customers.get(mode).toString());
+      assertThat(unresolved.get(0).get("customer_name").asString()).isEqualTo(mode + "-customer");
+      assertThat(unresolved.get(0).get("amount").asLong()).isEqualTo(amounts.get(mode));
+    }
+  }
+
+  @Test
   void 대시보드의_건수와_확정액과_결제환경은_요청환경에_고정된다() {
     prepare("test", 20);
     prepare("live", 30);

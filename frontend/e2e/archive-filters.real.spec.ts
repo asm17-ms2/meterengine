@@ -55,6 +55,25 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:test|live|reg|invite)_[A-Za-z0-9]+/g, "[redacted token]"));
 }
 
+test("미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인다", async ({ page }) => {
+  await page.goto("/login?returnTo=%2Fbillable-metrics");
+  await page.getByLabel("이메일", { exact: true }).fill("member@meterengine.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill("local-member-password");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(page).toHaveURL(/\/billable-metrics(?:\?.*)?$/);
+
+  for (const width of [1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const heading = page.locator("th").filter({ hasText: /^이름$/ });
+    await expect(heading).toBeVisible();
+    await heading.focus();
+    await expect(heading).toBeFocused();
+    const name = page.locator(".ant-table-tbody > tr:not(.ant-table-measure-row) > td:nth-child(2)").first();
+    await expect(name).toBeVisible();
+    await expect(name).not.toBeEmpty();
+  }
+});
+
 test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다", async ({ browser, request }) => {
   const suffix = randomUUID();
   const email = `archive-owner-${suffix}@fe-e2e.local`;
