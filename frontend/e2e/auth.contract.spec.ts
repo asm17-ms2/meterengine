@@ -317,6 +317,15 @@ test("the customer search names every searched field and fits its hint on a phon
   expect(fits).toBe(true);
 });
 
+test("phones do not show expand-all controls that only act on the desktop table", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await expect(page.locator(".data-mobile-records, .ant-empty, [role=status]").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "모두 펼치기", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
