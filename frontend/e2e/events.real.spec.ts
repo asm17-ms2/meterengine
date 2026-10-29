@@ -310,6 +310,11 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expect(drawer).toHaveCount(0);
       await expect.poll(() => new URL(page.url()).searchParams.toString()).toBe(listSearch);
       await expect(eventLinks(page)).toHaveText([...ids.slice(50), inclusiveEndId]);
+      await page.getByRole("link", { name: ids[54], exact: true }).click();
+      await expect(drawer).toBeVisible();
+      await drawer.getByRole("button", { name: "닫기", exact: true }).click();
+      await expect(drawer).toHaveCount(0);
+      await expect(page.getByRole("link", { name: ids[54], exact: true })).toBeFocused();
     });
     await test.step("390px에서도 직접 지정은 보이고 상세 조건은 키보드로 펼친다", async () => {
       await page.setViewportSize({ width: 390, height: 844 });

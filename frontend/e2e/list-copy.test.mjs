@@ -60,3 +60,12 @@ test("the event detail drawer uses the table's Korean labels and says the raw JS
   assert.ok(drawer.includes("API 원본 값, 시각은 UTC"));
 });
 
+test("mobile event links open the drawer in place and closing it returns focus to the row link", () => {
+  const table = source("events/EventsTable.tsx");
+  const routed = source("events/RoutedEventDetail.tsx");
+  assert.ok(table.includes("data-transaction-id={row.transactionId}"));
+  assert.equal(table.match(/onClick=\{event => openOnPlainClick\(event, row\)\}/g)?.length, 1);
+  assert.ok(table.includes("<a href={detailHref(row)} onClick={event => openOnPlainClick(event, row)}>"));
+  assert.ok(routed.includes("data-transaction-id"));
+});
+
