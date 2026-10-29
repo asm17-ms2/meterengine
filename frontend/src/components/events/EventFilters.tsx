@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { buildListHref, PAGE_SIZE_OPTIONS, rangeEndpoint, type ListQueryOverrides, type MonthlyListQuery } from "@/lib/list-query";
 import { CustomerFilter, type CustomerOption } from "@/components/screen/CustomerFilter";
+import { MonthPicker } from "@/components/screen/MonthPicker";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 
 type RangeUnit = "date" | "datetime";
@@ -155,7 +156,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
           </fieldset>
           <div className="event-period-shortcuts"><Button onClick={() => recent(1)}>최근 24시간</Button><Button onClick={() => recent(7)}>최근 7일</Button></div>
         </div>
-        {period === "month" ? <label className="workspace-field event-month"><span>조회 월</span><input name="month" type="month" value={month} onChange={event => selectMonth(event.target.value)} required /></label> : <div className="event-range-grid">
+        {period === "month" ? <div className="workspace-field event-month"><label htmlFor={`${id}-month`}>조회 월</label><MonthPicker id={`${id}-month`} label="조회 월" query={{ ...query, month }} capabilities={CAPABILITIES.listEvents} month={month} onChange={value => { selectMonth(value); setIsEdited(true); setError(undefined); }} /><input type="hidden" name="month" value={month} /></div> : <div className="event-range-grid">
           <label className="workspace-field"><span>지정 단위</span><select name="range_unit" value={unit} onChange={event => changeUnit(event.target.value as RangeUnit)}><option value="date">날짜</option><option value="datetime">날짜와 시각 (초 단위)</option></select></label>
           <label className="workspace-field"><span>시작 {unit === "date" ? "날짜" : "시각"} (포함)</span><input name="from" type={unit === "date" ? "date" : "datetime-local"} step={1} value={from} onChange={event => setFrom(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>
           <label className="workspace-field"><span>종료 {unit === "date" ? "날짜 (해당 일 포함)" : "시각 (미포함)"}</span><input name="to" type={unit === "date" ? "date" : "datetime-local"} step={1} value={to} onChange={event => setTo(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>

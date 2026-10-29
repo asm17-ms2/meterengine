@@ -33,6 +33,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   const target = new URL(href!, "http://localhost:33148");
   expect(target.pathname).toBe(`/payments/${invoiceId}`);
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
+  // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
   await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
   await page.getByRole("button", { name: "조회", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 과금 운영");
@@ -41,6 +42,10 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Enter만 눌러 제출해도 직접 쓴 월로 조회한다.
+  await page.getByLabel("청구 월", { exact: true }).fill("2026-04");
+  await page.getByLabel("청구 월", { exact: true }).press("Enter");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 4월 과금 운영");
 });
 
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
