@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T16:09:32+09:00",
+  "updated_at": "2026-10-29T17:43:40+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -4300,8 +4300,8 @@
       "id": "G-144",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 UnbilledUsageReportService.report는 진단이나 음수 사용량이 있으면 구독 엔드포인트가 있는지 보지 않고 발행하고, WebhookEventRepository.insert는 webhook_event를 먼저 무조건 넣은 뒤 전달 행은 그 순간 구독 중인 엔드포인트에만 만든다. webhook_event를 읽는 곳은 WebhookDeliveryRepository의 두 조인뿐이라 전달 행이 없는 통보는 어디에도 쓰이지 않고, V28 트리거가 DELETE와 TRUNCATE를 막으며 main까지 이를 푸는 마이그레이션도 정리 작업도 없다. 일일 작업은 활성 도입사마다 legacy, test, live 세 범위를 돌기 때문에 웹훅을 쓰지 않는 도입사도 미청구가 남아 있는 동안 범위마다 하루 한 건씩 영구히 쌓인다. README에 append-only 제약을 적지 않았다는 부분은 backend/README.md 297행에 이미 적혀 있어 그 부분만 해소됐다. 미청구 통보는 매일 다시 나가므로 구독자가 없을 때 건너뛰어도 나중에 생긴 엔드포인트는 다음 날 통보를 받고, insert 조건(C444-001, Q9)은 바꾸지 않고 발행부만 고쳐 끝낼 수 있다.",
       "evidence": [
@@ -4316,17 +4316,29 @@
         "backend/src/main/resources/application.properties:46 @ af15d7f5",
         "backend/src/test/java/com/meterengine/notification/UnbilledUsageNotificationIntegrationTest.java:49-55 @ af15d7f5",
         "backend/src/test/java/com/meterengine/notification/UnbilledUsageNotificationIntegrationTest.java:109-114 @ af15d7f5",
-        "backend/README.md:297 @ af15d7f5"
+        "backend/README.md:297 @ af15d7f5",
+        "UnbilledUsageNotificationIntegrationTest.미청구_통보를_구독한_수신_주소가_없으면_웹훅_원장에_남기지_않는다: 실패 Expecting value to be false but was true",
+        "커밋 7b270fea",
+        "커밋 38311027"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "7b270fea537b8b761c6cb0a242d6a0c8c920d372",
+        "3831102713e0de05c473101a7f2f66e6ed23fc90"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.notification.*': 통과",
+        "UnbilledUsageNotificationIntegrationTest.미청구_통보를_구독한_수신_주소가_없으면_웹훅_원장에_남기지_않는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "구독한 수신 주소가 없으면 미청구 통보를 남기지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-151",
@@ -5806,8 +5818,8 @@
       "id": "Nk3-001",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에도 sum 전용 분기와 래퍼가 그대로 남아 있고, #453이 래퍼에 environmentId 오버로드를 더하고 서비스 분기도 환경 유무로 둘로 나눠 지적한 비용이 실제로 커졌다. 래퍼는 code와 name이 빈 문자열인 12인자 BillableMetric을 새로 만들어 같은 aggregate()로 넘긴 뒤, GROUPING SETS로 이미 구한 고객 합계를 버리고 조합별 수량만 돌려준다. 서비스는 그 합계를 조합별 수량을 더해 다시 만들어서, 같은 고객 합계 계산이 저장소 SQL과 서비스 두 곳에 갈라져 있다. 엔티티 기본값이 unit_size 1, rounding none이라 지금 결과는 aggregate()를 바로 부를 때와 같아서 이 분기가 주는 이득이 없다. 남는 효과는 BillableMetricUsageServiceTest가 래퍼만 목으로 막아 sum 경로의 aggregate()를 단위 시험에서 한 번도 지나지 않는 것과, aggregate()가 읽는 미터 필드가 늘면 가짜 엔티티에서만 빠질 수 있다는 것이다. 운영 파일은 서비스와 저장소 둘이고 공개 이름이나 API를 바꾸지 않아서 이 묶음에서 고칠 수 있다.",
       "evidence": [
@@ -5815,17 +5827,23 @@
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:37-73 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:115-117,186 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:151-167 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/metric/service/BillableMetricUsageServiceTest.java:67-80,129-131,152-154,176-181,226-227,250-251 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/metric/service/BillableMetricUsageServiceTest.java:67-80,129-131,152-154,176-181,226-227,250-251 @ af15d7f5",
+        "BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 expected: 800 but was: 0",
+        "커밋 42b996de"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "42b996deee4be662ae7b2ed13ce7fe64003ea0fc"
+      ],
+      "tests": [
+        "metric, pricing, invoice 시험: 통과",
+        "BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:135-166: sum 분기, 139-154 환경 유무 분기, 155-164 고객 합계를 서비스에서 다시 계산",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:37-73: 래퍼 두 오버로드, 57-69 code와 name이 빈 가짜 BillableMetric 생성 후 aggregate 호출, 72 합계 버림",
@@ -5834,7 +5852,11 @@
         "backend/src/test/java/com/meterengine/metric/service/BillableMetricUsageServiceTest.java:67-80,129-131,152-154,176-181,226-227,250-251: 서비스 시험이 래퍼만 목으로 막아 aggregate 경로를 지나지 않음",
         "94a48a20 (#453): 래퍼에 environmentId 오버로드(BillableMetricUsageRepository.java:48-73)와 서비스의 환경별 분기(BillableMetricUsageService.java:139-154)를 더함",
         "1d74b240 (#446): 서비스 sum 분기와 래퍼의 aggregate 위임을 처음 넣음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "sum 전용 우회 경로를 지운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Nk3-003",
@@ -6691,8 +6713,8 @@
       "id": "Ck3-450-01",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "미청구 일일 통보는 ChargeService 계산 결과에서 음수 사용량(negativeUsages)만 꺼내 싣고, 같은 결과에 들어 있는 단가 없는 사용량(unpricedUsages)은 버린다. 단가 없는 사용량도 청구액에서 빠지는 사용량이고, 이벤트 문제 진단(/v1/event-issues)은 같은 ChargeService 결과에서 unpricedUsages를 꺼내 '적용 단가 없음' 문제로 센다. 그래서 단가만 빠진 조직은 진단 화면에는 문제가 뜨지만 64번 줄 조건에 걸려 통보가 아예 나가지 않는다. 화면에서 이 통보의 이름은 '과금 제외 사용량'이고 #450 커밋도 '청구에서 빠지는 이유'를 알리는 것이 목적이라고 적었으며, 단가 없는 사용량을 빼기로 한 기록은 찾지 못했다. 넘길 때 head와 main의 파일이 같아 main에서 고쳐지지 않았고, 묶음으로 든 G-116, G-117, G-124, G-146, C450-009와는 원인이 다르다.",
       "evidence": [
@@ -6702,17 +6724,25 @@
         "backend/src/main/java/com/meterengine/pricing/service/UsagePriceDiagnosticsService.java:35 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:103 @ af15d7f5",
         "frontend/src/app/(console)/overview/page.tsx:31 @ af15d7f5",
-        "frontend/src/app/(console)/integrations/page.tsx:14 @ af15d7f5"
+        "frontend/src/app/(console)/integrations/page.tsx:14 @ af15d7f5",
+        "UnbilledUsageNotificationIntegrationTest.단가_없는_사용량만_있어도_통보에_싣는다: 실패 Expecting value to be true but was false",
+        "커밋 7b270fea",
+        "커밋 38311027"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "7b270fea537b8b761c6cb0a242d6a0c8c920d372",
+        "3831102713e0de05c473101a7f2f66e6ed23fc90"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.notification.*': 통과",
+        "UnbilledUsageNotificationIntegrationTest.단가_없는_사용량만_있어도_통보에_싣는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:48: charge.negativeUsages()만 꺼낸다",
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:64: summary.isEmpty() && negatives.isEmpty()이면 발행하지 않아 단가 없는 사용량만 있는 달은 통보가 없다",
@@ -6722,14 +6752,18 @@
         "frontend/src/app/(console)/overview/page.tsx:31: '단가를 등록해야 청구액에 포함됩니다'",
         "frontend/src/app/(console)/integrations/page.tsx:14: unbilled_usage_detected 라벨이 '과금 제외 사용량'",
         "git show 7b1d1e5 와 af15d7f5 의 UnbilledUsageReportService.java 내용이 같다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "미청구 통보에 단가 없는 사용량을 싣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-02",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적한 중복은 main에도 그대로 있다. 수집 거절 사유는 EventRejectionService의 REASONS, 컨트롤러 error_code 정규식, V46의 CHECK, 화면 라벨 표에 따로 적혀 있다. 매핑 문제 사유도 EventIssueRepository의 SQL 문자열, Summary 매핑, 안내 문구 switch, Summary DTO 필드, 컨트롤러 정규식, 화면 라벨 표에 따로 있다. 지금은 목록이 모두 같고 통합 시험이 사유마다 한 번씩 지나가서 당장 실패하는 경로는 없다. 그러나 REASONS에만 코드를 더하면 한 INSERT로 넣던 여러 행이 CHECK에 걸려 그 요청의 거절 기록이 통째로 빠지고 카운터만 오르며, SQL에만 사유를 더하면 rows에는 나오는데 total은 Summary 세 필드의 합이라 행 수와 어긋난다. 한 정본으로 묶으려면 서비스, 컨트롤러, 리포지토리, DTO를 같이 바꿔야 해서 시험을 빼도 파일이 셋을 넘고, CHECK는 배포된 V46이라 같은 정본으로 묶을 수 없으므로 결정이 필요하다.",
       "evidence": [
@@ -6748,17 +6782,25 @@
         "frontend/src/app/(console)/event-issues/page.tsx:15-16 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventRejectionIntegrationTest.java:57-66,94-112,149-158 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventIssueIntegrationTest.java:91-93 @ af15d7f5",
-        "docs/contributing/error-handling.md:8-9 @ af15d7f5"
+        "docs/contributing/error-handling.md:8-9 @ af15d7f5",
+        "커밋 68afb087",
+        "커밋 c2d367a2"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "68afb08766008bf98a96f4b836285a8e93e114ec",
+        "c2d367a29cfd4c020fa1a50001eb1e768c6074f0"
+      ],
+      "tests": [
+        "EventReasonListTest: 통과",
+        "서비스 목록에만 사유를 더한 변이: 실패",
+        "시험 자리 이동 뒤 EventRejectionServiceTest, EventIssueIntegrationTest: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 문자열 목록은 두고 목록끼리와 V46 CHECK가 같은지 보는 시험만 더한다",
       "decision_question": "수집 거절 사유와 매핑 문제 사유를 각각 enum 하나로 모아 서비스, 컨트롤러, 리포지토리, DTO를 함께 바꿀지, 지금 문자열 목록을 두고 목록끼리와 V46 CHECK를 대조하는 시험만 더할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventRejectionService.java:31-36: REASONS: 거절 기록 대상 ErrorCode 넷",
@@ -6778,14 +6820,19 @@
         "backend/src/test/java/com/meterengine/event/EventIssueIntegrationTest.java:91-93: 지금은 세 사유가 summary에 모두 잡힘",
         "docs/contributing/error-handling.md:8-9: code 값의 정본은 ErrorCode enum",
         "git log af15d7f5: 관련 파일은 ec13ca29(#450), 94a48a20(#453)만 바꿨고 사유 목록 구조는 그대로"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "사유 목록끼리와 DB CHECK가 같은지 시험한다(결정: 문자열 유지)",
+      "decision": "fix: 문자열 목록은 두고 목록끼리와 V46 CHECK가 같은지 보는 시험만 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-03",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 중복은 그대로 남아 있습니다. 요청 행위자와 요청 ID를 구하는 코드가 RequestIdentity, EventRejectionService, EventRejectionRepository 세 곳에 따로 있습니다. 행위자 종류는 RequestIdentity와 EventRejectionRepository가 삼항식으로 API_KEY가 아니면 모두 user_account로 적습니다. 반면 AuditActor.from은 PrincipalKind 전체를 switch로 다뤄서 새 종류가 생기면 컴파일 단계에서 막힙니다. 다만 PrincipalKind에는 지금 API_KEY와 SESSION 두 값뿐이라 지금 잘못 기록되는 경로는 없고, 나중에 문제가 될 수 있는 중복일 뿐입니다. 중복을 다 걷어내려면 EventRejectionService, EventRejectionStorageService, EventRejectionRepository의 시그니처를 같이 바꿔야 하고 RequestIdentity도 고쳐야 합니다. 운영 코드 파일이 셋 이상이고, RequestIdentity의 요청 ID 경로는 U17-B2(Q3)가 다루는 줄이라 결정이 필요합니다.",
       "evidence": [
@@ -6798,17 +6845,21 @@
         "backend/src/main/java/com/meterengine/audit/service/AuditActor.java:28-34 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/PrincipalKind.java:3-6 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventRejectionStorageService.java:20-25 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:31,55 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:31,55 @ af15d7f5",
+        "커밋 fa9fdc9a"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "fa9fdc9a6f865e6fd2827e3e4b88d4ac5af53e34"
+      ],
+      "tests": [
+        "EventRejectionIntegrationTest, audit 시험: 통과(동작 변화 없음)"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 두 삼항식을 PrincipalKind 전체 switch로만 바꾼다. 시그니처와 U17-B2 줄은 그대로 둔다",
       "decision_question": "수집 거절 기록의 행위자와 요청 ID를 RequestIdentity.current() 하나로 모을지 정해야 합니다. 모으면 EventRejectionService, EventRejectionStorageService, EventRejectionRepository 시그니처와 U17-B2가 다루는 RequestIdentity 줄까지 바뀝니다. 아니면 두 삼항식을 PrincipalKind 전체 switch로만 바꾸고 나머지 중복은 그대로 둘 수도 있습니다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/RequestIdentity.java:10-15: SecurityContext에서 principal 꺼내기, 첫째 벌",
@@ -6822,14 +6873,19 @@
         "backend/src/main/java/com/meterengine/event/service/EventRejectionStorageService.java:20-25: principal과 requestId를 따로 넘기는 시그니처라 정리하면 같이 바뀜",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:31,55: 같은 패키지에서 이미 RequestIdentity.current()를 쓰므로 하나로 모을 수 있음",
         "git log af15d7f5 기준 네 파일은 ec13ca29(#450)와 94a48a20(#453, environment_id만 추가)만 고쳤고 중복은 손대지 않음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "행위자 종류를 PrincipalKind 전체 switch로 정한다(결정: 시그니처 유지)",
+      "decision": "fix: 두 삼항식을 PrincipalKind 전체 switch로만 바꾼다. 시그니처와 U17-B2 줄은 그대로 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-04",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 수집(event)이 쓰고 pricing이 구현하는 요금 진단 계약이 인증 패키지 global.security에 그대로 있어 지적은 맞다. README는 global.security를 인증 필터, 접근 어노테이션, 레이트리밋 자리로 적고 있고, 이 파일은 CODEOWNERS의 event/ 담당 경로 밖이라 계약을 바꿔도 수집 담당에게 리뷰가 가지 않는다. 계약을 pricing 쪽에 두면 event -> pricing -> metric -> event 순환이 생겨 DomainBoundaryTest의 순환 금지 규칙에 걸리는데, global에 두어 이 의존이 검사에 보이지 않는다. 고치려면 계약을 event.api로 옮기고 구현과 사용처 import를 바꿔야 해서 시험과 README를 빼고 파일 셋이 바뀌므로 유지보수 분류 규칙상 결정이 필요하다. 또 이 위치는 팀 리드가 같은 커밋에서 수집 경계와 ArchUnit을 넣으며 고른 것이라 의도를 확인해야 한다.",
       "evidence": [
@@ -6842,17 +6898,21 @@
         "backend/src/main/java/com/meterengine/pricing/service/UsagePriceDiagnosticsService.java:3-4 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:4 @ af15d7f5",
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/api/EventPresence.java:1 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/api/EventPresence.java:1 @ af15d7f5",
+        "커밋 821ac9f3"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "821ac9f3cdc2135ce9e329bd5a7e9eabefd89587"
+      ],
+      "tests": [
+        "DomainBoundaryTest, EventIssueIntegrationTest: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): UsagePriceDiagnostics 계약을 수집이 소유하는 event.api로 옮긴다",
       "decision_question": "요금 진단 계약 UsagePriceDiagnostics를 global.security에서 수집이 소유하는 event.api로 옮길지(구현 pricing -> event.api 의존을 허용) 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/UsagePriceDiagnostics.java:1: package com.meterengine.global.security",
@@ -6866,7 +6926,12 @@
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15: domains_have_no_cycles",
         "backend/src/main/java/com/meterengine/event/api/EventPresence.java:1: 도메인 공개 계약은 <도메인>.api에 두는 선례",
         "git diff 7b1d1e5 af15d7f5 에서 세 파일 변경 없음, ec13ca29 작성자 박성종이 같은 커밋에서 DomainBoundaryTest를 추가"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "요금 진단 계약을 event.api로 옮긴다(결정)",
+      "decision": "fix: UsagePriceDiagnostics 계약을 수집이 소유하는 event.api로 옮긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-193",
@@ -6905,8 +6970,8 @@
       "id": "G-116",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 UnbilledUsageReportService.report도 month 없이 unbilledEventService.get(organizationId)를 불러 실행 시각 기준 KST 이번 달만 본다. 크론 기본값이 매일 09:00 KST라서, 지난달 마지막 날 09:00 이후 들어온 문제 이벤트와 35일 수집 창 안에서 늦게 들어온 지난달 이벤트는 어떤 웹훅에도 실리지 않는다. 청구 확정 화면에도 미매칭 유형 경고가 없어 이 빈틈을 메우는 다른 경로를 찾지 못했다. #453은 이 파일에 환경 루프만 더했고 대상 달은 그대로 두었다. 웹훅 payload에 month가 이미 있어서 공개 이름을 바꾸지 않고도 지난달 몫을 따로 발행할 수 있다.",
       "evidence": [
@@ -6915,24 +6980,36 @@
         "backend/src/main/java/com/meterengine/notification/config/UnbilledUsageNotificationConfig.java:36 @ af15d7f5",
         "backend/src/main/resources/application.properties:46 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventIngestionService.java:22 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:68 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:68 @ af15d7f5",
+        "UnbilledUsageNotificationIntegrationTest.지난달_사용량은_지난달_통보로_따로_발행한다: 실패 Expecting value to be true but was false",
+        "커밋 7b270fea",
+        "커밋 38311027"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "7b270fea537b8b761c6cb0a242d6a0c8c920d372",
+        "3831102713e0de05c473101a7f2f66e6ed23fc90"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.notification.*': 통과",
+        "UnbilledUsageNotificationIntegrationTest.지난달_사용량은_지난달_통보로_따로_발행한다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "지난달 몫을 따로 통보한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-117",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 UnbilledEventRepository, EventIssueRepository, UsagePriceDiagnosticsService 모두 인보이스 확정 여부를 보지 않는다. 그래서 확정 뒤 들어와 청구되지 않는 이벤트는 미터와 단가가 맞으면 정상으로 분류돼 진단 API와 웹훅 어디에도 나오지 않는다. 확정 고객의 단가 없는 사용량에는 등록해도 소용없는 단가 등록 안내가 나간다. 반면 DraftInvoiceService와 대시보드 unpriced_usage_count는 확정 고객을 빼서 두 화면의 판단이 갈린다. 고치려면 event-issues의 reason 값과 요약 DTO에 새 범주를 더할지, 확정 고객을 진단에서 뺄지 정해야 한다. 이는 공개 계약과 InvoiceController에 적힌 확정 정책에 걸려서 결정이 필요하다.",
       "evidence": [
@@ -6944,25 +7021,36 @@
         "backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java:50-61 @ af15d7f5",
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:140 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventIngestionService.java:22 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/controller/EventIssueController.java:48 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/controller/EventIssueController.java:48 @ af15d7f5",
+        "EventIssueIntegrationTest.확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다: 실패 단가를 등록하세요 to contain 확정",
+        "커밋 645b7bb2"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "645b7bb24ec3df19f420b747e460017cb0b1ab72"
+      ],
+      "tests": [
+        "event 시험: 통과",
+        "EventIssueIntegrationTest.확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 확정한 (고객, 달)의 단가 없는 사용량에는 단가 등록 대신 확정한 달이라 이번 청구에 들어가지 않는다는 안내를 준다. 공개 reason 값은 그대로 둔다",
-      "decision_question": "확정된 (고객, 달)에 확정 뒤 들어온 이벤트를 진단에 새 범주(새 reason 값과 요약 필드)로 보여 줄지, unpriced_usage 진단에서 확정 고객을 뺄지 다른 안내를 줄지 정한다."
+      "decision_question": "확정된 (고객, 달)에 확정 뒤 들어온 이벤트를 진단에 새 범주(새 reason 값과 요약 필드)로 보여 줄지, unpriced_usage 진단에서 확정 고객을 뺄지 다른 안내를 줄지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "확정한 달의 단가 없는 사용량에 확정 안내를 준다(결정: reason 값 유지)",
+      "decision": "fix: 확정한 (고객, 달)의 단가 없는 사용량에는 단가 등록 대신 확정한 달이라 이번 청구에 들어가지 않는다는 안내를 준다. 공개 reason 값은 그대로 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-119",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 event 표의 인덱스는 PK(organization_id, environment_scope_id, transaction_id)뿐이고 occurred_at 인덱스가 없다. /v1/event-issues 요청 한 번은 미터마다 집계 1회, 진단 CTE 2회(count, page), 미청구 집계 4회를 돌려 M+6번 이벤트를 읽고, 페이지 이동과 reason 필터마다 다시 돈다. months 쿼리도 EventRepository와 WorkspaceQueryRepository에 따로 있다. 다만 부하 시험처럼 조회하는 달에 이벤트가 몰려 있으면 occurred_at 인덱스만으로는 읽는 행이 줄지 않아, 실패 시나리오를 끝내려면 집계 재사용이나 월 요약 같은 구조 변경이 필요하다. 이 변경은 EventIssueService, UsagePriceDiagnosticsService, UnbilledEventService, 두 months 쿼리와 새 V__에 걸쳐 파일 셋 이상의 구조 변경이라 결정이 필요하다. 환경 조건만 인덱스를 타게 하는 좁은 수정은 G-132에서 따로 다룬다.",
       "evidence": [
@@ -6973,17 +7061,21 @@
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:139 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventIssueService.java:85 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:187 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:321 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:321 @ af15d7f5",
+        "커밋 a727083e"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a727083e517ecec089d8cfb1654e5c65951a8882"
+      ],
+      "tests": [
+        "README와 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 집계 구조 변경과 큰 이벤트 표 인덱스는 배포 준비 한도(G-161) 때문에 지금 하지 않는다. G-132의 환경 조건 수정만 들어가고 남은 비용을 README에 적는다",
       "decision_question": "요청마다 미터 수만큼 이벤트를 다시 집계하는 진단과 사용량 화면 구조를 집계 재사용이나 월 요약으로 바꾸고, occurred_at 인덱스를 새 V__로 더하는 작업을 지금 할지 정한다.",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:47: event 인덱스는 PK 하나, occurred_at 인덱스 없음",
@@ -6994,14 +7086,19 @@
         "backend/src/main/java/com/meterengine/event/service/EventIssueService.java:85: 미청구 집계 4회 호출",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:187: 전 기간 DISTINCT to_char months",
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:321: 같은 months 쿼리가 따로 있음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정)",
+      "decision": "doc: 집계 구조 변경과 큰 이벤트 표 인덱스는 배포 준비 한도(G-161) 때문에 지금 하지 않는다. G-132의 환경 조건 수정만 들어가고 남은 비용을 README에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-132",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 event를 읽는 쿼리는 환경을 environment_id IS NOT DISTINCT FROM ?로 거른다. PostgreSQL은 이 식을 인덱스 조건으로 쓰지 못해 PK(organization_id, environment_scope_id, transaction_id)로는 도입사까지만 좁히고 legacy, test, live 이벤트를 모두 읽은 뒤 거른다. 그래서 test 환경에 부하 시험 이벤트가 쌓이면 live 사용량 조회, 진단, 미청구 집계가 함께 느려진다. #453이 넣은 웹훅 저장소는 이미 environment_scope_id = ?와 BusinessEnvironmentContext.scopeId()를 쓰고 있어 같은 방식으로 바꾸면 된다. scope는 COALESCE(environment_id, 0 UUID)라 결과는 같고 성능만 달라진다. 고칠 곳은 event 쿼리가 있는 리포지토리 다섯 파일의 같은 식을 기계적으로 바꾸는 일이고 구조는 바뀌지 않는다.",
       "evidence": [
@@ -7014,31 +7111,40 @@
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:322 @ af15d7f5",
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:47 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:24 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentContext.java:30 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentContext.java:30 @ af15d7f5",
+        "커밋 d07ecded"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d07ecdede74ef70df83f28befc1bc3f5213f1d20"
+      ],
+      "tests": [
+        "event, query, metric, notification 통합 시험(환경 격리 시험 포함): 통과",
+        "성능 변화는 시험으로 잡지 않고 인덱스를 쓸 수 있는 조건(environment_scope_id = ?, environment_id = ?)으로 바꾼 것을 코드로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:327: 목록, count, 내보내기 공통 조건",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:110: 집계",
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:47: PK가 environment_scope_id 기준",
         "backend/src/main/java/com/meterengine/webhook/repository/WebhookEndpointRepository.java:24: scope 등호 방식의 선례",
         "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentContext.java:30: scopeId 제공"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "이벤트 조회와 거절 검색이 환경 인덱스를 탄다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-170",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 V46은 event_rejection 검색 인덱스를 (organization_id, environment_id, recorded_at DESC, id DESC)와 고객 인덱스로 만들었는데, EventRejectionRepository.search는 environment_id IS NOT DISTINCT FROM ?::uuid로 거른다. 이 식은 인덱스 조건이 되지 못해 environment_id 뒤의 recorded_at 범위와 정렬을 인덱스로 쓰지 못하고, 도입사의 거절 행을 다 읽은 뒤 정렬한다. #453부터 실제 environment_id가 들어가므로 test와 live 거절이 서로의 조회 비용도 늘린다. 이미 있는 V46은 고칠 수 없지만, 환경이 없으면 environment_id IS NULL, 있으면 environment_id = ?로 조건을 나누면 btree가 두 경우 모두 인덱스 조건으로 받아 새 마이그레이션 없이 지금 인덱스를 탄다. 고칠 파일은 리포지토리 하나다.",
       "evidence": [
@@ -7046,31 +7152,40 @@
         "backend/src/main/resources/db/migration/V46__create_event_rejections.sql:35 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:82 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:85 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:111 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:111 @ af15d7f5",
+        "커밋 d07ecded"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d07ecdede74ef70df83f28befc1bc3f5213f1d20"
+      ],
+      "tests": [
+        "event, query, metric, notification 통합 시험(환경 격리 시험 포함): 통과",
+        "성능 변화는 시험으로 잡지 않고 인덱스를 쓸 수 있는 조건(environment_scope_id = ?, environment_id = ?)으로 바꾼 것을 코드로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V46__create_event_rejections.sql:34: 검색 인덱스가 environment_id 위",
         "backend/src/main/resources/db/migration/V46__create_event_rejections.sql:35: 고객 인덱스도 같음",
         "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:82: IS NOT DISTINCT FROM 조건",
         "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:85: 환경 값 전달",
         "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:111: ORDER BY recorded_at DESC, id DESC LIMIT"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "이벤트 조회와 거절 검색이 환경 인덱스를 탄다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-06",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 음수 수량 집계는 미터별 건수를 더한 값이고, 이 값이 /v1/unbilled-events와 웹훅에서는 negative_quantity.event_count로, /v1/event-issues/search에서는 warnings.negative_event_metric_count로 나간다. V39에서 이벤트 유형과 속성 유일 제약이 빠졌고 서비스도 막지 않으므로 한 이벤트 유형에 미터가 둘 이상 붙을 수 있다. 이때 음수 이벤트 1건이 미터 2개에 걸리면 event_count가 2가 되고, 콘솔 사용량 품질 카드는 이를 '음수 수량의 이벤트 2'로 보여 준다. 반대로 이슈 화면은 같은 값을 '음수 이벤트-미터 조합'으로 읽으니 같은 숫자를 두 뜻으로 쓰는 셈이다. 공개 이름은 그대로 두고, 위쪽 event_count를 실제 서로 다른 이벤트 수로 세고 이슈 쪽은 미터별 건수 합을 쓰면 두 이름이 각자 맞는 값을 갖게 된다. non_numeric_value.event_count도 같은 metricCounts를 거쳐 같은 방식으로 함께 바로잡힌다.",
       "evidence": [
@@ -7083,17 +7198,24 @@
         "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql:2 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricRepository.java:25 @ af15d7f5",
         "frontend/src/components/workspace/UsageQuality.tsx:15 @ af15d7f5",
-        "frontend/src/app/(console)/event-issues/page.tsx:47 @ af15d7f5"
+        "frontend/src/app/(console)/event-issues/page.tsx:47 @ af15d7f5",
+        "UnbilledEventIntegrationTest.같은_유형에_미터가_둘이어도_음수와_숫자_아닌_이벤트는_한_건으로_센다: 실패 expected: 1L but was: 2L",
+        "커밋 ea3cce08"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "ea3cce0853d8f97130246965fa7b7584fe65a574"
+      ],
+      "tests": [
+        "EventIssueIntegrationTest.음수_경고는_이벤트와_미터_조합_수를_센다: 통과",
+        "event, notification 시험: 통과",
+        "UnbilledEventIntegrationTest.같은_유형에_미터가_둘이어도_음수와_숫자_아닌_이벤트는_한_건으로_센다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:106: top-level eventCount = 미터별 count 합, 이벤트-미터 조합 수",
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:88: event JOIN billable_metric ON event_type, 미터마다 한 줄",
@@ -7104,14 +7226,18 @@
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricRepository.java:25: 중복 검사 메서드는 운영 코드에서 호출되지 않음",
         "frontend/src/components/workspace/UsageQuality.tsx:15: '음수 수량의 이벤트'로 표시",
         "frontend/src/app/(console)/event-issues/page.tsx:47: '음수 이벤트-미터 조합'으로 표시"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "미청구 요약 event_count를 서로 다른 이벤트 수로 센다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-07",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적한 상태가 그대로 남아 있고, 넘길 때 head(7b1d1e5)와 코드가 같다. 같은 이벤트 조회 묶음 안에서 GET /v1/events, /types, /lookup은 모르는 조회 조건을 조용히 무시하고, /months, /export, /event-issues/search, /event-rejections/search는 400으로 막는다. 그래서 customerId처럼 이름을 틀리게 보내면 목록은 필터 없이 200으로 전체를 돌려주고, 설명에 목록과 같은 조건이라고 적힌 내보내기는 400을 낸다. 허용 이름 목록도 컨트롤러 세 곳에서 @RequestParam과 따로 Set.of로 손으로 적었고, SDK에도 세 번째 사본이 있다. 지금은 이름이 서로 맞아 실제 실패는 없지만, 고치려면 SDK와 데모가 쓰는 공개 API인 GET /v1/events 계열을 엄격하게 막을지 정해야 하고, 목록을 @RequestParam에서 뽑는 공통 장치를 두면 컨트롤러 네 개와 새 공통 클래스까지 파일 셋 이상이 바뀐다. 유지보수 분류에서 파일 셋 이상 구조 변경이고 공개 API 정책 선택이라 결정이 필요하다.",
       "evidence": [
@@ -7124,17 +7250,22 @@
         "backend/src/main/java/com/meterengine/event/controller/EventIssueController.java:44-52 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/controller/EventRejectionController.java:42-50 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/validation/UnknownQueryParameterValidator.java:13-18 @ af15d7f5",
-        "demo/sdk/src/meter-engine-client.ts:46-48 @ af15d7f5"
+        "demo/sdk/src/meter-engine-client.ts:46-48 @ af15d7f5",
+        "커밋 09e06ae9"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "09e06ae90871e5ed8337b8c380e915ba56b5aa31"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과",
+        "설명 문장과 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 공개 API 호환을 위해 지금 동작(목록은 무시, 내보내기와 search는 400)을 유지하고 엔드포인트별 규칙을 API 설명에 적는다",
       "decision_question": "이벤트 조회 엔드포인트 전체에서 모르는 조회 조건을 400으로 막을지 무시할지 한 규칙으로 정하고, 막는다면 허용 목록을 @RequestParam에서 자동으로 뽑는 공통 장치를 둘지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:155-176: GET /v1/events listEvents, 모르는 조건 검사 없음",
@@ -7148,14 +7279,19 @@
         "backend/src/main/java/com/meterengine/global/validation/UnknownQueryParameterValidator.java:13-18: 허용 목록을 호출부가 직접 넘기는 구조",
         "demo/sdk/src/meter-engine-client.ts:46-48: SDK의 세 번째 손 목록), :149 (SDK가 GET /v1/events를 공개 API로 호출",
         "git log: UnknownQueryParameterValidator는 ec13ca29(#450)에서 들어왔고 af15d7f5까지 이벤트 컨트롤러의 해당 부분은 바뀌지 않음. backend/src/test에 이벤트 엔드포인트의 모르는 조건 시험이 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지)",
+      "decision": "doc: 공개 API 호환을 위해 지금 동작(목록은 무시, 내보내기와 search는 400)을 유지하고 엔드포인트별 규칙을 API 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-08",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 배치 요청 DTO는 @NotEmpty @Size(max = 100)에 @ArraySchema(minItems = 1)을 같이 달고 있는데, springdoc이 @Size의 min 기본값 0으로 minItems를 덮어써서 openapi.yaml에는 minItems: 0이 나간다. 실제 서버는 빈 배열을 400으로 막고 시험도 그렇게 확인하므로 문서와 동작이 어긋난다. 웹훅 요청 DTO는 같은 문제를 @Size(min = 1, max = 20)으로 풀어 minItems: 1이 나가고 OpenApiDocumentTest가 이를 지킨다. 결과의 result도 서비스는 stored, duplicate, rejected 세 값만 만들고 데모 SDK 타입도 세 값 유니온인데 openapi.yaml에는 값 목록 없는 string이다. #450 이후 이 두 DTO를 바꾼 main 커밋이 없어 고쳐지지 않았다.",
       "evidence": [
@@ -7168,17 +7304,23 @@
         "backend/src/main/java/com/meterengine/event/dto/IngestEventBatchResponse.java:12 @ af15d7f5",
         "backend/openapi.yaml:9126 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:173 @ af15d7f5",
-        "demo/sdk/src/types.ts:23 @ af15d7f5"
+        "demo/sdk/src/types.ts:23 @ af15d7f5",
+        "OpenApiDocumentTest.배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_세_값만_적는다: 실패 expected: 1 but was: 0",
+        "커밋 c55b3d38"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "c55b3d383dd254f39bdbbf488f56bc482f1df0dc"
+      ],
+      "tests": [
+        "OpenApiDocumentTest, event 시험: 통과",
+        "OpenApiDocumentTest.배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_세_값만_적는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/dto/IngestEventBatchRequest.java:11: @NotEmpty @Size(max = 100) @ArraySchema(... minItems = 1 ...",
         "backend/openapi.yaml:9188: IngestEventBatchRequest.events minItems: 0, 파일 전체에서 minItems: 0은 이 한 곳",
@@ -7191,14 +7333,18 @@
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:173: stored), :185 (rejected), :190 (duplicate",
         "demo/sdk/src/types.ts:23: result: \"stored\" | \"duplicate\" | \"rejected\"",
         "git log af15d7f5 -- backend/src/main/java/com/meterengine/event/dto/ 의 마지막 변경이 ec13ca29(#450)이고 7b1d1e5와 차이 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "배치 수집 API 문서가 한 건 이상과 결과 세 값을 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-09",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventBatchService는 넘길 때 head와 한 줄도 다르지 않고, 이 파일을 바꾼 main 커밋은 #450(ec13ca29) 하나뿐이라 고쳐지지 않았다. 배치 경로는 jsonField의 switch로 transactionId, customerId, occurredAt을 JSON 이름으로 손으로 바꾸고, 단건 경로는 GlobalExceptionHandler가 IngestEventRequest의 @JsonProperty를 읽어 같은 일을 한다. 지금은 다섯 필드의 결과가 같아서 틀린 응답이 나가지는 않지만, @JsonProperty 이름을 바꾸거나 필드를 더하면 배치 쪽만 옛 이름을 내는 구조가 두 파일에 갈라져 있다. 배치는 원본 JsonNode에서 transaction_id와 timestamp도 문자열로 다시 읽어서 같은 위험이 있다. 고칠 때는 이름을 정하는 출처만 @JsonProperty로 모으고, 시각을 OffsetDateTime.parse로 엄격하게 해석하는 규칙은 Q12(C450-005) 결정 대기라 건드리지 않는다.",
       "evidence": [
@@ -7211,17 +7357,24 @@
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:73-74 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:81-82 @ af15d7f5",
         "docs/contributing/error-handling.md:22 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/event/EventBatchIntegrationTest.java:73-74 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/event/EventBatchIntegrationTest.java:73-74 @ af15d7f5",
+        "커밋 6a870a07",
+        "커밋 4caedb41"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "6a870a07291c2aec224f24b2f35701c82d46bcff",
+        "4caedb414ddbde9a563fa1f972d53cfc11116a25"
+      ],
+      "tests": [
+        "EventBatchServiceTest.검증_오류_필드는_단건_요청과_같은_JSON_이름이다: 통과(바꾸기 전과 뒤)",
+        "checkstyle 이름 규칙에 맞춘 @Test 전환 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:193-200: jsonField switch가 transactionId->transaction_id, customerId->customer_id, occurredAt->timestamp를 손으로 적음",
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:103: 검증 오류 필드 이름을 jsonField로 만듦",
@@ -7234,7 +7387,11 @@
         "docs/contributing/error-handling.md:22: 공용 오류 코드는 com.meterengine.global.error에 둔다",
         "git diff 7b1d1e5 af15d7f5 -- EventBatchService.java IngestEventRequest.java 결과가 비어 있음, git log af15d7f5 -- EventBatchService.java는 ec13ca29(#450)만 나옴",
         "backend/src/test/java/com/meterengine/event/EventBatchIntegrationTest.java:73-74: 배치 필드 이름은 events[2].timestamp 하나만 확인하고 다른 필드는 지키는 시험이 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "배치 오류 필드 이름을 DTO의 JSON 이름에서 읽는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-10",
@@ -7279,8 +7436,8 @@
       "id": "Ck3-450-11",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적은 맞다. CustomerDirectory의 check와 active는 고객 상태를 묻는 이름이지만, 구현은 CustomerRepository.lock과 lockScoped를 불러 고객 행에 FOR SHARE 잠금을 건다. customer 모듈 안에서는 잠금을 거는 메서드를 모두 lock이라고 부르고(CustomerRepository의 같은 쿼리, CustomerService의 lock 도우미), 다른 모듈도 findForUpdate처럼 이름에 잠금을 드러낸다. 그래서 naming.md의 \"읽는 자리에서 답이 나온다\", \"같은 개념에 같은 낱말\" 원칙과 어긋난다. 잠금 자체는 고객 보관(FOR UPDATE)과 이벤트 저장이 엇갈리지 않게 하려는 의도라 동작은 고칠 대상이 아니고 이름만 문제다. main은 넘길 때 head와 같아 고쳐지지 않았다. 이름을 바꾸면 인터페이스, 구현, 호출부 두 곳까지 시험 빼고 파일 네 개가 바뀌어 유지보수 분류 기준(셋 이상)에 걸리므로 결정이 필요하다.",
       "evidence": [
@@ -7296,17 +7453,21 @@
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:121 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventIngestionService.java:52 @ af15d7f5",
         "docs/contributing/naming.md:13 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "커밋 06655a90"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "06655a906cc19f512105351e4429df2dc4780a96"
+      ],
+      "tests": [
+        "컴파일 통과, naming.md와 MemberNamingConventionTest 규칙 대조"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): check, active를 잠금이 드러나는 이름으로 바꾼다(내부 계약, 공개 이름 아님)",
       "decision_question": "CustomerDirectory.check와 active를 잠금이 드러나는 이름(예: lockActive, lockActivity)으로 바꿔 구현과 호출부 네 파일을 함께 고칠지, 이름은 두고 인터페이스에 잠금 경고 한 줄만 달지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/api/CustomerDirectory.java:10: void check, 잠금이 이름에 없음",
@@ -7323,14 +7484,19 @@
         "docs/contributing/naming.md:13: 읽는 자리에서 답이 나온다",
         "docs/contributing/naming.md:14: 같은 개념에 같은 낱말",
         "git log af15d7f5 -- CustomerDirectory.java: ec13ca29 하나뿐, 7b1d1e5와 내용 같음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "고객 조회 계약이 잠금을 건다고 적는다(결정: 이름 유지, 한 낱말 규칙)",
+      "decision": "doc: 이름은 두고 인터페이스 선언 위에 잠금 설명을 한 줄씩 적는다. 서비스 공개 메서드는 한 낱말이라는 MemberNamingConventionTest 규칙 때문에 lockActive 같은 이름을 쓸 수 없어 1단계 결정안(이름 바꾸기)에서 바꿨다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-12",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventRepository에는 기간만 받는 옛 findPage와 count 오버로드가 그대로 남아 있고, 둘 다 EventSearch.resolve를 거치지 않고 record 생성자로 검색 조건을 바로 만들어 시작이 종료보다 앞서는지 같은 검사를 건너뛴다. main 전체를 찾아봐도 두 오버로드를 부르는 곳은 없고, 서비스와 시험은 모두 EventSearch를 받는 쪽만 쓴다. 기본 정렬 값 occurred_at, desc도 EventRepository 두 곳과 EventSearch.resolve에 따로 적혀 있어서 같은 규칙이 세 곳으로 갈라졌다. 두 오버로드는 #450에서 들어왔고, 이후 #453은 이 파일의 환경 조건만 바꿔서 그대로 남았다. EventQueryService의 YearMonth 오버로드, Event와 ListEventsResponse, EventResponse의 호환 생성자도 부르는 곳이 없지만 검증을 건너뛰지는 않는다. 이것까지 지우면 파일 네 개를 고치는 유지보수 변경이 되어서, 이번 계획은 지적이 가리킨 저장소 파일 하나로 줄였다.",
       "evidence": [
@@ -7340,17 +7506,22 @@
         "backend/src/main/java/com/meterengine/event/service/EventSearch.java:56-57 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:55,57,72,75 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:281-285 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:39-49 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:39-49 @ af15d7f5",
+        "커밋 1704e89f"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1704e89f661d4269f8684c8f4c9175aeda319c0d"
+      ],
+      "tests": [
+        "git grep으로 기간 인자 findPage, count 호출 없음 확인",
+        "event, query 시험: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:97-112: 옛 findPage 오버로드, :109에서 new EventSearch(null, start, end, null, \"occurred_at\", \"desc\", null)로 resolve를 건너뜀",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:152-159: 옛 count 오버로드, :158에 같은 생성자 호출",
@@ -7361,14 +7532,18 @@
         "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:39-49: YearMonth 오버로드도 호출부 없음. EventController.java:177-183은 EventSearch 오버로드를 부름",
         "backend/src/main/java/com/meterengine/event/dto/Event.java:17-36, backend/src/main/java/com/meterengine/event/dto/ListEventsResponse.java:21-24, :48-67 @ af15d7f5 (호환 생성자도 호출부 없음. new Event(는 EventRepository.java:138, :203에서 10인자만, new ListEventsResponse(는 EventQueryService.java:59, :118에서 전체 인자만 씀)",
         "git log --oneline af15d7f5 -- EventRepository.java: ec13ca29(#450)가 들여온 뒤 94a48a20(#453)은 환경 조건만 바꾸고 이 오버로드는 그대로 둠"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "검증을 건너뛰는 옛 저장소 오버로드를 지운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-450-13",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 UnbilledEventService는 넘길 때 head와 한 글자도 다르지 않습니다. 월 시작, 월 끝, cutoff 계산과 ZoneId.of(\"Asia/Seoul\") 직접 생성이 그대로 있고, 같은 계산이 BillableMetricUsageService.aggregationEnd와 BILLING_ZONE에도 있으며 EventIssueService에도 세 번째 사본이 있습니다. 그래서 중복 자체는 눈으로 확인되는 사실이라 refuted는 아닙니다. 다만 지적이 말하는 대로 event 쪽에서 aggregationEnd나 BILLING_ZONE을 불러 쓰면 같은 #450에서 넣은 DomainBoundaryTest의 event에서 metric 의존 금지 규칙에 걸리고, metric이 이미 event.api를 쓰고 있어 순환 금지 규칙에도 걸립니다. 규칙을 지키면서 중복을 없애려면 global에 공용 월 구간 도우미를 새로 두고 두 서비스(필요하면 EventIssueService까지)를 바꿔야 해서 시험을 뺀 운영 파일이 셋 이상 바뀝니다. 유지보수 분류에서 파일 셋 이상 구조 변경이고, 기록된 경계 규칙과 맞물리는 주제라 팀이 정해야 합니다.",
       "evidence": [
@@ -7379,17 +7554,22 @@
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:71 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventIssueService.java:22 @ af15d7f5",
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:17-26 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15 @ af15d7f5",
+        "커밋 1e010c1f"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "1e010c1fcdcb71fe60caf61f972606bea11c359b"
+      ],
+      "tests": [
+        "BillingMonthTest: 통과",
+        "global, event, metric, notification 시험과 DomainBoundaryTest: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 월 구간, cutoff, 과금 시간대를 global의 작은 도우미 하나로 모아 event와 metric이 함께 쓴다",
       "decision_question": "월 구간과 집계 cutoff 계산, 과금 시간대 상수를 global 패키지의 공용 도우미로 옮겨 event와 metric이 함께 쓰게 할지, 도메인 경계 규칙 때문에 생긴 중복으로 두고 넘어갈지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/UnbilledEventService.java:31: ZoneId.of(\"Asia/Seoul\") 직접 생성, 39행과 41행에도 반복",
@@ -7401,7 +7581,12 @@
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:17-26: com.meterengine.event..가 com.meterengine.metric..에 의존 금지, ec13ca29 #450에서 추가",
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15: 도메인 순환 금지) + backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:4 @ af15d7f5 (metric이 event.api를 이미 import",
         "git diff 7b1d1e5 af15d7f5 -- UnbilledEventService.java 변경 없음 (main에서 고쳐지지 않음)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "과금 달 계산을 global 도우미로 모은다(결정)",
+      "decision": "fix: 월 구간, cutoff, 과금 시간대를 global의 작은 도우미 하나로 모아 event와 metric이 함께 쓴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-076",
@@ -7579,8 +7764,8 @@
       "id": "G-182",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적한 불일치는 그대로 남아 있습니다. /v1/event-issues/search와 /v1/event-rejections/search는 page를 0부터 받고, WorkspaceQueryController의 /search 여섯 개는 SearchParameters로 1부터 받습니다. 다만 지금 코드에는 실패 경로가 없습니다. 두 화면이 각각 0부터 보내고 OpenAPI 설명과 README도 엔드포인트별 기준을 적어 두었습니다. 게다가 0부터 세는 쪽이 이벤트, 감사, 웹훅 목록에도 있어서 어느 쪽을 표준으로 삼을지부터 정해야 합니다. 맞추려면 공개 API 두 개의 page 의미가 바뀌고, 컨트롤러 둘, 서비스, 화면 둘, openapi.yaml까지 시험을 빼고도 파일 셋 이상이 바뀝니다. 그래서 결정이 필요합니다.",
       "evidence": [
@@ -7592,17 +7777,21 @@
         "backend/README.md:128 @ af15d7f5",
         "frontend/src/app/(console)/event-issues/page.tsx:24 @ af15d7f5",
         "frontend/src/app/(console)/event-rejections/page.tsx:17 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/controller/EventController.java:157 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/controller/EventController.java:157 @ af15d7f5",
+        "커밋 a727083e"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a727083e517ecec089d8cfb1654e5c65951a8882"
+      ],
+      "tests": [
+        "README와 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 이벤트 문제와 거절 search는 0부터를 유지하고(이벤트, 감사, 웹훅 목록과 같음) README에 엔드포인트별 기준을 적는다",
       "decision_question": "이벤트 문제와 수집 거절 search의 page를 공개 API 계약을 바꿔 1부터로 맞출지, 아니면 이벤트, 감사, 웹훅 목록처럼 0부터를 유지하고 README에 /search 이름과 무관하게 엔드포인트별 기준을 따른다고 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/controller/EventIssueController.java:51: @RequestParam(defaultValue = \"0\") @Min(0) int page",
@@ -7614,7 +7803,12 @@
         "frontend/src/app/(console)/event-issues/page.tsx:24: 기본 page 0, 27행에서 그대로 전송",
         "frontend/src/app/(console)/event-rejections/page.tsx:17: 기본 page 0, 19행에서 그대로 전송",
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:157: , backend/src/main/java/com/meterengine/audit/controller/AuditLogController.java:55 @ af15d7f5, backend/src/main/java/com/meterengine/webhook/controller/WebhookEndpointController.java:140 @ af15d7f5 (다른 목록 API도 0부터"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정)",
+      "decision": "doc: 이벤트 문제와 거절 search는 0부터를 유지하고(이벤트, 감사, 웹훅 목록과 같음) README에 엔드포인트별 기준을 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C450-011",
@@ -7658,32 +7852,42 @@
       "id": "C450-009",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 UnbilledUsageNotificationService에 있는 두 LOGGER.error 호출(환경 목록 실패, 조직별 보고 실패)이 여전히 예외 객체를 넘기지 않는다. #453이 환경별 루프로 바꿨지만 로그 인자는 그대로라 고쳐지지 않았다. catch에서 예외를 삼키므로 ScheduledJobRunService의 error_summary도 비고 작업은 성공으로 남는다. 같은 예약 작업인 PaymentReconciliationService는 예외를 마지막 인자로 넘기고, Grafana 경보 안내는 백엔드 로그를 보라고 한다. 그래서 지금은 원인을 찾을 길이 없다. G-146과 원인이 같아서 한 변경으로 고친다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageNotificationService.java:44-45 @ af15d7f5",
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageNotificationService.java:55-58 @ af15d7f5",
         "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:104-108 @ af15d7f5",
-        "deploy/grafana/provisioning/alerting/alerting.yml:161 @ af15d7f5"
+        "deploy/grafana/provisioning/alerting/alerting.yml:161 @ af15d7f5",
+        "UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 출력에 java.lang.IllegalStateException: environments down이 없음",
+        "커밋 210baa23"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "210baa2316b503bd96396cc6e83037a67d0ec7c2"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.notification.*': 통과",
+        "UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "미청구 통보 실패 로그에 예외를 남긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-124",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서 집계 가능 조건이 BillableMetricUsageRepository, EventIssueRepository, UnbilledEventRepository 세 곳에 따로 쓰여 있다. 그 달 활성 미터 조건도 BillableMetricUsageService의 자바 코드와 진단 저장소 두 곳에 따로 있다. 지금은 결과가 같지만 한쪽만 고치면 청구와 진단이 갈리는 구조라는 지적은 맞다. 공용 조건 한 곳으로 모으려면 시험을 빼고도 파일 셋 이상을 바꿔야 해서 판정 기준상 결정이 필요하다. 정의가 같은지 보는 시험만 더하는 작은 선택지도 있다.",
       "evidence": [
@@ -7693,49 +7897,69 @@
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:85-94 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:78-83 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:30 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:88-96 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:88-96 @ af15d7f5",
+        "커밋 d459a67f"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d459a67f51b72a25269d4d8b878f5d29d8541dd9"
+      ],
+      "tests": [
+        "EligibleEventDefinitionIntegrationTest: 통과",
+        "문제 진단 조건을 바꾼 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 공용 조건으로 모으지 않고 세 정의가 같은 결과를 내는지 보는 시험만 더한다",
-      "decision_question": "집계 가능 조건과 활성 미터 조건을 공용 SQL 조각이나 뷰 한 곳으로 모을지, 지금 구조를 두고 두 정의가 같은지 보는 시험만 더할지 정한다."
+      "decision_question": "집계 가능 조건과 활성 미터 조건을 공용 SQL 조각이나 뷰 한 곳으로 모을지, 지금 구조를 두고 두 정의가 같은지 보는 시험만 더할지 정한다.",
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "세 집계 가능 정의가 같은지 시험한다(결정: 구조 유지)",
+      "decision": "fix: 공용 조건으로 모으지 않고 세 정의가 같은 결과를 내는지 보는 시험만 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-146",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "C450-009와 같은 지적이다. main의 UnbilledUsageNotificationService 44행과 55행 LOGGER.error 모두 exception 인자가 없어 예외 종류와 스택이 남지 않는다. 작업은 succeeded로 기록돼 scheduled_job_run.error_summary도 비어 있다. 그런데 scheduled-job-failed 경보 안내는 error_summary와 백엔드 로그를 보라고 하므로 실패 원인을 알 수 없다. 환경 mode가 이미 찍혀 있어 환경 id 추가는 지적 밖으로 보고, 예외만 넘기는 최소 변경으로 C450-009와 함께 고친다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageNotificationService.java:44-45 @ af15d7f5",
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageNotificationService.java:55-58 @ af15d7f5",
         "deploy/grafana/provisioning/alerting/alerting.yml:161 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:104-108 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/payment/service/PaymentReconciliationService.java:104-108 @ af15d7f5",
+        "UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 출력에 java.lang.IllegalStateException: environments down이 없음",
+        "커밋 210baa23"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "210baa2316b503bd96396cc6e83037a67d0ec7c2"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.notification.*': 통과",
+        "UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "미청구 통보 실패 로그에 예외를 남긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-176",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 V46__create_event_rejections.sql은 event_rejection에 UPDATE, DELETE, TRUNCATE를 막는 트리거를 걸고, 뒤 마이그레이션에서 이를 풀지 않았다. 보존 기간이나 정리 작업도 코드에 없다. 다만 audit_log, webhook 기록, 결제 대사 불일치 같은 여러 기록 표가 같은 append-only 관례를 따르고, README도 통보 기록은 지우지 않는다고 적는다. DB 소유자는 수동으로 트리거를 끌 수 있으니 마이그레이션 없이는 못 지운다는 설명은 조금 과장이다. 이미 적용된 V46은 고칠 수 없으므로 새 V__로 DELETE 트리거를 풀고 보존 기간을 정한 정리 작업을 더해야 한다. 보존 기간과 관례 예외 여부는 팀이 정할 일이다.",
       "evidence": [
@@ -7744,25 +7968,34 @@
         "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:28-30 @ af15d7f5",
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:58-60 @ af15d7f5",
         "backend/src/main/resources/db/migration/V34__create_payment_reconciliation_mismatch_table.sql:28-30 @ af15d7f5",
-        "backend/README.md:297 @ af15d7f5"
+        "backend/README.md:297 @ af15d7f5",
+        "커밋 a727083e"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "a727083e517ecec089d8cfb1654e5c65951a8882"
+      ],
+      "tests": [
+        "README와 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): event_rejection도 다른 기록 표처럼 지우지 않는다. README에 적는다",
-      "decision_question": "event_rejection을 append-only 관례의 예외로 두고 보존 기간(예: N일)을 정해 오래된 행을 지우는 정리 작업을 더할지, 다른 기록 표처럼 계속 지우지 않을지 정한다."
+      "decision_question": "event_rejection을 append-only 관례의 예외로 두고 보존 기간(예: N일)을 정해 오래된 행을 지우는 정리 작업을 더할지, 다른 기록 표처럼 계속 지우지 않을지 정한다.",
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정)",
+      "decision": "doc: event_rejection도 다른 기록 표처럼 지우지 않는다. README에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C450-006",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventSearch.parse는 OffsetDateTime.parse나 LocalDateTime.parse 결과를 범위 검사 없이 돌려주고, 이 값이 그대로 SQL의 occurred_at 조건 값이 된다. +300000-01-01T00:00:00Z는 64자 제한과 @StorableText를 통과하고, PostgreSQL timestamptz 범위 밖이라 DB 오류가 나며 GlobalExceptionHandler는 이를 Exception 핸들러로 받아 500을 낸다. 감사 조회는 같은 형태의 from, to를 AuditLogQueryService에서 연도 범위로 막고 400을 내는 시험도 있어 두 곳이 갈라져 있다. error-handling.md는 DB가 거부할 클라이언트 입력을 파라미터 검증으로 막으라고 한다. /v1/events, /v1/events/types, /v1/events/export가 모두 같은 resolve를 쓰므로 한 곳만 고치면 된다.",
       "evidence": [
@@ -7774,31 +8007,44 @@
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:128 @ af15d7f5",
         "backend/src/test/java/com/meterengine/audit/AuditQueryAndRequestIntegrationTest.java:231 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/validation/StorableTimestampValidator.java:21 @ af15d7f5",
-        "docs/contributing/error-handling.md:33 @ af15d7f5"
+        "docs/contributing/error-handling.md:33 @ af15d7f5",
+        "EventListIntegrationTest.DB_시각_범위를_넘는_기간은_500이_아니라_400이다: 실패 expected: 400 but was: 500",
+        "커밋 eb6350c3",
+        "커밋 4caedb41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "eb6350c38b44849c2ebe9f0602913570668d8bdf",
+        "4caedb414ddbde9a563fa1f972d53cfc11116a25"
+      ],
+      "tests": [
+        "EventListIntegrationTest: 통과",
+        "checkstyle 이름 규칙에 맞춘 @Test 전환 뒤 통과",
+        "EventListIntegrationTest.DB_시각_범위를_넘는_기간은_500이_아니라_400이다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventSearch.java:73: 범위 검사 없이 파싱 결과 반환",
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:171: from은 길이와 문자만 검사",
         "backend/src/main/java/com/meterengine/global/error/GlobalExceptionHandler.java:214: DB 오류가 500으로 감",
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:128: 감사 조회는 연도 범위로 400",
         "backend/src/main/java/com/meterengine/global/validation/StorableTimestampValidator.java:21: 재사용할 범위 검사"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "DB 시각 범위를 넘는 기간을 400으로 막는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C450-007",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventQueryService.validateProperties는 readTree 결과가 JSON 객체인지만 보고 원문 문자열을 EventRepository의 e.properties @> ?::jsonb에 그대로 넘긴다. 파라미터의 @StorableText는 실제 NUL 문자만 막아 6글자 이스케이프 \\u0000, 짝 없는 \\ud800, 1e200000 같은 숫자는 통과하고 PostgreSQL jsonb 입력에서 거부되어 500이 된다. 수집 쪽은 같은 값을 StorableJsonValidator로 400 처리해 두 경로가 갈라져 있다. error-handling.md도 DB가 거부할 입력을 검증으로 막으라고 한다. 설정에 use-big-decimal-for-floats가 켜져 있어 Map으로 읽어 StorableJsonValidator를 그대로 쓰면 숫자 자릿수까지 같은 규칙으로 막힌다.",
       "evidence": [
@@ -7808,30 +8054,46 @@
         "backend/src/main/java/com/meterengine/event/dto/IngestEventRequest.java:18 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/validation/StorableJsonValidator.java:22 @ af15d7f5",
         "backend/src/main/resources/application.properties:38 @ af15d7f5",
-        "docs/contributing/error-handling.md:33 @ af15d7f5"
+        "docs/contributing/error-handling.md:33 @ af15d7f5",
+        "EventListIntegrationTest.DB가_받지_못할_속성_조건은_500이_아니라_400이다: 실패 expected: 400 but was: 500",
+        "커밋 eb6350c3",
+        "커밋 39b29bde",
+        "커밋 4caedb41"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "eb6350c38b44849c2ebe9f0602913570668d8bdf",
+        "39b29bde7657d506f443fb3961385ad9b05370e3",
+        "4caedb414ddbde9a563fa1f972d53cfc11116a25"
+      ],
+      "tests": [
+        "EventListIntegrationTest: 통과",
+        "unchecked 경고 정리 커밋 뒤 EventListIntegrationTest: 통과",
+        "checkstyle 이름 규칙에 맞춘 @Test 전환 뒤 통과",
+        "EventListIntegrationTest.DB가_받지_못할_속성_조건은_500이_아니라_400이다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:103: 객체 여부만 검사",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:238: 원문을 ?::jsonb로 전달",
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:176: @StorableText만 적용",
         "backend/src/main/java/com/meterengine/event/dto/IngestEventRequest.java:18: 수집은 @StorableJson"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "DB가 받지 못할 속성 조건을 400으로 막는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C450-012",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 EventIssueIntegrationTest와 EventRejectionIntegrationTest는 q=%25를 uri 문자열에 이어 붙여 보낸다. MockMvc의 uri(String)는 문자열을 한 번 더 인코딩하므로 서버는 % 한 글자가 아니라 %25 세 글자를 받고, 픽스처에 25가 없어 total=0으로 통과한다. 그래서 검색이 position에서 이스케이프 없는 LIKE로 회귀해도 두 시험은 잡지 못한다. 같은 패키지의 EventExportIntegrationTest는 suffix를 URLDecoder로 풀어 .param으로 보내고 literal%value 행이 나오는지 단언해 올바르게 검사하므로 두 방식이 갈라져 있다. 지금 구현은 position이라 동작은 맞고 시험만 고치면 된다.",
       "evidence": [
@@ -7842,23 +8104,32 @@
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:163 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:311 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:50 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:98 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/repository/EventRejectionRepository.java:98 @ af15d7f5",
+        "커밋 cfb0e6f7"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "cfb0e6f705d570fdbd6e1774a6b8579763b69f73"
+      ],
+      "tests": [
+        "EventIssueIntegrationTest, EventRejectionIntegrationTest: 통과",
+        "position을 이스케이프 없는 LIKE로 바꾼 변이: 실패 expected: 0 but was: 3"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/test/java/com/meterengine/event/EventIssueIntegrationTest.java:245: uri 문자열 이어 붙이기",
         "backend/src/test/java/com/meterengine/event/EventRejectionIntegrationTest.java:324: uri 문자열 이어 붙이기",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:163: literal %를 실제로 검사",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:311: URLDecoder 뒤 .param"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "검색어 % 시험이 실제로 % 한 글자를 보낸다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-254",
@@ -8021,8 +8292,8 @@
       "id": "G-127",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 수집은 StorableTimestampValidator로 294276년까지 받고, EventIngestionService는 35일 넘은 과거만 막을 뿐 미래 상한이 없다. 이벤트 월 목록(EventRepository.findMonths)과 /v1/usage/months(WorkspaceQueryRepository.months의 기본 분기)는 여전히 to_char(..., 'YYYY-MM')을 거르지 않고 돌려주므로 '55835-03' 같은 5자리 연도 달이 문자열 내림차순으로 맨 위에 온다. 반면 GET /v1/events의 month는 @FourDigitYear로 9999년까지만 받아 그 달 버튼을 누르면 400이고, 미래 시각 진단도 조회한 달 범위 안만 센다. 넘길 때 head 이후 #453이 같은 쿼리에 환경 조건만 더했고 범위 조건은 어느 squash에도 없어 고쳐지지 않았다. 수집 상한을 두는 방안은 294276년까지 받는다는 시험 계약을 바꾸므로 빼고, 두 months 쿼리에 9999년 이하 조건만 더하는 가장 작은 수정을 계획한다.",
       "evidence": [
@@ -8034,17 +8305,29 @@
         "backend/src/main/java/com/meterengine/global/validation/FourDigitYearValidator.java:14 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:65 @ af15d7f5",
         "frontend/src/components/screen/DataMonths.tsx:9 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/global/validation/StorableTimestampValidatorTest.java:20 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/global/validation/StorableTimestampValidatorTest.java:20 @ af15d7f5",
+        "EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 actual [\"55835-03\", \"2026-10\"]",
+        "WorkspaceQueryIntegrationTest.사용량_월_목록은_네_자리_연도로_열_수_없는_달을_뺀다: 실패 expected: 1 but was: 2",
+        "커밋 cdb63ae7"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "cdb63ae7a323f8cfc4f3a9c7a6a4e00f5826b27f"
+      ],
+      "tests": [
+        "EventMonthsIntegrationTest, WorkspaceQueryIntegrationTest: 통과",
+        "EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 확인 뒤 통과",
+        "WorkspaceQueryIntegrationTest.사용량_월_목록은_네_자리_연도로_열_수_없는_달을_뺀다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "월 목록에서 네 자리 연도로 열 수 없는 달을 뺀다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-165",
@@ -8170,8 +8453,8 @@
       "id": "D-186",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 CsvDownload의 바깥 div가 workspace-field이고, workspace-field는 세로 flex에 align-items를 따로 주지 않아 안의 Button이 카드 폭만큼 늘어납니다. 같은 카드의 주 동작인 '조건 적용'은 workspace-actions(가로 flex) 안에 있어 글자 폭만큼만 그려지므로, 내보내기 버튼이 더 크게 보이는 구조가 그대로 남았습니다. 코드에는 이미 .workspace-form > .ant-btn { align-self: start } 규칙이 있어 단독 버튼을 늘리지 않는 쪽이 이 저장소의 방식인데, CsvDownload만 이 규칙 밖에 있습니다. 함께 지적된 설정 화면 '결제 모드 변경' 버튼은 main에서 workspace-actions로 감싸져 있어 이미 해결됐고, 남은 것은 CSV 버튼뿐입니다. 시각 비중은 화면으로 한 번 확인합니다.",
       "evidence": [
@@ -8181,27 +8464,37 @@
         "frontend/src/components/screen/ScreenCard.tsx:9 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:103 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5",
-        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5"
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "X-038",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적의 두 버튼 가운데 설정 화면 '결제 모드 변경'은 main에서 workspace-actions(가로 flex)로 감싸져 늘어나지 않으므로 이미 해결됐습니다. 반면 '조건 전체 CSV 내보내기'는 main에서도 workspace-field(세로 flex, 기본 stretch) 안에 있어 카드 폭으로 늘어납니다. 바로 위 '조건 적용'은 workspace-actions 안에 있어 좁게 그려지므로 보조 버튼이 주 버튼보다 커 보이는 갈림이 코드로 확인됩니다. globals.css에 .workspace-form > .ant-btn { align-self: start }가 있어 단독 버튼을 늘리지 않는 방식이 이미 쓰이는데 CsvDownload만 빠져 있습니다. 실제 시각 비중은 화면 캡처로 확인합니다.",
       "evidence": [
@@ -8210,20 +8503,30 @@
         "frontend/src/app/globals.css:148 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:103 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5",
-        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5"
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-176",
@@ -8671,8 +8974,8 @@
       "id": "Ck3-451-03",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 조회 자원을 문자열로 고르는 switch가 query 패키지 안 세 파일에 나뉘어 있습니다. SearchParameters와 suggest는 모르는 값이 오면 IllegalArgumentException을 던지는데, WorkspaceQueryRepository.months만 default에서 이벤트 월 SQL을 돌려줍니다. 지금 /v1/usage/months도 \"usage\"라는 case가 없어서 이 default로 들어갑니다. 같은 단가 자원을 SearchParameters는 \"prices\"로, months는 \"billable-metric-prices\"로 불러서, 나중에 누가 list(organizationId, \"prices\")처럼 잘못 부르면 오류 없이 이벤트 월이 나갑니다. 지금 호출부는 모두 컨트롤러의 고정 문자열이라 당장 틀린 응답이 나가는 경로는 없지만, 같은 모양의 분기가 파일마다 다르게 처리하는 것은 코드에서 바로 보이므로 low로 확인합니다. #453이 이 SQL에 환경 조건을 더했을 뿐 default는 그대로 남아 있어서 아직 고쳐지지 않았습니다.",
       "evidence": [
@@ -8681,17 +8984,23 @@
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:110 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/SearchParameters.java:43 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:512 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:204 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:204 @ af15d7f5",
+        "WorkspaceQueryIntegrationTest.모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다: 실패 Expecting code to raise a throwable",
+        "커밋 cdb63ae7"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "cdb63ae7a323f8cfc4f3a9c7a6a4e00f5826b27f"
+      ],
+      "tests": [
+        "WorkspaceQueryIntegrationTest: 통과",
+        "WorkspaceQueryIntegrationTest.모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:320: default가 이벤트 월 SQL을 돌려주고 모르는 값을 거르지 않음",
         "backend/src/main/java/com/meterengine/query/service/SearchParameters.java:58: 같은 자원 문자열 switch인데 모르는 값이면 IllegalArgumentException",
@@ -8700,14 +9009,18 @@
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:512: \"usage\"를 넘기지만 months에 해당 case가 없어 default로 감",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:204: 와 :532 @ af15d7f5 (같은 컨트롤러가 단가에 두 키를 씀",
         "git log af15d7f5 -- WorkspaceQueryRepository.java: f53222e7(#451)에서 생기고 94a48a20(#453)은 환경 조건만 더함"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "모르는 자원의 월 목록을 거부한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-451-04",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 두 벌이 그대로 남아 있다. 수식 이스케이프 조건(=+-@ 문자와 앞 공백 처리), 큰따옴표 인용, BOM, CRLF, 응답 헤더 세 줄이 EventCsvService와 SearchCsvService에 각각 들어 있고, 넘길 때 head 17cc788과 main 사이에 두 파일 변경이 없다(둘 다 #451에서만 바뀜). 이미 조금 갈라지기 시작했다. SearchCsvService는 숫자와 불리언을 이스케이프에서 빼고 문자열이 아닌 값은 JSON으로 바꾸지만 EventCsvService는 toString만 쓴다. 지금 실패 경로는 없지만 한쪽 이스케이프 규칙만 고치면 다른 쪽이 빠질 수 있다. 가장 작은 수정은 global 아래에 CSV 셀 이스케이프, 인용, 응답 생성을 모은 파일을 새로 만들고 두 서비스가 쓰게 하는 것이라 운영 파일 셋이 바뀐다. event가 query의 SearchCsvService를 직접 쓰면 파일 둘로 끝나지만 event에서 query, query에서 metric, metric에서 event로 도는 순환이 생겨 DomainBoundaryTest가 막으므로, 유지보수 분류 파일 셋 규칙에 따라 결정이 필요하다.",
       "evidence": [
@@ -8721,17 +9034,21 @@
         "backend/src/test/java/com/meterengine/architecture/DomainBoundaryTest.java:14-15 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:10 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:4 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:133-152 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:133-152 @ af15d7f5",
+        "커밋 d7f32663"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "d7f326639d2586668d5fdb45f97164a00b49f7e0"
+      ],
+      "tests": [
+        "EventExportIntegrationTest, WorkspaceQueryIntegrationTest CSV 시험: 통과(동작 변화 없음)"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): CSV 이스케이프, 인용, BOM, 응답 헤더를 global 공용 도우미 하나로 모은다",
       "decision_question": "CSV 이스케이프, 인용, BOM, 응답 헤더를 global 아래 공용 도우미 하나로 모으고 EventCsvService와 SearchCsvService가 함께 쓰게 할지(운영 파일 셋 변경) 정해 주세요.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:36: BOM으로 시작",
@@ -8746,7 +9063,12 @@
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:10: query가 metric에 의존",
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:4: metric이 event에 의존",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:133-152: , backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:270-278 @ af15d7f5 (두 경로 각각 이스케이프 시험 보유"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 처리를 global 도우미로 모은다(결정)",
+      "decision": "fix: CSV 이스케이프, 인용, BOM, 응답 헤더를 global 공용 도우미 하나로 모은다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "Ck3-451-05",
@@ -8903,8 +9225,8 @@
       "id": "D-062",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 CsvDownload.tsx 42행은 내려받는 파일 이름을 `${resource}.csv`로 고정하고, 내보내기 route.ts 32행도 Content-Disposition을 같은 이름으로 고정한다. 그런데 같은 요청은 조회 월(route.ts 21행 hasMonth)과 업무 환경(proxy.ts 14행이 URL의 environment를 헤더로 넘김)을 달리해서 다른 데이터를 받는다. 그래서 9월과 10월, test와 live에서 받은 파일이 같은 이름이 되어 브라우저가 billing (1).csv처럼 번호만 붙인다는 점이 코드만으로 확인된다. 넘길 때 head(17cc788)와 main의 두 파일이 같고, 두 파일을 바꾼 main 커밋은 #451 f53222e7 하나뿐이라 고쳐지지 않았다. 지적이 권한 '서버 파일 이름 우선'만으로는 풀리지 않는다. 백엔드 이름도 'draft-invoices' 같은 고정 값이라 월이 없다.",
       "evidence": [
@@ -8915,24 +9237,40 @@
         "frontend/src/lib/api/client.ts:18 @ af15d7f5",
         "frontend/src/lib/api/transport.ts:118 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:753 @ af15d7f5",
-        "frontend/README.md:155 @ af15d7f5"
+        "frontend/README.md:155 @ af15d7f5",
+        "export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 Received billable-metric-prices.csv",
+        "커밋 320745a3",
+        "커밋 e4c8c177"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "320745a3d7e552613c4db3f1b616f8deadd3ed7f",
+        "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+      ],
+      "tests": [
+        "node --test e2e/*.test.mjs 83: 통과",
+        "query-workspace.real.spec.ts: 통과",
+        "한쪽 끝 기간 파일 이름(리뷰 지적): export-filename.test.mjs 통과",
+        "export-filename.test.mjs: 실패 확인 뒤 통과",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 파일 이름에 조회 월과 업무 환경을 넣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-144",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-062와 원인이 같다. main의 CsvDownload.tsx 42행 link.download와 route.ts 32행 Content-Disposition이 모두 `${resource}.csv`로 고정되어 월, 기간, 환경이 이름에 들어가지 않는다. 요청 자체는 csvDownloadParameters가 URL 조건(월, from과 to, environment)을 그대로 실어 보내므로 서로 다른 데이터가 같은 이름으로 저장된다. 넘길 때 head(17cc788)와 main 코드가 같고 두 파일을 바꾼 커밋은 #451 f53222e7뿐이라 아직 남아 있다. 지적대로 route.ts와 클라이언트가 같은 규칙을 쓰게 하면 되고, 클라이언트가 route의 헤더를 읽게 하면 규칙이 한곳에 모인다.",
       "evidence": [
@@ -8940,24 +9278,40 @@
         "frontend/src/app/exports/[resource]/route.ts:32 @ af15d7f5",
         "frontend/src/components/screen/CsvDownload.tsx:29 @ af15d7f5",
         "frontend/src/lib/resource-query.ts:20 @ af15d7f5",
-        "frontend/src/app/exports/[resource]/route.ts:21 @ af15d7f5"
+        "frontend/src/app/exports/[resource]/route.ts:21 @ af15d7f5",
+        "export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 Received billable-metric-prices.csv",
+        "커밋 320745a3",
+        "커밋 e4c8c177"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "320745a3d7e552613c4db3f1b616f8deadd3ed7f",
+        "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+      ],
+      "tests": [
+        "node --test e2e/*.test.mjs 83: 통과",
+        "query-workspace.real.spec.ts: 통과",
+        "한쪽 끝 기간 파일 이름(리뷰 지적): export-filename.test.mjs 통과",
+        "export-filename.test.mjs: 실패 확인 뒤 통과",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 파일 이름에 조회 월과 업무 환경을 넣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "X-096",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "D-062, D-144와 같은 줄이 원인이다. 원문이 기댄 runs/70-export/dl/ 자료는 없지만, main의 CsvDownload.tsx 42행과 route.ts 32행만 봐도 파일 이름이 resource에만 달려 있어 월과 환경이 달라도 이름이 같다는 점이 확인된다. 업무 환경은 proxy.ts 14행에서 URL의 environment로 정해져 client.ts 18행을 거쳐 내보내기 요청에 쓰이므로 test와 legacy 고객 목록도 같은 customers.csv로 내려온다. 넘길 때 head(17cc788)와 main 코드가 같고 #451 f53222e7 뒤로 바뀐 적이 없다.",
       "evidence": [
@@ -8965,24 +9319,40 @@
         "frontend/src/app/exports/[resource]/route.ts:32 @ af15d7f5",
         "frontend/src/proxy.ts:14 @ af15d7f5",
         "frontend/src/lib/api/client.ts:18 @ af15d7f5",
-        "frontend/src/lib/api/client.ts:41 @ af15d7f5"
+        "frontend/src/lib/api/client.ts:41 @ af15d7f5",
+        "export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 Received billable-metric-prices.csv",
+        "커밋 320745a3",
+        "커밋 e4c8c177"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "320745a3d7e552613c4db3f1b616f8deadd3ed7f",
+        "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+      ],
+      "tests": [
+        "node --test e2e/*.test.mjs 83: 통과",
+        "query-workspace.real.spec.ts: 통과",
+        "한쪽 끝 기간 파일 이름(리뷰 지적): export-filename.test.mjs 통과",
+        "export-filename.test.mjs: 실패 확인 뒤 통과",
+        "query-workspace.real.spec.ts CSV 파일 이름에 조회 월: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 파일 이름에 조회 월과 업무 환경을 넣는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-019",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적이 짚은 globals.css의 .workspace-form > .ant-btn { align-self: start } 규칙은 main에서도 workspace-form 아래에만 걸리고, CsvDownload는 workspace-field로 감싸져 있어 이 규칙을 받지 못합니다. 그래서 '조건 전체 CSV 내보내기'는 main에서도 카드 폭 막대로 그려집니다. 설정 화면 '결제 모드 변경'은 main에서 workspace-actions 안으로 들어가 늘어나지 않으므로 이 부분은 이미 해결됐습니다. 남은 CSV 버튼은 같은 카드의 '조건 적용'(workspace-actions 안)과 배치 방식이 갈려 있어 근거가 코드에 있습니다. 시각 비중은 화면으로 확인합니다.",
       "evidence": [
@@ -8990,27 +9360,37 @@
         "frontend/src/app/globals.css:124 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:103 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5",
-        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5"
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-072",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 CsvDownload는 여전히 Button을 workspace-field(세로 flex, align-items 미지정이라 stretch) 안에 두어 버튼이 가로로 늘어납니다. 같은 카드의 '조건 적용'은 workspace-actions 가로 줄 안에 있어 좁게 그려지므로, 두 버튼의 배치 방식이 코드에서 갈려 있습니다. 도입사 설정의 '결제 모드 변경'은 main에서 workspace-actions로 감싸져 패널 폭으로 늘어나지 않으므로 이미 해결됐습니다. 남은 CSV 버튼만 고치면 되고, 시각 비중은 화면으로 확인합니다.",
       "evidence": [
@@ -9018,27 +9398,37 @@
         "frontend/src/app/globals.css:124 @ af15d7f5",
         "frontend/src/app/globals.css:148 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:103 @ af15d7f5",
-        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5"
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-135",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 CsvDownload는 workspace-field(세로 flex, 기본 stretch)로 감싸져 있어 '조건 전체 CSV 내보내기' 버튼이 카드 폭으로 늘어납니다. 주 동작인 '조건 적용'은 type primary이지만 workspace-actions 가로 줄 안에 있어 글자 폭만큼만 그려집니다. 버튼 폭을 막는 align-self 규칙은 workspace-form 아래 버튼에만 있어 CSV 버튼에는 적용되지 않습니다. 결과가 0건이어도 CsvDownload는 조건 없이 그려지므로 같은 크기로 남습니다. 시각 비중은 화면 캡처로 확인합니다.",
       "evidence": [
@@ -9046,24 +9436,34 @@
         "frontend/src/app/globals.css:124 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:103 @ af15d7f5",
         "frontend/src/components/screen/ResourceSearchControls.tsx:124 @ af15d7f5",
-        "frontend/src/app/(console)/customers/page.tsx:25 @ af15d7f5"
+        "frontend/src/app/(console)/customers/page.tsx:25 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "D-160",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 CsvDownload 루트는 여전히 workspace-field이고, 이 클래스가 세로 flex에 align-items 기본값 stretch라 Button이 카드 폭으로 늘어납니다. 인보이스 화면도 ScreenCard(세로 flex) 안에 CsvDownload를 그대로 두어 같은 결과입니다. 지적에 함께 적힌 '결제 모드 변경'은 main에서 workspace-actions로 감싸져 이미 해결됐습니다. 같은 카드의 '조건 적용'은 workspace-actions 안에 있어 좁게 그려지므로 보조 버튼이 더 커 보이는 갈림이 코드로 남아 있습니다. 시각 비중은 화면으로 확인합니다.",
       "evidence": [
@@ -9071,20 +9471,30 @@
         "frontend/src/app/globals.css:124 @ af15d7f5",
         "frontend/src/components/screen/ScreenCard.tsx:9 @ af15d7f5",
         "frontend/src/app/(console)/invoices/page.tsx:59 @ af15d7f5",
-        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5"
+        "frontend/src/app/(console)/settings/page.tsx:29 @ af15d7f5",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상",
+        "커밋 c651e791"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c651e791ea3a962d7c668915e9891e83756b3b96"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts 10 passed: 통과",
+        "workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C451-008",
@@ -9728,8 +10138,8 @@
         "G-120"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 WorkspaceQueryService.invoices()는 지금도 invoiceService.list(organizationId, null, null)과 invoicePaymentService.list(organizationId, null, null, mode)를 불러 고객과 월 조건 없이 전체를 읽는다. 두 서비스 모두 고객과 월을 받아 저장소 쿼리(findNewestFirst, findInvoicePayments)로 넘길 수 있는데 쓰지 않는다. InvoiceService.list는 읽은 인보이스 id 전부로 invoice_line을 IN 조회하므로 페이지 크기와 상관없이 매 요청이 무겁다. #453이 환경 범위로 좁히는 분기를 더했지만 조직(환경) 전체를 읽는 구조는 그대로이고, CSV 내보내기도 같은 invoices()를 탄다. 넘길 때 head 302, 304행과 main 312, 314행이 같은 코드라 고쳐진 커밋이 없다. G-120도 같은 원인이라 함께 남아 있다.",
       "evidence": [
@@ -9739,17 +10149,32 @@
         "backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:48-72 @ af15d7f5",
         "backend/src/main/java/com/meterengine/payment/service/InvoicePaymentService.java:45-63 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:822-823 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:302-304 @ 17cc788"
+        "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:302-304 @ 17cc788",
+        "WorkspaceQueryIntegrationTest.인보이스_검색은_고객과_월_조건을_조회에_넘긴다: 실패 Argument(s) are different",
+        "WorkspaceQueryIntegrationTest.인보이스_검색의_total_unfiltered는_조건과_무관한_환경_전체_건수다(리뷰 지적 회귀): 실패 expected: 3 but was: 1",
+        "커밋 3c7aae19",
+        "커밋 46cb5c9b"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "3c7aae190148a3ce4febd7a4ad7e6d69f93f554a",
+        "46cb5c9b9a195b6f10829c2ce1d8f4060d448f14"
+      ],
+      "tests": [
+        "WorkspaceQueryIntegrationTest: 통과",
+        "query, invoice 시험: 통과",
+        "WorkspaceQueryIntegrationTest.인보이스_검색은_고객과_월_조건을_조회에_넘긴다: 실패 확인 뒤 통과",
+        "WorkspaceQueryIntegrationTest.인보이스_검색의_total_unfiltered는_조건과_무관한_환경_전체_건수다(리뷰 지적 회귀): 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "인보이스 검색이 고객과 월 조건을 조회에 넘긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C451-004",
@@ -9861,8 +10286,8 @@
       "id": "Nk3-009",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 SearchPageResponse의 summary는 Map<String, Object>이고 #451 이후 이 파일을 바꾼 커밋이 없어 고쳐지지 않았다. 그래서 openapi.yaml의 검색 응답 스키마 7개가 summary를 additionalProperties: {}로만 내고, 프론트는 naming.md 46행 규칙(백엔드 스키마 이름 그대로)을 따를 스키마가 없어 billing.ts, invoices.ts, pricing.ts, PricingWorkspace.tsx에서 요약 타입을 손으로 적었다. 같은 성격의 EventIssuesResponse는 요약을 record로 두어 스키마로 내므로 두 곳의 방식이 갈라져 있다. 다만 지금 실패하는 경로는 없고 키를 바꿀 때 못 잡는다는 미래 위험이며, no_rate_count와 has_pending은 WorkspaceQueryIntegrationTest가 확인한다. 고치려면 SearchPageResponse 제네릭 변경, 요약 record 5개 추가, 저장소와 서비스와 컨트롤러 반환 타입 변경, openapi.yaml 재생성까지 파일 셋 이상에 걸친 DTO 구조 변경이라 type-design 분류 규칙상 결정이 먼저 필요하다.",
       "evidence": [
@@ -9874,17 +10299,22 @@
         "backend/src/main/java/com/meterengine/event/dto/EventIssuesResponse.java:14 @ af15d7f5",
         "docs/contributing/naming.md:46 @ af15d7f5",
         "frontend/src/lib/api/billing.ts:13 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:119 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:119 @ af15d7f5",
+        "커밋 09e06ae9"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "09e06ae90871e5ed8337b8c380e915ba56b5aa31"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과",
+        "설명 문장과 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 요약 record 구조 변경은 하지 않고 자원별 summary 키를 API 설명에 적는다",
       "decision_question": "검색 API 7종의 summary를 자원별 요약 record와 SearchPageResponse<T, S>로 바꿔 OpenAPI 스키마로 내는 구조 변경(백엔드 파일 9개 이상과 openapi.yaml)을 지금 할지, 프론트와 SDK 요약 타입 정리와 묶어 후속으로 미룰지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/dto/SearchPageResponse.java:13: Map<String, Object> summary, git log상 f53222e7 이후 변경 없음",
@@ -9896,7 +10326,12 @@
         "docs/contributing/naming.md:46: 프론트 API 타입은 백엔드 스키마 이름 그대로",
         "frontend/src/lib/api/billing.ts:13: , frontend/src/lib/api/invoices.ts:20, frontend/src/lib/api/pricing.ts:30, frontend/src/components/pricing/PricingWorkspace.tsx:35 (요약 타입을 손으로 적음",
         "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:119: , 265 (no_rate_count, has_pending은 시험이 확인하므로 원문의 예시 두 개는 CI가 잡음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지)",
+      "decision": "doc: 요약 record 구조 변경은 하지 않고 자원별 summary 키를 API 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "X-035",
@@ -9963,8 +10398,8 @@
       "id": "C451-009",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 인보이스 금액 범위 단언은 min_amount=200&max_amount=300 그대로이고 이 시험 파일은 #451 뒤로 바뀌지 않았다. 헬퍼 invoice()는 공급가액 100, 200에 세금 10%를 더해 합계 110, 220을 넣으므로, 이 범위는 공급가액 기준(200)이든 합계 기준(220)이든 둘째 인보이스 하나만 걸려 total 1이 된다. 서비스는 인보이스를 totalAmount로 거르지만 같은 min_amount/max_amount를 받는 청구 예정액 검색은 customer.amount(공급가액)로 걸러서, 인보이스 쪽이 공급가액으로 바뀌어도 이 시험은 통과한다. backend 시험과 frontend e2e 어디에도 인보이스 금액 필터 기준을 가르는 다른 단언이 없다(실화면 명세는 0~10000 범위만 쓴다). 그래서 지적한 빈틈이 main에 남아 있다.",
       "evidence": [
@@ -9974,20 +10409,29 @@
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:332 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:335 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:249-251 @ af15d7f5",
-        "frontend/e2e/query-workspace.real.spec.ts:156 @ af15d7f5"
+        "frontend/e2e/query-workspace.real.spec.ts:156 @ af15d7f5",
+        "커밋 3c7aae19"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "3c7aae190148a3ce4febd7a4ad7e6d69f93f554a"
+      ],
+      "tests": [
+        "금액 필터를 공급가액으로 바꾼 변이: 실패 expected: 1 but was: 0",
+        "WorkspaceQueryIntegrationTest: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- WorkspaceQueryIntegrationTest.java: f53222e7 (#451) 하나뿐"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "금액 범위 시험이 합계 기준을 가린다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "C451-010",
@@ -10443,8 +10887,8 @@
       "id": "G-118",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 가격 검색의 metric_counts는 달 조건 없이 환경의 모든 미터를 고르고, 상태 필터는 지금의 archived_at만 본다. 청구와 진단은 '(archived_at IS NULL AND active_from <= 달) 또는 billable_metric_period가 그 달을 포함'으로 그 달 미터를 정하므로, 9월에 보관하고 10월에 복원한 미터(active_from 2026-11)가 10월 가격 화면과 no_rate_count에 들어가는 문제는 그대로 남았다. 이 파일은 #451과 #453(환경 분리)에서만 바뀌었고 달 조건은 들어간 적이 없다. metric_counts에 같은 달 조건을 넣는 일은 파일 하나로 끝나고 계약도 바꾸지 않는다. 다만 10월에 보관한 미터가 10월 기본 보기(사용 중)에서 빠지는 쪽은, API 설명이 status를 '미터 보관 상태'로, 화면이 '미터 관리 상태'로 적어 두었기 때문에 그 뜻을 '그 달 청구 대상'으로 바꾸거나 새 필터를 더해야만 고쳐진다. 그래서 기본 보기 처리 방식을 먼저 정해야 한다.",
       "evidence": [
@@ -10460,17 +10904,23 @@
         "frontend/src/lib/resource-query.ts:5-6 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:45-46 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:67 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:154 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:154 @ af15d7f5",
+        "WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 actual [\"restored\", \"retired\"]",
+        "커밋 e79f63e6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "e79f63e6e6e1847ae91d1301f42d138b43c85162"
+      ],
+      "tests": [
+        "query, pricing, metric 시험: 통과",
+        "WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): status 뜻은 그대로 두고 metric_counts만 그 달 청구 대상 미터로 좁힌다",
       "decision_question": "달을 고른 가격 화면에서 '사용 중' 기본 보기가 그 달에 청구되는 미터(그 달에 보관한 미터 포함)를 보여 주게 status 뜻을 바꿀지, 별도 필터를 더할지, 지금처럼 현재 보관 상태로 두고 metric_counts만 그 달 청구 대상으로 좁힐지 정해야 한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:52-58: metric_counts가 organization_id와 environment_id만으로 미터를 고르고 달 활성 조건이 없다",
@@ -10487,14 +10937,19 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:67: '단가가 없는 미터' 수 표시",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:154: status를 '미터 보관 상태'로 문서화",
         "git log af15d7f5 -- WorkspaceQueryRepository.java: f53222e7(#451), 94a48a20(#453)만 있고 달 활성 조건을 넣은 커밋이 없다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "가격 검색이 그 달에 청구하는 미터만 센다(결정: status 뜻 유지)",
+      "decision": "fix: status 뜻은 그대로 두고 metric_counts만 그 달 청구 대상 미터로 좁힌다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-121",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 SearchCsvService는 넘길 때 head와 같고(#451 뒤로 이 파일을 바꾼 커밋이 없다), 결과가 없으면 empty_result 한 열만 낸다. 같은 API의 이벤트 CSV는 고정 열을 쓰고 OpenAPI에도 빈 결과도 같은 열 제목을 낸다고 적어 두었다. 그래서 열 이름으로 읽는 연동은 결과가 없는 달에 검색 CSV에서만 실패한다. 결제가 없는 인보이스 때문에 열 순서가 바뀐다는 부분은 성립하지 않는다. 같은 읽기 트랜잭션에서 모든 인보이스에 결제 행을 LEFT JOIN으로 붙이니 payment가 null이 되지 않고, 다른 내보내기 DTO에도 null이 될 중첩 레코드가 없어 결과가 있을 때는 타입마다 열이 고정된다. 목록 필드를 JSON 한 칸에 넣는 것은 이벤트 CSV의 properties 열과 같은 방식이고 라인마다 한 행으로 펼치려면 CSV 형식을 새로 정해야 하므로, 가장 작은 수정은 빈 결과의 열 제목을 맞추는 것으로 잡았다.",
       "evidence": [
@@ -10503,17 +10958,23 @@
         "backend/src/main/java/com/meterengine/event/service/EventCsvService.java:27-41 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/controller/EventExportController.java:46 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:573,610,656,702,752,821 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:270-279 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:270-279 @ af15d7f5",
+        "WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 but was \"empty_result\"",
+        "커밋 6198c5d6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "6198c5d66f05df3e3048c672093f61d588dbb4d9"
+      ],
+      "tests": [
+        "query 시험: 통과",
+        "WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:37: columns가 비면 List.of(\"empty_result\"",
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:29-35: 열을 행에서 펼친 키의 합집합으로만 만든다",
@@ -10524,14 +10985,18 @@
         "반박된 부분: backend/src/main/java/com/meterengine/query/service/WorkspaceQueryService.java:42-44,313-315,348 @ af15d7f5와 backend/src/main/java/com/meterengine/payment/repository/PaymentAttemptRepository.java:78-115 @ af15d7f5 (같은 REPEATABLE_READ 트랜잭션에서 FROM invoice i LEFT JOIN LATERAL이라 모든 인보이스에 결제 행이 생긴다)",
         "목록 JSON 한 칸: backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:60-65,72 @ af15d7f5, 같은 방식인 backend/src/main/java/com/meterengine/event/service/EventCsvService.java:39,55 @ af15d7f5",
         "backend/src/test/java/com/meterengine/query/WorkspaceQueryIntegrationTest.java:270-279: 검색 CSV 시험은 결과가 있는 경우만 본다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "빈 검색 CSV도 같은 열 제목을 쓴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-122",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 EventCsvService.cell이 occurred_at, received_at을 value.toString()으로 그대로 쓰고, 이 파일은 #451 이후 바뀌지 않았다. EventRepository는 timestamptz를 rs.getObject(..., OffsetDateTime.class)로 읽어 UTC 오프셋 값이 들어오고, 시간대나 Jackson 시간대 설정도 없어서 막아 주는 곳이 없다. 그래서 month=2026-10 내보내기에서 10월 1일 0시 KST 이벤트가 2026-09-30T15:00Z처럼 초 없이 9월 날짜로 찍힌다. 조회 기간은 EventSearch가 Asia/Seoul 달로 정하고, 인보이스 CSV는 InvoiceService가 finalized_at을 KST로 바꾼 뒤 SearchCsvService가 Jackson ISO 형식으로 써서 두 내보내기의 시간대와 형식이 갈라져 있다. EventExportIntegrationTest에는 CSV 시각 형식을 확인하는 단언이 없다.",
       "evidence": [
@@ -10542,29 +11007,39 @@
         "backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:112-115 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:72 @ af15d7f5",
         "backend/src/main/resources/application.properties:38 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:84-105 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:84-105 @ af15d7f5",
+        "EventExportIntegrationTest.발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다: 실패 CSV에 2026-09-30T15:00Z",
+        "커밋 70b1df38"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "70b1df380de21c73dc20327dcd5830ac70c2828e"
+      ],
+      "tests": [
+        "EventExportIntegrationTest: 통과",
+        "EventExportIntegrationTest.발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/application.properties:38: jackson 시간대나 JDBC 시간대 설정 없음",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:84-105: 시각 형식 단언 없음",
         "git log af15d7f5 -- EventCsvService.java: f53222e7 (#451) 하나뿐"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "이벤트 CSV 시각을 KST 오프셋 초 단위로 쓴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-123",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고쳐지지 않았다. EventSearch.parse와 SearchParameters.date는 넘길 때 head(17cc788)와 한 글자도 다르지 않다. 날짜만 준 끝값은 그날 끝까지 보고 시간대가 없으면 KST로 보는 해석 코드가 두 벌 그대로 남았고, 감사 로그(AuditLogQueryService.boundary)에도 비슷한 세 번째 복사본이 있다. 다른 결과가 나오는 곳은 조합 규칙이다. /v1/events는 from만 주거나 month와 기간을 같이 주면 400이고, /v1/invoices/search는 끝이 열린 기간과 month AND 조회를 받아 준다. 다만 이벤트 쪽 규칙은 EventListIntegrationTest가 '모호한 조회 거절'로, EventExportIntegrationTest가 내보내기에서 의도로 고정해 두었다. 그래서 맞추려면 공개 API 한쪽의 계약을 바꾸고 공용 해석 객체를 global에 새로 두어 파일 셋 이상을 고쳐야 하므로 결정이 필요하다. 지적 원문의 '인보이스 기본 정렬 asc'는 틀렸다. invoiceParameters가 order 기본값을 desc로 넣는다. 페이지 0/1 기준 차이는 G-182 범위와 겹친다.",
       "evidence": [
@@ -10576,17 +11051,22 @@
         "backend/src/test/java/com/meterengine/event/EventListIntegrationTest.java:667-673 @ af15d7f5",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:251-257 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:826-830 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/event/controller/EventController.java:157 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/event/controller/EventController.java:157 @ af15d7f5",
+        "커밋 09e06ae9"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "09e06ae90871e5ed8337b8c380e915ba56b5aa31"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과",
+        "설명 문장과 코드 대조로 확인"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 두 엔드포인트의 기간 규칙은 시험으로 고정된 지금대로 두고 차이를 API 설명에 적는다",
       "decision_question": "/v1/events와 /v1/invoices/search의 기간 조합 규칙(시작만 준 기간 허용 여부, month와 기간 병용 여부)을 어느 쪽으로 맞추고, 해석 코드를 global 공용 객체로 모을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventSearch.java:35-41: from과 to 둘 다 필요, month와 같이 쓰면 400",
@@ -10599,14 +11079,19 @@
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:826-830: 인보이스 기본 정렬은 desc라 원문의 asc 주장은 틀림",
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:157: 이벤트 page는 0부터, G-182와 겹침",
         "git diff 17cc788 af15d7f5 -- EventSearch.java SearchParameters.java 결과 차이 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지)",
+      "decision": "doc: 두 엔드포인트의 기간 규칙은 시험으로 고정된 지금대로 두고 차이를 API 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-126",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 이벤트 하나의 properties 크기를 막는 곳이 없다. IngestEventRequest의 properties는 @NotNull @StorableJson뿐이고 StorableJsonValidator는 문자와 숫자 자릿수만 보며, 설정이나 필터에 JSON 본문 크기 상한도 없다. 내보내기는 행 수만 10000으로 막고 findPage가 include_properties와 상관없이 e.properties::text를 늘 읽은 뒤, EventCsvService가 StringBuilder, String, byte[]로 본문을 다시 만든다. Next 쪽도 transport가 response.text()로 전부 받고 route가 BOM을 붙인 새 문자열로 Response를 만든다. EventCsvService는 넘길 때 head(17cc788)와 main이 같아 #451 뒤로 고친 커밋이 없다.",
       "evidence": [
@@ -10617,20 +11102,33 @@
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:143 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/service/EventCsvService.java:40-62 @ af15d7f5",
         "frontend/src/lib/api/transport.ts:120 @ af15d7f5",
-        "frontend/src/app/exports/[resource]/route.ts:29-32 @ af15d7f5"
+        "frontend/src/app/exports/[resource]/route.ts:29-32 @ af15d7f5",
+        "EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 expected: 400 but was: 200",
+        "커밋 3568cc3f",
+        "커밋 d904aaf2"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "3568cc3fea0bfd1db5e29205bddbb49fe4b597f6",
+        "d904aaf2d3035a4baa6e96cd353fb823c19b80bb"
+      ],
+      "tests": [
+        "EventExportIntegrationTest: 통과",
+        "원본 속성 미포함 내보내기는 상한을 적용하지 않음(리뷰 지적): EventExportIntegrationTest 통과",
+        "EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git diff 17cc788 af15d7f5 -- EventCsvService.java, EventQueryService.java, exports/[resource]/route.ts: 변경 없음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CSV 내보내기 원본 속성 합계를 32MB로 묶는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     },
     {
       "id": "G-178",
@@ -12452,9 +12950,105 @@
         "deploy/caddy/Caddyfile:43-73: 사이트 블록에 header Strict-Transport-Security 지시어가 없다",
         "deploy/caddy/Caddyfile:1: HTTPS 리다이렉트는 Caddy가 자동으로 맡는다"
       ]
+    },
+    {
+      "id": "NT-inho-009",
+      "merged_ids": [],
+      "layer": 442,
+      "branch": "fix/s456-t-inho-events-query",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "title": "워크스페이스 계약 명세 두 시험이 API 키 발급 뒤 복사 없이 닫아 main에서도 실패한다",
+      "reason": "playwright.workspace.config.ts로 도는 workspace.contract.spec.ts의 발급 중 닫기, 키 한도 시험이 비밀값을 복사하지 않고 닫는다. 2db50b44(#442)부터 복사 전 닫기에 확인 창이 떠서 Playwright가 거절하고 대화상자가 남는다. NT-inho-007과 같은 원인이다.",
+      "evidence": [
+        "frontend/e2e/workspace.contract.spec.ts:39-42 @ af15d7f5",
+        "frontend/src/components/workspace/ActionPanel.tsx:99 @ af15d7f5",
+        "workspace.contract.spec.ts 발급 중 닫기, 키 한도: 실패 dialog toHaveCount(0) @ af15d7f5",
+        "workspace.contract.spec.ts 발급 중 닫기, 키 한도(main 빌드): 실패 dialog toHaveCount(0)",
+        "커밋 62a2f0fa"
+      ],
+      "commits": [
+        "62a2f0fa2520832386c0a1e9fa2418094d4914f9"
+      ],
+      "tests": [
+        "playwright.workspace.config.ts: 통과",
+        "workspace.contract.spec.ts 발급 중 닫기, 키 한도(main 빌드): 실패 확인 뒤 통과"
+      ],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
+      },
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "워크스페이스 계약 명세가 비밀값을 복사한 뒤 닫는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/488"
     }
   ],
   "checks": [
+    {
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
+      "result": "not-applicable",
+      "detail": "NT-inho-006, NT-inho-007과 같은 이유로 실패(PR #471 머지 전). #471 명세 변경을 잠시 얹으면 두 명세 모두 통과",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 10개(aggregation, archive-filters, auth, customer-payment-retry, events, invoice-links, operator-create, people, permissions, query-workspace), 새로 띄운 브랜치 백엔드와 프론트",
+      "result": "pass",
+      "detail": "10개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "pass",
+      "detail": "10 passed",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "65 passed",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 84, pass 84, fail 0",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass",
+      "detail": "BUILD SUCCESSFUL, openapi.yaml 변화 없음",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4"
+    },
     {
       "branch": "fix/s456-t-inho-real-spec-baseline",
       "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
@@ -16027,6 +16621,11 @@
       "branch": "fix/s456-t-inho-real-spec-baseline",
       "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
       "at": "2026-10-29T15:40:49+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-events-query",
+      "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4",
+      "at": "2026-10-29T17:42:55+09:00"
     }
   ],
   "usage_log": [],
@@ -16065,14 +16664,16 @@
     "2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.",
     "PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.",
     "2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md",
-    "2026-10-29 사람 승인: 22개 주제를 PR 8개로 합쳐 진행한다(events-query, billing-api, webhook-audit-ops, auth-security, demo-infra, list-screens, work-screens, shell-design 순). 300줄 상한은 없고 PR 안에서 항목별로 커밋을 나눈다."
+    "2026-10-29 사람 승인: 22개 주제를 PR 8개로 합쳐 진행한다(events-query, billing-api, webhook-audit-ops, auth-security, demo-infra, list-screens, work-screens, shell-design 순). 300줄 상한은 없고 PR 안에서 항목별로 커밋을 나눈다.",
+    "PR #488(fix/s456-t-inho-events-query): events-query 묶음 46건과 NT-inho-009를 고쳤다. push 전 독립 리뷰가 찾은 회귀 세 건(인보이스 검색 total_unfiltered, 속성 미포함 CSV의 크기 상한, 한쪽 끝 기간 파일 이름)도 같은 PR에서 고쳤다. Ck3-450-11은 이름 규칙 시험 때문에 결정안을 설명 한 줄로 바꿨다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
     "444": "https://github.com/asm17-ms2/meterengine/pull/466",
     "446": "https://github.com/asm17-ms2/meterengine/pull/468",
     "448": "https://github.com/asm17-ms2/meterengine/pull/469",
-    "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471"
+    "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471",
+    "events-query": "https://github.com/asm17-ms2/meterengine/pull/488"
   },
   "final_checks": [
     {

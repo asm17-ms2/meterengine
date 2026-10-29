@@ -1,19 +1,19 @@
-미완료 217건, 결과: 끝 상태 159/372건 (fixed 127, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 0, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654)
+미완료 170건, 결과: 끝 상태 206/372건 (fixed 174, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 0, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T16:09:32+09:00
+상태: running, 갱신 2026-10-29T17:43:40+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
-| #444 | fix/s456-444-t-inho | 40 | 23 | 0 | 7 | 0 | 0 | 10 |
-| #446 | fix/s456-446-t-inho | 50 | 12 | 0 | 7 | 0 | 0 | 31 |
+| #444 | fix/s456-444-t-inho | 40 | 24 | 0 | 7 | 0 | 0 | 9 |
+| #446 | fix/s456-446-t-inho | 50 | 13 | 0 | 7 | 0 | 0 | 30 |
 | #448 | feat/request-audit | 24 | 17 | 1 | 1 | 0 | 0 | 5 |
-| #450 | feat/event-ingestion | 38 | 0 | 0 | 2 | 0 | 0 | 36 |
-| #451 | feat/billing-queries | 96 | 0 | 0 | 6 | 0 | 0 | 90 |
+| #450 | fix/s456-t-inho-events-query | 38 | 25 | 0 | 2 | 0 | 0 | 11 |
+| #451 | feat/billing-queries | 96 | 20 | 0 | 6 | 0 | 0 | 70 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 1 | 4 | 0 | 0 | 14 |
 | #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
 | #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -114,6 +114,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-157 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | C444-008 | #444 | 8008c44 | 콘솔에서 웹훅 수신 주소를 수정해도 기존 설명을 지우지 않는다 | saving a webhook endpoint keeps its existing description: 실패 Expected "운영 알림 수신기" Received "설명 없이 보냄" (PUT 본문에 description이 없다) |
 | D-226 | #444 | ce5041c | 운영 현황 예약 작업 표가 과금 제외 사용량 통보 작업을 이름으로 보인다 | every scheduled job the operations API lists has a label on the operations screen: 실패 unbilled_usage_report has no label in JOB_LABELS |
+| G-144 | #444 | 7b270fe, 3831102 | 구독한 수신 주소가 없으면 미청구 통보를 남기지 않는다 | UnbilledUsageNotificationIntegrationTest.미청구_통보를_구독한_수신_주소가_없으면_웹훅_원장에_남기지_않는다: 실패 Expecting value to be false but was true |
 | G-152 | #444 | 815f525 | backend README에 웹훅 발송과 암호화 키, 운영 현황을 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 값을 WebhookDeliveryRepository.java 21-22, 43, 71-75행(재시도 간격, 6회, 2분 선점, 종결 조건), WebhookDelive) |
 | U14-B1 | #444 | f67bc41 | 마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다 | 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0 |
 | U5-B1 | #444 | c0a9f4a | 하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다 | 없음(Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시) |
@@ -129,6 +130,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-120 | #446 | 8804e65 | 작성 중인 미터 폼을 Esc, 바깥 클릭, 취소로 닫기 전에 묻는다 | a meter form with input asks before Escape throws it away: 실패 Expected "작성 중인 미터를 버리고 닫을까요?" Received "" (확인 없이 닫힘) |
 | X-091 | #446 | 1574c86 | 미터 폼의 숫자 입력에서 영어 이름의 증감 버튼을 뺀다 | meter number inputs do not expose English stepper buttons: 실패 Expected 0 Received 2 (Increase Value, Decrease Value) |
 | D-119 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| Nk3-001 | #446 | 42b996d | sum 전용 우회 경로를 지운다 | BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 expected: 800 but was: 0 |
 | C448-001 | #448 | 1164c20 | 운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다 | 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다 |
 | X-024 | #448 | 80a3ad0 | 감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다 | an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다) |
 | Ck1-448-01 | #448 | 1003ba5 | 감사 조회의 기간 조건이 저장할 수 없는 연도면 500 대신 400을 낸다 | 감사조회의_잘못된_필터와_기간은_400이다: 실패 [HTTP status code] expected: 400 but was: 500 (to=+300000-01-01T00:00:00Z) |
@@ -139,8 +141,53 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Nk1-002 | #448 | df3caf7 | v1 경로 변수가 요청 감사 대상인지 대상에서 뺀 이름인지 시험으로 강제한다 | 없음(이 층 라우트 변수(code, delivery_id, id, mode, organization_id, token)는 모두 분류돼 있어 고치기 전에 실패하는 시험을 만들 수 없다. 새 RequestAuditTarget) |
 | Nk1-003 | #448 | c2991ef | 요청 감사가 감사 행을 AuditLogService로 남기고 익명 행위자를 AuditActor에서 만든다 | 없음(동작이 같은 리팩터링이라 고치기 전에 실패하는 시험을 쓸 수 없다. ./gradlew test --tests 'com.meterengine.audit.*' --tests 'com.meterengine.global.s) |
 | X-045 | #448 | cea0a76 | 감사 기록을 한 목록으로 촘촘하게 보이고 거절과 오류 요청은 붉은 태그로 표시한다 | the audit list marks rejected requests and keeps entries compact: 실패 Expected <= 80 Received 120.84375 (항목 간격), 거절 태그 0개 |
+| Ck3-450-01 | #450 | 7b270fe, 3831102 | 미청구 통보에 단가 없는 사용량을 싣는다 | UnbilledUsageNotificationIntegrationTest.단가_없는_사용량만_있어도_통보에_싣는다: 실패 Expecting value to be true but was false |
+| Ck3-450-02 | #450 | 68afb08, c2d367a | 사유 목록끼리와 DB CHECK가 같은지 시험한다(결정: 문자열 유지) | 없음(EventReasonListTest: 통과; 서비스 목록에만 사유를 더한 변이: 실패; 시험 자리 이동 뒤 EventRejectionServiceTest, EventIssueIntegrationTest: 통과) |
+| Ck3-450-03 | #450 | fa9fdc9 | 행위자 종류를 PrincipalKind 전체 switch로 정한다(결정: 시그니처 유지) | 없음(EventRejectionIntegrationTest, audit 시험: 통과(동작 변화 없음)) |
+| Ck3-450-04 | #450 | 821ac9f | 요금 진단 계약을 event.api로 옮긴다(결정) | 없음(DomainBoundaryTest, EventIssueIntegrationTest: 통과) |
+| G-116 | #450 | 7b270fe, 3831102 | 지난달 몫을 따로 통보한다 | UnbilledUsageNotificationIntegrationTest.지난달_사용량은_지난달_통보로_따로_발행한다: 실패 Expecting value to be true but was false |
+| G-117 | #450 | 645b7bb | 확정한 달의 단가 없는 사용량에 확정 안내를 준다(결정: reason 값 유지) | EventIssueIntegrationTest.확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다: 실패 단가를 등록하세요 to contain 확정 |
+| G-119 | #450 | a727083 | README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정) | 없음(README와 코드 대조로 확인) |
+| G-132 | #450 | d07ecde | 이벤트 조회와 거절 검색이 환경 인덱스를 탄다 | 없음(event, query, metric, notification 통합 시험(환경 격리 시험 포함): 통과; 성능 변화는 시험으로 잡지 않고 인덱스를 쓸 수 있는 조건(environment_scope_id = ?, en) |
+| G-170 | #450 | d07ecde | 이벤트 조회와 거절 검색이 환경 인덱스를 탄다 | 없음(event, query, metric, notification 통합 시험(환경 격리 시험 포함): 통과; 성능 변화는 시험으로 잡지 않고 인덱스를 쓸 수 있는 조건(environment_scope_id = ?, en) |
+| Ck3-450-06 | #450 | ea3cce0 | 미청구 요약 event_count를 서로 다른 이벤트 수로 센다 | UnbilledEventIntegrationTest.같은_유형에_미터가_둘이어도_음수와_숫자_아닌_이벤트는_한_건으로_센다: 실패 expected: 1L but was: 2L |
+| Ck3-450-07 | #450 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
+| Ck3-450-08 | #450 | c55b3d3 | 배치 수집 API 문서가 한 건 이상과 결과 세 값을 적는다 | OpenApiDocumentTest.배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_세_값만_적는다: 실패 expected: 1 but was: 0 |
+| Ck3-450-09 | #450 | 6a870a0, 4caedb4 | 배치 오류 필드 이름을 DTO의 JSON 이름에서 읽는다 | 없음(EventBatchServiceTest.검증_오류_필드는_단건_요청과_같은_JSON_이름이다: 통과(바꾸기 전과 뒤); checkstyle 이름 규칙에 맞춘 @Test 전환 뒤 통과) |
+| Ck3-450-11 | #450 | 06655a9 | 고객 조회 계약이 잠금을 건다고 적는다(결정: 이름 유지, 한 낱말 규칙) | 없음(컴파일 통과, naming.md와 MemberNamingConventionTest 규칙 대조) |
+| Ck3-450-12 | #450 | 1704e89 | 검증을 건너뛰는 옛 저장소 오버로드를 지운다 | 없음(git grep으로 기간 인자 findPage, count 호출 없음 확인; event, query 시험: 통과) |
+| Ck3-450-13 | #450 | 1e010c1 | 과금 달 계산을 global 도우미로 모은다(결정) | 없음(BillingMonthTest: 통과; global, event, metric, notification 시험과 DomainBoundaryTest: 통과) |
+| G-182 | #450 | a727083 | README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정) | 없음(README와 코드 대조로 확인) |
+| C450-009 | #450 | 210baa2 | 미청구 통보 실패 로그에 예외를 남긴다 | UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 출력에 java.lang.IllegalStateException: environments down이 없음 |
+| G-124 | #450 | d459a67 | 세 집계 가능 정의가 같은지 시험한다(결정: 구조 유지) | 없음(EligibleEventDefinitionIntegrationTest: 통과; 문제 진단 조건을 바꾼 변이: 실패) |
+| G-146 | #450 | 210baa2 | 미청구 통보 실패 로그에 예외를 남긴다 | UnbilledUsageNotificationServiceTest.통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다: 실패 출력에 java.lang.IllegalStateException: environments down이 없음 |
+| G-176 | #450 | a727083 | README에 페이지 기준, 진단 비용, 거절 기록 보존을 적는다(결정) | 없음(README와 코드 대조로 확인) |
+| C450-006 | #450 | eb6350c, 4caedb4 | DB 시각 범위를 넘는 기간을 400으로 막는다 | EventListIntegrationTest.DB_시각_범위를_넘는_기간은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
+| C450-007 | #450 | eb6350c, 39b29bd, 4caedb4 | DB가 받지 못할 속성 조건을 400으로 막는다 | EventListIntegrationTest.DB가_받지_못할_속성_조건은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
+| C450-012 | #450 | cfb0e6f | 검색어 % 시험이 실제로 % 한 글자를 보낸다 | 없음(EventIssueIntegrationTest, EventRejectionIntegrationTest: 통과; position을 이스케이프 없는 LIKE로 바꾼 변이: 실패 expected: 0 but was: 3) |
+| G-127 | #450 | cdb63ae | 월 목록에서 네 자리 연도로 열 수 없는 달을 뺀다 | EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 actual ["55835-03", "2026-10"] |
+| D-186 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| X-038 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| Ck3-451-03 | #451 | cdb63ae | 모르는 자원의 월 목록을 거부한다 | WorkspaceQueryIntegrationTest.모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다: 실패 Expecting code to raise a throwable |
+| Ck3-451-04 | #451 | d7f3266 | CSV 처리를 global 도우미로 모은다(결정) | 없음(EventExportIntegrationTest, WorkspaceQueryIntegrationTest CSV 시험: 통과(동작 변화 없음)) |
+| D-062 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
+| D-144 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
+| X-096 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
+| D-019 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| D-072 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| D-135 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| D-160 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
+| C451-003 | #451 | 3c7aae1, 46cb5c9 | 인보이스 검색이 고객과 월 조건을 조회에 넘긴다 | WorkspaceQueryIntegrationTest.인보이스_검색은_고객과_월_조건을_조회에_넘긴다: 실패 Argument(s) are different |
+| Nk3-009 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
+| C451-009 | #451 | 3c7aae1 | 금액 범위 시험이 합계 기준을 가린다 | 없음(금액 필터를 공급가액으로 바꾼 변이: 실패 expected: 1 but was: 0; WorkspaceQueryIntegrationTest: 통과) |
+| G-118 | #451 | e79f63e | 가격 검색이 그 달에 청구하는 미터만 센다(결정: status 뜻 유지) | WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 actual ["restored", "retired"] |
+| G-121 | #451 | 6198c5d | 빈 검색 CSV도 같은 열 제목을 쓴다 | WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 but was "empty_result" |
+| G-122 | #451 | 70b1df3 | 이벤트 CSV 시각을 KST 오프셋 초 단위로 쓴다 | EventExportIntegrationTest.발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다: 실패 CSV에 2026-09-30T15:00Z |
+| G-123 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
+| G-126 | #451 | 3568cc3, d904aaf | CSV 내보내기 원본 속성 합계를 32MB로 묶는다 | EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 expected: 400 but was: 200 |
 | NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
 | NT-inho-007 | #442 | 3373654 | mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471) | mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5 |
+| NT-inho-009 | #442 | 62a2f0f | 워크스페이스 계약 명세가 비밀값을 복사한 뒤 닫는다 | workspace.contract.spec.ts 발급 중 닫기, 키 한도: 실패 dialog toHaveCount(0) @ af15d7f5 |
 
 ## 정할 것
 
@@ -164,6 +211,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | NT-inho-006 | #451 | fixed | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
 | NT-inho-007 | #442 | fixed | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
 | NT-inho-008 | #454 | open | 운영 Caddyfile에 HSTS가 없다(X-088에서 떼어 낸 결정 항목) |
+| NT-inho-009 | #442 | fixed | 워크스페이스 계약 명세 두 시험이 API 키 발급 뒤 복사 없이 닫아 main에서도 실패한다 |
 
 ## 돌리지 못한 검사
 
@@ -282,3 +330,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.
 - 2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md
 - 2026-10-29 사람 승인: 22개 주제를 PR 8개로 합쳐 진행한다(events-query, billing-api, webhook-audit-ops, auth-security, demo-infra, list-screens, work-screens, shell-design 순). 300줄 상한은 없고 PR 안에서 항목별로 커밋을 나눈다.
+- PR #488(fix/s456-t-inho-events-query): events-query 묶음 46건과 NT-inho-009를 고쳤다. push 전 독립 리뷰가 찾은 회귀 세 건(인보이스 검색 total_unfiltered, 속성 미포함 CSV의 크기 상한, 한쪽 끝 기간 파일 이름)도 같은 PR에서 고쳤다. Ck3-450-11은 이름 규칙 시험 때문에 결정안을 설명 한 줄로 바꿨다.
