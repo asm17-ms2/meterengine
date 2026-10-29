@@ -53,3 +53,10 @@ test("the meter screen shows the same submit-based archive filter while loading 
   assert.ok(!frame.includes("<ListControls"));
 });
 
+test("the event detail drawer uses the table's Korean labels and says the raw JSON is in UTC", () => {
+  const drawer = source("events/EventDetailDrawer.tsx");
+  for (const label of ['label: "전송 ID"', 'label: "이벤트 유형"', 'label: "발생 시각 (KST)"', 'label: "수신 시각 (KST)"']) assert.ok(drawer.includes(label), label);
+  for (const raw of ['label: "transaction_id"', 'label: "type"', 'label: "occurred_at"', 'label: "received_at"']) assert.ok(!drawer.includes(raw), raw);
+  assert.ok(drawer.includes("API 원본 값, 시각은 UTC"));
+});
+
