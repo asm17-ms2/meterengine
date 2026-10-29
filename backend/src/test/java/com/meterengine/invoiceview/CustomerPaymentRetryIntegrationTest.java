@@ -387,6 +387,44 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   @Test
+  void 일반_거절_뒤_자동_재시도와_고객_재시도가_겹치면_인보이스_잠금을_기다려_새_승인은_한번뿐이다() throws Exception {
+    Fixture fixture = fixture(true, "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusHours(25));
+    String token = value(create(fixture, true), "$.token");
+    String version = value(lookup(token), "$.payment_retry.version");
+    rejectApproval();
+    try (var executor = Executors.newFixedThreadPool(2);
+        Connection connection = dataSource.getConnection()) {
+      connection.setAutoCommit(false);
+      try (var statement =
+          connection.prepareStatement("SELECT id FROM invoice WHERE id=? FOR UPDATE")) {
+        statement.setObject(1, fixture.invoiceId());
+        statement.executeQuery().close();
+      }
+      var customer = executor.submit(() -> retry(token, version));
+      var automatic = executor.submit(() -> paymentRetryService.retry());
+      try {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8);
+        int waiting = 0;
+        while (System.nanoTime() < deadline) {
+          waiting =
+              jdbcTemplate.queryForObject(
+                  "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND state='active' AND wait_event_type='Lock' AND lower(query) LIKE '%from invoice%'",
+                  Integer.class);
+          if (waiting >= 2) break;
+          Thread.sleep(10);
+        }
+        assertThat(waiting).isEqualTo(2);
+      } finally {
+        connection.commit();
+      }
+      assertThat(customer.get(15, TimeUnit.SECONDS).getResponse().getStatus()).isIn(200, 409);
+      automatic.get(15, TimeUnit.SECONDS);
+    }
+    assertThat(count(fixture)).isEqualTo(2);
+    verify(tossPaymentsClient).approveBilling(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  @Test
   void 승인_중_링크가_폐기돼도_수락한_결제_결과를_정확히_돌려준다() throws Exception {
     retireDuringApproval(false);
   }
