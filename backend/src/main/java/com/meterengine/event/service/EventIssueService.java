@@ -1,12 +1,12 @@
 package com.meterengine.event.service;
 
 import com.meterengine.customer.api.CustomerDirectory;
+import com.meterengine.event.api.UsagePriceDiagnostics;
 import com.meterengine.event.dto.EventIssuesResponse;
 import com.meterengine.event.dto.UnbilledEventsResponse;
 import com.meterengine.event.repository.EventIssueRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.UsagePriceDiagnostics;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
