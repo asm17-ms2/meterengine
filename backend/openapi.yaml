@@ -9126,6 +9126,10 @@ components:
           format: int32
         result:
           type: string
+          enum:
+          - stored
+          - duplicate
+          - rejected
         transaction_id:
           type: string
     FieldError:
@@ -9186,7 +9190,7 @@ components:
           items:
             $ref: "#/components/schemas/IngestEventRequest"
           maxItems: 100
-          minItems: 0
+          minItems: 1
       required:
       - events
     IngestEventBatchResponse:
