@@ -227,7 +227,13 @@ export class LumenService {
     const usageData = usage.status === "fulfilled" ? usage.value : null;
     const hasCompatibleMetrics = Object.values(METRIC_CODES).every(code => matchesMetricContract(code, usageData, priceData));
     const models = modelsWithPrices(priceData, usageData, account.customerId, month);
-    if (!hasCompatibleMetrics || models.some(model => model.inputPricePerThousand === null || model.outputPricePerThousand === null || model.requestPrice === null)) billingErrors.push("요금 설정");
+    const hasMissingPrice = !hasCompatibleMetrics || models.some(model => model.inputPricePerThousand === null || model.outputPricePerThousand === null || model.requestPrice === null);
+    const isPriceReadFailure = usage.status === "rejected" || hasPriceQueryFailure;
+    if (hasMissingPrice && isPriceReadFailure) billingErrors.push("적용 요금");
+    const billingError = [
+      billingErrors.length ? `다음 청구 정보를 확인하지 못했습니다: ${billingErrors.join(", ")}. 연결 상태를 확인한 뒤 새로고침하세요.` : "",
+      hasMissingPrice && !isPriceReadFailure ? "이 달의 요금 설정이 예제 서비스의 기준과 맞지 않습니다. 운영자가 요금 설정을 확인해야 합니다." : "",
+    ].filter(Boolean).join(" ");
     if (payments.status === "fulfilled" && visibleInvoices.some(invoice => !visiblePayments.some(payment => payment.invoice_id === invoice.id))) billingErrors.push("일부 납부 상태");
     if (method.status === "fulfilled" && method.value.customer_id !== account.customerId) billingErrors.push("등록 카드");
     return {
@@ -246,7 +252,7 @@ export class LumenService {
           : !hasCompatibleMetrics ? { error: "집계 또는 요금 설정이 예제 서비스의 기준과 다릅니다. 운영자가 연결 설정을 확인해야 합니다." } : {}),
       },
       billing: {
-        state: billingErrors.length ? "unavailable" : "ready",
+        state: billingError ? "unavailable" : "ready",
         draft: draftCustomer ? { supplyAmount: draftCustomer.amount, taxAmount: Math.floor(draftCustomer.amount * 0.1), totalAmount: draftCustomer.amount + Math.floor(draftCustomer.amount * 0.1), lines: draftCustomer.lines.map(billingLine) } : null,
         invoices: visibleInvoices.map(invoice => {
           const payment = visiblePayments.find(item => item.invoice_id === invoice.id);
@@ -255,7 +261,7 @@ export class LumenService {
         }),
         paymentMethod: method.status === "fulfilled" && method.value.customer_id === account.customerId ? { cardNumber: method.value.card_number, authenticatedAt: method.value.authenticated_at, archived: Boolean(method.value.archived_at) } : null,
         canRegisterPaymentMethod: this.registrationClient !== null,
-        ...(billingErrors.length ? { error: `${billingErrors.join(", ")}를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.` } : {}),
+        ...(billingError ? { error: billingError } : {}),
       },
     };
   }

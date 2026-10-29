@@ -373,6 +373,7 @@ test("부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다", asy
   assert.equal(result.billing.state, "unavailable");
   assert.equal(result.billing.draft, null);
   assert.equal(result.models[0].requestPrice, null);
+  assert.equal(result.billing.error, "다음 청구 정보를 확인하지 못했습니다: 청구 예정액, 적용 요금. 연결 상태를 확인한 뒤 새로고침하세요.");
   assert.ok(!JSON.stringify(result).includes("secret upstream payload"));
 });
 
@@ -434,6 +435,7 @@ test("미터 단위와 집계 방식 또는 차원이 달라지면 고정 단위
     } else {
       assert.equal(result.models[0].inputPricePerThousand, null, change);
       assert.equal(result.billing.state, "unavailable", change);
+      assert.equal(result.billing.error, "이 달의 요금 설정이 예제 서비스의 기준과 맞지 않습니다. 운영자가 요금 설정을 확인해야 합니다.", change);
       assert.match(result.usage.error!, /집계 또는 요금 설정/);
     }
   }
