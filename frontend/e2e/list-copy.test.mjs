@@ -47,3 +47,9 @@ test("the meter search empty state counts all meters and the sort note follows t
   assert.ok(screen.includes('query.sort ?? "code"'));
 });
 
+test("the meter screen shows the same submit-based archive filter while loading or failing", () => {
+  const frame = source("billable-metrics/BillableMetricsFrame.tsx");
+  assert.ok(frame.includes('<ResourceSearchControls query={query} capabilities={capabilities} resource="billable-metrics" />'));
+  assert.ok(!frame.includes("<ListControls"));
+});
+
