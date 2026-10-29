@@ -131,6 +131,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await remove(`/v1/customers/${oldCustomer.id}`);
       for (const [code, name] of [[activeMetricCode, activeMetricName], [archivedMetricCode, archivedMetricName]]) {
         await post("/v1/billable-metrics", { code, name, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] });
+        await post("/v1/events", { transaction_id: randomUUID(), customer_id: activeCustomerId, type: code, properties: { units: 1 }, occurred_at: new Date().toISOString() });
       }
       await remove(`/v1/billable-metrics/${archivedMetricCode}`);
       const oldRate = await post(`/v1/billable-metrics/${activeMetricCode}/price-rates`, { dimension_values: {}, unit_price: 123, effective_from: currentMonth });
@@ -195,6 +196,29 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await selectedFilter(page, "관리 상태", "전체");
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
+    });
+
+    await test.step("조회 필터에서 보관한 고객과 수집된 이벤트 유형을 유지", async () => {
+      const filterOptions = async (label: string, text: string) => {
+        const combobox = page.getByRole("combobox", { name: label, exact: true });
+        await expect(page.locator(".ant-select").filter({ has: combobox }).locator(".anticon-loading")).toHaveCount(0);
+        await combobox.click();
+        await combobox.fill(text);
+        return page.locator(".ant-select-dropdown:visible .ant-select-item-option");
+      };
+      for (const path of ["/invoices", "/events", "/billing", "/usage"]) {
+        await page.goto(path);
+        const customers = await filterOptions("고객", suffix);
+        await expect(customers.filter({ hasText: `${archivedName} (보관됨)` })).toHaveCount(1);
+        await expect(customers.filter({ hasText: activeName })).toHaveCount(1);
+      }
+      await page.goto("/events");
+      const eventTypes = page.getByRole("combobox", { name: "이벤트 유형", exact: true });
+      const list = await eventTypes.getAttribute("list");
+      expect(list).toBeTruthy();
+      const options = `datalist[id="${list}"] option`;
+      await expect(page.locator(`${options}[value="${archivedMetricCode}"]`)).toHaveCount(1);
+      await expect(page.locator(`${options}[value="${activeMetricCode}"]`)).toHaveCount(1);
     });
 
     await test.step("요금제, 단가와 미터 필터를 서로 독립적으로 유지", async () => {
