@@ -261,6 +261,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
 - 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 도입사와 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
+  - 등록 전에 고객 목록에서 외부 ID 없이 같은 이름으로 만든 옛 고객을 찾으면 그 고객을 이어 쓴다.
 - 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 도입사 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
 
 ### 보내는 이벤트와 properties
@@ -430,6 +431,7 @@ curl -X POST http://localhost:8080/v1/webhook-endpoints/<id>/test-events \
 ```
 
 - 서명 검증 뒤 본문의 `environment`가 선택한 대상과 같은지 확인한다. 대상이 없거나 중복된 URL은 거절한다.
+- 브라우저가 보낸 요청(`Origin`이 있거나 `Sec-Fetch-Site`가 `none`이 아님)은 403, 256KB를 넘는 본문은 413으로 기록 없이 거절한다.
 - 기록은 대상 이름, API 주소, 환경과 키별로 분리한다. 같은 `webhook-id`의 재전송도 수신 기록에 남으므로 업무 처리의 중복 방지는 별도로 한다.
 - 기존 `.data/webhooks.jsonl`은 `METERENGINE_LEGACY_WEBHOOK_TARGET`으로 지정한 원래 legacy 연결에만 고정한다. 기존 파일을 복사하거나 `test/live`에 자동 배정하지 않는다. 연결 키나 주소를 바꾼 뒤에도 원래 파일은 보존한다.
 - 백엔드 없이 검증하려면 대상 설정을 담은 비공개 환경 파일로 시험 통보를 보낸다.
