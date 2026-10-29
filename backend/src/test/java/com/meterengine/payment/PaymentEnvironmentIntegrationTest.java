@@ -649,6 +649,46 @@ class PaymentEnvironmentIntegrationTest {
   }
 
   @Test
+  void 대사하지_않는_옛_키로_승인한_결제의_토스에만_있는_취소는_현재_키_목록에서_남긴다() {
+    String oldSecret = "test_sk_reconciliation_external_old";
+    String currentSecret = "test_sk_reconciliation_external_current";
+    Payable test = payable("test", oldSecret);
+    UUID oldAttempt = insertAttempt(test, "test", false);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "external-cancel-old",
+        OffsetDateTime.now().minusMinutes(25 * 60 + 30),
+        oldAttempt);
+    assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    when(toss.listTransactions(eq(currentSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-external-cancel",
+                        "external-cancel-old",
+                        oldAttempt.toString(),
+                        "PARTIAL_CANCELED",
+                        OffsetDateTime.now().minusHours(1),
+                        -400))));
+
+    reconciliation.reconcile(OffsetDateTime.now());
+
+    verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT kind, transaction_key FROM payment_reconciliation_mismatch WHERE"
+                    + " organization_id=?",
+                organizationId))
+        .containsExactly(
+            Map.of(
+                "kind", "missing_in_meterengine",
+                "transaction_key", "transaction-external-cancel"));
+  }
+
+  @Test
   void 대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다() {
     String retiredSecret = "test_sk_reconciliation_partial_retired";
     String currentSecret = "test_sk_reconciliation_partial_current";
