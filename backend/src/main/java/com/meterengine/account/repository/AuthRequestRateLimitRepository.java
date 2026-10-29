@@ -48,10 +48,10 @@ public class AuthRequestRateLimitRepository {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public Optional<Rejection> consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
     long blocked = take(address, windowSeconds);
-    if (blocked > 0) return Optional.of(new Rejection(address.scope(), blocked));
+    if (blocked > 0) return Optional.of(new Rejection(address.name(), blocked));
     for (Bucket account : accounts) {
       long retryAfter = take(account, windowSeconds);
-      if (retryAfter > 0) return Optional.of(new Rejection(account.scope(), retryAfter));
+      if (retryAfter > 0) return Optional.of(new Rejection(account.name(), retryAfter));
     }
     return Optional.empty();
   }
@@ -87,9 +87,14 @@ public class AuthRequestRateLimitRepository {
         .retryAfter(bucket.limit());
   }
 
-  public record Bucket(String scope, byte[] identityHash, int limit) {}
+  // name은 로그에 남길 한도 이름이다. 같은 범위를 나눠 쓰는 한도는 이름으로 구분한다.
+  public record Bucket(String scope, byte[] identityHash, int limit, String name) {
+    public Bucket(String scope, byte[] identityHash, int limit) {
+      this(scope, identityHash, limit, scope);
+    }
+  }
 
-  public record Rejection(String scope, long retryAfterSeconds) {}
+  public record Rejection(String limit, long retryAfterSeconds) {}
 
   private record Window(long attempts, long retryAfterSeconds) {
     long retryAfter(int limit) {

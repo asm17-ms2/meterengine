@@ -121,7 +121,8 @@ class AuthRequestRateLimitServiceTest {
             new Bucket(
                 "login_account",
                 SecureTokens.hash("account_ip\nuser@example.com\n203.0.113.10"),
-                10),
+                10,
+                "login_account_ip"),
             new Bucket("login_account", SecureTokens.hash("account\nuser@example.com"), 100));
   }
 

@@ -47,7 +47,11 @@ public class AuthRequestRateLimitService {
         address,
         new Bucket("login_ip", SecureTokens.hash(address), authRateLimitProperties.loginIpLimit()),
         List.of(
-            new Bucket("login_account", accountKey("account_ip", account, address), accountLimit),
+            new Bucket(
+                "login_account",
+                accountKey("account_ip", account, address),
+                accountLimit,
+                "login_account_ip"),
             new Bucket(
                 "login_account",
                 accountKey("account", account),
@@ -81,7 +85,7 @@ public class AuthRequestRateLimitService {
           "Authentication request limited action={} client_address={} limit={} retry_after={}",
           action,
           address,
-          rejection.get().scope(),
+          rejection.get().limit(),
           rejection.get().retryAfterSeconds());
       throw new TooManyRequestsException(
           ErrorCode.RATE_LIMIT_EXCEEDED, rejection.get().retryAfterSeconds());

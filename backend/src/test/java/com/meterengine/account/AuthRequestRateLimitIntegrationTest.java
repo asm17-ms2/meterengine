@@ -157,6 +157,17 @@ class AuthRequestRateLimitIntegrationTest {
   }
 
   @Test
+  void 계정과_IP_쌍_한도에_걸린_요청은_로그에_쌍_한도라고_남긴다(CapturedOutput output) {
+    String email = email();
+    for (int index = 0; index < 2; index++)
+      assertThat(login(email, "203.0.113.53", null)).hasStatus(401);
+
+    assertLimited(login(email, "203.0.113.53", null));
+
+    assertThat(output.getAll()).contains("limit=login_account_ip");
+  }
+
+  @Test
   void 이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다() {
     for (int index = 0; index < 3; index++)
       assertThat(login(email(), "203.0.113.40", null)).hasStatus(401);
