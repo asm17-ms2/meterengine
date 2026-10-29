@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T20:53:58+09:00",
+  "updated_at": "2026-10-29T21:18:45+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -39,7 +39,7 @@
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
     "fix/s456-t-yang-pricing-archive": "a937f8f",
     "fix/s456-t-yang-reconcile-catchup": "8edf94b",
-    "fix/s456-t-yang-ci-tests": "a9ce8d1"
+    "fix/s456-t-yang-ci-tests": "84c47c7"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3386,14 +3386,17 @@
         "demo/README.md:69 @ af15d7f",
         "deploy/README.md:113 @ af15d7f",
         "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:1-3 @ af15d7f",
-        "커밋 a9ce8d1"
+        "커밋 a9ce8d1",
+        "커밋 84c47c7"
       ],
       "commits": [
-        "a9ce8d11"
+        "a9ce8d11",
+        "84c47c7a"
       ],
       "tests": [
         "CI 설정이라 고치기 전 실패하는 시험은 없다. PR #494의 CI 실행(run 40868392114)에서 새 단계가 돌았다: frontend 단위 79건, auth 계약 65건, 카드 등록 계약 6건 통과, 업무 계약 7 통과 2 실패(main 기준선, #481이 고침), demo sdk 82, llm-service 36, web 85, Python 328건, deploy 39건 skip 없이 통과, terraform mock 2건과 ASL 27건 통과",
-        "main 새 checkout 트리에서 같은 명령 통과, actionlint 통과"
+        "main 새 checkout 트리에서 같은 명령 통과, actionlint 통과",
+        "#494 리뷰 p4 반영 뒤 CI(run 40871714563): demo Python 328건 skip 없이 통과(콘솔 시험 7건 실행), backend, deploy, terraform 통과, frontend는 main 기준선과 같은 업무 계약 2건만 실패"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -13604,6 +13607,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "ci",
+      "result": "pass",
+      "command": "PR #494 GitHub Actions CI(run 40871714563)",
+      "detail": "backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -14111,6 +14130,11 @@
       "branch": "fix/s456-t-yang-ci-tests",
       "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
       "at": "2026-10-29T20:53:58+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "at": "2026-10-29T21:18:45+09:00"
     }
   ],
   "usage_log": [],
@@ -14155,7 +14179,8 @@
     "2026-10-29: #490 박성종 님 리뷰 p4(성공 기록 없이 첫 대사가 실패하면 다음 실행이 첫 실패일을 건너뜀)를 받아 가장 이른 실행의 창부터 맞추게 고쳤다(8edf94b).",
     "2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f).",
     "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).",
-    "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다."
+    "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.",
+    "2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7)."
   ],
   "final_checks": [
     {
