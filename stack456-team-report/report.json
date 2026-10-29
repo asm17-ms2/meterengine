@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T15:16:53+09:00",
+  "updated_at": "2026-10-29T15:25:55+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -20,7 +20,8 @@
     "feat/environment-isolation": "f014e03",
     "fix/s456-445-t-yang": "22dfb35",
     "fix/s456-447-t-yang": "84bb5e7",
-    "main": "af15d7f"
+    "main": "af15d7f",
+    "fix/s456-t-yang-invoice-retry": "59e548e"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -6123,15 +6124,31 @@
       "id": "C449-008",
       "merged_ids": [],
       "layer": 449,
-      "branch": "feat/customer-invoices",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "500 경로 자체는 94a48a20이 insertRetryAttempt에 인보이스 잠금을 넣어 main에서 막혔지만, 경합 시험은 NOT_FOUND_PAYMENT만 다뤄 그 잠금을 지워도 실패하지 않았다. 일반 거절 경합 시험을 더했다.",
+      "evidence": [
+        "backend/src/test/java/com/meterengine/invoiceview/CustomerPaymentRetryIntegrationTest.java:521-528 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentRetryService.java:146-149 @ af15d7f",
+        "일반_거절_뒤_자동_재시도와_고객_재시도가_겹치면_인보이스_잠금을_기다려_새_승인은_한번뿐이다: 실패 expected 2 but was 1 (인보이스 잠금 제거 변이)",
+        "커밋 59e548e"
+      ],
+      "commits": [
+        "59e548e6"
+      ],
+      "tests": [
+        "자동 재시도의 인보이스 잠금을 지운 변이에서 실패, 원래 코드에서 통과",
+        "./gradlew build 통과(59e548e)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "일반 거절 자동, 고객 재시도 경합 시험"
     },
     {
       "id": "D-068",
@@ -6255,29 +6272,61 @@
       "id": "C449-002",
       "merged_ids": [],
       "layer": 449,
-      "branch": "feat/customer-invoices",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "보안 지적. 재현 내용은 .s456-work/security/C449-002/에 둔다.",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:81-93 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/controller/InvoiceViewLinkController.java:51-61 @ af15d7f",
+        "test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 201",
+        "커밋 bddcb58"
+      ],
+      "commits": [
+        "bddcb58a"
+      ],
+      "tests": [
+        "./gradlew test --tests 'com.meterengine.invoiceview.*' 통과",
+        "./gradlew build 통과(59e548e)"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "재시도 허용 조회 링크 발급의 키 모드 검사"
     },
     {
       "id": "C449-004",
       "merged_ids": [],
       "layer": 449,
-      "branch": "feat/customer-invoices",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "조회 전용 링크의 재시도 시험이 가짜 버전으로 409만 확인해, 허용 플래그 검사를 지워도 버전 불일치 409로 통과했다. 시험이 code payment_retry_unavailable까지 확인하게 했다.",
+      "evidence": [
+        "backend/src/test/java/com/meterengine/invoiceview/CustomerPaymentRetryIntegrationTest.java:76-86 @ af15d7f",
+        "backend/src/main/java/com/meterengine/invoiceview/service/InvoiceViewLinkService.java:242-249 @ af15d7f",
+        "기존_조회_링크와_옵션을_생략한_링크는_고객의_결제를_허용하지_않는다: 실패 expected payment_retry_unavailable but was payment_retry_stale (허용 플래그 검사 제거 변이)",
+        "커밋 a5ec894"
+      ],
+      "commits": [
+        "a5ec8944"
+      ],
+      "tests": [
+        "허용 플래그 검사를 지운 변이에서 실패, 원래 코드에서 통과",
+        "./gradlew build 통과(59e548e)"
+      ],
       "behavior_change": false,
-      "left": "시작 전"
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "조회 전용 링크 재시도 거절의 code 확인"
     },
     {
       "id": "C449-006",
@@ -11317,6 +11366,22 @@
       "result": "fail",
       "command": "SRC=.s456-work/base-main bash .s456-work/tools/live2.sh spec mvp (11절 6번 명령, 새 DB)",
       "detail": "main 기준선 실화면 mvp.real.spec.ts: main 기준선 실패: locator.click Timeout, '수신 주소 등록' 클릭을 API 키 발급 창이 가로챔(2db50b4의 복사 전 닫기 window.confirm을 Playwright가 거절)"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1377개 실패 0, openapi.yaml 변경 없음(main 기준선도 통과)"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD와 git log --format=%B origin/main..HEAD 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -11709,6 +11774,11 @@
       "branch": "fix/s456-447-t-yang",
       "sha": "84bb5e762856729c3480fade2074f50a1e25a9a3",
       "at": "2026-10-29T11:20:07+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "at": "2026-10-29T15:25:38+09:00"
     }
   ],
   "usage_log": [],

@@ -1,5 +1,5 @@
-미완료 63건, 결과: 끝 상태 267/328건 (fixed 180, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7)
+미완료 60건, 결과: 끝 상태 270/328건 (fixed 183, refuted 5, already-fixed 27(그중 fixed-above 12), needs-decision 45, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e)
 정할 것: 44건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183, C449-006, C453-006). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -9,7 +9,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #442 | 143 | 100 | 1 | 7 | 32 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
 | #447 | 35 | 22 | 2 | 1 | 10 | 0 | 0 |
-| #449 | 24 | 0 | 1 | 3 | 1 | 6 | 13 |
+| #449 | 24 | 3 | 1 | 3 | 1 | 6 | 10 |
 | #452 | 19 | 0 | 0 | 3 | 0 | 0 | 16 |
 | #453 | 39 | 0 | 1 | 4 | 1 | 1 | 32 |
 
@@ -160,6 +160,9 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | D-223 | #447 | 449b06c | 이벤트가 있는 미터를 고칠 때 이름만 바꿀 수 있다고 알린다 | 이벤트가_있는_미터의_event_type을_바꾸면_409이고_미터는_그대로다: 실패 Expecting actual: "집계된 이벤트가 있어 event_type과 target_property를 바꾸거나 미터를 삭제할 수 없습니다" not to contain: "삭제" |
 | D-241 | #447 | 1b50aeb | 관리 상태 사용 중이 화면마다 다른 색과 형태 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
 | X-011 | #447 | cc2baea | 미터 목록 이름 열 폭 0 | 없음(보이는 변경: 실화면 캡처는 따로; lint, tsc, corepack pnpm build, 단위 시험 e2e/*.test.mjs 23건 통과) |
+| C449-008 | #449 | 59e548e | 일반 거절 자동, 고객 재시도 경합 시험 | 일반_거절_뒤_자동_재시도와_고객_재시도가_겹치면_인보이스_잠금을_기다려_새_승인은_한번뿐이다: 실패 expected 2 but was 1 (인보이스 잠금 제거 변이) |
+| C449-002 | #449 | bddcb58 | 재시도 허용 조회 링크 발급의 키 모드 검사 | test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다: 실패 [HTTP status code] expected: 409 but was: 201 |
+| C449-004 | #449 | a5ec894 | 조회 전용 링크 재시도 거절의 code 확인 | 기존_조회_링크와_옵션을_생략한_링크는_고객의_결제를_허용하지_않는다: 실패 expected payment_retry_unavailable but was payment_retry_stale (허용 플래그 검사 제거 변이) |
 | NT-yang-001 | #442 | 1e6c5df | AuthFrame 안내 h2를 문단으로 | the sign-in frame starts its headings with the page h1: 실패 Expected "H1", Received "H2" |
 
 ## 정할 것
