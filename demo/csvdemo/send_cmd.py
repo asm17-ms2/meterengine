@@ -114,8 +114,9 @@ def send_events(events: List[Event], client: ApiClient, organization: Organizati
             print()
             print("중단했습니다. 여기까지의 기록은 로그에 남아 있습니다.")
         finally:
+            logged = max(sent, counts.get("_logged", 0))
             sent = max(sent, counts.get("_sent", 0))
-            for index in range(sent, len(events)):
+            for index in range(logged, len(events)):
                 writer.write_send(seq=index + 1, sent_at_text=datetime.now(KST).isoformat(), request_body_text=build_body_text(events[index]), status=None, response_text=None, outcome="error", error="NOT_SENT: 앞선 요청 이후 전송을 중단했습니다", elapsed_ms=None)
                 print("%d/%d NOT_SENT: 전송하지 않았습니다" % (index + 1, len(events)))
     print()
@@ -127,6 +128,7 @@ def send_events(events: List[Event], client: ApiClient, organization: Organizati
 
 def _send_batches(events, client, writer, counts, notes, console, args):
     sent = 0
+    logged = 0
     auth_problem = None
     batch_size = args.batch_size
     for start in range(0, len(events), batch_size):
@@ -143,13 +145,17 @@ def _send_batches(events, client, writer, counts, notes, console, args):
         batch_rows = iter(rows or [])
         for offset, event in enumerate(chunk):
             seq = start + offset + 1
-            if offset in broken and failure is None:
+            if offset in broken and stop:
+                summary = "NOT_SENT: 앞선 요청 이후 전송을 중단했습니다"
+                writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=None, response_text=None, outcome="error", error=summary, elapsed_ms=None)
+                logged += 1
+                counts["_logged"] = logged
+                print("%d/%d NOT_SENT: 전송하지 않았습니다" % (seq, len(events)))
+                continue
+            if offset in broken:
                 outcome, summary, single_problem = _send_one(client, writer, seq, event, args.verbose)
                 auth_problem = auth_problem or single_problem
                 stop = stop or single_problem is not None or outcome == "error"
-            elif offset in broken:
-                outcome, summary = "error", "NOT_SENT: 앞선 요청 이후 전송을 중단했습니다"
-                writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=None, response_text=None, outcome=outcome, error=summary, elapsed_ms=None)
             elif failure is None:
                 row = next(batch_rows)
                 outcome = {"stored": "new", "duplicate": "duplicate", "rejected": "rejected"}[row["result"]]
@@ -162,7 +168,9 @@ def _send_batches(events, client, writer, counts, notes, console, args):
                 writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=result.status if result is not None else None, response_text=result.body_text if result is not None else None, outcome=outcome, error=failure, elapsed_ms=result.elapsed_ms if result is not None else None)
             counts[outcome] += 1
             sent += 1
+            logged += 1
             counts["_sent"] = sent
+            counts["_logged"] = logged
             for line in format_send_pair(console, seq, len(events), event, outcome, summary, notes.get(seq - 1, "")):
                 print(line)
         if stop:

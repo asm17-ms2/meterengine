@@ -192,6 +192,28 @@ class BatchSendTest(unittest.TestCase):
         self.assertEqual([row["outcome"] for row in records], ["new", "rejected", "new"])
         self.assertEqual(code, 0)
 
+    def test_단건으로_보낸_깨진_행이_인증에_실패하면_같은_묶음의_다음_깨진_행을_보내지_않는다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                rows = json.loads(body_text)["events"]
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        events = _events(3)
+        events[0].properties_text = '{"quantity":'
+        events[1].properties_text = '{"quantity":'
+        args = Args()
+        args.batch_size = 3
+        client = BatchClient([(401, {"code": "invalid_credentials", "message": "인증 실패"})])
+        with contextlib.redirect_stdout(io.StringIO()) as output, contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(events, client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual(len(client.posted), 1)
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3])
+        self.assertIn("NOT_SENT", records[1]["error"])
+        self.assertEqual(records[2]["outcome"], "new")
+        self.assertIn("전송 2건", output.getvalue())
+        self.assertEqual(code, 2)
+
     def test_봉투_전체를_거절한_4xx는_rejected가_아닌_error로_센다(self):
         class BatchClient(FakeClient):
             def post_events(self, body_text):
