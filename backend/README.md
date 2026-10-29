@@ -256,11 +256,11 @@ unset SESSION
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
 | `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
-| `metric` | 미터 등록, 수정, 삭제, 조회, 고객별 월 사용량 집계(속성 값 조합별로 나눔) | `/v1/billable-metrics`, `/v1/usage` |
-| `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 삭제, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
+| `metric` | 미터 등록, 수정, 보관과 복원, 조회, 고객별 월 사용량 집계(속성 값 조합별로 나눔) | `/v1/billable-metrics`, `/v1/usage` |
+| `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 보관, 복원, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정(확정한 고객마다 청구 메일을 남김), 확정 인보이스 목록 조회(금액 구성과 라인 포함) | `/v1/invoices`, `/v1/invoices/draft` |
 | `invoiceview` | 고객 인보이스 링크 발급, 조회와 폐기, 별도 허용한 링크의 실패 결제 재시도 | `/v1/invoices/{id}/view-links`, `/v1/public/invoice-links/lookup`, `/v1/public/invoice-links/payment-retries` |
-| `customer` | 고객 등록, 수정, 삭제, 조회 | `/v1/customers` |
+| `customer` | 고객 등록, 수정, 보관과 복원, 조회 | `/v1/customers` |
 | `payment` | 도입사별 토스 키, 카드 등록, 승인과 취소, 결과 확정, 재시도와 대사 | `/v1/invoices/{id}/payment-attempts` |
 | `webhook`, `notification` | 서명된 아웃박스 통보, 발송 이력과 제외 사용량 정기 통보 | `/v1/webhook-endpoints`, `/v1/unbilled-events` |
 | `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 운영자 상태 조회 | `/v1/dashboard`, `/v1/operations` |

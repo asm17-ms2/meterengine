@@ -641,12 +641,17 @@ paths:
     get:
       operationId: listBillableMetrics
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -1025,7 +1030,7 @@ paths:
           type: string
       responses:
         "204":
-          description: No Content
+          description: 보관했다. 본문 없음
         "401":
           content:
             application/json:
@@ -1043,6 +1048,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
         "429":
           content:
             application/json:
@@ -1239,6 +1250,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없다.
+            code=resource_archived: 보관한 미터다. 복원한 뒤 고친다.
         "429":
           content:
             application/json:
@@ -1342,12 +1354,17 @@ paths:
         schema:
           type: string
           format: uuid
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -1447,6 +1464,16 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=resource_archived: 보관한 미터다. 미터를 복원한 뒤 등록한다.
+            code=price_rate_history_immutable: effective_from이 이번 달보다 앞이다.
+            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
+            code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
         "429":
           content:
             application/json:
@@ -1539,7 +1566,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PriceRateResponse"
-          description: OK
+          description: 복원한 단가 버전. 보관하지 않은 버전이면 그대로 돌려준다
         "401":
           content:
             application/json:
@@ -1557,6 +1584,19 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=archive_restoration_conflict: 같은 조합, 고객 범위, 시작 월의 보관하\
+            지 않은 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다"
         "429":
           content:
             application/json:
@@ -1590,7 +1630,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/BillableMetricResponse"
-          description: OK
+          description: 복원한 미터. 보관하지 않은 미터면 그대로 돌려준다
         "401":
           content:
             application/json:
@@ -1608,6 +1648,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=billable_metric_not_found: 그런 code의 미터가 없다"
         "429":
           content:
             application/json:
@@ -1640,12 +1686,17 @@ paths:
           type: string
           maxLength: 255
           minLength: 1
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -2039,7 +2090,7 @@ paths:
           format: uuid
       responses:
         "204":
-          description: No Content
+          description: 보관했다. 본문 없음
         "401":
           content:
             application/json:
@@ -2057,6 +2108,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: 그런 고객이 없다"
         "429":
           content:
             application/json:
@@ -2089,7 +2146,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerResponse"
-          description: OK
+          description: 고객
         "401":
           content:
             application/json:
@@ -2107,6 +2164,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: 그런 고객이 없다"
         "429":
           content:
             application/json:
@@ -2249,6 +2312,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=customer_not_found: 그런 고객이 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_archived: 보관한 고객이다. 복원한 뒤 고친다"
         "429":
           content:
             application/json:
@@ -2442,6 +2511,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=payment_mode_mismatch: API 키의 모드가 지금 결제 모드와 다르다.
+            code=customer_archived: 보관한 고객이다.
             code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
         "429":
           content:
@@ -2476,7 +2546,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerResponse"
-          description: OK
+          description: 복원한 고객. 보관하지 않은 고객이면 그대로 돌려준다
         "401":
           content:
             application/json:
@@ -2494,6 +2564,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: 그런 고객이 없다"
         "429":
           content:
             application/json:
@@ -2999,6 +3075,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=customer_not_found: customer_id가 가리키는 고객이 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된\
+            \ transaction_id면 거절하지 않고 200 duplicate=true로 답한다"
         "429":
           content:
             application/json:
@@ -5754,8 +5837,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼\
-            츠 키가 없다"
+          description: |
+            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
+            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
       security: []
       summary: 카드 등록 링크 조회
       tags:
@@ -5809,8 +5893,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼\
-            츠 키가 없다"
+          description: |
+            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
+            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
         "503":
           content:
             application/json:
@@ -5829,12 +5914,17 @@ paths:
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
       operationId: listPaymentMethods
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -6093,6 +6183,10 @@ paths:
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -6163,7 +6257,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PricePlanResponse"
-          description: Created
+          description: 저장된 요금제. 같은 고객 범위와 시작 월의 버전을 덮어쓴 경우에도 201이다
         "401":
           content:
             application/json:
@@ -6181,6 +6275,15 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=price_plan_history_immutable: effective_from이 이번 달보다 앞이다.
+            code=customer_archived: customer_id가 가리키는 고객을 보관했다.
+            code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용된다.
         "429":
           content:
             application/json:
@@ -6263,7 +6366,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PricePlanResponse"
-          description: OK
+          description: 복원한 요금제 버전. 보관하지 않은 버전이면 그대로 돌려준다
         "401":
           content:
             application/json:
@@ -6281,6 +6384,19 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=price_plan_not_found: 그런 id의 요금제 버전이 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=archive_restoration_conflict: 같은 고객 범위와 시작 월의 보관하지 않은\
+            \ 버전이 있거나, 보관 효력이 이번 달이나 그 전에 시작됐다"
         "429":
           content:
             application/json:
@@ -6603,12 +6719,17 @@ paths:
         verified_at과 updated_at은 KST(+09:00)로 나온다.
       operationId: listTossPaymentsCredentials
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -6669,7 +6790,7 @@ paths:
           pattern: test|live
       responses:
         "204":
-          description: No Content
+          description: 보관했다. 본문 없음
         "401":
           content:
             application/json:
@@ -6687,6 +6808,13 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가\
+            \ 없다"
         "429":
           content:
             application/json:
@@ -7317,12 +7445,17 @@ paths:
     get:
       operationId: listWebhookEndpoints
       parameters:
-      - in: query
+      - description: 보관 상태. 생략하면 active
+        in: query
         name: status
         required: false
         schema:
           type: string
           default: active
+          enum:
+          - active
+          - archived
+          - all
       responses:
         "200":
           content:
@@ -7417,7 +7550,8 @@ paths:
       - webhook-endpoint-controller
   /v1/webhook-endpoints/{id}:
     delete:
-      description: 발송을 중지하고 목록에서 숨긴다. 과거 전송 기록은 보존한다.
+      description: "발송을 중지하고 비활성으로 보관한다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와\
+        \ status=archived 목록으로 조회된다. 과거 전송 기록은 보존한다. 반복 요청은 204다."
       operationId: deleteWebhookEndpoint
       parameters:
       - in: path
@@ -7460,7 +7594,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 웹훅 엔드포인트 삭제
+      summary: 웹훅 엔드포인트 보관
       tags:
       - webhook-endpoint-controller
     get:
@@ -7534,7 +7668,7 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/WebhookEndpointResponse"
-          description: OK
+          description: 바뀐 엔드포인트
         "401":
           content:
             application/json:
@@ -7552,6 +7686,12 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 도입사가 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=resource_archived: 보관한 엔드포인트다. 복원한 뒤 고친다"
         "429":
           content:
             application/json:
@@ -8775,6 +8915,7 @@ components:
           - payment_method_not_found
           - payment_method_registration_not_found
           - payment_attempt_not_found
+          - toss_payments_credential_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
