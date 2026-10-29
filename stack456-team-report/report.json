@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "stopped",
-  "updated_at": "2026-10-29T01:28:36+09:00",
+  "updated_at": "2026-10-29T14:58:16+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -89,28 +89,30 @@
       "branch": "feat/product-design",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "재현 경로를 줄 단위로 따라갔다. 0f1d1bf의 layout.tsx 8-14행은 localFont에 preload를 주지 않아 next 16.2.12(package.json 20행)의 기본값 preload = true가 적용되고, 루트 레이아웃이라 27행 html 아래 모든 경로의 head에 2,057,688바이트(blob 49c54b5) 글꼴 preload가 붙는다. globals.css 154행 body와 AppProviders.tsx 17행 antd 토큰이 var(--font-pretendard)를 쓰므로 preload를 꺼도 첫 렌더에서 같은 2MB를 받고, next.config.ts와 Caddyfile에 이를 줄이는 설정은 없다. 이 층의 첫 방문 경로는 소개, 로그인, 가입, 초대 링크이고, 지적이 든 카드 등록(4ace811, #445)과 청구서 링크(c9a86c4, #449)는 위층에서 생기며 0fe7d2a의 두 layout이 children만 돌려줘 같은 preload를 받는다. 11.6초, 87% 같은 수치는 저장소 밖 lab 측정이라 메인 세션이 다시 재야 하고, 원인 줄은 f671a4f(#443)가 들였으며 넘길 때 head 뒤 9de0e1e까지 바뀐 것은 metadata title 한 줄뿐이다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "reason": "main(af15d7f5)에서도 layout.tsx 8-14행이 preload 옵션 없이 2,057,688바이트 전체 글리프 파일 하나를 localFont로 부르고, next 16.2.12의 기본값 preload true와 27행 루트 html 때문에 카드 등록과 청구서 링크를 포함한 모든 경로가 이 글꼴을 받는다. 글꼴 blob 49c54b5와 선언 줄은 넘길 때 head와 같고, #443 squash(be67d816) 뒤로 두 파일을 바꾼 main 커밋은 없어 이미 고쳐지지 않았다. 피해 쪽으로 보면 운영의 Caddyfile 70-72행은 frontend:3000으로 그대로 넘길 뿐 CDN이나 캐시 층이 없고, woff2는 이미 압축된 형식이라 encode를 더해도 줄지 않으며, Next의 immutable 캐시는 재방문에만 듣는다. 공개 링크를 여는 고객은 거의 항상 첫 방문이라 느린 모바일망에서 2MB가 JS와 토스 SDK와 대역폭을 나눠 버튼 활성화가 늦어지는 피해가 실제로 남는다(수치는 저장소 밖 lab 측정이고 표시는 막히지 않아 심각도는 medium 정도다). body(globals.css 131행)와 antd 토큰이 이 글꼴을 바로 쓰므로 preload: false만으로는 전송량이 줄지 않고, 줄이려면 표시 음절을 KS X 1001로 줄이거나 조각 파일 구조로 바꿔야 해서 #443이 정한 공통 글꼴 디자인에 대한 결정이 필요하다.",
       "evidence": [
-        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
-        "frontend/src/app/layout.tsx:27 @ 0f1d1bf",
-        "frontend/package.json:20 @ 0f1d1bf",
-        "frontend/src/app/globals.css:154 @ 0f1d1bf",
-        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
-        "frontend/next.config.ts:3-9 @ 0f1d1bf",
-        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a",
-        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
-        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a",
-        "커밋 f671a4f"
+        "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
+        "frontend/src/app/layout.tsx:27 @ af15d7f5",
+        "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5",
+        "frontend/package.json:21 @ af15d7f5",
+        "frontend/src/app/globals.css:131 @ af15d7f5",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ af15d7f5",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ af15d7f5",
+        "deploy/caddy/Caddyfile:70-72 @ af15d7f5",
+        "frontend/README.md:147 @ af15d7f5",
+        "git log af15d7f5 -- frontend/src/app/layout.tsx frontend/src/app/fonts/: 마지막 변경 be67d816(#443)",
+        "be67d816 본문: 소개 화면부터 업무 화면까지 일관된 글꼴이 필요하다"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "0f1d1bf",
-        "top_sha": "0fe7d2a",
-        "rechecked_layer_sha": "9de0e1e"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
+      "question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
       "id": "D-024",
@@ -261,24 +263,25 @@
       "branch": "feat/product-design",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "X-012와 같은 원인이다. 0f1d1bf의 layout.tsx 8-14행이 preload 옵션 없이 단일 2,057,688바이트 파일을 localFont로 부르고, next 16.2.12(package.json 20행)의 기본값이 preload true라 루트 레이아웃 아래 모든 응답에 preload 링크가 붙는다. 지적한 공개 화면은 이 층에 없고 카드 등록은 #445(4ace811), 청구서 링크는 #449(c9a86c4)에서 생기지만, 0fe7d2a의 두 layout이 metadata만 두고 children을 그대로 돌려줘 같은 preload를 받는다. body(globals.css 154행)가 이 글꼴을 쓰므로 제안 중 preload: false만으로는 전송량이 줄지 않고 원인은 전체 글리프 파일의 크기다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "reason": "X-012와 원인이 같다. main의 layout.tsx 8-14행은 넘길 때 head와 같고 글꼴 파일도 같은 blob 49c54b5라, 공개 카드 등록과 청구서 화면도 metadata만 두는 하위 layout을 거쳐 같은 2MB preload를 받는다. 제안 중 preload: false는 body(globals.css 131행)와 antd 토큰(AppProviders.tsx 17행)이 첫 렌더에서 같은 글꼴을 요청하므로 전송량을 줄이지 못한다. 다른 제안인 dynamic subset은 next/font/local로 파일마다 unicode-range를 줄 수 없어 public/ 조각, globals.css @font-face, layout.tsx 변수 정의를 함께 바꾸는 구조 변경이 된다. 프록시나 캐시 층이 첫 방문 비용을 막지 않으므로 피해는 남지만, 어느 쪽으로 줄일지는 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
-        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
-        "frontend/package.json:20 @ 0f1d1bf",
-        "frontend/src/app/globals.css:154 @ 0f1d1bf",
-        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
-        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a",
-        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+        "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
+        "frontend/src/app/globals.css:131 @ af15d7f5",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ af15d7f5",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ af15d7f5",
+        "frontend/next.config.ts:15 @ af15d7f5 (invoice-links CSP font-src 'self')",
+        "deploy/caddy/Caddyfile:70-72 @ af15d7f5"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "0f1d1bf",
-        "top_sha": "0fe7d2a",
-        "rechecked_layer_sha": "9de0e1e"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
+      "question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
       "id": "G-075",
@@ -287,24 +290,24 @@
       "branch": "feat/product-design",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "preload 부분은 X-012와 같은 경로로 확인했다(layout.tsx 8-14행 preload 생략, next 16.2.12 기본값 true, 27행 루트 html, globals.css 154행 body 사용). 버전과 출처 부분도 맞다. OFL.txt는 저작권자와 GitHub 저장소만 적고 버전이 없으며, 0f1d1bf의 README.md 135행은 오히려 '글꼴은 시스템 글꼴이다. 웹폰트를 받지 않는다'라고 적어 layout.tsx와 어긋난다. 파일 버전은 woff2 머리의 fontRevision 0x4f1a로 1.309(Pretendard 1.3.9)임을 읽을 수 있지만 저장소 어디에도 기록되어 있지 않다. 원인과 수정이 같은 커밋에 들어가므로 묶음에서 떼지 않는다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다. 버전과 출처 기록 부분은 README 점검 묶음(G-073) 커밋에서 frontend/README.md에 적는다.",
+      "reason": "지적은 두 부분이다. 글꼴 버전과 출처가 없다는 부분은 main에서 이미 고쳐졌다. be67d816(#443 squash)이 README.md 147행에 Pretendard Variable 1.3.9와 받은 저장소 주소를 적었고, 넘길 때 head 135행의 '시스템 글꼴이다. 웹폰트를 받지 않는다' 문장도 지웠다. 그러나 제목의 본론인 2MB 전체 글꼴 preload는 layout.tsx 8-14행과 blob 49c54b5가 그대로라 X-012와 같은 이유로 남고, 운영 프록시나 캐시가 첫 방문 비용을 막지 않는다. 줄이는 방법이 공통 글꼴 디자인 결정에 걸려 있어 X-012와 같은 질문으로 둔다.",
       "evidence": [
-        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
-        "frontend/src/app/layout.tsx:27 @ 0f1d1bf",
-        "frontend/src/app/globals.css:154 @ 0f1d1bf",
-        "frontend/README.md:135 @ 0f1d1bf",
-        "frontend/src/app/fonts/OFL.txt:1-2 @ 0f1d1bf",
-        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+        "frontend/README.md:147 @ af15d7f5 (버전 1.3.9와 출처 주소, be67d816에서 들어옴)",
+        "frontend/README.md:135 @ 0f1d1bf (시스템 글꼴 문장, main에서 사라짐)",
+        "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
+        "frontend/src/app/layout.tsx:27 @ af15d7f5",
+        "frontend/src/app/globals.css:131 @ af15d7f5",
+        "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "0f1d1bf",
-        "top_sha": "0fe7d2a",
-        "rechecked_layer_sha": "9de0e1e"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
+      "question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
       "id": "G-085",
@@ -313,24 +316,24 @@
       "branch": "feat/product-design",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "X-012와 같은 원인이다. next/font/local은 subset을 만들지 않고 0f1d1bf의 layout.tsx 8-14행이 한글 전체 글리프 단일 파일을 preload 생략(next 16.2.12 기본값 true)으로 불러 루트 레이아웃 아래 모든 HTML에 preload가 붙는다. 지적대로 deploy/caddy/Caddyfile에는 encode나 캐시 설정이 없고 header 줄(32, 47행)만 있으나, woff2는 이미 압축된 형식이라 encode를 더해도 전송량은 그대로라 원인은 파일 크기다. 정점 0fe7d2a에서도 layout.tsx 8-14행과 글꼴 파일이 같고 공개 경로 layout은 children만 돌려준다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "reason": "X-012와 원인이 같다. main의 Caddyfile 70-72행은 프론트엔드로 그대로 넘길 뿐 encode나 캐시 설정이 없다는 지적은 맞지만, woff2는 이미 압축된 형식이라 encode를 더해도 전송량은 그대로이고 원인은 layout.tsx 8-14행이 부르는 2,057,688바이트 단일 파일이다. 제안 중 공개 경로만 시스템 글꼴로 빼려면 localFont를 하위 layout으로 옮겨야 하는데, 27행 html의 변수 클래스가 빠지면 body로 포털되는 antd 모달과 메시지가 var(--font-pretendard)를 잃는다. 첫 방문 고객의 피해는 남지만 subset 교체나 조각 구조 중 무엇으로 줄일지는 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
-        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
-        "frontend/package.json:20 @ 0f1d1bf",
-        "deploy/caddy/Caddyfile:32,47 @ 0f1d1bf",
-        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a",
-        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ 0fe7d2a",
-        "frontend/src/app/invoice-links/layout.tsx:10-12 @ 0fe7d2a"
+        "deploy/caddy/Caddyfile:70-72 @ af15d7f5",
+        "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
+        "frontend/src/app/layout.tsx:27 @ af15d7f5",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
+        "frontend/src/app/payment-method-registrations/layout.tsx:9-11 @ af15d7f5",
+        "frontend/src/app/invoice-links/layout.tsx:10-12 @ af15d7f5"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "0f1d1bf",
-        "top_sha": "0fe7d2a",
-        "rechecked_layer_sha": "9de0e1e"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
+      "question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
       "id": "X-054",
@@ -1647,24 +1650,24 @@
       "branch": "feat/product-design",
       "status": "needs-decision",
       "verdict": "confirmed",
-      "reason": "X-012와 같은 원인이다. f671a4f(#443)가 2,057,688바이트 PretendardVariable.woff2를 더하고 0f1d1bf의 layout.tsx 8-14행에서 preload 없이 선언해 next 16.2.12 기본값 true로 모든 경로 head에 preload가 붙는다. globals.css 154행과 AppProviders.tsx 17행이 이 글꼴을 쓰므로 실제로 내려받고, display swap이라 표시는 막히지 않지만 첫 방문 전송량은 그대로다. 정점 0fe7d2a에서도 같은 줄이고 공개 카드 등록과 청구서 layout은 children만 돌려준다. 메인 세션 판단: 원인은 파일 크기라 preload만 끄면 줄지 않고, 줄이려면 표시할 수 있는 음절을 줄이거나(subset) 조각 파일 수십 개를 외부에서 받아 들여야 해 디자인 결정이 필요하다.",
+      "reason": "X-012와 원인이 같다. be67d816(#443)이 2,057,688바이트 PretendardVariable.woff2를 더하고 layout.tsx 8-14행에서 preload 없이 선언한 상태가 main에 그대로 있어, next 16.2.12 기본값으로 모든 경로 head에 preload가 붙는다. globals.css 131행과 AppProviders.tsx 17행이 이 글꼴을 쓰므로 실제로 내려받고, display swap이라 표시는 막히지 않지만 첫 방문 전송량과 hydration 지연은 남는다. 운영 프록시와 캐시는 첫 방문 비용을 막지 않으며, 줄이는 방법은 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
-        "frontend/src/app/layout.tsx:8-14 @ 0f1d1bf",
-        "frontend/src/app/globals.css:154 @ 0f1d1bf",
-        "frontend/src/components/shell/AppProviders.tsx:17 @ 0f1d1bf",
-        "frontend/package.json:20 @ 0f1d1bf",
-        "커밋 f671a4f",
-        "frontend/src/app/layout.tsx:8-14 @ 0fe7d2a"
+        "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
+        "frontend/src/app/globals.css:131 @ af15d7f5",
+        "frontend/src/components/shell/AppProviders.tsx:17 @ af15d7f5",
+        "frontend/package.json:21 @ af15d7f5",
+        "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5",
+        "deploy/caddy/Caddyfile:70-72 @ af15d7f5"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "0f1d1bf",
-        "top_sha": "0fe7d2a",
-        "rechecked_layer_sha": "9de0e1e"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "question": "모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함)."
+      "question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
       "id": "C443-001",
@@ -8252,14 +8255,13 @@
       "merged_ids": [],
       "layer": 448,
       "branch": "feat/request-audit",
-      "status": "open",
-      "verdict": "not-judged",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
       "title": "#448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다",
-      "reason": "#448 마지막 실화면 점검에서 archive-filters.real.spec.ts의 '고객 검색어와 월을 유지하며 세 관리 상태 조회' 단계가 getByRole('combobox', { name: '관리 상태' })를 찾지 못해 실패했다. cea0a76(이 패키지 수정 뒤), 6431cef(바꾸지 않은 head), bc7e538(넘길 때 head) 모두 같은 실패다. bc7e538의 customers/page.tsx는 '관리 상태'를 표의 열로만 그리고 선택 필터가 없어, 명세가 위층에서 생기는 화면을 기대하는 것으로 보인다(정점 0fe7d2a에서는 명세 12개가 모두 통과했다고 common-brief 11절에 적혀 있다). 이 패키지 담당이 아닌 스택 분할 문제일 수 있어 판정하지 않고 조율 담당에게 넘긴다.",
+      "reason": "main(af15d7f5)에서는 archive-filters.real.spec.ts가 관리 상태 선택 상자가 있는 #451 화면 기준으로 옮겨져 새 DB 실화면 환경에서 2개 시험이 모두 통과한다.",
       "evidence": [
-        "frontend/e2e/archive-filters.real.spec.ts:154-158 @ bc7e538",
-        "frontend/src/app/(console)/customers/page.tsx:19 @ bc7e538",
-        "archive-filters 보관을 지원하는 모든 도입사 목록에서 상태별 조회와 독립 필터를 유지한다: 실패 '관리 상태' combobox element(s) not found (cea0a76, 6431cef, bc7e538)"
+        "archive-filters.real.spec.ts: 통과 2 passed @ af15d7f5",
+        "커밋 f53222e7"
       ],
       "commits": [],
       "tests": [
@@ -8267,12 +8269,236 @@
       ],
       "behavior_change": false,
       "judged_at": {
-        "layer_sha": "6431cefb1cd0c47b1a882dfe74c0aad305e9b8e2"
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
       },
-      "left": "12절로 멈춤. 조율 담당이 명세를 그 층에 맞추거나(관리 상태 선택 필터가 생기는 층으로 옮기기) 이 층에서 빼도록 정하면, #448 마지막 실화면 점검을 cea0a76(또는 그 뒤 마지막 push)에서 다시 한다"
+      "top_head": "main af15d7f5"
+    },
+    {
+      "merged_ids": [],
+      "branch": "main",
+      "verdict": "confirmed",
+      "commits": [],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
+      },
+      "id": "NT-inho-006",
+      "layer": 451,
+      "status": "open",
+      "title": "environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다",
+      "reason": "main의 개요 화면은 h1을 formatKoreanMonth(month)로 그려 '2026년 10월 과금 운영'이 된다. #453이 더한 environment-cycle.real.spec.ts 143행은 넘길 때 head(17cc788)의 문구 '이번 달 과금 운영'을 그대로 기대해, 바꾸지 않은 main 실화면 환경에서 두 번 모두 그 단계에서 실패한다. 문구는 #451 squash(f53222e7)에서 바뀌었고 명세는 따라가지 않았다.",
+      "evidence": [
+        "frontend/src/app/(console)/overview/page.tsx:23 @ af15d7f5",
+        "frontend/e2e/environment-cycle.real.spec.ts:143-144 @ af15d7f5",
+        "environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5",
+        "커밋 f53222e7"
+      ],
+      "tests": [
+        "environment-cycle.real.spec.ts 두 번 실행, 두 번 실패"
+      ],
+      "left": "main 기준선 실패. 명세를 화면에 맞출지(어느 PR로 고칠지) 사람이 정한 뒤 이어 간다"
+    },
+    {
+      "merged_ids": [],
+      "branch": "main",
+      "verdict": "confirmed",
+      "commits": [],
+      "behavior_change": false,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "base": "origin/main"
+      },
+      "id": "NT-inho-007",
+      "layer": 442,
+      "status": "open",
+      "title": "mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다",
+      "reason": "main의 ActionPanel close()는 비밀값을 복사하지 않고 닫으면 window.confirm으로 묻는다(2db50b44, #442 squash 1b2c555d). Playwright는 확인 창을 기본으로 거절해 대화상자가 남고, mvp.real.spec.ts 128-129행은 Escape 뒤 '수신 주소 등록' 버튼을 누르려다 모달에 막혀 바꾸지 않은 main 실화면 환경에서 두 번 모두 실패한다.",
+      "evidence": [
+        "frontend/src/components/workspace/ActionPanel.tsx:99 @ af15d7f5",
+        "frontend/e2e/mvp.real.spec.ts:128-129 @ af15d7f5",
+        "mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5",
+        "커밋 1b2c555d"
+      ],
+      "tests": [
+        "mvp.real.spec.ts 두 번 실행, 두 번 실패"
+      ],
+      "left": "main 기준선 실패. 명세가 확인 창을 받게 고칠지(어느 PR로 고칠지) 사람이 정한 뒤 이어 간다"
     }
   ],
   "checks": [
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "static",
+      "command": "저장소의 *.sh bash -n, deploy/grafana와 measurements JSON json.tool, .github, deploy/grafana, measurements YAML ruby 읽기",
+      "result": "pass",
+      "detail": "준비 4번 main 기준선. 실패 파일 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "rds-auto-stop",
+      "command": "measurements/terraform/modules/rds-auto-stop/README.md 로컬 검사 절 명령",
+      "result": "pass",
+      "detail": "npm test 통과, terraform fmt -check 통과, 임시 폴더 terraform test 2 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "deploy",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "result": "pass",
+      "detail": "Ran 36 tests, OK (skipped=11)"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "demo",
+      "command": "cd demo/llm-service && corepack pnpm exec playwright test --list",
+      "result": "pass",
+      "detail": "명세 목록이 나온다"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "demo",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "result": "pass",
+      "detail": "unittest 328개 통과(skipped 7). pnpm -r build는 build 스크립트가 없는 demo/sdk를 건너뛰고(Scope: 3 of 4) web, llm-service를 빌드해 통과한다"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 mvp.real.spec.ts (main 실화면 환경, 새 DB, 두 번)",
+      "result": "fail",
+      "detail": "두 번 모두 실패. API 키 발급 뒤 Escape로 닫는데 복사 전 닫기 확인 창이 거절돼 대화상자가 남는다(NT-inho-007)"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts (main 실화면 환경, 새 DB, 두 번)",
+      "result": "fail",
+      "detail": "두 번 모두 실패. 개요 화면 h1을 '이번 달 과금 운영'으로 기대하는데 main은 '2026년 10월 과금 운영'을 그린다(NT-inho-006)"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 query-workspace.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 permissions.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "6 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 people.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 operator-create.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 invoice-links.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "3 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 events.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 customer-payment-retry.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "6 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 auth.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "3 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 archive-filters.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "2 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "11절 6번 aggregation.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "65 passed"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 79, pass 79, fail 0"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "detail": "준비 4번 main 기준선"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass",
+      "detail": "준비 4번 바꾸지 않은 main 기준선. BUILD SUCCESSFUL, openapi.yaml 변화 없음"
+    },
     {
       "branch": "fix/s456-448-t-inho",
       "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
@@ -11661,7 +11887,13 @@
     "2026-10-29T00:16:15+09:00 PR #466은 조율 담당이 feat/webhook-jobs에 merge했다(be40088, 2026-10-28T15:14:43Z). origin의 fix/s456-444-t-inho는 지워졌다. #444 push는 be40088을 통해 origin에 있고, 보조 검사는 fix_merges의 머지 커밋으로 확인한다.",
     "2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.",
     "2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다.",
-    "2026-10-29T01:27:30+09:00 12절로 전체를 멈췄다: #448 마지막 실화면 점검에서 archive-filters.real.spec.ts가 실패했고, 바꾸지 않은 head 6431cef와 넘길 때 head bc7e538에서도 같은 단계에서 같은 실패였다(NT-inho-005). #448 항목은 모두 끝 상태이고(fixed 10, needs-decision 5, already-fixed 1, refuted 1), 고친 커밋은 fix/s456-448-t-inho(PR #469)에 모두 push했다. #446은 동기화 충돌(C446-001)로 남은 24건이 열려 있다."
+    "2026-10-29T01:27:30+09:00 12절로 전체를 멈췄다: #448 마지막 실화면 점검에서 archive-filters.real.spec.ts가 실패했고, 바꾸지 않은 head 6431cef와 넘길 때 head bc7e538에서도 같은 단계에서 같은 실패였다(NT-inho-005). #448 항목은 모두 끝 상태이고(fixed 10, needs-decision 5, already-fixed 1, refuted 1), 고친 커밋은 fix/s456-448-t-inho(PR #469)에 모두 push했다. #446은 동기화 충돌(C446-001)로 남은 24건이 열려 있다.",
+    "2026-10-29 스택 #442~#455가 main(af15d7f5)에 squash로 머지됐다(후속 PR #465 #466 #468 #469 포함). 이 뒤로는 최신 origin/main을 기준으로 남은 지적을 판정하고 주제별 fix/s456-t-inho-<주제> 브랜치에서 고쳐 main 대상 PR로 올린다. 층 순서, feat 브랜치, fix/s456-<PR>-t-inho, 9절 동기화 merge, 15절 층별 마지막 실화면 점검은 쓰지 않고, 이미 있는 V__는 고치지 않는다(새 V__를 더하거나 needs-decision).",
+    "준비 4번 바꾸지 않은 main(af15d7f5) 기준선: backend, frontend, frontend-unit(79/79), 계약 명세(65), demo(unittest와 pnpm -r typecheck, lint, test, build), demo llm-service 명세 목록, deploy, rds-auto-stop, static이 통과했다. 실화면 명세 12개 가운데 10개가 통과했고 environment-cycle(NT-inho-006)과 mvp(NT-inho-007)가 두 번 모두 같은 단계에서 실패해 준비 4번대로 1단계 판정 전에 멈췄다.",
+    "demo의 corepack pnpm -r build는 main에서 통과한다. build 스크립트가 없는 demo/sdk는 건너뛰고(Scope: 3 of 4) web, llm-service만 빌드하므로 not-applicable로 적지 않았다.",
+    "로컬 DB: 2026-10-29 docker compose down -v로 compose 프로젝트 meterengine의 meterengine_postgres-data(V20까지 적용)를 지우고 main 기준으로 다시 띄웠다. 실화면 환경 DB(meterengine-0696-e2e)도 main에서 새로 만들었다.",
+    "넘기기 자료 41d92a5: findings.json은 바뀌지 않았다. common-brief 10절 표에 archive-filters가 더해졌고 orchestration.md가 생겼다. 바뀐 규칙(main 기준)이 이보다 우선한다.",
+    "1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",

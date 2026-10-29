@@ -1,8 +1,8 @@
-미완료 194건, 결과: 끝 상태 179/372건 (fixed 127, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+미완료 195건, 결과: 끝 상태 179/372건 (fixed 127, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76)
 정할 것: 39건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: stopped, 갱신 2026-10-29T01:28:36+09:00
+상태: stopped, 갱신 2026-10-29T14:58:16+09:00
 
 ## 층별 상태
 
@@ -144,15 +144,15 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
-| X-012 | #443 | 모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함). |
-| D-071 | #443 | 모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함). |
-| G-075 | #443 | 모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함). |
-| G-085 | #443 | 모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함). |
+| X-012 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
+| D-071 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
+| G-075 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
+| G-085 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
 | D-011 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
 | D-065 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
 | G-072 | #443 | 색과 글꼴 값을 TS 모듈 하나에 모아 AppProviders 테마와 :root CSS 변수를 함께 만들고 globals.css, HomePage.module.css는 var()만 쓰게 바꿀지(새 파일과 AppProviders.tsx, layout.tsx, globals.css, HomePage.module.css에 걸친 구조 변경, 박성종 님 f671a4f 디자인), 지금 복제를 둘지 정한다. |
 | G-080 | #443 | WorkspaceHeader의 kicker를 화면에 보이게 할지(globals.css:170 삭제, f671a4f 디자인 되돌림) 아니면 kicker prop과 호출부 인자, .workspace-kicker 두 규칙을 지울지(이 층 4개 파일, 정점 12개 호출 파일)를 D-237과 함께 정한다. |
-| C443-002 | #443 | 모든 경로가 preload하는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 릴리스의 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 들일지, (다) 지금 파일을 둘지 정해야 한다(외부에서 받은 글꼴 파일을 저장소에 넣는 일 포함). |
+| C443-002 | #443 | 모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다. |
 | D-039 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
 | D-055 | #443 | 767px 이하 콘솔 헤더를 줄이려고 시연 안내, 권한 새로 조회, 로그아웃(#453부터 업무 환경 선택 포함)을 메뉴 Drawer로 옮길지, 헤더 sticky를 풀지, 지금 배치를 유지할지 정해야 한다. |
 | D-244 | #443 | 색 토큰을 역할 이름(--color-primary, --color-text-secondary 등)으로 다시 짓고 TS 상수 하나에서 antd 테마와 CSS 변수를 함께 만들며 테스트 환경 안내 상자를 한 컴포넌트로 묶을지(#443, #445, #446, #449 파일에 걸친 구조 변경) 정한다. |
@@ -202,7 +202,9 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | NT-inho-002 | #444 | already-fixed | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
 | NT-inho-003 | #444 | needs-decision | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
 | NT-inho-004 | #448 | needs-decision | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
-| NT-inho-005 | #448 | open | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
+| NT-inho-005 | #448 | already-fixed | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
+| NT-inho-006 | #451 | open | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
+| NT-inho-007 | #442 | open | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
 
 ## 돌리지 못한 검사
 
@@ -311,3 +313,9 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 2026-10-29T00:18:26+09:00 #446 동기화 충돌: origin/feat/pricing-aggregation이 f91912f(#466 반영, 70357f5, ad9f7fa 포함)로 움직여 fix/s456-446-t-inho에 merge하니 OpenApiDocumentTest.java와 auth.contract.spec.ts가 충돌했다. 두 파일 모두 #444와 #446에서 같은 기준 시험 앞에 새 시험을 더한 자리라, 반영할 때 양쪽 시험을 모두 남기면 된다. 9절대로 충돌을 풀지 않고 merge를 취소했고, push하지 못한 C446-001 커밋 e4da2fa를 evidence/sync-conflict/446/0001-fix-ApiClient-verify.patch로 남겼다. PR #468(fix/s456-446-t-inho -> feat/pricing-aggregation)도 같은 두 파일에서 충돌한다. #446의 남은 항목은 충돌이 풀린 뒤 이어 고치고, 그때까지 #448로 넘어간다.
 - 2026-10-29T00:59:24+09:00 U6-B3(Q3) 결정 때 다시 볼 동작: #448 GA-B1(b0bf0b1)로 요청 감사가 퍼센트 인코딩한 경로를 디코딩해 판정하므로, 인코딩한 수집 경로(POST /%761/events)는 수집 제외(isIngestion, 원문 비교)에 걸리지 않고 감사 행을 남긴다. 시험 퍼센트_인코딩한_수집_경로는_수집으로_보지_않아_감사기록을_남긴다가 이 동작을 단정한다.
 - 2026-10-29T01:27:30+09:00 12절로 전체를 멈췄다: #448 마지막 실화면 점검에서 archive-filters.real.spec.ts가 실패했고, 바꾸지 않은 head 6431cef와 넘길 때 head bc7e538에서도 같은 단계에서 같은 실패였다(NT-inho-005). #448 항목은 모두 끝 상태이고(fixed 10, needs-decision 5, already-fixed 1, refuted 1), 고친 커밋은 fix/s456-448-t-inho(PR #469)에 모두 push했다. #446은 동기화 충돌(C446-001)로 남은 24건이 열려 있다.
+- 2026-10-29 스택 #442~#455가 main(af15d7f5)에 squash로 머지됐다(후속 PR #465 #466 #468 #469 포함). 이 뒤로는 최신 origin/main을 기준으로 남은 지적을 판정하고 주제별 fix/s456-t-inho-<주제> 브랜치에서 고쳐 main 대상 PR로 올린다. 층 순서, feat 브랜치, fix/s456-<PR>-t-inho, 9절 동기화 merge, 15절 층별 마지막 실화면 점검은 쓰지 않고, 이미 있는 V__는 고치지 않는다(새 V__를 더하거나 needs-decision).
+- 준비 4번 바꾸지 않은 main(af15d7f5) 기준선: backend, frontend, frontend-unit(79/79), 계약 명세(65), demo(unittest와 pnpm -r typecheck, lint, test, build), demo llm-service 명세 목록, deploy, rds-auto-stop, static이 통과했다. 실화면 명세 12개 가운데 10개가 통과했고 environment-cycle(NT-inho-006)과 mvp(NT-inho-007)가 두 번 모두 같은 단계에서 실패해 준비 4번대로 1단계 판정 전에 멈췄다.
+- demo의 corepack pnpm -r build는 main에서 통과한다. build 스크립트가 없는 demo/sdk는 건너뛰고(Scope: 3 of 4) web, llm-service만 빌드하므로 not-applicable로 적지 않았다.
+- 로컬 DB: 2026-10-29 docker compose down -v로 compose 프로젝트 meterengine의 meterengine_postgres-data(V20까지 적용)를 지우고 main 기준으로 다시 띄웠다. 실화면 환경 DB(meterengine-0696-e2e)도 main에서 새로 만들었다.
+- 넘기기 자료 41d92a5: findings.json은 바뀌지 않았다. common-brief 10절 표에 archive-filters가 더해졌고 orchestration.md가 생겼다. 바뀐 규칙(main 기준)이 이보다 우선한다.
+- 1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다.
