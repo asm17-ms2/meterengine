@@ -1,6 +1,6 @@
-결과: 끝 상태 328/328건 (fixed 257, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 5, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57)
-정할 것: 5건 (G-187, Ck2-017, Nk3-006, Ck3-447-03, Ck3-447-06). 로컬 DB 다시 만들기: 없음
+결과: 끝 상태 328/328건 (fixed 260, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 2, blocked 10(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 1개(마지막 62e8eee), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 1개(마지막 b303189), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 1개(마지막 34e8959), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f)
+정할 것: 2건 (G-187, Ck2-017). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
@@ -8,7 +8,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | #442 | 143 | 113 | 9 | 17 | 1 | 3 | 0 |
 | #445 | 68 | 58 | 0 | 9 | 1 | 0 | 0 |
-| #447 | 35 | 24 | 5 | 3 | 3 | 0 | 0 |
+| #447 | 35 | 27 | 5 | 3 | 0 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
 | #452 | 19 | 16 | 0 | 3 | 0 | 0 | 0 |
 | #453 | 39 | 33 | 1 | 4 | 0 | 1 | 0 |
@@ -164,7 +164,10 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | G-147 | #447 | 7da6d60 | SDK 웹훅 엔드포인트 목록에 보관 상태 필터와 archived_at이 없음 | 웹훅 엔드포인트 목록은 보관 상태를 query로 보내고 archived_at을 돌려준다: 실패 AssertionError expected: 'archived', actual: null (tsc: TS2554 Expected 0 arguments, but got 1) |
 | Nk3-004 | #447 | f766ae8 | 저장하지 않은 모드의 토스페이먼츠 키를 보관하면 500 대신 404를 돌려준다 | test_키만_저장한_도입사가_live_키를_보관하면_404_toss_payments_credential_not_found다: 실패 [HTTP status code] expected: 404 but was: 500 |
 | Nk3-005 | #447 | 56a230c | 보관한 자원을 거절하는 409와 보관, 복원 경로의 404를 API 문서에 적는다 | 보관한_자원을_쓰는_경로는_409_보관_code를_ErrorResponse로_문서화한다: 실패 [409 응답: {"200":{...IngestEventResponse...},...}] expected: "#/components/schemas/ErrorResponse" but was: " |
+| Nk3-006 | #447 | 2683834 | GET /v1/price-plans의 계약은 바꾸지 않는다. 컨트롤러 설명대로 month는 기간만 거르고 s | price-plan.test.mjs: 실패 ERR_MODULE_NOT_FOUND price-plan.ts(옛 activePlan은 2026-11에 V1 반환), demo test_보관한_최신_요금제는_이전_요금제로_돌아가지_않는다: 실패 False is not true |
 | U19-B1 | #447 | 8e329ff | 지난 월 요금제 삭제 시험이 삭제 효과를 보지 않음 | PricePlanService.delete가 지난 월 요금제를 이번 달부터 보관하는 변이: 실패 expected: "2026-11" but was: "2026-10" |
+| Ck3-447-03 | #447 | 3d1f20d | 고친다. main에서도 PaymentArchiveRepository.methods와 credentials가  | BusinessArchiveIntegrationTest 보관한_카드와_PG키는_새등록을_막고_재등록전_이력을_보존한다: 실패 이력 카드 authenticatedAt=...Z |
+| Ck3-447-06 | #447 | a937f8f | 고친다. main에서도 CustomerRepository의 findByOrganizationIdAndIdIn | 없음(동작 불변 정리: git grep으로 남은 호출 없음, backend build 시험 1375건 통과(a937f8f)) |
 | Ck3-447-10 | #447 | 4ec2ebd | 보관 상태로 거르는 목록의 status에 받는 값을 API 문서에 적는다 | 보관_상태로_거르는_목록의_status는_active_archived_all만_받고_기본이_active다: 실패 [listCustomers] Expecting actual: [] to contain exactly (and in same order): ["active", "archived |
 | Ck3-447-11 | #447 | 84bb5e7 | README 구조 절이 없어진 삭제 가드 의존과 삭제 동작을 그대로 적음 | 없음(보이는 변경(README 구조 절 글만 바뀌고 실행 시험 대상이 없다). 고친 줄을 git show 5371d1e의 CustomerService(import에 event, payment 없음), BillableMet) |
 | Ck3-447-13 | #447 | f69fd31 | 결제 보관 잠금을 FOR NO KEY UPDATE로 바꿔 이벤트 수집을 막지 않음 | 도입사_잠금을_쥐고_있어도_그_도입사의_이벤트_수집은_기다리지_않는다: 실패 java.util.concurrent.TimeoutException |
@@ -229,9 +232,6 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | --- | --- | --- |
 | G-187 | #442 | CI에 프론트 단위 시험, 계약 명세, demo, deploy, terraform 잡을 더할지(팀 전체에 거는 제약이라 Discussion 합의가 필요하다). |
 | Ck2-017 | #445 | 실패하거나 빠진 날의 결제 대사를 다시 돌리는 경로를 키별 워터마크 자동 따라잡기(새 마이그레이션 필요)로 둘지, 날짜를 받는 운영자 재실행 API와 deploy/README 런북으로 둘지, 이번 스택에서는 두지 않고 후속 이슈로 넘길지 정한다. |
-| Nk3-006 | #447 | GET /v1/price-plans에 month를 주면, status와 상관없이 그 달 청구에 적용되는 요금제 버전 하나만 돌려주도록 계약을 바꿀지 정해야 합니다. 바꾸지 않는다면 지금처럼 그 달에 걸친 이력을 status로 걸러 돌려주고, demo verify와 콘솔이 status=all 목록에서 보관 가림을 포함한 청구 규칙으로 직접 고르게 합니다. |
-| Ck3-447-03 | #447 | #447에서 결제 이력 목록을 저장소가 아니라 DTO from(KST 변환)과 서비스의 문서대로 정렬로 만들도록 저장소와 두 서비스를 고칠지, 컨트롤러 설명을 이력 행 순서에 맞게 고칠지, 그리고 교체로 물러난 키와 카드를 보관 목록에 보관으로 보일지 정합니다. |
-| Ck3-447-06 | #447 | CustomerRepository에서 호출처 없는 existsWithPricing과 findByOrganizationIdAndIdIn을 지우고, PricePlanService와 PriceRateService의 읽기 트랜잭션을 실제로 호출되는 4인자 list로 옮기는 세 파일 정리를 #447에서 할지 정합니다. |
 
 ## 막힌 것
 
@@ -468,3 +468,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: #486 fix/s456-t-yang-month-picker(D-236, D-136, D-170, X-046)를 열고 문인호 님과 박성종 님을 리뷰어로 지정했다.
 - 2026-10-29: #487 fix/s456-t-yang-sidebar-nav(D-179)를 열고 문인호 님을 리뷰어로 지정했다.
 - 2026-10-29: #476 박성종 님 리뷰 p4(대사 버전 실패 격리 시험이 실패 버전을 실제로 부르지 않음)를 받아 현재 키 실패 뒤 옛 키 대사를 보는 시험을 더했다(cce95ba). 시험만 바뀌어 프론트와 실화면 검사는 다시 돌리지 않았다.
+- 2026-10-29: #489 fix/s456-t-yang-pricing-archive(Nk3-006, Ck3-447-03, Ck3-447-06)를 열고 문인호 님을 리뷰어로 지정했다.
