@@ -84,6 +84,7 @@ test("도입사 고객의 생성, 실제 수집과 청구, 계정 격리와 독�
     assertNoSecrets(activeSession, secrets);
     evidence.clientAssetsChecked = await assertClientAssetsSafe(page, secrets);
     const baseline = await workspace(context.request);
+    if (baseline.billing.invoices.some(invoice => invoice.month === baseline.month)) throw new Error("이번 달 인보이스가 이미 확정된 시드입니다. seed-demo.ts를 새 출력 경로로 다시 실행하고 그 설정으로 앱을 다시 띄운 뒤 LUMEN_E2E_ENV_FILE을 바꾸세요.");
     const readHeaders = { Authorization: `Bearer ${environment.METERENGINE_API_KEY}` };
     const commonPrices = await jsonResponse<MeterPrices>(await request.get(`${environment.METERENGINE_API_BASE_URL}/v1/billable-metric-prices?month=${baseline.month}`, { headers: readHeaders }));
     const customerPrices = await jsonResponse<MeterPrices>(await request.get(`${environment.METERENGINE_API_BASE_URL}/v1/billable-metric-prices?month=${baseline.month}&customer_id=${account.customerId}`, { headers: readHeaders }));
