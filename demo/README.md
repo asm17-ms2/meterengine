@@ -397,10 +397,10 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 변수 | 내용 |
 |---|---|
 | `METERENGINE_API_KEY` | `http://localhost:8080` 백엔드에 쓸 API 키. 대상 이름은 `local` |
-| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 키의 환경을 사용한다 |
+| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 호출은 키의 환경을 쓰고 웹훅은 기존 데이터(legacy) 범위로 받는다. 지정하면 `METERENGINE_WEBHOOK_SECRET`으로 그 환경의 웹훅을 받는다 |
 | `METERENGINE_TARGETS` | `[{"name": "local-test", "base_url": "http://localhost:8080", "api_key": "...", "environment": "test", "webhook_secret": "whsec_..."}]`. API 키와 웹훅 비밀값은 서버에서만 쓴다. 단일 대상 설정보다 먼저 적용한다 |
 | `METERENGINE_LEGACY_WEBHOOK_TARGET` | 기존 전역 비밀값과 수신 기록을 사용할 원래 무환경 대상 이름. 예: `e2e` |
-| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상의 웹훅 비밀값. 새 `test/live` 대상에는 적용하지 않는다 |
+| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상, 또는 환경을 지정한 단일 대상의 웹훅 비밀값. `METERENGINE_TARGETS`의 `test/live` 대상에는 적용하지 않는다 |
 | `METERENGINE_BRIDGE_URL` | 브리지 주소. 기본 `http://127.0.0.1:4318` |
 | `METERENGINE_CONSOLE_URL` | 공개 카드 등록 화면이 있는 콘솔 주소. 기본 `http://127.0.0.1:3000` |
 
