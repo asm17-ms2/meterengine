@@ -1,6 +1,7 @@
 "use client";
 
 import { planAmount } from "@/lib/plan-amount";
+import { formatKrw } from "@/lib/format";
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
 import { ResourceSearchControls, resourceSearchFormId } from "@/components/screen/ResourceSearchControls";
@@ -21,13 +22,14 @@ import type { ArchiveStatus } from "@/lib/list-query";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import type { BillableMetricResponse } from "@/lib/api/billable-metrics";
 import { metricCalculationFormula } from "@/lib/billable-metric-calculation";
-import { isZeroPriceRate } from "@/lib/price-rate";
+import { isRepresentableUnitPrice, isZeroPriceRate } from "@/lib/price-rate";
 import type { CustomerResponse } from "@/lib/api/customers";
 import type { BillableMetricPricePriceRate, ListBillableMetricPricesResponse, PricePlanResponse, PriceRateResponse } from "@/lib/api/pricing";
 import styles from "./pricing.module.css";
 
 const MODEL_LABELS = { per_unit: "단일 단가", graduated: "누진 구간", volume: "총량 구간" };
 const MONEY = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
+const UNIT_PRICE_PRECISION_MESSAGE = "단가는 소수점 아래 10자리까지 입력하세요. 더 정밀한 단가는 API로 등록하세요.";
 
 export type PricingCustomer = Pick<CustomerResponse, "id" | "name" | "archived_at"> & { is_archived?: boolean };
 
@@ -94,7 +96,7 @@ export function PricingWorkspace(props: Props) {
       {title:"조합",key:"dimensions",render:(_,rate)=>dimensions(rate)},
       {title:"적용 기간",key:"period",render:(_,rate)=>dateRange(rate)},
       {title:"계산 방식",key:"model",render:(_,rate)=><Tag>{MODEL_LABELS[rate.model]}</Tag>},
-      {title:"단가",key:"price",align:"right",render:(_,rate)=><span className="numeric">{rate.unit_price !== null ? `${MONEY.format(rate.unit_price)}원` : `${rate.tiers?.length ?? 0}개 구간`}</span>},
+      {title:"단가",key:"price",align:"right",render:(_,rate)=><span className="numeric">{rate.unit_price !== null ? formatKrw(rate.unit_price) : `${rate.tiers?.length ?? 0}개 구간`}</span>},
       {title:"관리 상태",key:"state",render:(_,rate)=><><Tag color={rate.archived_at ? "default" : "success"}>{rate.archived_at ? "보관됨" : "사용 중"}</Tag>{rate.archived_at && <p className="field-hint">{rate.archived_from ?? "다음 달"}부터 중단</p>}</>},
       ...(canManage ? [{title:"작업",key:"actions",render:(_: unknown, rate: PriceRateResponse)=>rate.archived_at && !canRestoreRate(rate) ? <span className="field-hint">적용 중단이 시작됐거나 대체 버전이 있습니다. 새 버전을 등록하세요.</span> : <ActionPanel title={rate.archived_at ? "단가 버전 복원" : "단가 버전 보관"} operation={rate.archived_at ? "restorePriceRate" : "deletePriceRate"} description={rate.archived_at ? "이 단가 버전을 다시 사용합니다. 적용 기간과 같은 조합의 다른 버전을 확인하세요." : "다음 달부터 이 단가 버전의 적용을 중단합니다. 현재 월과 과거 청구, 확정 인보이스는 보존되며 보관 목록에서 복원할 수 있습니다."} isDanger={!rate.archived_at} fields={[{name:"id",label:"단가",type:"hidden",value:rate.id},{name:"code",label:"미터",type:"hidden",value:selectedCode}]} />}] : []),
     ]} /></section>}
@@ -108,9 +110,9 @@ function PricingHistoryFilter({ parameterName, value, label }: { parameterName: 
 }
 
 function RateDetails({ rate }: { rate: BillableMetricPricePriceRate }) {
-  if (rate.model === "per_unit") return <p className={styles.unitPrice}><strong>{MONEY.format(rate.unit_price ?? 0)}원</strong> / 과금 수량 1</p>;
+  if (rate.model === "per_unit") return <p className={styles.unitPrice}><strong>{formatKrw(rate.unit_price ?? 0)}</strong> / 과금 수량 1</p>;
   let lower = 0;
-  return <div className={styles.tierList}><p>{rate.model === "graduated" ? "구간마다 해당 수량에 단가를 곱해 더합니다." : "전체 수량이 속한 구간의 단가를 모든 수량에 적용합니다."}</p>{rate.tiers?.map((tier,index)=>{const start=lower;lower=tier.up_to??lower;return <div key={index}><span>{start === 0 ? "0부터" : `${MONEY.format(start)} 초과`}{tier.up_to === null ? " 계속" : ` ${MONEY.format(tier.up_to)}까지`}</span><strong>{MONEY.format(tier.unit_price)}원 / 과금 수량 1</strong></div>;})}</div>;
+  return <div className={styles.tierList}><p>{rate.model === "graduated" ? "구간마다 해당 수량에 단가를 곱해 더합니다." : "전체 수량이 속한 구간의 단가를 모든 수량에 적용합니다."}</p>{rate.tiers?.map((tier,index)=>{const start=lower;lower=tier.up_to??lower;return <div key={index}><span>{start === 0 ? "0부터" : `${MONEY.format(start)} 초과`}{tier.up_to === null ? " 계속" : ` ${MONEY.format(tier.up_to)}까지`}</span><strong>{formatKrw(tier.unit_price)} / 과금 수량 1</strong></div>;})}</div>;
 }
 
 function PriceRateEditor({ metric, month, currentMonth, customerId, customerName }: { metric: Pick<BillableMetricResponse, "code" | "name" | "dimension_properties">; month: string; currentMonth: string; customerId: string; customerName: string }) {
@@ -144,6 +146,8 @@ function PriceRateEditor({ metric, month, currentMonth, customerId, customerName
     const nextErrors: Record<string, string> = {};
     const until = String(data.get("effective_until") ?? "");
     if (until && until <= String(data.get("effective_from") ?? "")) nextErrors.effective_until = "적용 종료 월은 시작 월보다 뒤여야 합니다.";
+    const unitPrice = String(data.get("unit_price") ?? "");
+    if (model === "per_unit" && unitPrice && !isRepresentableUnitPrice(unitPrice)) nextErrors.unit_price = UNIT_PRICE_PRECISION_MESSAGE;
     if (model !== "per_unit") {
       let previous = 0;
       for (const [index, tier] of tiers.entries()) {
@@ -153,6 +157,7 @@ function PriceRateEditor({ metric, month, currentMonth, customerId, customerName
           previous = upper;
         }
         if (!tier.unitPrice || !Number.isFinite(Number(tier.unitPrice)) || Number(tier.unitPrice) < 0) nextErrors["tier:" + tier.id + ":unitPrice"] = "단가는 0 이상의 숫자로 입력하세요.";
+        else if (!isRepresentableUnitPrice(tier.unitPrice)) nextErrors["tier:" + tier.id + ":unitPrice"] = UNIT_PRICE_PRECISION_MESSAGE;
       }
     }
     for (const key of metric.dimension_properties) {

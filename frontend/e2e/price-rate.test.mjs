@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { isZeroPriceRate } from "../src/lib/price-rate.ts";
+import { isRepresentableUnitPrice, isZeroPriceRate } from "../src/lib/price-rate.ts";
 
 const editor = readFileSync(new URL("../src/components/pricing/PricingWorkspace.tsx", import.meta.url), "utf8");
 
@@ -17,3 +17,9 @@ test("the price editor does not prefill unit prices with zero", () => {
   assert.doesNotMatch(editor, /name="unit_price"[^>]*defaultValue=\{?\s*"0"/);
   assert.doesNotMatch(editor, /unitPrice:\s*"0"/);
 });
+
+test("unit prices the screen can show exactly are accepted and finer ones are sent to the API instead", () => {
+  for (const text of ["120", "0.0000000001", "12.5", "9007199254740991"]) assert.equal(isRepresentableUnitPrice(text), true, text);
+  for (const text of ["0.00000000001", "9007199254740992", "1e-11"]) assert.equal(isRepresentableUnitPrice(text), false, text);
+});
+
