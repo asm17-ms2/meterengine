@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
 import { test } from "node:test";
+import { MeterEngineApiError } from "@meterengine/sdk";
 import type { IngestEventRequest } from "@meterengine/sdk";
 import { readConfig } from "./config.ts";
 import type { LumenConfig } from "./config.ts";
@@ -294,17 +295,52 @@ test("모델 작업 임대가 만료돼도 새 작업 결과만 outbox와 함께
   assert.equal(store.claimOutbox(NOW + 60002)?.event.timestamp, old.generation.createdAt);
 });
 
+test("실패한 응답을 나중에 다시 만들어도 처음 요청 시각으로 사용량을 보낸다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  let now = Date.parse("2026-10-31T14:59:30Z");
+  let calls = 0;
+  const provider: GenerationProvider = { async generate() { calls++; if (calls === 1) throw new Error("provider down"); return { output: "응답", inputTokens: 2, outputTokens: 3 }; } };
+  const fake = clientFixture();
+  const service = new LumenService({ config: config(), store, client: fake.client, provider, now: () => now });
+  const body = { requestId: randomUUID(), modelId: "lumen-fast", prompt: "월말 요청" };
+  await assert.rejects(() => service.generate(ACCOUNT_A, body), error => error instanceof ServiceError && error.status === 503);
+  now = Date.parse("2026-10-31T15:00:10Z");
+  await service.generate(ACCOUNT_A, body);
+  assert.deepEqual(fake.events.map(event => event.timestamp), ["2026-10-31T14:59:30.000Z"]);
+});
+
+test("MeterEngine이 영구 거절한 사용량은 자동으로 다시 보내지 않고 직접 재전송으로만 보낸다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  let now = NOW;
+  let calls = 0;
+  const fake = clientFixture({ async ingestEvent() { calls++; throw new MeterEngineApiError(409, { code: "customer_archived", message: "보관한 고객입니다" }); } });
+  const service = new LumenService({ config: config(), store, client: fake.client, now: () => now });
+  const id = randomUUID();
+  await service.generate(ACCOUNT_A, { requestId: id, modelId: "lumen-fast", prompt: "보관된 고객" });
+  assert.equal(calls, 1);
+  now = NOW + 60000;
+  await service.flushMetering();
+  assert.equal(calls, 1);
+  assert.equal(service.getRequest(ACCOUNT_A, id).meteringStatus, "failed");
+  await service.retryMetering(ACCOUNT_A, { requestId: id });
+  assert.equal(calls, 2);
+});
+
 test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다", async t => {
   const store = new LumenStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
   t.after(() => store.close());
   const fake = clientFixture({ async ingestEvent() { throw new Error("offline"); } });
-  const service = new LumenService({ config: config(), store, client: fake.client, now: () => NOW });
+  let now = NOW;
+  const service = new LumenService({ config: config(), store, client: fake.client, now: () => now });
   const a = randomUUID();
   const b = randomUUID();
   await service.generate(ACCOUNT_A, { requestId: a, modelId: "lumen-fast", prompt: "앨리스" });
   await service.generate(ACCOUNT_B, { requestId: b, modelId: "lumen-fast", prompt: "밥" });
   await assert.rejects(() => service.retryMetering(ACCOUNT_A, { requestId: b }), error => error instanceof ServiceError && error.status === 404);
   fake.client.ingestEvent = async event => { fake.events.push({ ...event, transaction_id: event.transaction_id! }); return { transaction_id: event.transaction_id!, duplicate: false }; };
+  now = NOW + 6000;
   await service.retryMetering(ACCOUNT_A, {});
   assert.equal(service.getRequest(ACCOUNT_A, a).meteringStatus, "delivered");
   assert.equal(service.getRequest(ACCOUNT_B, b).meteringStatus, "failed");
@@ -338,6 +374,7 @@ test("조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태�
   assert.equal(result.billing.invoices[0].paidAmount, null);
   assert.equal(result.billing.invoices[0].canceledAmount, null);
   assert.equal(result.billing.invoices[0].amountDue, null);
+  assert.deepEqual(result.usage.metrics.map(metric => [metric.code, metric.quantity, metric.rawQuantity, metric.modelQuantities.length]), [["llm-input-tokens", 0.01, 10, 1]]);
   assert.ok(!JSON.stringify(result).includes("다른 고객 비밀"));
   assert.ok(!JSON.stringify(result).includes("999999"));
 });
@@ -355,7 +392,22 @@ test("부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다", asy
   assert.equal(result.billing.state, "unavailable");
   assert.equal(result.billing.draft, null);
   assert.equal(result.models[0].requestPrice, null);
+  assert.equal(result.billing.error, "다음 청구 정보를 확인하지 못했습니다: 청구 예정액, 적용 요금. 연결 상태를 확인한 뒤 새로고침하세요.");
   assert.ok(!JSON.stringify(result).includes("secret upstream payload"));
+});
+
+test("일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  for (const broken of ["payment", "method"] as const) {
+    const fake = pricedClientFixture();
+    fake.client.listInvoices = async () => ({ invoices: [{ id: "invoice", invoice_number: "ME-202610-00000001", customer_id: ACCOUNT_A.customerId, customer_name: "앨리스", month: "2026-10", finalized_at: "2026-10-26T12:00:00Z", supply_amount: 100, tax_amount: 10, total_amount: 110, lines: [] }] });
+    fake.client.listInvoicePayments = async () => ({ invoice_payments: broken === "payment" ? [] : [{ invoice_id: "invoice", status: "paid", mode: "test", amount: 110, canceled_amount: 0, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: null }] });
+    if (broken === "method") fake.client.getPaymentMethod = async () => ({ customer_id: ACCOUNT_B.customerId, card_issuer_code: "61", card_number: "1234****5678", mode: "test", authenticated_at: "2026-10-01T00:00:00Z" });
+    const result = await new LumenService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    assert.equal(result.billing.state, "unavailable", broken);
+    assert.equal(result.billing.error, `다음 청구 정보를 확인하지 못했습니다: ${broken === "payment" ? "일부 납부 상태" : "등록 카드"}. 연결 상태를 확인한 뒤 새로고침하세요.`, broken);
+  }
 });
 
 test("고객별 단가 응답이 비어 있어도 공통 단가를 조회해 모델 요금을 표시한다", async t => {
@@ -416,6 +468,7 @@ test("미터 단위와 집계 방식 또는 차원이 달라지면 고정 단위
     } else {
       assert.equal(result.models[0].inputPricePerThousand, null, change);
       assert.equal(result.billing.state, "unavailable", change);
+      assert.equal(result.billing.error, "이 달의 요금 설정이 예제 서비스의 기준과 맞지 않습니다. 운영자가 요금 설정을 확인해야 합니다.", change);
       assert.match(result.usage.error!, /집계 또는 요금 설정/);
     }
   }
