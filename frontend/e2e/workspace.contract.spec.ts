@@ -201,6 +201,17 @@ test("격리 계약: 전액 취소는 잔액을 명시하고 부분 취소의 �
 });
 
 
+test("격리 계약: 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/customers");
+  const button = page.getByRole("button", { name: "조건 전체 CSV 내보내기", exact: true });
+  await expect(button).toBeVisible();
+  const card = button.locator("xpath=ancestor::*[contains(@class, 'ant-card') or contains(@class, 'workspace-panel')][1]");
+  const [buttonBox, cardBox] = await Promise.all([button.boundingBox(), card.boundingBox()]);
+  expect(buttonBox && cardBox ? buttonBox.width < cardBox.width / 2 : false).toBe(true);
+});
+
+
 test("격리 계약: 최초 화면을 읽는 동안 소속이 바뀌어도 다른 도입사의 고객이 노출되지 않는다", async ({ page, request }) => {
   const organizationId = "55555555-5555-4555-8555-555555555555";
   const switchedOrganizationId = "88888888-8888-4888-8888-888888888888";

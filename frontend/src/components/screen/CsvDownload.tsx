@@ -51,5 +51,5 @@ export function CsvDownload({ resource }: { resource: SearchResource | "events" 
     }
   }
 
-  return <div className="workspace-field">{resource === "events" && <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44 }}><input type="checkbox" checked={isIncludingProperties} onChange={event => setIsIncludingProperties(event.target.checked)} style={{ width: 18, height: 18, minHeight: 18, margin: 0, accentColor: "#5746ad" }} />원본 속성 포함 (JSON)</label>}<Button loading={isLoading} onClick={download}>조건 전체 CSV 내보내기</Button>{error && <Alert type="error" showIcon title={error} />}</div>;
+  return <div className="workspace-field">{resource === "events" && <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44 }}><input type="checkbox" checked={isIncludingProperties} onChange={event => setIsIncludingProperties(event.target.checked)} style={{ width: 18, height: 18, minHeight: 18, margin: 0, accentColor: "#5746ad" }} />원본 속성 포함 (JSON)</label>}<Button loading={isLoading} onClick={download} style={{ alignSelf: "flex-start" }}>조건 전체 CSV 내보내기</Button>{error && <Alert type="error" showIcon title={error} />}</div>;
 }
