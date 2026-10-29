@@ -72,6 +72,28 @@ export interface ListInvoicesResponse {
   invoices: InvoiceResponse[];
 }
 
+export interface CreateInvoiceViewLinkRequest {
+  expires_in_days?: number;
+  allow_payment_retry?: boolean;
+}
+
+export interface InvoiceViewLinkResponse {
+  id: string;
+  mode: "test" | "live";
+  allow_payment_retry: boolean;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+}
+
+export interface InvoiceViewLinkSecretResponse extends InvoiceViewLinkResponse {
+  token: string;
+}
+
+export interface ListInvoiceViewLinksResponse {
+  invoice_view_links: InvoiceViewLinkResponse[];
+}
+
 export interface DraftInvoiceResponse {
   month: string;
   calculated_at: string;

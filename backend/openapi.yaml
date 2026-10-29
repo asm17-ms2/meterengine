@@ -2376,6 +2376,174 @@ paths:
       summary: 인보이스 결제 요청
       tags:
       - payment-attempt-controller
+  /v1/invoices/{id}/view-links:
+    get:
+      description: 원문 token을 제외한 발급 이력을 조회한다.
+      operationId: listInvoiceViewLinks
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListInvoiceViewLinksResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 인보이스 조회 링크 목록
+      tags:
+      - invoice-view-link-controller
+    post:
+      description: "로그인 없이 인보이스 하나를 조회하는 링크를 만든다. token은 발급 응답에만 제공하고 해시만 저장한다. 기본\
+        \ 30일, 최대 90일이며 폐기할 수 있다. 결제 상태는 발급 당시 test/live 모드로 조회한다. 링크를 가진 사람이 조회할\
+        \ 수 있으므로 고객에게만 전달한다."
+      operationId: createInvoiceViewLink
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvoiceViewLinkRequest"
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvoiceViewLinkSecretResponse"
+          description: Created
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 인보이스 조회 링크 발급
+      tags:
+      - invoice-view-link-controller
+  /v1/invoices/{id}/view-links/{view_link_id}/revoke:
+    post:
+      description: 폐기한 링크는 다시 사용할 수 없다. 반복 폐기는 같은 결과다.
+      operationId: revokeInvoiceViewLink
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: view_link_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvoiceViewLinkResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
+            의 초만큼 기다린 뒤 다시 보낸다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 고객 인보이스 조회 링크 폐기
+      tags:
+      - invoice-view-link-controller
   /v1/operations:
     get:
       description: "운영자 세션으로 전체 도입사와 결제, 통보 장애, DB의 예약 작업 마지막 성공 시각을 확인한다. 결제 실패는\
@@ -4147,6 +4315,52 @@ paths:
       summary: 요금제 버전 복원
       tags:
       - price-plan-controller
+  /v1/public/invoice-links/lookup:
+    post:
+      description: "본문 token으로 인보이스 하나를 조회한다. 없거나 만료, 폐기된 링크는 모두 404다. 내부 식별자, 이메일\
+        과 PG 거래 키는 제공하지 않는다. 결제 취소액을 별도로 표시하며 자동 재청구 대기액으로 바꾸지 않는다. pending의 납부액과\
+        \ 대기액은 null이다."
+      operationId: getPublicInvoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetPublicInvoiceRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PublicInvoiceResponse"
+          description: OK
+      security: []
+      summary: 고객 인보이스 공개 조회
+      tags:
+      - invoice-view-link-controller
+  /v1/public/invoice-links/payment-retries:
+    post:
+      description: "도입사가 재시도를 허용한 링크로 실패 결제만 다시 시도한다. 조회 응답의 retry_version을 보내며 같은\
+        \ 실패 버전은 한 번만 새 결제를 만들 수 있다. 금액과 등록 카드는 서버의 기록을 사용한다. pending, 승인과 취소, 시도\
+        \ 상한과 카드 오류는 우회하지 않는다."
+      operationId: createInvoicePaymentRetry
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvoicePaymentRetryRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PublicInvoiceResponse"
+          description: OK
+      security: []
+      summary: 고객의 실패 결제 재시도
+      tags:
+      - invoice-view-link-controller
   /v1/sessions:
     post:
       description: |
@@ -5767,6 +5981,31 @@ components:
           minLength: 0
       required:
       - name
+    CreateInvoicePaymentRetryRequest:
+      type: object
+      properties:
+        retry_version:
+          type: string
+          maxLength: 64
+          minLength: 0
+          pattern: "[a-f0-9]{64}"
+        token:
+          type: string
+      required:
+      - retry_version
+    CreateInvoiceViewLinkRequest:
+      type: object
+      properties:
+        allow_payment_retry:
+          type: boolean
+          default: false
+          description: 고객의 실패 결제 재시도를 허용한다. 생략하면 false이며 기존 조회 링크는 허용하지 않는다
+        expires_in_days:
+          type: integer
+          format: int32
+          description: "유효 기간(일). 생략하면 30일, 1일부터 90일까지"
+          maximum: 90
+          minimum: 1
     CreateManagedMemberRequest:
       type: object
       properties:
@@ -6268,6 +6507,11 @@ components:
           format: int32
         month:
           type: string
+    GetPublicInvoiceRequest:
+      type: object
+      properties:
+        token:
+          type: string
     IngestEventRequest:
       type: object
       properties:
@@ -6444,6 +6688,46 @@ components:
         total_amount:
           type: integer
           format: int64
+    InvoiceViewLinkResponse:
+      type: object
+      properties:
+        allow_payment_retry:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+        revoked_at:
+          type: string
+          format: date-time
+    InvoiceViewLinkSecretResponse:
+      type: object
+      properties:
+        allow_payment_retry:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+        revoked_at:
+          type: string
+          format: date-time
+        token:
+          type: string
     IssuedInvitation:
       type: object
       properties:
@@ -6530,6 +6814,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoicePaymentResponse"
+    ListInvoiceViewLinksResponse:
+      type: object
+      properties:
+        invoice_view_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceViewLinkResponse"
     ListInvoicesResponse:
       type: object
       properties:
@@ -7034,6 +7325,80 @@ components:
           type: number
       required:
       - unit_price
+    PublicInvoicePayment:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        canceled_amount:
+          type: integer
+          format: int64
+        completed_at:
+          type: string
+          format: date-time
+        mode:
+          type: string
+        outstanding_amount:
+          type:
+          - integer
+          - "null"
+          format: int64
+          description: 미납 또는 실패 시 원 청구액. 취소액은 포함하지 않는다. pending이면 null이다
+        paid_amount:
+          type:
+          - integer
+          - "null"
+          format: int64
+          description: 취소액을 제외한 납부액. pending이면 확인 전이므로 null이다
+        status:
+          type: string
+    PublicInvoicePaymentRetry:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        version:
+          type:
+          - string
+          - "null"
+          description: 현재 실패에 대한 재시도 버전. 허용되지 않으면 null이다
+    PublicInvoiceResponse:
+      type: object
+      properties:
+        customer_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        finalized_at:
+          type: string
+          format: date-time
+        invoice_number:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLineResponse"
+        month:
+          type: string
+        organization_name:
+          type: string
+        payment:
+          $ref: "#/components/schemas/PublicInvoicePayment"
+        payment_retry:
+          $ref: "#/components/schemas/PublicInvoicePaymentRetry"
+        supply_amount:
+          type: integer
+          format: int64
+        tax_amount:
+          type: integer
+          format: int64
+        total_amount:
+          type: integer
+          format: int64
     SessionOrganization:
       type: object
       properties:

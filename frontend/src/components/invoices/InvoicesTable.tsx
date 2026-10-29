@@ -145,7 +145,7 @@ export function InvoicesTable({
             </Flex>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               {row.invoiceNumber && <Typography.Text type="secondary">{row.invoiceNumber}</Typography.Text>}
-              <Link href={`/payments/${encodeURIComponent(row.key)}`} onClick={event => event.stopPropagation()}>수납 상세</Link>
+              <Link href={`/payments/${encodeURIComponent(row.key)}#invoice-view-links`} onClick={event => event.stopPropagation()}>수납과 고객 조회 링크</Link>
             </div>
             </div>
           );

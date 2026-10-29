@@ -62,6 +62,8 @@ services:
     environment:
       # 브라우저가 아니라 프론트 서버가 백엔드를 부른다. 살아 있는 색에 닿도록 Caddy를 거친다.
       METERENGINE_API_BASE_URL: http://caddy:8081
+      # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 Caddy가 SITE_DOMAIN으로 리다이렉트한다.
+      METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
     ports:
       - "127.0.0.1:3000:3000"
     logging: *default-logging

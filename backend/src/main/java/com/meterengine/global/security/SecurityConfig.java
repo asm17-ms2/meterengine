@@ -60,6 +60,11 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/v1/sessions", "/v1/signups")
                     .permitAll()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/v1/public/invoice-links/lookup",
+                        "/v1/public/invoice-links/payment-retries")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/v1/organization-invitations/*")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/v1/organization-invitations/*/accept")

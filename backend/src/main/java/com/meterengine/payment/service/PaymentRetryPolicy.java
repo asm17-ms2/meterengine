@@ -1,6 +1,7 @@
 package com.meterengine.payment.service;
 
 import com.meterengine.payment.config.PaymentProperties;
+import com.meterengine.payment.entity.PaymentAttempt;
 import java.time.OffsetDateTime;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -44,6 +45,15 @@ public class PaymentRetryPolicy {
 
   Set<String> nonRetryableFailureCodes() {
     return NON_RETRYABLE_FAILURE_CODES;
+  }
+
+  static boolean isUnconfirmable(
+      PaymentAttempt attempt, OffsetDateTime credentialUpdatedAt, OffsetDateTime now) {
+    return !credentialUpdatedAt.isBefore(attempt.getRequestedAt())
+        || attempt.getCompletedAt() == null
+        || attempt
+            .getCompletedAt()
+            .isBefore(now.minus(PaymentAttemptConfirmationService.CONFIRMATION_WINDOW));
   }
 
   // 없음 실패는 이 시각 뒤에 끝난 것만 토스에 다시 물어 재시도한다.

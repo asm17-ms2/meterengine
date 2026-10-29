@@ -16,7 +16,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class RequestAuditTargetCoverageTest {
-  private static final Set<String> NOT_AUDIT_TARGETS = Set.of("code", "token", "mode");
+  private static final Set<String> NOT_AUDIT_TARGETS =
+      Set.of("code", "token", "mode", "view_link_id");
   private static final Pattern PATH_VARIABLE = Pattern.compile("\\{([^}:]+)");
 
   @Autowired

@@ -1,7 +1,7 @@
 
 import { MeterEngineApiError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
-import type { ArchiveStatus, ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
+import type { ArchiveStatus, ErrorResponse, ListBillableMetricUsagesResponse, ListInvoicesResponse, InvoiceResponse, CreateInvoiceViewLinkRequest, InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, ListInvoiceViewLinksResponse, DraftInvoiceResponse, ListInvoicePaymentsResponse, ListPaymentMethodsResponse, PaymentMethodRegistrationResponse, ListWebhookEndpointsResponse, ListWebhookDeliveriesResponse, PaymentMethodResponse, OrganizationResponse, ListBillableMetricPricesResponse, ListPricePlansResponse } from "./types.ts";
 
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
@@ -83,6 +83,18 @@ export class MeterEngineClient {
 
   getInvoice(id: string): Promise<InvoiceResponse> {
     return this.request("GET", `/v1/invoices/${encodeURIComponent(id)}`);
+  }
+
+  createInvoiceViewLink(id: string, request: CreateInvoiceViewLinkRequest = {}): Promise<InvoiceViewLinkSecretResponse> {
+    return this.request("POST", `/v1/invoices/${encodeURIComponent(id)}/view-links`, request, undefined, false);
+  }
+
+  listInvoiceViewLinks(id: string): Promise<ListInvoiceViewLinksResponse> {
+    return this.request("GET", `/v1/invoices/${encodeURIComponent(id)}/view-links`);
+  }
+
+  revokeInvoiceViewLink(id: string, linkId: string): Promise<InvoiceViewLinkResponse> {
+    return this.request("POST", `/v1/invoices/${encodeURIComponent(id)}/view-links/${encodeURIComponent(linkId)}/revoke`);
   }
 
   previewDraftInvoice(params: { month?: string } = {}): Promise<DraftInvoiceResponse> {
