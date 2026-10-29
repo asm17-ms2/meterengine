@@ -39,7 +39,7 @@ def run_serve(args) -> int:
     config.api_key = api_key
     state = BridgeState(args.state, None)
     try:
-        return server.serve(config, state, args.host, args.port)
+        return server.serve(config, state, args.host, args.port, config_path=args.config)
     except OSError as error:
         print(
             "%d 포트를 열지 못했습니다: %s\n"
