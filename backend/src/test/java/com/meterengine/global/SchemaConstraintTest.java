@@ -120,6 +120,26 @@ class SchemaConstraintTest {
         .doesNotContain("WHERE");
   }
 
+  @Test
+  void 집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다() {
+    List<String> names =
+        jdbcTemplate.queryForList(
+            "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conrelid::regclass::text IN"
+                + " ('billable_metric', 'invoice_line')",
+            String.class);
+    assertThat(names)
+        .contains(
+            "billable_metric_aggregation_check",
+            "billable_metric_aggregation_percentile_check",
+            "billable_metric_aggregation_target_property_check",
+            "invoice_line_quantity_fraction_check")
+        .doesNotContain(
+            "billable_metric_supported_aggregation",
+            "billable_metric_percentile_configuration",
+            "billable_metric_target_configuration",
+            "invoice_line_quantity_fraction_pair");
+  }
+
   // --- 단가 ---
 
   @Test
