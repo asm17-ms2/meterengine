@@ -313,20 +313,20 @@ public class WorkspaceQueryRepository {
         switch (resource) {
           case "invoices" ->
               "SELECT DISTINCT period AS month FROM invoice WHERE organization_id = ? AND"
-                  + " environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
+                  + " environment_scope_id = ? ORDER BY month DESC";
           case "billable-metric-prices" ->
               "SELECT DISTINCT effective_from AS month FROM price_rate WHERE organization_id = ?"
-                  + " AND environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
+                  + " AND environment_scope_id = ? ORDER BY month DESC";
           default ->
               "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month"
-                  + " FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM"
-                  + " cast(? as uuid) ORDER BY month DESC";
+                  + " FROM event WHERE organization_id = ? AND environment_scope_id = ? ORDER BY month"
+                  + " DESC";
         };
     return jdbcTemplate.query(
         sql,
         (rs, row) -> rs.getString("month"),
         organizationId,
-        BusinessEnvironmentContext.environmentId());
+        BusinessEnvironmentContext.scopeId());
   }
 
   private static BillableMetricResponse metric(ResultSet rs, int row) throws SQLException {

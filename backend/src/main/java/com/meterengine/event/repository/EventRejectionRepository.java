@@ -77,12 +77,15 @@ public class EventRejectionRepository {
       String query,
       int page,
       int size) {
+    UUID environmentId = BusinessEnvironmentContext.environmentId();
     StringBuilder where =
         new StringBuilder(
-            " WHERE organization_id=? AND environment_id IS NOT DISTINCT FROM ?::uuid AND recorded_at>=? AND recorded_at<?");
+            environmentId == null
+                ? " WHERE organization_id=? AND environment_id IS NULL AND recorded_at>=? AND recorded_at<?"
+                : " WHERE organization_id=? AND environment_id=?::uuid AND recorded_at>=? AND recorded_at<?");
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    if (environmentId != null) parameters.add(environmentId);
     parameters.add(start);
     parameters.add(end);
     if (customerId != null) {

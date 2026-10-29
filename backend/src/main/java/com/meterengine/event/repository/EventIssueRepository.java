@@ -37,7 +37,7 @@ public class EventIssueRepository {
       String unpricedJson) {
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(start);
     parameters.add(cutoff);
     StringBuilder filters = new StringBuilder();
@@ -55,7 +55,7 @@ public class EventIssueRepository {
       parameters.add(query);
     }
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(month.toString());
     parameters.add(month.toString());
     parameters.add(month.toString());
@@ -70,13 +70,13 @@ public class EventIssueRepository {
         WITH selected_events AS (
           SELECT e.*, c.name AS customer_name FROM event e
           JOIN customer c ON c.organization_id = e.organization_id AND c.environment_scope_id = e.environment_scope_id AND c.id = e.customer_id
-          WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid
+          WHERE e.organization_id = ? AND e.environment_scope_id = ?
             AND e.occurred_at >= ? AND e.occurred_at < ?
         """
             + filters
             + """
             ), active_metrics AS (
-              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_id IS NOT DISTINCT FROM ?::uuid AND (
+              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_scope_id = ? AND (
                 (m.archived_at IS NULL AND m.active_from <= ?)
                 OR EXISTS (SELECT 1 FROM billable_metric_period p
                   WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code

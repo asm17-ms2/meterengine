@@ -1,6 +1,7 @@
 package com.meterengine.metric.repository;
 
 import com.meterengine.global.math.DecimalFraction;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.dto.DimensionUsage;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.MetricAggregation;
@@ -107,7 +108,7 @@ public class BillableMetricUsageRepository {
                  properties -> ?::text AS value,
                  COALESCE((SELECT jsonb_object_agg(dimension_property, properties -> dimension_property)
                            FROM unnest(?::text[]) AS dimension_property), '{}'::jsonb) AS dimension_values
-          FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND type = ? AND occurred_at >= ? AND occurred_at < ?
+          FROM event WHERE organization_id = ? AND environment_scope_id = ? AND type = ? AND occurred_at >= ? AND occurred_at < ?
         ), eligible AS (
           SELECT *, CASE WHEN jsonb_typeof(value) = 'number' THEN value::text::numeric END AS numeric_value
           FROM candidates WHERE %s
@@ -155,7 +156,7 @@ public class BillableMetricUsageRepository {
                   .getConnection()
                   .createArrayOf("text", metric.getDimensionProperties().toArray(String[]::new)));
           statement.setObject(3, metric.getOrganizationId());
-          statement.setObject(4, metric.getEnvironmentId());
+          statement.setObject(4, BusinessEnvironmentContext.scopeId(metric.getEnvironmentId()));
           statement.setString(5, metric.getEventType());
           statement.setObject(6, start);
           statement.setObject(7, end);
