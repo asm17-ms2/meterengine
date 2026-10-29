@@ -281,3 +281,11 @@ test("the payments list can show only the month's failed payments and go back to
   await expect(page).toHaveURL(url => url.pathname === "/payments" && !url.searchParams.has("payment_status") && url.searchParams.get("month") === "2026-10");
   await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toBeVisible();
 });
+
+test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
+  await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await page.getByRole("button", { name: "조회", exact: true }).click();
+  await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
+});
