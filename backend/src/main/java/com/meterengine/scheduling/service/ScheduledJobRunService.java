@@ -41,15 +41,14 @@ public class ScheduledJobRunService {
   }
 
   public void register(String jobName) {
-    scheduledJobRunRepository
-        .findLastSucceededFinishedAt(jobName)
-        .ifPresent(finishedAt -> recordSuccess(jobName, finishedAt));
+    refreshLastSuccess(jobName);
   }
 
   public void run(String jobName, OffsetDateTime scheduledAt, Supplier<ScheduledJobResult> job) {
     UUID id = UUID.randomUUID();
     if (scheduledJobRunRepository.insertIfAbsent(id, jobName, scheduledAt, OffsetDateTime.now())
         == 0) {
+      refreshLastSuccess(jobName);
       return;
     }
 
@@ -67,6 +66,12 @@ public class ScheduledJobRunService {
     countRun(jobName, ScheduledJobRun.SUCCEEDED);
     countItems(jobName, result);
     recordSuccess(jobName, finishedAt);
+  }
+
+  private void refreshLastSuccess(String jobName) {
+    scheduledJobRunRepository
+        .findLastSucceededFinishedAt(jobName)
+        .ifPresent(finishedAt -> recordSuccess(jobName, finishedAt));
   }
 
   private void recordSuccess(String jobName, OffsetDateTime finishedAt) {

@@ -39,12 +39,21 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
       case "createOrganizationInvitation": path = "/v1/organization/invitations"; body = { email: text(data, "email"), scopes: data.getAll("scopes") }; break;
       case "revokeOrganizationInvitation": path = `/v1/organization/invitations/${identifier(data)}`; method = "DELETE"; break;
+      case "restoreWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/restorations`; break;
       case "createApiKey":
         path = "/v1/api-keys";
         body = { label: text(data, "label"), mode: text(data, "mode"), scopes: data.getAll("scopes"), replaced_api_key_id: optional(data, "replaced_api_key_id"), rate_limit_per_minute: text(data, "rate_limit_per_minute") ? amount(data, "rate_limit_per_minute", { min: 1, max: 2147483647, message: "분당 요청 한도는 1 이상 2,147,483,647 이하의 정수로 입력하세요." }) : null };
         break;
       case "deleteApiKey": path = `/v1/api-keys/${identifier(data)}`; method = "DELETE"; break;
       case "updateApiKeyScopes": path = `/v1/api-keys/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
+      case "createWebhookEndpoint":
+        path = "/v1/webhook-endpoints";
+        body = { url: text(data, "url"), event_types: data.getAll("event_types") };
+        break;
+      case "deleteWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "DELETE"; break;
+      case "updateWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}`; method = "PUT"; body = { url: text(data, "url"), event_types: data.getAll("event_types"), enabled: text(data, "enabled") === "true", description: optional(data, "description")?.replace(/\r\n/g, "\n") ?? null }; break;
+      case "testWebhookEndpoint": path = `/v1/webhook-endpoints/${identifier(data)}/test-events`; break;
+      case "retryWebhookDelivery": path = `/v1/webhook-endpoints/${identifier(data)}/deliveries/${identifier(data, "delivery_id")}/retries`; break;
       default: return { message: "수행할 작업을 확인하지 못했습니다." };
     }
   } catch (error) {
@@ -58,7 +67,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
     ifMatch: false ? `"${text(data, "version")}"` : undefined,
     idempotencyKey: ["createPaymentCancellation", "createCustomer"].includes(operation) ? text(data, "request_id") : undefined,
-    isEmptyResponse: false,
+    isEmptyResponse: operation === "retryWebhookDelivery",
   });
   if (!result.ok) {
     if (isPaymentRequest && (result.error.status === 0 || result.error.code === "malformed_response" || result.error.code === "payment_result_unconfirmed" || result.error.code === "payment_cancellation_in_progress"))
@@ -69,12 +78,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const redirectScope = new URLSearchParams({ organization_id: session.organization!.id });
   if (false) redirect(workspaceHref("/customers?status=archived", redirectScope));
   if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
-  if (false) redirect(workspaceHref("/integrations?status=archived", redirectScope));
+  if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));
   const response = result.data;
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
   return {
-    isSuccess: true, message: false ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,
