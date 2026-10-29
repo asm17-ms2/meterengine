@@ -38,3 +38,12 @@ test("the pricing meter rail stays a wrapping row of chips at 900px and below", 
   assert.ok(css.includes("@media(max-width:900px){.meterRail.meterRail{flex-direction:row}.meterRail>:not(button){width:100%}}"));
 });
 
+test("a disabled month finalization shows its reason as text the button describes, not only a tooltip", () => {
+  const button = source("components/billing/InvoiceFinalizeButton.tsx");
+  const dialog = source("components/billing/InvoiceFinalizeDialog.tsx");
+  const section = source("components/billing/InvoiceFinalizeSection.tsx");
+  assert.ok(!button.includes("title={title}") && button.includes("aria-describedby={hintId}") && button.includes('className="field-hint"'));
+  assert.ok(dialog.includes('disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다." : undefined}'));
+  assert.ok(section.includes('disabledReason="청구 예정액을 불러오지 못해 확정할 수 없습니다."'));
+});
+

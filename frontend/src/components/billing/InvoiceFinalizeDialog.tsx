@@ -45,7 +45,7 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
     <>
       <InvoiceFinalizeButton
         disabled={isEmpty}
-        title={isEmpty ? "청구할 금액이 있는 고객이 없습니다" : undefined}
+        disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다." : undefined}
         onClick={() => setIsOpen(true)}
       />
 
