@@ -26,7 +26,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     workspaceFetch<{ invoice_payments: InvoicePaymentResponse[] }>("/v1/invoice-payments", { month, customer_id: id }),
     workspaceFetch<CardResponse>(`/v1/customers/${encodeURIComponent(id)}/payment-method`),
     aggregateBillableMetricUsages(readListQuery({ month, customer_id: id }, CAPABILITIES.aggregateBillableMetricUsages, { hasMonth: true }), "normal"),
-    workspaceFetch<{ payment_methods: CardResponse[] }>("/v1/payment-methods", { status: cardStatus }),
+    workspaceFetch<{ payment_methods: CardResponse[] }>("/v1/payment-methods", { status: cardStatus, customer_id: id }),
   ]);
   if (!customer.ok) return <>
     <WorkspaceHeader title={customer.error.status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"} kicker="도입사 콘솔"
@@ -38,7 +38,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const detail = customer.data;
   const paymentById = new Map(payments.ok ? payments.data.invoice_payments.map(payment => [payment.invoice_id, payment]) : []);
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: `${metric.name} (${metric.code})`, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];
-  const cardRows = cards.ok ? cards.data.payment_methods.filter(method => method.customer_id === id).map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
+  const cardRows = cards.ok ? cards.data.payment_methods.map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
     <WorkspaceHeader title={detail.name} kicker="도입사 콘솔" description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
     <section className="workspace-panel">

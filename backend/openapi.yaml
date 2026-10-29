@@ -5910,7 +5910,8 @@ paths:
   /v1/payment-methods:
     get:
       description: |
-        지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. 빌링키 원문은 싣지 않는다.
+        지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. customer_id를 주면 그 고객의 카드만 돌려준다.
+        빌링키 원문은 싣지 않는다.
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
       operationId: listPaymentMethods
       parameters:
@@ -5925,6 +5926,13 @@ paths:
           - active
           - archived
           - all
+      - description: 고객을 좁힌다. 생략하면 모든 고객의 카드다.
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
         "200":
           content:

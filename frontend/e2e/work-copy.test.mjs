@@ -94,3 +94,9 @@ test("the overview failed payment item opens the payments list filtered to failu
   const overview = source("app/(console)/overview/page.tsx");
   assert.ok(overview.includes("<Link href={`/payments?month=${month}&payment_status=failed`}>수납 확인</Link>"));
 });
+
+test("customer detail asks the server for only that customer's cards instead of filtering every card", () => {
+  const detail = source("app/(console)/customers/[id]/page.tsx");
+  assert.ok(detail.includes('"/v1/payment-methods", { status: cardStatus, customer_id: id }'));
+  assert.ok(!detail.includes("payment_methods.filter(method => method.customer_id === id)"));
+});
