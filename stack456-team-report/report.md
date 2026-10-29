@@ -1,5 +1,5 @@
 결과: 끝 상태 328/328건 (fixed 262, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 2개(마지막 cce95ba), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 2개(마지막 84c47c7)
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 2개(마지막 4d32e0b), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 1개(마지막 6dd3dc9), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 2개(마지막 84c47c7)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -206,7 +206,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | C452-013 | #452 | 5c83728 | 계정별 재전송 격리 시험 보강 | 한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다: 실패 (store.ts 계정 조건 제거 변이) |
 | C452-014 | #452 | 8dbbd99 | main의 demo/llm-service/playwright.config.ts outputDir가 /priv | 없음(Lumen 실화면은 띄우는 법이 없어 playwright test --list로 설정 읽기 확인, demo typecheck, lint 통과; b78630c 검사: frontend lint, typecheck, bu) |
 | C452-016 | #452 | b3f414e | 원문의 시점 문제(#452 README가 #453 기능을 설명)는 #453 squash 94a48a20이 환 | 없음(문서 변경: environment.ts 환경 경로, ConsoleShell 안내, backend README와 대조; 6da19c6 검사: backend build, frontend lint와 build, 단위 시험) |
-| C453-001 | #453 | d255870, cce95ba | 대사의 옛 키 버전 실패 격리 | 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1 |
+| C453-001 | #453 | d255870, cce95ba, f7eb389 | 대사의 옛 키 버전 실패 격리 | 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1 |
 | C453-002 | #453 | 04c93d9 | 도입사 공통 작업 감사의 환경 분리 | 도입사_공통_작업의_감사는_모든_환경의_감사_조회에_보인다: 실패 expected: 1 but was: 0 |
 | C453-006 | #453 | a34c969 | 고친다. 전역 비밀값을 legacy 대상에만 주는 규칙은 METERENGINE_TARGETS의 여러 대상이  | 단일 대상에서 환경을 지정하면 전역 비밀값으로 그 환경의 웹훅을 받는다: 실패 actual 400 expected 200 |
 | C453-008 | #453 | ffa9cd3 | 취소 확인의 환경과 키 버전 시험 | 요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다: 실패 status pending (환경 래퍼 제거 변이와 키 기준 시각 변이) |
@@ -477,3 +477,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.
 - 2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7).
 - 2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b).
+- 2026-10-29: #476 문인호 님 리뷰 p4(키 교체 뒤 옛 승인의 토스 외부 취소 누락)를 받아 현재 키가 대사하지 않는 옛 키의 거래를 맡게 고쳤다(f7eb389). 옛 키가 다른 상점 키인 경우는 남는다고 커밋에 적었다. push 전에 main(#471)을 받았다(35a26e1).

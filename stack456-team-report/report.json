@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T22:38:01+09:00",
+  "updated_at": "2026-10-29T22:44:29+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -25,7 +25,7 @@
     "fix/s456-t-yang-public-invoice": "22943db",
     "fix/s456-t-yang-lumen": "7ed660f",
     "fix/s456-t-yang-demo-bridge-web": "c1ee7a8",
-    "fix/s456-t-yang-toss-key": "cce95ba",
+    "fix/s456-t-yang-toss-key": "f7eb389",
     "fix/s456-t-yang-audit-env": "04c93d9",
     "fix/s456-t-yang-ops-metrics": "6152c0b",
     "fix/s456-t-yang-readme": "6da19c6",
@@ -7550,15 +7550,19 @@
         "대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1",
         "커밋 d255870",
         "대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다: 고치기 전 루프로 되돌리면 실패 옛 키 listTransactions 호출 없음(Argument(s) are different)",
-        "커밋 cce95ba"
+        "커밋 cce95ba",
+        "#476 리뷰 p4 반영 시험 '대사하지_않는_옛_키로_승인한_결제의_토스에만_있는_취소는_현재_키_목록에서_남긴다': 고치기 전 실패 불일치 0건",
+        "커밋 f7eb389"
       ],
       "commits": [
         "d2558707",
-        "cce95bac"
+        "cce95bac",
+        "f7eb3893"
       ],
       "tests": [
         "./gradlew build 통과(ffa9cd3, 시험 1378개)",
-        "#476 리뷰 p4 반영 시험 추가 뒤 ./gradlew build 통과(cce95ba, 시험 1379개)"
+        "#476 리뷰 p4 반영 시험 추가 뒤 ./gradlew build 통과(cce95ba, 시험 1379개)",
+        "#476 리뷰 p4 반영 뒤 backend build 시험 1380건 통과(f7eb389)"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -13643,6 +13647,22 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1380개 실패 0, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -14160,6 +14180,11 @@
       "branch": "fix/s456-t-yang-lumen",
       "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
       "at": "2026-10-29T22:38:01+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "at": "2026-10-29T22:44:29+09:00"
     }
   ],
   "usage_log": [],
@@ -14206,7 +14231,8 @@
     "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b).",
     "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.",
     "2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7).",
-    "2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b)."
+    "2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b).",
+    "2026-10-29: #476 문인호 님 리뷰 p4(키 교체 뒤 옛 승인의 토스 외부 취소 누락)를 받아 현재 키가 대사하지 않는 옛 키의 거래를 맡게 고쳤다(f7eb389). 옛 키가 다른 상점 키인 경우는 남는다고 커밋에 적었다. push 전에 main(#471)을 받았다(35a26e1)."
   ],
   "final_checks": [
     {
