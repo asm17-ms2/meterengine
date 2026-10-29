@@ -5,6 +5,9 @@ const SUCCESS_MESSAGES: Partial<Record<string, string>> = {
   revokeOrganizationInvitation: "초대를 취소했습니다.",
   deleteApiKey: "API 키를 폐기했습니다.",
   updateApiKeyScopes: "API 키 권한을 저장했습니다.",
+  deleteCustomer: "고객을 보관했습니다. 보관 목록에서 확인하세요.",
+  archiveMember: "사용자 소속을 보관했습니다. 보관 목록에서 확인하세요.",
+  deleteWebhookEndpoint: "수신 주소를 보관했습니다. 보관 목록에서 확인하세요.",
 };
 
 export function successMessage(operation: string): string {

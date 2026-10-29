@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { readEnvironment } from "@/lib/environment";
+import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { requireTenantSession } from "@/lib/auth/session";
@@ -11,7 +11,10 @@ import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
 import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage, existingCustomerMessage } from "@/app/(console)/workspace-action-feedback";
 
-export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
+export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean; nextPath?: string };
+
+// 보관한 뒤에는 성공 안내를 보인 다음 그 보관 목록으로 옮긴다.
+const ARCHIVED_LIST_PATHS: Partial<Record<string, string>> = { deleteCustomer: "/customers?status=archived", archiveMember: "/members?status=archived", deleteWebhookEndpoint: "/integrations?status=archived" };
 
 function text(data: FormData, key: string) {
   const value = data.get(key);
@@ -108,10 +111,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");
-  const redirectScope = new URLSearchParams({ organization_id: session.organization!.id, environment });
-  if (operation === "deleteCustomer") redirect(workspaceHref("/customers?status=archived", redirectScope));
-  if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
-  if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));
+  const archivedListPath = ARCHIVED_LIST_PATHS[operation];
+  if (archivedListPath) {
+    const archivedListScope = new URLSearchParams({ organization_id: session.organization!.id, environment });
+    if (operation === "deleteCustomer") archivedListScope.set("month", readMonth(text(data, "month")));
+    return { isSuccess: true, message: successMessage(operation), nextPath: workspaceHref(archivedListPath, archivedListScope) };
+  }
   const response = result.data;
   if (operation === "createCustomer") {
     const existing = existingCustomerMessage({ externalId: text(data, "external_id"), name: text(data, "name"), billingEmail: text(data, "billing_email") }, response);

@@ -5,7 +5,7 @@ import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search"
 import { Alert, App, Button, Checkbox, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { unstable_rethrow } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 
 import { readEnvironment } from "@/lib/environment";
 import { workspaceAction, type WorkspaceActionState } from "@/app/(console)/workspace-actions";
@@ -36,6 +36,7 @@ export type ActionPanelProps = { title: string; operation: string; description?:
 
 function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: (isConfirmedFailure?: boolean) => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
+  const router = useRouter();
   const environment = readEnvironment(useWorkspaceSearch().get("environment"));
   const tenantAccess = useTenantAccess();
   const [mutationScope] = useState(() => ({ organizationId: tenantAccess?.organizationId ?? "", environment }));
@@ -62,6 +63,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
       if (!result.secret && !result.registrationPath && !isInline) {
         message.success(result.message ?? "저장했습니다.");
         onSuccess?.();
+        if (result.nextPath) router.push(result.nextPath);
       }
     }
     return result;

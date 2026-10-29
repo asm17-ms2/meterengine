@@ -63,3 +63,9 @@ test("re-registering an existing external customer id is reported as not created
   assert.equal(existingCustomerMessage({ ...input, externalId: "" }, { name: "기존 고객", billing_email: null }), undefined);
 });
 
+test("archiving a customer, a member or a receiver confirms what happened", () => {
+  assert.equal(successMessage("deleteCustomer"), "고객을 보관했습니다. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("archiveMember"), "사용자 소속을 보관했습니다. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("deleteWebhookEndpoint"), "수신 주소를 보관했습니다. 보관 목록에서 확인하세요.");
+});
+

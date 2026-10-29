@@ -47,3 +47,13 @@ test("a disabled month finalization shows its reason as text the button describe
   assert.ok(section.includes('disabledReason="청구 예정액을 불러오지 못해 확정할 수 없습니다."'));
 });
 
+test("archive actions show their success message before moving to the archived list with the viewed month", () => {
+  const actions = source("app/(console)/workspace-actions.ts");
+  const panel = source("components/workspace/ActionPanel.tsx");
+  const detail = source("app/(console)/customers/[id]/page.tsx");
+  assert.ok(!actions.includes('redirect(workspaceHref("/customers?status=archived"'));
+  assert.ok(actions.includes("nextPath: workspaceHref("));
+  assert.ok(panel.includes("if (result.nextPath) router.push(result.nextPath);"));
+  assert.ok(detail.includes('{ name: "month", label: "", type: "hidden" as const, value: month }'));
+});
+
