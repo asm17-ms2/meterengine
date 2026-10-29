@@ -417,7 +417,7 @@ public class WorkspaceQueryService {
                     value -> value.payment() == null ? "unpaid" : value.payment().status(),
                     LinkedHashMap::new,
                     Collectors.counting())));
-    return page(selected, invoices.size(), search, summary);
+    return page(selected, invoiceService.count(organizationId), search, summary);
   }
 
   private static DraftInvoiceCustomer filterMetric(DraftInvoiceCustomer customer, String code) {

@@ -301,6 +301,21 @@ class WorkspaceQueryIntegrationTest {
   }
 
   @Test
+  void 인보이스_검색의_total_unfiltered는_조건과_무관한_환경_전체_건수다() {
+    UUID first = customer("가 고객", "first", false);
+    UUID second = customer("나 고객", "second", false);
+    invoice(first, "가 고객", 100, "2026-08-05T23:59:59+09:00");
+    invoice(second, "나 고객", 200, "2026-08-06T00:00:00+09:00");
+    jdbc.update(
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,'가 고객','2026-09',10,1,11,now())",
+        organizationId,
+        first);
+    JsonNode august = data(get("/v1/invoices/search?month=2026-08&customer_id=" + first));
+    assertThat(august.get("total").asInt()).isEqualTo(1);
+    assertThat(august.get("total_unfiltered").asInt()).isEqualTo(3);
+  }
+
+  @Test
   void 인보이스_검색은_고객과_월_조건을_조회에_넘긴다() {
     UUID first = customer("가 고객", "first", false);
     invoice(first, "가 고객", 100, "2026-08-05T23:59:59+09:00");
