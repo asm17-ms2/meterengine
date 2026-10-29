@@ -5913,6 +5913,7 @@ paths:
       description: |
         지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. 빌링키 원문은 싣지 않는다.
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 카드를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 카드는 새 결제에 다시 쓰이지 않는다.
       operationId: listPaymentMethods
       parameters:
       - description: 보관 상태. 생략하면 active
@@ -6159,6 +6160,7 @@ paths:
       description: |
         customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
         month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+        청구는 보관 효력(archived_from)까지 따져 버전을 고르므로, 그 달 청구에 쓰이는 요금제는 status=all 목록에서 시작 월이 가장 늦은 버전을 보고 고른다. 그 버전이 archived_from부터 멈췄으면 이전 버전으로 돌아가지 않는다.
       operationId: listPricePlans
       parameters:
       - description: "이 달(yyyy-MM, KST)이 시작 월부터 종료 월 전까지에 드는 버전만 고른다. 보관 여부는 이 값과\
@@ -6718,6 +6720,7 @@ paths:
         선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
         시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
         verified_at과 updated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 키를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 키는 새 결제에 다시 쓰이지 않는다.
       operationId: listTossPaymentsCredentials
       parameters:
       - description: 보관 상태. 생략하면 active

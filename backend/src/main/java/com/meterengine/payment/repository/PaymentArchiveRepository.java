@@ -63,7 +63,7 @@ public class PaymentArchiveRepository {
         "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
             + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
         (rs, n) ->
-            new PaymentMethodResponse(
+            PaymentMethodResponse.of(
                 rs.getObject("customer_id", UUID.class),
                 rs.getString("card_issuer_code"),
                 rs.getString("card_number"),
@@ -80,7 +80,7 @@ public class PaymentArchiveRepository {
         "SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND"
             + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
         (rs, n) ->
-            new TossPaymentsCredentialResponse(
+            TossPaymentsCredentialResponse.of(
                 rs.getString("mode"),
                 rs.getString("client_key"),
                 rs.getString("secret_key_last_four"),
