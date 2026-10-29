@@ -16,14 +16,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.UrlPathHelper;
 
 public class RequestAuditFilter extends OncePerRequestFilter {
   public static final String REQUEST_ID_ATTRIBUTE =
       RequestAuditFilter.class.getName() + ".requestId";
   static final String AUDITED_ATTRIBUTE = RequestAuditFilter.class.getName() + ".audited";
-  private static final List<String> UUID_VARIABLES =
-      List.of("delivery_id", "id", "organization_id");
+  static final List<String> UUID_VARIABLES = List.of("delivery_id", "id", "organization_id");
   private static final Pattern UUID_VALUE =
       Pattern.compile(
           "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
@@ -42,7 +43,12 @@ public class RequestAuditFilter extends OncePerRequestFilter {
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
-    return !request.getRequestURI().startsWith("/v1/");
+    return !isApiRequest(request);
+  }
+
+  // 퍼센트 인코딩한 경로도 MVC와 보안 설정처럼 디코딩한 경로로 /v1 요청인지 본다.
+  static boolean isApiRequest(HttpServletRequest request) {
+    return UrlPathHelper.defaultInstance.getPathWithinApplication(request).startsWith("/v1/");
   }
 
   @Override
@@ -72,7 +78,9 @@ public class RequestAuditFilter extends OncePerRequestFilter {
       Object actor = request.getAttribute(ApiCredentialAuthenticationFilter.PRINCIPAL_ATTRIBUTE);
       try {
         requestAuditRecorder.record(
-            actor instanceof AuthenticatedPrincipal principal ? principal : null,
+            actor instanceof AuthenticatedPrincipal principal
+                ? attributedActor(request, principal)
+                : null,
             request.getMethod(),
             route,
             status,
@@ -84,6 +92,23 @@ public class RequestAuditFilter extends OncePerRequestFilter {
         logger.error("Request audit failed request_id=" + requestId, exception);
       }
     }
+  }
+
+  // 운영자 전용 경로는 플랫폼 전체를 다루므로 운영자 세션이 고른 도입사에 요청 감사를 남기지 않는다.
+  private static AuthenticatedPrincipal attributedActor(
+      HttpServletRequest request, AuthenticatedPrincipal principal) {
+    if (!(request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
+            instanceof HandlerMethod handler)
+        || !handler.hasMethodAnnotation(OperatorAccess.class)) return principal;
+    return new AuthenticatedPrincipal(
+        principal.kind(),
+        null,
+        principal.apiKeyId(),
+        principal.userAccountId(),
+        principal.userSessionId(),
+        principal.mode(),
+        principal.role(),
+        principal.scopes());
   }
 
   // 수집은 요청이 많아 요청마다 감사 행을 동기로 쓰면 지연과 DB 쓰기가 크게 늘어 감사에서 뺀다.

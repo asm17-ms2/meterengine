@@ -25,6 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class AuditLogQueryService {
+  private static final int MIN_YEAR = 1;
+  private static final int MAX_YEAR = 9999;
   private final AuditLogRepository auditLogRepository;
   private final JsonMapper jsonMapper;
 
@@ -106,14 +108,19 @@ public class AuditLogQueryService {
 
   private static OffsetDateTime boundary(String text, boolean end) {
     if (text == null) return null;
+    OffsetDateTime parsed;
     try {
       if (text.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) {
         LocalDate date = LocalDate.parse(text);
-        return (end ? date.plusDays(1) : date).atStartOfDay().atOffset(ZoneOffset.ofHours(9));
+        parsed = (end ? date.plusDays(1) : date).atStartOfDay().atOffset(ZoneOffset.ofHours(9));
+      } else {
+        parsed = OffsetDateTime.parse(text);
       }
-      return OffsetDateTime.parse(text);
     } catch (DateTimeException exception) {
       throw new InvalidRequestException(ErrorCode.VALIDATION_ERROR);
     }
+    if (parsed.getYear() < MIN_YEAR || parsed.getYear() > MAX_YEAR)
+      throw new InvalidRequestException(ErrorCode.VALIDATION_ERROR);
+    return parsed;
   }
 }
