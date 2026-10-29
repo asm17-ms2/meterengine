@@ -34,6 +34,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   expect(target.pathname).toBe(`/payments/${invoiceId}`);
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
   await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
+  await page.getByLabel("청구 월", { exact: true }).press("Enter");
   await page.getByRole("button", { name: "조회", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 과금 운영");
   await expect(unresolved).toContainText("지난달 실패 고객");
