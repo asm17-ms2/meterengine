@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T19:55:41+09:00",
+  "updated_at": "2026-10-29T20:01:52+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -30,7 +30,7 @@
     "fix/s456-t-yang-ops-metrics": "6152c0b",
     "fix/s456-t-yang-readme": "6da19c6",
     "fix/s456-t-yang-e2e": "b78630c",
-    "fix/s456-t-yang-env-ui": "b303189",
+    "fix/s456-t-yang-env-ui": "4d32e0b",
     "fix/s456-t-yang-backend-cleanup": "6b954c5",
     "fix/s456-t-yang-demo-web-target": "a34c969",
     "fix/s456-t-yang-frontend-cleanup": "395d4b7",
@@ -7849,13 +7849,17 @@
         "frontend/src/components/workspace/ActionPanel.tsx:41,113 @ af15d7f",
         "frontend/e2e/query-workspace.real.spec.ts:209 @ af15d7f",
         "격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다: 실패 Received '열어 둔 화면과 요청의 업무 환경이 다릅니다'",
-        "커밋 c7898bb"
+        "커밋 c7898bb",
+        "#481 리뷰 p4 반영 업무 계약 '공백을 낀 환경 값도 다듬어 비교': 고치기 전 실패 Received '처리했습니다.'",
+        "커밋 4d32e0b"
       ],
       "commits": [
-        "c7898bb4"
+        "c7898bb4",
+        "4d32e0b9"
       ],
       "tests": [
-        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)"
+        "b303189 검사: frontend lint, typecheck, build, 단위 80건, 인증 계약 65건, 업무 계약 11건 통과, 실화면 명세 10개 통과(environment-cycle, mvp는 기준선과 같은 자리)",
+        "#481 리뷰 p4 반영 뒤 단위 80건, auth 계약 65건, 업무 계약 12건, 카드 등록 계약 6건, 실화면 archive-filters, customer-payment-retry, permissions 통과(4d32e0b)"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -13512,6 +13516,62 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 80, pass 80"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; playwright test -c playwright.workspace.config.ts; playwright test -c playwright.payment.config.ts",
+      "detail": "인증 계약 65건, 업무 계약 12건, 카드 등록 계약 6건 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "archive-filters.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "customer-payment-retry.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "permissions.real.spec.ts 통과(DB를 새로 만든 실환경, 이 브랜치 백엔드와 프론트)"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -14009,6 +14069,11 @@
       "branch": "fix/s456-t-yang-auth-session",
       "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
       "at": "2026-10-29T19:55:41+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "4d32e0b97f550b225dcde03790fdebdf3623aa6d",
+      "at": "2026-10-29T20:01:52+09:00"
     }
   ],
   "usage_log": [],
@@ -14051,7 +14116,8 @@
     "2026-10-29: #490 fix/s456-t-yang-reconcile-catchup(Ck2-017)를 열고 문인호 님을 리뷰어로 지정했다.",
     "2026-10-29: G-187 수정(fix/s456-t-yang-ci-tests a9ce8d1, .github/workflows/ci.yml 등)은 로컬 커밋까지 했으나 push가 거절됐다. gh OAuth 토큰에 workflow 권한이 없어 워크플로 파일을 바꾸는 push를 GitHub가 막았다. 우회하지 않고 사용자에게 권한 갱신(gh auth refresh -s workflow)을 요청했다. G-187은 그때까지 needs-decision으로 둔다.",
     "2026-10-29: #490 박성종 님 리뷰 p4(성공 기록 없이 첫 대사가 실패하면 다음 실행이 첫 실패일을 건너뜀)를 받아 가장 이른 실행의 창부터 맞추게 고쳤다(8edf94b).",
-    "2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f)."
+    "2026-10-29: #485 박성종 님 리뷰 p4(첫 동의의 비밀번호 변경과 동시에 옛 비밀번호 로그인이 세션을 저장하는 경합)를 받아 세션 저장 전 사용자 행을 잠그고 해시를 다시 보게 고쳤다(b562b3f).",
+    "2026-10-29: #481 박성종 님 리뷰 p4(G-044 확인 도우미가 다듬지 않은 환경 값 비교, 고객 상세 결제 환경 표기)를 받아 고쳤다(4d32e0b)."
   ],
   "final_checks": [
     {
