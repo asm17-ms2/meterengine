@@ -19,3 +19,13 @@ test("globals.css uses its own color tokens instead of repeating the same litera
   for (const literal of ["#202b40", "#5a6578", "#dce1eb", "#5746ad", "#f3f5f9", "#7c8799"]) assert.doesNotMatch(rules, new RegExp(`${literal}(?![0-9a-f])`, "i"));
   assert.doesNotMatch(rules, /background(?:-color)?:\s*#fff\b/i);
 });
+
+test("link buttons and scoped links resolve workspace addresses through one shared hook", () => {
+  const button = source("components/screen/LinkButton.tsx");
+  const link = source("components/workspace/ScopedLink.tsx");
+  assert.ok(link.includes("export function useScopedHref("));
+  for (const file of [button, link.slice(link.indexOf("export function ScopedLink"))]) {
+    assert.ok(file.includes("useScopedHref(href, { inheritFilters })"));
+    assert.ok(!file.includes('href.startsWith("?")'));
+  }
+});
