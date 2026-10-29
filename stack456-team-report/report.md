@@ -2,8 +2,6 @@
 push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7)
 정할 것: 42건 (G-008, G-009, G-020, G-027, G-039, G-050, G-056, G-067, C442-002, C442-010, D-136, D-170, D-179, D-236, G-007, G-010, G-011, G-013, G-017, G-018, G-030, G-038, G-041, G-054, G-057, G-059, G-096, G-160, G-187, X-046, X-104, Ck2-017, Nk3-006, Ck3-447-02, Ck3-447-03, Ck3-447-05, Ck3-447-06, Ck3-447-07, Ck3-447-09, Ck3-447-12, D-245, G-183). 로컬 DB 다시 만들기: 없음
 
-멈춘 까닭: 박성종 님 요청으로 스택 main 머지까지 층 작업을 멈춘다. #447 수정 21건은 fix/s456-447-t-yang(84bb5e7)로 push했고 PR #470에서 박성종 님이 충돌을 풀어 반영한다
-
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
@@ -402,7 +400,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 
 ## 사용량
 
-사용량 도구가 없어 사람이 /usage로 지켜본다. 층별 사용량은 기록하지 못한다.
+사용량 도구가 없어 사람이 /usage로 지켜본다(주간 상한 70%). 층별 사용량은 기록하지 못한다.
 
 ## 메모
 
@@ -419,3 +417,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-29 재개: archive-filters.real.spec.ts가 넘기기 자료 10절 표에 들어가(b334d36) 12절 멈춤이 풀렸다. #447 수정 21건을 fix/s456-447-t-yang에 모았다. origin/feat/resource-archive(5371d1e에서 6d91d41로 움직임)와의 동기화 merge는 backend/openapi.yaml, PaymentMethodRegistrationController, PricePlanController, PriceRateController, PaymentMethodRegistrationIntegrationTest, PaymentAttemptRepositoryTest, PaymentRetryServiceTest에서 충돌한다. 9절대로 충돌은 풀지 않았고, 박성종 님이 fix 브랜치로 push만 하면 직접 반영한다고 해 merge 없이 5371d1e 기반으로 push하며 PR은 열지 않는다.
 - 2026-10-29 다시 멈춤: 84bb5e7의 demo 검사가 corepack pnpm -r build 단계에서 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패했고, 바꾸지 않은 head 5371d1e에서도 같다. 10절 표에 없어 12절대로 멈추고 fix 브랜치는 push하지 않았다. 박성종 님이 바로 반영할 수 있게 21커밋 patch를 evidence/stop-447/patches에 둔다(5371d1e 기준 git am).
 - 2026-10-29 박성종 님이 Slack에서 patch 대신 PR로 열어 주면 충돌을 풀어 스택에 merge하겠다고 해, demo build 단계만 실패한(바꾸지 않은 head와 같은) 84bb5e7을 fix/s456-447-t-yang로 push하고 PR #470을 열었다. 동기화 merge와 충돌 해결은 하지 않았다.
+- 2026-10-29 15:00 KST: 스택 #442~#455가 2026-10-29 13:52 main(af15d7f)으로 squash 머지됐고 층 feat 브랜치와 fix/s456-445-t-yang, fix/s456-447-t-yang는 origin에서 지워졌다(#447 머지 head 5104b8a에 #470, 곧 84bb5e7의 21건이 들어 있다). state.json branches의 지워진 브랜치 8개(feat/account-permissions 643ae66, feat/billing-payments 54bb1d5, feat/resource-archive 8babc3d, feat/customer-invoices 2fe98d1, feat/llm-service-demo 2aa2be2, feat/environment-isolation f014e03, fix/s456-445-t-yang 22dfb35, fix/s456-447-t-yang 84bb5e7)를 main af15d7f 한 줄로 정리했다.
+- 2026-10-29 15:00 KST: 넘기기 자료 41d92a5를 다시 꺼냈다(handover_sha 98dff66에서 바꿈). findings.json id는 늘거나 줄지 않았다.
+- 2026-10-29 15:00 KST: 박성종 님의 머지 뒤 지침이 아직 없어 양성지 님이 정한 임시 방식으로 재개한다. open 82건만 origin/main에서 판정하고, 고치면 origin/main에서 만든 fix/s456-t-yang-<주제> 브랜치에 커밋해 push만 하고 PR은 열지 않는다. 검사는 10절 kind를 main에서 돌리고, 바꾸지 않은 origin/main 기준선에서도 실패하는 검사는 결과가 기준선보다 나빠지지 않으면 통과로 본다(양성지 님 허락). 문인호 님 open 항목이 가리키는 파일은 건드리지 않는다.
+- 2026-10-29 15:00 KST: check-report.mjs가 지워진 브랜치의 커밋을 origin/<브랜치>에서 찾아 기존 기록 전부를 오류로 막아, 로컬 사본 .s456-work/tools/check-report-main.mjs를 고쳐 쓴다(커밋하지 않음). 고친 것: main에 머지돼 지워진 브랜치 8개는 항목 커밋을 그 브랜치 pushes의 sha로 보고 push의 origin 대조는 건너뛴다. fix/s456-t-yang-* 주제 브랜치는 origin/main 뒤 커밋을 이 세션 커밋으로 본다. 나머지 검사는 그대로다.
+- check-report-main.mjs의 알려진 예외 1건: G-147 커밋 7da6d60을 담은 fix/s456-447-t-yang 84bb5e7의 demo 검사는 corepack pnpm -r build 단계에서 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패했고(바꾸지 않은 head 5371d1e도 같다) 박성종 님 요청으로 push했다. 예전 필터(cr.py)가 이 오류를 감추고 있어, 사본은 오류 대신 주의로 출력한다. 기록(checks의 fail)은 바꾸지 않았다.
