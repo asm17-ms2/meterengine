@@ -436,6 +436,31 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 다른_도입사의_단가_ID_삭제는_404이고_보관과_감사_기록을_남기지_않는다() {
+    PriceRateResponse created = rate(null, month, null, "per_unit", BigDecimal.TEN, null);
+    String foreign = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID());
+    assertThat(
+            mvc.delete()
+                .uri("/v1/billable-metrics/tokens/price-rates/" + created.id())
+                .header(AUTHORIZATION, foreign)
+                .exchange())
+        .hasStatus(404);
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_at IS NULL FROM price_rate WHERE id = ?",
+                Boolean.class,
+                created.id()))
+        .isTrue();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE target_id = ? AND action = 'price_rate_archived'",
+                Integer.class,
+                created.id().toString()))
+        .isZero();
+  }
+
+  @Test
   void 요금_모델에_맞지_않는_단가는_요청에_있는_model_필드로_거절된다() {
     String admin = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
     assertThat(
