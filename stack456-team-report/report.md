@@ -2,7 +2,7 @@
 push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T16:00:30+09:00
+상태: running, 갱신 2026-10-29T16:09:32+09:00
 
 ## 층별 상태
 
@@ -281,3 +281,4 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.
 - PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.
 - 2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md
+- 2026-10-29 사람 승인: 22개 주제를 PR 8개로 합쳐 진행한다(events-query, billing-api, webhook-audit-ops, auth-security, demo-infra, list-screens, work-screens, shell-design 순). 300줄 상한은 없고 PR 안에서 항목별로 커밋을 나눈다.

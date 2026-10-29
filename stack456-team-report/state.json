@@ -1,18 +1,14 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-29T16:00:30+09:00",
+  "updated_at": "2026-10-29T16:09:32+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
-  "resume_hint": {
-    "last_finished_id": "NT-inho-007",
-    "in_progress": "1단계 판정과 묶음 끝. 사람의 묶음 승인을 기다린다(evidence/main-stage1/topics.md, 로컬 .s456-work/judge/main/topics.json)",
-    "next_command": "승인한 묶음마다 origin/main에서 fix/s456-t-inho-<묶음 키>를 따서 항목별로 고치기 전과 뒤 시험을 남기고, 검사 통과 뒤 origin/main을 merge하고 push해 main 대상 PR을 연다"
-  },
+  "resume_hint": null,
   "current": {
     "id": null,
-    "step": "approval",
-    "branch": "main"
+    "step": "fix",
+    "branch": "fix/s456-t-inho-events-query"
   },
   "finished_ids": [
     "C443-000",

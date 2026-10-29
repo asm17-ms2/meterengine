@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T16:00:30+09:00",
+  "updated_at": "2026-10-29T16:09:32+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -109,7 +109,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): 같은 Pretendard 1.3.9의 KS X 1001 subset 가변 글꼴로 바꾼다. 줄어든 크기를 PR에 적고, 드문 음절은 지정한 대체 글꼴로 그린다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 같은 Pretendard 1.3.9의 KS X 1001 subset 가변 글꼴로 바꾼다. 줄어든 크기를 PR에 적고, 드문 음절은 지정한 대체 글꼴로 그린다",
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5",
@@ -284,7 +284,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): X-012와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): X-012와 같은 결정",
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/next.config.ts:15: invoice-links CSP font-src 'self'"
@@ -313,7 +313,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): X-012와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): X-012와 같은 결정",
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/README.md:147: 버전 1.3.9와 출처 주소, be67d816에서 들어옴",
@@ -345,7 +345,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): X-012와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): X-012와 같은 결정",
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
     },
     {
@@ -522,7 +522,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): 767px 이하에서 시연 안내, 권한 범위와 새로 조회, 로그아웃을 메뉴 서랍으로 옮긴다. 업무 환경 선택은 README 67행대로 헤더에 두고 sticky도 유지한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 767px 이하에서 시연 안내, 권한 범위와 새로 조회, 로그아웃을 메뉴 서랍으로 옮긴다. 업무 환경 선택은 README 67행대로 헤더에 두고 sticky도 유지한다",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
@@ -553,7 +553,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): D-011과 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-011과 같은 결정",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
@@ -1206,7 +1206,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): README 143행의 여러 곳 방식은 유지하고, globals.css 안에서 이미 있는 :root 토큰과 같은 색 리터럴만 var()로 바꾼다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): README 143행의 여러 곳 방식은 유지하고, globals.css 안에서 이미 있는 :root 토큰과 같은 색 리터럴만 var()로 바꾼다",
       "decision_question": "색과 글꼴 값을 TS 모듈 하나에서 antd 테마와 :root CSS 변수로 함께 만들고 globals.css와 CSS Modules는 var()만 쓰게 바꿀지, README:143대로 여러 곳에 두고 함께 바꾸는 지금 방식을 유지할지(유지한다면 globals.css 안 리터럴만 var()로 바꿀지) 정한다.",
       "evidence_notes": [
         "frontend/README.md:131: be67d816에서 README:143으로 바뀜"
@@ -1451,7 +1451,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): 숨겨 둔 kicker를 보이지 않는 채 남기지 않고, WorkspaceHeader의 kicker prop과 호출부 인자, 숨김 규칙을 지운다(화면 변화 없음)",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 숨겨 둔 kicker를 보이지 않는 채 남기지 않고, WorkspaceHeader의 kicker prop과 호출부 인자, 숨김 규칙을 지운다(화면 변화 없음)",
       "decision_question": "WorkspaceHeader의 kicker를 화면에 보이게 할지(globals.css:147 삭제, f671a4f 숨김 결정 되돌림) 아니면 kicker prop과 12개 호출 파일의 인자, globals.css:120과 147 규칙을 함께 지울지 정한다.",
       "evidence_notes": [
         "커밋 f671a4f5 (SEONGJONG PARK, #443 be67d816로 squash) globals.css에 120행과 147행 두 규칙을 함께 추가",
@@ -1701,7 +1701,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): X-012와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): X-012와 같은 결정",
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5"
@@ -1828,7 +1828,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): D-011과 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-011과 같은 결정",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
@@ -2802,7 +2802,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): G-072와 같은 범위로 리터럴만 var()로 바꾼다. 토큰 이름 바꾸기와 기준값 통일은 하지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): G-072와 같은 범위로 리터럴만 var()로 바꾼다. 토큰 이름 바꾸기와 기준값 통일은 하지 않는다",
       "decision_question": "색 토큰을 역할 이름으로 다시 짓고 globals.css와 CSS Modules의 리터럴을 var()로 바꾸며, 갈라진 오류 빨강, 연보라 배경, --home-muted의 기준값을 하나로 정하고 테스트 환경 안내를 한 컴포넌트로 묶을지 정한다.",
       "evidence_notes": [
         "frontend/src/app/globals.css:27: be67d816에서 :root 하나로 합침",
@@ -2843,7 +2843,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): 로고 마크를 공용 컴포넌트 하나로 묶고 크기만 prop으로 받는다. README 147행대로 로고 서체는 그대로 두고 다른 화면에 마크를 더하지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 로고 마크를 공용 컴포넌트 하나로 묶고 크기만 prop으로 받는다. README 147행대로 로고 서체는 그대로 두고 다른 화면에 마크를 더하지 않는다",
       "decision_question": "워드마크를 공용 컴포넌트 하나로 묶을지, 묶는다면 README 147행대로 로고를 기존 서체(Avenir Next, 번들 안 함)로 둘지 Pretendard나 번들한 브랜드 글꼴로 바꿀지, 로그인, 가입, 도입사 선택, 운영 화면과 카드 등록, 청구서 조회 화면에도 막대 아이콘을 붙일지 정해야 한다."
     },
     {
@@ -2871,7 +2871,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): D-022와 같은 결정. 콘솔 비율을 기준으로 소개 화면은 크기만 키운다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-022와 같은 결정. 콘솔 비율을 기준으로 소개 화면은 크기만 키운다",
       "decision_question": "로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(폭 6px, 최대 27px)과 콘솔(폭 5px, 최대 23px) 중 어느 비율을 기준으로 할지 정해야 한다."
     },
     {
@@ -2898,7 +2898,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): LinkButton과 ScopedLink의 같은 주소 변환만 하나로 합친다. ConsoleShell과 NavMenu는 그대로 둔다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): LinkButton과 ScopedLink의 같은 주소 변환만 하나로 합친다. ConsoleShell과 NavMenu는 그대로 둔다",
       "decision_question": "LinkButton과 ScopedLink의 href 변환을 공용 훅 하나로 합치고 ConsoleShell(그리고 NavMenu)의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 이상 정리를 할지, LinkButton과 ScopedLink 두 파일 중복만 합칠지, 그대로 둘지 정한다.",
       "evidence_notes": [
         "git log af15d7f5 -- LinkButton.tsx: be67d816(#443)가 workspaceHref 복사를 넣은 뒤 변경 없음",
@@ -2976,7 +2976,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(fix): 제목 컴포넌트 통합은 하지 않고 운영 화면 제목 크기와 고객 등록 버튼 위계만 맞춘다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 제목 컴포넌트 통합은 하지 않고 운영 화면 제목 크기와 고객 등록 버튼 위계만 맞춘다",
       "decision_question": "화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker와 admin의 .page-heading을 없앨지, 아니면 admin 제목 크기와 고객 등록 버튼만 맞추는 작은 수정(ActionPanel triggerType에 primary 추가)으로 끝낼지 정한다."
     },
     {
@@ -3401,7 +3401,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:81,89,90: WEBHOOK_DELIVERY_NOT_FOUND 없음",
         "backend/src/test/java/com/meterengine/webhook/WebhookIntegrationTest.java:379-383: 비활성 경우가 not_retryable을 단정, Q9가 바꾼다고 적은 시험",
@@ -3688,7 +3688,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례"
     },
     {
       "id": "C444-002",
@@ -3728,7 +3728,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기. 결정안(fix): claim이 가장 오래 차례를 받지 못한 도입사 환경의 전송부터 꺼내게 한다. 직렬 발송과 15초 예산은 그대로 둔다. 새 오류 코드와 대기 상한은 더하지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): claim이 가장 오래 차례를 받지 못한 도입사 환경의 전송부터 꺼내게 한다. 직렬 발송과 15초 예산은 그대로 둔다. 새 오류 코드와 대기 상한은 더하지 않는다",
       "decision_question": "도입사 하나가 전역 웹훅 발송 큐를 막지 못하게 엔드포인트별 대기 전송 상한(시험 통보와 재시도를 새 409 오류 코드로 거절, 상한 값 포함)을 둘지, 발송 루프를 도입사별 공정 소비와 병렬 발송으로 바꿀지, 둘 다 할지 정한다."
     },
     {
@@ -3761,7 +3761,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기. 결정안(doc): 병렬 발송은 하지 않는다(박성종 님의 직렬 발송 설계 유지). C444-002의 공정 소비로 도입사 사이 지연을 줄이고, 느린 수신 주소가 실행 하나를 쓰는 동작을 README에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(doc): 병렬 발송은 하지 않는다(박성종 님의 직렬 발송 설계 유지). C444-002의 공정 소비로 도입사 사이 지연을 줄이고, 느린 수신 주소가 실행 하나를 쓰는 동작을 README에 적는다",
       "decision_question": "웹훅 발송 루프를 한 실행 안에서 병렬로 보낼지(전체 동시 수 상한, 엔드포인트별 동시 1건)와 연속 실패 엔드포인트를 뒤로 미룰지를 C444-002와 함께 정하고, 한 실행에 한 건씩 처리한다고 단언하는 기존 WebhookDeliveryServiceTest 기대를 바꿀지도 정한다."
     },
     {
@@ -3791,7 +3791,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기. 결정안(fix): failed_webhook_count는 지금 정의(현재 failed)를 유지하되 보관한 수신 주소의 전송은 뺀다. 설명에 적는다. 꺼 둔 주소(Q9)는 건드리지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): failed_webhook_count는 지금 정의(현재 failed)를 유지하되 보관한 수신 주소의 전송은 뺀다. 설명에 적는다. 꺼 둔 주소(Q9)는 건드리지 않는다",
       "decision_question": "운영 현황 failed_webhook_count를 지금처럼 현재 failed 전체로 둘지, 최근 24시간(last_attempted_at 기준) failed로 바꿀지, 보관되지 않은 엔드포인트의 failed만 셀지 정한다(Ck2-010과 같은 결정).",
       "evidence_notes": [
         "git log -S '웹훅 실패는 현재 failed': 80a3ef1f SEONGJONG PARK, main 828ea613 (#444)",
@@ -3942,7 +3942,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기. 결정안(fix): Ck2-005와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): Ck2-005와 같은 결정",
       "decision_question": "운영 현황 failed_webhook_count를 지금처럼 현재 failed 전체로 둘지, 최근 24시간(last_attempted_at) failed로 바꿀지, 보관되지 않은 활성 엔드포인트의 failed만 셀지 정한다(꺼 둔 엔드포인트의 endpoint_disabled 실패를 뺄지는 Q9와 함께 정한다).",
       "evidence_notes": [
         "git log af15d7f5 -- OperationsService.java: 828ea613(#444) 하나뿐, 이후 변경 없음",
@@ -3977,7 +3977,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'DB 인덱스, 제약, 시드 (새 V__)'(db-schema) 승인 대기. 결정안(fix): 문자열과 CHECK 관례를 유지하고 새 V__로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK를 NOT VALID로 더한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 문자열과 CHECK 관례를 유지하고 새 V__로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK를 NOT VALID로 더한다",
       "decision_question": "failure_reason의 정본으로 WebhookFailureReason enum을 두고 WebhookOutcome, WebhookClient, WebhookDeliveryService, WebhookDeliveryRepository를 함께 바꿀지(운영 파일 다섯), 아니면 문자열과 CHECK 관례를 유지하고 새 V__ 마이그레이션으로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK만 더할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:108-117: 예외가 deliver() 밖으로 나가지 않음",
@@ -4114,7 +4114,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '데모 CLI와 SDK'(demo-sdk) 승인 대기. 결정안(fix): 사본은 두고 frontend와 demo의 이름 규칙이 같은지 보는 시험만 더한다. ci.yml은 바꾸지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 사본은 두고 frontend와 demo의 이름 규칙이 같은지 보는 시험만 더한다. ci.yml은 바꾸지 않는다",
       "decision_question": "frontend와 demo가 같이 쓰는 이름 규칙을 한 파일로 모을지(모은다면 frontend, demo, 저장소 루트 중 어디에 두고 ci.yml 경로 필터와 llm-service Docker 빌드 문맥을 어떻게 맞출지), 아니면 사본을 두고 naming.md에 적고 동일성 시험만 더할지 정한다.",
       "evidence_notes": [
         "frontend/package.json:12: test:unit은 있으나 CI frontend job은 lint와 build만 돌림, .github/workflows/ci.yml:79-81 @ af15d7f5",
@@ -4326,7 +4326,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미청구 사용량 통보'(unbilled-notice) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "G-151",
@@ -4356,7 +4356,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/workspace/WorkspaceView.tsx:23: JOB_LABELS에 백엔드에 없는 invoice_email",
         "frontend/e2e/scheduled-job-labels.test.mjs:8-13: VALUES와 JOB_LABELS만 대조, 828ea613에서 추가",
@@ -4754,7 +4754,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(fix): 엔티티 상수 통합은 하지 않고 요청과 응답 DTO에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낸다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 엔티티 상수 통합은 하지 않고 요청과 응답 DTO에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낸다",
       "decision_question": "line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낼지, 미터 aggregation처럼 문자열로 둘지 정한다."
     },
     {
@@ -4893,7 +4893,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(doc): 감사 target_id는 단가 버전 UUID로 유지하고(614d3bc4 의도), 미터 code는 detail에 있다고 README 감사 절에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 감사 target_id는 단가 버전 UUID로 유지하고(614d3bc4 의도), 미터 code는 detail에 있다고 README 감사 절에 적는다",
       "decision_question": "price_rate 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 감사 검색(detail.billable_metric_code)과 README 설명으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:92-93: #446 전, target_id에 billableMetricCode",
@@ -4930,7 +4930,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(fix): 운영 코드와 시험이 부르지 않는 보조 생성자를 세 DTO에서 함께 지운다(동작 변화 없음)",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 운영 코드와 시험이 부르지 않는 보조 생성자를 세 DTO에서 함께 지운다(동작 변화 없음)",
       "decision_question": "운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 파일 셋 기준의 예외), 아니면 지적 위치인 DraftInvoiceResponse와 같은 중복인 InvoiceResponse 두 파일만 지울지 정한다.",
       "evidence_notes": [
         "git grep -E \"new (DraftInvoiceLine|InvoiceLineResponse|BillableMetricPricePriceRate)\\(|::new\" af15d7f5 -- . 결과는 위 정규 생성자 호출 네 곳뿐",
@@ -4968,7 +4968,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(fix): 서비스 메서드 이름만 naming.md대로 get으로 바꾼다. 공개 operationId(findSupplier)는 그대로 둔다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 서비스 메서드 이름만 naming.md대로 get으로 바꾼다. 공개 operationId(findSupplier)는 그대로 둔다",
       "decision_question": "OrganizationService.find(UUID)는 없으면 예외를 던지므로 naming.md 기준 get인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지(상태 전이 update의 도메인 동사 이름 변경도 함께 할지) 정한다.",
       "evidence_notes": [
         "backend/openapi.yaml:5355: operationId findSupplier, 다른 단건 조회는 getCustomer 2135, getOrganization 4734 등 모두 get",
@@ -5002,7 +5002,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'DB 인덱스, 제약, 시드 (새 V__)'(db-schema) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:139-144: 다른 표에는 조건 없는 environment_lookup 인덱스를 더했지만 price_rate는 빠짐",
         "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:15: billable_metric_period_organization_index 선례",
@@ -5171,7 +5171,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "H3-B2",
@@ -5201,7 +5201,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'DB 인덱스, 제약, 시드 (새 V__)'(db-schema) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- R__seed.sql: 1d74b240(#446), d6072d70(#447), 94a48a20(#453) 모두 SET 목록에 percentile을 넣지 않음"
       ]
@@ -5235,7 +5235,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/openapi.yaml:8146-8147: BillableMetricPricePriceRate.tiers가 $ref PriceRateTier 단일 객체",
         "backend/openapi.yaml:10055-10056: PriceRateResponse.tiers가 $ref PriceRateTier 단일 객체",
@@ -5275,7 +5275,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/package.json:19: antd 6.6.7",
         "frontend/node_modules/antd/es/table/style/empty.js (tr.ant-table-placeholder color: token.colorTextDisabled)",
@@ -5369,7 +5369,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "C446-006",
@@ -5429,7 +5429,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '데모 CLI와 SDK'(demo-sdk) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/application.properties:38: jackson 설정은 이 한 줄뿐이고 NON_NULL 없음"
       ]
@@ -5464,7 +5464,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "C446-010",
@@ -5521,7 +5521,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "C446-012",
@@ -5550,7 +5550,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "C446-013",
@@ -5579,7 +5579,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "D-115",
@@ -5606,7 +5606,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-142",
@@ -5631,7 +5631,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-146",
@@ -5656,7 +5656,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/pricing/pricing.module.css:2: .tierEditorRow .workspace-field{font-size:12px}, :global 없음",
         "frontend/src/components/pricing/pricing.module.css:1: .tierEditorRow label{font-size:11px}와 480px 미디어의 .tierEditorRow>.ant-btn{grid-column:3}",
@@ -5694,7 +5694,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "G-107",
@@ -5723,7 +5723,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "G-110",
@@ -5794,7 +5794,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'DB 인덱스, 제약, 시드 (새 V__)'(db-schema) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql:8: 열 CHECK 자동 이름 billable_metric_percentile_check가 이미 있어 새 이름으로 쓰면 충돌",
         "backend/src/main/resources/db/migration/V40__preserve_exact_invoice_quantities.sql:3: 자동 이름 invoice_line_quantity_denominator_check도 피한다",
@@ -5825,7 +5825,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricUsageService.java:135-166: sum 분기, 139-154 환경 유무 분기, 155-164 고객 합계를 서비스에서 다시 계산",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:37-73: 래퍼 두 오버로드, 57-69 code와 name이 빈 가짜 BillableMetric 생성 후 aggregate 호출, 72 합계 버림",
@@ -5863,7 +5863,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:222-224: private static active, 파일 안 호출처 없음",
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:61,74,81,84: 청구 계산은 applies와 stops만 부름",
@@ -5907,7 +5907,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ErrorAlert.tsx:20-21: 같은 md 경계 판별 방식",
         "git show c27b229:frontend/src/components/table/ExpandControls.tsx 와 af15d7f5 내용 동일"
@@ -5943,7 +5943,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-067",
@@ -5978,7 +5978,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '청구 확정 대화상자'(invoice-finalize) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-077",
@@ -6007,7 +6007,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-102",
@@ -6033,7 +6033,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- frontend/src/components/table/CustomerLabel.tsx: 511d6117 하나뿐(스택 이전)",
         "frontend/package.json:19: antd 6.6.7); node_modules/antd/lib/typography/hooks/useTooltipProps.js는 tooltip이 undefined면 title undefined, lib/typography/Base/EllipsisTooltip.js는 title이 없으면 Tooltip 없이 children만 반환"
@@ -6064,7 +6064,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "G-092",
@@ -6096,7 +6096,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(fix): 주체 없는 요청 가운데 로그인과 가입 밖의 401과 429는 audit_log에 남기지 않고 지표와 요청 로그로 센다. 로그인과 가입 실패, 주체가 있는 실패는 계속 남긴다. 파티션은 두지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): 주체 없는 요청 가운데 로그인과 가입 밖의 401과 429는 audit_log에 남기지 않고 지표와 요청 로그로 센다. 로그인과 가입 실패, 주체가 있는 실패는 계속 남긴다. 파티션은 두지 않는다",
       "decision_question": "수집 밖 /v1 요청 가운데 주체 없는 401, 429, 방화벽 400을 지울 수 없는 audit_log에 계속 남길지, 남긴다면 occurred_at 파티션과 트리거 완화 같은 보존 방식을 새 V__로 두고 플랫폼 조회의 전체 total을 다음 페이지 유무로 바꿀지 정한다."
     },
     {
@@ -6180,7 +6180,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(fix): GET /v1/audit-logs를 API 키 목록, 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힌다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): GET /v1/audit-logs를 API 키 목록, 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힌다",
       "decision_question": "도입사 감사 조회 GET /v1/audit-logs를 API 키 목록과 사용자 목록처럼 로그인 세션 전용(@MemberReadAccess)으로 좁힐지, 도입사 서버가 read API 키로 계속 읽게 둘지 정한다."
     },
     {
@@ -6212,7 +6212,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(fix): G-092와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): G-092와 같은 결정",
       "decision_question": "주체 없는 /v1 실패 요청(미인증 401, 잘못된 Bearer 401)을 audit_log에 계속 남길지, 빼고 요청 로그로만 볼지, 남기되 감사 필터 앞 IP 호출 제한이나 보존 기간을 둘지 정한다."
     },
     {
@@ -6266,7 +6266,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(fix): G-092와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): G-092와 같은 결정",
       "decision_question": "수집 밖 /v1 요청의 401과 429(API 키 한도, 로그인과 가입 호출 제한)를 audit_log 행으로 계속 남길지, 빼고 지표나 요청 로그로만 볼지, 남긴다면 파티션 단위 삭제를 허용하는 보존 방식을 새 V__로 둘지 정한다."
     },
     {
@@ -6439,7 +6439,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(fix): 새 조회 인수 없이 운영자 감사 조회의 q 검색 대상에 organization_id를 넣는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(fix): 새 조회 인수 없이 운영자 감사 조회의 q 검색 대상에 organization_id를 넣는다",
       "decision_question": "운영자 감사 조회 GET /v1/operations/audit-logs에 선택 인수(도입사 id)를 더하고 /admin/audit에 도입사 필터를 둘지, 둔다면 작업 공간 범위로 쓰이는 organization_id와 겹치지 않는 조회 키 이름을 무엇으로 할지(또는 q 검색 대상에 organization_id를 넣는 것으로 갈음할지) 정한다.",
       "evidence_notes": [
         "git log af15d7f5 -- AuditLogController.java: 3446fbe3 #448, 94a48a20 #453 (운영자 조회의 도입사 조건은 두 커밋 모두 없음)"
@@ -6712,7 +6712,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미청구 사용량 통보'(unbilled-notice) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:48: charge.negativeUsages()만 꺼낸다",
         "backend/src/main/java/com/meterengine/notification/service/UnbilledUsageReportService.java:64: summary.isEmpty() && negatives.isEmpty()이면 발행하지 않아 단가 없는 사용량만 있는 달은 통보가 없다",
@@ -6758,7 +6758,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): 문자열 목록은 두고 목록끼리와 V46 CHECK가 같은지 보는 시험만 더한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 문자열 목록은 두고 목록끼리와 V46 CHECK가 같은지 보는 시험만 더한다",
       "decision_question": "수집 거절 사유와 매핑 문제 사유를 각각 enum 하나로 모아 서비스, 컨트롤러, 리포지토리, DTO를 함께 바꿀지, 지금 문자열 목록을 두고 목록끼리와 V46 CHECK를 대조하는 시험만 더할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventRejectionService.java:31-36: REASONS: 거절 기록 대상 ErrorCode 넷",
@@ -6808,7 +6808,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): 두 삼항식을 PrincipalKind 전체 switch로만 바꾼다. 시그니처와 U17-B2 줄은 그대로 둔다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 두 삼항식을 PrincipalKind 전체 switch로만 바꾼다. 시그니처와 U17-B2 줄은 그대로 둔다",
       "decision_question": "수집 거절 기록의 행위자와 요청 ID를 RequestIdentity.current() 하나로 모을지 정해야 합니다. 모으면 EventRejectionService, EventRejectionStorageService, EventRejectionRepository 시그니처와 U17-B2가 다루는 RequestIdentity 줄까지 바뀝니다. 아니면 두 삼항식을 PrincipalKind 전체 switch로만 바꾸고 나머지 중복은 그대로 둘 수도 있습니다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/RequestIdentity.java:10-15: SecurityContext에서 principal 꺼내기, 첫째 벌",
@@ -6852,7 +6852,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): UsagePriceDiagnostics 계약을 수집이 소유하는 event.api로 옮긴다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): UsagePriceDiagnostics 계약을 수집이 소유하는 event.api로 옮긴다",
       "decision_question": "요금 진단 계약 UsagePriceDiagnostics를 global.security에서 수집이 소유하는 event.api로 옮길지(구현 pricing -> event.api 의존을 허용) 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/UsagePriceDiagnostics.java:1: package com.meterengine.global.security",
@@ -6891,7 +6891,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:49: '확인할 내용' 열이 8개 열 중 셋째에 남아 있다",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: hint는 reason만 보고 정하는 고정 문장 셋",
@@ -6925,7 +6925,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미청구 사용량 통보'(unbilled-notice) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "G-117",
@@ -6954,7 +6954,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): 확정한 (고객, 달)의 단가 없는 사용량에는 단가 등록 대신 확정한 달이라 이번 청구에 들어가지 않는다는 안내를 준다. 공개 reason 값은 그대로 둔다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 확정한 (고객, 달)의 단가 없는 사용량에는 단가 등록 대신 확정한 달이라 이번 청구에 들어가지 않는다는 안내를 준다. 공개 reason 값은 그대로 둔다",
       "decision_question": "확정된 (고객, 달)에 확정 뒤 들어온 이벤트를 진단에 새 범주(새 reason 값과 요약 필드)로 보여 줄지, unpriced_usage 진단에서 확정 고객을 뺄지 다른 안내를 줄지 정한다."
     },
     {
@@ -6983,7 +6983,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): 집계 구조 변경과 큰 이벤트 표 인덱스는 배포 준비 한도(G-161) 때문에 지금 하지 않는다. G-132의 환경 조건 수정만 들어가고 남은 비용을 README에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 집계 구조 변경과 큰 이벤트 표 인덱스는 배포 준비 한도(G-161) 때문에 지금 하지 않는다. G-132의 환경 조건 수정만 들어가고 남은 비용을 README에 적는다",
       "decision_question": "요청마다 미터 수만큼 이벤트를 다시 집계하는 진단과 사용량 화면 구조를 집계 재사용이나 월 요약으로 바꾸고, occurred_at 인덱스를 새 V__로 더하는 작업을 지금 할지 정한다.",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:47: event 인덱스는 PK 하나, occurred_at 인덱스 없음",
@@ -7024,7 +7024,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:327: 목록, count, 내보내기 공통 조건",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricUsageRepository.java:110: 집계",
@@ -7056,7 +7056,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V46__create_event_rejections.sql:34: 검색 인덱스가 environment_id 위",
         "backend/src/main/resources/db/migration/V46__create_event_rejections.sql:35: 고객 인덱스도 같음",
@@ -7093,7 +7093,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:106: top-level eventCount = 미터별 count 합, 이벤트-미터 조합 수",
         "backend/src/main/java/com/meterengine/event/repository/UnbilledEventRepository.java:88: event JOIN billable_metric ON event_type, 미터마다 한 줄",
@@ -7134,7 +7134,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): 공개 API 호환을 위해 지금 동작(목록은 무시, 내보내기와 search는 400)을 유지하고 엔드포인트별 규칙을 API 설명에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 공개 API 호환을 위해 지금 동작(목록은 무시, 내보내기와 search는 400)을 유지하고 엔드포인트별 규칙을 API 설명에 적는다",
       "decision_question": "이벤트 조회 엔드포인트 전체에서 모르는 조회 조건을 400으로 막을지 무시할지 한 규칙으로 정하고, 막는다면 허용 목록을 @RequestParam에서 자동으로 뽑는 공통 장치를 둘지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:155-176: GET /v1/events listEvents, 모르는 조건 검사 없음",
@@ -7178,7 +7178,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/dto/IngestEventBatchRequest.java:11: @NotEmpty @Size(max = 100) @ArraySchema(... minItems = 1 ...",
         "backend/openapi.yaml:9188: IngestEventBatchRequest.events minItems: 0, 파일 전체에서 minItems: 0은 이 한 곳",
@@ -7221,7 +7221,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:193-200: jsonField switch가 transactionId->transaction_id, customerId->customer_id, occurredAt->timestamp를 손으로 적음",
         "backend/src/main/java/com/meterengine/event/service/EventBatchService.java:103: 검증 오류 필드 이름을 jsonField로 만듦",
@@ -7306,7 +7306,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): check, active를 잠금이 드러나는 이름으로 바꾼다(내부 계약, 공개 이름 아님)",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): check, active를 잠금이 드러나는 이름으로 바꾼다(내부 계약, 공개 이름 아님)",
       "decision_question": "CustomerDirectory.check와 active를 잠금이 드러나는 이름(예: lockActive, lockActivity)으로 바꿔 구현과 호출부 네 파일을 함께 고칠지, 이름은 두고 인터페이스에 잠금 경고 한 줄만 달지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/api/CustomerDirectory.java:10: void check, 잠금이 이름에 없음",
@@ -7350,7 +7350,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:97-112: 옛 findPage 오버로드, :109에서 new EventSearch(null, start, end, null, \"occurred_at\", \"desc\", null)로 resolve를 건너뜀",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:152-159: 옛 count 오버로드, :158에 같은 생성자 호출",
@@ -7389,7 +7389,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): 월 구간, cutoff, 과금 시간대를 global의 작은 도우미 하나로 모아 event와 metric이 함께 쓴다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 월 구간, cutoff, 과금 시간대를 global의 작은 도우미 하나로 모아 event와 metric이 함께 쓴다",
       "decision_question": "월 구간과 집계 cutoff 계산, 과금 시간대 상수를 global 패키지의 공용 도우미로 옮겨 event와 metric이 함께 쓰게 할지, 도메인 경계 규칙 때문에 생긴 중복으로 두고 넘어갈지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/UnbilledEventService.java:31: ZoneId.of(\"Asia/Seoul\") 직접 생성, 39행과 41행에도 반복",
@@ -7426,7 +7426,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:16: REASONS: reason마다 라벨 하나",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: 같은 reason마다 고정 hint 하나",
@@ -7456,7 +7456,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:49: '확인할 내용' 열",
         "backend/src/main/java/com/meterengine/event/repository/EventIssueRepository.java:152-157: reason별 고정 hint",
@@ -7491,7 +7491,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:46: 요약 줄에 미터 없음, 단가 없음 건수만 있고 조치 링크 없음",
         "frontend/src/app/(console)/event-issues/page.tsx:47: 미래 이벤트, 음수 조합 경고에 확인할 곳 링크 없음",
@@ -7527,7 +7527,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-issues/page.tsx:47: 미래 이벤트, 음수 조합 건수 뒤에 '별도로 확인합니다'만 있고 링크 없음",
         "frontend/src/components/workspace/UsageQuality.tsx:14: 미래 시각 이벤트에 /events?month= '시각 확인' 링크",
@@ -7563,7 +7563,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/event-rejections/page.tsx:30: 안내가 placeholder에만 있고 UUID 형식 언급이 없음",
         "backend/src/main/java/com/meterengine/event/controller/EventRejectionController.java:44: customer_id를 UUID 타입으로 받음, UUID가 아니면 형식 불일치 400",
@@ -7602,7 +7602,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): 이벤트 문제와 거절 search는 0부터를 유지하고(이벤트, 감사, 웹훅 목록과 같음) README에 엔드포인트별 기준을 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 이벤트 문제와 거절 search는 0부터를 유지하고(이벤트, 감사, 웹훅 목록과 같음) README에 엔드포인트별 기준을 적는다",
       "decision_question": "이벤트 문제와 수집 거절 search의 page를 공개 API 계약을 바꿔 1부터로 맞출지, 아니면 이벤트, 감사, 웹훅 목록처럼 0부터를 유지하고 README에 /search 이름과 무관하게 엔드포인트별 기준을 따른다고 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/controller/EventIssueController.java:51: @RequestParam(defaultValue = \"0\") @Min(0) int page",
@@ -7676,7 +7676,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미청구 사용량 통보'(unbilled-notice) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "G-124",
@@ -7703,7 +7703,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): 공용 조건으로 모으지 않고 세 정의가 같은 결과를 내는지 보는 시험만 더한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): 공용 조건으로 모으지 않고 세 정의가 같은 결과를 내는지 보는 시험만 더한다",
       "decision_question": "집계 가능 조건과 활성 미터 조건을 공용 SQL 조각이나 뷰 한 곳으로 모을지, 지금 구조를 두고 두 정의가 같은지 보는 시험만 더할지 정한다."
     },
     {
@@ -7728,7 +7728,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미청구 사용량 통보'(unbilled-notice) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "G-176",
@@ -7754,7 +7754,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): event_rejection도 다른 기록 표처럼 지우지 않는다. README에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): event_rejection도 다른 기록 표처럼 지우지 않는다. README에 적는다",
       "decision_question": "event_rejection을 append-only 관례의 예외로 두고 보존 기간(예: N일)을 정해 오래된 행을 지우는 정리 작업을 더할지, 다른 기록 표처럼 계속 지우지 않을지 정한다."
     },
     {
@@ -7784,7 +7784,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventSearch.java:73: 범위 검사 없이 파싱 결과 반환",
         "backend/src/main/java/com/meterengine/event/controller/EventController.java:171: from은 길이와 문자만 검사",
@@ -7818,7 +7818,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventQueryService.java:103: 객체 여부만 검사",
         "backend/src/main/java/com/meterengine/event/repository/EventRepository.java:238: 원문을 ?::jsonb로 전달",
@@ -7852,7 +7852,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/test/java/com/meterengine/event/EventIssueIntegrationTest.java:245: uri 문자열 이어 붙이기",
         "backend/src/test/java/com/meterengine/event/EventRejectionIntegrationTest.java:324: uri 문자열 이어 붙이기",
@@ -7886,7 +7886,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/workspace/UsageQuality.tsx:12: href \"/billable-metrics\", 사유 필터 없음",
         "frontend/src/components/workspace/UsageQuality.tsx:13: href `/events?month=${data.month}`, 사유 필터 없음",
@@ -7928,7 +7928,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:91-92: POST는 @IngestAccess만",
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:120-131: 기존 고객이면 200으로 CustomerResponse.from 전체 반환",
@@ -7968,7 +7968,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
     },
     {
       "id": "C450-010",
@@ -8000,7 +8000,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '데모 CLI와 SDK'(demo-sdk) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "demo/csvdemo/send_cmd.py:137: properties 원문을 이어 붙여 봉투 생성",
         "demo/csvdemo/send_cmd.py:147-149: 봉투 4xx를 failure로 처리",
@@ -8044,7 +8044,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "G-165",
@@ -8074,7 +8074,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '운영 프록시, 배포 설정, 대시보드'(deploy-ops) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/grafana/dashboards/meterengine-storage.json:56: 패널 제목 POST /v1/events",
         "backend/src/main/java/com/meterengine/event/controller/EventBatchController.java:29: @PostMapping(\"/v1/event-batches\"",
@@ -8152,7 +8152,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기. 결정안(doc): 최초 응답 재생에 기한이 없는 지금 계약을 유지하고 저장 내용과 기간을 API 설명과 README에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 최초 응답 재생에 기한이 없는 지금 계약을 유지하고 저장 내용과 기간을 API 설명과 README에 적는다",
       "decision_question": "Idempotency-Key로 저장한 응답에 보관 기한(예: 24시간)을 두고 지난 행을 지우는 정리 작업을 넣을지, 넣는다면 기한을 얼마로 하고 API 설명에 어떻게 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:90-101: response_body에 응답 전체를 저장하고 만료 처리는 없다",
@@ -8191,7 +8191,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
       ]
@@ -8220,7 +8220,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
       ]
@@ -8250,7 +8250,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 상세 서랍'(event-drawer) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/RoutedEventDetail.tsx:12: isOpen 고정, onClose는 router.replace로 transaction_id 삭제만 한다",
         "frontend/src/app/(console)/events/page.tsx:44: transactionId가 없어지면 SelectedEvent와 드로어가 언마운트된다",
@@ -8288,7 +8288,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:124: .workspace-field input, textarea, select 자손 선택자에 padding 10px 12px, width 100%",
         "frontend/src/app/globals.css:153: .workspace-field input ... { min-height: 44px }",
@@ -8326,7 +8326,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:124: 자손 선택자로 antd 안쪽 input까지 걸림",
         "frontend/src/app/globals.css:153: min-height: 44px",
@@ -8361,7 +8361,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:311: .resource-advanced summary { min-height: 44px; display: flex; align-items: center; }",
         "frontend/src/components/screen/ResourceSearchControls.tsx:113: <details className=\"event-advanced resource-advanced\">",
@@ -8394,7 +8394,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-047",
@@ -8418,7 +8418,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-067",
@@ -8442,7 +8442,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-133",
@@ -8465,7 +8465,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-147",
@@ -8489,7 +8489,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-177",
@@ -8513,7 +8513,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-023",
@@ -8537,7 +8537,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-039",
@@ -8567,7 +8567,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: <Button type=\"primary\" htmlType=\"submit\">조건 적용</Button>",
         "frontend/src/components/events/EventFilters.tsx:182: 이 조건으로 조회도 type=\"primary\"",
@@ -8610,7 +8610,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:82-88: apply가 범위 검사 없이 router.push",
         "frontend/src/components/screen/ResourceSearchControls.tsx:118: min_amount, max_amount 입력에 서로 연동되는 검사 없음",
@@ -8652,7 +8652,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기. 결정안(keep): PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(keep): PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)",
       "decision_question": "PATCH를 If-Match 필수인 전체 교체로 둘지, 부분 수정(본문에 없는 필드는 유지)으로 바꿀지, PATCH를 없애고 PUT의 If-Match를 필수로 할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:153: PUT /{id}, 160줄에 빼면 청구 이메일이 지워진다고 적음, 191줄 If-Match required = false",
@@ -8691,7 +8691,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:320: default가 이벤트 월 SQL을 돌려주고 모르는 값을 거르지 않음",
         "backend/src/main/java/com/meterengine/query/service/SearchParameters.java:58: 같은 자원 문자열 switch인데 모르는 값이면 IllegalArgumentException",
@@ -8731,7 +8731,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기. 결정안(fix): CSV 이스케이프, 인용, BOM, 응답 헤더를 global 공용 도우미 하나로 모은다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): CSV 이스케이프, 인용, BOM, 응답 헤더를 global 공용 도우미 하나로 모은다",
       "decision_question": "CSV 이스케이프, 인용, BOM, 응답 헤더를 global 아래 공용 도우미 하나로 모으고 EventCsvService와 SearchCsvService가 함께 쓰게 할지(운영 파일 셋 변경) 정해 주세요.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:36: BOM으로 시작",
@@ -8773,7 +8773,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/dto/CustomerResponse.java:19: 6인자 보조 생성자, 26줄에서 version 자리에 0을 넘김",
         "backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:27: 13인자 보조 생성자, 55줄에서 version 자리에 0을 넘김",
@@ -8812,7 +8812,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:59-62: setIsSearching(true) 뒤 await queryOptionsAction, try/finally 없음",
         "frontend/src/components/screen/CustomerFilter.tsx:64: 실패 시 setSearchError만 하고 remoteOptions 유지",
@@ -8850,7 +8850,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:78: showSearch onSearch: searchCustomers, 디바운스 없음",
         "frontend/src/components/screen/CustomerFilter.tsx:86: 열 때마다 searchCustomers(searchText.current), 닫을 때 searchText를 비움",
@@ -8887,7 +8887,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/CustomerFilter.tsx:86: 열 때마다 searchCustomers(searchText.current), 닫으면 searchText를 비움",
         "frontend/src/components/screen/CustomerFilter.tsx:63: 검색 결과로 remoteOptions를 통째로 교체, 선택한 고객 보존 없음",
@@ -8925,7 +8925,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "D-144",
@@ -8950,7 +8950,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "X-096",
@@ -8975,7 +8975,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "D-019",
@@ -9000,7 +9000,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
       ]
@@ -9028,7 +9028,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
       ]
@@ -9056,7 +9056,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "D-160",
@@ -9081,7 +9081,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/settings/page.tsx:29: 결제 모드 변경은 workspace-actions 안, 42e5ceaa부터"
       ]
@@ -9153,7 +9153,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 상세 서랍'(event-drawer) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventDetailDrawer.tsx:46: label: \"transaction_id\"",
         "frontend/src/components/events/EventDetailDrawer.tsx:54-56: label: \"type\", \"occurred_at\", \"received_at\"",
@@ -9190,7 +9190,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 상세 서랍'(event-drawer) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventDetailDrawer.tsx:46: label: \"transaction_id\"",
         "frontend/src/components/events/EventDetailDrawer.tsx:53-56: '고객'과 'type', 'occurred_at', 'received_at'이 한 목록에 섞임",
@@ -9226,7 +9226,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: antd primary '조건 적용'",
         "frontend/src/components/screen/ResourceSearchControls.tsx:102: 안내 '조건 적용을 누르세요'",
@@ -9266,7 +9266,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터, 사용량, 고객 목록의 빈 결과와 상태 필터'(list-empty) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:86: 빈 검색 문구가 rows.length를 개수로 씀",
         "frontend/src/components/billable-metrics/BillableMetricsScreen.tsx:56: capabilities.q이면 visibleRows = rows라 빈 결과일 때 rows.length는 0",
@@ -9303,7 +9303,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 상세 서랍'(event-drawer) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventsTable.tsx:114: 모바일 레코드가 <a href={detailHref(row)}>로 문서 전체를 다시 받음",
         "frontend/src/components/events/EventsTable.tsx:51: 데스크톱은 router.push(detailHref(row), { scroll: false }",
@@ -9338,7 +9338,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:107: MonthPicker가 .workspace-field 안에 있음",
         "frontend/src/app/globals.css:153: .workspace-field input { min-height: 44px }",
@@ -9373,7 +9373,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:153: min-height: 44px가 자손 input 전체에 걸림",
         "frontend/src/app/globals.css:124: 자손 선택자 input 규칙",
@@ -9404,7 +9404,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-203",
@@ -9437,7 +9437,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기. 결정안(fix): D-013과 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): D-013과 같은 결정",
       "decision_question": "조회 조건 제출과 초기화 문구를 '조건 적용'과 '조건 초기화'로 모든 화면에 맞출지 정해 주세요. 모달 보조 버튼의 '취소'와 '닫기'는 지금처럼 단계에 따라 나눠 둘지도 함께 정해 주세요.",
       "evidence_notes": [
         "frontend/src/components/events/EventFilters.tsx:182: '이 조건으로 조회', '필터 초기화'",
@@ -9482,7 +9482,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기. 결정안(fix): D-013과 같은 결정. 진단, 거절 화면도 같은 문구로 맞춘다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): D-013과 같은 결정. 진단, 거절 화면도 같은 문구로 맞춘다",
       "decision_question": "조회 조건 제출 버튼과 초기화 링크를 모든 화면에서 한 문구(README대로 '조건 적용'과 '조건 초기화', 또는 '조회')로 맞출지, 진단과 거절 화면처럼 대상 이름을 붙인 문구는 예외로 둘지 정해 주세요.",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: '조건 적용'",
@@ -9525,7 +9525,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기. 결정안(fix): README 152행대로 목록 화면의 제출과 초기화를 '조건 적용'과 '조건 초기화'로 맞춘다. 모달의 '취소'와 '닫기'는 그대로 둔다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례. 결정안(fix): README 152행대로 목록 화면의 제출과 초기화를 '조건 적용'과 '조건 초기화'로 맞춘다. 모달의 '취소'와 '닫기'는 그대로 둔다",
       "decision_question": "필터 제출과 초기화 버튼 이름을 모든 목록 화면에서 '조건 적용'과 '조건 초기화' 한 벌로 맞출지, 맞춘다면 '진단 조회'와 '거절 기록 조회' 같은 맥락 이름도 바꿀지 정한다.",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:124: 조건 적용, primary",
@@ -9566,7 +9566,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/events/EventFilters.tsx:182: primary",
         "frontend/src/app/(console)/event-issues/page.tsx:43: month-apply default",
@@ -9597,7 +9597,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-082",
@@ -9622,7 +9622,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/screen/ResourceSearchControls.tsx:111: 라벨 '이름 또는 외부 ID로 찾기', placeholder '이름, 외부 ID, 청구 이메일'",
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:93-95: name, external_id, billing_email 셋을 LIKE로 검색",
@@ -9663,7 +9663,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터, 사용량, 고객 목록의 빈 결과와 상태 필터'(list-empty) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/README.md:152: 고객, 미터, 가격 등은 함께 선택한 뒤 조건 적용으로 제출한다고 문서화",
         "frontend/src/components/screen/ResourceSearchControls.tsx:102: 조건을 함께 선택한 뒤 조건 적용을 누르라는 안내",
@@ -9749,7 +9749,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례"
     },
     {
       "id": "C451-004",
@@ -9774,7 +9774,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:28: COLLECTED 집합",
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:67-75: collected와 canceled 계산, 단언하는 시험 없음",
@@ -9810,7 +9810,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터, 사용량, 고객 목록의 빈 결과와 상태 필터'(list-empty) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-190",
@@ -9884,7 +9884,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): 요약 record 구조 변경은 하지 않고 자원별 summary 키를 API 설명에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 요약 record 구조 변경은 하지 않고 자원별 summary 키를 API 설명에 적는다",
       "decision_question": "검색 API 7종의 summary를 자원별 요약 record와 SearchPageResponse<T, S>로 바꿔 OpenAPI 스키마로 내는 구조 변경(백엔드 파일 9개 이상과 openapi.yaml)을 지금 할지, 프론트와 SDK 요약 타입 정리와 묶어 후속으로 미룰지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/dto/SearchPageResponse.java:13: Map<String, Object> summary, git log상 f53222e7 이후 변경 없음",
@@ -9925,7 +9925,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "C451-006",
@@ -9954,7 +9954,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터와 청구 회귀 시험 보강'(regression-tests) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- WorkspaceQueryController.java: 리터럴 경로는 f53222e7(#451)에서 들어왔고 뒤의 94a48a20(#453)도 그대로 둔다"
       ]
@@ -9984,7 +9984,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- WorkspaceQueryIntegrationTest.java: f53222e7 (#451) 하나뿐"
       ]
@@ -10014,7 +10014,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '데모 CLI와 SDK'(demo-sdk) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git grep createCustomer af15d7f5 -- demo: 시험 호출은 read-contract.test.ts:17 하나뿐",
         "git grep Idempotency af15d7f5 -- demo/sdk/src/meter-engine-client.ts: 결과 없음"
@@ -10044,7 +10044,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/lib/api/usage.ts:88: 사용량 라벨 = billableMetricUsage.code",
         "frontend/src/lib/api/usage.ts:89: 툴팁에 미터명 없음",
@@ -10081,7 +10081,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/overview/page.tsx:19: detail은 payment_mode만 쓰고 isComplete는 supplier_configured && payment_configured",
         "frontend/src/app/(console)/overview/page.tsx:16: , frontend/src/app/(console)/overview/page.tsx:17 @ af15d7f5 (다른 단계는 완료 기준 값 customer_count, billable_metric_count를 설명에 보여 준다",
@@ -10121,7 +10121,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/customers/[id]/page.tsx:43: <h2>{month} 청구와 수납</h2>, 원시 YYYY-MM",
         "frontend/src/app/(console)/billing/page.tsx:58: 청구 예정액 - ${formatKoreanMonth(month)}",
@@ -10162,7 +10162,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-118",
@@ -10193,7 +10193,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/billing/BillingTable.tsx:276: 요약 행 라벨 query.customerId ? \"선택 고객 합계\" : \"합계\"",
         "frontend/src/components/billing/BillingTable.tsx:254: 모바일 라벨 \"공급가액 합계\"",
@@ -10235,7 +10235,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금 설계 화면'(pricing-screen) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-125",
@@ -10264,7 +10264,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '청구 확정 대화상자'(invoice-finalize) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-143",
@@ -10297,7 +10297,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- frontend/src/components/usage/UsageTable.tsx: 마지막 변경 f53222e7(#451), git diff 17cc788 af15d7f5 에서 이 파일 차이 없음"
       ]
@@ -10326,7 +10326,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "D-166",
@@ -10355,7 +10355,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/globals.css:125: D-018 정렬 부분은 be67d816에서 고쳐짐",
         "frontend/src/components/workspace/WorkspaceHeader.tsx:7: D-018 수납 상세 머리글 링크 묶음"
@@ -10388,7 +10388,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '미터, 사용량, 고객 목록의 빈 결과와 상태 필터'(list-empty) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "G-111",
@@ -10421,7 +10421,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기. 결정안(doc): 공개 오류 코드를 바꾸지 않고 엔드포인트별 멱등 계약 차이를 API 설명에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 공개 오류 코드를 바꾸지 않고 엔드포인트별 멱등 계약 차이를 API 설명에 적는다",
       "decision_question": "Idempotency-Key 계약(헤더 형식, 409 오류 코드, Idempotency-Replayed 헤더)을 결제 취소까지 IdempotencyService 기준으로 하나로 맞추고 공개 코드 payment_cancellation_idempotency_conflict를 idempotency_conflict로 바꿀지, 아니면 엔드포인트별 계약을 지금처럼 두고 차이만 API 설명에 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/payment/controller/PaymentCancellationController.java:96-98: 헤더를 UUID 타입으로 받음",
@@ -10470,7 +10470,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(fix): status 뜻은 그대로 두고 metric_counts만 그 달 청구 대상 미터로 좁힌다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(fix): status 뜻은 그대로 두고 metric_counts만 그 달 청구 대상 미터로 좁힌다",
       "decision_question": "달을 고른 가격 화면에서 '사용 중' 기본 보기가 그 달에 청구되는 미터(그 달에 보관한 미터 포함)를 보여 주게 status 뜻을 바꿀지, 별도 필터를 더할지, 지금처럼 현재 보관 상태로 두고 metric_counts만 그 달 청구 대상으로 좁힐지 정해야 한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:52-58: metric_counts가 organization_id와 environment_id만으로 미터를 고르고 달 활성 조건이 없다",
@@ -10513,7 +10513,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:37: columns가 비면 List.of(\"empty_result\"",
         "backend/src/main/java/com/meterengine/query/service/SearchCsvService.java:29-35: 열을 행에서 펼친 키의 합집합으로만 만든다",
@@ -10552,7 +10552,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 'CSV 내보내기 버튼, 파일 이름, 형식'(csv-export) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/application.properties:38: jackson 시간대나 JDBC 시간대 설정 없음",
         "backend/src/test/java/com/meterengine/event/EventExportIntegrationTest.java:84-105: 시각 형식 단언 없음",
@@ -10586,7 +10586,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기. 결정안(doc): 두 엔드포인트의 기간 규칙은 시험으로 고정된 지금대로 두고 차이를 API 설명에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례. 결정안(doc): 두 엔드포인트의 기간 규칙은 시험으로 고정된 지금대로 두고 차이를 API 설명에 적는다",
       "decision_question": "/v1/events와 /v1/invoices/search의 기간 조합 규칙(시작만 준 기간 허용 여부, month와 기간 병용 여부)을 어느 쪽으로 맞추고, 해석 코드를 global 공용 객체로 모을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/event/service/EventSearch.java:35-41: from과 to 둘 다 필요, month와 같이 쓰면 400",
@@ -10627,7 +10627,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '이벤트 수집, 조회, 진단 백엔드'(events-backend) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '이벤트 수집, 조회, 내보내기 백엔드'(fix/s456-t-inho-events-query) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git diff 17cc788 af15d7f5 -- EventCsvService.java, EventQueryService.java, exports/[resource]/route.ts: 변경 없음"
       ]
@@ -10658,7 +10658,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "Nk3-008",
@@ -10687,7 +10687,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(doc): outstanding_amount 이름과 값은 유지하고 정의를 응답 설명에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): outstanding_amount 이름과 값은 유지하고 정의를 응답 설명에 적는다",
       "decision_question": "개요 API의 outstanding_amount를 다른 엔드포인트와 같은 정의(unpaid와 failed 합, pending 합은 새 필드)로 바꿀지, 지금 값을 유지하고 키를 awaiting_amount처럼 새 이름으로 바꿀지, 아니면 이름은 두고 설명만 적을지 박성종 님이 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:29: OUTSTANDING = unpaid, pending, failed",
@@ -10736,7 +10736,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 등록 API와 응답 문서'(customer-api) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:46: searchCustomers부터 파일 끝까지 @ApiResponse가 0개, 17cc788도 0개",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:570: exportCustomers가 ResponseEntity<byte[]>이고 200 스키마를 따로 적지 않음, 607 653 699 749 818도 같음",
@@ -10788,7 +10788,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요금, 청구, 개요 API 설명과 코드 정리'(pricing-backend) 승인 대기. 결정안(keep): draft_invoice는 read API 키 호환 때문에 응답에 남긴다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(keep): draft_invoice는 read API 키 호환 때문에 응답에 남긴다",
       "decision_question": "main에 배포된 공개 계약인 GET /v1/dashboard 응답에서 화면이 쓰지 않는 draft_invoice 필드를 빼도 되는지(read API 키 사용자 호환성을 감수할지) 정해야 합니다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/dto/DashboardResponse.java:29: draft_invoice DraftInvoiceResponse 필드가 남음, 넘길 때 head 17cc788의 28행과 같음",
@@ -10835,7 +10835,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/customers/[id]/page.tsx:30: if (!customer.ok) return <WorkspaceError message={customer.error.message} />, status 없음, 머리글과 목록 링크 없음",
         "frontend/src/components/workspace/WorkspaceView.tsx:13-14: status가 403/404일 때만 다시 시도 없는 안내, 없으면 ErrorAlert",
@@ -10877,7 +10877,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-050",
@@ -10907,7 +10907,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-071",
@@ -10941,7 +10941,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '수집 진단과 사용량 화면 안내'(diagnostics-screen) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/app/(console)/payments/page.tsx:20: 탭 없음, 이 부분은 이미 해소",
         "frontend/src/components/shell/ConsoleShell.tsx:72: 하단 링크가 'API 키와 통보', 이 부분은 이미 해소"
@@ -10979,7 +10979,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '목록 화면의 조회 줄, 필터 문구, 표'(list-screens) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '목록과 조회 화면'(fix/s456-t-inho-list-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-092",
@@ -11009,7 +11009,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "X-093",
@@ -11044,7 +11044,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '고객 상세, 수납, 개요 화면의 안내와 동작'(console-copy) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '업무 화면(요금 설계, 청구 확정, 고객 상세, 수납)'(fix/s456-t-inho-work-screens) 승인됨, 고칠 차례"
     },
     {
       "id": "C454-001",
@@ -11206,7 +11206,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '운영 프록시, 배포 설정, 대시보드'(deploy-ops) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:9: - 전역 log의 request>uri 가림. 디코딩 없이 글자 그대로의 접두사 뒤에 바로 / 가 와야 맞고, ${2}로 나머지 경로를 남긴다",
         "deploy/caddy/Caddyfile:10: , deploy/caddy/Caddyfile:11 @ af15d7f5 - 같은 정규식을 Referer, Location에 복사",
@@ -11245,7 +11245,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '운영 프록시, 배포 설정, 대시보드'(deploy-ops) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/compose.prod.yml:20: METERENGINE_AUTH_RATE_LIMIT_ENABLED만 넘김",
         "deploy/compose.prod.yml:21: METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES만 넘김, 나머지 여섯은 environment에 없음",
@@ -11284,7 +11284,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:62: 거절 여부와 상관없이 매 요청 cleanExpired 쓰기 트랜잭션",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:63-72: consume로 쓴 뒤에야 429를 던진다",
@@ -11328,7 +11328,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기. 결정안(fix): 로그인 계정 한도를 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에 세지 않는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(fix): 로그인 계정 한도를 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에 세지 않는다",
       "decision_question": "로그인 계정 한도를 지금처럼 이메일 하나로 모든 IP가 공유할지, 표적 잠금을 줄이려고 (계정, IP) 쌍의 엄격한 한도와 느슨한 계정 전체 상한으로 바꿀지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:96: 비밀번호 확인인 97행 sessionService.create보다 먼저 한도 검사",
@@ -11371,7 +11371,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기. 결정안(fix): C454-002와 같은 결정",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(fix): C454-002와 같은 결정",
       "decision_question": "로그인 계정 한도를 지금처럼 이메일 하나로 모든 IP가 공유하고 성공과 IP 초과 시도까지 셀지, (계정, IP) 쌍 한도와 느슨한 계정 전체 상한으로 바꾸고 IP 한도를 넘은 요청은 계정 버킷에서 뺄지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/repository/AuthRequestRateLimitRepository.java:40: IP 버킷 증가",
@@ -11412,7 +11412,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:61: String account = email.strip().toLowerCase(Locale.ROOT",
         "backend/src/main/java/com/meterengine/account/repository/UserAccountRepository.java:15: lower(u.email) = lower(:email",
@@ -11454,7 +11454,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/controller/SessionController.java:87: 429 ApiResponse에 headers 없음, 92행 설명에만 Retry-After 언급",
         "backend/src/main/java/com/meterengine/account/controller/SignupController.java:77: 429 ApiResponse에 headers 없음, 82행 설명에만 언급",
@@ -11540,7 +11540,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:9: email VARCHAR NOT NULL, 콜레이션 지정 없음",
         "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql:20: lower(email) 고유 색인",
@@ -11571,7 +11571,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:67: SecureTokens.hash(account)로 카운터 식별"
       ]
@@ -11602,7 +11602,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '프론트엔드 보안 응답 헤더'(security-headers) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/next.config.ts:3: poweredByHeader 설정이 없어 X-Powered-By: Next.js가 기본으로 붙는다",
         "frontend/next.config.ts:11: headers()의 source가 /invoice-links/:path* 하나뿐",
@@ -11646,7 +11646,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기"
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례"
     },
     {
       "id": "G-101",
@@ -11676,7 +11676,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '공개 인증 호출 제한'(auth-rate-limit) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/global/security/RequestLogFilter.java:123-139: X-Forwarded-For 첫 값을 client_address로 씀, 신뢰 판정 없음",
         "backend/src/main/java/com/meterengine/account/service/AuthRequestRateLimitService.java:75-86: 신뢰 프록시면 X-MeterEngine-Client-IP로 셈",
@@ -11720,7 +11720,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '운영 프록시, 배포 설정, 대시보드'(deploy-ops) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:76-78: http://:8081 { import backend }, 헤더를 손대지 않음",
         "deploy/caddy/Caddyfile:57: 공개 사이트만 request_header X-MeterEngine-Client-IP {remote_host}",
@@ -11758,7 +11758,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/README.md:13: umask 077, 계획 절에만 있음",
         "measurements/terraform/rds-auto-stop/README.md:14: rds_plan_dir=\"$(mktemp -d)\", 유일한 정의",
@@ -11795,7 +11795,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:81-84: rds:stopDBInstance 가짜 응답이 args를 검사하지 않음",
         "measurements/terraform/modules/rds-auto-stop/tests/workflow.test.mjs:64-71: putItem 가짜 응답이 TableName을 검사하지 않음",
@@ -11832,7 +11832,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기. 결정안(fix): rds-auto-stop 시험(workflow.test.mjs, contracts.tftest.hcl)을 그 모듈 경로가 바뀔 때만 도는 CI job으로 더한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): rds-auto-stop 시험(workflow.test.mjs, contracts.tftest.hcl)을 그 모듈 경로가 바뀔 때만 도는 CI job으로 더한다",
       "decision_question": "rds-auto-stop 테스트(workflow.test.mjs, contracts.tftest.hcl)를 돌리는 job을 CI에 더할지",
       "evidence_notes": [
         ".github/workflows/ci.yml:28-35: filters가 backend/**, frontend/**, .node-version, ci.yml뿐",
@@ -11873,7 +11873,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기. 결정안(fix): 0fe7d2a 백스톱 설계를 확정하고, root에 환경 목록 변수를 두고 두 SUT README 지우기 절에 환경을 먼저 빼는 단계를 넣는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 0fe7d2a 백스톱 설계를 확정하고, root에 환경 목록 변수를 두고 두 SUT README 지우기 절에 환경을 먼저 빼는 단계를 넣는다",
       "decision_question": "Q14에서 0fe7d2a 백스톱 설계와 이행 순서를 확정한 뒤, rds-auto-stop root에 환경 목록 변수(environments)를 더하고 두 SUT README 지우기 절에 이 root에서 환경을 먼저 빼는 단계를 넣을지 정한다.",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/main.tf:6: environments = toset([\"test-slo\", \"test-storage\"]) 고정",
@@ -11917,7 +11917,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기. 결정안(doc): 돌려 볼 수 없는 Step Functions 조회는 sut-start.sh에 넣지 않고 README에 수동 확인 절차로 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(doc): 돌려 볼 수 없는 Step Functions 조회는 sut-start.sh에 넣지 않고 README에 수동 확인 절차로 적는다",
       "decision_question": "AWS에서 돌려 보지 않은 Step Functions 실행 조회를 sut-start.sh에 더할지(로컬에서는 bash -n만 확인할 수 있다)",
       "evidence_notes": [
         "measurements/test-slo/sut/scripts/sut-start.sh:13-14: starting이면 시작 요청을 건너뛰고 흐름 상태는 보지 않음",
@@ -11960,7 +11960,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기. 결정안(fix): 감지를 끌 때 variables.tf 기본값을 바꾸는 PR로 남기도록 README 복구 절을 고친다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례. 결정안(fix): 감지를 끌 때 variables.tf 기본값을 바꾸는 PR로 남기도록 README 복구 절을 고친다",
       "decision_question": "Q14에서 0fe7d2a 백스톱 설계를 확정할 때, 감지를 끄는 결정을 variables.tf 기본값을 바꾸는 PR로 남기도록 rds-auto-stop README 복구 절을 고칠지(필요하면 enabled를 끌 환경 집합 변수로 바꿀지) 함께 정한다.",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/README.md:48-54: 복구 절이 -var='enabled={test-slo=false,test-storage=true}' 일회성 계획만 안내한다",
@@ -11999,7 +11999,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/rds-auto-stop/.terraform.lock.hcl:8: h1 해시가 qXrrhlmTiAWFOE/8XyuAQYTDwNCYI6fcH6M1/aveJZg= 하나뿐",
         "measurements/terraform/rds-auto-stop/README.md:15: init -lockfile=readonly",
@@ -12040,7 +12040,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/main.tf:85: message_retention_seconds = 1209600, 14일",
         "measurements/terraform/modules/rds-auto-stop/main.tf:112-119: dead_letter_config, maximum_event_age_in_seconds = 900, maximum_retry_attempts = 3",
@@ -12083,7 +12083,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/main.tf:10-16: config 키 account_id, region, db_identifier, db_arn, claim_table 주입",
         "measurements/terraform/modules/rds-auto-stop/workflow.asl.json:16: $config.account_id, region, db_arn, db_identifier 참조",
@@ -12161,7 +12161,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/variables.tf:5: condition = can(regex(\"^[a-z0-9-]{1,45}$\", var.name_prefix",
         "measurements/terraform/modules/rds-auto-stop/variables.tf:6: error_message가 45자 이내를 약속",
@@ -12196,7 +12196,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '측정용 RDS 자동 중지'(rds-auto-stop) 승인 대기",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '데모, SDK, 측정 인프라'(fix/s456-t-inho-demo-infra) 승인됨, 고칠 차례",
       "evidence_notes": [
         "measurements/terraform/modules/rds-auto-stop/README.md:28: 'SUT 잠금 파일의 공급자 버전을 써서 임시 폴더에서 실행한다'",
         "measurements/terraform/modules/rds-auto-stop/README.md:33: 'cp measurements/test-slo/sut/terraform/.terraform.lock.hcl \"$rds_test_dir/\"'",
@@ -12234,7 +12234,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '콘솔 셸, 글꼴, 색, 제목, 로고'(shell-design) 승인 대기. 결정안(keep): 시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(keep): 시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다",
       "decision_question": "헤더 안내 토글과 안내 영역을 시연용 기능으로 두고 '시연' 낱말을 유지할지, 도입사 관리자용 업무 안내로 보고 소개 화면과 README까지 문구를 바꿀지 정해야 한다."
     },
     {
@@ -12288,7 +12288,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '웹훅 전달과 운영 현황'(webhooks) 승인 대기. 결정안(doc): failure_reason은 connection_error 하나로 두고 원인은 운영자 로그로 가른다. README에 적는다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(doc): failure_reason은 connection_error 하나로 두고 원인은 운영자 로그로 가른다. README에 적는다",
       "decision_question": "웹훅 failure_reason에 tls_error, internal_error 같은 값을 더해 도입사에게도 원인을 나눠 보일지(새 V__로 시도 표 CHECK 교체, 전송 기록 API 값 집합 확장, 콘솔 라벨 추가), 지금처럼 connection_error 하나로 두고 운영자 로그로만 가를지 Ck2-011과 함께 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/webhook/client/WebhookClient.java:71-73: ExecutionException, 곧 전송 작업 안의 예상하지 못한 예외를 connection_error로 반환",
@@ -12329,7 +12329,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '요청 감사 기록과 조회'(audit) 승인 대기. 결정안(keep): 감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '웹훅, 감사, 운영 배포'(fix/s456-t-inho-webhook-audit-ops) 승인됨, 고칠 차례. 결정안(keep): 감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다",
       "decision_question": "감사 조회 API 두 곳에 API 요청 기록을 빼는 새 조회 파라미터(예: kind=change)를 더하고 감사 화면 기본 보기를 변경 기록으로 바꿀지, 지금처럼 모든 기록을 기본으로 두고 행동 조건으로만 좁힐지 정한다."
     },
     {
@@ -12446,7 +12446,7 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). 묶음 '프론트엔드 보안 응답 헤더'(security-headers) 승인 대기. 결정안(keep): HSTS는 되돌릴 수 없어 이번에 더하지 않는다. 배포 도메인 기준이 정해진 뒤 따로 정한다",
+      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '인증 호출 제한과 보안 헤더'(fix/s456-t-inho-auth-security) 승인됨, 고칠 차례. 결정안(keep): HSTS는 되돌릴 수 없어 이번에 더하지 않는다. 배포 도메인 기준이 정해진 뒤 따로 정한다",
       "decision_question": "운영 Caddyfile에 HSTS를 더할지와 max-age를 얼마로 할지 정한다.",
       "evidence_notes": [
         "deploy/caddy/Caddyfile:43-73: 사이트 블록에 header Strict-Transport-Security 지시어가 없다",
@@ -16064,7 +16064,8 @@
     "1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다.",
     "2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.",
     "PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.",
-    "2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md"
+    "2026-10-29 1단계(main af15d7f5 기준 판정과 묶음): 대상 219항목과 새 지적 4건을 원인 묶음 169개로 나눠 묶음마다 에이전트 하나(high와 보안은 두 관점)로 판정했고 메인 세션이 evidence 줄을 main에서 열어 대조했다. 박성종 님 글(2026-10-29)대로 needs-decision도 세션이 정해 묶음에 넣고, 다른 사람 영역이나 팀 전체 결정이면 그 사람을 리뷰어로 둔다. 결정안은 각 항목 left에 있다. 묶음 목록은 evidence/main-stage1/topics.md",
+    "2026-10-29 사람 승인: 22개 주제를 PR 8개로 합쳐 진행한다(events-query, billing-api, webhook-audit-ops, auth-security, demo-infra, list-screens, work-screens, shell-design 순). 300줄 상한은 없고 PR 안에서 항목별로 커밋을 나눈다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
