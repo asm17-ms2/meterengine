@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
 import { test } from "node:test";
+import { MeterEngineApiError } from "@meterengine/sdk";
 import type { IngestEventRequest } from "@meterengine/sdk";
 import { readConfig } from "./config.ts";
 import type { LumenConfig } from "./config.ts";
@@ -307,6 +308,24 @@ test("실패한 응답을 나중에 다시 만들어도 처음 요청 시각으�
   now = Date.parse("2026-10-31T15:00:10Z");
   await service.generate(ACCOUNT_A, body);
   assert.deepEqual(fake.events.map(event => event.timestamp), ["2026-10-31T14:59:30.000Z"]);
+});
+
+test("MeterEngine이 영구 거절한 사용량은 자동으로 다시 보내지 않고 직접 재전송으로만 보낸다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  let now = NOW;
+  let calls = 0;
+  const fake = clientFixture({ async ingestEvent() { calls++; throw new MeterEngineApiError(409, { code: "customer_archived", message: "보관한 고객입니다" }); } });
+  const service = new LumenService({ config: config(), store, client: fake.client, now: () => now });
+  const id = randomUUID();
+  await service.generate(ACCOUNT_A, { requestId: id, modelId: "lumen-fast", prompt: "보관된 고객" });
+  assert.equal(calls, 1);
+  now = NOW + 60000;
+  await service.flushMetering();
+  assert.equal(calls, 1);
+  assert.equal(service.getRequest(ACCOUNT_A, id).meteringStatus, "failed");
+  await service.retryMetering(ACCOUNT_A, { requestId: id });
+  assert.equal(calls, 2);
 });
 
 test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않는다", async t => {

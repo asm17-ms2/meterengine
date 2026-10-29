@@ -1,4 +1,4 @@
-import { MeterEngineClient } from "@meterengine/sdk";
+import { MeterEngineApiError, MeterEngineClient } from "@meterengine/sdk";
 import type { InvoiceLineResponse, InvoicePaymentResponse, ListBillableMetricPricesResponse, ListBillableMetricUsagesResponse } from "@meterengine/sdk";
 import { viewer } from "./config.ts";
 import type { LumenConfig, ServiceAccount } from "./config.ts";
@@ -105,6 +105,9 @@ function paidAmount(payment: InvoicePaymentResponse | undefined, invoiceTotal: n
   return Math.max(0, Math.min(invoiceTotal, payment.amount - payment.canceled_amount));
 }
 
+// MeterEngine이 다시 보내도 같은 이유로 거절하는 수집 오류. 자동 재전송을 멈추고 직접 재전송만 받는다.
+const PERMANENT_INGEST_REJECTIONS = new Set(["customer_archived", "customer_not_found", "event_too_old", "validation_error"]);
+
 export class LumenService {
   readonly config: LumenConfig;
   readonly store: LumenStore;
@@ -192,8 +195,9 @@ export class LumenService {
         const result = await this.client.ingestEvent(claim.event);
         if (result.transaction_id !== claim.transactionId || typeof result.duplicate !== "boolean") throw new Error("Invalid ingestion acknowledgement");
         this.store.finishOutbox(claim, this.now(), true);
-      } catch {
-        this.store.finishOutbox(claim, this.now(), false);
+      } catch (error) {
+        const isRejected = error instanceof MeterEngineApiError && PERMANENT_INGEST_REJECTIONS.has(error.code);
+        this.store.finishOutbox(claim, this.now(), false, isRejected ? Number.MAX_SAFE_INTEGER : undefined);
       }
     }
   }
