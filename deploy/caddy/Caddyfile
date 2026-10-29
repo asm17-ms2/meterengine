@@ -1,14 +1,27 @@
 # 리버스 프록시. 사이트 주소만 적으면 Caddy가 인증서 발급과 HTTPS 리다이렉트를 맡는다.
 
+# 접속 로그와 오류 로그의 토큰 가림. 백엔드 RequestLogFilter의 경로 목록을 바꾸면 같이 바꾼다.
+# 인코딩, 세미콜론, 점 세그먼트가 든 경로는 백엔드가 디코딩해 등록 경로로 읽을 수 있어 경로 전체를 가린다.
+(redacted_path) {
+	{args[0]} multi_regexp {
+		regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+		regexp "^[^?]*(?:%|;|/\.{1,2}(?:[/?]|$)).*$" "REDACTED"
+	}
+}
+
+(log_redaction) {
+	import redacted_path request>uri
+	import redacted_path request>headers>Referer
+	import redacted_path resp_headers>Location
+}
+
 # 목록의 백엔드가 아직 안 떴거나 죽으면 헬스체크가 계속 실패한다. 그 info 로그가 컨테이너 로그 한도를 채우지 않게 경고 이상만 남긴다.
 {
 	log {
 		exclude http.handlers.reverse_proxy.health_checker.active
 		# 접속 로그를 꺼도 프록시 오류에는 요청이 남는다.
 		format filter {
-			request>uri regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
-			request>headers>Referer regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
-			resp_headers>Location regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			import log_redaction
 			wrap json
 		}
 	}
@@ -45,9 +58,7 @@
 	log {
 		import access-log.caddy
 		format filter {
-			request>uri regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
-			request>headers>Referer regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
-			resp_headers>Location regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			import log_redaction
 			wrap json
 		}
 	}

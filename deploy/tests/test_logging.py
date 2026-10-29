@@ -149,6 +149,34 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
                              f"http://{self.proxy}:8081/__client_ip")
         self.assertIn("x-observed-client-ip: 203.0.113.77", (result.stdout + result.stderr).lower())
 
+    def test_variant_paths_do_not_leak_tokens_into_logs(self):
+        variants = {
+            "encoded-token-for-log-privacy-regression": "/payment%2Dmethod-registrations/{}",
+            "semicolon-token-for-log-privacy-regression": "/v1/organization-invitations;x/{}/accept",
+            "dot-token-for-log-privacy-regression": "/v1/./payment-method-registrations/{}",
+        }
+        referer_token = "referer-token-for-log-privacy-regression"
+        before = len(self.access_entries())
+        for token, template in variants.items():
+            self.request(template.format(token), referer=f"/%70ayment-method-registrations/{referer_token}")
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and len(self.access_entries()) < before + len(variants):
+            time.sleep(0.05)
+        logs = self.logs()
+        self.assertGreaterEqual(len(self.access_entries()), before + len(variants))
+        for token in (*variants, referer_token):
+            self.assertNotIn(token, logs)
+
+    @classmethod
+    def logs(cls):
+        result = cls.docker("logs", cls.proxy)
+        return result.stdout + result.stderr
+
+    @classmethod
+    def access_entries(cls):
+        entries = [json.loads(line) for line in cls.logs().splitlines() if line.startswith("{")]
+        return [entry for entry in entries if entry.get("logger", "").startswith("http.log.access")]
+
     def test_source_configuration_validates_on_caddy_2_11_7(self):
         version = self.docker("run", "--rm", "--network", "none", IMAGE, "caddy", "version")
         self.assertTrue(version.stdout.startswith("v2.11.7 "))
