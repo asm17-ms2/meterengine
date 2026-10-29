@@ -89,7 +89,8 @@ class UnbilledUsageNotificationServiceTest {
     UUID organizationId = UUID.randomUUID();
     when(repository.findByStatusOrderByCreatedAtAscIdAsc(Organization.ACTIVE))
         .thenReturn(List.of(new Organization(organizationId, "도입사", Organization.ACTIVE)));
-    when(environments.list(organizationId)).thenThrow(new IllegalStateException("environments down"));
+    when(environments.list(organizationId))
+        .thenThrow(new IllegalStateException("environments down"));
     when(reporter.report(organizationId)).thenThrow(new IllegalArgumentException("report down"));
     new UnbilledUsageNotificationService(repository, reporter, environments).report();
     assertThat(output.getOut())

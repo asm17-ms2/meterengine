@@ -152,7 +152,11 @@ class UnbilledUsageNotificationIntegrationTest {
             + " 'quantity', '{}')",
         organizationId);
     insertEvent(
-        organizationId, customerId, "usage", "{\"quantity\":3}", OffsetDateTime.now().minusSeconds(1));
+        organizationId,
+        customerId,
+        "usage",
+        "{\"quantity\":3}",
+        OffsetDateTime.now().minusSeconds(1));
     subscribe(organizationId, null);
     assertThat(unbilledUsageReportService.report(organizationId)).isTrue();
     JsonNode unpriced = payloads(organizationId).get(0).path("data").path("unpriced_usages");
@@ -213,11 +217,14 @@ class UnbilledUsageNotificationIntegrationTest {
 
   private int webhookEventCount(UUID organizationId) {
     return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM webhook_event WHERE organization_id = ?", Integer.class, organizationId);
+        "SELECT count(*) FROM webhook_event WHERE organization_id = ?",
+        Integer.class,
+        organizationId);
   }
 
   private List<JsonNode> payloads(UUID organizationId) {
-    return jdbcTemplate.queryForList(
+    return jdbcTemplate
+        .queryForList(
             "SELECT payload::text FROM webhook_event WHERE organization_id = ? ORDER BY created_at",
             String.class,
             organizationId)
