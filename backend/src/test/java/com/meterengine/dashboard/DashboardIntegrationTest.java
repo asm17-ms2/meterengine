@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,58 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 선택한_월의_집계를_유지하면서_전체_월의_현재_모드_미해결_결제만_보여준다() {
+    UUID organizationId = UUID.randomUUID();
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    UUID pending = insertInvoice(organizationId, "2026-10", 1000);
+    UUID failed = insertInvoice(organizationId, "2026-09", 1000);
+    UUID unpaid = insertInvoice(organizationId, "2026-08", 1000);
+    UUID paid = insertInvoice(organizationId, "2026-07", 1000);
+    insertInvoice(organizationId, "2026-06", 0);
+    insertAttempt(organizationId, pending, "test", "pending");
+    insertAttempt(organizationId, failed, "test", "failed");
+    insertAttempt(organizationId, paid, "test", "done");
+    insertAttempt(organizationId, paid, "live", "failed");
+    UUID otherOrganizationId = UUID.randomUUID();
+    TestCredentials.issueMemberSession(jdbcTemplate, otherOrganizationId);
+    insertInvoice(otherOrganizationId, "2026-09", 1000);
+
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard?month=2026-10")
+                .header("Authorization", session)
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .isLenientlyEqualTo(
+            """
+            {"month":"2026-10", "outstanding_amount":1100, "failed_payment_count":0,
+             "invoice_payments":[{"invoice_id":"%s", "month":"2026-10"}],
+             "unresolved_invoice_payments":[
+               {"invoice_id":"%s", "month":"2026-10", "status":"pending", "mode":"test", "amount":1100},
+               {"invoice_id":"%s", "month":"2026-09", "status":"failed", "mode":"test", "amount":1100},
+               {"invoice_id":"%s", "month":"2026-08", "status":"unpaid", "mode":"test", "amount":1100}
+             ]}
+            """
+                .formatted(pending, pending, failed, unpaid));
+  }
+
+  @Test
+  void 미해결_결제가_없으면_전체_월_미해결_목록은_빈_배열이다() {
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID());
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard?month=2026-10")
+                .header("Authorization", session)
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.unresolved_invoice_payments")
+        .asArray()
+        .isEmpty();
+  }
+
+  @Test
   void 수집_키와_무인증은_과금_현황을_조회하지_못한다() {
     String ingestKey = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID(), "ingest");
     assertThat(mvc.get().uri("/v1/dashboard").header("Authorization", ingestKey).exchange())
@@ -221,5 +274,42 @@ class DashboardIntegrationTest {
         .extractingPath("$.jobs")
         .asArray()
         .hasSize(5);
+  }
+
+  private UUID insertInvoice(UUID organizationId, String month, long supplyAmount) {
+    UUID customerId = UUID.randomUUID();
+    UUID invoiceId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "insert into customer (id, organization_id, name) values (?, ?, '개요 시험 고객')",
+        customerId,
+        organizationId);
+    jdbcTemplate.update(
+        "insert into invoice (id, organization_id, customer_id, customer_name, period,"
+            + " supply_amount, tax_amount, total_amount, finalized_at)"
+            + " values (?, ?, ?, '개요 시험 고객', ?, ?, ?, ?, now())",
+        invoiceId,
+        organizationId,
+        customerId,
+        month,
+        supplyAmount,
+        supplyAmount / 10,
+        supplyAmount + supplyAmount / 10);
+    return invoiceId;
+  }
+
+  private void insertAttempt(UUID organizationId, UUID invoiceId, String mode, String status) {
+    jdbcTemplate.update(
+        "insert into payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount,"
+            + " order_name, status, payment_key, failure_code, requested_at, completed_at)"
+            + " select ?, organization_id, customer_id, id, ?, total_amount, '개요 시험', ?, ?, ?,"
+            + " now(), ? from invoice where organization_id = ? and id = ?",
+        UUID.randomUUID(),
+        mode,
+        status,
+        "done".equals(status) ? "mock-payment-" + UUID.randomUUID() : null,
+        "failed".equals(status) ? "REJECT_CARD_PAYMENT" : null,
+        "pending".equals(status) ? null : OffsetDateTime.now(),
+        organizationId,
+        invoiceId);
   }
 }

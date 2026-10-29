@@ -16,6 +16,7 @@ export type DashboardResponse = {
   finalized_total_amount: number; collected_amount: number; canceled_amount: number;
   outstanding_amount: number; failed_payment_count: number; unpriced_usage_count: number;
   negative_usage_count: number; invoice_payments: (InvoicePaymentResponse & { customer_id: string; customer_name: string; month: string })[]; draft_invoice: DraftInvoiceResponse;
+  unresolved_invoice_payments: (InvoicePaymentResponse & { customer_id: string; customer_name: string; month: string })[];
 };
 
 export function getDashboard(month: string) {

@@ -77,6 +77,31 @@ class PaymentAttemptServiceTest {
   }
 
   @Test
+  void 승인_직전에_키를_보관했으면_고정한_키_버전이_있어도_토스를_부르지_않고_실패시킨다() {
+    Invoice invoice = invoice();
+    insertCredential(invoice.getOrganizationId());
+    insertBillingKey(invoice);
+    PaymentAttempt attempt =
+        paymentAttemptRepository.saveAndFlush(
+            PaymentAttempt.pending(
+                    UUID.randomUUID(),
+                    invoice.getOrganizationId(),
+                    invoice.getCustomerId(),
+                    invoice.getId(),
+                    "test",
+                    invoice.getTotalAmount(),
+                    "2026-08 사용료")
+                .pinCredential(OffsetDateTime.parse("2026-10-01T00:00:00Z")));
+    jdbcTemplate.update(
+        "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
+        invoice.getOrganizationId());
+
+    PaymentAttemptResponse response = paymentAttemptService.approve(attempt, null);
+
+    assertFailedWithoutToss(response, invoice, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
+  }
+
+  @Test
   @ExtendWith(OutputCaptureExtension.class)
   void 토스가_승인했는데_시도가_이미_NOT_FOUND_PAYMENT로_failed면_그대로_두고_error_로그를_남긴다(CapturedOutput output) {
     Invoice invoice = invoice();

@@ -95,6 +95,13 @@ public class TossPaymentsCredentialService {
     return paymentArchiveRepository.historical(organizationId, mode, requestedAt);
   }
 
+  // 새 결제와 카드 등록용이다. 현재 키를 보관했으면 고정한 버전이 있어도 비운다.
+  Optional<TossPaymentsCredential> chargeable(
+      UUID organizationId, String mode, OffsetDateTime pinnedAt) {
+    if (active(organizationId, mode).isEmpty()) return Optional.empty();
+    return historical(organizationId, mode, pinnedAt);
+  }
+
   Optional<TossPaymentsCredential> active(UUID organizationId, String mode) {
     return find(organizationId, mode).filter(credential -> credential.getArchivedAt() == null);
   }

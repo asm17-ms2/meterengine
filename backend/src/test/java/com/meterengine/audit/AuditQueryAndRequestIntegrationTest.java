@@ -10,10 +10,17 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.audit.service.RequestAuditService;
+import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.BusinessEnvironment;
+import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.security.PrincipalKind;
+import com.meterengine.global.security.RequestAuditTarget;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +32,7 @@ import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -35,6 +43,7 @@ class AuditQueryAndRequestIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private AuditLogService auditLogService;
+  @Autowired private RequestAuditService requestAuditService;
   private MockMvcTester mvc;
 
   @BeforeEach
@@ -42,6 +51,93 @@ class AuditQueryAndRequestIntegrationTest {
     mvc =
         MockMvcTester.from(
             webApplicationContext, builder -> builder.apply(springSecurity()).build());
+  }
+
+  @Test
+  void 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다() {
+    UUID organizationId = UUID.randomUUID();
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    jdbcTemplate.update(
+        "UPDATE user_account SET role = 'operator' WHERE id = (SELECT user_account_id FROM organization_member WHERE organization_id = ?)",
+        organizationId);
+
+    MvcTestResult result =
+        mvc.get().uri("/v1/operations").header(AUTHORIZATION, session).exchange();
+
+    assertThat(result).hasStatusOk();
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT organization_id FROM audit_log WHERE detail->>'request_id'=?",
+                UUID.class,
+                result.getResponse().getHeader("X-Request-ID")))
+        .containsExactly((UUID) null);
+
+    UUID environmentId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM organization_environment WHERE organization_id=? AND mode='test'",
+            UUID.class,
+            organizationId);
+    MvcTestResult scoped =
+        mvc.get()
+            .uri("/v1/operations")
+            .header(AUTHORIZATION, session)
+            .header("X-MeterEngine-Environment", "test")
+            .exchange();
+    assertThat(scoped).hasStatusOk();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT environment_id FROM audit_log WHERE detail->>'request_id'=?",
+                UUID.class,
+                scoped.getResponse().getHeader("X-Request-ID")))
+        .isEqualTo(environmentId);
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void 요청_문맥과_달라도_주체의_환경을_보존하고_익명은_환경을_물려받지_않는다() {
+    UUID organizationId = UUID.randomUUID();
+    TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    UUID environmentId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM organization_environment WHERE organization_id=? AND mode='test'",
+            UUID.class,
+            organizationId);
+    UUID requestId = UUID.randomUUID();
+    requestAuditService.record(
+        new AuthenticatedPrincipal(
+            PrincipalKind.API_KEY,
+            organizationId,
+            UUID.randomUUID(),
+            null,
+            null,
+            "test",
+            null,
+            Set.of("read"),
+            environmentId),
+        "GET",
+        "/v1/customers",
+        403,
+        1,
+        requestId,
+        RequestAuditTarget.empty());
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT environment_id FROM audit_log WHERE detail->>'request_id'=?",
+                UUID.class,
+                requestId.toString()))
+        .isEqualTo(environmentId);
+    UUID anonymous = UUID.randomUUID();
+    BusinessEnvironmentContext.run(
+        new BusinessEnvironment(organizationId, environmentId, "test"),
+        () ->
+            requestAuditService.record(
+                null, "GET", "/v1/unknown", 401, 1, anonymous, RequestAuditTarget.empty()));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT environment_id FROM audit_log WHERE detail->>'request_id'=?",
+                UUID.class,
+                anonymous.toString()))
+        .isNull();
   }
 
   @Test
@@ -132,6 +228,7 @@ class AuditQueryAndRequestIntegrationTest {
             Map.of("sort", "random"),
             Map.of("action", "Customer"),
             Map.of("from", "2026-99-99"),
+            Map.of("to", "+300000-01-01T00:00:00Z"),
             Map.of("from", "2026-10-02", "to", "2026-10-01"))) {
       var request = mvc.get().uri("/v1/audit-logs").header(AUTHORIZATION, read);
       invalid.forEach(request::queryParam);
