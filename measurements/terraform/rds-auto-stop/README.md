@@ -18,7 +18,7 @@ terraform -chdir=measurements/terraform/rds-auto-stop plan -lock=false \
 terraform -chdir=measurements/terraform/rds-auto-stop show -no-color "$rds_plan_dir/rds-auto-stop.tfplan"
 ```
 
-계획에는 두 환경의 `module.rds_auto_stop` 신규 자원만 있어야 한다. 기존 DB, EC2, 역할이나 스케줄 변경이 있으면 적용하지 않는다. 사용자에게 계획을 보여주고 적용 승인을 받은 뒤 저장한 계획만 적용한다.
+계획에는 두 환경의 `module.rds_auto_stop` 신규 자원만 있어야 한다. 기존 DB, EC2, 역할이나 스케줄 변경이 있으면 적용하지 않는다. 이벤트 규칙의 `state`가 바뀌는 계획은 그 변경을 의도한 PR이 아니면 적용하지 않는다. 사용자에게 계획을 보여주고 적용 승인을 받은 뒤 저장한 계획만 적용한다.
 
 ```bash
 terraform -chdir=measurements/terraform/rds-auto-stop apply "$rds_plan_dir/rds-auto-stop.tfplan"
@@ -45,9 +45,13 @@ aws rds describe-db-instances --region ap-northeast-2 \
 
 실패한 event-id는 재실행해도 선점되지 않는다. 중복 방지 기록을 지우지 말고 실패 원인과 실행 이력을 확인한다.
 
-감지를 끄려면 실행 중인 상태 기계가 없는지 확인한 뒤 아래 조건으로 계획을 만들고 별도로 승인받아 적용한다. 중복 방지 테이블은 삭제 보호가 있다.
+감지를 끄는 결정은 `variables.tf`의 `enabled` 기본값에서 그 환경을 false로 바꾸는 PR로 남긴다. `-var`로만 끄면 다음 일반 적용이 감지를 다시 켠다. 실행 중인 상태 기계가 없는지 확인하고, 머지된 코드로 `-var` 없이 만든 계획만 별도로 승인받아 적용한다. 중복 방지 테이블은 삭제 보호가 있다.
+
+아래 `-var` 계획은 PR을 머지하기 전에 바뀔 자원을 미리 보는 용도로만 쓰고 적용하지 않는다. 새 셸에서도 계획 파일이 비공개 임시 폴더에 남게 폴더부터 만든다.
 
 ```bash
+umask 077
+rds_plan_dir="$(mktemp -d)"
 terraform -chdir=measurements/terraform/rds-auto-stop plan -lock=false \
   -var='enabled={test-slo=false,test-storage=true}' \
   -out="$rds_plan_dir/disable-slo-detector.tfplan"
