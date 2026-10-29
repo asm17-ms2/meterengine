@@ -74,11 +74,8 @@ export async function InvoicesSection({
             ? "확정된 인보이스가 없습니다. 확정 전 금액은 청구 예정액에서 봅니다."
             : `${month}에 확정된 인보이스가 없습니다. 확정 전 금액은 청구 예정액에서 봅니다.`
         }
-        resetHref={
-          query.customerId
-            ? buildListHref("/invoices", query, { customerId: undefined, size: undefined, page: undefined })
-            : "/invoices"
-        }
+        resetHref={isAllMonths ? "/billing" : `/billing?month=${month}`}
+        resetLabel="청구 예정액 확인"
       />
     );
   }

@@ -228,7 +228,7 @@ export function InvoicesTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.id} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.totalAmount}</strong></div><p className="field-hint">{group.month} / {group.finalizedAt} KST 확정</p>{group.paymentStatus && <p><Tag color={group.paymentStatusColor}>{group.paymentStatus}</Tag> 취소액 {group.canceledAmount}</p>}<details><summary>확정 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}<div className="data-mobile-line"><span>공급가액</span><span className="numeric">{group.supplyAmount}</span></div><div className="data-mobile-line"><span>세액</span><span className="numeric">{group.taxAmount}</span></div></details></article>)}<div className="data-mobile-total"><span>세금 포함 합계</span><span className="numeric">{totalAmount}</span></div></div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.id} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.totalAmount}</strong></div><p className="field-hint">{group.month} / {group.finalizedAt} KST 확정</p>{group.paymentStatus && <p><Tag color={group.paymentStatusColor}>{group.paymentStatus}</Tag> 취소액 {group.canceledAmount}</p>}<details><summary>확정 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}<div className="data-mobile-line"><span>공급가액</span><span className="numeric">{group.supplyAmount}</span></div><div className="data-mobile-line"><span>세액</span><span className="numeric">{group.taxAmount}</span></div></details></article>)}<div className="data-mobile-total"><span>조건 전체 세금 포함 합계</span><span className="numeric">{totalAmount}</span></div></div>
     <div className="data-desktop-table"><Table<InvoiceRow>
       rowKey="key"
       columns={columns}
@@ -248,7 +248,7 @@ export function InvoicesTable({
       summary={() => (
         <Table.Summary.Row>
           <Table.Summary.Cell index={0}>
-            <Typography.Text strong>합계</Typography.Text>
+            <Typography.Text strong>조건 전체 합계</Typography.Text>
           </Table.Summary.Cell>
           <Table.Summary.Cell index={1} colSpan={3} />
           <Table.Summary.Cell index={4} align="right">
