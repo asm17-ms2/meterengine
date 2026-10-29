@@ -233,13 +233,13 @@ export class LumenService {
     const models = modelsWithPrices(priceData, usageData, account.customerId, month);
     const hasMissingPrice = !hasCompatibleMetrics || models.some(model => model.inputPricePerThousand === null || model.outputPricePerThousand === null || model.requestPrice === null);
     const isPriceReadFailure = usage.status === "rejected" || hasPriceQueryFailure;
+    if (payments.status === "fulfilled" && visibleInvoices.some(invoice => !visiblePayments.some(payment => payment.invoice_id === invoice.id))) billingErrors.push("일부 납부 상태");
+    if (method.status === "fulfilled" && method.value.customer_id !== account.customerId) billingErrors.push("등록 카드");
     if (hasMissingPrice && isPriceReadFailure) billingErrors.push("적용 요금");
     const billingError = [
       billingErrors.length ? `다음 청구 정보를 확인하지 못했습니다: ${billingErrors.join(", ")}. 연결 상태를 확인한 뒤 새로고침하세요.` : "",
       hasMissingPrice && !isPriceReadFailure ? "이 달의 요금 설정이 예제 서비스의 기준과 맞지 않습니다. 운영자가 요금 설정을 확인해야 합니다." : "",
     ].filter(Boolean).join(" ");
-    if (payments.status === "fulfilled" && visibleInvoices.some(invoice => !visiblePayments.some(payment => payment.invoice_id === invoice.id))) billingErrors.push("일부 납부 상태");
-    if (method.status === "fulfilled" && method.value.customer_id !== account.customerId) billingErrors.push("등록 카드");
     return {
       user: viewer(account), month, provider: PROVIDER_INFO,
       models,

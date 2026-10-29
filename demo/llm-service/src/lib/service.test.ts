@@ -396,6 +396,20 @@ test("부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다", asy
   assert.ok(!JSON.stringify(result).includes("secret upstream payload"));
 });
 
+test("일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다", async t => {
+  const store = new LumenStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  for (const broken of ["payment", "method"] as const) {
+    const fake = pricedClientFixture();
+    fake.client.listInvoices = async () => ({ invoices: [{ id: "invoice", invoice_number: "ME-202610-00000001", customer_id: ACCOUNT_A.customerId, customer_name: "앨리스", month: "2026-10", finalized_at: "2026-10-26T12:00:00Z", supply_amount: 100, tax_amount: 10, total_amount: 110, lines: [] }] });
+    fake.client.listInvoicePayments = async () => ({ invoice_payments: broken === "payment" ? [] : [{ invoice_id: "invoice", status: "paid", mode: "test", amount: 110, canceled_amount: 0, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: null }] });
+    if (broken === "method") fake.client.getPaymentMethod = async () => ({ customer_id: ACCOUNT_B.customerId, card_issuer_code: "61", card_number: "1234****5678", mode: "test", authenticated_at: "2026-10-01T00:00:00Z" });
+    const result = await new LumenService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    assert.equal(result.billing.state, "unavailable", broken);
+    assert.equal(result.billing.error, `다음 청구 정보를 확인하지 못했습니다: ${broken === "payment" ? "일부 납부 상태" : "등록 카드"}. 연결 상태를 확인한 뒤 새로고침하세요.`, broken);
+  }
+});
+
 test("고객별 단가 응답이 비어 있어도 공통 단가를 조회해 모델 요금을 표시한다", async t => {
   const store = new LumenStore(":memory:", [ACCOUNT_A]);
   t.after(() => store.close());
