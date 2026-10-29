@@ -1,22 +1,22 @@
-미완료 170건, 결과: 끝 상태 206/372건 (fixed 174, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 0, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17)
-정할 것: 0건 (없음). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+미완료 141건, 결과: 끝 상태 235/372건 (fixed 201, refuted 3, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597)
+정할 것: 2건 (Ck3-451-02, Nk3-011). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T17:43:40+09:00
+상태: running, 갱신 2026-10-29T18:49:44+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
-| #444 | fix/s456-444-t-inho | 40 | 24 | 0 | 7 | 0 | 0 | 9 |
-| #446 | fix/s456-446-t-inho | 50 | 13 | 0 | 7 | 0 | 0 | 30 |
+| #444 | fix/s456-444-t-inho | 40 | 26 | 0 | 7 | 0 | 0 | 7 |
+| #446 | fix/s456-446-t-inho | 50 | 27 | 0 | 7 | 0 | 0 | 16 |
 | #448 | feat/request-audit | 24 | 17 | 1 | 1 | 0 | 0 | 5 |
-| #450 | fix/s456-t-inho-events-query | 38 | 25 | 0 | 2 | 0 | 0 | 11 |
-| #451 | feat/billing-queries | 96 | 20 | 0 | 6 | 0 | 0 | 70 |
+| #450 | fix/s456-t-inho-events-query | 38 | 27 | 0 | 2 | 0 | 0 | 9 |
+| #451 | feat/billing-queries | 96 | 28 | 0 | 6 | 2 | 0 | 60 |
 | #454 | feat/auth-rate-limit | 19 | 0 | 1 | 4 | 0 | 0 | 14 |
 | #455 | feat/rds-auto-stop | 12 | 0 | 0 | 1 | 0 | 0 | 11 |
-| #447 | feat/resource-archive | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| #447 | fix/s456-t-inho-billing-api | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
 ## 고친 것
 
@@ -109,12 +109,14 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | X-028 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | Ck2-006 | #444 | 37556b4 | 웹훅 전송 기록 목록을 받치는 색인을 둔다 | 전송기록_목록을_엔드포인트별_최신순으로_읽는_색인이_있다: 실패 EmptyResultDataAccessException: Incorrect result size: expected 1, actual 0 |
 | Ck2-008 | #444 | a4a3660 | openapi.yaml이 웹훅 통보 종류의 최소 개수와 받는 값을 적는다 | 웹훅_엔드포인트_요청의_통보_종류는_하나_이상이고_서버가_받는_값만_적는다: 실패 [CreateWebhookEndpointRequest] expected: 1 but was: 0 |
+| Ck2-011 | #444 | eb1780b | 웹훅 전송 실패 사유 CHECK를 V52로 더한다(결정: 문자열과 CHECK 관례 유지) | SchemaConstraintTest.웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다: 실패 expected 1, actual 0 |
 | Ck2-013 | #444 | 40089ce | SecretMask.lastFour를 결과가 드러나는 mask로 바꾼다 | SecretMaskTest: 실패 error: cannot find symbol method mask(String) (같은 동작을 결과가 드러나는 이름으로 부를 길이 없다) |
 | D-035 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | D-157 | #444 | 1fc88c3 | 웹훅 발송 내역이 통보 종류, 발송 상태, 실패 사유를 이름으로 보인다 | webhook delivery history names event types, delivery states and failure reasons: 실패 locator('.workspace-desktop-table').getByText('결제 실패', { exact: true }) elem |
 | C444-008 | #444 | 8008c44 | 콘솔에서 웹훅 수신 주소를 수정해도 기존 설명을 지우지 않는다 | saving a webhook endpoint keeps its existing description: 실패 Expected "운영 알림 수신기" Received "설명 없이 보냄" (PUT 본문에 description이 없다) |
 | D-226 | #444 | ce5041c | 운영 현황 예약 작업 표가 과금 제외 사용량 통보 작업을 이름으로 보인다 | every scheduled job the operations API lists has a label on the operations screen: 실패 unbilled_usage_report has no label in JOB_LABELS |
 | G-144 | #444 | 7b270fe, 3831102 | 구독한 수신 주소가 없으면 미청구 통보를 남기지 않는다 | UnbilledUsageNotificationIntegrationTest.미청구_통보를_구독한_수신_주소가_없으면_웹훅_원장에_남기지_않는다: 실패 Expecting value to be false but was true |
+| G-151 | #444 | 3decc91, a0ec597 | 예약 작업 이름이 세 곳에서 같은지 시험한다(결정: 운영 코드 유지) | ScheduledJobNamesIntegrationTest(변이, 경보 이름 오타): 실패 |
 | G-152 | #444 | 815f525 | backend README에 웹훅 발송과 암호화 키, 운영 현황을 적는다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 값을 WebhookDeliveryRepository.java 21-22, 43, 71-75행(재시도 간격, 6회, 2분 선점, 종결 조건), WebhookDelive) |
 | U14-B1 | #444 | f67bc41 | 마지막 시도의 선점이 만료돼 실패로 끝난 웹훅도 실패 지표와 경보에 센다 | 마지막_시도_중_선점이_만료되어_실패로_끝난_전송도_실패_지표에_센다: 실패 Expecting actual 0.0 to be greater than or equal to 1.0 |
 | U5-B1 | #444 | c0a9f4a | 하루 주기 작업 미실행 경보가 배포 뒤 멈춘 색의 오늘 성공도 본다 | 없음(Grafana 경보 규칙을 돌리는 저장소 시험이 없어 고치기 전 실패를 시험으로 볼 수 없다. prom/prometheus:v3의 promtool test rules로 두 색 시리즈(1시간에 오늘 성공을 낸 뒤 1시) |
@@ -124,13 +126,28 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | X-005 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
 | D-109 | #446 | 61d5216 | 미터 저장 실패를 대화상자 맨 위에 보이고 포커스하며 화면 문구로 알린다 | changing the calculation of a meter with events says what can still change instead of API field names: 실패 SyntaxError: does not provide an export named 'billabl |
 | Ck3-446-02 | #446 | d5ae200 | 단가 종료 월이 시작 월보다 뒤가 아니면 요금제와 같은 validation_error를 낸다 | 종료_월이_시작_월보다_뒤가_아니면_요금제와_같은_validation_error다: 실패 expected: VALIDATION_ERROR but was: INVALID_PRICE_RATE |
+| Ck3-446-03 | #446 | 85e8d8d | 단가 모델과 라인 종류 값 목록을 문서화한다(결정: 상수 통합 없음) | OpenApiDocumentTest.단가_모델과_청구_라인_종류는_서버가_쓰는_값_목록을_적는다: 실패 enum 없음 |
 | Ck3-446-04 | #446 | b22fd8d | 조합별 단가 DELETE 설명을 이번 달 공통 단가를 끝내는 실제 동작에 맞춘다 | 없음(문서 변경이라 시험으로 실패를 볼 수 없다. 적은 동작을 PriceRateService.java 159-191행(공통 단가, 이번 달 적용 중, 이번 달 시작은 삭제, 그 전은 close(current))과 Audi) |
 | Ck3-446-05 | #446 | ae50ce0 | 요금제 이력 조회 API가 생략한 파라미터의 뜻과 400, 404를 적는다 | 요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다: 실패 Expecting not blank but was: "" (description 없음) |
 | Ck3-446-06 | #446 | a7a789e | 요금 모델 검사를 서비스 한곳에 두고 오류 필드를 요청의 model로 낸다 | 요금_모델에_맞지_않는_단가는_요청에_있는_model_필드로_거절된다: 실패 expected: "model" but was: "validPricing" |
+| Ck3-446-07 | #446 | ec82ba5 | 단가 감사 target_id 뜻을 README에 적는다(결정: 버전 UUID 유지) | 없음(README와 PriceRateService 감사 줄 대조) |
+| Ck3-446-08 | #446 | 318a9e9 | 청구 응답 DTO의 보조 생성자를 지운다(결정) | 없음(컴파일, OpenApiDocumentTest: 통과, openapi.yaml 변화 없음) |
+| Ck3-446-09 | #446 | db6a775 | 공급자 조회 find가 예외를 던진다고 적는다(결정 변경: 이름 유지) | 없음(컴파일 통과, naming.md와 이름 규칙 시험 대조) |
+| Ck3-446-10 | #446 | 18f7a85 | 단가 조회 인덱스를 V50으로 더한다 | SchemaConstraintTest.단가에는_조건_없는_도입사와_미터_인덱스가_있다: 실패 expected 1, actual 0 |
 | D-120 | #446 | 8804e65 | 작성 중인 미터 폼을 Esc, 바깥 클릭, 취소로 닫기 전에 묻는다 | a meter form with input asks before Escape throws it away: 실패 Expected "작성 중인 미터를 버리고 닫을까요?" Received "" (확인 없이 닫힘) |
 | X-091 | #446 | 1574c86 | 미터 폼의 숫자 입력에서 영어 이름의 증감 버튼을 뺀다 | meter number inputs do not expose English stepper buttons: 실패 Expected 0 Received 2 (Increase Value, Decrease Value) |
 | D-119 | #446 | efabb7c | 단가 입력을 0으로 미리 채우지 않고 0원 단가는 저장 전에 묻는다 | a price that charges nothing is recognized so the editor can ask before saving it: 실패 ERR_MODULE_NOT_FOUND Cannot find module src/lib/price-rate.ts (단가 창의 단가 입력 |
+| H3-B2 | #446 | 3be4f3a | 시드 재실행이 percentile을 비운다 | SeedDataTest.백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다: 실패 DataIntegrityViolationException |
+| Nk3-002 | #446 | 85e8d8d | 단가 응답 tiers를 배열로 문서화한다 | OpenApiDocumentTest.단가_응답의_tiers는_구간_객체의_배열이다: 실패 expected array but was |
+| C446-005 | #446 | 349319e | 반올림 시험에 사사오입 판별 자리를 더한다 | 없음(MetricAggregationIntegrationTest: 통과; round를 HALF_EVEN으로 바꾼 변이: 실패) |
+| C446-011 | #446 | 628658f | 올림 음수 시험이 올림 미터를 쓴다 | 없음(ChargeServiceTest: 통과; 음수 판정을 변환 수량으로 바꾼 변이: 실패) |
+| C446-012 | #446 | 7347579 | 다른 도입사 단가 ID 삭제의 경계를 시험한다 | 없음(VersionedPricingIntegrationTest: 통과; 도입사 비교를 뺀 변이: 실패) |
+| C446-013 | #446 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
+| G-107 | #446 | c93b2d3 | 요금제 절사 규칙을 API 설명에 적는다 | 없음(VersionedPricingIntegrationTest.기본료와_최소_사용료는_청구할_때_10원_미만을_버린다: 통과; OpenApiDocumentTest: 통과) |
+| G-174 | #446 | 191dc8d | CHECK 제약 이름을 V51로 규칙에 맞춘다 | SchemaConstraintTest.집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다: 실패 새 이름 없음 |
 | Nk3-001 | #446 | 42b996d | sum 전용 우회 경로를 지운다 | BillableMetricUsageServiceTest.고객의_수량은_집계_결과의_고객_합계다: 실패 expected: 800 but was: 0 |
+| Nk3-003 | #446 | 5588b4f | 호출처 없는 옛 기간 판정 메서드를 지운다 | 없음(git grep 호출 없음, pricing 시험: 통과) |
+| C447-011 | #447 | 088d775 | 이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다 | 없음(BillableMetricServiceTest: 통과; changesBeyondName을 늘 true로 바꾼 변이: 실패) |
 | C448-001 | #448 | 1164c20 | 운영자 전용 경로의 요청 감사를 운영자 세션이 고른 도입사에 남기지 않는다 | 도입사에_소속된_운영자의_운영자_전용_요청은_그_도입사의_감사에_남지_않는다: 실패 감사 행 organization_id가 null이 아니라 그 도입사 id였다 |
 | X-024 | #448 | 80a3ad0 | 감사 기록 요약 줄에 실행한 사람을 보이고 변경 이력 보기는 사용자와 초대 변경만 연다 | an audit entry names the person who acted and falls back to the actor kind: 실패 ERR_MODULE_NOT_FOUND src/lib/audit.ts (요약 줄은 실행 주체 유형만 보였다) |
 | Ck1-448-01 | #448 | 1003ba5 | 감사 조회의 기간 조건이 저장할 수 없는 연도면 500 대신 400을 낸다 | 감사조회의_잘못된_필터와_기간은_400이다: 실패 [HTTP status code] expected: 400 but was: 500 (to=+300000-01-01T00:00:00Z) |
@@ -165,11 +182,15 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | C450-006 | #450 | eb6350c, 4caedb4 | DB 시각 범위를 넘는 기간을 400으로 막는다 | EventListIntegrationTest.DB_시각_범위를_넘는_기간은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
 | C450-007 | #450 | eb6350c, 39b29bd, 4caedb4 | DB가 받지 못할 속성 조건을 400으로 막는다 | EventListIntegrationTest.DB가_받지_못할_속성_조건은_500이_아니라_400이다: 실패 expected: 400 but was: 500 |
 | C450-012 | #450 | cfb0e6f | 검색어 % 시험이 실제로 % 한 글자를 보낸다 | 없음(EventIssueIntegrationTest, EventRejectionIntegrationTest: 통과; position을 이스케이프 없는 LIKE로 바꾼 변이: 실패 expected: 0 but was: 3) |
+| C450-002 | #450 | db6bbd5 | 보안 지적 수정 | CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패 |
+| C450-003 | #450 | db6bbd5 | 고객 등록의 보관 409를 문서화하고 시험한다 | OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패 |
 | G-127 | #450 | cdb63ae | 월 목록에서 네 자리 연도로 열 수 없는 달을 뺀다 | EventMonthsIntegrationTest.네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다: 실패 actual ["55835-03", "2026-10"] |
+| Ck3-451-01 | #451 | 4f705cd | main에서도 고객 등록 응답(이름, billing_email)을 idempotent_request.response_body에 기한 없이 저장한다. 지우는 코드가 없고 created_at 열을 읽는 곳도 없어서, 넘길 때 head와 같은 상태로 남아  | OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 (설명 없음) |
 | D-186 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | X-038 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | Ck3-451-03 | #451 | cdb63ae | 모르는 자원의 월 목록을 거부한다 | WorkspaceQueryIntegrationTest.모르는_자원의_월_목록은_이벤트_월로_대신하지_않고_거부한다: 실패 Expecting code to raise a throwable |
 | Ck3-451-04 | #451 | d7f3266 | CSV 처리를 global 도우미로 모은다(결정) | 없음(EventExportIntegrationTest, WorkspaceQueryIntegrationTest CSV 시험: 통과(동작 변화 없음)) |
+| Ck3-451-05 | #451 | 4f63c98 | 고객과 미터 응답의 보조 생성자를 지운다 | 없음(컴파일, OpenApiDocumentTest: 통과, openapi.yaml 변화 없음) |
 | D-062 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
 | D-144 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
 | X-096 | #451 | 320745a, e4c8c17 | CSV 파일 이름에 조회 월과 업무 환경을 넣는다 | export-filename.test.mjs: 실패 ERR_MODULE_NOT_FOUND |
@@ -178,13 +199,18 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-135 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | D-160 | #451 | c651e79 | CSV 내보내기 버튼이 카드 폭으로 늘어나지 않는다 | workspace.contract.spec.ts 조건 전체 CSV 내보내기는 보조 버튼이라 카드 폭으로 늘어나지 않는다: 실패 버튼 폭이 카드 절반 이상 |
 | C451-003 | #451 | 3c7aae1, 46cb5c9 | 인보이스 검색이 고객과 월 조건을 조회에 넘긴다 | WorkspaceQueryIntegrationTest.인보이스_검색은_고객과_월_조건을_조회에_넘긴다: 실패 Argument(s) are different |
+| C451-004 | #451 | fafcdc0 | 개요 금액 집계를 상태별로 시험한다 | 없음(DashboardIntegrationTest: 통과; 수납액에서 취소액을 빼지 않는 변이: 실패) |
 | Nk3-009 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
+| C451-006 | #451 | 01d7cbd, 921d9d0 | 조회 경로와 겹치는 미터 code를 거절한다 | BillableMetricServiceTest.조회_경로와_겹치는_code의_미터는_만들지_않는다: 실패 Expecting code to raise a throwable |
 | C451-009 | #451 | 3c7aae1 | 금액 범위 시험이 합계 기준을 가린다 | 없음(금액 필터를 공급가액으로 바꾼 변이: 실패 expected: 1 but was: 0; WorkspaceQueryIntegrationTest: 통과) |
+| G-111 | #451 | 4e6ebc7 | main에도 지적이 그대로 남아 있다. 결제 취소는 Idempotency-Key를 UUID로만 받고 충돌하면 payment_cancellation_idempotency_conflict를 돌려주며 재생 헤더가 없다. 고객과 미터 생성이 쓰는 Idempo | OpenApiDocumentTest.결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다: 실패 (400 설명에 Idempotency-Key 없음) |
 | G-118 | #451 | e79f63e | 가격 검색이 그 달에 청구하는 미터만 센다(결정: status 뜻 유지) | WorkspaceQueryIntegrationTest.가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다: 실패 actual ["restored", "retired"] |
 | G-121 | #451 | 6198c5d | 빈 검색 CSV도 같은 열 제목을 쓴다 | WorkspaceQueryIntegrationTest.결과가_없는_검색_CSV도_결과가_있을_때와_같은_열_제목을_쓴다: 실패 but was "empty_result" |
 | G-122 | #451 | 70b1df3 | 이벤트 CSV 시각을 KST 오프셋 초 단위로 쓴다 | EventExportIntegrationTest.발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다: 실패 CSV에 2026-09-30T15:00Z |
 | G-123 | #451 | 09e06ae | API 설명에 엔드포인트별 규칙과 summary 키를 적는다(결정: 공개 계약 유지) | 없음(OpenApiDocumentTest: 통과; 설명 문장과 코드 대조로 확인) |
 | G-126 | #451 | 3568cc3, d904aaf | CSV 내보내기 원본 속성 합계를 32MB로 묶는다 | EventExportIntegrationTest.원문_속성_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다: 실패 expected: 400 but was: 200 |
+| Nk3-008 | #451 | c93b2d3 | 개요 미수금 정의를 적는다(결정: 이름과 값 유지) | 없음(OpenApiDocumentTest: 통과, 설명과 DashboardService, WorkspaceQueryService 대조) |
+| Nk3-010 | #451 | ec1bc7f | main에서도 WorkspaceQueryController에는 @ApiResponse가 하나도 없고, OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 검색, 내보내기의 400 validation_err | OpenApiDocumentTest 새 시험 6개: 실패 (400, 404, 409 응답과 재생 헤더 없음, CSV format byte) |
 | NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
 | NT-inho-007 | #442 | 3373654 | mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471) | mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5 |
 | NT-inho-009 | #442 | 62a2f0f | 워크스페이스 계약 명세가 비밀값을 복사한 뒤 닫는다 | workspace.contract.spec.ts 발급 중 닫기, 키 한도: 실패 dialog toHaveCount(0) @ af15d7f5 |
@@ -193,6 +219,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
+| Ck3-451-02 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
+| Nk3-011 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(draft_invoice는 read API 키 호환 때문에 응답에 남긴다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 
 ## 막힌 것
 

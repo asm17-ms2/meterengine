@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T17:43:40+09:00",
+  "updated_at": "2026-10-29T18:49:44+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -3953,8 +3953,8 @@
       "id": "Ck2-011",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 failure_reason은 WebhookOutcome의 String이고, 값은 WebhookClient 여덟 곳, WebhookDeliveryService 세 곳, WebhookDeliveryRepository 세 곳에 문자열로 따로 적혀 있다. 사유 값을 다루는 줄은 넘길 때 head와 같고, V28과 WebhookOutcome은 #444 뒤로 바뀐 적이 없다. 값 목록은 V28 51행의 시도 표 CHECK에만 있다. 같은 사유를 담는 webhook_delivery.failure_reason(V28 34행)에는 CHECK가 없고, lease_expired는 CHECK가 없는 그 열에만 쓰인다(Repository 35행). 원문 시나리오 가운데 예외가 deliver() 밖으로 나가 남은 전송이 멈춘다는 부분은 Service 108-117행의 try/catch가 막으므로 틀렸다. 또 지금 코드가 만드는 사유는 모두 CHECK 목록 안에 있어 현재 실패 경로는 없다. 제안대로 enum을 두면 운영 파일 다섯이 바뀌어 유지보수 분류 상한을 넘는다. 저장소에는 문자열과 CHECK 관례(webhook_delivery.status)와 소문자 값 enum 관례(WebhookEventType)가 함께 있어 어느 쪽으로 갈지 정해야 한다. V28은 main에 배포돼 고칠 수 없으므로, CHECK만 맞추는 작은 안은 새 V__ 마이그레이션 하나로 한다.",
       "evidence": [
@@ -3967,24 +3967,35 @@
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:51 @ af15d7f5",
         "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:108-117 @ af15d7f5",
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:28 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/webhook/entity/WebhookEventType.java:6-16 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/webhook/entity/WebhookEventType.java:6-16 @ af15d7f5",
+        "SchemaConstraintTest.웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다: 실패 expected 1, actual 0",
+        "커밋 eb1780bf"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "eb1780bf93b5fa79dbbee5946eec93f6f62fed98"
+      ],
+      "tests": [
+        "SchemaConstraintTest, webhook 시험: 통과",
+        "SchemaConstraintTest.웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 문자열과 CHECK 관례를 유지하고 새 V__로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK를 NOT VALID로 더한다",
       "decision_question": "failure_reason의 정본으로 WebhookFailureReason enum을 두고 WebhookOutcome, WebhookClient, WebhookDeliveryService, WebhookDeliveryRepository를 함께 바꿀지(운영 파일 다섯), 아니면 문자열과 CHECK 관례를 유지하고 새 V__ 마이그레이션으로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK만 더할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:108-117: 예외가 deliver() 밖으로 나가지 않음",
         "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql:28: 문자열과 CHECK 관례",
         "backend/src/main/java/com/meterengine/webhook/entity/WebhookEventType.java:6-16: 소문자 값 enum 관례",
         "git log --oneline af15d7f5 -- V28__create_webhook_tables.sql WebhookOutcome.java: 828ea613 하나뿐"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "웹훅 전송 실패 사유 CHECK를 V52로 더한다(결정: 문자열과 CHECK 관례 유지)",
+      "decision": "fix: 문자열과 CHECK 관례를 유지하고 새 V__로 webhook_delivery.failure_reason에 시도 표와 같은 CHECK를 NOT VALID로 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Ck2-012",
@@ -4344,8 +4355,8 @@
       "id": "G-151",
       "merged_ids": [],
       "layer": 444,
-      "branch": "feat/webhook-jobs",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 작업 이름 다섯 개가 따로 적혀 있다. OperationsService의 VALUES 목록, WebhookDeliveryConfig와 UnbilledUsageNotificationConfig의 문자열 각 두 곳, PaymentJobScheduler의 private 상수, alerting.yml 경보 정규식 열 줄이다. 넘길 때 head 81651ed와 main을 대조해 보면 OperationsService VALUES와 WebhookDeliveryConfig 문자열은 그대로다. #444 squash가 운영 화면 VALUES와 프론트 JOB_LABELS를 맞춰 보는 node 시험을 더했지만, 이 시험은 CI에서 돌지 않는다. 등록 이름, VALUES, 경보 정규식이 같은지는 어떤 시험도 보지 않는다. DashboardIntegrationTest는 jobs 개수가 5인지만 본다. JOB_LABELS에는 백엔드에 없는 작업 invoice_email이 남아 있어 같은 원인의 어긋남이 이미 생겼다. 지금 빠진 작업은 없지만, 작업을 더하거나 이름을 바꾸는 PR이 한 곳을 빠뜨리면 그 작업이 운영 화면이나 경보에서 조용히 빠지므로 지적은 맞다. 가장 작은 수정은 운영 코드를 건드리지 않고 목록들이 일치하는지 보는 백엔드 시험 하나를 더하는 것이다. 이 수정은 운영 파일 셋 기준에 걸리지 않아 confirmed로 둔다. enum으로 모으는 제안은 운영 파일 다섯 개를 바꾸므로 원하면 따로 결정한다.",
       "evidence": [
@@ -4358,24 +4369,38 @@
         "frontend/e2e/scheduled-job-labels.test.mjs:8-13 @ af15d7f5",
         ".github/workflows/ci.yml:79-81 @ af15d7f5",
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:276 @ af15d7f5",
-        "backend/src/test/resources/config/application.properties:5 @ af15d7f5"
+        "backend/src/test/resources/config/application.properties:5 @ af15d7f5",
+        "ScheduledJobNamesIntegrationTest(변이, 경보 이름 오타): 실패",
+        "커밋 3decc918",
+        "커밋 a0ec5972"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "3decc918f7a2828a0e6421fd146e668d3572921c",
+        "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6"
+      ],
+      "tests": [
+        "ScheduledJobNamesIntegrationTest: 통과",
+        "운영 현황 목록에서 이름 하나를 뺀 변이: 실패",
+        "변이 확인: payment_retries 오타에 고친 시험만 실패, 되돌린 뒤 통과",
+        "ScheduledJobNamesIntegrationTest(변이, 경보 이름 오타): 실패: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "frontend/src/components/workspace/WorkspaceView.tsx:23: JOB_LABELS에 백엔드에 없는 invoice_email",
         "frontend/e2e/scheduled-job-labels.test.mjs:8-13: VALUES와 JOB_LABELS만 대조, 828ea613에서 추가",
         ".github/workflows/ci.yml:79-81: 프론트 CI는 install, lint, build만 돌려 test:unit이 빠짐",
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:276: jobs 개수 5만 확인",
         "backend/src/test/resources/config/application.properties:5: 시험에서 scheduling 꺼짐, 새 시험은 속성으로 켜야 함"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "예약 작업 이름이 세 곳에서 같은지 시험한다(결정: 운영 코드 유지)",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "G-152",
@@ -4734,8 +4759,8 @@
       "id": "Ck3-446-03",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적이 그대로 남아 있다. line_type 5종은 ChargeService가 맨 문자열로 만들고 InvoiceEmailService가 같은 맨 문자열로 다시 가르며, model 기본값 per_unit도 CreatePriceRateRequest와 PriceRateService가 따로 채운다. 같은 저장소의 다른 값은 엔티티 상수(PaymentAttempt.PENDING 등)와 DTO의 @Schema(allowableValues)로 openapi.yaml에 enum을 내는데, line_type과 model 응답 필드는 type: string뿐이고 요청 model도 pattern만 있다. DB의 CHECK 제약이 잘못된 값 저장을 막아 실패 경로는 없고 타입 설계 문제만 남는다. 미터 aggregation도 openapi에 enum이 없어 관례가 하나로 정해진 것은 아니다. 고치려면 엔티티, 서비스, DTO와 openapi.yaml까지 시험 빼고 파일 셋 이상을 바꿔야 해서 결정이 필요하다.",
       "evidence": [
@@ -4756,18 +4781,29 @@
         "backend/README.md:222 @ af15d7f5",
         "frontend/src/lib/api/billing.ts:38 @ af15d7f5",
         "frontend/src/lib/api/invoices.ts:45 @ af15d7f5",
-        "frontend/src/lib/api/pricing.ts:12 @ af15d7f5"
+        "frontend/src/lib/api/pricing.ts:12 @ af15d7f5",
+        "OpenApiDocumentTest.단가_모델과_청구_라인_종류는_서버가_쓰는_값_목록을_적는다: 실패 enum 없음",
+        "커밋 85e8d8d4"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "85e8d8d42ce8ead45bfb0304a734bac02bc4c443"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과",
+        "OpenApiDocumentTest.단가_모델과_청구_라인_종류는_서버가_쓰는_값_목록을_적는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 엔티티 상수 통합은 하지 않고 요청과 응답 DTO에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낸다",
-      "decision_question": "line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낼지, 미터 aggregation처럼 문자열로 둘지 정한다."
+      "decision_question": "line_type 5종과 model 3종을 엔티티 상수로 모으고 요청과 응답 DTO 다섯 곳에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낼지, 미터 aggregation처럼 문자열로 둘지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "단가 모델과 라인 종류 값 목록을 문서화한다(결정: 상수 통합 없음)",
+      "decision": "fix: 엔티티 상수 통합은 하지 않고 요청과 응답 DTO에 @Schema(allowableValues)를 달아 openapi.yaml에 값 목록을 낸다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Ck3-446-04",
@@ -4882,8 +4918,8 @@
       "id": "Ck3-446-07",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 PriceRateService는 price_rate 감사 행의 target_id에 단가 버전 UUID를 남긴다(생성, 보관, 복원 세 곳). #446 squash 전 main(f46a475a)은 같은 target_type에 미터 code를 남겼고, 그 코드가 배포됐으므로 배포 DB에는 code 행이 이미 있다. audit_log는 V25 트리거로 UPDATE와 DELETE가 막혀 있고 README도 남긴 행은 고치지 않는다고 적어 옛 행을 옮길 수 없으니, 한 target_type 안에 두 의미가 섞인 상태가 main에 그대로 남는다. 감사 검색은 target_id와 detail의 request_id, route만 찾아서 화면 안내대로 미터 code로 검색하면 배포 전 단가 기록만 나오고 이후 기록은 빠진다. UUID로 바꾼 것은 박성종 님 커밋 614d3bc4가 시험(AuditLogIntegrationTest)까지 고친 의도된 변경이고 다른 대상(customer, api_key 등)의 UUID 관례와도 맞아서, code로 되돌릴지, target_type 이름을 바꿀지, UUID를 유지하고 검색과 README로 메울지는 결정이 필요하다.",
       "evidence": [
@@ -4895,17 +4931,21 @@
         "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql:27-44 @ af15d7f5",
         "backend/README.md:271 @ af15d7f5",
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:77-98 @ af15d7f5",
-        "frontend/src/components/workspace/AuditScreen.tsx:48 @ af15d7f5"
+        "frontend/src/components/workspace/AuditScreen.tsx:48 @ af15d7f5",
+        "커밋 ec82ba57"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ec82ba578deb9ca0d8cb57f690795fb9fbc74318"
+      ],
+      "tests": [
+        "README와 PriceRateService 감사 줄 대조"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 감사 target_id는 단가 버전 UUID로 유지하고(614d3bc4 의도), 미터 code는 detail에 있다고 README 감사 절에 적는다",
       "decision_question": "price_rate 감사 기록의 target_id를 버전 UUID로 유지하고 배포 DB에 남은 미터 code 행과의 차이를 감사 검색(detail.billable_metric_code)과 README 설명으로 메울지, 미터 code로 되돌리고 버전 UUID를 detail에 둘지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/pricing/service/PriceRateService.java:92-93: #446 전, target_id에 billableMetricCode",
@@ -4915,14 +4955,19 @@
         "backend/src/main/java/com/meterengine/audit/service/AuditLogQueryService.java:77-98: 검색 대상에 detail.billable_metric_code 없음",
         "frontend/src/components/workspace/AuditScreen.tsx:48: 대상 ID로 검색 안내",
         "커밋 614d3bc4 (작성자 SEONGJONG PARK, #446 squash 1d74b240에 포함)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "단가 감사 target_id 뜻을 README에 적는다(결정: 버전 UUID 유지)",
+      "decision": "doc: 감사 target_id는 단가 버전 UUID로 유지하고(614d3bc4 의도), 미터 code는 detail에 있다고 README 감사 절에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Ck3-446-08",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 DraftInvoiceLine의 8인자, 6인자 보조 생성자와 InvoiceLineResponse의 같은 두 생성자가 그대로 남아 line_type을 per_unit, 분모를 1, 분자를 표시용 수량으로 채운다. BillableMetricPricePriceRate의 2인자 생성자도 effective_from을 2000-01, model을 per_unit으로 채운다. af15d7f5 전체에서 이 레코드들을 만드는 곳은 DraftInvoiceService, InvoiceService, BillableMetricPriceService, WorkspaceQueryRepository 네 곳뿐이고 모두 10인자 정규 생성자를 쓰며, 시험에도 역직렬화에도 보조 생성자를 부르는 곳이 없어 죽은 코드가 맞다. 두 invoice DTO의 보조 생성자는 글자까지 같은 중복이기도 하다. 세 파일 모두 #446(1d74b240) 이후 이 부분이 바뀌지 않았다. 제목의 세 기본값을 다 지우려면 시험이 아닌 DTO 파일 셋을 바꿔야 해서 유지보수 분류의 파일 셋 기준에 걸리므로 needs-decision으로 둔다.",
       "evidence": [
@@ -4932,29 +4977,38 @@
         "backend/src/main/java/com/meterengine/invoice/service/DraftInvoiceService.java:106-116 @ af15d7f5",
         "backend/src/main/java/com/meterengine/invoice/service/InvoiceService.java:123-133 @ af15d7f5",
         "backend/src/main/java/com/meterengine/pricing/service/BillableMetricPriceService.java:101-111 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:267-277 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:267-277 @ af15d7f5",
+        "커밋 318a9e98"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "318a9e98fbf344fe56de84024736d7c70a73d0ff"
+      ],
+      "tests": [
+        "컴파일, OpenApiDocumentTest: 통과, openapi.yaml 변화 없음"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 운영 코드와 시험이 부르지 않는 보조 생성자를 세 DTO에서 함께 지운다(동작 변화 없음)",
       "decision_question": "운영 코드도 시험도 부르지 않는 DraftInvoiceLine, InvoiceLineResponse, BillableMetricPricePriceRate의 보조 생성자를 DTO 파일 셋에 걸쳐 한 번에 지울지(유지보수 분류 파일 셋 기준의 예외), 아니면 지적 위치인 DraftInvoiceResponse와 같은 중복인 InvoiceResponse 두 파일만 지울지 정한다.",
       "evidence_notes": [
         "git grep -E \"new (DraftInvoiceLine|InvoiceLineResponse|BillableMetricPricePriceRate)\\(|::new\" af15d7f5 -- . 결과는 위 정규 생성자 호출 네 곳뿐",
         "DraftInvoiceResponse.java 61-99행은 pinned_head c27b229와 main이 같다(git log 마지막 변경 1d74b240 #446)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "청구 응답 DTO의 보조 생성자를 지운다(결정)",
+      "decision": "fix: 운영 코드와 시험이 부르지 않는 보조 생성자를 세 DTO에서 함께 지운다(동작 변화 없음)",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Ck3-446-09",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 지적은 그대로 남아 있다. OrganizationService.find(UUID)는 환경이 없으면 get()을 불러 NotFoundException을 던지고, 환경이 있으면 queryForObject가 행이 없을 때 예외를 던진다. 그래서 빈 결과를 돌려주는 경로가 없고, naming.md 37행 기준으로는 get의 뜻이다. 같은 계층의 OrganizationAccountService.find는 Optional을 돌려주어 규칙을 지키므로 두 곳의 뜻이 갈라진다. 같은 인수를 받는 get(UUID)이 이미 있고, 서비스 메서드는 한 낱말이어야 하며 컨트롤러 이름은 같은 도메인 서비스 동사로 시작해야 한다는 ArchUnit 규칙 때문에, 이 클래스 안에서 이름만 바꿀 수는 없다. 고치려면 SupplierService를 떼어 내고 operationId findSupplier를 getSupplier로 바꿔야 해서 공개 이름이 바뀌고 서비스, 컨트롤러, openapi.yaml 세 파일이 함께 바뀐다. update가 두 뜻으로 겹치는 것은 #418부터 있던 상태 전이 update가 도메인 동사를 쓰지 않아서 생긴 일이고, 이를 고치면 updateOrganizationStatus operationId와 UpdateOrganizationStatusRequest 이름도 바뀌므로 이것도 정할 일이다.",
       "evidence": [
@@ -4970,30 +5024,39 @@
         "backend/src/main/java/com/meterengine/organization/controller/CurrentOrganizationController.java:44-45 @ af15d7f5",
         "backend/src/main/java/com/meterengine/organization/controller/OrganizationController.java:125-129 @ af15d7f5",
         "backend/openapi.yaml:5355 @ af15d7f5",
-        "backend/openapi.yaml:5573 @ af15d7f5"
+        "backend/openapi.yaml:5573 @ af15d7f5",
+        "커밋 db6a7755"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "db6a77559509d2cd35bc437e5b8fce4e71f642c7"
+      ],
+      "tests": [
+        "컴파일 통과, naming.md와 이름 규칙 시험 대조"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(fix): 서비스 메서드 이름만 naming.md대로 get으로 바꾼다. 공개 operationId(findSupplier)는 그대로 둔다",
       "decision_question": "OrganizationService.find(UUID)는 없으면 예외를 던지므로 naming.md 기준 get인데, 공급자 조회와 수정을 SupplierService(get, update)로 떼고 operationId findSupplier를 getSupplier로 바꿀지(상태 전이 update의 도메인 동사 이름 변경도 함께 할지) 정한다.",
       "evidence_notes": [
         "backend/openapi.yaml:5355: operationId findSupplier, 다른 단건 조회는 getCustomer 2135, getOrganization 4734 등 모두 get",
         "backend/openapi.yaml:5573: operationId updateOrganizationStatus",
         "git log af15d7f5 -- OrganizationService.java: 1d74b240(#446)이 find와 update를 더했고 94a48a20(#453)이 find에 환경별 조회를 더했을 뿐 이름은 그대로다"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "공급자 조회 find가 예외를 던진다고 적는다(결정 변경: 이름 유지)",
+      "decision": "fix: 서비스 메서드 이름만 naming.md대로 get으로 바꾼다. 공개 operationId(findSupplier)는 그대로 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Ck3-446-10",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 V36은 넘길 때 head와 한 글자도 다르지 않고, 1행에서 (organization_id, billable_metric_code, dimension_values) 기본 키를 지운 뒤 3행에서 id 기본 키로 바꾼다. 그 뒤 price_rate에 남는 인덱스는 id 기본 키와 customer_id IS NULL 또는 IS NOT NULL 조건이 붙은 부분 유일 인덱스 둘뿐이며, V43과 V48도 archived_at IS NULL과 environment_scope_id를 더해 같은 두 인덱스를 다시 만들 뿐이다. main의 PriceRateRepository 목록 조회와 존재 확인은 organization_id와 environment_id만 걸고 customer_id 조건이 없어서, PostgreSQL이 부분 인덱스를 쓰는 조건(WHERE가 인덱스 조건을 함의)을 채우지 못하고 모든 도입사의 단가 행을 순차 스캔한다. V48이 invoice, payment_attempt, webhook 표에는 조건 없는 environment_lookup 인덱스를 더했지만 price_rate에는 더하지 않아 main에서도 문제가 그대로다. V36을 고치지 않고 새 V__ 하나로 조건 없는 도입사 인덱스를 더하면 고쳐지므로 confirmed로 두고, 행 수가 적어 무게는 low 그대로다.",
       "evidence": [
@@ -5004,17 +5067,23 @@
         "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:139-144 @ af15d7f5",
         "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:15 @ af15d7f5",
         "backend/src/main/java/com/meterengine/pricing/repository/PriceRateRepository.java:14-15,22-23,30-32 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:56-60 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:56-60 @ af15d7f5",
+        "SchemaConstraintTest.단가에는_조건_없는_도입사와_미터_인덱스가_있다: 실패 expected 1, actual 0",
+        "커밋 18f7a853"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "18f7a853d3f5343a42c8ca9372cf8a9bfbda055e"
+      ],
+      "tests": [
+        "SchemaConstraintTest: 통과",
+        "SchemaConstraintTest.단가에는_조건_없는_도입사와_미터_인덱스가_있다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:139-144: 다른 표에는 조건 없는 environment_lookup 인덱스를 더했지만 price_rate는 빠짐",
         "backend/src/main/resources/db/migration/V43__archive_business_resources.sql:15: billable_metric_period_organization_index 선례",
@@ -5022,7 +5091,11 @@
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:56-60: 청구 계산이 이 목록 조회를 탐",
         "git diff c27b229 af15d7f5 -- V36__version_price_rates.sql: 차이 없음",
         "이전 세션 EXPLAIN(da90aac 마이그레이션 DB, enable_seqscan=off): Seq Scan on price_rate"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "단가 조회 인덱스를 V50으로 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "D-120",
@@ -5189,8 +5262,8 @@
       "id": "H3-B2",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 R__seed.sql에서 시드 미터 upsert 세 곳의 DO UPDATE SET은 지금도 aggregation만 EXCLUDED('sum')로 되돌리고 percentile은 그대로 둔다. V39의 billable_metric_percentile_configuration CHECK는 V40~V49 어디에서도 풀리거나 바뀌지 않았고 billable_metric 트리거도 없다. 그래서 시드 미터를 percentile 95로 바꾼 DB에서 시드가 다시 돌면 aggregation=sum, percentile=95 행이 생겨 23514로 Flyway가 멈춘다. 막는 장치를 찾아봤지만 BillableMetricService.update는 그 event_type 이벤트가 있을 때만 막고, BusinessEnvironmentInterceptor는 헤더 없음이나 legacy 요청을 environment_id NULL 범위로 보내 시드 미터를 그대로 고칠 수 있다. SeedDataTest의 되돌림 시험도 이름과 단가만 보므로 이 경우를 잡지 못한다. scope_notes가 허락한 percentile = NULL 세 줄만 더하면 되고 ON CONFLICT 대상이나 MERGE 구조(H3-B1, Q5)는 건드리지 않는다.",
       "evidence": [
@@ -5203,27 +5276,37 @@
         "backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java:107 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:55-58 @ af15d7f5",
         "backend/src/main/java/com/meterengine/global/security/BusinessEnvironmentInterceptor.java:69-70 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/global/SeedDataTest.java:68-86 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/global/SeedDataTest.java:68-86 @ af15d7f5",
+        "SeedDataTest.백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다: 실패 DataIntegrityViolationException",
+        "커밋 3be4f3a6"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "3be4f3a6b18d3c0e20b534cde0e0a478912956fe"
+      ],
+      "tests": [
+        "SeedDataTest: 통과",
+        "SeedDataTest.백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- R__seed.sql: 1d74b240(#446), d6072d70(#447), 94a48a20(#453) 모두 SET 목록에 percentile을 넣지 않음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "시드 재실행이 percentile을 비운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Nk3-002",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 PriceRateResponse 20행과 BillableMetricPricePriceRate 17행은 @JsonRawValue String에 @Schema(type = \"array\", implementation = PriceRateTier.class)를 그대로 붙이고 있다. 그래서 생성된 openapi.yaml의 두 응답 스키마에서 tiers가 type: array가 아니라 $ref PriceRateTier 하나, 즉 단일 객체로 나간다. 실제 응답은 배열이다. PriceRateService가 List를 JSON 문자열로 저장하고 V36 마이그레이션 제약이 jsonb 배열만 받으며, 요청 스키마 CreatePriceRateRequest만 배열로 적혀 있다. frontend/README.md가 API 계약의 정본을 openapi.yaml로 두는데 문서와 실제 응답이 어긋나고, OpenApiDocumentTest는 dimension_values 형태만 검사해 이를 막지 못한다. #446 이후 두 DTO를 바꾼 커밋은 #447(d6072d70) 하나이고 archived_at, archived_from만 더해서 tiers 줄은 넘길 때 head(c27b229)와 같다. unit_price가 graduated와 volume에서 null이라는 설명도 없고, #446이 지운 dimension_values 설명도 돌아오지 않았다.",
       "evidence": [
@@ -5237,17 +5320,23 @@
         "backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java:397-409 @ af15d7f5",
         "backend/src/main/java/com/meterengine/apikey/dto/ApiKeySecretResponse.java:20-23 @ af15d7f5",
         "frontend/README.md:9 @ af15d7f5",
-        "frontend/src/lib/api/pricing.ts:8-12 @ af15d7f5"
+        "frontend/src/lib/api/pricing.ts:8-12 @ af15d7f5",
+        "OpenApiDocumentTest.단가_응답의_tiers는_구간_객체의_배열이다: 실패 expected array but was",
+        "커밋 85e8d8d4"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "85e8d8d42ce8ead45bfb0304a734bac02bc4c443"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과",
+        "OpenApiDocumentTest.단가_응답의_tiers는_구간_객체의_배열이다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/openapi.yaml:8146-8147: BillableMetricPricePriceRate.tiers가 $ref PriceRateTier 단일 객체",
         "backend/openapi.yaml:10055-10056: PriceRateResponse.tiers가 $ref PriceRateTier 단일 객체",
@@ -5260,7 +5349,11 @@
         "frontend/src/lib/api/pricing.ts:8-12: 프론트는 문서 대신 PriceRateTier[] | null, unit_price: number | null을 손으로 적음",
         "git show 1d74b240 -- BillableMetricPricePriceRate.java: dimension_values, unit_price의 @Schema description 삭제",
         "git log af15d7f5 -- 두 DTO: #446 이후 d6072d70(#447)만 바꿨고 tiers 줄은 c27b229와 같음"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "단가 응답 tiers를 배열로 문서화한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "X-018",
@@ -5359,8 +5452,8 @@
       "id": "C446-005",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 집계_후_단위와_반올림을_적용하고_원본을_보존한다 시험에서 round 샘플은 179행 \"round,0,2\"와 182행 \"round,1,2.3\" 두 개뿐이고, 넘길 때 head c27b229와 줄만 밀렸을 뿐 값이 같다. avg 23.25를 unit_size 10으로 나눈 2.325는 자릿수 0과 1에서 동률이 아니라서 HALF_UP, HALF_EVEN, HALF_DOWN, FLOOR가 모두 2와 2.3을 낸다. backend/src/test 전체에서 rounding_mode round를 쓰는 곳은 이 두 줄뿐이고 MetricAggregation.transform을 직접 부르는 시험도 없어서, MetricAggregation.java 37행의 \"round\" -> RoundingMode.HALF_UP을 HALF_EVEN이나 FLOOR로 바꿔도 모든 백엔드 시험이 통과한다. demo/csvdemo/test_expected.py의 round 케이스는 백엔드가 아니라 demo의 expected.py를 검증한다. openapi.yaml과 컨트롤러 설명은 round를 사사오입이라고 적고 이 수량이 청구 수량이 되므로 지적이 맞다. #446, #447, #450 뒤 main에서 이 샘플이나 round 매핑을 고친 커밋은 없다.",
       "evidence": [
@@ -5371,17 +5464,26 @@
         "backend/src/main/java/com/meterengine/metric/entity/MetricAggregation.java:40 @ af15d7f5",
         "backend/openapi.yaml:703 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/controller/BillableMetricController.java:64 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:177,180 @ c27b229"
+        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:177,180 @ c27b229",
+        "커밋 349319ed"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "349319edc556a007fea6775993d916163587e98c"
+      ],
+      "tests": [
+        "MetricAggregationIntegrationTest: 통과",
+        "round를 HALF_EVEN으로 바꾼 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "반올림 시험에 사사오입 판별 자리를 더한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C446-006",
@@ -5512,8 +5614,8 @@
       "id": "C446-011",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 ChargeServiceTest 220~241행 시험은 이름이 '올림으로 0이 된 음수'인데 226행에서 7인자 billableMetric 도우미를 쓴다. 이 생성자는 BillableMetric 기본값 roundingMode none, unitSize 1을 그대로 둔다. none이면 ChargeService.quantity()가 원본 분자 -0.4로 분수를 만들어 변환 수량도 음수라, classify 131행의 원본 분자 검사를 quantity.signum() < 0으로 바꿔도 이 시험은 통과한다. 실제 ceil 미터라면 quantity()가 usage.quantity()인 0을 쓰므로 그 변경에서 negative_usages 경고 없이 0원 per_unit 라인이 생기는데, 이를 잡는 시험이 main에 없다. MetricAggregationIntegrationTest의 ceil 시험은 양수이고 작은 음수 시험은 rounding null(none)이다. 넘길 때 head와 main의 이 시험 줄은 같다.",
       "evidence": [
@@ -5523,24 +5625,33 @@
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:130-141 @ af15d7f5",
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:226-232 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/entity/MetricAggregation.java:29-41 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:444-470 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:444-470 @ af15d7f5",
+        "커밋 628658ff"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "628658ffc14d79350b894dfe0ebe1ea7a33d6dce"
+      ],
+      "tests": [
+        "ChargeServiceTest: 통과",
+        "음수 판정을 변환 수량으로 바꾼 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "올림 음수 시험이 올림 미터를 쓴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C446-012",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서 단가 ID 삭제 PriceRateService.delete(UUID, String, UUID)는 환경 문맥이 없으면 findById로 행을 찾고, 196행 필터의 organization_id 비교 하나로만 도입사 경계를 지킨다. 시험용 API 키(TestCredentials.issueApiKey)는 environment_id 없이 들어가 인터셉터가 legacy 문맥(환경 id null)을 주므로, 다른 도입사 키 요청은 바로 이 필터까지 온다. 그런데 main의 단가 ID 삭제 시험은 모두 같은 도입사 호출(VersionedPricingIntegrationTest, BusinessArchiveIntegrationTest)이거나 같은 도입사의 다른 환경을 보는 EnvironmentBillingIntegrationTest 195행뿐이다. BusinessArchiveIntegrationTest 165행은 다른 도입사의 복원(restore)만 막는지 보고, 삭제 쪽 필터는 따로 떨어진 코드라 이 시험이 지켜 주지 않는다. 요금제는 PricePlanAuditIntegrationTest 116행이 같은 경계를 보지만 단가 삭제에는 대응 시험이 없어, 196행의 조직 비교가 빠져도 지금 시험은 모두 통과한다.",
       "evidence": [
@@ -5552,24 +5663,33 @@
         "backend/src/test/java/com/meterengine/pricing/VersionedPricingIntegrationTest.java:132,169,256,264,297 @ af15d7f5",
         "backend/src/test/java/com/meterengine/archive/BusinessArchiveIntegrationTest.java:146,150,162-168 @ af15d7f5",
         "backend/src/test/java/com/meterengine/invoice/EnvironmentBillingIntegrationTest.java:193-199 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/pricing/PricePlanAuditIntegrationTest.java:116-139 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/pricing/PricePlanAuditIntegrationTest.java:116-139 @ af15d7f5",
+        "커밋 73475794"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "73475794349dc38077c97ed1262ab2df5c13f874"
+      ],
+      "tests": [
+        "VersionedPricingIntegrationTest: 통과",
+        "도입사 비교를 뺀 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "다른 도입사 단가 ID 삭제의 경계를 시험한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C446-013",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 update는 이름 말고 다른 필드가 바뀔 때만 2인자 eventPresence.exists(organizationId, eventType)를 부른다(BillableMetricService.java 151~156행, 164~167행). 그런데 이름만 바꾸는 시험 event_type과_target_property가_그대로면_이벤트와_중복을_확인하지_않는다는 3인자 exists와 저장소의 existsByOrganizationIdAndEventTypeAndTargetProperty가 불리지 않았는지만 본다(257~259행). main 운영 코드에서 3인자 exists는 update가 부르지 않고, 저장소 메서드는 어디서도 부르지 않으니 두 검증은 늘 참이다. #447 d6072d70이 넘길 때의 existsWithNumericProperty를 3인자 exists로 바꿨지만 update가 부르는 2인자 exists는 여전히 검증하지 않는다. 같은 파일에 never()로 2인자 exists를 보는 시험도 없어서, changesBeyondName 조건을 지워 이름만 바꿔도 이벤트를 확인하게 회귀해도 이 시험은 통과한다. 통합 시험 MetricAggregationIntegrationTest가 이름만 바꾸는 성공을 따로 보므로 위험은 작다.",
       "evidence": [
@@ -5581,17 +5701,26 @@
         "backend/src/main/java/com/meterengine/event/api/EventPresence.java:6-8 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/repository/BillableMetricRepository.java:25 @ af15d7f5",
         "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:270-300 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java:236-238 @ c27b229"
+        "backend/src/test/java/com/meterengine/metric/service/BillableMetricServiceTest.java:236-238 @ c27b229",
+        "커밋 088d775e"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "088d775eba7d84d2d8c4debe42ca29020f194064"
+      ],
+      "tests": [
+        "BillableMetricServiceTest: 통과",
+        "changesBeyondName을 늘 true로 바꾼 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "D-115",
@@ -5712,8 +5841,8 @@
       "id": "G-107",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 CreatePricePlanRequest는 base_fee와 minimum_amount에 @NotNull @Min(0)만 걸어 9,999나 15,005 같은 값을 그대로 받는다. ChargeService.apply는 trim()으로 두 값의 10원 미만을 버려 기본료 9,999원은 9,990원 라인, 5원은 라인 없음이 되고, 최소 사용료 15,005원은 15,000원 기준으로 차액을 낸다. PricePlanController 등록 설명은 이 절사를 말하지 않고, DraftInvoiceController의 절사 설명은 고객 x 미터 x 조합 라인만 대상으로 적어 요금제 금액은 빠진다. 콘솔(PricingWorkspace)도 등록값을 그대로 보여 준다. 넘길 때 head(c27b229)와 main의 절사 코드와 설명이 같고 #447, #453이 ChargeService를 건드렸지만 이 부분은 바꾸지 않았다. demo/csvdemo/expected.py 389행이 같은 절사를 구현하므로 절사는 의도한 규칙이고, 계약을 바꾸지 않고 문서에 드러내는 것이 가장 작은 수정이다.",
       "evidence": [
@@ -5725,17 +5854,26 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:80-81,83,86-87 @ af15d7f5",
         "demo/csvdemo/expected.py:389 @ af15d7f5",
         "backend/openapi.yaml:6301 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:196-198,225 @ c27b229"
+        "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:196-198,225 @ c27b229",
+        "커밋 c93b2d31"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c93b2d316aea9d5308be49a4bb3f1041fceadfd1"
+      ],
+      "tests": [
+        "VersionedPricingIntegrationTest.기본료와_최소_사용료는_청구할_때_10원_미만을_버린다: 통과",
+        "OpenApiDocumentTest: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "요금제 절사 규칙을 API 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "G-110",
@@ -5781,8 +5919,8 @@
       "id": "G-174",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 naming.md 44행은 DB 제약 이름을 '<테이블>_<대상>_<종류>'로 정하고 종류를 pk, fk, unique, check, not_null로 묶는다. main의 V39 9, 11, 13행 billable_metric_supported_aggregation, billable_metric_percentile_configuration, billable_metric_target_configuration과 V40 4행 invoice_line_quantity_fraction_pair는 넘길 때 head와 글자까지 같고 종류 접미사가 없다. V46부터 V49까지 이 이름을 RENAME한 마이그레이션은 없고, main은 V9 11행에서 같은 꼴의 invoice_period_format을 invoice_period_check로 고친 이력이 있어 규칙이 실제로 적용된다. 저장소 전체에서 이 네 이름을 참조하는 코드나 시험은 없어 기능 오류는 없고 규칙 위반만 남는다. 이미 배포된 V39, V40은 고칠 수 없으므로 새 V__에서 RENAME CONSTRAINT로 맞추는 계획을 세운다. V45의 organization_environment_org_id_unique(약어 org)와 key_mode_unique는 scope_notes에 따라 건드리지 않고 남은 것으로만 적는다.",
       "evidence": [
@@ -5796,23 +5934,33 @@
         "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql:8 @ af15d7f5",
         "backend/src/main/resources/db/migration/V40__preserve_exact_invoice_quantities.sql:3 @ af15d7f5",
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:8-9 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/global/SchemaConstraintTest.java:242-260 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/global/SchemaConstraintTest.java:242-260 @ af15d7f5",
+        "SchemaConstraintTest.집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다: 실패 새 이름 없음",
+        "커밋 191dc8de"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "191dc8de49b09ef0a23d48e1112a6f9e616df54d"
+      ],
+      "tests": [
+        "SchemaConstraintTest, metric, invoice 시험: 통과",
+        "SchemaConstraintTest.집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql:8: 열 CHECK 자동 이름 billable_metric_percentile_check가 이미 있어 새 이름으로 쓰면 충돌",
         "backend/src/main/resources/db/migration/V40__preserve_exact_invoice_quantities.sql:3: 자동 이름 invoice_line_quantity_denominator_check도 피한다",
         "backend/src/main/resources/db/migration/V45__create_organization_environments.sql:8-9: 범위 밖, 남은 것으로 기록",
         "backend/src/test/java/com/meterengine/global/SchemaConstraintTest.java:242-260: 제약 이름을 단정하는 기존 시험 형태"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "CHECK 제약 이름을 V51로 규칙에 맞춘다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Nk3-001",
@@ -5862,8 +6010,8 @@
       "id": "Nk3-003",
       "merged_ids": [],
       "layer": 446,
-      "branch": "feat/pricing-aggregation",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서는 #447(d6072d70)이 청구 계산, 미터별 가격 목록, 단가 삭제를 모두 PricePlan.applies와 PriceRate.applies 호출로 바꿔서 네 벌 복사 가운데 셋은 이미 하나로 모였다. 요금제 목록의 월 필터가 보관 시작 월을 보지 않는 것은 같은 #447이 API 설명을 '시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 보관 여부는 month와 상관없이 status로 고른다'로 바꿔 계약으로 정한 동작이고, 응답에 archived_from도 실어 주므로 지적한 청구와 목록의 어긋남은 버그가 아니다. 이 목록을 applies로 바꾸면 담당자가 문서로 정한 공개 계약을 뒤집는 일이라 이번 수정에 넣지 않는다. 남은 것은 ChargeService의 private static active 메서드 하나로, #447이 호출 두 곳을 applies로 바꾼 뒤 호출처 없이 같은 범위 판정을 한 벌 더 들고 있다. 그래서 이 죽은 복사본만 지우는 가장 작은 수정으로 확정한다.",
       "evidence": [
@@ -5875,24 +6023,32 @@
         "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:65-70 @ af15d7f5",
         "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:79 @ af15d7f5",
         "backend/openapi.yaml:6160,6163 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/pricing/dto/PricePlanResponse.java:15 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/pricing/dto/PricePlanResponse.java:15 @ af15d7f5",
+        "커밋 5588b4f6"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "5588b4f608af20592510c18a314770abaffb53d5"
+      ],
+      "tests": [
+        "git grep 호출 없음, pricing 시험: 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:222-224: private static active, 파일 안 호출처 없음",
         "backend/src/main/java/com/meterengine/pricing/service/ChargeService.java:61,74,81,84: 청구 계산은 applies와 stops만 부름",
         "backend/src/main/java/com/meterengine/pricing/service/PricePlanService.java:65-70: 범위만 보는 월 필터, 계약대로",
         "backend/src/main/java/com/meterengine/pricing/controller/PricePlanController.java:79: 보관 여부는 month와 상관없이 status로 고른다",
         "backend/src/main/java/com/meterengine/pricing/dto/PricePlanResponse.java:15: archived_from 반환"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "호출처 없는 옛 기간 판정 메서드를 지운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "X-036",
@@ -6065,8 +6221,8 @@
       "id": "C447-011",
       "merged_ids": [],
       "layer": 447,
-      "branch": "feat/resource-archive",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 BillableMetricServiceTest 257행은 아직 verify(eventService, never()).exists(any(), any(), any())로 3인자 오버로드만 확인한다. BillableMetricService.update는 154행과 166행에서 2인자 exists(organizationId, eventType)만 부르고, 3인자 exists는 main 운영 코드 어디서도 부르지 않으므로 이 verify는 항상 통과한다. 258~259행의 existsByOrganizationIdAndEventTypeAndTargetProperty 검증도 운영 코드에서 부르는 곳이 없어 빈 검증이지만 이 지적 밖이라 계획에 넣지 않았다. 이름만 바꾸는 요청이 409가 되는 회귀 자체는 MetricAggregationIntegrationTest의 두 시험(이벤트가 있는 상태에서 이름만 바꾸기 성공)이 잡으므로 위험은 낮고, 남은 것은 단위 시험 이름과 단언이 어긋난 문제다. #446과 #447이 main에 차례로 들어와 시험이 하나뿐이라 C446-013과 같은 시험, 같은 원인이고 이 한 줄을 고치면 둘 다 풀린다.",
       "evidence": [
@@ -6076,17 +6232,26 @@
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:166 @ af15d7f5",
         "backend/src/main/java/com/meterengine/event/api/EventPresence.java:6 @ af15d7f5",
         "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:296 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:309 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/metric/MetricAggregationIntegrationTest.java:309 @ af15d7f5",
+        "커밋 088d775e"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "088d775eba7d84d2d8c4debe42ca29020f194064"
+      ],
+      "tests": [
+        "BillableMetricServiceTest: 통과",
+        "changesBeyondName을 늘 true로 바꾼 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "이름만 바꿀 때 이벤트 확인을 건너뛰는지 실제 메서드로 검증한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "G-092",
@@ -8173,10 +8338,10 @@
       "id": "C450-002",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main(af15d7f5)에서 두 관점으로 다시 판정했다.",
+      "reason": "보안 지적이라 상세는 보고에 적지 않는다. main 기준으로 고쳤다.",
       "evidence": [
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:91-92 @ af15d7f5",
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:120-131 @ af15d7f5",
@@ -8189,17 +8354,23 @@
         "backend/src/test/java/com/meterengine/customer/CustomerExternalIdIntegrationTest.java:112-114 @ af15d7f5",
         "frontend/README.md:100 @ af15d7f5",
         "deploy/caddy/Caddyfile:60-64 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:133 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:133 @ af15d7f5",
+        "CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패",
+        "커밋 db6bbd58"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "db6bbd58c47a75f81dd06eb48fe8b2a4963c0d94"
+      ],
+      "tests": [
+        "customer 시험: 통과",
+        "CustomerExternalIdIntegrationTest.조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:91-92: POST는 @IngestAccess만",
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:120-131: 기존 고객이면 200으로 CustomerResponse.from 전체 반환",
@@ -8212,14 +8383,18 @@
         "frontend/README.md:100: ingest: 조회에는 read도 필요",
         "deploy/caddy/Caddyfile:60-64: /v1/* 경로 제한 없음",
         "backend/src/main/java/com/meterengine/apikey/service/ApiKeyService.java:133: scopes=[ingest] 단독 키 발급 허용"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "보안 지적 수정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C450-003",
       "merged_ids": [],
       "layer": 450,
-      "branch": "feat/event-ingestion",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 CustomerRegistrationService.create는 같은 external_id의 기존 고객이 보관 상태면 ConflictException(CUSTOMER_ARCHIVED)을 던지고, 이 코드는 409로 나간다. 그런데 createCustomer의 설명은 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려준다고만 하고 @ApiResponses에는 201, 200, 400만 있다. main의 openapi.yaml도 createCustomer 응답이 200, 201, 400, 401, 403, 429뿐이다. OpenApiDocumentTest의 보관 409 문서화 시험은 PUT /v1/customers/{id}, POST /v1/events 등은 검사하지만 POST /v1/customers는 빠져 있고, CustomerExternalIdIntegrationTest는 201 다음 200, 동시 생성, 단건 조회 세 가지만 검사한다. 박성종 님 수정이나 후속 PR에서 이 부분을 고친 흔적이 없어 지적이 그대로 남아 있다.",
       "evidence": [
@@ -8229,17 +8404,27 @@
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:101-114 @ af15d7f5",
         "backend/openapi.yaml:1759-1810 @ af15d7f5",
         "backend/src/test/java/com/meterengine/global/OpenApiDocumentTest.java:270-326 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/customer/CustomerExternalIdIntegrationTest.java:49-100 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/customer/CustomerExternalIdIntegrationTest.java:49-100 @ af15d7f5",
+        "OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패",
+        "커밋 db6bbd58"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "db6bbd58c47a75f81dd06eb48fe8b2a4963c0d94"
+      ],
+      "tests": [
+        "CustomerExternalIdIntegrationTest.보관한_고객의_외부_ID로_다시_등록하면_409_customer_archived이고_고객을_새로_만들지_않는다: 통과",
+        "OpenApiDocumentTest.고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "고객 등록의 보관 409를 문서화하고 시험한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C450-010",
@@ -8413,8 +8598,8 @@
       "id": "Ck3-451-01",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고객 등록 응답(이름, billing_email)을 idempotent_request.response_body에 기한 없이 저장한다. 지우는 코드가 없고 created_at 열을 읽는 곳도 없어서, 넘길 때 head와 같은 상태로 남아 있다. 다만 같은 키에 같은 본문을 다시 보내면 최초 응답을 돌려주는 것은 API 설명에 적힌 계약이고 통합 시험도 이 동작을 확인한다. 그래서 \"옛 응답을 계속 돌려준다\"는 부분은 결함이 아니라 설계다. 개인정보를 오래 남기는 문제도 이 표에만 있는 것은 아니다. 고객 삭제는 보관(소프트 삭제)이고 outbound_email은 수신 주소를 추가만 하는 표로 영구 보관하며, 저장소에는 보관 기간 정책이 없다. 기한을 두려면 기한 값과 재생 기간이라는 공개 계약을 새로 정해야 하므로 결정이 필요하다.",
       "evidence": [
@@ -8425,17 +8610,23 @@
         "backend/src/test/java/com/meterengine/query/ConditionalCreationIntegrationTest.java:44,117 @ af15d7f5",
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:239-243 @ af15d7f5",
         "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:95-104 @ af15d7f5",
-        "backend/src/main/resources/db/migration/V22__create_outbound_email_table.sql:11,31 @ af15d7f5"
+        "backend/src/main/resources/db/migration/V22__create_outbound_email_table.sql:11,31 @ af15d7f5",
+        "OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 (설명 없음)",
+        "커밋 4f705cdb"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "4f705cdbcd826813ff943f925640e0dc080d23ec"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 38개 통과",
+        "OpenApiDocumentTest.멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 최초 응답 재생에 기한이 없는 지금 계약을 유지하고 저장 내용과 기간을 API 설명과 README에 적는다",
       "decision_question": "Idempotency-Key로 저장한 응답에 보관 기한(예: 24시간)을 두고 지난 행을 지우는 정리 작업을 넣을지, 넣는다면 기한을 얼마로 하고 API 설명에 어떻게 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:90-101: response_body에 응답 전체를 저장하고 만료 처리는 없다",
@@ -8447,7 +8638,11 @@
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:239-243: 고객 삭제는 보관이라 이름과 이메일이 customer 표에 남는다",
         "backend/src/main/java/com/meterengine/customer/service/CustomerService.java:95-104: 감사 기록에는 바뀐 필드 이름만 남으므로, 고객 정보를 고친 뒤 옛 값이 남는 곳은 idempotent_request뿐이다",
         "backend/src/main/resources/db/migration/V22__create_outbound_email_table.sql:11,31: recipient_email을 추가만 하는 표로 영구 보관한다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "doc: 최초 응답 재생에 기한이 없는 지금 계약을 유지하고 저장 내용과 기간을 API 설명과 README에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "D-186",
@@ -8932,8 +9127,8 @@
       "id": "Ck3-451-02",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "지적한 동작은 main에도 그대로 있다. PATCH /v1/customers/{id}와 /v1/billable-metrics/{code}는 PUT과 같은 요청 DTO와 같은 서비스 메서드를 부르고, If-Match가 필수라는 점만 다르다. 고객 서비스는 받은 billing_email을 그대로 덮어써서 본문에서 billing_email을 빼고 PATCH하면 청구 이메일이 지워진다. 다만 이것은 #451에서 박성종 님이 일부러 만든 설계다. PATCH 설명에 \"이름/이메일을 모두 보내는 조건부 수정\", \"PUT과 같은 전체 필드를 보낸다\"라고 적었고, 시험 이름도 \"PATCH는 강한 숫자 버전을 요구하고 기존 PUT을 허용한다\"로 PUT 호환을 지키려는 의도를 밝힌다. 저장소 안 호출부(화면 두 곳)는 항상 이름과 이메일을 모두 보내서 지금 깨지는 경로는 없다. 고치려면 PATCH를 부분 수정으로 바꾸거나 PATCH를 없애고 PUT에 If-Match를 필수로 거는 공개 API 계약 변경이 필요하고 담당자 설계를 뒤집는 일이라 결정이 필요하다.",
       "evidence": [
@@ -8955,7 +9150,6 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(keep): PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)",
       "decision_question": "PATCH를 If-Match 필수인 전체 교체로 둘지, 부분 수정(본문에 없는 필드는 유지)으로 바꿀지, PATCH를 없애고 PUT의 If-Match를 필수로 할지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:153: PUT /{id}, 160줄에 빼면 청구 이메일이 지워진다고 적음, 191줄 If-Match required = false",
@@ -8968,7 +9162,10 @@
         "frontend/src/app/(console)/workspace-actions.ts:48: PATCH 본문에 name과 billing_email ?? null을 함께 보냄",
         "frontend/src/lib/api/customers.ts:69: PATCH 본문에 name과 billing_email을 함께 보냄",
         "git show f53222e7 (#451, 박성종): PATCH 두 엔드포인트와 \"버전 조건 수정\"을 추가한 커밋"
-      ]
+      ],
+      "decision": "keep: PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491",
+      "question": "세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다."
     },
     {
       "id": "Ck3-451-03",
@@ -9074,8 +9271,8 @@
       "id": "Ck3-451-05",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "#451(f53222e7)이 두 응답 레코드에 version 칸을 더하면서 version을 0으로 채우는 보조 생성자도 같이 넣었는데, main에서 이 생성자를 부르는 곳이 하나도 없다. 운영 코드와 시험 코드를 모두 찾아보니 생성자 호출은 각 레코드의 from과 WorkspaceQueryRepository 두 곳뿐이고 넷 다 version까지 넘기는 정식 생성자를 쓴다. 틀렸다고 보려고 IdempotencyService가 저장한 응답을 CustomerResponse.class, BillableMetricResponse.class로 다시 읽는 경로도 봤지만, 레코드 역직렬화는 정식 생성자를 쓰고 보조 생성자에는 @JsonCreator가 없어서 이 경로도 보조 생성자를 쓰지 않는다. #451 뒤 두 파일을 바꾼 main 커밋이 없어서 이미 고쳐진 것도 아니다. 남겨 두면 나중에 누가 이 생성자를 쓸 때 version이 조용히 0으로 나가 버전 조건 수정이 어긋날 수 있으니, 두 생성자를 지우는 것이 가장 작은 정리다.",
       "evidence": [
@@ -9085,17 +9282,21 @@
         "backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:59 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:119 @ af15d7f5",
         "backend/src/main/java/com/meterengine/query/repository/WorkspaceQueryRepository.java:333 @ af15d7f5",
-        "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:88 @ af15d7f5"
+        "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:88 @ af15d7f5",
+        "커밋 4f63c98d"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "4f63c98d2351dec795a0c3874dae0591ac636189"
+      ],
+      "tests": [
+        "컴파일, OpenApiDocumentTest: 통과, openapi.yaml 변화 없음"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/customer/dto/CustomerResponse.java:19: 6인자 보조 생성자, 26줄에서 version 자리에 0을 넘김",
         "backend/src/main/java/com/meterengine/metric/dto/BillableMetricResponse.java:27: 13인자 보조 생성자, 55줄에서 version 자리에 0을 넘김",
@@ -9106,7 +9307,11 @@
         "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:88: jsonMapper.readValue로 레코드를 역직렬화하며 보조 생성자에는 @JsonCreator가 없어 쓰이지 않음",
         "git grep \"new CustomerResponse(\\|new BillableMetricResponse(\\|::new\" af15d7f5 결과가 위 네 곳뿐이고 backend/src/test에는 호출이 없음",
         "git log af15d7f5 -- 두 DTO 파일: 마지막 변경이 f53222e7(#451)"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "고객과 미터 응답의 보조 생성자를 지운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "D-139",
@@ -10180,8 +10385,8 @@
       "id": "C451-004",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 DashboardService는 여전히 COLLECTED 집합(paid, partially_canceled, canceled)과 amount - canceledAmount로 수납액을 계산하고 결제 목록의 취소액을 더해 canceled_amount를 만든다. #451 squash(f53222e7)에서 선택 월 집계 시험이 하나 더 들어와 pending이 미수금에 들어가는지(outstanding_amount 1100)는 이제 잡히지만, 그 시험의 선택 월에는 paid나 취소 결제가 없고 collected_amount와 canceled_amount는 어디서도 단언하지 않는다. backend/src/test 전체에서 collected_amount 단언은 없고 EnvironmentBillingIntegrationTest도 finalized_total_amount와 draft_supply_amount만 본다. 57행 '다른_도입사의_고객과_금액이_현황에_섞이지_않는다'는 넘길 때와 똑같이 다른 조직에 고객 한 명만 넣고 customer_count만 확인한다. 그래서 COLLECTED에서 canceled를 빼거나 amount - canceledAmount를 amount로 바꿔도 모든 시험이 통과한다.",
       "evidence": [
@@ -10189,17 +10394,22 @@
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:67-75 @ af15d7f5",
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:57-77 @ af15d7f5",
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:203-237 @ af15d7f5",
-        "backend/src/test/java/com/meterengine/invoice/EnvironmentBillingIntegrationTest.java:405-408 @ af15d7f5"
+        "backend/src/test/java/com/meterengine/invoice/EnvironmentBillingIntegrationTest.java:405-408 @ af15d7f5",
+        "커밋 fafcdc0c"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "fafcdc0ca6a5607c7aa3afdc61409987087a7d55"
+      ],
+      "tests": [
+        "DashboardIntegrationTest: 통과",
+        "수납액에서 취소액을 빼지 않는 변이: 실패"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:28: COLLECTED 집합",
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:67-75: collected와 canceled 계산, 단언하는 시험 없음",
@@ -10207,7 +10417,11 @@
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:203-237: f53222e7에서 추가, 선택 월에 pending만 있어 outstanding_amount 1100과 failed_payment_count 0만 확인, paid는 2026-07",
         "backend/src/test/java/com/meterengine/invoice/EnvironmentBillingIntegrationTest.java:405-408: 대시보드 금액은 finalized_total_amount와 draft_supply_amount만 확인",
         "git grep collected_amount af15d7f5 -- backend/src/test 결과 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "개요 금액 집계를 상태별로 시험한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "D-132",
@@ -10366,8 +10580,8 @@
       "id": "C451-006",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 미터 code에는 빈 값과 저장 불가 문자만 막는 검사뿐이라 search, options, export라는 code로 미터를 만들 수 있다. 같은 main에 #451이 더한 GET /v1/billable-metrics/search, /options, /export 리터럴 매핑이 그대로 있고, Spring은 변수 없는 리터럴 경로를 {code}보다 먼저 고르므로 그 미터의 상세 조회와 ETag 응답이 검색 결과로 바뀐다. 서비스의 create도 중복 여부만 보고, DB의 billable_metric.code에도 형식 제약이 없어 막는 줄을 찾지 못했다. 콘솔 요금 화면도 같은 상세 경로로 미터를 불러 같은 문제를 탄다. 경로를 옮기는 방법은 공개 API 경로를 바꾸는 일이라 피하고, 생성할 때 세 낱말을 예약어로 거절하는 쪽이 가장 작은 수정이다.",
       "evidence": [
@@ -10379,20 +10593,35 @@
         "backend/src/main/java/com/meterengine/global/validation/StorableTextValidator.java:9-21 @ af15d7f5",
         "backend/src/main/java/com/meterengine/metric/service/BillableMetricService.java:63-81 @ af15d7f5",
         "backend/src/main/resources/db/migration/V1__create_initial_tables.sql:8 @ af15d7f5",
-        "frontend/src/app/(console)/pricing/page.tsx:35 @ af15d7f5"
+        "frontend/src/app/(console)/pricing/page.tsx:35 @ af15d7f5",
+        "BillableMetricServiceTest.조회_경로와_겹치는_code의_미터는_만들지_않는다: 실패 Expecting code to raise a throwable",
+        "OpenApiDocumentTest.미터_등록의_400은_조회_경로와_겹쳐_쓸_수_없는_code를_적는다: 실패 (400 설명에 예약 code 없음)",
+        "커밋 01d7cbdf",
+        "커밋 921d9d04"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "01d7cbdf0262818d791968e9d2ba3b3e547ca812",
+        "921d9d04ae6735334db2f56aa78b37289e5926f7"
+      ],
+      "tests": [
+        "metric 시험: 통과",
+        "OpenApiDocumentTest 40개 통과",
+        "BillableMetricServiceTest.조회_경로와_겹치는_code의_미터는_만들지_않는다: 실패 확인 뒤 통과",
+        "OpenApiDocumentTest.미터_등록의_400은_조회_경로와_겹쳐_쓸_수_없는_code를_적는다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "git log af15d7f5 -- WorkspaceQueryController.java: 리터럴 경로는 f53222e7(#451)에서 들어왔고 뒤의 94a48a20(#453)도 그대로 둔다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "조회 경로와 겹치는 미터 code를 거절한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "C451-009",
@@ -10840,8 +11069,8 @@
         "G-171"
       ],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에도 지적이 그대로 남아 있다. 결제 취소는 Idempotency-Key를 UUID로만 받고 충돌하면 payment_cancellation_idempotency_conflict를 돌려주며 재생 헤더가 없다. 고객과 미터 생성이 쓰는 IdempotencyService는 1~255자 문자열을 받고 idempotency_conflict와 Idempotency-Replayed: true를 쓴다. 다만 취소의 UUID 전용 동작은 #445 담당자가 시험(멱등키가_UUID가_아니면_PG호출_전에_400이다)과 README로 의도를 고정했고, 고치려면 공개 계약인 오류 코드를 바꿔야 하며 프론트가 그 코드로 분기한다. 바뀌는 파일도 컨트롤러, 서비스, ErrorCode, 프론트 피드백, openapi.yaml로 셋을 넘고, 모든 엔드포인트의 키 규칙을 하나로 정하는 일은 팀 전체에 제약을 거는 합의 대상이라 결정이 필요하다. G-171에 덧붙은 legacy 범위 표현 차이는 V47 표 안의 CHECK로 일관되고 V45와 섞어 쓰는 코드가 없어 실패 경로가 없으며, 이미 적용된 V47은 고칠 수도 없다.",
       "evidence": [
@@ -10855,17 +11084,23 @@
         "backend/src/test/java/com/meterengine/payment/PaymentCancellationIntegrationTest.java:800-815 @ af15d7f5",
         "backend/README.md:327 @ af15d7f5",
         "frontend/src/app/(console)/workspace-action-feedback.ts:32 @ af15d7f5",
-        "backend/src/main/resources/db/migration/V47__add_conditional_resource_updates.sql:7,19 @ af15d7f5"
+        "backend/src/main/resources/db/migration/V47__add_conditional_resource_updates.sql:7,19 @ af15d7f5",
+        "OpenApiDocumentTest.결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다: 실패 (400 설명에 Idempotency-Key 없음)",
+        "커밋 4e6ebc79"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "4e6ebc79e4cc8efa61ea681c98c703501178d987"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 39개 통과",
+        "OpenApiDocumentTest.결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): 공개 오류 코드를 바꾸지 않고 엔드포인트별 멱등 계약 차이를 API 설명에 적는다",
       "decision_question": "Idempotency-Key 계약(헤더 형식, 409 오류 코드, Idempotency-Replayed 헤더)을 결제 취소까지 IdempotencyService 기준으로 하나로 맞추고 공개 코드 payment_cancellation_idempotency_conflict를 idempotency_conflict로 바꿀지, 아니면 엔드포인트별 계약을 지금처럼 두고 차이만 API 설명에 적을지 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/payment/controller/PaymentCancellationController.java:96-98: 헤더를 UUID 타입으로 받음",
@@ -10881,7 +11116,11 @@
         "docs/contributing/naming.md '원칙' 같은 개념에 같은 낱말, 고를 자유도를 남기지 않는다 @ af15d7f5; docs/contributing/error-handling.md 'code' 절 '계약은 code다' @ af15d7f5",
         "backend/src/main/resources/db/migration/V47__add_conditional_resource_updates.sql:7,19: G-171 legacy 표현은 표 안에서 일관",
         "git diff 17cc788 af15d7f5: 두 파일 모두 환경 범위만 더해졌고 헤더 형식, 충돌 코드, 재생 헤더는 그대로"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "decision": "doc: 공개 오류 코드를 바꾸지 않고 엔드포인트별 멱등 계약 차이를 API 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "G-118",
@@ -11162,8 +11401,8 @@
       "id": "Nk3-008",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적은 main에도 그대로 남아 있다. 개요 API는 pending까지 더한 금액을 null이 될 수 없는 outstanding_amount로 내고, 인보이스 검색과 공개 링크는 같은 키를 unpaid와 failed만 세며 pending이 있으면 null로 둔다. 화면 이름도 개요와 공개 링크가 똑같이 '결제 대기액'을 쓰는데 정의가 다르다. naming.md의 '같은 개념에 같은 낱말, 다른 개념에 다른 낱말'에 어긋나고 상태 분류가 세 파일에 따로 있다. 다만 고치려면 공개 DTO 필드 outstanding_amount의 이름이나 정의를 바꿔야 하는데, 박성종 님이 쓴 DashboardIntegrationTest가 pending 포함을 일부러 고정해 두었다. 공용 계산 타입으로 모으는 것도 시험을 빼고 네 파일 이상 바뀌는 유지보수 변경이라 판정 규칙상 결정이 먼저다.",
       "evidence": [
@@ -11175,17 +11414,21 @@
         "backend/openapi.yaml:8770 @ af15d7f5",
         "frontend/src/app/(console)/overview/page.tsx:24 @ af15d7f5",
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:228 @ af15d7f5",
-        "docs/contributing/naming.md:14 @ af15d7f5"
+        "docs/contributing/naming.md:14 @ af15d7f5",
+        "커밋 c93b2d31"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "c93b2d316aea9d5308be49a4bb3f1041fceadfd1"
+      ],
+      "tests": [
+        "OpenApiDocumentTest: 통과, 설명과 DashboardService, WorkspaceQueryService 대조"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(doc): outstanding_amount 이름과 값은 유지하고 정의를 응답 설명에 적는다",
       "decision_question": "개요 API의 outstanding_amount를 다른 엔드포인트와 같은 정의(unpaid와 failed 합, pending 합은 새 필드)로 바꿀지, 지금 값을 유지하고 키를 awaiting_amount처럼 새 이름으로 바꿀지, 아니면 이름은 두고 설명만 적을지 박성종 님이 정한다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:29: OUTSTANDING = unpaid, pending, failed",
@@ -11198,14 +11441,19 @@
         "backend/src/test/java/com/meterengine/dashboard/DashboardIntegrationTest.java:228: pending 한 건만 있는 달의 outstanding_amount를 1100으로 고정, 작성자 SEONGJONG PARK f53222e7",
         "docs/contributing/naming.md:14: '같은 개념에 같은 낱말, 다른 개념에 다른 낱말'",
         "git log af15d7f5 -- DashboardService.java: f53222e7(#451), 94a48a20(#453)만 있고 이 분류를 바꾼 커밋 없음"
-      ]
+      ],
+      "fails_without_fix": false,
+      "top_head": "main af15d7f5 same",
+      "summary": "개요 미수금 정의를 적는다(결정: 이름과 값 유지)",
+      "decision": "doc: outstanding_amount 이름과 값은 유지하고 정의를 응답 설명에 적는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Nk3-010",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 WorkspaceQueryController에는 @ApiResponse가 하나도 없고, OpenApiConfig.documentAccess는 401, 403, 429만 자동으로 더하므로 검색, 내보내기의 400 validation_error와 가격, 사용량, 청구 예정액, 인보이스의 404 customer_not_found가 openapi.yaml에 실리지 않는다. 내보내기 6종의 200은 여전히 text/csv에 type: string, format: byte로 나가고, 같은 저장소의 EventExportController만 format 없는 string을 명시한다. 고객과 미터의 PATCH는 200과 공통 응답만 적고, PUT의 409에는 customer_archived나 billable_metric_has_events, resource_archived만 있어 resource_version_conflict와 If-Match 형식 400이 빠져 있다. createCustomer와 createBillableMetric도 idempotency_conflict 409와 Idempotency-Replayed 헤더를 적지 않아 이 두 code는 ErrorResponse enum에만 있다. 넘길 때 head 이후 main 커밋은 404, customer_archived 409 같은 다른 응답만 더했고 이 지적은 고치지 않았다. error-handling.md 8행은 오류 code 목록을 openapi.yaml이 낸다고 정하므로 문서와 서버 동작이 어긋난 상태가 남아 있다.",
       "evidence": [
@@ -11224,17 +11472,23 @@
         "backend/src/main/java/com/meterengine/idempotency/service/IdempotencyService.java:82 @ af15d7f5",
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:101 @ af15d7f5",
         "backend/openapi.yaml:8921 @ af15d7f5",
-        "docs/contributing/error-handling.md:8 @ af15d7f5"
+        "docs/contributing/error-handling.md:8 @ af15d7f5",
+        "OpenApiDocumentTest 새 시험 6개: 실패 (400, 404, 409 응답과 재생 헤더 없음, CSV format byte)",
+        "커밋 ec1bc7fd"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ec1bc7fd11010ce8a3ed5ae8491c4bd5bf3b978e"
+      ],
+      "tests": [
+        "OpenApiDocumentTest 37개 통과",
+        "OpenApiDocumentTest 새 시험 6개: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:46: searchCustomers부터 파일 끝까지 @ApiResponse가 0개, 17cc788도 0개",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:570: exportCustomers가 ResponseEntity<byte[]>이고 200 스키마를 따로 적지 않음, 607 653 699 749 818도 같음",
@@ -11252,14 +11506,17 @@
         "backend/src/main/java/com/meterengine/customer/controller/CustomerController.java:101: createCustomer @ApiResponses에 409와 헤더 없음), BillableMetricController.java:68 @ af15d7f5 (createBillableMetric 409는 billable_metric_already_exists만",
         "backend/openapi.yaml:8921: resource_version_conflict, idempotency_conflict가 ErrorResponse enum에만 나옴",
         "docs/contributing/error-handling.md:8: 오류 code 목록은 openapi.yaml이 낸다"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491"
     },
     {
       "id": "Nk3-011",
       "merged_ids": [],
       "layer": 451,
-      "branch": "feat/billing-queries",
-      "status": "open",
+      "branch": "fix/s456-t-inho-billing-api",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "main에서도 문제는 그대로 남아 있습니다. DashboardResponse가 draft_invoice로 그 달 청구 예정 전체(모든 고객의 라인, 단가 없는 사용량, 음수 사용량)를 싣고, DashboardService가 preview 결과를 통째로 넣습니다. 개요 화면은 요약 필드(draft_supply_amount, unpriced_usage_count, negative_usage_count)만 읽고, frontend, demo, 백엔드 시험 어디에도 대시보드의 draft_invoice를 읽는 곳은 없습니다. 같은 데이터는 /v1/invoices/draft와 /v1/invoices/draft/search로 받을 수 있습니다. 다만 #451이 main에 머지되면서 이 필드는 @ReadAccess 엔드포인트의 응답과 openapi.yaml에 올라간 공개 DTO 필드가 됐습니다. 고치려면 공개 DTO 필드를 빼야 하므로 판정 규칙 5에 따라 결정이 필요합니다. 나머지 두 주장은 성립하지 않습니다. invoice_payments는 개요의 고객별 수납 현황 표가 실제로 쓰고, DashboardInvoice는 지금 InvoicePaymentResponse와 필드가 갈라진 곳이 없습니다.",
       "evidence": [
@@ -11286,7 +11543,6 @@
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '요금, 청구, 고객 API와 DB'(fix/s456-t-inho-billing-api) 승인됨, 고칠 차례. 결정안(keep): draft_invoice는 read API 키 호환 때문에 응답에 남긴다",
       "decision_question": "main에 배포된 공개 계약인 GET /v1/dashboard 응답에서 화면이 쓰지 않는 draft_invoice 필드를 빼도 되는지(read API 키 사용자 호환성을 감수할지) 정해야 합니다.",
       "evidence_notes": [
         "backend/src/main/java/com/meterengine/dashboard/dto/DashboardResponse.java:29: draft_invoice DraftInvoiceResponse 필드가 남음, 넘길 때 head 17cc788의 28행과 같음",
@@ -11303,7 +11559,10 @@
         "backend/openapi.yaml:8747: DashboardResponse 스키마에 draft_invoice가 계약으로 올라감",
         "backend/src/main/java/com/meterengine/query/controller/WorkspaceQueryController.java:264: 같은 데이터를 주는 /v1/invoices/draft/search",
         "backend/src/main/java/com/meterengine/invoice/controller/DraftInvoiceController.java:27: 같은 데이터를 주는 /v1/invoices/draft"
-      ]
+      ],
+      "decision": "keep: draft_invoice는 read API 키 호환 때문에 응답에 남긴다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/491",
+      "question": "세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(draft_invoice는 read API 키 호환 때문에 응답에 남긴다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다."
     },
     {
       "id": "X-026",
@@ -12987,6 +13246,52 @@
     }
   ],
   "checks": [
+    {
+      "kind": "frontend",
+      "command": "프론트 변경 없음",
+      "result": "not-applicable",
+      "branch": "fix/s456-t-inho-billing-api",
+      "sha": "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
+      "result": "not-applicable",
+      "detail": "NT-inho-006, NT-inho-007과 같은 이유로 실패(PR #471 머지 전). #471 명세 변경을 잠시 얹으면 두 명세 모두 통과",
+      "sha": "4e6ebc79",
+      "branch": "fix/s456-t-inho-billing-api"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 10개(aggregation, archive-filters, auth, customer-payment-retry, events, invoice-links, operator-create, people, permissions, query-workspace)",
+      "result": "pass",
+      "detail": "10개 파일 모두 통과. 뒤의 두 커밋은 API 설명과 시험만 바꿈",
+      "sha": "4e6ebc79",
+      "branch": "fix/s456-t-inho-billing-api"
+    },
+    {
+      "kind": "backend",
+      "command": "마이그레이션 적용 확인: V49까지 적용되고 데이터가 있는 실화면 DB(meterengine-0696-e2e)에 브랜치 백엔드 기동",
+      "result": "pass",
+      "detail": "V50, V51, V52와 R__seed 적용 성공, V52 CHECK는 NOT VALID",
+      "sha": "4e6ebc79",
+      "branch": "fix/s456-t-inho-billing-api"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build; git status --porcelain -- backend/openapi.yaml",
+      "result": "pass",
+      "detail": "BUILD SUCCESSFUL, tests 1398, openapi.yaml 변화 없음",
+      "branch": "fix/s456-t-inho-billing-api",
+      "sha": "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-billing-api",
+      "sha": "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6"
+    },
     {
       "kind": "screen",
       "command": "11절 6번 environment-cycle.real.spec.ts, mvp.real.spec.ts",
@@ -16626,6 +16931,11 @@
       "branch": "fix/s456-t-inho-events-query",
       "sha": "e4c8c1777f8bbd0554feaf5e2b3bd4c46f26d4b4",
       "at": "2026-10-29T17:42:55+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-billing-api",
+      "sha": "a0ec59729b27c717ac7d7f7d9a4597af82aabeb6",
+      "at": "2026-10-29T18:48:32+09:00"
     }
   ],
   "usage_log": [],
@@ -16673,7 +16983,8 @@
     "446": "https://github.com/asm17-ms2/meterengine/pull/468",
     "448": "https://github.com/asm17-ms2/meterengine/pull/469",
     "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471",
-    "events-query": "https://github.com/asm17-ms2/meterengine/pull/488"
+    "events-query": "https://github.com/asm17-ms2/meterengine/pull/488",
+    "billing-api": "https://github.com/asm17-ms2/meterengine/pull/491"
   },
   "final_checks": [
     {
