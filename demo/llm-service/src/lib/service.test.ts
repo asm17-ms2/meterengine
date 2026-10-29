@@ -298,13 +298,15 @@ test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않
   const store = new LumenStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
   t.after(() => store.close());
   const fake = clientFixture({ async ingestEvent() { throw new Error("offline"); } });
-  const service = new LumenService({ config: config(), store, client: fake.client, now: () => NOW });
+  let now = NOW;
+  const service = new LumenService({ config: config(), store, client: fake.client, now: () => now });
   const a = randomUUID();
   const b = randomUUID();
   await service.generate(ACCOUNT_A, { requestId: a, modelId: "lumen-fast", prompt: "앨리스" });
   await service.generate(ACCOUNT_B, { requestId: b, modelId: "lumen-fast", prompt: "밥" });
   await assert.rejects(() => service.retryMetering(ACCOUNT_A, { requestId: b }), error => error instanceof ServiceError && error.status === 404);
   fake.client.ingestEvent = async event => { fake.events.push({ ...event, transaction_id: event.transaction_id! }); return { transaction_id: event.transaction_id!, duplicate: false }; };
+  now = NOW + 6000;
   await service.retryMetering(ACCOUNT_A, {});
   assert.equal(service.getRequest(ACCOUNT_A, a).meteringStatus, "delivered");
   assert.equal(service.getRequest(ACCOUNT_B, b).meteringStatus, "failed");
