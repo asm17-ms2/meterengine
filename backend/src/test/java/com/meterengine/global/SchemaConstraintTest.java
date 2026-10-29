@@ -140,6 +140,21 @@ class SchemaConstraintTest {
             "invoice_line_quantity_fraction_pair");
   }
 
+  @Test
+  void 웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                    + " 'webhook_delivery_failure_reason_check'",
+                String.class))
+        .isEqualTo(
+            jdbcTemplate.queryForObject(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                        + " 'webhook_delivery_attempt_failure_reason_check'",
+                    String.class)
+                + " NOT VALID");
+  }
+
   // --- 단가 ---
 
   @Test
