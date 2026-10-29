@@ -219,10 +219,6 @@ public class ChargeService {
         .reduce(0L, Math::addExact);
   }
 
-  private static boolean active(String from, String until, String month) {
-    return from.compareTo(month) <= 0 && (until == null || until.compareTo(month) > 0);
-  }
-
   private static DecimalFraction quantity(BillableMetric metric, DimensionUsage usage) {
     return "none".equals(metric.getRoundingMode())
         ? new DecimalFraction(
