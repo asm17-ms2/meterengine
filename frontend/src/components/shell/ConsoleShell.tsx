@@ -9,6 +9,7 @@ import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { LogoutButton } from "@/components/auth/SessionControls";
 import { NavMenu } from "@/components/shell/NavMenu";
+import { BrandMark } from "@/components/shell/BrandMark";
 import { GuideModeToggle, useGuideMode } from "@/components/shell/GuideMode";
 import { workspaceHref } from "@/lib/workspace-href";
 import { TenantAccessProvider } from "@/components/auth/TenantAccess";
@@ -65,7 +66,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
     <header ref={headerRef} className="workspace-header">
       <div className="workspace-brand">
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="업무 메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />
-        <Link href={workspaceHref("/overview", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+        <Link href={workspaceHref("/overview", search, { inheritFilters: false })} className="wordmark"><BrandMark />MeterEngine</Link>
         <span className="workspace-divider" />
         <Link href="/organizations" className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span><SwapOutlined aria-hidden="true" /></Link>
       </div>
