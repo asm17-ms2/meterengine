@@ -15,7 +15,11 @@ export async function logoutAction(_prev: ActionState, data: FormData): Promise<
   const token = await readSessionToken();
   if (token) {
     const result = await requestApi<void>("/v1/sessions/current", { method: "DELETE", token });
-    if (!result.ok && result.error.status !== 401) return { message: "로그아웃을 완료하지 못했습니다. 다시 시도하세요." };
+    if (!result.ok && result.error.status !== 401) {
+      await clearSession();
+      revalidatePath("/", "layout");
+      redirect("/login?reason=logout_unconfirmed");
+    }
   }
   await clearSession();
   revalidatePath("/", "layout");

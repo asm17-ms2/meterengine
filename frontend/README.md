@@ -89,6 +89,7 @@ docker run -p 3000:3000 \
 
 - Next 서버가 `me_session` 쿠키를 백엔드 Bearer로 전달한다. 쿠키는 httpOnly, SameSite=Lax이며 프로덕션에서 Secure다. 도입사 API에 공용 API 키를 대신 쓰지 않는다.
 - 공개 로그인과 가입 요청에는 쿠키의 Bearer를 붙이지 않는다. 경로와 서버 액션에서 각각 인증을 검사한다.
+- 로그아웃 요청이 401 밖의 이유로 실패해도 이 브라우저의 `me_session` 쿠키는 지우고, 로그인 화면에서 서버 세션 종료를 확인하지 못했다고 알린다. 그 서버 세션은 만료 시각에 끝난다.
 - `src/lib/config.ts`, 인증과 API 클라이언트는 `server-only`다. 브라우저는 백엔드를 직접 호출하지 않는다.
 - 필터 선택지도 `no-store`로 조회한다. 같은 세션 토큰으로 도입사를 바꿀 수 있어 Authorization만으로 응답을 캐시하지 않는다. 고객과 미터 변경 뒤에는 `revalidatePath`로 화면을 갱신한다.
 
