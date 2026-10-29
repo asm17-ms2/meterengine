@@ -203,20 +203,20 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, q: narrowedQuery, page: null });
       await expect(eventLinks(page)).toHaveText([ids[54]]);
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       await expect(filters.getByLabel("이벤트 또는 고객 찾기", { exact: true })).toHaveValue(narrowedQuery);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       const unchangedUrl = page.url();
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(`${queryText}-edited`);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toBeVisible();
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(filters).toHaveAttribute("aria-busy", "false");
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       expect(page.url()).toBe(unchangedUrl);
     });
 
@@ -262,7 +262,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       for (const [label, days] of [["최근 24시간", 1], ["최근 7일", 7]] as const) {
         const draftQuery = days === 1 ? `${queryText}-draft` : queryText;
         await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(draftQuery);
-        await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toBeVisible();
+        await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
         await filters.getByRole("button", { name: label, exact: true }).click();
         await expectQuery(page, { ...preserved, q: draftQuery, month: null, range_mode: null, page: null });
         await expect(filters.getByRole("radio", { name: "직접 지정", exact: true })).toBeChecked();
