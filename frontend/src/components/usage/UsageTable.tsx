@@ -16,6 +16,12 @@ import { toMeterRows, type MeterRow } from "@/lib/grouped-rows";
 import type { ListQuery } from "@/lib/list-query";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
+
+function toDimensionText(values: Record<string, unknown>): string {
+  const entries = Object.entries(values);
+  return entries.length ? entries.map(([key, value]) => `${key}: ${String(value)}`).join(", ") : "차원 값 없음";
+}
+
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
@@ -162,7 +168,7 @@ export function UsageTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><h3>{group.customerName}</h3>{group.items.map((item, index) => <div key={index}>{item.kind === "meter" && <><div className="data-mobile-line"><span>{item.label} / 전체 집계값</span><strong className="numeric">{item.quantity}</strong></div>{item.lines[0]?.overallRawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {item.lines[0].overallRawQuantity}</p>}</>}{linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{item.kind === "meter" ? "차원별 집계값" : line.label}</span><strong className="numeric">{line.quantity}</strong></div>{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}{line.rawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {line.rawQuantity}</p>}</div>)}</div>)}</article>)}</div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><h3>{group.customerName}</h3>{group.items.map((item, index) => <div key={index}>{item.kind === "meter" && <><div className="data-mobile-line"><span>{item.label} / 전체 집계값</span><strong className="numeric">{item.quantity}</strong></div>{item.lines[0]?.overallRawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {item.lines[0].overallRawQuantity}</p>}</>}{item.kind === "meter" ? <div style={{ paddingLeft: 12, borderLeft: "2px solid var(--line)" }}><p className="field-hint">차원별 집계값</p>{linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{toDimensionText(line.dimensionValues)}</span><strong className="numeric">{line.quantity}</strong></div>{line.rawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {line.rawQuantity}</p>}</div>)}</div> : linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.quantity}</strong></div>{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{toDimensionText(line.dimensionValues)}</p>}{line.rawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {line.rawQuantity}</p>}</div>)}</div>)}</article>)}</div>
     <div className="data-desktop-table"><Table<UsageRow>
       rowKey="key"
       columns={columns}

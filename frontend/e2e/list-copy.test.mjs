@@ -83,3 +83,10 @@ test("usage and event screens drop the mismatched sub-tab rows and keep their cr
   assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 통보</ScopedLink>'));
 });
 
+test("mobile usage cards label each dimension row with its dimension values under one group heading", () => {
+  const usage = source("usage/UsageTable.tsx");
+  assert.ok(!usage.includes('item.kind === "meter" ? "차원별 집계값" : line.label'));
+  assert.ok(usage.includes("{toDimensionText(line.dimensionValues)}"));
+  assert.ok(usage.includes('<p className="field-hint">차원별 집계값</p>'));
+});
+
