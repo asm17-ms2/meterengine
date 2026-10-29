@@ -1,8 +1,8 @@
 {
   "package": "T-yang",
   "owner": "양성지",
-  "status": "running",
-  "updated_at": "2026-10-29T22:44:29+09:00",
+  "status": "done",
+  "updated_at": "2026-10-30T00:30:44+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -30,12 +30,12 @@
     "fix/s456-t-yang-ops-metrics": "6152c0b",
     "fix/s456-t-yang-readme": "6da19c6",
     "fix/s456-t-yang-e2e": "b78630c",
-    "fix/s456-t-yang-env-ui": "4d32e0b",
+    "fix/s456-t-yang-env-ui": "f062667",
     "fix/s456-t-yang-backend-cleanup": "6b954c5",
     "fix/s456-t-yang-demo-web-target": "a34c969",
     "fix/s456-t-yang-frontend-cleanup": "395d4b7",
     "fix/s456-t-yang-auth-session": "b562b3f",
-    "fix/s456-t-yang-month-picker": "6dd3dc9",
+    "fix/s456-t-yang-month-picker": "b19d150",
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
     "fix/s456-t-yang-pricing-archive": "a937f8f",
     "fix/s456-t-yang-reconcile-catchup": "8edf94b",
@@ -2183,13 +2183,17 @@
         "frontend/src/components/workspace/AuditScreen.tsx:54 @ af15d7f",
         "frontend/src/components/events/EventFilters.tsx:182 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
-        "커밋 6dd3dc9"
+        "커밋 6dd3dc9",
+        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "커밋 ad54b89"
       ],
       "commits": [
-        "6dd3dc98"
+        "6dd3dc98",
+        "ad54b897"
       ],
       "tests": [
-        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)",
+        "#486 리뷰 p4 반영 뒤 새 main을 받은 b19d150에서 단위 87건, auth 계약 66건, 카드 등록 계약 6건, 실화면 명세 12개, 화면 38개 비교 통과"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -2283,13 +2287,17 @@
         "frontend/e2e/auth.contract.spec.ts:28 @ af15d7f",
         "frontend/e2e/events.real.spec.ts:127 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
-        "커밋 6dd3dc9"
+        "커밋 6dd3dc9",
+        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "커밋 ad54b89"
       ],
       "commits": [
-        "6dd3dc98"
+        "6dd3dc98",
+        "ad54b897"
       ],
       "tests": [
-        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)",
+        "#486 리뷰 p4 반영 뒤 새 main을 받은 b19d150에서 단위 87건, auth 계약 66건, 카드 등록 계약 6건, 실화면 명세 12개, 화면 38개 비교 통과"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -2476,13 +2484,17 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:189 @ af15d7f",
         "frontend/src/lib/field-validation.ts:7 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
-        "커밋 6dd3dc9"
+        "커밋 6dd3dc9",
+        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "커밋 ad54b89"
       ],
       "commits": [
-        "6dd3dc98"
+        "6dd3dc98",
+        "ad54b897"
       ],
       "tests": [
-        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)",
+        "#486 리뷰 p4 반영 뒤 새 main을 받은 b19d150에서 단위 87건, auth 계약 66건, 카드 등록 계약 6건, 실화면 명세 12개, 화면 38개 비교 통과"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -3713,13 +3725,17 @@
         "frontend/e2e/events.real.spec.ts:241 @ af15d7f",
         "frontend/e2e/auth.contract.spec.ts:37 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
-        "커밋 6dd3dc9"
+        "커밋 6dd3dc9",
+        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "커밋 ad54b89"
       ],
       "commits": [
-        "6dd3dc98"
+        "6dd3dc98",
+        "ad54b897"
       ],
       "tests": [
-        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)"
+        "단위 80건, auth 계약 65건, 실화면 events, auth, customer-payment-retry, invoice-links, people, permissions 통과(6dd3dc9)",
+        "#486 리뷰 p4 반영 뒤 새 main을 받은 b19d150에서 단위 87건, auth 계약 66건, 카드 등록 계약 6건, 실화면 명세 12개, 화면 38개 비교 통과"
       ],
       "behavior_change": true,
       "judged_at": {
@@ -13663,6 +13679,2198 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-audit-env",
+      "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-backend-cleanup",
+      "sha": "6b954c5e3836a0d8be32b2b3ae8c636a06a4a8fa",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-bridge-web",
+      "sha": "c1ee7a864effd24cfccf48448946e7ec40104795",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a34c969652f67c2a3aa1cef9fcb171b687466ba9",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "b78630cf6c4061d1fe714da3a9819008fe063646",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-frontend-cleanup",
+      "sha": "395d4b73833f4963a2b80eed24fcae2c7fe1311e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-retry",
+      "sha": "59e548e6226dc5b48d4fc4f731676effb68179bf",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-lumen",
+      "sha": "7ed660ffb79c732e31614189ed2ef785b1987f21",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-pricing-archive",
+      "sha": "a937f8f2475ba14c86d5fae64eab638345543b75",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-public-invoice",
+      "sha": "22943db4447bea66d5ebcadfecd29c8f003f291d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme",
+      "sha": "6da19c6b0f662e318a7350ff11a80e5cc6358692",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검: 통과 첫 실행(10-29 23:56)에서 1건 실패(정지 카드 재시도 허용 false 기대, true). 같은 sha에서 DB를 새로 띄워 두 번 다시 돌려 모두 통과. 카드 인증 시각은 호스트 시계, 실패 시각은 컨테이너 DB 시계라 시계 차이로 보임"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-reconcile-catchup",
+      "sha": "8edf94b87554f6656db6d4955f2aa6b4a22228d3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp (origin/main #471 판 명세를 얹어)",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-sidebar-nav",
+      "sha": "63a0b57be4799cdf645caa0c285ba512b74284e2",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-toss-key",
+      "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=. bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공(새 main 1286548을 받은 뒤)"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 87, pass 87"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build",
+      "detail": "모두 성공(새 main 1286548을 받은 뒤)"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 87, pass 87"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; playwright test -c playwright.workspace.config.ts; playwright test -c playwright.payment.config.ts",
+      "detail": "인증 계약 66건, 업무 계약 12건, 카드 등록 계약 6건 통과"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract; playwright test -c playwright.workspace.config.ts; playwright test -c playwright.payment.config.ts",
+      "detail": "인증 계약 66건, 카드 등록 계약 6건 통과. 업무 계약 7 통과 2 실패는 main 기준선과 같은 두 시험(#481이 고침)이라 나빠지지 않았다"
     }
   ],
   "pushes": [
@@ -14185,6 +16393,16 @@
       "branch": "fix/s456-t-yang-toss-key",
       "sha": "f7eb3893e8e5f3d0d174dae1f9aa2c446967c591",
       "at": "2026-10-29T22:44:29+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-env-ui",
+      "sha": "f06266740e5db9898ad4e44146cbc3ec001b5569",
+      "at": "2026-10-30T00:29:59+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-month-picker",
+      "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
+      "at": "2026-10-30T00:29:59+09:00"
     }
   ],
   "usage_log": [],
@@ -14232,7 +16450,12 @@
     "2026-10-29: 사용자가 gh 토큰에 workflow 권한을 더해 G-187 브랜치를 push하고 #494를 열었다(박성종 님, 문인호 님 리뷰어). 룰셋 필수 체크 추가는 PR 본문에서 박성종 님께 요청했다.",
     "2026-10-29: #494 박성종 님 리뷰 p4 두 건(deploy 경로 필터의 바깥 입력, demo 콘솔 시험의 textual)을 반영했다(84c47c7).",
     "2026-10-29: #474 박성종 님 리뷰 p4(16:31, 그동안 놓침)를 받아 Lumen 청구 오류 검사 순서를 고쳤다(7ed660f). push 전에 main(#471)을 받았다(6cae14b).",
-    "2026-10-29: #476 문인호 님 리뷰 p4(키 교체 뒤 옛 승인의 토스 외부 취소 누락)를 받아 현재 키가 대사하지 않는 옛 키의 거래를 맡게 고쳤다(f7eb389). 옛 키가 다른 상점 키인 경우는 남는다고 커밋에 적었다. push 전에 main(#471)을 받았다(35a26e1)."
+    "2026-10-29: #476 문인호 님 리뷰 p4(키 교체 뒤 옛 승인의 토스 외부 취소 누락)를 받아 현재 키가 대사하지 않는 옛 키의 거래를 맡게 고쳤다(f7eb389). 옛 키가 다른 상점 키인 경우는 남는다고 커밋에 적었다. push 전에 main(#471)을 받았다(35a26e1).",
+    "2026-10-30: 15절 마지막 실화면 점검을 마쳤다. main 기준 주제 브랜치 19개를 마지막 push sha에서 브랜치마다 DB를 새로 띄워 실화면 명세 12개를 파일마다 돌렸다. main(af15d7f)을 받지 않은 브랜치는 environment-cycle, mvp가 af15d7f 기준선대로 실패했고, 그 브랜치에 origin/main(#471) 판 두 명세를 얹어 돌리면 통과했다. 결과는 evidence/final-<PR>/specs.txt에 있다.",
+    "2026-10-30: 화면 지적의 after 증거가 main 기준 수정에는 없어서, main(9df2768)에서 라우트 19개를 데스크톱과 모바일로 찍어 기준선으로 쓰고 프론트를 바꾼 브랜치 9개와 비교했다. 콘솔 오류, 가로 넘침, axe 위반이 늘어난 화면은 없다(evidence/final-<PR>/screens-compare.txt). 스크린샷 PNG는 용량 때문에 .s456-work/final에만 두고 screens.json만 올렸다.",
+    "2026-10-30: reconcile-catchup(8edf94b)의 customer-payment-retry가 첫 실행(10-29 23:56)에서 1건 실패했다(정지 카드 재시도 허용이 true). 같은 sha에서 DB를 새로 띄워 두 번 다시 돌려 모두 통과했다. 카드 인증 시각은 PG 대역의 호스트 시계, 실패 시각은 컨테이너 DB 시계라 두 시계 차이로 보이며 이 브랜치의 대사 코드와 관계없다.",
+    "2026-10-30: 점검 중 main이 움직였다(#471, 이어서 #472~#477, #479, #482, #484, #487, #489, #490이 마지막 push sha 그대로 머지됨). env-ui는 #471 판 environment-cycle을 얹으면 옛 '결제 환경' 문구로 실패해, 지침(나중에 머지하는 PR이 main을 받는다)대로 main을 받아 풀었다. 충돌은 environment-cycle 명세(8e8acaa)와 workspace-actions.ts(f062667)의 import 한 줄씩이라 둘 다 남겼다. 처음 프롬프트의 '충돌이면 중단'은 박성종 님 지침이 우선이라 따르지 않았다.",
+    "2026-10-30: #486 문인호 님 리뷰 p4(직접 쓴 월을 Enter 없이 조회하거나 Enter로 제출하면 이전 달을 조회)를 받아 월 선택기가 blur와 Enter 때 쓴 월을 먼저 확정하게 고쳤다(ad54b89). env-ui(f062667)와 month-picker(b19d150)는 새 main을 받은 sha에서 다시 점검해 실화면 명세 12개와 화면 비교가 통과했고, 옛 sha의 점검은 대체했다."
   ],
   "final_checks": [
     {

@@ -1,0 +1,12 @@
+aggregation: 통과 1 passed (7.8s) rc=0
+archive-filters: 통과 2 passed (14.5s) rc=0
+auth: 통과 3 passed (5.6s) rc=0
+customer-payment-retry: 통과 6 passed (7.0s) rc=0
+environment-cycle: 통과 1 passed (11.2s) rc=0
+events: 통과 1 passed (7.2s) rc=0
+invoice-links: 통과 3 passed (3.8s) rc=0
+mvp: 통과 1 passed (50.6s) rc=0
+operator-create: 통과 1 passed (2.4s) rc=0
+people: 통과 1 passed (10.2s) rc=0
+permissions: 통과 6 passed (13.8s) rc=0
+query-workspace: 통과 1 passed (9.7s) rc=0

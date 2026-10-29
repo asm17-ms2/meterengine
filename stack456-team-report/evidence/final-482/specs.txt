@@ -1,0 +1,14 @@
+aggregation: 통과 1 passed (7.4s) rc=0
+archive-filters: 통과 2 passed (16.8s) rc=0
+auth: 통과 3 passed (6.2s) rc=0
+customer-payment-retry: 통과 6 passed (7.0s) rc=0
+environment-cycle: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과
+events: 통과 1 passed (6.7s) rc=0
+invoice-links: 통과 3 passed (3.8s) rc=0
+mvp: 실패 1 failed rc=1. af15d7f 기준선 실패(#471 전 명세)이고 #471 판 명세로는 통과
+operator-create: 통과 1 passed (2.4s) rc=0
+people: 통과 1 passed (9.8s) rc=0
+permissions: 통과 6 passed (13.3s) rc=0
+query-workspace: 통과 1 passed (10.2s) rc=0
+environment-cycle(#471 판): 통과 1 passed (14.4s) rc=0
+mvp(#471 판): 통과 1 passed (1.4m) rc=0
