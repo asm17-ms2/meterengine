@@ -170,6 +170,43 @@ class BatchSendTest(unittest.TestCase):
         self.assertIn("UNKNOWN", records[3]["error"])
         self.assertIn("NOT_SENT", records[4]["error"])
 
+    def test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                try:
+                    rows = json.loads(body_text)["events"]
+                except ValueError:
+                    return _result(400, {"code": "malformed_request_body", "message": "본문을 읽을 수 없습니다"})
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        events = _events(3)
+        events[1].properties_text = '{"quantity":'
+        args = Args()
+        args.batch_size = 3
+        client = BatchClient([(400, {"code": "malformed_request_body", "message": "본문을 읽을 수 없습니다"})])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(events, client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3])
+        self.assertEqual([row["outcome"] for row in records], ["new", "rejected", "new"])
+        self.assertEqual(code, 0)
+
+    def test_봉투_전체를_거절한_4xx는_rejected가_아닌_error로_센다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                return _result(400, {"code": "validation_error", "message": "요청 값이 올바르지 않습니다"})
+
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(_events(2), client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["outcome"] for row in records], ["error", "error"])
+        self.assertEqual(code, 2)
+
     def test_배치의_속성_숫자는_원문_자릿수를_그대로_보낸다(self):
         class BatchClient(FakeClient):
             def post_events(self, body_text):

@@ -22,7 +22,7 @@ from core.api_client import (
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import Prediction, predict_send
 from core.jsonl_log import JsonlLogWriter, classify_outcome
-from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, parse_rfc3339
+from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, parse_properties, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
 LOGS_DIR = os.path.join(
@@ -133,45 +133,65 @@ def _send_batches(events, client, writer, counts, notes, console, args):
         if start:
             _pause(args.interval, args.jitter)
         chunk = events[start:start + batch_size]
+        # 속성이 깨진 행은 봉투 전체를 깨뜨리므로 단건으로 보내 서버가 그 행만 판정하게 한다.
+        broken = {offset for offset, event in enumerate(chunk) if not _has_valid_properties(event)}
+        batched = [event for offset, event in enumerate(chunk) if offset not in broken]
         sent_at = datetime.now(KST).isoformat()
-        raw = '{"events":[' + ','.join(build_body_text(event) for event in chunk) + ']}'
-        result = None
-        failure = None
-        try:
-            result = client.post_events(raw)
-        except (TransportError, KeyboardInterrupt) as error:
-            failure = "UNKNOWN: " + (str(error) or "전송 중 중단되어 저장 여부를 확인할 수 없습니다")
-        rows = (result.body or {}).get("results") if result is not None and isinstance(result.body, dict) else None
-        valid_rows = result is not None and result.status == 200 and isinstance(rows, list) and len(rows) == len(chunk) and all(isinstance(row, dict) and row.get("index") == index and row.get("transaction_id") == chunk[index].transaction_id and row.get("result") in ("stored", "duplicate", "rejected") for index, row in enumerate(rows))
-        if not valid_rows and failure is None:
-            if result is not None and 400 <= result.status < 500:
-                failure = parse_problem(result.status, result.body).summary()
-                auth_problem = parse_problem(result.status, result.body) if is_auth_failure(result.status) else None
-            else:
-                failure = "UNKNOWN: 배치 응답으로 각 이벤트의 저장 여부를 확인할 수 없습니다"
+        result, rows, failure, problem = _post_batch(client, batched) if batched else (None, [], None, None)
+        auth_problem = auth_problem or problem
+        stop = failure is not None or problem is not None
+        batch_rows = iter(rows or [])
         for offset, event in enumerate(chunk):
-            if valid_rows:
-                row = rows[offset]
+            seq = start + offset + 1
+            if offset in broken and failure is None:
+                outcome, summary, single_problem = _send_one(client, writer, seq, event, args.verbose)
+                auth_problem = auth_problem or single_problem
+                stop = stop or single_problem is not None or outcome == "error"
+            elif offset in broken:
+                outcome, summary = "error", "NOT_SENT: 앞선 요청 이후 전송을 중단했습니다"
+                writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=None, response_text=None, outcome=outcome, error=summary, elapsed_ms=None)
+            elif failure is None:
+                row = next(batch_rows)
                 outcome = {"stored": "new", "duplicate": "duplicate", "rejected": "rejected"}[row["result"]]
                 summary = row["result"]
                 if row.get("error"):
                     summary += ": " + parse_problem(400, row["error"]).summary()
-                response_text = json.dumps(row, ensure_ascii=False)
-                error = None
+                writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=result.status, response_text=json.dumps(row, ensure_ascii=False), outcome=outcome, error=None, elapsed_ms=result.elapsed_ms)
             else:
-                outcome = "rejected" if result is not None and 400 <= result.status < 500 else "error"
-                summary = failure
-                response_text = result.body_text if result is not None else None
-                error = failure
+                outcome, summary = "error", failure
+                writer.write_send(seq=seq, sent_at_text=sent_at, request_body_text=build_body_text(event), status=result.status if result is not None else None, response_text=result.body_text if result is not None else None, outcome=outcome, error=failure, elapsed_ms=result.elapsed_ms if result is not None else None)
             counts[outcome] += 1
             sent += 1
             counts["_sent"] = sent
-            writer.write_send(seq=start + offset + 1, sent_at_text=sent_at, request_body_text=build_body_text(event), status=result.status if result is not None else None, response_text=response_text, outcome=outcome, error=error, elapsed_ms=result.elapsed_ms if result is not None else None)
-            for line in format_send_pair(console, start + offset + 1, len(events), event, outcome, summary, notes.get(start + offset, "")):
+            for line in format_send_pair(console, seq, len(events), event, outcome, summary, notes.get(seq - 1, "")):
                 print(line)
-        if not valid_rows:
+        if stop:
             break
     return sent, auth_problem
+
+
+def _has_valid_properties(event: Event) -> bool:
+    try:
+        parse_properties(event.properties_text)
+    except ValueError:
+        return False
+    return True
+
+
+# 봉투 전체가 거절되면 각 행의 저장 여부를 알 수 없으므로 rejected가 아니라 error로 센다.
+def _post_batch(client: ApiClient, batched: List[Event]):
+    raw = '{"events":[' + ','.join(build_body_text(event) for event in batched) + ']}'
+    try:
+        result = client.post_events(raw)
+    except (TransportError, KeyboardInterrupt) as error:
+        return None, None, "UNKNOWN: " + (str(error) or "전송 중 중단되어 저장 여부를 확인할 수 없습니다"), None
+    rows = (result.body or {}).get("results") if isinstance(result.body, dict) else None
+    if result.status == 200 and isinstance(rows, list) and len(rows) == len(batched) and all(isinstance(row, dict) and row.get("index") == index and row.get("transaction_id") == batched[index].transaction_id and row.get("result") in ("stored", "duplicate", "rejected") for index, row in enumerate(rows)):
+        return result, rows, None, None
+    if 400 <= result.status < 500:
+        problem = parse_problem(result.status, result.body)
+        return result, None, problem.summary(), problem if is_auth_failure(result.status) else None
+    return result, None, "UNKNOWN: 배치 응답으로 각 이벤트의 저장 여부를 확인할 수 없습니다", None
 
 
 def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event, verbose: bool):
