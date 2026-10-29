@@ -739,7 +739,9 @@ paths:
         같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
       operationId: createBillableMetric
       parameters:
-      - in: header
+      - description: 1~255자 재시도 키. 같은 도입사와 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지
+          그대로 돌려준다. 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.
+        in: header
         name: Idempotency-Key
         required: false
         schema:
@@ -1835,7 +1837,10 @@ paths:
         billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
       operationId: createCustomer
       parameters:
-      - in: header
+      - description: 1~255자 재시도 키. 같은 도입사와 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지
+          그대로 돌려준다. 이름과 billing_email을 담은 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은
+          바뀌지 않는다.
+        in: header
         name: Idempotency-Key
         required: false
         schema:

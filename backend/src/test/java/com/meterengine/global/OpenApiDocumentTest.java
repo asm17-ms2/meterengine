@@ -283,6 +283,24 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다() {
+    for (String path : List.of("/v1/customers", "/v1/billable-metrics")) {
+      List<String> descriptions = new ArrayList<>();
+      root()
+          .path("paths")
+          .path(path)
+          .path("post")
+          .path("parameters")
+          .forEach(
+              parameter -> {
+                if (parameter.path("name").asText().equals("Idempotency-Key"))
+                  descriptions.add(parameter.path("description").asText());
+              });
+      assertThat(descriptions).as(path).singleElement().asString().contains("기한 없이");
+    }
+  }
+
+  @Test
   void 단가_응답의_tiers는_구간_객체의_배열이다() {
     JsonNode schemas = root().path("components").path("schemas");
     for (String schema : List.of("PriceRateResponse", "BillableMetricPricePriceRate")) {

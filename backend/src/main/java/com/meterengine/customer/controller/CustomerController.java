@@ -162,7 +162,11 @@ public class CustomerController {
       @CurrentOrganizationId UUID organizationId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Valid @RequestBody CreateCustomerRequest request,
-      @RequestHeader(name = "Idempotency-Key", required = false) @StorableText
+      @Parameter(
+              description =
+                  "1~255자 재시도 키. 같은 도입사와 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지 그대로 돌려준다. 이름과 billing_email을 담은 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.")
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          @StorableText
           String idempotencyKey) {
     ResponseEntity<CustomerResponse> response =
         idempotencyService.execute(
