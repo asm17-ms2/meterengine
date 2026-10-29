@@ -1,8 +1,8 @@
 {
   "package": "T-inho",
   "owner": "문인호",
-  "status": "stopped",
-  "updated_at": "2026-10-29T14:58:16+09:00",
+  "status": "running",
+  "updated_at": "2026-10-29T15:42:04+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -8277,9 +8277,11 @@
     },
     {
       "merged_ids": [],
-      "branch": "main",
+      "branch": "fix/s456-t-inho-real-spec-baseline",
       "verdict": "confirmed",
-      "commits": [],
+      "commits": [
+        "33736544339dfd8433a4337bd76fa7b8938f2056"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
@@ -8288,25 +8290,32 @@
       },
       "id": "NT-inho-006",
       "layer": 451,
-      "status": "open",
+      "status": "fixed",
       "title": "environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다",
       "reason": "main의 개요 화면은 h1을 formatKoreanMonth(month)로 그려 '2026년 10월 과금 운영'이 된다. #453이 더한 environment-cycle.real.spec.ts 143행은 넘길 때 head(17cc788)의 문구 '이번 달 과금 운영'을 그대로 기대해, 바꾸지 않은 main 실화면 환경에서 두 번 모두 그 단계에서 실패한다. 문구는 #451 squash(f53222e7)에서 바뀌었고 명세는 따라가지 않았다.",
       "evidence": [
         "frontend/src/app/(console)/overview/page.tsx:23 @ af15d7f5",
         "frontend/e2e/environment-cycle.real.spec.ts:143-144 @ af15d7f5",
         "environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5",
-        "커밋 f53222e7"
+        "커밋 f53222e7",
+        "environment-cycle.real.spec.ts: 실패 heading \"이번 달 과금 운영\" element(s) not found",
+        "environment-cycle.real.spec.ts: 통과 1 passed",
+        "커밋 33736544"
       ],
       "tests": [
-        "environment-cycle.real.spec.ts 두 번 실행, 두 번 실패"
+        "environment-cycle.real.spec.ts: 고치기 전 main af15d7f5에서 두 번 실패, 고친 뒤 1 passed"
       ],
-      "left": "main 기준선 실패. 명세를 화면에 맞출지(어느 PR로 고칠지) 사람이 정한 뒤 이어 간다"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471)"
     },
     {
       "merged_ids": [],
-      "branch": "main",
+      "branch": "fix/s456-t-inho-real-spec-baseline",
       "verdict": "confirmed",
-      "commits": [],
+      "commits": [
+        "33736544339dfd8433a4337bd76fa7b8938f2056"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
@@ -8315,22 +8324,66 @@
       },
       "id": "NT-inho-007",
       "layer": 442,
-      "status": "open",
+      "status": "fixed",
       "title": "mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다",
       "reason": "main의 ActionPanel close()는 비밀값을 복사하지 않고 닫으면 window.confirm으로 묻는다(2db50b44, #442 squash 1b2c555d). Playwright는 확인 창을 기본으로 거절해 대화상자가 남고, mvp.real.spec.ts 128-129행은 Escape 뒤 '수신 주소 등록' 버튼을 누르려다 모달에 막혀 바꾸지 않은 main 실화면 환경에서 두 번 모두 실패한다.",
       "evidence": [
         "frontend/src/components/workspace/ActionPanel.tsx:99 @ af15d7f5",
         "frontend/e2e/mvp.real.spec.ts:128-129 @ af15d7f5",
         "mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5",
-        "커밋 1b2c555d"
+        "커밋 1b2c555d",
+        "mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events",
+        "mvp.real.spec.ts: 통과 1 passed",
+        "커밋 33736544"
       ],
       "tests": [
-        "mvp.real.spec.ts 두 번 실행, 두 번 실패"
+        "mvp.real.spec.ts: 고치기 전 main af15d7f5에서 두 번 실패, 고친 뒤 1 passed"
       ],
-      "left": "main 기준선 실패. 명세가 확인 창을 받게 고칠지(어느 PR로 고칠지) 사람이 정한 뒤 이어 간다"
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471)"
     }
   ],
   "checks": [
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 79, pass 79, fail 0"
+    },
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "kind": "screen",
+      "command": "11절 6번 mvp.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "kind": "screen",
+      "command": "11절 6번 environment-cycle.real.spec.ts (main 실화면 환경, 새 DB)",
+      "result": "pass",
+      "detail": "1 passed"
+    },
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint",
+      "result": "pass",
+      "detail": "명세 두 파일만 바뀌어 사람 지시(2026-10-29)대로 lint를 돌렸다. 빌드 대상 코드는 바뀌지 않았고 main 기준선 빌드는 통과했다"
+    },
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
+      "result": "pass"
+    },
     {
       "branch": "main",
       "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
@@ -11859,6 +11912,11 @@
       "branch": "fix/s456-448-t-inho",
       "sha": "cea0a761b42ddf4b052955f7a957887f6ea22f23",
       "at": "2026-10-29T01:21:32+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-real-spec-baseline",
+      "sha": "33736544339dfd8433a4337bd76fa7b8938f2056",
+      "at": "2026-10-29T15:40:49+09:00"
     }
   ],
   "usage_log": [],
@@ -11893,13 +11951,16 @@
     "demo의 corepack pnpm -r build는 main에서 통과한다. build 스크립트가 없는 demo/sdk는 건너뛰고(Scope: 3 of 4) web, llm-service만 빌드하므로 not-applicable로 적지 않았다.",
     "로컬 DB: 2026-10-29 docker compose down -v로 compose 프로젝트 meterengine의 meterengine_postgres-data(V20까지 적용)를 지우고 main 기준으로 다시 띄웠다. 실화면 환경 DB(meterengine-0696-e2e)도 main에서 새로 만들었다.",
     "넘기기 자료 41d92a5: findings.json은 바뀌지 않았다. common-brief 10절 표에 archive-filters가 더해졌고 orchestration.md가 생겼다. 바뀐 규칙(main 기준)이 이보다 우선한다.",
-    "1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다."
+    "1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다.",
+    "2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.",
+    "PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다."
   ],
   "fix_prs": {
     "443": "https://github.com/asm17-ms2/meterengine/pull/465",
     "444": "https://github.com/asm17-ms2/meterengine/pull/466",
     "446": "https://github.com/asm17-ms2/meterengine/pull/468",
-    "448": "https://github.com/asm17-ms2/meterengine/pull/469"
+    "448": "https://github.com/asm17-ms2/meterengine/pull/469",
+    "real-spec-baseline": "https://github.com/asm17-ms2/meterengine/pull/471"
   },
   "final_checks": [
     {

@@ -1,8 +1,8 @@
-미완료 195건, 결과: 끝 상태 179/372건 (fixed 127, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76)
+미완료 193건, 결과: 끝 상태 179/372건 (fixed 127, refuted 2, already-fixed 8(그중 fixed-above 3), needs-decision 36, blocked 6(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654)
 정할 것: 39건 (X-012, D-071, G-075, G-085, D-011, D-065, G-072, G-080, C443-002, D-039, D-055, D-244, D-022, G-084, G-078, D-237, Ck2-007, D-045, C444-002, G-140, Ck2-005, Ck2-009, Ck2-010, Ck2-011, Ck2-012, Ck2-015, G-151, Ck3-446-03, Ck3-446-07, Ck3-446-08, Ck3-446-09, G-092, G-095, C448-002, G-169, Ck1-448-04, NT-inho-001, NT-inho-003, NT-inho-004). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: stopped, 갱신 2026-10-29T14:58:16+09:00
+상태: running, 갱신 2026-10-29T15:42:04+09:00
 
 ## 층별 상태
 
@@ -139,6 +139,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | Nk1-002 | #448 | df3caf7 | v1 경로 변수가 요청 감사 대상인지 대상에서 뺀 이름인지 시험으로 강제한다 | 없음(이 층 라우트 변수(code, delivery_id, id, mode, organization_id, token)는 모두 분류돼 있어 고치기 전에 실패하는 시험을 만들 수 없다. 새 RequestAuditTarget) |
 | Nk1-003 | #448 | c2991ef | 요청 감사가 감사 행을 AuditLogService로 남기고 익명 행위자를 AuditActor에서 만든다 | 없음(동작이 같은 리팩터링이라 고치기 전에 실패하는 시험을 쓸 수 없다. ./gradlew test --tests 'com.meterengine.audit.*' --tests 'com.meterengine.global.s) |
 | X-045 | #448 | cea0a76 | 감사 기록을 한 목록으로 촘촘하게 보이고 거절과 오류 요청은 붉은 태그로 표시한다 | the audit list marks rejected requests and keeps entries compact: 실패 Expected <= 80 Received 120.84375 (항목 간격), 거절 태그 0개 |
+| NT-inho-006 | #451 | 3373654 | environment-cycle 명세가 개요 제목을 화면과 같은 formatKoreanMonth로 만들어 기대한다(PR #471) | environment-cycle.real.spec.ts: 실패 heading '이번 달 과금 운영' element(s) not found @ af15d7f5 |
+| NT-inho-007 | #442 | 3373654 | mvp 명세가 API 키와 웹훅 비밀값을 복사한 뒤 닫는다(PR #471) | mvp.real.spec.ts: 실패 locator.click Timeout, ant-modal-wrap intercepts pointer events @ af15d7f5 |
 
 ## 정할 것
 
@@ -203,8 +205,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | NT-inho-003 | #444 | needs-decision | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
 | NT-inho-004 | #448 | needs-decision | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
 | NT-inho-005 | #448 | already-fixed | #448 head의 archive-filters.real.spec.ts가 고객 목록의 '관리 상태' 선택 필터를 찾지 못해 실패한다 |
-| NT-inho-006 | #451 | open | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
-| NT-inho-007 | #442 | open | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
+| NT-inho-006 | #451 | fixed | environment-cycle 실화면 명세가 개요 h1을 '이번 달 과금 운영'으로 기대하는데 main은 선택한 달 이름을 그린다 |
+| NT-inho-007 | #442 | fixed | mvp 실화면 명세가 API 키 발급 뒤 Escape로 닫는데 main은 복사 전 닫기를 확인 창으로 묻는다 |
 
 ## 돌리지 못한 검사
 
@@ -319,3 +321,5 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 - 로컬 DB: 2026-10-29 docker compose down -v로 compose 프로젝트 meterengine의 meterengine_postgres-data(V20까지 적용)를 지우고 main 기준으로 다시 띄웠다. 실화면 환경 DB(meterengine-0696-e2e)도 main에서 새로 만들었다.
 - 넘기기 자료 41d92a5: findings.json은 바뀌지 않았다. common-brief 10절 표에 archive-filters가 더해졌고 orchestration.md가 생겼다. 바뀐 규칙(main 기준)이 이보다 우선한다.
 - 1단계 판정 준비: 판정 대상은 open_ids 193건과 needs-decision 36건, blocked 5건(항목 219개, 원인 묶음 166개)과 새 지적 needs-decision 3건이다. 시범으로 g0(X-012 묶음, 두 관점)만 main에서 다시 판정했고 다섯 건 모두 needs-decision이 유지된다. 로컬 e4da2fa(C446-001)는 쓰지 않고 main에서 다시 판정한다.
+- 2026-10-29 사람 지시: environment-cycle.real.spec.ts(NT-inho-006, 개요 제목 '이번 달 과금 운영' 기대)와 mvp.real.spec.ts(NT-inho-007, API 키 발급 뒤 Escape 닫기)는 main에서 이미 실패하는 시험으로 기록하고 기준선에서 뺀다. 앞으로 검사에서 이 두 파일이 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다. 다른 이유로 실패하면 멈춘다.
+- PR #471(fix/s456-t-inho-real-spec-baseline)이 NT-inho-006, NT-inho-007을 고쳤다. 이 PR이 main에 머지되기 전까지 다른 주제 브랜치의 검사에서 environment-cycle과 mvp 명세가 같은 이유로 실패하면 screen을 not-applicable로 적고 멈추지 않는다.
