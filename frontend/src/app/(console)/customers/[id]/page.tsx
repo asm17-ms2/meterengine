@@ -28,7 +28,13 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     aggregateBillableMetricUsages(readListQuery({ month, customer_id: id }, CAPABILITIES.aggregateBillableMetricUsages, { hasMonth: true }), "normal"),
     workspaceFetch<{ payment_methods: CardResponse[] }>("/v1/payment-methods", { status: cardStatus }),
   ]);
-  if (!customer.ok) return <WorkspaceError message={customer.error.message} />;
+  if (!customer.ok) return <>
+    <WorkspaceHeader title={customer.error.status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"} kicker="도입사 콘솔"
+      description={customer.error.status === 404 ? "주소가 잘못됐거나 다른 도입사나 업무 환경의 고객일 수 있습니다. 현재 도입사와 업무 환경을 확인하세요." : "고객 정보를 불러오지 못했습니다."}>
+      <Link href="/customers">고객 목록으로</Link>
+    </WorkspaceHeader>
+    <WorkspaceError message={customer.error.message} status={customer.error.status} />
+  </>;
   const detail = customer.data;
   const paymentById = new Map(payments.ok ? payments.data.invoice_payments.map(payment => [payment.invoice_id, payment]) : []);
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: `${metric.name} (${metric.code})`, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];

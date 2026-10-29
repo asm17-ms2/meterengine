@@ -204,6 +204,14 @@ test("a customer edit that lost a version race offers to load the latest values 
   await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
 });
 
+test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByText("다른 도입사나 업무 환경의 고객일 수 있습니다", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "고객 목록으로", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
 test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
