@@ -20,11 +20,12 @@ const session = {
 const invoice = { id: INVOICE_ID, customer_id: "77777777-7777-4777-8777-777777777777", customer_name: "계약 고객", month: "2026-10", supply_amount: 10_000, tax_amount: 1_000, total_amount: 11_000, finalized_at: NOW, lines: [] };
 const attempt = { id: ATTEMPT_ID, invoice_id: INVOICE_ID, status: "done", amount: 11_000, mode: "test", failure_message: null, requested_at: NOW };
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const FAR_CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
 const initialState = () => ({
   scenario: "normal", cancellationCalls: [], cancellations: [], cancellationEffects: 0,
   cancellationCompletedAfterMs: null, idempotentResults: new Map(), lostResponseSent: false, rejectionSent: false,
   retryCalls: 0, deliveryStatus: "failed", keyCalls: [], apiKeys: [],
-  activeOrganization: organization, initialSessionReturned: false, customerSearchReturned: false, customerQueries: [], invoiceListCalls: [], invoiceSearchCalls: 0,
+  activeOrganization: organization, initialSessionReturned: false, customerSearchReturned: false, customerQueries: [], invoiceListCalls: [], invoiceSearchCalls: 0, customerOptionQueries: [],
 });
 let state = initialState();
 
@@ -63,6 +64,7 @@ const server = createServer(async (request, response) => {
       customerQueries: current.customerQueries,
       invoiceListCalls: current.invoiceListCalls,
       invoiceSearchCalls: current.invoiceSearchCalls,
+      customerOptionQueries: current.customerOptionQueries,
     });
     if (request.headers.authorization !== "Bearer workspace-contract-session") return error(response, 401, "invalid_credentials", "로그인이 필요합니다.");
     if (path === "/v1/sessions/current") {
@@ -86,6 +88,14 @@ const server = createServer(async (request, response) => {
       }
       const items = ["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario) ? [{ id: "99999999-9999-4999-8999-999999999999", name: "다른 도입사 B의 비공개 고객", external_id: "organization-b-private", billing_email: null, archived_at: null, created_at: NOW, version: 0 }] : [];
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
+    }
+    if (current.scenario === "customer-options" && path === `/v1/customers/${FAR_CUSTOMER_ID}`) return send(response, 200, { id: FAR_CUSTOMER_ID, name: "검색으로만 보이는 고객", external_id: null, billing_email: null, archived_at: null, created_at: NOW, version: 0 });
+    if (current.scenario === "customer-options" && path === "/v1/customers/options") {
+      const q = new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "";
+      current.customerOptionQueries.push(q);
+      if (q === "실패") return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
+      const items = q ? [{ value: FAR_CUSTOMER_ID, label: "검색으로만 보이는 고객", archived: false }] : [{ value: ZERO_CUSTOMER_ID, label: "첫 페이지 고객", archived: false }];
+      return send(response, 200, { items, total: items.length, total_unfiltered: 201, page: 1, size: 200, summary: {} });
     }
     if (current.scenario === "finalized-month-zero-customer") {
       const url = new URL(request.url, "http://127.0.0.1");

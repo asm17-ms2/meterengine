@@ -117,11 +117,18 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
     metricSearchText.current = q;
     const request = ++latestRequest.current;
     setIsLoading(true);
-    const result = await queryOptionsAction("billable-metrics", q);
-    if (latestRequest.current !== request) return;
-    setIsLoading(false);
-    if (result.ok) { setOptions(result.data); setOptionError(""); }
-    else setOptionError(result.error.message);
+    try {
+      const result = await queryOptionsAction("billable-metrics", q);
+      if (latestRequest.current !== request) return;
+      if (result.ok) { setOptions(result.data); setOptionError(""); }
+      else { setOptions([]); setOptionError(result.error.message); }
+    } catch {
+      if (latestRequest.current !== request) return;
+      setOptions([]);
+      setOptionError("미터를 찾지 못했습니다.");
+    } finally {
+      if (latestRequest.current === request) setIsLoading(false);
+    }
   }
 
   return <div className="resource-search">
