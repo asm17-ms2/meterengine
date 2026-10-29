@@ -157,8 +157,8 @@ export class MeterEngineClient {
     return this.request("POST", `/v1/customers/${encodeURIComponent(id)}/payment-method-registrations`, undefined, undefined, false);
   }
 
-  listWebhookEndpoints(): Promise<ListWebhookEndpointsResponse> {
-    return this.request("GET", "/v1/webhook-endpoints");
+  listWebhookEndpoints(params: { status?: ArchiveStatus } = {}): Promise<ListWebhookEndpointsResponse> {
+    return this.request("GET", queryPath("/v1/webhook-endpoints", params));
   }
 
   listWebhookDeliveries(id: string, params: { page?: number; size?: number; status?: string } = {}): Promise<ListWebhookDeliveriesResponse> {

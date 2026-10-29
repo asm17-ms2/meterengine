@@ -12,7 +12,10 @@ async function loadCustomerOptions(
   if (!customers) return [];
   const result = await customers.catch(() => null);
   if (!result?.ok) return [];
-  return result.data.customers.map((customer) => ({ value: customer.id, label: customer.name }));
+  return result.data.customers.map((customer) => ({
+    value: customer.id,
+    label: customer.archived_at ? `${customer.name} (보관됨)` : customer.name,
+  }));
 }
 
 async function loadEventTypes(

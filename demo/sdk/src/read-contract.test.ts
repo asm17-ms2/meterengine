@@ -32,3 +32,15 @@ test("이벤트 진단과 수집 거절은 영부터 시작하는 페이지와 �
   assert.equal(urls[1]?.searchParams.get("error_code"), "customer_not_found");
   assert.equal(urls[1]?.searchParams.get("reason"), null);
 });
+
+test("웹훅 엔드포인트 목록은 보관 상태를 query로 보내고 archived_at을 돌려준다", async () => {
+  const urls: string[] = [];
+  const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, fetch: async (input) => {
+    urls.push(String(input));
+    return new Response(JSON.stringify({ endpoints: [{ id: "c0b1a2d3-0000-4000-8000-000000000001", url: "https://example.com/hook", event_types: ["invoice.finalized"], enabled: false, description: null, created_at: "2026-10-01T00:00:00Z", archived_at: "2026-10-02T00:00:00Z" }] }), { status: 200 });
+  } });
+  const response = await client.listWebhookEndpoints({ status: "archived" });
+  assert.equal(new URL(urls[0]).pathname, "/v1/webhook-endpoints");
+  assert.equal(new URL(urls[0]).searchParams.get("status"), "archived");
+  assert.equal(response.endpoints[0].archived_at, "2026-10-02T00:00:00Z");
+});
