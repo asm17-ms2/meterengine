@@ -18,6 +18,7 @@ ON CONFLICT (organization_id, environment_scope_id, code) DO UPDATE SET
   name                 = EXCLUDED.name,
   event_type           = EXCLUDED.event_type,
   aggregation          = EXCLUDED.aggregation,
+  percentile           = NULL,
   target_property      = EXCLUDED.target_property,
   dimension_properties = EXCLUDED.dimension_properties;
 
@@ -56,6 +57,7 @@ ON CONFLICT (organization_id, environment_scope_id, code) DO UPDATE SET
   name                 = EXCLUDED.name,
   event_type           = EXCLUDED.event_type,
   aggregation          = EXCLUDED.aggregation,
+  percentile           = NULL,
   target_property      = EXCLUDED.target_property,
   dimension_properties = EXCLUDED.dimension_properties;
 
@@ -108,6 +110,7 @@ ON CONFLICT (organization_id, environment_scope_id, code) DO UPDATE SET
   name                 = EXCLUDED.name,
   event_type           = EXCLUDED.event_type,
   aggregation          = EXCLUDED.aggregation,
+  percentile           = NULL,
   target_property      = EXCLUDED.target_property,
   dimension_properties = EXCLUDED.dimension_properties;
 

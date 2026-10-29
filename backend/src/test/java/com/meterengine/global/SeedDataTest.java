@@ -86,6 +86,21 @@ class SeedDataTest {
   }
 
   @Test
+  void 백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다() {
+    jdbcTemplate.update(
+        "UPDATE billable_metric SET aggregation = 'percentile', percentile = 95 WHERE code ="
+            + " 'token-usage'");
+
+    jdbcTemplate.execute(readSeedScript());
+
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT aggregation, percentile FROM billable_metric WHERE code = 'token-usage'"))
+        .containsEntry("aggregation", "sum")
+        .containsEntry("percentile", null);
+  }
+
+  @Test
   void 입력과_출력_토큰은_model별_단가이고_나머지_미터는_무차원_단가_1행이다() {
     assertThat(
             jdbcTemplate.queryForList(
