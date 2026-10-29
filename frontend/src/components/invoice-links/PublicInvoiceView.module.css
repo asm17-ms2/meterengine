@@ -39,7 +39,10 @@
 .totals .total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 18px; font-size: 21px; }
 .total dt { color: var(--ink); font-weight: 650; }
 .hint { color: var(--muted); font-size: 13px; margin: 20px 0 0; }
-.status { font-size: 18px; font-weight: 650; margin: 0 0 8px; }
+.status { display: inline-block; font-size: 15px; font-weight: 650; line-height: 1.5; margin: 0 0 12px; padding: 3px 12px; border: 1px solid var(--line); border-radius: 999px; background: #f5f6fa; }
+.status.success { color: #176d59; border-color: #9fd3c4; background: #eef8f4; }
+.status.error { color: #a92334; border-color: #f0b8bf; background: #fdf1f2; }
+.status.warning { color: #7a4b00; border-color: #ecd29b; background: #fff8e8; }
 .paymentAmounts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 22px; border: 1px solid var(--line); border-radius: 8px; margin: 24px 0 0; }
 .paymentAmounts dd { font-size: 17px; }
 .footer { border-top: 1px solid var(--line); margin-top: 36px; padding-top: 22px; color: var(--muted); font-size: 13px; }

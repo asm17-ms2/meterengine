@@ -357,6 +357,7 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, failure_code, failure_message, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local failed lookup fixture', 'failed', 'LOCAL_DECLINED', 'local fixture failure', clock_timestamp(), clock_timestamp());`);
     await page.getByRole("button", { name: "결제 상태 새로 조회", exact: true }).click();
     await expect(page.getByText("결제 실패", { exact: true })).toBeVisible();
+    await expect(page.getByText("결제 실패", { exact: true })).toHaveCSS("color", "rgb(169, 35, 52)");
     await expect(page.getByText("최근 결제 처리 시각 (KST)", { exact: true })).toBeVisible();
     await expect(page.getByText("결제 완료 시각 (KST)", { exact: true })).toHaveCount(0);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ status: "failed", paid_amount: 0, canceled_amount: 0, outstanding_amount: 1100 });

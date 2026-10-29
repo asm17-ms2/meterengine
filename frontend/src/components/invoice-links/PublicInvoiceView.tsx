@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatDecimal, formatDimensionValues, formatKoreanMonth, formatKrw, formatKstDateTime, formatQuantityBasis } from "@/lib/format";
 import { isValidInvoiceViewToken, type PublicInvoice } from "@/lib/invoice-view-links";
 import { canRetryInvoicePayment } from "@/lib/invoice-payment-retry";
+import { INVOICE_PAYMENT_STATUSES } from "@/lib/invoice-payment-status";
 import styles from "./PublicInvoiceView.module.css";
 import { InvoicePaymentRetry, type InvoicePaymentRequestState } from "./InvoicePaymentRetry";
 
@@ -121,6 +122,7 @@ export function PublicInvoiceView() {
     : paymentRequestState === "unknown"
       ? { label: "결제 결과 확인 필요", description: "방금 보낸 요청의 결과를 확인하지 못했습니다. 다시 결제하지 말고 상태를 새로 조회해 주세요." }
       : invoice ? PAYMENT_STATES[invoice.payment.status] : undefined;
+  const paymentTone = hasUnconfirmedPaymentRequest ? "warning" : invoice ? INVOICE_PAYMENT_STATUSES[invoice.payment.status]?.color : undefined;
   function isCurrentPaymentRequest(token: string) { return tokenRef.current === token && requestRef.current === revision; }
   function acceptPaymentResult(updated: PublicInvoice, token: string) {
     if (!isCurrentPaymentRequest(token)) return;
@@ -149,7 +151,7 @@ export function PublicInvoiceView() {
           <dl className={styles.totals}><div><dt>공급가액</dt><dd>{formatKrw(invoice.supply_amount)}</dd></div><div><dt>부가세</dt><dd>{formatKrw(invoice.tax_amount)}</dd></div><div className={styles.total}><dt>확정 청구액</dt><dd>{formatKrw(invoice.total_amount)}</dd></div></dl>
           <p className={styles.hint}>항목별 공급가액은 수량에 단가를 곱한 금액에서 10원 미만을 버린 값입니다. 수량과 금액은 확정 시점의 기록입니다. 이후 요금 변경이나 결제 취소로 바뀌지 않습니다. 이 화면은 세금계산서나 결제 영수증이 아닙니다.</p>
         </section>
-        <section className={styles.section} aria-labelledby="invoice-payment-title"><h2 id="invoice-payment-title" ref={paymentTitleRef} tabIndex={-1}>결제 내역</h2><p className={styles.status}>{paymentState?.label ?? "결제 상태 확인 필요"}</p><p>{canRetryPayment ? "결제가 완료되지 않았습니다. 아래에서 금액을 확인한 뒤 등록된 카드로 다시 시도할 수 있습니다." : paymentState?.description ?? "결제 상태를 확인하지 못했습니다. 청구서를 보낸 담당자에게 문의해 주세요."}</p>
+        <section className={styles.section} aria-labelledby="invoice-payment-title"><h2 id="invoice-payment-title" ref={paymentTitleRef} tabIndex={-1}>결제 내역</h2><p className={[styles.status, paymentTone ? styles[paymentTone] : ""].filter(Boolean).join(" ")}>{paymentState?.label ?? "결제 상태 확인 필요"}</p><p>{canRetryPayment ? "결제가 완료되지 않았습니다. 아래에서 금액을 확인한 뒤 등록된 카드로 다시 시도할 수 있습니다." : paymentState?.description ?? "결제 상태를 확인하지 못했습니다. 청구서를 보낸 담당자에게 문의해 주세요."}</p>
           <dl className={styles.paymentAmounts}><div><dt>취소 제외 납부액</dt><dd>{hasUnconfirmedPaymentRequest || invoice.payment.paid_amount == null ? "확인 중" : formatKrw(invoice.payment.paid_amount)}</dd></div><div><dt>취소 완료액</dt><dd>{formatKrw(invoice.payment.canceled_amount)}</dd></div><div><dt>결제 대기액</dt><dd>{hasUnconfirmedPaymentRequest || invoice.payment.outstanding_amount == null ? "확인 중" : formatKrw(invoice.payment.outstanding_amount)}</dd></div>{invoice.payment.completed_at && <div><dt>최근 결제 처리 시각 (KST)</dt><dd>{formatKstDateTime(invoice.payment.completed_at)}</dd></div>}</dl>
           <InvoicePaymentRetry key={revision} invoice={invoice} getToken={() => tokenRef.current}
             isCurrentRequest={isCurrentPaymentRequest} onResult={acceptPaymentResult}
