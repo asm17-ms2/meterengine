@@ -36,6 +36,12 @@ async function openCancellation(page: Page) {
   return dialog;
 }
 
+async function copySecret(page: Page, dialog: Locator) {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await expect(dialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
+}
+
 async function closeDialog(dialog: Locator) {
   await dialog.locator("button.ant-modal-close").click();
   await expect(dialog).toHaveCount(0);
@@ -150,6 +156,7 @@ test("격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창�
   expect(state.keyCount).toBe(1);
   expect(state.keyCalls).toHaveLength(1);
   expect(state.keyCalls[0].rateLimitPerMinute).toBeNull();
+  await copySecret(page, dialog);
   await closeDialog(dialog);
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.locator(".secret-result code")).toHaveCount(0);
@@ -165,6 +172,7 @@ test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 
     await dialog.getByLabel(/^분당 요청 한도/).fill(limit);
     await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
     await expect(dialog.locator(".secret-result code")).toBeVisible();
+    await copySecret(page, dialog);
     await closeDialog(dialog);
   }
   const state = await readState(request);
