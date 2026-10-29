@@ -54,3 +54,10 @@ export function readBusinessRegistrationNumber(value: string, field: string): st
   if (!/^\d{10}$/.test(digits)) throw new InputFieldError(field, "사업자등록번호는 숫자 10자리로 입력하세요.");
   return digits;
 }
+
+// 같은 외부 고객 ID를 다시 보내면 서버는 기존 고객을 200으로 돌려주고 이름과 이메일을 바꾸지 않는다. 입력과 다르면 새로 만들지 않았다고 알린다.
+export function existingCustomerMessage(input: { externalId: string; name: string; billingEmail: string }, response: Record<string, unknown> | undefined): string | undefined {
+  if (!input.externalId || !response) return undefined;
+  const isSameCustomer = response.name === input.name && String(response.billing_email ?? "") === input.billingEmail;
+  return isSameCustomer ? undefined : `외부 고객 ID가 같은 기존 고객 "${String(response.name ?? "")}"이 있어 새로 등록하지 않았습니다.`;
+}
