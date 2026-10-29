@@ -7,7 +7,7 @@ import {
   MeterEngineConnectionError,
   MeterEngineTimeoutError,
 } from "./index.ts";
-import type { IngestEventInput, IngestEventRequest, MeterEngineClientOptions } from "./index.ts";
+import type { IngestEventInput, IngestEventRequest, InvoiceLineResponse, MeterEngineClientOptions } from "./index.ts";
 
 const BASE_URL = "http://localhost:8080";
 const API_KEY = "me_live_0123456789abcdefghijABCDEFGHIJKL";
@@ -534,4 +534,12 @@ test("배치 재시도에도 생성한 ID와 본문을 유지하고 다음 묶�
   assert.deepEqual(calls[1].body, calls[0].body);
   assert.equal((calls[2].body as { events: unknown[] }).events.length, 1);
   assert.equal(new Set(response.results.map((result) => result.transaction_id)).size, 101);
+});
+
+test("invoice line types allow a base fee line without a meter and only the server's line types", () => {
+  const baseFee: InvoiceLineResponse = { billable_metric_code: null, target_property: null, dimension_values: {}, quantity: 1, unit_price: 9990, amount: 9990, line_type: "base_fee", tier_index: 0 };
+  // @ts-expect-error 서버가 내지 않는 라인 종류는 타입에서 막는다
+  const unknownLineType: InvoiceLineResponse["line_type"] = "discount";
+  assert.equal(baseFee.billable_metric_code, null);
+  assert.equal(unknownLineType, "discount");
 });
