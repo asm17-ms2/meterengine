@@ -23,6 +23,13 @@ public class AuthRequestRateLimitRepository {
           AS retry_after_seconds
       """;
 
+  private static final String LIMITED_SQL =
+      """
+      SELECT GREATEST(1, CEIL(EXTRACT(EPOCH FROM expires_at - statement_timestamp())))
+      FROM auth_request_rate_limit
+      WHERE scope = ? AND identity_hash = ? AND expires_at > statement_timestamp() AND attempts > ?
+      """;
+
   private final JdbcTemplate jdbcTemplate;
 
   public AuthRequestRateLimitRepository(JdbcTemplate jdbcTemplate) {
@@ -58,7 +65,12 @@ public class AuthRequestRateLimitRepository {
         """);
   }
 
+  // 이미 한도를 넘은 카운터는 upsert해도 값이 같으므로, 잠금 없이 읽고 끝내 거절 경로에서 쓰기와 행 잠금을 없앤다.
   private long take(Bucket bucket, long seconds) {
+    List<Long> limited =
+        jdbcTemplate.queryForList(
+            LIMITED_SQL, Long.class, bucket.scope(), bucket.identityHash(), bucket.limit());
+    if (!limited.isEmpty()) return limited.getFirst();
     return jdbcTemplate
         .queryForObject(
             CONSUME_SQL,

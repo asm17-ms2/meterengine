@@ -114,6 +114,18 @@ class AuthRequestRateLimitIntegrationTest {
   }
 
   @Test
+  void 이미_한도를_넘은_요청은_카운터_행을_다시_쓰지_않는다() {
+    for (int index = 0; index < 3; index++)
+      assertThat(login(email(), "203.0.113.40", null)).hasStatus(401);
+    assertLimited(login(email(), "203.0.113.40", null));
+    String version = ipCounterVersion();
+
+    assertLimited(login(email(), "203.0.113.40", null));
+
+    assertThat(ipCounterVersion()).isEqualTo(version);
+  }
+
+  @Test
   void 계정_한도는_로그인_조회와_같은_DB_규칙으로_대소문자를_합친다() {
     String email = email();
     String variant = email.replace("limit-", "l\u0130mit-");
@@ -314,6 +326,11 @@ class AuthRequestRateLimitIntegrationTest {
               return request;
             })
         .exchange();
+  }
+
+  private String ipCounterVersion() {
+    return jdbcTemplate.queryForObject(
+        "SELECT xmin::text FROM auth_request_rate_limit WHERE scope='login_ip'", String.class);
   }
 
   private static void assertLimited(MvcTestResult result) {

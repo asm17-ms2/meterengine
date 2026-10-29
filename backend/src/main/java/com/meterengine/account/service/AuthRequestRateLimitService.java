@@ -65,10 +65,10 @@ public class AuthRequestRateLimitService {
   }
 
   private void check(Bucket address, List<Bucket> accounts, Duration window) {
-    authRequestRateLimitRepository.cleanExpired();
     long retryAfter = authRequestRateLimitRepository.consume(address, accounts, window.toSeconds());
     if (retryAfter > 0)
       throw new TooManyRequestsException(ErrorCode.RATE_LIMIT_EXCEEDED, retryAfter);
+    authRequestRateLimitRepository.cleanExpired();
   }
 
   String clientAddress(HttpServletRequest request) {
