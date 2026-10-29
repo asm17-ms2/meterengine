@@ -99,23 +99,6 @@ public class EventRepository {
   }
 
   public List<Event> findPage(
-      UUID organizationId,
-      UUID customerId,
-      String type,
-      OffsetDateTime start,
-      OffsetDateTime end,
-      int page,
-      int size) {
-    return findPage(
-        organizationId,
-        customerId,
-        type,
-        new EventSearch(null, start, end, null, "occurred_at", "desc", null),
-        page,
-        size);
-  }
-
-  public List<Event> findPage(
       UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
     List<Object> parameters = new ArrayList<>();
     String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
@@ -151,15 +134,6 @@ public class EventRepository {
                 rs.getString("actor_type"),
                 rs.getObject("actor_id", UUID.class)),
         parameters.toArray());
-  }
-
-  public long count(
-      UUID organizationId, UUID customerId, String type, OffsetDateTime start, OffsetDateTime end) {
-    return count(
-        organizationId,
-        customerId,
-        type,
-        new EventSearch(null, start, end, null, "occurred_at", "desc", null));
   }
 
   public long count(UUID organizationId, UUID customerId, String type, EventSearch search) {
