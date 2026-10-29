@@ -774,7 +774,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: code, name, event_type, aggregation 중 빈 필드가 있거나, 문자열 필드에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다. Idempotency-Key가 비었거나 255자를 넘어도 이 코드다.
-            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있다. 어느 필드가 왜 거절됐는지는 errors에 있다.
+            code=invalid_billable_metric: 집계 방식과 대상 속성, 단위, 반올림, 백분위 설정이 맞지 않거나 dimension_properties에 중복이나 빈 키가 있거나, code가 조회 경로와 겹치는 search, options, export다. 어느 필드가 왜 거절됐는지는 errors에 있다.
         "401":
           content:
             application/json:

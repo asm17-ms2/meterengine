@@ -301,6 +301,13 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 미터_등록의_400은_조회_경로와_겹쳐_쓸_수_없는_code를_적는다() {
+    JsonNode responses =
+        root().path("paths").path("/v1/billable-metrics").path("post").path("responses");
+    assertErrorResponse(responses, "400", "search", "options", "export");
+  }
+
+  @Test
   void 결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다() {
     JsonNode operation =
         root().path("paths").path("/v1/payment-attempts/{id}/cancellations").path("post");
