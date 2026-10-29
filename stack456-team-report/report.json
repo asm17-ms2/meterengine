@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-29T16:05:10+09:00",
+  "updated_at": "2026-10-29T16:13:32+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -26,7 +26,8 @@
     "fix/s456-t-yang-lumen": "62e8eee",
     "fix/s456-t-yang-demo-bridge-web": "c1ee7a8",
     "fix/s456-t-yang-toss-key": "ffa9cd3",
-    "fix/s456-t-yang-audit-env": "04c93d9"
+    "fix/s456-t-yang-audit-env": "04c93d9",
+    "fix/s456-t-yang-ops-metrics": "6152c0b"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -7401,15 +7402,39 @@
       "id": "G-133",
       "merged_ids": [],
       "layer": 453,
-      "branch": "feat/environment-isolation",
-      "status": "open",
-      "verdict": "not-judged",
-      "reason": "",
-      "evidence": [],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
-      "left": "시작 전"
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "reason": "main에서도 meterengine.webhook.delivery 카운터에는 result와 reason 태그만 있다(WebhookDeliveryService 160-162, 173-175행). 그래서 test 환경 전송의 최종 실패를 live와 가를 수 없고, OperationsService 48-52행도 결제 대기와 실패, 웹훅 실패를 mode와 환경 조건 없이 세어 운영 현황 화면에 그대로 보여 준다. 결제 지표에는 이미 mode 태그가 있으므로 남은 백엔드 일은 웹훅 지표 태그와 운영 건수 조건이고, test 실패로 울리는 Slack 경보(383-385행과 결제 경보)는 alerting.yml을 바꿔야 없어져서 백엔드를 고친 뒤 그 부분은 brief대로 needs-decision으로 남긴다. 경보 부분은 머지 뒤 지침대로 세션이 정해 test를 뺐다(PR #478 본문에 근거, 박성종 님과 문인호 님 리뷰어).",
+      "evidence": [
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:173-175 @ af15d7f",
+        "backend/src/main/java/com/meterengine/webhook/service/WebhookDeliveryService.java:160-162 @ af15d7f",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:54-56 @ af15d7f",
+        "backend/src/main/java/com/meterengine/dashboard/service/OperationsService.java:48-52 @ af15d7f",
+        "frontend/src/app/admin/page.tsx:12 @ af15d7f",
+        "backend/src/main/java/com/meterengine/payment/service/PaymentMetrics.java:48-57 @ af15d7f",
+        "deploy/grafana/provisioning/alerting/alerting.yml:383-385 @ af15d7f",
+        "deploy/grafana/provisioning/alerting/alerting.yml:323-325 @ af15d7f",
+        "환경별_수신처와_아웃박스와_실제_전송이_독립적이다: 실패 [legacy] Expecting actual not to be null(환경 태그 없음)",
+        "운영_현황의_웹훅_실패_수는_test_환경_전송을_세지_않는다: 실패 expected 1L but was 2L",
+        "운영_현황의_결제_대기와_실패_수는_test_결제를_세지_않는다: 실패 expected 0L but was 1L",
+        "커밋 6152c0b"
+      ],
+      "commits": [
+        "6152c0bd"
+      ],
+      "tests": [
+        "./gradlew build 통과(6152c0b, 시험 1377개)",
+        "deploy 시험 36건 OK, alerting.yml YAML 읽기 성공"
+      ],
+      "behavior_change": true,
+      "judged_at": {
+        "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+        "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4"
+      },
+      "fails_without_fix": true,
+      "top_head": "same (main 기준이라 위층 없음)",
+      "summary": "test 환경 실패를 운영 지표와 경보에서 제외"
     },
     {
       "id": "G-135",
@@ -11920,6 +11945,46 @@
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "main 기준선. 36건 OK(skipped 11)"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon; git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1377개 실패 0, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "36건 OK(skipped 11, main 기준선과 같음)"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "static",
+      "result": "pass",
+      "command": "ruby -ryaml -e 'YAML.load_file(ARGV[0])' deploy/grafana/provisioning/alerting/alerting.yml",
+      "detail": "YAML 읽기 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "8절 금지 문자 검사",
+      "detail": "출력 없음"
     }
   ],
   "pushes": [
@@ -12342,6 +12407,11 @@
       "branch": "fix/s456-t-yang-audit-env",
       "sha": "04c93d998e0035d613c33f4760aed54a6e3af355",
       "at": "2026-10-29T16:03:00+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "6152c0bd6a468ffb1c80b3454fadd55c92784b0e",
+      "at": "2026-10-29T16:13:15+09:00"
     }
   ],
   "usage_log": [],
@@ -12367,7 +12437,8 @@
     "check-report-main.mjs의 알려진 예외 1건: G-147 커밋 7da6d60을 담은 fix/s456-447-t-yang 84bb5e7의 demo 검사는 corepack pnpm -r build 단계에서 ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT로 실패했고(바꾸지 않은 head 5371d1e도 같다) 박성종 님 요청으로 push했다. 예전 필터(cr.py)가 이 오류를 감추고 있어, 사본은 오류 대신 주의로 출력한다. 기록(checks의 fail)은 바꾸지 않았다.",
     "2026-10-29 15:33 KST: 문인호 님이 main의 environment-cycle, mvp 실화면 명세를 고치기로 해(#논의 15:25, 박성종 님 15:26) 두 명세 파일(frontend/e2e/environment-cycle.real.spec.ts, frontend/e2e/mvp.real.spec.ts)을 문인호 님 쪽 파일로 보고 건드리지 않는다. 그 파일을 바꿔야 하는 항목은 문인호 님 PR이 main에 들어온 뒤 본다.",
     "2026-10-29 16:10 KST: 박성종 님 머지 뒤 지침(#논의 스택 스레드 15:49)을 양성지 님이 붙여 넣어 반영한다. 주제 브랜치는 push하면 바로 main으로 PR을 연다. 300줄 상한은 적용하지 않고 주제별로만 나눈다. needs-decision은 세션이 근거를 PR 본문에 적고 정해서 고치며, 다른 사람 영역이나 팀 전체에 걸리면 그 사람을 리뷰어로 지정한다. 같은 파일을 건드리면 나중에 머지하는 PR이 main을 받는다. 그래서 문인호 님 쪽 파일도 필요하면 고치되, 문인호 님이 고치기로 한 environment-cycle, mvp 명세 실패(NT-yang-002, 003)는 겹치지 않게 그대로 둔다.",
-    "2026-10-29 16:10 KST: 연 PR: #472 fix/s456-t-yang-invoice-retry, #473 fix/s456-t-yang-public-invoice, #474 fix/s456-t-yang-lumen, #475 fix/s456-t-yang-demo-bridge-web, #476 fix/s456-t-yang-toss-key, #477 fix/s456-t-yang-audit-env(문인호 님 리뷰어 지정). 리뷰어는 CODEOWNERS가 붙였다."
+    "2026-10-29 16:10 KST: 연 PR: #472 fix/s456-t-yang-invoice-retry, #473 fix/s456-t-yang-public-invoice, #474 fix/s456-t-yang-lumen, #475 fix/s456-t-yang-demo-bridge-web, #476 fix/s456-t-yang-toss-key, #477 fix/s456-t-yang-audit-env(문인호 님 리뷰어 지정). 리뷰어는 CODEOWNERS가 붙였다.",
+    "2026-10-29: #478 fix/s456-t-yang-ops-metrics(G-133)를 열고 경보 결정 때문에 박성종 님과 문인호 님을 리뷰어로 지정했다."
   ],
   "final_checks": [
     {
