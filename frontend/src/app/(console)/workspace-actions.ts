@@ -6,6 +6,7 @@ import { readEnvironment } from "@/lib/environment";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
 import { mutationScopeError } from "@/lib/auth/mutation-scope";
+import { credentialFieldErrors } from "@/lib/auth/credentials";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
@@ -38,7 +39,12 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   try {
     switch (operation) {
-      case "createMember": path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password: typeof data.get("password") === "string" ? data.get("password") : "", scopes: data.getAll("scopes") }; break;
+      case "createMember": {
+        const password = typeof data.get("password") === "string" ? String(data.get("password")) : "";
+        const fieldErrors = credentialFieldErrors({ name: text(data, "name"), email: text(data, "email"), password });
+        if (Object.keys(fieldErrors).length) return { message: "입력한 내용을 확인하세요.", fieldErrors };
+        path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password, scopes: data.getAll("scopes") }; break;
+      }
       case "updateMemberRole": path = `/v1/organization/members/${identifier(data)}/role`; method = "PUT"; body = { organization_role: text(data, "organization_role") }; break;
       case "updateMemberScopes": path = `/v1/organization/members/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;

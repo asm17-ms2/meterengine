@@ -63,7 +63,7 @@ public class PaymentArchiveRepository {
         "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
             + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
         (rs, n) ->
-            new PaymentMethodResponse(
+            PaymentMethodResponse.of(
                 rs.getObject("customer_id", UUID.class),
                 rs.getString("card_issuer_code"),
                 rs.getString("card_number"),
@@ -80,7 +80,7 @@ public class PaymentArchiveRepository {
         "SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND"
             + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
         (rs, n) ->
-            new TossPaymentsCredentialResponse(
+            TossPaymentsCredentialResponse.of(
                 rs.getString("mode"),
                 rs.getString("client_key"),
                 rs.getString("secret_key_last_four"),
@@ -91,10 +91,18 @@ public class PaymentArchiveRepository {
         BusinessEnvironmentContext.environmentId());
   }
 
-  public List<TossPaymentsCredential> credentialVersions(UUID organizationId, String mode) {
+  // 교체로 물러난 키 가운데 since 뒤에 그 키로 고정한 결제나 취소가 있거나 진행 중인 버전만 고른다.
+  public List<TossPaymentsCredential> credentialVersionsInUse(
+      UUID organizationId, String mode, OffsetDateTime since) {
     return jdbcTemplate.query(
-        "SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND mode = ? AND"
-            + " environment_id IS NOT DISTINCT FROM ? ORDER BY updated_at",
+        "SELECT h.* FROM toss_payments_credential_history h WHERE h.organization_id = ? AND"
+            + " h.mode = ? AND h.environment_id IS NOT DISTINCT FROM ? AND EXISTS (SELECT 1 FROM"
+            + " payment_attempt a WHERE a.organization_id = h.organization_id AND a.mode = h.mode"
+            + " AND a.environment_id IS NOT DISTINCT FROM h.environment_id AND"
+            + " a.credential_updated_at = h.updated_at AND (a.status = 'pending' OR a.requested_at"
+            + " >= ? OR a.completed_at >= ? OR EXISTS (SELECT 1 FROM payment_cancellation c WHERE"
+            + " c.payment_attempt_id = a.id AND (c.status = 'pending' OR c.completed_at >= ?))))"
+            + " ORDER BY h.updated_at",
         (rs, n) ->
             new TossPaymentsCredential(
                 organizationId,
@@ -105,7 +113,10 @@ public class PaymentArchiveRepository {
                 rs.getObject("updated_at", OffsetDateTime.class)),
         organizationId,
         mode,
-        BusinessEnvironmentContext.environmentId());
+        BusinessEnvironmentContext.environmentId(),
+        since,
+        since,
+        since);
   }
 
   public Optional<TossPaymentsCredential> historical(

@@ -18,7 +18,7 @@ function client(): Parameters<typeof loadCustomerPortal>[0] {
 
 test("도입사 서버가 조회한 전체 사용량에서도 선택한 고객의 정보만 화면에 전달한다", async () => {
   const data = await loadCustomerPortal(client(), CUSTOMER_ID, "2026-10");
-  assert.equal(data.usages[0]?.quantity, 123);
+  assert.deepEqual(data.usages.map((usage) => [usage.code, usage.quantity]), [["tokens", 123]]);
   assert.equal(data.draft?.amount, 100);
   assert.equal(data.invoices.length, 1);
   assert.equal(data.payments.length, 1);
