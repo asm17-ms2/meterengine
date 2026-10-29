@@ -204,6 +204,21 @@ test("a customer edit that lost a version race offers to load the latest values 
   await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
 });
 
+test("restoring a customer returns focus to the same button, now offering to archive", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("복원할 고객");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { archiveCustomers: true } });
+  await page.getByRole("link", { name: "복원할 고객", exact: true }).click();
+  await page.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await dialog.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "고객 보관", exact: true })).toBeFocused();
+});
+
 test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
   await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
   await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
