@@ -269,6 +269,15 @@ test("meter number inputs do not expose English stepper buttons", async ({ page 
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
 
+test("list screens keep the disclosure marker on the advanced filter summary", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const summary = page.locator(".resource-advanced > summary");
+  await expect(summary).toHaveCSS("display", "list-item");
+  const box = await summary.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

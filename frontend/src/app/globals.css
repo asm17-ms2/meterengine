@@ -308,4 +308,4 @@ input, textarea { caret-color: var(--blue); }
 
 .resource-search { display: grid; gap: 12px; min-width: 0; width: 100%; }
 .resource-search > .field-hint { margin: 0; }
-.resource-advanced summary { min-height: 44px; display: flex; align-items: center; }
+.resource-advanced summary { min-height: 44px; box-sizing: border-box; padding-block: 11px; }
