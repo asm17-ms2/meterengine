@@ -543,3 +543,20 @@ test("invoice line types allow a base fee line without a meter and only the serv
   assert.equal(baseFee.billable_metric_code, null);
   assert.equal(unknownLineType, "discount");
 });
+
+test("external_id 없는 createCustomer는 실패해도 다시 보내지 않는다", async () => {
+  const { client, calls } = createClient([apiError(503, "internal_server_error"), json(201, { id: CUSTOMER_ID })]);
+
+  await assert.rejects(client.createCustomer({ name: "고객" }), (error) => error instanceof MeterEngineApiError && error.status === 503);
+  assert.equal(calls.length, 1);
+});
+
+test("external_id 있는 createCustomer는 실패하면 같은 요청을 다시 보낸다", async () => {
+  const { client, calls } = createClient([apiError(503, "internal_server_error"), json(200, { id: CUSTOMER_ID })]);
+
+  const customer = await client.createCustomer({ name: "고객", external_id: "customer-1" });
+
+  assert.equal(customer.id, CUSTOMER_ID);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].body, calls[0].body);
+});
