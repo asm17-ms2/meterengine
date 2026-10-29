@@ -57,45 +57,5 @@ public record DraftInvoiceResponse(
           BigDecimal quantityNumerator,
       @Schema(description = "정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다")
           @JsonProperty("quantity_denominator")
-          BigDecimal quantityDenominator) {
-    public DraftInvoiceLine(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount,
-        String lineType,
-        int tierIndex) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          lineType,
-          tierIndex,
-          quantity,
-          BigDecimal.ONE);
-    }
-
-    public DraftInvoiceLine(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          "per_unit",
-          0);
-    }
-  }
+          BigDecimal quantityDenominator) {}
 }

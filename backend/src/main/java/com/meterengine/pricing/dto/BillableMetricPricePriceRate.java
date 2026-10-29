@@ -16,8 +16,4 @@ public record BillableMetricPricePriceRate(
     String model,
     @JsonRawValue @Schema(type = "array", implementation = PriceRateTier.class) String tiers,
     @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
-    @JsonProperty("archived_from") String archivedFrom) {
-  public BillableMetricPricePriceRate(Map<String, Object> dimensionValues, BigDecimal unitPrice) {
-    this(dimensionValues, unitPrice, null, null, "2000-01", null, "per_unit", null, null, null);
-  }
-}
+    @JsonProperty("archived_from") String archivedFrom) {}
