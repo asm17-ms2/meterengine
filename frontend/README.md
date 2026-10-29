@@ -209,6 +209,8 @@ E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
 
+`playwright.mvp.config.ts` 시나리오 가운데 `customer-payment-retry`, `invoice-links`, `permissions`는 테스트 DB를 `docker exec ... psql`로 직접 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
+
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 
 가입 동의 안내는 `2026-10-26-preview` 개발 검증용이다. 정식 약관과 개인정보 처리방침은 서비스 공개 전에 확정해야 한다. S1에 동의 이력 조회 API가 없어 승인 화면에서 동의 내역은 조회하지 않는다.
