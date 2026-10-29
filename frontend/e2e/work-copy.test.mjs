@@ -66,3 +66,11 @@ test("the customer archive action sits with the other customer actions, not in t
   assert.ok(!actionRow.includes(">고객별 요금 설계</Link>"));
   assert.ok(!navigationRow.includes("<ActionPanel") && navigationRow.includes(">고객별 요금 설계</Link>"));
 });
+
+test("every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel", () => {
+  const pricing = source("components/pricing/PricingWorkspace.tsx");
+  const page = source("app/(console)/pricing/page.tsx");
+  assert.ok(pricing.includes('<small style={{ overflowWrap: "anywhere" }}>{`등록 단가 ${metric.rate_count ?? 0}개`}</small>'));
+  assert.ok(pricing.includes("<p>{props.month} / {customerName}</p>{selectedMetric?.aggregation && <p>{metricCalculationFormula("));
+  assert.ok(page.includes("{ ...selectedMetric.data, rate_count: metric.rate_count }"));
+});

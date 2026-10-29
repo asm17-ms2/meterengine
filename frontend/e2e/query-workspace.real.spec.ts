@@ -86,6 +86,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.goto(`/pricing?${new URLSearchParams(preserved)}`);
     const rail = page.getByRole("region", { name: "과금 미터 선택", exact: true });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(20);
+    await expect(rail.getByRole("button", { name: /등록 단가 \d+개/ }), "선택한 미터도 단가 개수를 보인다").toHaveCount(20);
     await rail.getByRole("link", { name: "다음", exact: true }).click();
     await expectScope(page, { ...preserved, page: "1" });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(1);
