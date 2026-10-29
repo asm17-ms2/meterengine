@@ -287,6 +287,7 @@ unset SESSION
 - 통보는 `webhook-id`, `webhook-timestamp`, `webhook-signature` 헤더와 `User-Agent: MeterEngine-Webhooks/1.0`을 싣는다. 수신 측 방화벽의 허용 목록에는 이 User-Agent를 쓴다.
 - 발송 작업은 30초마다 돌고 한 번에 최대 100건, 15초까지 보낸다. 시도마다 전송을 2분 선점한다.
 - 전송은 한 건씩 차례로 보낸다. 한 건을 최대 15초까지 기다리므로 응답하지 않는 수신 주소 하나가 실행 하나를 다 쓸 수 있다. 실행 안에서는 도입사 환경마다 돌아가며 꺼내, 한 도입사에 쌓인 전송이 다른 도입사의 통보를 계속 밀어내지 않게 한다.
+- 연결 거절, TLS 실패, 발송 중 내부 오류는 모두 실패 사유 `connection_error` 하나로 남는다. 원인은 백엔드 로그의 `Webhook <webhook-id> could not be sent` 줄로 가른다.
 - 실패하면 1분, 5분, 30분, 2시간, 8시간 뒤 다시 보내 모두 6번 시도한다. 성공(2xx), 6번 소진, 막힌 주소(`blocked_address`), 발송을 끄거나 지운 엔드포인트(`endpoint_disabled`)에서 끝난다.
 - 실패로 끝난 전송은 수동 재시도(`POST /v1/webhook-endpoints/{id}/deliveries/{delivery_id}/retries`)로 같은 `webhook-id`를 다시 보낸다.
 
