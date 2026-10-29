@@ -21,6 +21,9 @@ export type Result<T> =
   | { ok: false; error: ApiError };
 
 export function toDisplayMessage(error: ApiError): string {
+  if (error.status === 429) return error.retryAfterSeconds
+    ? `요청이 많아 잠시 대기해야 합니다. ${error.retryAfterSeconds}초 후 다시 시도하세요.`
+    : "요청이 많아 잠시 대기해야 합니다. 잠시 후 다시 시도하세요.";
   if (error.errors && error.errors.length > 0) {
     return error.errors.map((fieldError) => fieldError.message).join(" / ");
   }
@@ -53,6 +56,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     body = (await response.json()) as ErrorBody;
   } catch {
   }
+  const retryAfter = response.headers.get("Retry-After");
   return {
     status: response.status,
     code: typeof body.code === "string" ? body.code : "http_error",
@@ -61,6 +65,7 @@ async function toApiError(response: Response): Promise<ApiError> {
         ? body.message
         : "서버가 오류 응답 형식이 아닌 응답을 보냈습니다.",
     errors: toFieldErrors(body.errors),
+    ...(retryAfter && /^\d+$/.test(retryAfter) ? { retryAfterSeconds: Math.min(86_400, Number(retryAfter)) } : {}),
   };
 }
 
@@ -92,6 +97,7 @@ export async function requestApi<T>(
       method: options.method ?? "GET",
       headers: {
         Accept: options.responseType === "text" ? "text/csv" : "application/json",
+        ...(options.clientIp ? { "X-MeterEngine-Client-IP": options.clientIp } : {}),
         ...(options.organizationId ? { "X-MeterEngine-Organization-Id": options.organizationId } : {}),
         ...(options.environment ? { "X-MeterEngine-Environment": options.environment } : {}),
         ...(options.ifMatch ? { "If-Match": options.ifMatch } : {}),

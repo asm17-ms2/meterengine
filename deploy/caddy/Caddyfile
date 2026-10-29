@@ -4,6 +4,13 @@
 {
 	log {
 		exclude http.handlers.reverse_proxy.health_checker.active
+		# 접속 로그를 꺼도 프록시 오류에는 요청이 남는다.
+		format filter {
+			request>uri regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			request>headers>Referer regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			resp_headers>Location regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			wrap json
+		}
 	}
 	log health {
 		include http.handlers.reverse_proxy.health_checker.active
@@ -37,10 +44,17 @@
 	# access-log.caddy는 deploy.sh가 deploy.conf의 CADDY_ACCESS_LOG(기본 discard)로 배포마다 쓰는 output 줄이다.
 	log {
 		import access-log.caddy
+		format filter {
+			request>uri regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			request>headers>Referer regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			resp_headers>Location regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+			wrap json
+		}
 	}
 
 	@alias not host {$SITE_DOMAIN}
 	redir @alias https://{$SITE_DOMAIN}{uri} permanent
+	request_header X-MeterEngine-Client-IP {remote_host}
 
 	# handle_path는 접두사를 벗겨 백엔드가 404를 내므로 handle을 쓴다.
 	handle /v1/* {

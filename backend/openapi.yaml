@@ -6503,6 +6503,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인\
             \ 곳이 없다"
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의\
+            \ 초만큼 기다린 뒤 재시도한다"
       security: []
       summary: 로그인
       tags:
@@ -6693,6 +6700,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=email_already_exists: 대소문자를 가리지 않고 같은 이메일로 가입한 사용자가 있\
             다"
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 가입 시도 한도를 넘었다. Retry-After 헤더의 초\
+            만큼 기다린 뒤 재시도한다"
       security: []
       summary: 가입 신청
       tags:
