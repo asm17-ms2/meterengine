@@ -129,6 +129,10 @@ docker build -t meterengine-backend .
 
 수집한 이벤트의 매핑 문제는 `/v1/event-issues/search`, 거절된 수집의 안전한 메타데이터는 `/v1/event-rejections/search`에서 본다. 검색, 선택지, 월, CSV와 매핑 진단에도 같은 환경 경계를 적용한다. 새 거절 기록은 배포 이후부터 쌓이며 과거 실패 요청을 복원하지 않는다.
 
+페이지 번호의 시작은 경로 이름이 아니라 엔드포인트마다 정한다. 위 여섯 자원의 `/search`는 1부터, `/v1/event-issues/search`와 `/v1/event-rejections/search`는 이벤트, 감사, 웹훅 목록처럼 0부터 센다. 각 파라미터 설명에 기준을 적는다.
+
+매핑 진단과 사용량 화면은 요청마다 미터 수만큼 그 달 이벤트를 다시 집계한다. event 표에는 환경 범위 PK만 있고 occurred_at 인덱스는 없어, 한 달 이벤트가 많은 도입사는 이 조회가 느려질 수 있다. 큰 event 표에 인덱스를 더하는 마이그레이션은 배포 준비 시간 안에 끝난다는 근거가 없어 아직 두지 않았다.
+
 ### 로컬 계정과 키
 
 | 구분 | 값 | 비밀번호 | 내용 |
@@ -295,6 +299,7 @@ unset SESSION
 - `R__seed.sql`은 반복 마이그레이션이라 파일 내용이 바뀌면 다시 적용된다. 데모가 쓰는 도입사, 고객, 미터, 가격을 이 파일이 정한다.
 - 로컬 계정과 키는 `src/main/resources/db/local/R__local_credentials.sql`이 넣는다. 이 로케이션은 `local` 프로파일(`application-local.properties`)에서만 읽는다.
 - `create_webhook_tables` 마이그레이션은 `webhook_event`와 `webhook_delivery_attempt`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 통보와 시도 기록은 고치거나 지우지 않는다.
+- `create_event_rejections` 마이그레이션은 `event_rejection`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 수집 거절 기록도 다른 기록 표처럼 보존 기간 없이 지우지 않는다.
 - 이미 적용된 `V__` 파일은 주석만 고쳐도 체크섬이 바뀌어 그 DB의 기동이 실패한다. 아래 "문제 해결" 참조.
 - V41은 기존 인보이스에도 고유한 표시 번호를 부여하고, 조회 링크의 토큰 해시, 만료와 폐기, 발급 당시 결제 모드를 저장한다. 공개 조회 감사는 토큰 대신 링크 ID를 행위자로 남긴다.
 - V44는 링크의 고객 결제 재시도 권한을 추가한다. 기존 링크와 옵션을 생략한 새 링크는 모두 조회만 허용한다.
