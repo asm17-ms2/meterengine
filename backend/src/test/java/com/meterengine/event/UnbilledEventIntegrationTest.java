@@ -68,6 +68,24 @@ class UnbilledEventIntegrationTest {
   }
 
   @Test
+  void 같은_유형에_미터가_둘이어도_음수와_숫자_아닌_이벤트는_한_건으로_센다() {
+    jdbcTemplate.update(
+        "INSERT INTO billable_metric (organization_id, code, name, event_type, aggregation, target_property, dimension_properties) VALUES (?, 'peak', '최대', 'usage', 'max', 'quantity', '{}')",
+        organizationId);
+    YearMonth month = BillableMetricUsageService.currentMonth();
+    OffsetDateTime cutoffAt =
+        month.atDay(15).atStartOfDay(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime();
+    insert("negative", "usage", "{\"quantity\":-2}", cutoffAt.minusSeconds(1));
+    insert("non-numeric", "usage", "{\"quantity\":\"text\"}", cutoffAt.minusSeconds(1));
+    UnbilledEventsResponse summary =
+        unbilledEventService.aggregate(organizationId, month, cutoffAt);
+    assertThat(summary.negativeQuantity().eventCount()).isEqualTo(1);
+    assertThat(summary.negativeQuantity().billableMetrics()).hasSize(2);
+    assertThat(summary.nonNumericValue().eventCount()).isEqualTo(1);
+    assertThat(summary.nonNumericValue().billableMetrics()).hasSize(2);
+  }
+
+  @Test
   void 누락된_숫자와_null과_불리언을_숫자가_아닌_값으로_센다() {
     YearMonth month = BillableMetricUsageService.currentMonth();
     OffsetDateTime cutoffAt =

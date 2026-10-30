@@ -2,9 +2,12 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
@@ -229,6 +232,50 @@ class EventExportIntegrationTest {
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .isEqualTo("export");
+  }
+
+  @Test
+  void 원문_속성을_포함할_때만_합계가_상한을_넘으면_큰_본문_대신_오류를_반환한다() {
+    jdbcTemplate.update(
+        "INSERT INTO event(organization_id,transaction_id,customer_id,type,properties,occurred_at) SELECT ?, 'large-' || sequence, ?, 'usage', jsonb_build_object('blob', repeat('x', 9 * 1024 * 1024)), '2026-10-02T00:00:00+09:00'::timestamptz FROM generate_series(1,4) sequence",
+        organizationId,
+        customerId);
+    assertThat(get(authorization, null, "")).hasStatusOk();
+    assertThat(get(authorization, null, "&include_properties=true"))
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .isEqualTo("export");
+  }
+
+  @Test
+  void 원문_속성을_빼고_내보낼_때는_속성을_읽는_조회를_쓰지_않는다() {
+    insert(
+        "without-properties",
+        customerId,
+        null,
+        "usage",
+        "{\"blob\":\"x\"}",
+        "2026-10-02T00:00:00+09:00");
+
+    String csv = body(get(authorization, null, ""));
+
+    assertThat(csv).contains("without-properties").doesNotContain("blob");
+    verify(eventRepository, never())
+        .findPage(
+            eq(organizationId),
+            nullable(UUID.class),
+            nullable(String.class),
+            any(EventSearch.class),
+            anyInt(),
+            anyInt());
+  }
+
+  @Test
+  void 발생과_수신_시각을_KST_오프셋이_붙은_초_단위_형식으로_쓴다() {
+    insert("kst-boundary", customerId, null, "usage", "{}", "2026-10-01T00:00:00+09:00");
+    String csv = body(get(authorization, null, "&q=kst-boundary"));
+    assertThat(csv).contains("\"2026-10-01T00:00:00+09:00\"").doesNotContain("2026-09-30T15:00Z");
   }
 
   @Test
