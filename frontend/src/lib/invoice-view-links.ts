@@ -1,4 +1,4 @@
-export type InvoiceViewLink = {
+export type InvoiceViewLinkResponse = {
   id: string;
   created_at: string;
   expires_at: string;
@@ -7,9 +7,9 @@ export type InvoiceViewLink = {
   allow_payment_retry: boolean;
 };
 
-export type CreatedInvoiceViewLink = InvoiceViewLink & { token: string };
+export type InvoiceViewLinkSecretResponse = InvoiceViewLinkResponse & { token: string };
 
-export type PublicInvoice = {
+export type PublicInvoiceResponse = {
   invoice_number: string;
   organization_name: string;
   customer_name: string;
@@ -48,7 +48,7 @@ export type PublicInvoice = {
   expires_at: string;
 };
 
-type PublicInvoiceLine = PublicInvoice["lines"][number];
+type PublicInvoiceLine = PublicInvoiceResponse["lines"][number];
 
 export function publicInvoiceLineName(line: Pick<PublicInvoiceLine, "line_type" | "billable_metric_code" | "billable_metric_name">): string {
   if (line.line_type === "base_fee") return "기본료";

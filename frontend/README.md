@@ -9,6 +9,8 @@ MeterEngine 관리자 콘솔. Next.js App Router + TypeScript.
 - API 계약은 `backend/openapi.yaml`에서 확인한다. 로그인 세션으로 도입사를 선택하고, 도입사 서버는 별도 API 키로 같은 조회 API를 쓴다.
 - 코드와 문서 작성 규칙은 `docs/contributing/`에 있다.
 
+로고 심볼 원본은 `public/brand/meterengine-mark.svg`다. 홈페이지와 콘솔에서 함께 사용하며, 같은 폴더의 PNG는 투명 배경 배포용이다. `src/app/icon.svg`, `favicon.ico`, `apple-icon.png`는 원본에서 만든 아이콘이다. 색상은 `#5746ad`다.
+
 ## 사전 준비
 
 - Node.js 24 (`Dockerfile`의 빌드 이미지가 `node:24-alpine`).
@@ -81,7 +83,7 @@ docker run -p 3000:3000 \
   meterengine-frontend
 ```
 
-- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
+- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`과 `public`을 따로 복사한다. 빼면 CSS, JS와 로고 이미지가 404다.
 - 백엔드 주소는 런타임 환경변수로 받는다. 생략하면 로컬 기본값을 쓴다.
 
 ## 백엔드 연동

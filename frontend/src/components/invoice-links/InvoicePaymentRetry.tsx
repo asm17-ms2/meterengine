@@ -3,17 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { formatKrw } from "@/lib/format";
 import { canRetryInvoicePayment, invoicePaymentRetryUnavailableMessage } from "@/lib/invoice-payment-retry";
-import type { PublicInvoice } from "@/lib/invoice-view-links";
+import type { PublicInvoiceResponse } from "@/lib/invoice-view-links";
 import styles from "./InvoicePaymentRetry.module.css";
 
 export type InvoicePaymentRequestState = "idle" | "submitting" | "unknown";
 
 type Props = {
-  invoice: PublicInvoice;
+  invoice: PublicInvoiceResponse;
   getToken: () => string;
   isCurrentRequest: (token: string) => boolean;
   onStateChange: (state: InvoicePaymentRequestState, token: string) => void;
-  onResult: (invoice: PublicInvoice, token: string) => void;
+  onResult: (invoice: PublicInvoiceResponse, token: string) => void;
   onRefresh: () => void;
 };
 
@@ -58,7 +58,7 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
         onStateChange("unknown", token);
         return;
       }
-      const updated = await response.json() as PublicInvoice;
+      const updated = await response.json() as PublicInvoiceResponse;
       if (controller.signal.aborted || !isCurrentRequest(token)) return;
       if (updated.invoice_number !== invoice.invoice_number || updated.total_amount !== invoice.total_amount || updated.payment.mode !== invoice.payment.mode) throw new Error("invoice_mismatch");
       onResult(updated, token);

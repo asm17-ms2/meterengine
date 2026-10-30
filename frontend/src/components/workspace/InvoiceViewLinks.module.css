@@ -16,5 +16,4 @@
 .list li { padding: 20px 0; display: flex; justify-content: space-between; gap: 20px; align-items: center; border-top: 1px solid var(--line); }
 .list li > div { display: grid; gap: 6px; min-width: 0; }
 .list span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-.revoke { color: #a92334; border-color: #b72c3c; white-space: nowrap; }
 @media (max-width: 520px) { .issued { padding: 18px; }.createRow { align-items: stretch; }.createRow > * { width: 100%; }.list li { align-items: start; flex-wrap: wrap; }.buttons { align-items: stretch; flex-direction: column; }.buttons a { text-align: center; } }
