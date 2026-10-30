@@ -223,8 +223,8 @@ input, textarea { caret-color: var(--blue); }
   .workspace-mobile-records, .data-mobile-records { display: grid; gap: 18px; min-width: 0; }
   .workspace-mobile-record, .data-mobile-record { padding-block: 0 18px; border-bottom: 1px solid var(--line); min-width: 0; }
   .workspace-mobile-record:last-child, .data-mobile-record:last-child { border-bottom: 0; padding-bottom: 0; }
-  .workspace-mobile-record h3, .data-mobile-record h3 { font-size: 16px; margin: 0 0 16px; overflow-wrap: anywhere; }
-  .workspace-mobile-record h3 { font-size: 14px; }
+  .workspace-mobile-title, .data-mobile-record h3 { font-size: 16px; margin: 0 0 16px; overflow-wrap: anywhere; }
+  .workspace-mobile-title { font-size: 14px; font-weight: 700; line-height: inherit; }
   .workspace-mobile-record dl { display: grid; gap: 12px; margin: 0 0 18px; }
   .workspace-mobile-record dl > div { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1.3fr); gap: 12px; align-items: baseline; }
   .workspace-mobile-record dt { font-size: 12px; color: var(--muted); }
