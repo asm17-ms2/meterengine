@@ -25,6 +25,9 @@ public class InvoiceLine {
   @Column(name = "billable_metric_code")
   private String billableMetricCode;
 
+  @Column(name = "billable_metric_name", updatable = false)
+  private String billableMetricName;
+
   @Column(name = "target_property")
   private String targetProperty;
 
@@ -206,7 +209,8 @@ public class InvoiceLine {
       int tierIndex,
       BigDecimal quantityNumerator,
       BigDecimal quantityDenominator,
-      UUID environmentId) {
+      UUID environmentId,
+      String billableMetricName) {
     this(
         id,
         organizationId,
@@ -222,5 +226,10 @@ public class InvoiceLine {
         quantityNumerator,
         quantityDenominator);
     this.environmentId = environmentId;
+    this.billableMetricName = billableMetricName;
+  }
+
+  public String getBillableMetricName() {
+    return billableMetricName;
   }
 }
