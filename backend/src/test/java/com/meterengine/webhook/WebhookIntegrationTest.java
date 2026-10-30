@@ -332,6 +332,19 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 수신_주소_목록은_보관_상태로_거른다() {
+    String url = endpoint.url();
+    WebhookEndpointResponse archived =
+        webhookEndpointService.create(
+            organizationId, new CreateWebhookEndpointRequest(url, List.of("webhook_test"), null));
+    webhookEndpointService.delete(organizationId, archived.id());
+
+    assertThat(endpointIds("active")).contains(endpoint.id()).doesNotContain(archived.id());
+    assertThat(endpointIds("archived")).contains(archived.id()).doesNotContain(endpoint.id());
+    assertThat(endpointIds("all")).contains(endpoint.id(), archived.id());
+  }
+
+  @Test
   void 수신_주소_목록은_시도_전_전송이_쌓여도_기록된_마지막_시도의_실패를_알린다() {
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
@@ -679,5 +692,11 @@ class WebhookIntegrationTest {
         .findFirst()
         .orElseThrow()
         .latestAttemptFailed();
+  }
+
+  private List<UUID> endpointIds(String status) {
+    return webhookEndpointService.list(organizationId, status).stream()
+        .map(WebhookEndpointResponse::id)
+        .toList();
   }
 }

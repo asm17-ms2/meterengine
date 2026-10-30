@@ -1,6 +1,7 @@
 package com.meterengine.webhook.repository;
 
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.webhook.dto.WebhookEndpointResponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,11 +28,15 @@ public class WebhookEndpointRepository {
           + " WHERE d.organization_id = e.organization_id AND d.webhook_endpoint_id = e.id"
           + " ORDER BY a.attempted_at DESC, a.id DESC LIMIT 1), false) AS latest_attempt_failed";
 
-  public List<WebhookEndpointResponse> findByOrganizationId(UUID organizationId) {
+  // 상태를 SQL에서 먼저 걸러, 기본 목록이 개수 제한 밖인 보관 주소의 최근 시도까지 계산하지 않게 한다.
+  public List<WebhookEndpointResponse> findByOrganizationId(
+      UUID organizationId, ArchiveStatus status) {
     return jdbcTemplate.query(
         "SELECT e.*, "
             + LATEST_ATTEMPT_FAILED
-            + " FROM webhook_endpoint e WHERE organization_id = ? AND environment_scope_id = ? ORDER BY created_at, id",
+            + " FROM webhook_endpoint e WHERE organization_id = ? AND environment_scope_id = ?"
+            + archiveCondition(status)
+            + " ORDER BY created_at, id",
         (rs, rowNum) -> endpoint(rs),
         organizationId,
         BusinessEnvironmentContext.scopeId());
@@ -118,6 +123,14 @@ public class WebhookEndpointRepository {
         organizationId,
         BusinessEnvironmentContext.scopeId(),
         id);
+  }
+
+  private static String archiveCondition(ArchiveStatus status) {
+    return switch (status) {
+      case ACTIVE -> " AND deleted_at IS NULL";
+      case ARCHIVED -> " AND deleted_at IS NOT NULL";
+      case ALL -> "";
+    };
   }
 
   private static WebhookEndpointResponse endpoint(ResultSet rs) throws SQLException {
