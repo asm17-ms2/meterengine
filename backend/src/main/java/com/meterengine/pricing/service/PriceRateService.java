@@ -74,6 +74,7 @@ public class PriceRateService {
     return list(organizationId, code, customerId, "active");
   }
 
+  @Transactional(readOnly = true)
   public ListPriceRatesResponse list(
       UUID organizationId, String code, UUID customerId, String status) {
     validateCustomer(organizationId, customerId);

@@ -215,9 +215,9 @@ export class LumenStore {
     });
   }
 
-  finishOutbox(claim: OutboxClaim, now: number, isDelivered: boolean): void {
+  finishOutbox(claim: OutboxClaim, now: number, isDelivered: boolean, retryAt = now + 5000): void {
     this.db.prepare("UPDATE metering_outbox SET status=?,lease_token=NULL,lease_until=NULL,next_attempt_at=? WHERE transaction_id=? AND lease_token=? AND status='delivering'")
-      .run(isDelivered ? "delivered" : "failed", isDelivered ? 0 : now + 5000, claim.transactionId, claim.leaseToken);
+      .run(isDelivered ? "delivered" : "failed", isDelivered ? 0 : retryAt, claim.transactionId, claim.leaseToken);
   }
 
   makeOutboxDue(accountId: string, generationId?: string): void {

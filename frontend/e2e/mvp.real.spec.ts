@@ -126,6 +126,9 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(keyDialog.locator(".secret-result code")).toBeVisible();
     apiKey = (await keyDialog.locator(".secret-result code").textContent())!;
     expect(apiKey.startsWith("me_test_")).toBe(true);
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await keyDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await expect(keyDialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "수신 주소 등록", exact: true }).click();
     const webhookDialog = page.getByRole("dialog");
@@ -134,6 +137,8 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(webhookDialog.locator(".secret-result code")).toBeVisible();
     const webhookSecret = await webhookDialog.locator(".secret-result code").textContent();
     await request.post(`${PG_URL}/__control`, { data: { webhookSecret, channel: suffix } });
+    await webhookDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await expect(webhookDialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
   });
   const apiHeaders = { Authorization: `Bearer ${apiKey}` };
@@ -285,7 +290,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect.poll(async () => {
       const provider = await (await request.get(`${PG_URL}/__state`)).json();
       return ["payment_succeeded", "payment_canceled", "unbilled_usage_detected"].every(type => provider.webhooks.some((event: { channel: string; type: string; is_valid: boolean }) => event.channel === suffix && event.type === type && event.is_valid));
-    }, { timeout: 100_000, intervals: [1000, 3000, 5000] }).toBe(true);
+    }, { timeout: 100_000, intervals: [1000, 3000, 5000], message: "결제 성공, 취소와 미청구 사용량 통보 수신(백엔드 UNBILLED_USAGE_REPORT_CRON을 짧은 주기로 두었는지 확인)" }).toBe(true);
     const provider = await (await request.get(`${PG_URL}/__state`)).json();
     const webhooks = provider.webhooks.filter((event: { channel: string }) => event.channel === suffix);
     expect(webhooks.every((event: { is_valid: boolean }) => event.is_valid)).toBe(true);

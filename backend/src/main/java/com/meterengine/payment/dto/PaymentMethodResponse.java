@@ -21,15 +21,30 @@ public record PaymentMethodResponse(
     @JsonProperty("archived_at") OffsetDateTime archivedAt) {
 
   public static PaymentMethodResponse from(BillingKey billingKey) {
-    return new PaymentMethodResponse(
+    return of(
         billingKey.getCustomerId(),
         billingKey.getCardIssuerCode(),
         billingKey.getCardNumber(),
         billingKey.getMode(),
-        billingKey
-            .getAuthenticatedAt()
+        billingKey.getAuthenticatedAt(),
+        billingKey.getArchivedAt());
+  }
+
+  public static PaymentMethodResponse of(
+      UUID customerId,
+      String cardIssuerCode,
+      String cardNumber,
+      String mode,
+      OffsetDateTime authenticatedAt,
+      OffsetDateTime archivedAt) {
+    return new PaymentMethodResponse(
+        customerId,
+        cardIssuerCode,
+        cardNumber,
+        mode,
+        authenticatedAt
             .atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE)
             .toOffsetDateTime(),
-        billingKey.getArchivedAt());
+        archivedAt);
   }
 }

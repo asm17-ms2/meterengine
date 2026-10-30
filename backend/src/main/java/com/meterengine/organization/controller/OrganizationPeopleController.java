@@ -12,6 +12,7 @@ import com.meterengine.organization.dto.CreateOrganizationInvitationRequest;
 import com.meterengine.organization.dto.ListManagedMembersResponse;
 import com.meterengine.organization.dto.ListOrganizationInvitationsResponse;
 import com.meterengine.organization.dto.ManagedMemberResponse;
+import com.meterengine.organization.dto.OrganizationInvitationSecretResponse;
 import com.meterengine.organization.dto.UpdateOrganizationMemberRoleRequest;
 import com.meterengine.organization.dto.UpdateOrganizationMemberScopesRequest;
 import com.meterengine.organization.service.OrganizationPeopleService;
@@ -252,7 +253,7 @@ public class OrganizationPeopleController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=organization_member_already_exists: 그 이메일의 사용자가 이미 세션 도입사에 소속돼 있다")
   })
-  public OrganizationPeopleService.IssuedInvitation inviteOrganizationUser(
+  public OrganizationInvitationSecretResponse inviteOrganizationUser(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @CurrentOrganizationId UUID organizationId,
       @Valid @RequestBody CreateOrganizationInvitationRequest request) {

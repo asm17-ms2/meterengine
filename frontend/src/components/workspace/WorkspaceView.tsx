@@ -70,7 +70,3 @@ export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록�
     </div>
   </>;
 }
-
-export function WorkspaceOperations({ items }: { items: (ActionPanelProps & { id: string })[] }) {
-  return <div className="workspace-actions">{items.map(item => <ActionPanel key={item.id} {...item} />)}</div>;
-}

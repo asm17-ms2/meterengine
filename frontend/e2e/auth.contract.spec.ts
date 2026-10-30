@@ -33,6 +33,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   const target = new URL(href!, "http://localhost:33148");
   expect(target.pathname).toBe(`/payments/${invoiceId}`);
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
+  // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
   await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
   await page.getByRole("button", { name: "조회", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 과금 운영");
@@ -41,6 +42,10 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Enter만 눌러 제출해도 직접 쓴 월로 조회한다.
+  await page.getByLabel("청구 월", { exact: true }).fill("2026-04");
+  await page.getByLabel("청구 월", { exact: true }).press("Enter");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 4월 과금 운영");
 });
 
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
@@ -175,10 +180,14 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
-test("the sidebar menu list is not a separate tab stop", async ({ page }) => {
+test("the sidebar lists page links in plain lists without menu roles", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  await expect(page.getByRole("navigation", { name: "도입사 업무" }).getByRole("menu")).toHaveAttribute("tabindex", "-1");
+  const nav = page.getByRole("navigation", { name: "도입사 업무" });
+  await expect(nav.getByRole("menu")).toHaveCount(0);
+  await expect(nav.getByRole("menuitem")).toHaveCount(0);
+  await expect(nav.getByRole("list")).toHaveCount(4);
+  await expect(nav.getByRole("list", { name: "과금과 연동", exact: true }).getByRole("link")).toHaveCount(4);
 });
 
 test("the sidebar lists the meter screen and marks it as the current place", async ({ page }) => {
@@ -187,7 +196,8 @@ test("the sidebar lists the meter screen and marks it as the current place", asy
   const nav = page.getByRole("navigation", { name: "도입사 업무" });
   await nav.getByRole("link", { name: "미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
-  await expect(nav.locator(".ant-menu-item-selected")).toHaveText("미터");
+  await expect(nav.getByRole("link", { name: "미터", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(nav.locator("[aria-current=page]")).toHaveCount(1);
 });
 
 test("each screen has its own document title", async ({ page }) => {
@@ -470,6 +480,14 @@ test("a dangerous row action is a quiet link and its final confirmation carries 
   await expect(confirm).toHaveClass(/ant-btn-primary/);
 });
 
+test("the operator organization list shows the application time in the console KST format", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/organizations");
+  await expect(page).toHaveURL(/\/admin\/organizations/);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/organizations?status=all");
+  await expect(page.getByText(/^신청일 /).first()).toHaveText(/^신청일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST$/);
+});
+
 test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/organizations");
   await expect(page).toHaveURL(/\/admin\/organizations/);
@@ -556,6 +574,10 @@ test("375px forms and tenant header fit, keyboard focus and menu work", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "업무 메뉴 열기" })).toBeFocused();
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await page.getByRole("dialog").getByRole("link", { name: "미터", exact: true }).click();
+  await expectTenantUrl(page, "/billable-metrics");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("server action replay on a public route cannot create a customer without a session", async ({ page, request }) => {
@@ -687,7 +709,7 @@ test("a long organization name is cut with an ellipsis and keeps the header icon
 test("sidebar group titles start on the same line as the sidebar label", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  const title = page.locator(".workspace-sidebar .ant-menu-item-group-title").first();
+  const title = page.locator(".workspace-sidebar .nav-group-title").first();
   await expect(title).toHaveCSS("padding-inline-start", "24px");
   await expect(title).toHaveCSS("font-size", "11px");
 });

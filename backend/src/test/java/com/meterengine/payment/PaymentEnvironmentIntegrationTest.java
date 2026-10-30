@@ -24,6 +24,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.client.TossPaymentsTransaction;
+import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.entity.BillingKey;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
@@ -493,6 +494,75 @@ class PaymentEnvironmentIntegrationTest {
   }
 
   @Test
+  void 요청문맥_없는_취소_확인도_원본환경과_결제당시_키를_사용한다() {
+    Payable live = payable("live");
+    payable("test");
+    assertThat(putCredential("live", "live", "live_sk_rotated_environment")).hasStatusOk();
+    jdbcTemplate.update(
+        "UPDATE toss_payments_credential SET updated_at = now() - interval '20 minutes' WHERE"
+            + " organization_id=? AND environment_id=? AND mode='live'",
+        organizationId,
+        environment("live"));
+    UUID attempt = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id,"
+            + " invoice_id, mode, amount, order_name, status, payment_key, requested_at,"
+            + " completed_at, credential_updated_at) VALUES (?, ?, ?, ?, ?, 'live', 1100, '사용료',"
+            + " 'done', 'cancel-confirm-live', now() - interval '10 minutes', now() - interval '9"
+            + " minutes', ?)",
+        attempt,
+        organizationId,
+        environment("live"),
+        live.customer(),
+        live.invoice(),
+        KEY_TIME);
+    UUID cancellation = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO payment_cancellation (id, organization_id, environment_id,"
+            + " payment_attempt_id, mode, amount, reason, status, requested_at) VALUES (?, ?, ?,"
+            + " ?, 'live', 400, '부분 취소', 'pending', now() - interval '3 minutes')",
+        cancellation,
+        organizationId,
+        environment("live"),
+        attempt);
+    when(toss.findPayment(eq(LIVE_SECRET), eq("cancel-confirm-live")))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                new TossPaymentsPayment(
+                    "cancel-confirm-live",
+                    attempt.toString(),
+                    "PARTIAL_CANCELED",
+                    1100,
+                    700,
+                    List.of(
+                        new TossPaymentsPayment.Cancel(
+                            "cancel-transaction-live",
+                            400,
+                            OffsetDateTime.now().minusMinutes(2),
+                            "DONE")))));
+    assertThat(BusinessEnvironmentContext.current()).isNull();
+
+    confirmation.confirm();
+
+    assertThat(BusinessEnvironmentContext.current()).isNull();
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT status, transaction_key FROM payment_cancellation WHERE id=?",
+                cancellation))
+        .containsEntry("status", "done")
+        .containsEntry("transaction_key", "cancel-transaction-live");
+    verify(toss, never()).findPayment(eq("live_sk_rotated_environment"), anyString());
+    verify(toss, never()).findPayment(eq(TEST_SECRET), anyString());
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT environment_id FROM webhook_event WHERE organization_id=? AND"
+                    + " type='payment_canceled'",
+                UUID.class,
+                organizationId))
+        .containsExactly(environment("live"));
+  }
+
+  @Test
   void 대사는_교체전_키도_사용하고_다른_환경의_거래를_불일치로_기록하지_않는다() {
     String originalSecret = "test_sk_reconciliation_original";
     Payable test = payable("test", originalSecret);
@@ -533,6 +603,134 @@ class PaymentEnvironmentIntegrationTest {
                 organizationId))
         .isZero();
     assertThat(BusinessEnvironmentContext.current()).isNull();
+  }
+
+  @Test
+  void 대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다() {
+    String oldSecret = "test_sk_reconciliation_revoked";
+    String midSecret = "test_sk_reconciliation_retired";
+    Payable test = payable("test", oldSecret);
+    assertThat(putCredential("test", "test", midSecret)).hasStatusOk();
+    UUID midAttempt = insertAttempt(test, "test", false);
+    OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "reconciled-retired",
+        completed,
+        midAttempt);
+    assertThat(putCredential("test", "test", "test_sk_reconciliation_current")).hasStatusOk();
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    when(toss.listTransactions(eq(oldSecret), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Rejected<>(401, "UNAUTHORIZED_KEY", "폐기한 키"));
+    when(toss.listTransactions(eq(midSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-retired",
+                        "reconciled-retired",
+                        midAttempt.toString(),
+                        "DONE",
+                        completed,
+                        1100))));
+
+    PaymentJobResult result = reconciliation.reconcile(OffsetDateTime.now());
+
+    assertThat(result.failedCount()).isZero();
+    verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
+    verify(toss).listTransactions(eq(midSecret), any(), any(), isNull(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
+                Integer.class,
+                organizationId))
+        .isZero();
+  }
+
+  @Test
+  void 대사하지_않는_옛_키로_승인한_결제의_토스에만_있는_취소는_현재_키_목록에서_남긴다() {
+    String oldSecret = "test_sk_reconciliation_external_old";
+    String currentSecret = "test_sk_reconciliation_external_current";
+    Payable test = payable("test", oldSecret);
+    UUID oldAttempt = insertAttempt(test, "test", false);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "external-cancel-old",
+        OffsetDateTime.now().minusMinutes(25 * 60 + 30),
+        oldAttempt);
+    assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    when(toss.listTransactions(eq(currentSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-external-cancel",
+                        "external-cancel-old",
+                        oldAttempt.toString(),
+                        "PARTIAL_CANCELED",
+                        OffsetDateTime.now().minusHours(1),
+                        -400))));
+
+    reconciliation.reconcile(OffsetDateTime.now());
+
+    verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT kind, transaction_key FROM payment_reconciliation_mismatch WHERE"
+                    + " organization_id=?",
+                organizationId))
+        .containsExactly(
+            Map.of(
+                "kind", "missing_in_meterengine",
+                "transaction_key", "transaction-external-cancel"));
+  }
+
+  @Test
+  void 대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다() {
+    String retiredSecret = "test_sk_reconciliation_partial_retired";
+    String currentSecret = "test_sk_reconciliation_partial_current";
+    when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Success<>(List.of()));
+    // 같은 DB에 남은 다른 시험의 도입사 실패는 빼고 이 도입사의 실패만 센다.
+    int othersFailed = reconciliation.reconcile(OffsetDateTime.now()).failedCount();
+    Payable test = payable("test");
+    assertThat(putCredential("test", "test", retiredSecret)).hasStatusOk();
+    UUID retiredAttempt = insertAttempt(test, "test", false);
+    OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
+    jdbcTemplate.update(
+        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+        "reconciled-partial",
+        completed,
+        retiredAttempt);
+    assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
+    when(toss.listTransactions(eq(currentSecret), any(), any(), any(), eq(1000)))
+        .thenReturn(new TossPaymentsResult.Rejected<>(503, "PROVIDER_ERROR", "일시 장애"));
+    when(toss.listTransactions(eq(retiredSecret), any(), any(), isNull(), eq(1000)))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    new TossPaymentsTransaction(
+                        "transaction-partial",
+                        "reconciled-partial",
+                        retiredAttempt.toString(),
+                        "DONE",
+                        completed,
+                        1100))));
+
+    PaymentJobResult result = reconciliation.reconcile(OffsetDateTime.now());
+
+    assertThat(result.failedCount() - othersFailed).isEqualTo(1);
+    verify(toss).listTransactions(eq(currentSecret), any(), any(), any(), eq(1000));
+    verify(toss).listTransactions(eq(retiredSecret), any(), any(), isNull(), eq(1000));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
+                Integer.class,
+                organizationId))
+        .isZero();
   }
 
   private UUID insertAttempt(Payable payable, String mode, boolean failed) {

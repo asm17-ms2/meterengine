@@ -47,6 +47,20 @@ export type PublicInvoice = {
   expires_at: string;
 };
 
+type PublicInvoiceLine = PublicInvoice["lines"][number];
+
+export function publicInvoiceLineName(line: Pick<PublicInvoiceLine, "line_type" | "billable_metric_code">): string {
+  if (line.line_type === "base_fee") return "기본료";
+  if (line.line_type === "minimum_adjustment") return "최소 사용료 조정";
+  return line.billable_metric_code ?? "사용량";
+}
+
+export function publicInvoiceLineTier(line: Pick<PublicInvoiceLine, "line_type" | "tier_index">): string | null {
+  if (line.line_type === "volume") return "총량 단가";
+  if (line.line_type === "graduated_tier" && line.tier_index != null) return `구간 ${line.tier_index + 1}`;
+  return null;
+}
+
 export function isValidInvoiceViewToken(value: unknown): value is string {
   return typeof value === "string" && /^me_invoice_[A-Za-z0-9]{32}$/.test(value);
 }

@@ -2,6 +2,8 @@ import { expect, test, type APIRequestContext, type APIResponse, type Page } fro
 import { randomUUID } from "node:crypto";
 import { closeSync, fchmodSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { ENVIRONMENT_LABELS } from "../src/lib/environment";
+import { formatKoreanMonth } from "../src/lib/format";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PG_URL = "http://127.0.0.1:38447";
@@ -71,7 +73,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       await page.getByRole("button", { name: "공급자 정보 저장", exact: true }).click();
       await expect(page.getByText("처리했습니다.", { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "결제 모드 변경", exact: true })).toHaveCount(0);
-      await expect(page.getByText("결제 환경을 바꾸려면 상단 업무 환경을 전환하세요.", { exact: false })).toBeVisible();
+      await expect(page.getByText("결제 모드를 바꾸려면 상단 업무 환경을 전환하세요.", { exact: false })).toBeVisible();
       await page.getByRole("button", { name: "토스 키 저장", exact: true }).click();
       const credentials = page.getByRole("dialog");
       await expect(credentials.locator('input[name="mode"]')).toHaveValue(environment);
@@ -130,8 +132,9 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       expect(inaccessible.status()).toBe(404);
       const query = await json<{ items: { id: string }[] }>(await request.get(`${API_URL}/v1/customers/search?q=${suffix}`, { headers: scope.headers }));
       expect(query.items.map(customer => customer.id)).toEqual([scope.customerId]);
-      page.once("dialog", dialog => dialog.accept());
-      await page.getByRole("combobox", { name: "업무 환경", exact: true }).selectOption(other.environment);
+      await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+      await page.locator(".ant-select-item-option", { hasText: ENVIRONMENT_LABELS[other.environment] }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
       await expect.poll(() => new URL(page.url()).pathname).toBe("/payments");
       expect(new URL(page.url()).searchParams.get("environment")).toBe(other.environment);
       await expect(page.getByText("데이터를 불러오지 못했습니다", { exact: true })).toHaveCount(0);
@@ -140,9 +143,9 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
     for (const scope of scopes) {
       for (const screen of ["overview", "settings", "events", "payments"]) {
         await page.goto(href(`/${screen}`, scope.environment));
-        const heading = { overview: "이번 달 과금 운영", settings: "도입사 설정", events: "수집 로그", payments: "수납과 취소" }[screen];
+        const heading = { overview: `${formatKoreanMonth(month)} 과금 운영`, settings: "도입사 설정", events: "수집 로그", payments: "수납과 취소" }[screen];
         await expect(page.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
-        await expect(page.getByRole("combobox", { name: "업무 환경", exact: true })).toHaveValue(scope.environment);
+        await expect(page.locator(".workspace-environment")).toContainText(ENVIRONMENT_LABELS[scope.environment]);
         await expect(page.getByText("업무 화면을 준비하고 있습니다.", { exact: true })).toHaveCount(0);
         if (screen === "events") {
           await expect(page.locator("form#event-search")).toBeVisible();
@@ -155,7 +158,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       }
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(page.getByRole("heading", { level: 1, name: "수납과 취소", exact: true })).toBeVisible();
-      await expect(page.getByRole("combobox", { name: "업무 환경", exact: true })).toHaveValue(scope.environment);
+      await expect(page.locator(".workspace-environment")).toContainText(ENVIRONMENT_LABELS[scope.environment]);
       await expect(page.getByText("업무 화면을 준비하고 있습니다.", { exact: true })).toHaveCount(0);
       await expect(page.locator(".workspace-mobile-records").getByText(`${scope.environment} 고객 ${suffix}`, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
