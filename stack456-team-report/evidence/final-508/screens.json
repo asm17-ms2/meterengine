@@ -1,0 +1,744 @@
+[
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "login",
+    "path": "/login",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/login-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/login-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "login-logout-unconfirmed",
+    "path": "/login?reason=logout_unconfirmed",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/login-logout-unconfirmed-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/login",
+        "title": "로그인 | MeterEngine",
+        "h1": "로그인",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/login-logout-unconfirmed-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "signup",
+    "path": "/signup",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/signup-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/signup",
+        "title": "도입사 가입 신청 | MeterEngine",
+        "h1": "도입사 가입 신청",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/signup-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "public",
+    "account": "anonymous",
+    "loginLanded": null,
+    "reducedMotion": null,
+    "name": "invoice-links",
+    "path": "/invoice-links",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoice-links",
+        "title": "청구서 조회 | MeterEngine | MeterEngine",
+        "h1": "청구서 조회 정보가 없습니다",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/invoice-links-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoice-links",
+        "title": "청구서 조회 | MeterEngine | MeterEngine",
+        "h1": "청구서 조회 정보가 없습니다",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/invoice-links-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "overview",
+    "path": "/overview",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/overview",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "첫 청구를 준비하세요",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/overview-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/overview",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "첫 청구를 준비하세요",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/overview-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "customers",
+    "path": "/customers",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/customers-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/customers",
+        "title": "고객 | MeterEngine",
+        "h1": "고객",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/customers-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "heading-order",
+            "impact": "moderate",
+            "nodes": 1,
+            "help": "Heading levels should only increase by one",
+            "targets": [
+              "article:nth-child(1) > h3"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "events",
+    "path": "/events",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/events",
+        "title": "수집 로그 | MeterEngine",
+        "h1": "수집 로그",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/events-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/events",
+        "title": "수집 로그 | MeterEngine",
+        "h1": "수집 로그",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/events-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "event-issues",
+    "path": "/event-issues",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/event-issues",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "이벤트 매핑 진단",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/event-issues-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/event-issues",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "이벤트 매핑 진단",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/event-issues-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "event-rejections",
+    "path": "/event-rejections",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/event-rejections",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "수집 거절",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/event-rejections-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/event-rejections",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "수집 거절",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/event-rejections-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "invoices",
+    "path": "/invoices",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoices",
+        "title": "확정 인보이스 | MeterEngine",
+        "h1": "인보이스 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/invoices-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/invoices",
+        "title": "확정 인보이스 | MeterEngine",
+        "h1": "인보이스 - 2026년 10월",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/invoices-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "payments",
+    "path": "/payments",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/payments",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "수납과 취소",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/payments-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/payments",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "수납과 취소",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/payments-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "billable-metrics",
+    "path": "/billable-metrics",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": "미터",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/billable-metrics-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/billable-metrics",
+        "title": "미터 | MeterEngine",
+        "h1": "미터",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/billable-metrics-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "pricing",
+    "path": "/pricing",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pricing",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "무엇에 얼마를 청구할까요",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/pricing-desktop.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".ant-table-expanded-row-fixed"
+            ]
+          }
+        ],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/pricing",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "무엇에 얼마를 청구할까요",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/pricing-mobile.png",
+        "consoleErrors": [],
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "targets": [
+              ".ant-table-expanded-row-fixed"
+            ]
+          },
+          {
+            "id": "scrollable-region-focusable",
+            "impact": "serious",
+            "nodes": 1,
+            "help": "Scrollable region must have keyboard access",
+            "targets": [
+              ".ant-table-empty > .ant-table-container > .ant-table-content"
+            ]
+          }
+        ],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "integrations",
+    "path": "/integrations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "API 키와 통보 | MeterEngine",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/integrations-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/integrations",
+        "title": "API 키와 통보 | MeterEngine",
+        "h1": "API 키와 통보",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/integrations-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "settings",
+    "path": "/settings",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/settings",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "도입사 설정",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/settings-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/settings",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "도입사 설정",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/settings-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "member",
+    "account": "member@meterengine.local",
+    "loginLanded": "/customers",
+    "reducedMotion": null,
+    "name": "members",
+    "path": "/members",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/members-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/members",
+        "title": "사용자 관리 | MeterEngine",
+        "h1": "사용자 관리",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/members-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@meterengine.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin",
+    "path": "/admin",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "서비스 운영 현황",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin",
+        "title": "MeterEngine 관리자 콘솔",
+        "h1": "서비스 운영 현황",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@meterengine.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-organizations",
+    "path": "/admin/organizations",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-organizations-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/organizations",
+        "title": "가입 승인과 도입사 | MeterEngine",
+        "h1": "가입 승인과 도입사",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-organizations-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  },
+  {
+    "group": "operator",
+    "account": "operator@meterengine.local",
+    "loginLanded": "/admin",
+    "reducedMotion": null,
+    "name": "admin-users",
+    "path": "/admin/users",
+    "note": null,
+    "viewports": [
+      {
+        "viewport": "desktop",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-users-desktop.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      },
+      {
+        "viewport": "mobile",
+        "status": 200,
+        "navError": null,
+        "finalPath": "/admin/users",
+        "title": "사용자와 플랫폼 권한 | MeterEngine",
+        "h1": "사용자와 플랫폼 권한",
+        "horizontalOverflow": false,
+        "screenshot": "./.s456-work/final/archived-card-1/screens/admin-users-mobile.png",
+        "consoleErrors": [],
+        "violations": [],
+        "axeError": null
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+sha cb9bdda2a5f7faabafbda0795167efb63ae4b6fd, DB를 새로 만든 실환경(final2.sh archived-card-1)
+aggregation: 통과 1 passed (9.8s) rc=0
+archive-filters: 통과 2 passed (14.5s) rc=0
+auth: 통과 3 passed (6.4s) rc=0
+customer-payment-retry: 통과 6 passed (8.2s) rc=0
+environment-cycle: 통과 1 passed (21.2s) rc=0
+events: 통과 1 passed (7.0s) rc=0
+invoice-links: 통과 3 passed (4.4s) rc=0
+mvp: 통과 1 passed (56.2s) rc=0
+operator-create: 통과 1 passed (2.7s) rc=0
+people: 통과 1 passed (11.4s) rc=0
+permissions: 통과 6 passed (14.2s) rc=0
+query-workspace: 통과 1 passed (9.6s) rc=0
