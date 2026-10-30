@@ -434,6 +434,32 @@ test("accepting an invitation as a new account does not send a stale session", a
   expect(accept.hasAuthorization).toBe(false);
 });
 
+test("the automatic login after accepting an invitation sends the visitor's client address", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-meterengine-client-ip": "198.51.100.77" });
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await page.getByLabel(/^이름/).fill("초대 받은 사용자");
+  await page.getByLabel(/^비밀번호/).fill("invited-password");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
+  await page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+  await expectTenantUrl(page, "/overview");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const login = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
+  expect(login.clientIp).toBe("198.51.100.77");
+});
+
+test("every page refuses framing and MIME sniffing without naming the framework, and invoice links keep their own policy", async ({ request }) => {
+  for (const path of ["/login", "/signup", "/organization-invitations/me_invite_ContractInvitation00000000000001"]) {
+    const response = await request.get(path);
+    expect(response.headers()["x-frame-options"], path).toBe("DENY");
+    expect(response.headers()["content-security-policy"], path).toContain("frame-ancestors 'none'");
+    expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
+    expect(response.headers()["x-powered-by"], path).toBeUndefined();
+  }
+  const invoiceLink = await request.get("/invoice-links");
+  expect(invoiceLink.headers()["content-security-policy"]).toContain("default-src 'self'");
+  expect(invoiceLink.headers()["x-content-type-options"]).toBe("nosniff");
+});
+
 test("logging in to a return path of another member organization opens that organization", async ({ page }) => {
   const other = "22222222-2222-4222-8222-222222222222";
   await login(page, "member@contract.local", `/customers?organization_id=${other}&q=abc`);
