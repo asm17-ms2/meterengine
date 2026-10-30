@@ -39,8 +39,7 @@ ENV HOSTNAME=0.0.0.0
 # CSS와 JS 청크만 404가 난다.
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
-
-# public/을 만들면 여기에 COPY 한 줄을 더한다. 지금은 그 디렉터리가 없다.
+COPY --from=build --chown=node:node /app/public ./public
 
 # node 이미지가 미리 만들어 둔 비root 사용자다.
 USER node
