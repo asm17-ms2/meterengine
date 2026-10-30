@@ -1,0 +1,13 @@
+sha c661d802a97a8e76b49393c459a11fddf02e4b6d, DB를 새로 만든 실환경(final2.sh main-c661d80), 바꾸지 않은 main 기준선
+aggregation: 통과   1 passed (10.7s) rc=0
+archive-filters: 통과   2 passed (14.6s) rc=0
+auth: 통과   3 passed (6.3s) rc=0
+customer-payment-retry: 통과   6 passed (8.5s) rc=0
+environment-cycle: 통과   1 passed (19.2s) rc=0
+events: 통과   1 passed (7.6s) rc=0
+invoice-links: 통과   3 passed (5.1s) rc=0
+mvp: 통과   1 passed (50.8s) rc=0
+operator-create: 통과   1 passed (2.8s) rc=0
+people: 통과   1 passed (9.6s) rc=0
+permissions: 통과   6 passed (16.1s) rc=0
+query-workspace: 통과   1 passed (11.2s) rc=0
