@@ -1,0 +1,13 @@
+sha 9e58580ee8361956b65c61590d9052358851656e, DB를 새로 만든 실환경(final2.sh contract-redelivery-1)
+aggregation: 통과 1 passed (8.9s) rc=0
+archive-filters: 통과 2 passed (12.3s) rc=0
+auth: 통과 3 passed (6.6s) rc=0
+customer-payment-retry: 통과 6 passed (7.1s) rc=0
+environment-cycle: 통과 1 passed (19.8s) rc=0
+events: 통과 1 passed (6.7s) rc=0
+invoice-links: 통과 3 passed (4.2s) rc=0
+mvp: 통과 1 passed (37.3s) rc=0
+operator-create: 통과 1 passed (2.7s) rc=0
+people: 통과 1 passed (9.4s) rc=0
+permissions: 통과 6 passed (14.0s) rc=0
+query-workspace: 통과 1 passed (9.7s) rc=0

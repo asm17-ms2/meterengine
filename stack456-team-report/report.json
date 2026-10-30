@@ -1,8 +1,8 @@
 {
   "package": "T-yang",
   "owner": "양성지",
-  "status": "running",
-  "updated_at": "2026-10-30T12:25:05+09:00",
+  "status": "done",
+  "updated_at": "2026-10-30T12:58:37+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -39,9 +39,9 @@
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
     "fix/s456-t-yang-pricing-archive": "a937f8f",
     "fix/s456-t-yang-reconcile-catchup": "8edf94b",
-    "fix/s456-t-yang-ci-tests": "61ba35e",
+    "fix/s456-t-yang-ci-tests": "64a790f",
     "fix/s456-t-yang-mobile-heading": "dd5810c",
-    "fix/s456-t-yang-account-rules": "bb71176",
+    "fix/s456-t-yang-account-rules": "0943e24",
     "fix/s456-t-yang-webhook-restore": "cd7193b",
     "fix/s456-t-yang-demo-request": "f833734",
     "fix/s456-t-yang-toss-key-archive": "f3fcbcc",
@@ -51,7 +51,8 @@
     "fix/s456-t-yang-invoice-links-ui": "3b16755",
     "fix/s456-t-yang-contract-redelivery": "9e58580",
     "fix/s456-t-yang-readme-rules": "6bc2459",
-    "fix/s456-t-yang-console-rules": "ccbace0"
+    "fix/s456-t-yang-console-rules": "ccbace0",
+    "fix/s456-t-yang-payments-pricing-rules": "a2eb1db"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3398,7 +3399,7 @@
       "branch": "fix/s456-t-yang-ci-tests",
       "status": "fixed",
       "verdict": "confirmed",
-      "reason": "결정(머지 뒤 지침): CI가 저장소에 이미 있는 hermetic 시험(프론트 node 단위와 계약 명세 3종, demo의 pnpm과 Python 시험, deploy unittest, rds-auto-stop terraform test와 ASL 시험)을 돌리게 하기로 정한다. 지금 필수 체크는 lint와 build만 봐서 결제수단 등록 콜백, workspace 격리, Caddy 로그 마스킹이 깨져도 초록으로 머지되고 cd.yml이 그대로 배포한다. 팀 규칙도 어기면 실패해야 하는 제약은 CI 검사에 두라고 하고(comments.md:20), 추가하는 시험은 모두 외부 계정 없이 돌며(terraform은 mock_provider) 바뀐 경로에서만 돌아 비용이 작다. CI와 필수 체크는 팀 전체 제약이라 박성종, 문인호 두 사람을 리뷰어로 두고, 새 잡을 main 룰셋 필수 체크에 넣는 설정은 PR 본문에서 박성종 님에게 요청한다.",
+      "reason": "결정(머지 뒤 지침): CI가 저장소에 이미 있는 hermetic 시험(프론트 node 단위와 계약 명세 3종, demo의 pnpm과 Python 시험, deploy unittest, rds-auto-stop terraform test와 ASL 시험)을 돌리게 하기로 정한다. 지금 필수 체크는 lint와 build만 봐서 결제수단 등록 콜백, workspace 격리, Caddy 로그 마스킹이 깨져도 초록으로 머지되고 cd.yml이 그대로 배포한다. 팀 규칙도 어기면 실패해야 하는 제약은 CI 검사에 두라고 하고(comments.md:20), 추가하는 시험은 모두 외부 계정 없이 돌며(terraform은 mock_provider) 바뀐 경로에서만 돌아 비용이 작다. CI와 필수 체크는 팀 전체 제약이라 박성종, 문인호 두 사람을 리뷰어로 두고, 새 잡을 main 룰셋 필수 체크에 넣는 설정은 PR 본문에서 박성종 님에게 요청한다. [10-30] #495가 같은 일을 하는 rds-auto-stop job을 main에 더해, main을 받으면서 이 브랜치의 terraform job을 빼고 main job을 남겼다. 머지 조건 문서의 job 이름을 64a790f에서 rds-auto-stop으로 맞췄다.",
       "evidence": [
         ".github/workflows/ci.yml:28-35 @ af15d7f",
         ".github/workflows/ci.yml:79-81 @ af15d7f",
@@ -3413,11 +3414,13 @@
         "deploy/README.md:113 @ af15d7f",
         "measurements/terraform/modules/rds-auto-stop/tests/contracts.tftest.hcl:1-3 @ af15d7f",
         "커밋 a9ce8d1",
-        "커밋 84c47c7"
+        "커밋 84c47c7",
+        "커밋 64a790f"
       ],
       "commits": [
         "a9ce8d11",
-        "84c47c7a"
+        "84c47c7a",
+        "64a790fc"
       ],
       "tests": [
         "CI 설정이라 고치기 전 실패하는 시험은 없다. PR #494의 CI 실행(run 40868392114)에서 새 단계가 돌았다: frontend 단위 79건, auth 계약 65건, 카드 등록 계약 6건 통과, 업무 계약 7 통과 2 실패(main 기준선, #481이 고침), demo sdk 82, llm-service 36, web 85, Python 328건, deploy 39건 skip 없이 통과, terraform mock 2건과 ASL 27건 통과",
@@ -8818,42 +8821,51 @@
       "id": "NT-yang-010",
       "merged_ids": [],
       "evidence": [
-        "frontend/src/app/(console)/payments/page.tsx:13 @ c661d80",
-        "frontend/src/app/(console)/settings/page.tsx:28-31 @ c661d80"
+        "frontend/src/app/(console)/settings/page.tsx:28-31 @ c743f1f",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:38,130 @ c743f1f",
+        "workspace-load-rules.test.mjs a failed lookup passes its HTTP status: 실패 status 없는 WorkspaceError",
+        "커밋 ccbace0"
       ],
       "commits": [
         "ccbace03"
       ],
-      "tests": [],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-load-rules.test.mjs"
+      ],
       "behavior_change": false,
       "layer": 445,
       "branch": "fix/s456-t-yang-console-rules",
-      "status": "open",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "수납 목록, 수납 상세, 설정의 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #445 10-29 00:27 p3)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "설정 세 곳과 수납 상세 두 곳은 ccbace0(#513)에서 고침. 수납 목록(payments/page.tsx)은 열린 #498이 같은 줄을 다시 써 그 PR이 들어간 뒤 main에서 고친다"
+      "reason": "설정(공급자 정보, 결제 모드, 토스 키)과 수납 상세(취소 내역, 결제 내역)의 조회 실패가 WorkspaceError에 status를 넘기지 않았다. 각 자리에 error.status를 넘긴다(ccbace0, #513). 같은 지적의 수납 목록 몫은 #498과 겹쳐 NT-yang-033으로 떼어 따로 고쳤다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-011",
       "merged_ids": [],
       "evidence": [
-        "frontend/src/app/(console)/payments/page.tsx:21 @ c661d80",
-        "frontend/src/app/(console)/payments/[id]/page.tsx:78,134 @ c661d80",
-        "frontend/src/app/(console)/settings/page.tsx:31 @ c661d80"
+        "frontend/src/app/(console)/settings/page.tsx:31 @ c743f1f",
+        "frontend/src/app/(console)/payments/[id]/page.tsx:78,134 @ c743f1f",
+        "workspace-load-rules.test.mjs every workspace table on these pages names its scroll area: 실패 이름 없는 표",
+        "커밋 ccbace0"
       ],
       "commits": [
         "ccbace03"
       ],
-      "tests": [],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-load-rules.test.mjs"
+      ],
       "behavior_change": false,
       "layer": 445,
       "branch": "fix/s456-t-yang-console-rules",
-      "status": "open",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "수납 목록, 수납 상세, 설정의 업무 표에 label이 없다(박성종 님 #445 10-29 00:27 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "토스 키, 결제 시도 기록, 취소 내역 표는 ccbace0(#513)에서 고침. 수납 목록 표는 #498 뒤 main에서 고친다"
+      "reason": "토스 키, 결제 시도 기록, 취소 내역 표에 label이 없었다. 이름을 준다(취소 내역은 승인 시각으로 구분, ccbace0, #513). 수납 목록 표 몫은 NT-yang-034로 떼었다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-012",
@@ -8908,21 +8920,25 @@
       "id": "NT-yang-014",
       "merged_ids": [],
       "evidence": [
-        "frontend/src/components/pricing/PricingWorkspace.tsx:89,98 @ c661d80",
-        "frontend/src/components/billable-metrics/BillableMetricsTable.tsx:134 @ c661d80"
+        "frontend/src/components/billable-metrics/BillableMetricsTable.tsx:134 @ c743f1f",
+        "workspace-load-rules.test.mjs a row restore action on the meter list is a small link button: 실패 triggerType 없음",
+        "커밋 ccbace0"
       ],
       "commits": [
         "ccbace03"
       ],
-      "tests": [],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-load-rules.test.mjs"
+      ],
       "behavior_change": false,
       "layer": 447,
       "branch": "fix/s456-t-yang-console-rules",
-      "status": "open",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "요금제, 단가 이력 보관과 복원, 미터 복원 행 버튼이 link 버튼이 아니다(박성종 님 #447 10-29 00:27 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "미터 복원은 ccbace0(#513)에서 고침. PricingWorkspace의 요금제, 단가 보관과 복원은 #498이 그 파일을 고치는 중이라 그 뒤 main에서 고친다"
+      "reason": "미터 목록의 복원 행 버튼이 테두리 버튼이었다. triggerType=link를 준다(ccbace0, #513). 요금제와 단가 이력 몫은 #498과 겹쳐 NT-yang-035로 떼었다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-015",
@@ -9147,6 +9163,106 @@
       "reason": "가능 여부는 findLatest(요청 시각, id 내림차순)로, 생성 경로는 요청 시각만으로 정렬한 목록의 첫 행으로 최신을 고른다. id가 큰 일반 거절과 같은 시각의 옛 NOT_FOUND가 있으면 조회는 허용, 실행은 409다. 목록 정렬에 id 내림차순을 더했다.",
       "fails_without_fix": true,
       "top_head": "main 931b703"
+    },
+    {
+      "id": "NT-yang-033",
+      "merged_ids": [],
+      "evidence": [
+        "frontend/src/app/(console)/payments/page.tsx:13 @ c743f1f",
+        "payments-pricing-rules.test.mjs the payment list passes the failed lookup status and names its table: 실패 status 없음",
+        "커밋 a2eb1db"
+      ],
+      "commits": [
+        "a2eb1db2"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/payments-pricing-rules.test.mjs",
+        "frontend 검사와 계약 명세"
+      ],
+      "behavior_change": false,
+      "layer": 445,
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "title": "수납 목록 조회 실패가 WorkspaceError에 status를 넘기지 않는다(NT-yang-010에서 뗌)",
+      "reason": "두 조회를 묶은 실패의 WorkspaceError에 message를 고르는 삼항과 같은 모양으로 status를 넘긴다. #498이 같은 줄을 다시 써 #498 뒤에 머지하는 PR(#514)로 뗐다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
+    },
+    {
+      "id": "NT-yang-034",
+      "merged_ids": [],
+      "evidence": [
+        "frontend/src/app/(console)/payments/page.tsx:21 @ c743f1f",
+        "payments-pricing-rules.test.mjs the payment list passes the failed lookup status and names its table: 실패 label 없음",
+        "커밋 a2eb1db"
+      ],
+      "commits": [
+        "a2eb1db2"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/payments-pricing-rules.test.mjs",
+        "frontend 검사와 계약 명세"
+      ],
+      "behavior_change": false,
+      "layer": 445,
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "title": "수납 목록 업무 표에 label이 없다(NT-yang-011에서 뗌)",
+      "reason": "수납 목록 표에 이름을 준다. #498 뒤에 머지하는 PR(#514).",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
+    },
+    {
+      "id": "NT-yang-035",
+      "merged_ids": [],
+      "evidence": [
+        "frontend/src/components/pricing/PricingWorkspace.tsx:89,98 @ c743f1f",
+        "payments-pricing-rules.test.mjs price plan and rate history row actions are small link buttons: 실패 triggerType 없음",
+        "커밋 a2eb1db"
+      ],
+      "commits": [
+        "a2eb1db2"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/payments-pricing-rules.test.mjs",
+        "frontend 검사와 계약 명세"
+      ],
+      "behavior_change": false,
+      "layer": 447,
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "title": "요금제와 단가 이력의 보관, 복원 행 버튼이 link 버튼이 아니다(NT-yang-014에서 뗌)",
+      "reason": "PricingWorkspace의 이력 행 ActionPanel 둘에 triggerType=link를 준다. #498이 같은 구간을 고쳐 #498 뒤에 머지하는 PR(#514).",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
+    },
+    {
+      "id": "NT-yang-036",
+      "merged_ids": [],
+      "evidence": [
+        "frontend/e2e/auth.contract.spec.ts:527 @ bb71176",
+        "frontend/src/app/admin/actions.ts:28,80 @ bb71176",
+        "옛 조건 /operators|memberships|members/.test('/v1/user-accounts'): 실패 false(새 조건 true)",
+        "커밋 0943e24"
+      ],
+      "commits": [
+        "0943e24b"
+      ],
+      "tests": [
+        "auth 계약 operator dialogs report invalid input inline instead of browser bubbles"
+      ],
+      "behavior_change": false,
+      "layer": 442,
+      "branch": "fix/s456-t-yang-account-rules",
+      "status": "fixed",
+      "verdict": "confirmed",
+      "title": "운영자 대화상자 계약 시험의 요청 차단 확인이 실제 생성 경로 POST /v1/user-accounts를 보지 않는다(#502 박성종 님 리뷰 p4, 10-30 03:13)",
+      "reason": "확인 조건이 operators|memberships|members라 운영자 계정 생성 경로 /v1/user-accounts를 놓쳤다. 두 실제 경로(POST /v1/user-accounts, POST /v1/organizations/{id}/members)를 정확히 본다. 시험만 바꿨고, 대화상자가 입력 오류에도 제출하게 흉내 내 보니 서버 동작의 입력 검사가 요청을 막아 그 길로는 실패를 재현하지 못했다.",
+      "fails_without_fix": false,
+      "top_head": "main c743f1f"
     }
   ],
   "checks": [
@@ -19149,6 +19265,822 @@
       "result": "pass",
       "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
       "detail": "계약 명세  18 passed (22.0s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 117 ℹ pass 117 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  75 passed (30.2s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.3s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  18 passed (22.5s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-account-rules..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 94 ℹ pass 94 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  67 passed (29.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.3s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (18.9s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<readme-rules-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<contract-redelivery-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "fail",
+      "command": "SRC=<console-rules-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검: 실패 1 failed rc=1. 같은 sha에서 DB를 새로 띄운 재실행(console-rules-1b)에서 통과해 흔들림으로 판정(드롭다운 항목이 클릭 중 DOM에서 떨어짐, 이 브랜치가 바꾸지 않은 /pricing)"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "fail",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-c661d80, 비교 38개 화면, 늘어난 것 2건. 기준을 옛 main c661d80으로 잡은 비교라 #496(c743f1f)이 바꾼 /events의 위반이 섞였다. 이 브랜치의 base인 c743f1f로 다시 비교한다"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<console-rules-1b 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<account-rules-2 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-c661d80, 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-c743f1f, 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-c743f1f, 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-ci-tests..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " yaml:.github/workflows/ci.yml"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
     }
   ],
   "pushes": [
@@ -19776,6 +20708,21 @@
       "branch": "fix/s456-t-yang-console-rules",
       "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
       "at": "2026-10-30T12:24:14+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "at": "2026-10-30T12:31:08+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-account-rules",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "at": "2026-10-30T12:35:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
+      "at": "2026-10-30T12:54:19+09:00"
     }
   ],
   "usage_log": [],
@@ -19842,7 +20789,12 @@
     "D-216 마이그레이션 기동 점검(.s456-work/tools/mig-check.sh): 따로 띄운 PostgreSQL 18에 main 931b703 백엔드로 V52까지 올린 뒤 fix/s456-t-yang-invoice-line-name 8d23297 백엔드가 V53을 적용해 기동했고, 빈 DB에서도 기동했다.",
     "2026-10-30T12:12:33+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics 두 번째: #492가 들어간 main(18c4f64)과 OperationsService.java가 충돌했다. 이 PR의 결제 실패 수 live 한정과 웹훅 실패 수 test 환경 제외, #492의 지운 수신 주소 제외 조건을 한 쿼리에 모두 살렸다. #492 조건을 합쳐 쓴 곳이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.",
     "할 일 8(#494): origin/main(c661d80)을 받은 head 61ba35e의 PR CI frontend 체크가 초록이 됐다(run 40990363749, job 123851050243). #481의 업무 계약 수정이 main에 들어와 풀렸다. 따로 고칠 것은 없었다.",
-    "readme-rules 6bc2459의 첫 backend 검사(10-30 12:3x)는 다른 백엔드 빌드와 실화면 환경이 함께 돌던 중 Testcontainers PostgreSQL 연결이 끊겨 1452개 중 503개가 컨텍스트 기동 실패로 떨어졌다(FlywaySqlUnableToConnectToDbException). README만 바꾼 커밋이라 환경 탓으로 보고, 백엔드 빌드를 한 번에 하나만 돌리게 chk3.sh를 고친 뒤 같은 sha에서 다시 돌려 통과했다."
+    "readme-rules 6bc2459의 첫 backend 검사(10-30 12:3x)는 다른 백엔드 빌드와 실화면 환경이 함께 돌던 중 Testcontainers PostgreSQL 연결이 끊겨 1452개 중 503개가 컨텍스트 기동 실패로 떨어졌다(FlywaySqlUnableToConnectToDbException). README만 바꾼 커밋이라 환경 탓으로 보고, 백엔드 빌드를 한 번에 하나만 돌리게 chk3.sh를 고친 뒤 같은 sha에서 다시 돌려 통과했다.",
+    "fix/s456-t-yang-console-rules ccbace0 마지막 실화면 점검: 첫 실행에서 query-workspace 1건이 /pricing 고객 선택 드롭다운 클릭 시간 초과로 실패했고, 같은 sha에서 DB를 새로 띄워 다시 돌려 12개 모두 통과했다. 바꾸지 않은 화면의 UI 타이밍 실패라 흔들림으로 판정했다. 두 결과를 checks와 evidence/final-513/specs.txt에 적었다.",
+    "2026-10-30T12:54:46+09:00 main 받기 #494 fix/s456-t-yang-ci-tests 세 번째: #493, #495가 들어간 main(6ddb8f4)과 ci.yml, workflows README가 충돌했다. #495의 rds-auto-stop job이 이 PR의 terraform job과 같은 일을 하고 루트 모듈 시험까지 돌아, 지금 main 동작인 rds-auto-stop job을 남기고 이 PR의 terraform job과 필터를 뺐다. frontend 계약 단계와 demo, deploy job은 살렸다. 머지 조건 문서의 job 이름은 64a790f에서 고쳤다. #495 쪽을 남긴 결정이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.",
+    "2026-10-30T12:58:30+09:00 main 기준 2차 마무리: 열린 PR 다섯 개(#478 #480 #483 #485 #494)는 main(6ddb8f4)과 충돌이 없고 필수 체크가 초록이다. 새 주제 PR 14개(#501 #502 #504~#514)를 열었다. 모든 주제 브랜치의 마지막 push sha에서 DB를 새로 만든 마지막 실화면 점검이 12/12로 통과했고(console-rules 첫 실행 1건은 흔들림 판정), 프론트를 바꾼 브랜치의 화면 비교는 그 브랜치 base main 기준으로 늘어난 위반이 없다.",
+    "2026-10-30T12:58:30+09:00 승인을 기다리는 PR(끝을 막지 않음, 머지는 박성종 님): #514(REVIEW_REQUIRED) #513(REVIEW_REQUIRED) #512(APPROVED) #511(REVIEW_REQUIRED) #510(REVIEW_REQUIRED) #509() #508(APPROVED) #507(APPROVED) #506(APPROVED) #505(APPROVED) #504(APPROVED) #502(APPROVED) #501(APPROVED) #494(APPROVED) #485(APPROVED) #483(APPROVED) #480(APPROVED) #478(APPROVED). #514는 #498 뒤에 머지한다. #509는 새 V53이라 V53보다 큰 번호가 먼저 머지되면 나중 쪽이 번호를 올린다.",
+    "2026-10-30T12:58:30+09:00 이번에 쓴 로컬 도구(커밋하지 않음): .s456-work/tools/chk3.sh(워크트리 검사, 백엔드 빌드 한 번에 하나), ingest3.py, push3.sh(검사한 sha만, main과 충돌 없을 때만 올리고 ls-remote로 확인한 뒤 기록), final2.sh(워크트리판 마지막 실화면 점검), final-record2.py, pr-final.py, mig-check.sh(새 V__ 기동 점검), ntset.py. 앞서 적은 rpush-main.sh와 check-report-main.mjs 수정도 커밋하지 않았다."
   ],
   "final_checks": [
     {
@@ -19967,6 +20919,48 @@
     {
       "layer": "507",
       "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "512",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "511",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "502",
+      "sha": "0943e24b8bb091aefd2d569113d8e319be1709cb",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "513",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "514",
+      "sha": "a2eb1db200c57538d4d7b9e42018f9a315aae4e8",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "494",
+      "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
       "passed": 12,
       "total": 12,
       "screens": "화면 비교 없음(프론트를 바꾸지 않음)"

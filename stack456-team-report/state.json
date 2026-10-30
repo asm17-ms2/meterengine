@@ -1,7 +1,7 @@
 {
   "package": "T-yang",
-  "status": "running",
-  "updated_at": "2026-10-30T12:25:05+09:00",
+  "status": "done",
+  "updated_at": "2026-10-30T12:58:37+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
@@ -340,8 +340,8 @@
   "since_report_push": 0,
   "branches": {
     "main": {
-      "origin_sha": "be62d91",
-      "local_sha": "be62d91",
+      "origin_sha": "6ddb8f4",
+      "local_sha": "6ddb8f4",
       "unpushed": []
     },
     "fix/s456-t-yang-ops-metrics": {
@@ -365,8 +365,8 @@
       "unpushed": []
     },
     "fix/s456-t-yang-ci-tests": {
-      "origin_sha": "61ba35e",
-      "local_sha": "61ba35e",
+      "origin_sha": "64a790f",
+      "local_sha": "64a790f",
       "unpushed": []
     },
     "fix/s456-t-yang-mobile-heading": {
@@ -375,8 +375,8 @@
       "unpushed": []
     },
     "fix/s456-t-yang-account-rules": {
-      "origin_sha": "bb71176",
-      "local_sha": "bb71176",
+      "origin_sha": "0943e24",
+      "local_sha": "0943e24",
       "unpushed": []
     },
     "fix/s456-t-yang-webhook-restore": {
@@ -427,6 +427,11 @@
     "fix/s456-t-yang-console-rules": {
       "origin_sha": "ccbace0",
       "local_sha": "ccbace0",
+      "unpushed": []
+    },
+    "fix/s456-t-yang-payments-pricing-rules": {
+      "origin_sha": "a2eb1db",
+      "local_sha": "a2eb1db",
       "unpushed": []
     }
   },

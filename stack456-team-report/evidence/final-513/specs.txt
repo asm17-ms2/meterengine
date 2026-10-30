@@ -1,0 +1,27 @@
+sha ccbace03e9c6d2498fe5e4e723195a9e9f79d08c, DB를 새로 만든 실환경(final2.sh console-rules-1b)
+aggregation: 통과 1 passed (8.2s) rc=0
+archive-filters: 통과 2 passed (14.5s) rc=0
+auth: 통과 3 passed (6.6s) rc=0
+customer-payment-retry: 통과 6 passed (7.0s) rc=0
+environment-cycle: 통과 1 passed (19.6s) rc=0
+events: 통과 1 passed (8.5s) rc=0
+invoice-links: 통과 3 passed (3.9s) rc=0
+mvp: 통과 1 passed (30.8s) rc=0
+operator-create: 통과 1 passed (2.5s) rc=0
+people: 통과 1 passed (9.1s) rc=0
+permissions: 통과 6 passed (13.8s) rc=0
+query-workspace: 통과 1 passed (10.0s) rc=0
+
+첫 실행(final2.sh console-rules-1, 12:32): query-workspace 1건 실패. /pricing의 적용 대상 고객 선택에서 antd 드롭다운 항목이 클릭 중 화면 밖으로 밀리고 DOM에서 떨어져 15초 시간 초과. 이 브랜치가 바꾸지 않은 화면이고, 같은 sha에서 DB를 새로 띄운 재실행(위, 12:38)은 12개 모두 통과해 흔들림으로 판정했다.
+첫 실행 aggregation: 통과 1 passed (9.4s) rc=0
+첫 실행 archive-filters: 통과 2 passed (13.1s) rc=0
+첫 실행 auth: 통과 3 passed (6.9s) rc=0
+첫 실행 customer-payment-retry: 통과 6 passed (7.9s) rc=0
+첫 실행 environment-cycle: 통과 1 passed (19.0s) rc=0
+첫 실행 events: 통과 1 passed (8.6s) rc=0
+첫 실행 invoice-links: 통과 3 passed (4.1s) rc=0
+첫 실행 mvp: 통과 1 passed (30.9s) rc=0
+첫 실행 operator-create: 통과 1 passed (2.5s) rc=0
+첫 실행 people: 통과 1 passed (10.1s) rc=0
+첫 실행 permissions: 통과 6 passed (13.4s) rc=0
+첫 실행 query-workspace: 실패 1 failed rc=1
