@@ -129,7 +129,7 @@ docker build -t meterengine-backend .
 
 수집한 이벤트의 매핑 문제는 `/v1/event-issues/search`, 거절된 수집의 안전한 메타데이터는 `/v1/event-rejections/search`에서 본다. 검색, 선택지, 월, CSV와 매핑 진단에도 같은 환경 경계를 적용한다. 새 거절 기록은 배포 이후부터 쌓이며 과거 실패 요청을 복원하지 않는다.
 
-페이지 번호의 시작은 경로 이름이 아니라 엔드포인트마다 정한다. 위 여섯 자원의 `/search`는 1부터, `/v1/event-issues/search`와 `/v1/event-rejections/search`는 이벤트, 감사, 웹훅 목록처럼 0부터 센다. 각 파라미터 설명에 기준을 적는다.
+페이지 번호의 시작은 경로 이름이 아니라 엔드포인트마다 정한다. 위 목록 자원의 `/search`는 1부터, `/v1/event-issues/search`와 `/v1/event-rejections/search`는 이벤트, 감사, 웹훅 목록처럼 0부터 센다. 각 파라미터 설명에 기준을 적는다.
 
 매핑 진단과 사용량 화면은 요청마다 미터 수만큼 그 달 이벤트를 다시 집계한다. event 표에는 환경 범위 PK만 있고 occurred_at 인덱스는 없어, 한 달 이벤트가 많은 도입사는 이 조회가 느려질 수 있다. 큰 event 표에 인덱스를 더하는 마이그레이션은 배포 준비 시간 안에 끝난다는 근거가 없어 아직 두지 않았다.
 
