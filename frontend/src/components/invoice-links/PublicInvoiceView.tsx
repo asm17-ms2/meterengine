@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatDecimal, formatDimensionValues, formatKoreanMonth, formatKrw, formatKstDateTime, formatQuantityBasis } from "@/lib/format";
-import { isValidInvoiceViewToken, publicInvoiceLineName, publicInvoiceLineTier, type PublicInvoice } from "@/lib/invoice-view-links";
+import { isValidInvoiceViewToken, publicInvoiceLineName, publicInvoiceLineTier, type PublicInvoiceResponse } from "@/lib/invoice-view-links";
 import { canRetryInvoicePayment } from "@/lib/invoice-payment-retry";
 import { INVOICE_PAYMENT_STATUSES } from "@/lib/invoice-payment-status";
 import styles from "./PublicInvoiceView.module.css";
@@ -25,12 +25,15 @@ const UNREADY_MESSAGES = {
 };
 const RETRY_FAILED = "다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
 
-function LineLabel({ line }: { line: PublicInvoice["lines"][number] }) {
+function LineLabel({ line }: { line: PublicInvoiceResponse["lines"][number] }) {
   const tier = publicInvoiceLineTier(line);
   return <><strong>{publicInvoiceLineName(line)}</strong>{Object.keys(line.dimension_values).length > 0 && <small>{formatDimensionValues(line.dimension_values)}</small>}{tier && <small>{tier}</small>}</>;
 }
 
-type ViewState = { kind: "loading" } | { kind: "missing" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoice; revision: number };
+type ViewState = { kind: "loading" } | { kind: "missing" } | { kind: "invalid" } | { kind: "unavailable" } | { kind: "ready"; invoice: PublicInvoiceResponse; revision: number };
+
+// 같은 문구도 다시 읽히도록 상태 영역을 비운 뒤 다음 프레임에 넣는다.
+function announce(setFeedback: (message: string) => void, message: string) { setFeedback(""); requestAnimationFrame(() => setFeedback(message)); }
 
 export function PublicInvoiceView() {
   const tokenRef = useRef("");
@@ -56,18 +59,18 @@ export function PublicInvoiceView() {
       if (!response.ok) {
         if (response.status === 404) { try { sessionStorage.removeItem(STORAGE_KEY); } catch {} tokenRef.current = ""; }
         setView({ kind: response.status === 404 ? "invalid" : "unavailable" });
-        if (isRefresh && response.status !== 404) setFeedback(RETRY_FAILED);
+        if (isRefresh && response.status !== 404) announce(setFeedback, RETRY_FAILED);
         return;
       }
-      const invoice = await response.json() as PublicInvoice;
+      const invoice = await response.json() as PublicInvoiceResponse;
       if (requestId !== requestRef.current) return;
       setView({ kind: "ready", invoice, revision: requestId });
       setPaymentRequestState("idle");
-      if (isRefresh) setFeedback("최신 결제 상태를 조회했습니다.");
+      if (isRefresh) announce(setFeedback, "최신 결제 상태를 조회했습니다.");
     } catch {
       if (signal?.aborted || requestId !== requestRef.current) return;
       setView({ kind: "unavailable" });
-      if (isRefresh) setFeedback(RETRY_FAILED);
+      if (isRefresh) announce(setFeedback, RETRY_FAILED);
     }
     finally { if (requestId === requestRef.current) setIsRefreshing(false); }
   }
@@ -107,8 +110,8 @@ export function PublicInvoiceView() {
   async function copy() {
     try {
       await navigator.clipboard.writeText(new URL(`/invoice-links#${tokenRef.current}`, window.location.origin).href);
-      setFeedback("청구서 조회 링크를 복사했습니다. 이 링크의 조회와 허용된 재시도 권한도 함께 전달됩니다.");
-    } catch { setFeedback("링크를 복사하지 못했습니다. 처음 전달받은 조회 링크를 사용해 주세요."); }
+      announce(setFeedback, "청구서 조회 링크를 복사했습니다. 이 링크의 조회와 허용된 재시도 권한도 함께 전달됩니다.");
+    } catch { announce(setFeedback, "링크를 복사하지 못했습니다. 처음 전달받은 조회 링크를 사용해 주세요."); }
   }
 
   const invoice = view.kind === "ready" ? view.invoice : null;
@@ -128,12 +131,12 @@ export function PublicInvoiceView() {
       : invoice ? PAYMENT_STATES[invoice.payment.status] : undefined;
   const paymentTone = hasUnconfirmedPaymentRequest ? "warning" : invoice ? INVOICE_PAYMENT_STATUSES[invoice.payment.status]?.color : undefined;
   function isCurrentPaymentRequest(token: string) { return tokenRef.current === token && requestRef.current === revision; }
-  function acceptPaymentResult(updated: PublicInvoice, token: string) {
+  function acceptPaymentResult(updated: PublicInvoiceResponse, token: string) {
     if (!isCurrentPaymentRequest(token)) return;
     const nextRevision = ++requestRef.current;
     paymentFocusRevisionRef.current = nextRevision;
     setView({ kind: "ready", invoice: updated, revision: nextRevision }); setPaymentRequestState("idle");
-    setFeedback(updated.payment.status === "paid" ? "결제가 완료되었습니다."
+    announce(setFeedback, updated.payment.status === "paid" ? "결제가 완료되었습니다."
       : updated.payment.status === "failed" ? "결제에 실패했습니다. 표시된 상태와 재시도 안내를 확인해 주세요."
         : "결제 요청을 접수했습니다. 결과를 확인할 때까지 다시 결제하지 마세요.");
   }

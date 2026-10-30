@@ -1,5 +1,5 @@
 import { requestApi } from "@/lib/api/transport";
-import { isValidInvoiceViewToken, type PublicInvoice } from "@/lib/invoice-view-links";
+import { isValidInvoiceViewToken, type PublicInvoiceResponse } from "@/lib/invoice-view-links";
 import { isAllowedPublicInvoiceRequest } from "@/lib/public-invoice-request";
 
 const RESPONSE_HEADERS = { "Cache-Control": "no-store, private", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive" };
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   } catch { return failure(404); }
   if (!parsed || typeof parsed !== "object" || !("token" in parsed) || !isValidInvoiceViewToken(parsed.token)) return failure(404);
   try {
-    const result = await requestApi<PublicInvoice>("/v1/public/invoice-links/lookup", { method: "POST", body: { token: parsed.token } });
+    const result = await requestApi<PublicInvoiceResponse>("/v1/public/invoice-links/lookup", { method: "POST", body: { token: parsed.token } });
     if (!result.ok) return failure([400, 404].includes(result.error.status) ? 404 : 503);
     return Response.json(result.data, { headers: RESPONSE_HEADERS });
   } catch { return failure(503); }

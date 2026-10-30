@@ -6,7 +6,7 @@ import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import { InvoiceViewLinks } from "@/components/workspace/InvoiceViewLinks";
-import type { InvoiceViewLink } from "@/lib/invoice-view-links";
+import type { InvoiceViewLinkResponse } from "@/lib/invoice-view-links";
 import { paymentReadiness } from "./card-state";
 import { INVOICE_PAYMENT_STATUS_LABELS } from "@/lib/invoice-payment-status";
 
@@ -86,7 +86,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   const [invoice, attempts, viewLinks] = await Promise.all([
     workspaceFetch<InvoiceResponse>("/v1/invoices/" + encodeURIComponent(id)),
     workspaceFetch<{ payment_attempts: PaymentAttemptResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/payment-attempts"),
-    workspaceFetch<{ invoice_view_links: InvoiceViewLink[] }>("/v1/invoices/" + encodeURIComponent(id) + "/view-links"),
+    workspaceFetch<{ invoice_view_links: InvoiceViewLinkResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/view-links"),
   ]);
   if (!invoice.ok || !attempts.ok) {
     const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;

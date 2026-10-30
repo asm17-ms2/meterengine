@@ -1,18 +1,23 @@
 "use client";
 
+import { App, Button } from "antd";
 import { useTenantScope } from "@/components/auth/TenantAccess";
 import { useEffect, useState } from "react";
 import { createInvoiceViewLink, revokeInvoiceViewLink } from "@/app/(console)/invoices/view-link-actions";
 import { formatKstDateTime } from "@/lib/format";
-import { isValidInvoiceViewToken, type CreatedInvoiceViewLink, type InvoiceViewLink } from "@/lib/invoice-view-links";
+import { isValidInvoiceViewToken, type InvoiceViewLinkSecretResponse, type InvoiceViewLinkResponse } from "@/lib/invoice-view-links";
 import styles from "./InvoiceViewLinks.module.css";
 
+// 같은 문구도 다시 읽히도록 상태 영역을 비운 뒤 다음 프레임에 넣는다.
+function announce(setFeedback: (message: string) => void, message: string) { setFeedback(""); requestAnimationFrame(() => setFeedback(message)); }
+
 export function InvoiceViewLinks({ invoiceId, initialLinks, loadError, checkedAt }: {
-  invoiceId: string; initialLinks: InvoiceViewLink[]; loadError?: string; checkedAt: number;
+  invoiceId: string; initialLinks: InvoiceViewLinkResponse[]; loadError?: string; checkedAt: number;
 }) {
   const canManage = useTenantScope("admin");
+  const { modal } = App.useApp();
   const [links, setLinks] = useState(initialLinks);
-  const [createdLink, setCreatedLink] = useState<CreatedInvoiceViewLink | null>(null);
+  const [createdLink, setCreatedLink] = useState<InvoiceViewLinkSecretResponse | null>(null);
   const [sharedUrl, setSharedUrl] = useState("");
   const [expiresInDays, setExpiresInDays] = useState(30);
   const [canAllowPaymentRetry, setCanAllowPaymentRetry] = useState(false);
@@ -38,26 +43,36 @@ export function InvoiceViewLinks({ invoiceId, initialLinks, loadError, checkedAt
       setCreatedLink(result.data);
       setSharedUrl(new URL(`/invoice-links#${result.data.token}`, window.location.origin).href);
       setLinks(current => [result.data, ...current]);
-      setFeedback("고객 조회 링크를 발급했습니다. 이 화면을 닫기 전에 복사해 주세요.");
+      announce(setFeedback, "고객 조회 링크를 발급했습니다. 이 화면을 닫기 전에 복사해 주세요.");
     } catch { setError("발급 결과를 확인하지 못했습니다. 목록을 새로 조회한 뒤 다시 시도해 주세요."); }
     finally { setIsCreating(false); }
   }
 
-  async function revoke(link: InvoiceViewLink) {
-    if (isBusy || !canManage || !window.confirm("이 링크의 고객 조회를 중지할까요? 이미 전달한 링크도 더 이상 사용할 수 없습니다.")) return;
+  function confirmRevoke(link: InvoiceViewLinkResponse) {
+    if (isBusy || !canManage) return;
+    modal.confirm({
+      title: "이 링크의 고객 조회를 중지할까요?",
+      content: "이미 전달한 링크도 더 이상 사용할 수 없습니다. 확정 청구와 결제 기록은 유지합니다.",
+      okText: "링크 폐기", okButtonProps: { danger: true }, cancelText: "닫기",
+      onOk: () => revoke(link),
+    });
+  }
+
+  async function revoke(link: InvoiceViewLinkResponse) {
+    if (isBusy || !canManage) return;
     setRevokingId(link.id); setError(""); setFeedback("");
     try {
       const result = await revokeInvoiceViewLink(invoiceId, link.id);
       if (!result.ok) { setError(result.message); return; }
       setLinks(current => current.map(row => row.id === link.id ? result.data : row));
       if (createdLink?.id === link.id) { setCreatedLink(null); setSharedUrl(""); }
-      setFeedback("링크를 폐기했습니다. 이 링크로 청구서를 조회할 수 없습니다.");
+      announce(setFeedback, "링크를 폐기했습니다. 이 링크로 청구서를 조회할 수 없습니다.");
     } catch { setError("폐기 결과를 확인하지 못했습니다. 목록을 새로 조회해 주세요."); }
     finally { setRevokingId(null); }
   }
 
   async function copy() {
-    try { await navigator.clipboard.writeText(sharedUrl); setFeedback("고객 조회 링크를 복사했습니다."); }
+    try { await navigator.clipboard.writeText(sharedUrl); announce(setFeedback, "고객 조회 링크를 복사했습니다."); }
     catch { setError("복사하지 못했습니다. 아래 링크를 직접 선택해 복사해 주세요."); }
   }
 
@@ -72,7 +87,7 @@ export function InvoiceViewLinks({ invoiceId, initialLinks, loadError, checkedAt
     <div className={styles.createRow}><button className="month-apply" type="button" disabled={isBusy} onClick={create}>{isCreating ? "발급 중" : "고객 조회 링크 발급"}</button></div></>}
     {!canManage && <p className="field-hint">조회 전용입니다. 링크 발급과 폐기는 관리 권한이 있는 사용자에게 요청하세요.</p>}
     {error && <p role="alert" className="field-error">{error}</p>}
-    {feedback && <p role="status">{feedback}</p>}
+    <p role="status" style={feedback ? undefined : { margin: 0 }}>{feedback}</p>
     {canManage && createdLink && sharedUrl && <div className={styles.issued}>
       <strong>발급한 링크는 이 화면에서만 확인할 수 있습니다</strong>
       <p>{createdLink.allow_payment_retry ? "실패 결제 재시도 허용: 고객이 등록 카드로 다시 결제할 수 있습니다." : "조회 전용: 이 링크로 결제를 실행할 수 없습니다."}</p>
@@ -87,7 +102,7 @@ export function InvoiceViewLinks({ invoiceId, initialLinks, loadError, checkedAt
       const state = link.revoked_at ? "폐기됨" : isExpired ? "만료됨" : "사용 가능";
       return <li key={link.id}>
         <div><strong>{state} / {link.mode === "test" ? "테스트" : "실결제"}</strong><span>{link.allow_payment_retry ? "실패 결제 재시도 허용" : "조회 전용"}</span><span>발급 {formatKstDateTime(link.created_at)} KST</span><span>만료 {formatKstDateTime(link.expires_at)} KST</span>{link.revoked_at && <span>폐기 {formatKstDateTime(link.revoked_at)} KST</span>}</div>
-        {canManage && !link.revoked_at && !isExpired && <button type="button" className={`month-apply ${styles.revoke}`} onClick={() => revoke(link)} disabled={isBusy}>{revokingId === link.id ? "폐기 중" : "링크 폐기"}</button>}
+        {canManage && !link.revoked_at && !isExpired && <Button type="link" size="small" danger onClick={() => confirmRevoke(link)} disabled={isBusy}>{revokingId === link.id ? "폐기 중" : "링크 폐기"}</Button>}
       </li>;
     })}</ul> : !loadError && <p className="muted">발급한 고객 조회 링크가 없습니다.</p>}
   </section>;
