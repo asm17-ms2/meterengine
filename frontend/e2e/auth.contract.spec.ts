@@ -629,6 +629,30 @@ test("a disabled operator action explains itself through its description", async
   await expect(button).toHaveAccessibleDescription(/.+/);
 });
 
+test("operator dialogs report invalid input inline instead of browser bubbles", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await page.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
+  const create = page.getByRole("dialog", { name: "플랫폼 운영자 계정 생성" });
+  await create.getByLabel(/^이메일/).fill("not-an-email");
+  await create.getByLabel(/^초기 비밀번호/).fill("short");
+  await create.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
+  await expect(create.getByText("값을 입력하세요.")).toBeVisible();
+  await expect(create.getByText("이메일 주소 형식으로 입력하세요.")).toBeVisible();
+  await expect(create.getByText("8자 이상으로 입력하세요.")).toBeVisible();
+  await expect(create.getByLabel(/^초기 비밀번호/)).toHaveAttribute("aria-invalid", "true");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/users");
+  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
+  await card.getByRole("button", { name: "도입사 소속 연결", exact: true }).click();
+  const attach = page.getByRole("dialog", { name: "도입사 소속 연결" });
+  await attach.getByRole("button", { name: "소속 연결", exact: true }).click();
+  await expect(attach.getByText("항목을 선택하세요.")).toBeVisible();
+  await expect(attach.getByLabel(/^연결할 도입사/)).toHaveAttribute("aria-invalid", "true");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.method === "POST" && (call.path === "/v1/user-accounts" || /^\/v1\/organizations\/[^/]+\/members$/.test(call.path)))).toBe(false);
+});
+
 test("a missing required field is reported inline like other form errors", async ({ page, request }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
