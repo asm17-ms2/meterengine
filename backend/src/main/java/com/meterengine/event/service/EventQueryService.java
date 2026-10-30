@@ -91,7 +91,10 @@ public class EventQueryService implements EventPresence {
             > MAX_EXPORT_PROPERTIES_BYTES) {
       throw EventSearch.invalid("export", "원본 속성이 32MB 이하가 되도록 검색 범위를 좁혀 주세요");
     }
-    return eventRepository.findPage(organizationId, customerId, type, search, 0, MAX_EXPORT_ROWS);
+    return includeProperties
+        ? eventRepository.findPage(organizationId, customerId, type, search, 0, MAX_EXPORT_ROWS)
+        : eventRepository.findPageWithoutProperties(
+            organizationId, customerId, type, search, 0, MAX_EXPORT_ROWS);
   }
 
   @Transactional(readOnly = true)

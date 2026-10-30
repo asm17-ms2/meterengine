@@ -100,19 +100,37 @@ public class EventRepository {
 
   public List<Event> findPage(
       UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
+    return queryPage("e.properties::text", organizationId, customerId, type, search, page, size);
+  }
+
+  // 원본 속성을 싣지 않는 내보내기는 큰 JSON을 메모리에 올리지 않도록 그 열을 읽지 않는다.
+  public List<Event> findPageWithoutProperties(
+      UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
+    return queryPage("NULL", organizationId, customerId, type, search, page, size);
+  }
+
+  private List<Event> queryPage(
+      String propertiesColumn,
+      UUID organizationId,
+      UUID customerId,
+      String type,
+      EventSearch search,
+      int page,
+      int size) {
     List<Object> parameters = new ArrayList<>();
     String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
     parameters.add(size);
     parameters.add((long) page * size);
 
     return jdbcTemplate.query(
-        """
-        SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
-               e.properties::text AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
-        FROM event e
-        LEFT JOIN customer c
-          ON c.organization_id = e.organization_id AND c.id = e.customer_id
-        """
+        "SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type, "
+            + propertiesColumn
+            + """
+             AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
+            FROM event e
+            LEFT JOIN customer c
+              ON c.organization_id = e.organization_id AND c.id = e.customer_id
+            """
             + where
             + " ORDER BY "
             + orderColumn(search.sort())

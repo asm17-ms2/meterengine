@@ -2,9 +2,12 @@ package com.meterengine.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
@@ -243,6 +246,29 @@ class EventExportIntegrationTest {
         .bodyJson()
         .extractingPath("$.errors[0].field")
         .isEqualTo("export");
+  }
+
+  @Test
+  void 원문_속성을_빼고_내보낼_때는_속성을_읽는_조회를_쓰지_않는다() {
+    insert(
+        "without-properties",
+        customerId,
+        null,
+        "usage",
+        "{\"blob\":\"x\"}",
+        "2026-10-02T00:00:00+09:00");
+
+    String csv = body(get(authorization, null, ""));
+
+    assertThat(csv).contains("without-properties").doesNotContain("blob");
+    verify(eventRepository, never())
+        .findPage(
+            eq(organizationId),
+            nullable(UUID.class),
+            nullable(String.class),
+            any(EventSearch.class),
+            anyInt(),
+            anyInt());
   }
 
   @Test
