@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { METRIC_CODES, MODEL_CATALOG } from "@/lib/contracts";
+import { createRequestId } from "@/lib/request-id";
 import type { ApiErrorBody, BillingLine, GenerationView, InvoiceView, LlmModel, SessionResponse, WorkspaceSnapshot } from "@/lib/contracts";
 import { currentBillingMonth, workspaceBillingMonth } from "./billing-month";
 import type { WorkspaceSection } from "./billing-month";
@@ -342,7 +343,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
     const text = prompt.trim();
     if (!text || Array.from(text).length > 4000) { setGenerationError("메시지는 1자부터 4,000자까지 입력하세요."); document.getElementById("lumen-prompt")?.focus(); return; }
     const existing = pendingRequest.current;
-    const candidate = existing?.prompt === text && existing.modelId === modelId ? existing : { requestId: crypto.randomUUID(), modelId, prompt: text };
+    const candidate = existing?.prompt === text && existing.modelId === modelId ? existing : { requestId: createRequestId(), modelId, prompt: text };
     pendingRequest.current = candidate;
     setUncertainRequest(candidate);
     setIsGenerating(true); setGeneration(null); setGenerationError(""); setActionStatus("응답을 생성하고 있습니다.");
