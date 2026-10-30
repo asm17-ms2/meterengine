@@ -51,14 +51,14 @@ def _event(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00
     )
 
 
-def _sum_quantities(stored, month, event_type, target_property):
+def _sum_quantities(stored, month, event_type, target_property, cutoff=None):
     billable_metric = BillableMetricMeta(
         code="token-usage", event_type=event_type, aggregation="sum", target_property=target_property
     )
     return {
         customer_id: by_dimension_values[dimension_values_key({})].quantity
         for customer_id, by_dimension_values in sum_quantities_by_dimension_values(
-            stored, month, billable_metric
+            stored, month, billable_metric, cutoff
         ).items()
     }
 
@@ -179,7 +179,8 @@ class SumQuantitiesTest(unittest.TestCase):
             _stored("evt-1", ts="2026-12-31T10:00:00+09:00", received="2027-01-01T12:00:00+09:00"),
             _stored("evt-2", ts="2026-12-31T11:00:00+09:00", received="2027-01-01T14:00:00+09:00"),
         ]
-        sums = _sum_quantities(stored, "2026-12", "chat_completion", "token")
+        # 계산 시각을 그 달 뒤로 둬서 아직 오지 않은 달로 빠지지 않게 한다.
+        sums = _sum_quantities(stored, "2026-12", "chat_completion", "token", parse_rfc3339("2027-01-02T00:00:00+09:00"))
         self.assertEqual(sums[ACME], Decimal("500"))
 
     def test_다른_event_type은_합산하지_않는다(self):
