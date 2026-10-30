@@ -62,10 +62,8 @@ public class WebhookEndpointService {
 
   @Transactional(readOnly = true)
   public List<WebhookEndpointResponse> list(UUID organizationId, String status) {
-    ArchiveStatus filter = ArchiveStatus.parse(status);
-    return webhookEndpointRepository.findByOrganizationId(organizationId).stream()
-        .filter(endpoint -> filter.includes(endpoint.archivedAt()))
-        .toList();
+    return webhookEndpointRepository.findByOrganizationId(
+        organizationId, ArchiveStatus.parse(status));
   }
 
   @Transactional(readOnly = true)

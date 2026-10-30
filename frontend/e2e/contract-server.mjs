@@ -107,8 +107,8 @@ const server = createServer(async (req, res) => {
       result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
     }
     else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [
-      { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
-      { id: HEALTHY_WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/healthy", event_types: ["payment_succeeded"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
+      { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, created_at: new Date().toISOString(), archived_at: null, latest_attempt_failed: true },
+      { id: HEALTHY_WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/healthy", event_types: ["payment_succeeded"], enabled: true, created_at: new Date().toISOString(), archived_at: null, latest_attempt_failed: false },
     ] } };
     else if (path === `/v1/webhook-endpoints/${HEALTHY_WEBHOOK_ENDPOINT_ID}/deliveries` && req.method === "GET") result = deliveryPage(url, [
       { id: "99999999-9999-4999-8999-0000000000b0", status: "pending", type: "payment_succeeded", attempt_count: 1, response_status: null, failure_reason: null, next_attempt_at: expiresAt(), created_at: new Date().toISOString(), attempts: [] },
