@@ -3,6 +3,7 @@ package com.meterengine.event.service;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.validation.StorableTimestampValidator;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -62,6 +63,13 @@ public record EventSearch(
   }
 
   private static OffsetDateTime parse(String value, boolean endDate) {
+    OffsetDateTime parsed = parseTimestamp(value, endDate);
+    if (!new StorableTimestampValidator().isValid(parsed, null))
+      throw invalid(endDate ? "to" : "from", "저장할 수 있는 범위 밖의 시각입니다");
+    return parsed;
+  }
+
+  private static OffsetDateTime parseTimestamp(String value, boolean endDate) {
     try {
       if (value.matches("\\d{4}-\\d{2}-\\d{2}")) {
         LocalDate day = LocalDate.parse(value);

@@ -64,9 +64,9 @@ export interface ListEventsResponse {
 
 export interface CustomerResponse {
   id: string;
-  name: string;
+  name: string | null;
   billing_email: string | null;
-  created_at: string;
+  created_at: string | null;
   version?: number;
   external_id?: string | null;
   archived_at?: string | null;
@@ -138,7 +138,7 @@ export interface ListBillableMetricUsagesResponse {
 }
 
 export interface InvoiceLineResponse {
-  billable_metric_code: string;
+  billable_metric_code: string | null;
   target_property: string | null;
   dimension_values: Record<string, unknown>;
   quantity: number;
@@ -146,7 +146,7 @@ export interface InvoiceLineResponse {
   quantity_denominator?: number | null;
   unit_price: number;
   amount: number;
-  line_type: string;
+  line_type: "per_unit" | "volume" | "graduated_tier" | "base_fee" | "minimum_adjustment";
   tier_index: number;
 }
 

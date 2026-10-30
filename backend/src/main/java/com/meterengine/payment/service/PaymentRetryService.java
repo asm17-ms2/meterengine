@@ -160,6 +160,10 @@ public class PaymentRetryService {
       logSkipped(candidate, "candidate_changed");
       return Optional.empty();
     }
+    if (tossPaymentsCredentialService.active(organizationId, mode).isEmpty()) {
+      logSkipped(candidate, "toss_payments_credential_missing");
+      return Optional.empty();
+    }
     if (billingKeyRepository
         .findById(new BillingKeyId(organizationId, failedAttempt.getCustomerId(), mode))
         .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))

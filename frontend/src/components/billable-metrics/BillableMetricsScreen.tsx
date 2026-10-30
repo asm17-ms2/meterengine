@@ -28,14 +28,18 @@ function filterByName(rows: BillableMetricRowView[], searchText: string): Billab
   return rows.filter((row) => row.name.toLowerCase().includes(needle));
 }
 
+
+const METRIC_SORT_LABELS: Record<string, string> = { code: "코드", name: "이름", event_type: "이벤트 타입", aggregation: "집계 방식", archived_at: "보관 시각" };
 export function BillableMetricsScreen({
   rows,
   total,
+  totalUnfiltered,
   query,
   capabilities,
 }: {
   rows: BillableMetricRowView[];
   total?: number;
+  totalUnfiltered?: number;
   query: ListQuery;
   capabilities: ListCapabilities;
 }) {
@@ -83,7 +87,7 @@ export function BillableMetricsScreen({
         ) : visibleRows.length === 0 ? (
           <EmptyState
             title="검색 결과가 없습니다"
-            body={`"${appliedSearchText}"에 맞는 미터가 없습니다. 등록된 미터는 ${rows.length}개입니다.`}
+            body={`"${appliedSearchText}"에 맞는 미터가 없습니다. 등록된 미터는 ${totalUnfiltered ?? rows.length}개입니다.`}
             action={<Button onClick={search.clear}>검색어 지우기</Button>}
           />
         ) : (
@@ -97,7 +101,7 @@ export function BillableMetricsScreen({
               clientSortSelection={{ selection: sortSelection, onSelectionChange: setSortSelection }}
             />
             <ListPagination query={query} capabilities={capabilities} total={total} />
-            <ScreenNote>정렬: 코드 오름차순</ScreenNote>
+            <ScreenNote>{`정렬: ${METRIC_SORT_LABELS[query.sort ?? "code"] ?? METRIC_SORT_LABELS.code} ${query.order === "desc" ? "내림차순" : "오름차순"}`}</ScreenNote>
           </>
         )}
       </ScreenCard>

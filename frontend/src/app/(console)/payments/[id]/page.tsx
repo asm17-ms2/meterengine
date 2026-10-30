@@ -91,7 +91,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   if (!invoice.ok || !attempts.ok) {
     const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
     return <>
-      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"} kicker="도입사 콘솔"
+      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"}
         description={failure?.status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
         <Link href="/payments">수납 목록으로</Link>
       </WorkspaceHeader>
@@ -103,14 +103,14 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   });
   const currentPayment = payments.ok ? payments.data.invoice_payments.find(payment => payment.invoice_id === id) : undefined;
   const [card, keys] = await Promise.all([
-    workspaceFetch<{ card_number: string }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
+    workspaceFetch<{ card_number: string; archived_at: string | null }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
     workspaceFetch<{ toss_payments_credentials: { mode: string }[] }>("/v1/toss-payments-credentials"),
   ]);
   const readiness = paymentReadiness(currentPayment?.mode, keys, card);
   const state = currentPayment ? PAYMENT_STATES[currentPayment.status] : undefined;
   const canCollect = currentPayment && ["unpaid", "failed"].includes(currentPayment.status);
   return <>
-    <WorkspaceHeader title={invoice.data.customer_name + "의 수납"} kicker="도입사 콘솔"
+    <WorkspaceHeader title={invoice.data.customer_name + "의 수납"}
       description={invoice.data.month + " 청구액 " + formatKrw(invoice.data.total_amount) + ". 확정 금액은 결제와 취소 이후에도 보존됩니다."}>
       <Link href={"/customers/" + invoice.data.customer_id + "?month=" + invoice.data.month}>고객으로 이동</Link>
       <a href="">내역 새로 조회</a>
@@ -132,7 +132,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
           : <><p role="status"><strong>{currentPayment.mode === "test" ? "테스트 결제" : "실결제"} / {state.label}</strong></p><p className="muted">{canCollect && readiness === "card-missing" ? "결제 모드에 맞는 등록 카드가 없어 결제를 요청할 수 없습니다. 카드 등록 링크를 만들어 고객에게 전달하세요." : canCollect && readiness === "key-missing" ? "결제 모드의 토스페이먼츠 키가 없어 결제를 요청할 수 없습니다. 설정에서 키를 저장하세요." : state.description}</p></>}
       <h3>결제 시도 기록</h3>
       <WorkspaceTable rows={attempts.data.payment_attempts.map(attempt => ({ ...attempt, requested_at: formatKstDateTime(attempt.requested_at) }))}
-        columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "모드" }, { key: "failure_message", label: "실패 사유" }]} />
+        columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "결제 모드" }, { key: "failure_message", label: "실패 사유" }]} />
     </section>
     {attempts.data.payment_attempts.filter(attempt => attempt.status === "done").map(attempt => <CancellationHistory key={attempt.id} attempt={attempt} />)}
     <InvoiceViewLinks invoiceId={id} initialLinks={viewLinks.ok ? viewLinks.data.invoice_view_links : []} loadError={viewLinks.ok ? undefined : viewLinks.error.message} checkedAt={new Date().getTime()} />

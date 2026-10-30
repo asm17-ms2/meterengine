@@ -1,6 +1,6 @@
 package com.meterengine.pricing.service;
 
-import com.meterengine.global.security.UsagePriceDiagnostics;
+import com.meterengine.event.api.UsagePriceDiagnostics;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;

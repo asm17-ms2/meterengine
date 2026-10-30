@@ -51,7 +51,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
       "select a from PaymentAttempt a where a.organizationId = :organizationId and a.invoiceId ="
           + " :invoiceId and a.environmentId IS NOT DISTINCT FROM"
           + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}"
-          + " order by a.requestedAt desc")
+          + " order by a.requestedAt desc, a.id desc")
   List<PaymentAttempt> findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(
       UUID organizationId, UUID invoiceId);
 

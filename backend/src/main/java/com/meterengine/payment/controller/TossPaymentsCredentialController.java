@@ -1,7 +1,6 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
@@ -49,6 +48,7 @@ public class TossPaymentsCredentialController {
           선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
           시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
           verified_at과 updated_at은 KST(+09:00)로 나온다.
+          status가 archived나 all이면 교체나 보관으로 물러난 이전 키를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 키는 새 결제에 다시 쓰이지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(
@@ -126,12 +126,14 @@ public class TossPaymentsCredentialController {
   }
 
   @org.springframework.web.bind.annotation.DeleteMapping("/{mode}")
-  @AdminAccess
+  @MemberAdminAccess
   @org.springframework.web.bind.annotation.ResponseStatus(
       org.springframework.http.HttpStatus.NO_CONTENT)
   @Operation(
       summary = "토스페이먼츠 키 보관",
-      description = "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.")
+      description =
+          "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다. 저장과 같이"
+              + " 로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
     @ApiResponse(

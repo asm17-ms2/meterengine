@@ -86,7 +86,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
     const label = billableMetricUsage.code;
-    const labelTooltip = [formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
+    const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
 
     for (const customer of billableMetricUsage.customers) {
       let group = customerGroupByCustomerId.get(customer.customer_id);
@@ -123,7 +123,7 @@ export async function aggregateBillableMetricUsages(
         status: 503,
         code: "dev_forced",
         message:
-          "개발 모드에서 강제한 에러 상태입니다. 사이드바의 표 상태 스위치를 정상으로 되돌리면 사라집니다.",
+          "개발 모드에서 강제한 에러 상태입니다. 주소의 state 파라미터를 지우면 사라집니다.",
       },
     };
   }

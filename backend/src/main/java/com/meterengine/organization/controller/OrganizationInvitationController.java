@@ -6,6 +6,8 @@ import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.organization.dto.AcceptOrganizationInvitationRequest;
+import com.meterengine.organization.dto.OrganizationInvitationAcceptanceResponse;
+import com.meterengine.organization.dto.OrganizationInvitationPreviewResponse;
 import com.meterengine.organization.service.OrganizationPeopleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -79,7 +81,7 @@ public class OrganizationInvitationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description = "code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다")
   })
-  public OrganizationPeopleService.InvitationPreview previewOrganizationInvitation(
+  public OrganizationInvitationPreviewResponse previewOrganizationInvitation(
       @PathVariable @StorableText @Pattern(regexp = "me_invite_[A-Za-z0-9]{32}") String token) {
     return organizationPeopleService.preview(token);
   }
@@ -141,7 +143,7 @@ public class OrganizationInvitationController {
             code=email_already_exists: 수락을 처리하는 사이에 같은 이메일의 계정이 먼저 만들어졌다.
             """)
   })
-  public OrganizationPeopleService.AcceptedInvitation acceptOrganizationInvitation(
+  public OrganizationInvitationAcceptanceResponse acceptOrganizationInvitation(
       @PathVariable @StorableText @Pattern(regexp = "me_invite_[A-Za-z0-9]{32}") String token,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @Valid @RequestBody(required = false) AcceptOrganizationInvitationRequest request) {

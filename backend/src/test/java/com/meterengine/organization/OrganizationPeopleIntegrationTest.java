@@ -91,7 +91,11 @@ class OrganizationPeopleIntegrationTest {
         .bodyJson()
         .extractingPath("$.code")
         .isEqualTo("consent_required");
-    assertThat(post("/v1/sessions/current/consents", authorization, Map.of("consents", CONSENTS)))
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                authorization,
+                Map.of("consents", CONSENTS, "new_password", "self-chosen-password")))
         .hasStatusOk();
     assertThat(
             mvc.get()
@@ -116,6 +120,66 @@ class OrganizationPeopleIntegrationTest {
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM consent WHERE user_account_id=?", Integer.class, userId))
         .isEqualTo(2);
+  }
+
+  @Test
+  void 직접_생성한_계정은_본인_동의에서_새_비밀번호를_정하고_초기_비밀번호와_먼저_연_세션이_막힌다() {
+    String email = UUID.randomUUID() + "@example.com";
+    assertThat(
+            post(
+                "/v1/organization/members",
+                owner,
+                Map.of("email", email, "name", "초기 비밀번호", "password", PASSWORD)))
+        .hasStatus(201);
+    String first = signIn(email, PASSWORD);
+    String earlier = signIn(email, PASSWORD);
+    assertThat(post("/v1/sessions/current/consents", first, Map.of("consents", CONSENTS)))
+        .hasStatus(400);
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                first,
+                Map.of("consents", CONSENTS, "new_password", PASSWORD)))
+        .hasStatus(400);
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                first,
+                Map.of("consents", CONSENTS, "new_password", "self-chosen-password")))
+        .hasStatusOk();
+    entityManager.flush();
+    assertThat(post("/v1/sessions", null, Map.of("email", email, "password", PASSWORD)))
+        .hasStatus(401);
+    assertThat(mvc.get().uri("/v1/sessions/current").header(AUTHORIZATION, earlier).exchange())
+        .hasStatus(401);
+    assertThat(mvc.get().uri("/v1/sessions/current").header(AUTHORIZATION, first).exchange())
+        .hasStatusOk();
+    assertThat(signIn(email, "self-chosen-password")).isNotBlank();
+  }
+
+  private String signIn(String email, String password) {
+    MvcTestResult login = post("/v1/sessions", null, Map.of("email", email, "password", password));
+    assertThat(login).hasStatus(201);
+    return "Bearer " + JsonPath.read(body(login), "$.token");
+  }
+
+  @Test
+  void 직접생성과_초대의_이메일_형식_오류는_가입과_같은_문구다() {
+    for (String email : List.of("a@b", "abc")) {
+      for (MvcTestResult result :
+          List.of(
+              post(
+                  "/v1/organization/members",
+                  owner,
+                  Map.of("email", email, "name", "형식 확인", "password", PASSWORD)),
+              post("/v1/organization/invitations", owner, Map.of("email", email)))) {
+        assertThat(result).as(email).hasStatus(400);
+        List<String> fields = JsonPath.read(body(result), "$.errors[*].field");
+        List<String> messages = JsonPath.read(body(result), "$.errors[*].message");
+        assertThat(fields).as(email).containsOnly("email");
+        assertThat(messages).as(email).containsOnly("올바른 형식의 이메일 주소여야 합니다");
+      }
+    }
   }
 
   @Test

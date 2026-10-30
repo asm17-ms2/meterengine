@@ -1,6 +1,7 @@
 import { tenantExport } from "@/lib/api/client";
 import { toDisplayMessage } from "@/lib/api/transport";
 import { CAPABILITIES } from "@/lib/api/capabilities";
+import { exportFilename } from "@/lib/export-filename";
 import { readListQuery, toServerParams } from "@/lib/list-query";
 import { normalizeResourceQuery, searchParametersFromUrl } from "@/lib/resource-query";
 
@@ -18,7 +19,8 @@ export async function GET(request: Request, context: { params: Promise<{ resourc
   const { resource } = await context.params;
   if (!Object.hasOwn(RESOURCES, resource)) return new Response("찾을 수 없는 내보내기입니다.", { status: 404 });
   const target = RESOURCES[resource as keyof typeof RESOURCES];
-  const search = normalizeResourceQuery(resource, searchParametersFromUrl(new URL(request.url).searchParams));
+  const url = new URL(request.url);
+  const search = normalizeResourceQuery(resource, searchParametersFromUrl(url.searchParams));
   const query = ["events", "usage", "billing", "invoices", "billable-metric-prices"].includes(resource) ? readListQuery(search, target.capabilities, { hasMonth: true }) : readListQuery(search, target.capabilities);
   const params = toServerParams(query, target.capabilities);
   if (resource === "events") {
@@ -30,5 +32,5 @@ export async function GET(request: Request, context: { params: Promise<{ resourc
   const result = await tenantExport(target.path, params);
   if (!result.ok) return Response.json({ code: result.error.code, message: toDisplayMessage(result.error) }, { status: result.error.status || 503, headers: { "Cache-Control": "no-store" } });
   const csv = result.data.body.startsWith("\uFEFF") ? result.data.body : "\uFEFF" + result.data.body;
-  return new Response(csv, { headers: { "Content-Type": result.data.contentType, "Content-Disposition": `attachment; filename="${resource}.csv"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+  return new Response(csv, { headers: { "Content-Type": result.data.contentType, "Content-Disposition": `attachment; filename="${exportFilename(resource, { month: query.month, from: query.from, to: query.to, environment: url.searchParams.get("environment") })}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }

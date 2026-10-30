@@ -26,13 +26,13 @@ public class UnbilledEventRepository {
         jdbcTemplate.query(
             """
             SELECT e.type, count(*) AS event_count FROM event e
-            WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid AND e.occurred_at >= ? AND e.occurred_at < ?
+            WHERE e.organization_id = ? AND e.environment_scope_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?
               AND NOT EXISTS (SELECT 1 FROM billable_metric m WHERE m.organization_id = e.organization_id AND m.environment_scope_id = e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))))
             GROUP BY e.type ORDER BY event_count DESC, e.type
             """,
             (rs, rowNum) -> new TypeCount(rs.getString("type"), rs.getLong("event_count")),
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             startAt,
             cutoffAt);
     return new UnmatchedType(
@@ -66,8 +66,7 @@ public class UnbilledEventRepository {
       UUID organizationId, OffsetDateTime startAt, OffsetDateTime endAt, OffsetDateTime cutoffAt) {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) AS event_count, min(occurred_at) AS earliest_occurred_at, max(occurred_at)"
-            + " AS latest_occurred_at FROM event WHERE organization_id = ? AND environment_id IS"
-            + " NOT DISTINCT FROM ?::uuid AND occurred_at >= ? AND occurred_at < ? AND occurred_at"
+            + " AS latest_occurred_at FROM event WHERE organization_id = ? AND environment_scope_id = ? AND occurred_at >= ? AND occurred_at < ? AND occurred_at"
             + " >= ?",
         (rs, rowNum) ->
             new FutureTimestamp(
@@ -75,7 +74,7 @@ public class UnbilledEventRepository {
                 rs.getObject("earliest_occurred_at", OffsetDateTime.class),
                 rs.getObject("latest_occurred_at", OffsetDateTime.class)),
         organizationId,
-        BusinessEnvironmentContext.environmentId(),
+        BusinessEnvironmentContext.scopeId(),
         startAt,
         endAt,
         cutoffAt);
@@ -83,26 +82,48 @@ public class UnbilledEventRepository {
 
   private MetricCounts metricCounts(
       UUID organizationId, OffsetDateTime startAt, OffsetDateTime cutoffAt, String condition) {
-    List<MetricCount> counts =
+    String matched =
+        " FROM event e JOIN billable_metric m ON"
+            + " m.organization_id = e.organization_id AND m.environment_scope_id ="
+            + " e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
+            + " AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul',"
+            + " 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE"
+            + " p.organization_id = m.organization_id AND p.environment_scope_id ="
+            + " m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <="
+            + " to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until"
+            + " > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))) WHERE"
+            + " e.organization_id = ? AND e.environment_scope_id = ? AND"
+            + " e.occurred_at >= ? AND e.occurred_at < ? AND ("
+            + condition
+            + ")";
+    Object[] parameters = {organizationId, BusinessEnvironmentContext.scopeId(), startAt, cutoffAt};
+    // 미터별 수와 서로 다른 이벤트 수를 같은 JOIN 한 번으로 센다. 빈 묶음 () 줄이 전체 합계다.
+    List<GroupedCount> grouped =
         jdbcTemplate.query(
-            "SELECT m.code, count(*) AS event_count FROM event e JOIN billable_metric m ON"
-                + " m.organization_id = e.organization_id AND m.environment_scope_id ="
-                + " e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
-                + " AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul',"
-                + " 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE"
-                + " p.organization_id = m.organization_id AND p.environment_scope_id ="
-                + " m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <="
-                + " to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until"
-                + " > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))) WHERE"
-                + " e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid AND"
-                + " e.occurred_at >= ? AND e.occurred_at < ? AND ("
-                + condition
-                + ") GROUP BY m.code ORDER BY m.code",
-            (rs, rowNum) -> new MetricCount(rs.getString("code"), rs.getLong("event_count")),
-            organizationId,
-            BusinessEnvironmentContext.environmentId(),
-            startAt,
-            cutoffAt);
-    return new MetricCounts(counts.stream().mapToLong(MetricCount::eventCount).sum(), counts);
+            "SELECT m.code, GROUPING(m.code) = 1 AS is_total, count(*) AS event_count,"
+                + " count(DISTINCT e.transaction_id) AS distinct_event_count"
+                + matched
+                + " GROUP BY GROUPING SETS ((m.code), ()) ORDER BY m.code",
+            (rs, rowNum) ->
+                new GroupedCount(
+                    rs.getString("code"),
+                    rs.getBoolean("is_total"),
+                    rs.getLong("event_count"),
+                    rs.getLong("distinct_event_count")),
+            parameters);
+    long eventCount =
+        grouped.stream()
+            .filter(GroupedCount::total)
+            .mapToLong(GroupedCount::distinctEventCount)
+            .sum();
+    List<MetricCount> counts =
+        grouped.stream()
+            .filter(count -> !count.total())
+            .map(count -> new MetricCount(count.code(), count.eventCount()))
+            .toList();
+    return new MetricCounts(eventCount, counts);
   }
+
+  private record GroupedCount(
+      String code, boolean total, long eventCount, long distinctEventCount) {}
 }

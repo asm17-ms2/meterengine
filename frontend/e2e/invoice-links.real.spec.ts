@@ -10,6 +10,7 @@ const OUTPUT = process.env.INVOICE_LINK_EVIDENCE_DIR ?? "/private/tmp/meterengin
 const PASSWORD = "local-invoice-link-e2e-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? "meterengine-0696-e2e";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -51,7 +52,7 @@ function safeFailure(error: unknown, secrets: Set<string>) {
 }
 
 function sql(statement: string) {
-  return execFileSync("docker", ["exec", "-i", "meterengine-0696-e2e", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], {
+  return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], {
     input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"],
   }).trim();
 }
@@ -247,6 +248,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await expect(page.getByText(data.invoiceNumber, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
     await expect(page.getByRole("heading", { name: "청구 항목", exact: true })).toBeVisible();
+    await expect(page.getByText("항목별 공급가액은 수량에 단가를 곱한 금액에서 10원 미만을 버린 값입니다.", { exact: false })).toBeVisible();
     await expect(page.getByRole("heading", { name: "결제 내역", exact: true })).toBeVisible();
     await expect(page.getByRole("button")).toHaveText(["결제 상태 새로 조회", "조회 링크 복사"]);
     for (const value of [token, data.token, data.organizationId, data.customerId, data.invoiceId, "공개되면 안 되는 다른 고객"]) expect((await page.content()).includes(value)).toBe(false);
@@ -254,6 +256,11 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await page.reload();
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
+    await page.getByRole("link", { name: "본문으로 이동", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(`${FRONTEND_URL}/invoice-links#main-content`);
+    await page.reload();
+    await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect((await customer.cookies()).find(cookie => cookie.name === "me_session")).toBeUndefined();
     const paymentId = randomUUID();
     sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local browser link fixture', 'done', 'local-browser-link-payment-${paymentId}', clock_timestamp(), clock_timestamp()); INSERT INTO payment_cancellation (id, organization_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${paymentId}', 'test', 400, 'local browser link fixture', 'done', 'local-browser-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
@@ -268,16 +275,16 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     if (customerCopied !== copied) throw new Error("주소를 정리한 뒤 고객의 원본 링크 복사를 유지하지 못했습니다.");
     await assertLayout(page, "public-partial-cancellation-desktop.png");
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByText("단가와 공급가액은 표를 좌우로 이동해 확인할 수 있습니다.", { exact: true })).toBeVisible();
     await assertLayout(page, "public-invoice-mobile.png");
-    const lineItems = page.getByRole("region", { name: "청구 항목 상세", exact: true });
-    await expect(lineItems).toHaveAttribute("aria-describedby", /.+/);
-    await lineItems.focus();
-    await lineItems.press("ArrowRight");
-    await expect.poll(() => lineItems.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
-    const horizontalScroll = await lineItems.evaluate(element => ({ viewport: element.clientWidth, content: element.scrollWidth, moved: element.scrollLeft }));
-    writeFileSync(`${OUTPUT}/mobile-table-scroll-result.json`, JSON.stringify(horizontalScroll, null, 2));
-    await lineItems.evaluate(element => { element.scrollLeft = 0; });
+    await expect(page.getByRole("region", { name: "청구 항목 상세", exact: true })).toBeHidden();
+    const lineRecords = page.getByRole("list", { name: "청구 항목", exact: true });
+    expect(await lineRecords.getByRole("listitem").count()).toBeGreaterThan(0);
+    const firstRecord = lineRecords.getByRole("listitem").first();
+    await expect(firstRecord).toContainText(/원/);
+    await expect(firstRecord).toContainText("단가");
+    const recordBox = await firstRecord.boundingBox();
+    expect(recordBox && recordBox.x + recordBox.width <= 390).toBe(true);
+    writeFileSync(`${OUTPUT}/mobile-line-records-result.json`, JSON.stringify({ records: await lineRecords.getByRole("listitem").count(), right_edge: recordBox ? recordBox.x + recordBox.width : null }, null, 2));
     const secondLink = await mint(request, { ...data, invoiceId: data.otherInvoiceId }, secrets, 7);
     sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, requested_at) SELECT '${randomUUID()}', organization_id, customer_id, id, 'test', supply_amount + tax_amount, 'local browser pending fixture', 'pending', clock_timestamp() FROM invoice WHERE id = '${data.otherInvoiceId}';`);
     await page.goto(`${FRONTEND_URL}/invoice-links#${secondLink.token}`);
@@ -315,7 +322,9 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
 
 test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다", async ({ page, request }) => {
   await page.goto(`${FRONTEND_URL}/invoice-links`);
-  await expect(page.getByRole("heading", { name: "사용할 수 없는 조회 링크입니다", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "청구서 조회 정보가 없습니다", exact: true })).toBeVisible();
+  await expect(page.getByText("받은 메일이나 메시지의 원래 조회 링크를 다시 열어 주세요.", { exact: false })).toBeVisible();
+  await expect(page.getByText(/만료되었거나 폐기/)).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: /고객|인보이스/ })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   const cross = await request.post(`${FRONTEND_URL}/invoice-links/lookup`, { headers: { Origin: "http://evil.example" }, data: { token: randomBytes(32).toString("base64url") } });
@@ -335,12 +344,21 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     await page.setViewportSize({ width: 390, height: 844 });
     await assertLayout(page, "public-unavailable-mobile.png");
     await page.unroute("**/invoice-links/lookup");
+    let releaseOutage = () => {};
+    const outage = new Promise<void>(resolve => { releaseOutage = resolve; });
+    await page.route("**/invoice-links/lookup", async route => { await outage; await route.fulfill({ status: 503, contentType: "application/json", body: '{"message":"local outage fixture"}' }); });
+    await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
+    await expect(page.getByRole("button", { name: "조회 중", exact: true })).toBeDisabled();
+    releaseOutage();
+    await expect(page.locator("main").getByRole("status")).toHaveText("다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    await page.unroute("**/invoice-links/lookup");
     await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
     sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, failure_code, failure_message, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local failed lookup fixture', 'failed', 'LOCAL_DECLINED', 'local fixture failure', clock_timestamp(), clock_timestamp());`);
     await page.getByRole("button", { name: "결제 상태 새로 조회", exact: true }).click();
     await expect(page.getByText("결제 실패", { exact: true })).toBeVisible();
+    await expect(page.getByText("결제 실패", { exact: true })).toHaveCSS("color", "rgb(169, 35, 52)");
     await expect(page.getByText("최근 결제 처리 시각 (KST)", { exact: true })).toBeVisible();
     await expect(page.getByText("결제 완료 시각 (KST)", { exact: true })).toHaveCount(0);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ status: "failed", paid_amount: 0, canceled_amount: 0, outstanding_amount: 1100 });

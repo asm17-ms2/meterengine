@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { METRIC_CODES, MODEL_CATALOG } from "@/lib/contracts";
+import { createRequestId } from "@/lib/request-id";
 import type { ApiErrorBody, BillingLine, GenerationView, InvoiceView, LlmModel, SessionResponse, WorkspaceSnapshot } from "@/lib/contracts";
 import { currentBillingMonth, workspaceBillingMonth } from "./billing-month";
 import type { WorkspaceSection } from "./billing-month";
@@ -226,8 +227,11 @@ function HistoryScreen({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   </>;
 }
 
+// 메뉴를 옮기면 화면이 다시 마운트되므로 마지막 세션으로 먼저 그리고 다시 확인한다.
+let lastSession: SessionResponse | null = null;
+
 export function LumenApplication({ section, initialMonth }: { section: Section; initialMonth?: string }) {
-  const [session, setSession] = useState<SessionResponse | null>(null);
+  const [session, setSession] = useState<SessionResponse | null>(() => lastSession);
   const [sessionError, setSessionError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -249,7 +253,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
   const generationController = useRef<AbortController | null>(null);
 
   const loadSession = useCallback(async () => {
-    try { const result = await readApi<SessionResponse>("/api/session"); setSession(result); setSessionError(""); }
+    try { const result = await readApi<SessionResponse>("/api/session"); lastSession = result; setSession(result); setSessionError(""); }
     catch (error) { setSessionError(errorMessage(error, "서비스에 연결하지 못했습니다. 잠시 후 다시 불러오세요.")); }
   }, []);
 
@@ -271,7 +275,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
   useEffect(() => {
     const controller = new AbortController();
     void readApi<SessionResponse>("/api/session", { signal: controller.signal }).then(result => {
-      setSession(result); setSessionError("");
+      lastSession = result; setSession(result); setSessionError("");
     }).catch(error => { if (!controller.signal.aborted) setSessionError(errorMessage(error, "서비스에 연결하지 못했습니다. 잠시 후 다시 불러오세요.")); });
     return () => controller.abort();
   }, []);
@@ -339,7 +343,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
     const text = prompt.trim();
     if (!text || Array.from(text).length > 4000) { setGenerationError("메시지는 1자부터 4,000자까지 입력하세요."); document.getElementById("lumen-prompt")?.focus(); return; }
     const existing = pendingRequest.current;
-    const candidate = existing?.prompt === text && existing.modelId === modelId ? existing : { requestId: crypto.randomUUID(), modelId, prompt: text };
+    const candidate = existing?.prompt === text && existing.modelId === modelId ? existing : { requestId: createRequestId(), modelId, prompt: text };
     pendingRequest.current = candidate;
     setUncertainRequest(candidate);
     setIsGenerating(true); setGeneration(null); setGenerationError(""); setActionStatus("응답을 생성하고 있습니다.");

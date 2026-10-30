@@ -136,10 +136,12 @@ class ApiClient:
             query["customer_id"] = customer_id
         return self._request("GET", "/v1/billable-metric-prices", query=query)
 
-    def get_price_plans(self, month: Optional[str] = None, customer_id: Optional[str] = None) -> ApiResult:
+    def get_price_plans(self, month: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None) -> ApiResult:
         query = _month_query(month)
         if customer_id:
             query["customer_id"] = customer_id
+        if status:
+            query["status"] = status
         return self._request("GET", "/v1/price-plans", query=query)
 
     def get_events_page(self, month: Optional[str]) -> ApiResult:

@@ -33,6 +33,33 @@ function signedRequest(query: string, environment: string | undefined, secret: s
   }, body: payload });
 }
 
+test("단일 대상에서 환경을 지정하면 전역 비밀값으로 그 환경의 웹훅을 받는다", async () => {
+  const received: string[] = [];
+  const append = async (scope: { environment: string }) => { received.push(scope.environment); };
+  const scoped = Object.fromEntries([["METERENGINE_API_KEY", "key-test"], ["METERENGINE_ENVIRONMENT", "test"], ["METERENGINE_WEBHOOK_SECRET", SECRET_TEST]]);
+  assert.equal((await handleWebhookRequest(signedRequest("?target=local", "test", SECRET_TEST), scoped, append, NOW)).status, 200);
+  assert.deepEqual(received, ["test"]);
+  const unscoped = Object.fromEntries([["METERENGINE_API_KEY", "key-test"], ["METERENGINE_WEBHOOK_SECRET", SECRET_TEST]]);
+  const legacy = await handleWebhookRequest(signedRequest("?target=local", undefined, SECRET_TEST), unscoped, append, NOW);
+  assert.equal((await legacy.json()).reason, "secret_not_configured");
+  assert.deepEqual(received, ["test", "legacy"]);
+});
+
+test("브라우저 요청과 상한을 넘는 본문은 대상 선택 전에 기록 없이 거절한다", async () => {
+  let appended = 0;
+  const append = async () => { appended++; };
+  const url = "http://localhost:3100/api/webhooks?target=test";
+  const fromPage = new Request(url, { method: "POST", headers: { origin: "http://evil.example" }, body: "{}" });
+  const crossSite = new Request(url, { method: "POST", headers: { "sec-fetch-site": "cross-site" }, body: "{}" });
+  const large = new Request(url, { method: "POST", body: "x".repeat(256 * 1024 + 1) });
+  assert.equal((await handleWebhookRequest(fromPage, configuration(), append, NOW)).status, 403);
+  assert.equal((await handleWebhookRequest(crossSite, configuration(), append, NOW)).status, 403);
+  assert.equal((await handleWebhookRequest(large, configuration(), append, NOW)).status, 413);
+  assert.equal(appended, 0);
+  assert.equal((await handleWebhookRequest(signedRequest("?target=test", "test", SECRET_TEST), configuration(), append, NOW)).status, 200);
+  assert.equal(appended, 1);
+});
+
 test("URL의 대상을 하나만 고르고 서명 전 본문 환경으로 대상을 바꾸지 않는다", async () => {
   const received: string[] = [];
   const append = async (scope: { id: string }) => { received.push(scope.id); };

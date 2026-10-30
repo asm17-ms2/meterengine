@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./HomePage.module.css";
+import { BrandMark } from "@/components/shell/BrandMark";
+
+// 소개 화면 워드마크(24px)가 콘솔 헤더(21px)보다 큰 만큼 마크도 키운다.
+const HOME_MARK_SCALE = 24 / 21;
 
 export const metadata: Metadata = {
   title: "MeterEngine - 사용량과 청구의 근거를 연결하세요",
@@ -17,7 +21,7 @@ const FLOW = [
 export default function Home() {
   return <div className={styles.page}>
     <header className={styles.header}>
-      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><span className={styles.mark} aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><BrandMark scale={HOME_MARK_SCALE} />MeterEngine</Link>
       <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">운영 흐름</a><a href="#roles">역할과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입 신청</Link></nav>
     </header>
     <main id="main-content">
@@ -59,7 +63,7 @@ export default function Home() {
           <div><dt>도입사 고객</dt><dd>전달받은 카드 등록 링크에서 자동결제 동의를 확인하고 토스페이먼츠 카드 인증을 진행합니다. 카드 정보는 인증 화면에서 입력합니다.</dd></div>
           <div><dt>MeterEngine 운영자</dt><dd>도입사 가입 승인과 플랫폼 운영 권한을 관리합니다. 도입사 내부의 관리자 권한과 구분됩니다.</dd></div>
         </dl>
-        <p className={styles.modeNote}>테스트 업무 환경과 실제 업무 환경을 구분합니다. 현재 환경별 고객, 수집 로그와 연동 키를 지원하며 청구와 결제의 환경 분리는 준비 중입니다. 기존 데이터, PG 결제 환경과 화면 시연 모드는 각각 구분해 확인하세요.</p>
+        <p className={styles.modeNote}>테스트 업무 환경과 실제 업무 환경을 구분합니다. 현재 환경별 고객, 수집 로그와 연동 키를 지원하며 청구와 결제의 환경 분리는 준비 중입니다. 기존 데이터, 결제 모드와 화면 시연 모드는 각각 구분해 확인하세요.</p>
       </section>
       <section className={styles.startSection} aria-labelledby="start-title"><div><h2 id="start-title">첫 청구의 근거부터 준비하세요.</h2><p>도입사 가입을 신청하고 고객, 미터와 적용 요금을 연결하세요.</p></div><Link className={styles.primaryAction} href="/signup">도입사 가입 신청</Link></section>
     </main>

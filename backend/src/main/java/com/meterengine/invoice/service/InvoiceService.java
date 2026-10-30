@@ -45,6 +45,11 @@ public class InvoiceService {
   }
 
   @Transactional(readOnly = true)
+  public long count(UUID organizationId) {
+    return invoiceRepository.countScoped(organizationId, BusinessEnvironmentContext.scopeId());
+  }
+
+  @Transactional(readOnly = true)
   public ListInvoicesResponse list(UUID organizationId, UUID customerId, YearMonth month) {
     if (customerId != null
         && !(BusinessEnvironmentContext.environmentId() == null
@@ -122,6 +127,7 @@ public class InvoiceService {
   private InvoiceLineResponse toInvoiceLineResponse(InvoiceLine invoiceLine) {
     return new InvoiceLineResponse(
         invoiceLine.getBillableMetricCode(),
+        invoiceLine.getBillableMetricName(),
         invoiceLine.getTargetProperty(),
         jsonMapper.readValue(invoiceLine.getDimensionValues(), DIMENSION_VALUES_TYPE),
         invoiceLine.getQuantity(),

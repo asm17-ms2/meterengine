@@ -24,6 +24,13 @@ public record InvoiceResponse(
 
   public record InvoiceLineResponse(
       @JsonProperty("billable_metric_code") String billableMetricCode,
+      @Schema(
+              description =
+                  "확정할 때의 미터 이름. 미터 이름을 나중에 바꿔도 그대로다. 기본료와 최소 사용료 조정 줄, 이 값을 저장하기 전에 확정한 줄은"
+                      + " null이다",
+              nullable = true)
+          @JsonProperty("billable_metric_name")
+          String billableMetricName,
       @JsonProperty("target_property") String targetProperty,
       @Schema(description = "확정할 때 저장한 조합. 이 조합의 단가를 수량에 곱했다. 미터에 dimension_properties가 없었으면 빈 객체다")
           @JsonProperty("dimension_values")
@@ -32,51 +39,20 @@ public record InvoiceResponse(
           BigDecimal quantity,
       @JsonProperty("unit_price") BigDecimal unitPrice,
       long amount,
-      @JsonProperty("line_type") String lineType,
+      @Schema(
+              allowableValues = {
+                "per_unit",
+                "volume",
+                "graduated_tier",
+                "base_fee",
+                "minimum_adjustment"
+              })
+          @JsonProperty("line_type")
+          String lineType,
       @JsonProperty("tier_index") int tierIndex,
       @Schema(description = "금액과 구간 판정에 사용한 정확 청구 수량의 분자") @JsonProperty("quantity_numerator")
           BigDecimal quantityNumerator,
       @Schema(description = "정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다")
           @JsonProperty("quantity_denominator")
-          BigDecimal quantityDenominator) {
-    public InvoiceLineResponse(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount,
-        String lineType,
-        int tierIndex) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          lineType,
-          tierIndex,
-          quantity,
-          BigDecimal.ONE);
-    }
-
-    public InvoiceLineResponse(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          "per_unit",
-          0);
-    }
-  }
+          BigDecimal quantityDenominator) {}
 }

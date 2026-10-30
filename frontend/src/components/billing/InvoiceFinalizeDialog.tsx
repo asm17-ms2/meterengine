@@ -12,6 +12,8 @@ import { alertIcon } from "@/components/screen/alert-icon";
 import { LinkButton } from "@/components/screen/LinkButton";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
 import { useMutationScope } from "@/components/auth/use-mutation-scope";
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+import { ENVIRONMENT_LABELS, readEnvironment } from "@/lib/environment";
 import { formatKrw } from "@/lib/format";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
@@ -32,6 +34,9 @@ function toFinalizeFormData(month: string): FormData {
   return formData;
 }
 
+
+// 확정 결과는 처음 몇 건만 보이고 나머지는 이미 전체 목록인 인보이스 화면으로 보낸다.
+const FINALIZED_PREVIEW_COUNT = 5;
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
   const isEmpty = target.targetCount === 0;
@@ -42,7 +47,7 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
     <>
       <InvoiceFinalizeButton
         disabled={isEmpty}
-        title={isEmpty ? "청구할 금액이 있는 고객이 없습니다" : undefined}
+        disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다." : undefined}
         onClick={() => setIsOpen(true)}
       />
 
@@ -54,6 +59,8 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
 function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose: () => void }) {
   const [{ month, monthLabel, targetCount, supplyAmount, isUnfinishedMonth, hasUnpricedUsages }] =
     useState(target);
+  const search = useWorkspaceSearch();
+  const [environment] = useState(() => readEnvironment(search.get("environment")));
   const [state, formAction, isPending] = useActionState(
     finalizeInvoicesAction,
     FINALIZE_INVOICES_IDLE,
@@ -89,7 +96,8 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         ]}
       >
         <p>실제 확정 공급가액 {formatKrw(state.supplyAmount)}, 세액 {formatKrw(state.taxAmount)}, 총액 {formatKrw(state.totalAmount)}</p>
-        <ul>{state.invoices.map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
+        <ul>{state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
+        {state.invoices.length > FINALIZED_PREVIEW_COUNT && <p className="field-hint">{`나머지 ${state.invoices.length - FINALIZED_PREVIEW_COUNT}건은 '인보이스 보기'에서 확인하세요.`}</p>}
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
           {state.finalizedCount === 0
             ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.`
@@ -106,7 +114,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
       key="confirm"
       open
       width={MODAL_WIDTH}
-      title={`${monthLabel} 인보이스를 확정할까요?`}
+      title={`${ENVIRONMENT_LABELS[environment]} ${monthLabel} 인보이스를 확정할까요?`}
       onCancel={isPending ? undefined : onClose}
       keyboard={!isPending}
       mask={{ closable: !isPending }}

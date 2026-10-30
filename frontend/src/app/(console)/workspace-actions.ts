@@ -1,17 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { readEnvironment } from "@/lib/environment";
+import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
+import { mutationScopeError } from "@/lib/auth/mutation-scope";
+import { credentialFieldErrors } from "@/lib/auth/credentials";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
-import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "@/app/(console)/workspace-action-feedback";
+import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, staleVersionMessage, successMessage, unconfirmedMessage, existingCustomerMessage } from "@/app/(console)/workspace-action-feedback";
 
-export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean };
+export type WorkspaceActionState = { message?: string; fieldErrors?: Record<string, string>; isSuccess?: boolean; secret?: string; registrationPath?: string; registrationLabel?: string; isUnconfirmed?: boolean; isConfirmedFailure?: boolean; isStale?: boolean; nextPath?: string };
+
+// 보관한 뒤에는 성공 안내를 보인 다음 그 보관 목록으로 옮긴다.
+const ARCHIVED_LIST_PATHS: Partial<Record<string, string>> = { deleteCustomer: "/customers?status=archived", archiveMember: "/members?status=archived", deleteWebhookEndpoint: "/integrations?status=archived" };
 
 function text(data: FormData, key: string) {
   const value = data.get(key);
@@ -26,8 +30,9 @@ function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_IN
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
   const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(data, session.organization?.id);
+  if (scopeError) return { message: scopeError };
   const environment = readEnvironment(text(data, "environment"));
-  if (environment !== readEnvironment((await headers()).get("x-meterengine-environment"))) return { message: "열어 둔 화면과 요청의 업무 환경이 다릅니다. 환경을 확인한 뒤 다시 시도하세요." };
 
   let path: string;
   let method: "POST" | "PUT" | "PATCH" | "DELETE" = "POST";
@@ -35,10 +40,14 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const operation = text(data, "operation");
   if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
-  if (!text(data, "organization_id") || text(data, "organization_id") !== session.organization?.id) return { message: "열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요." };
   try {
     switch (operation) {
-      case "createMember": path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password: typeof data.get("password") === "string" ? data.get("password") : "", scopes: data.getAll("scopes") }; break;
+      case "createMember": {
+        const password = typeof data.get("password") === "string" ? String(data.get("password")) : "";
+        const fieldErrors = credentialFieldErrors({ name: text(data, "name"), email: text(data, "email"), password });
+        if (Object.keys(fieldErrors).length) return { message: "입력한 내용을 확인하세요.", fieldErrors };
+        path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password, scopes: data.getAll("scopes") }; break;
+      }
       case "updateMemberRole": path = `/v1/organization/members/${identifier(data)}/role`; method = "PUT"; body = { organization_role: text(data, "organization_role") }; break;
       case "updateMemberScopes": path = `/v1/organization/members/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;
@@ -105,14 +114,22 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       return { isUnconfirmed: true, message: unconfirmedMessage(operation) };
     const staleCancellation = staleCancellationMessage(operation, result.error.code);
     if (staleCancellation) return { isUnconfirmed: true, message: staleCancellation };
+    const staleVersion = staleVersionMessage(operation, result.error.code);
+    if (staleVersion) return { isStale: true, message: staleVersion };
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");
-  const redirectScope = new URLSearchParams({ organization_id: session.organization!.id, environment });
-  if (operation === "deleteCustomer") redirect(workspaceHref("/customers?status=archived", redirectScope));
-  if (operation === "archiveMember") redirect(workspaceHref("/members?status=archived", redirectScope));
-  if (operation === "deleteWebhookEndpoint") redirect(workspaceHref("/integrations?status=archived", redirectScope));
+  const archivedListPath = ARCHIVED_LIST_PATHS[operation];
+  if (archivedListPath) {
+    const archivedListScope = new URLSearchParams({ organization_id: session.organization!.id, environment });
+    if (operation === "deleteCustomer") archivedListScope.set("month", readMonth(text(data, "month")));
+    return { isSuccess: true, message: successMessage(operation), nextPath: workspaceHref(archivedListPath, archivedListScope) };
+  }
   const response = result.data;
+  if (operation === "createCustomer") {
+    const existing = existingCustomerMessage({ externalId: text(data, "external_id"), name: text(data, "name"), billingEmail: text(data, "billing_email") }, response);
+    if (existing) return { isConfirmedFailure: true, message: existing };
+  }
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
   return {

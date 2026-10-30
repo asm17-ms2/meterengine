@@ -162,7 +162,7 @@ class FakeVerifyClient:
     def get_billable_metric_prices(self, month=None, customer_id=None):
         return _result({"billable_metric_prices": []})
 
-    def get_price_plans(self, month=None, customer_id=None):
+    def get_price_plans(self, month=None, customer_id=None, status=None):
         return _result({"price_plans": []})
 
     def get_usage(self, month):
@@ -307,7 +307,7 @@ class AggregationVerificationTest(unittest.TestCase):
             base_url = "http://localhost:8080"
             def get_usage(self, month): return _result(usage_body)
             def get_invoice(self, month): return _result({"calculated_at": "2026-08-11T00:00:00Z", "total_amount": 460, "customers": [{"customer_id": "customer", "amount": 460, "lines": [{"billable_metric_code": "avg", "quantity": Decimal("3.5")}, {"billable_metric_code": "avg", "quantity": 43}]}]})
-            def get_price_plans(self, month, customer_id=None): return _result({"price_plans": []})
+            def get_price_plans(self, month, customer_id=None, status=None): return _result({"price_plans": []})
             def get_billable_metric_prices(self, month, customer_id=None): return prices
             def get_events_page(self, month): return _result({"total": 4})
         stored = [StoredEvent(str(index), "customer", "request", parse_rfc3339("2026-08-10T00:00:00Z"), {"quantity": value, "model": model}) for index, (value, model) in enumerate([(0, "a"), (7, "a"), (20, "b"), (66, "b")])]
@@ -319,6 +319,27 @@ class AggregationVerificationTest(unittest.TestCase):
         usage_body["billable_metric_usages"][0]["customers"][0]["dimension_usages"][0]["quantity"] = Decimal("4.5")
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertFalse(verify_cmd._verify_month(Client(), Console(color=False), stored, "2026-08", prices))
+
+    def test_보관한_최신_요금제는_이전_요금제로_돌아가지_않는다(self):
+        prices = _result({"billable_metric_prices": [{"billable_metric_code": "avg", "dimension_properties": ["model"], "price_rates": [{"dimension_values": {"model": model}, "unit_price": 10} for model in ["a", "b"]]}]})
+        usage_body = {"billable_metric_usages": [{"code": "avg", "event_type": "request", "aggregation": "avg", "target_property": "quantity", "unit_size": 1, "rounding_mode": "none", "rounding_precision": 0, "customers": [{"customer_id": "customer", "customer_name": "고객", "quantity": Decimal("23.25"), "raw_quantity": Decimal("23.25"), "dimension_usages": [
+            {"dimension_values": {"model": "a"}, "quantity": Decimal("3.5"), "raw_quantity": Decimal("3.5")},
+            {"dimension_values": {"model": "b"}, "quantity": 43, "raw_quantity": 43},
+        ]}]}]}
+        older = {"id": "V1", "customer_id": None, "effective_from": "2026-01", "effective_until": None, "archived_from": None, "base_fee": 1000, "minimum_amount": 0}
+        archived = {"id": "V2", "customer_id": None, "effective_from": "2026-05", "effective_until": None, "archived_from": "2026-08", "base_fee": 2000, "minimum_amount": 0}
+        class Client:
+            base_url = "http://localhost:8080"
+            def get_usage(self, month): return _result(usage_body)
+            def get_invoice(self, month): return _result({"calculated_at": "2026-08-11T00:00:00Z", "total_amount": 460, "customers": [{"customer_id": "customer", "amount": 460, "lines": [{"billable_metric_code": "avg", "quantity": Decimal("3.5")}, {"billable_metric_code": "avg", "quantity": 43}]}]})
+            def get_price_plans(self, month, customer_id=None, status=None):
+                if customer_id: return _result({"price_plans": []})
+                return _result({"price_plans": [archived, older] if status == "all" else [older]})
+            def get_billable_metric_prices(self, month, customer_id=None): return prices
+            def get_events_page(self, month): return _result({"total": 4})
+        stored = [StoredEvent(str(index), "customer", "request", parse_rfc3339("2026-08-10T00:00:00Z"), {"quantity": value, "model": model}) for index, (value, model) in enumerate([(0, "a"), (7, "a"), (20, "b"), (66, "b")])]
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(verify_cmd._verify_month(Client(), Console(color=False), stored, "2026-08", prices))
 
     def test_원본집계값_오류도_최종수량이_같다고_통과하지_않는다(self):
         metric = BillableMetricMeta("count", "request", "count", None, unit_size=Decimal("3"), rounding_mode="ceil")

@@ -49,8 +49,11 @@ pnpm dev
 cd frontend
 pnpm lint
 pnpm typecheck
+pnpm test:unit
 pnpm build
 ```
+
+- `pnpm test:unit`은 `e2e/*.test.mjs` 단위 검사다. 백엔드와 브라우저가 필요 없다.
 
 - `pnpm build`는 백엔드가 꺼져 있어도 통과한다. CI가 그 상태로 돌린다.
   - 인증 쿠키와 `cache: "no-store"` 조회는 요청 시점에 읽는다 (`src/lib/auth/session.ts`, `src/lib/api/transport.ts`).
@@ -64,7 +67,7 @@ pnpm build
 
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
-상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
+상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
 
 ## 컨테이너 이미지
 
@@ -89,6 +92,7 @@ docker run -p 3000:3000 \
 
 - Next 서버가 `me_session` 쿠키를 백엔드 Bearer로 전달한다. 쿠키는 httpOnly, SameSite=Lax이며 프로덕션에서 Secure다. 도입사 API에 공용 API 키를 대신 쓰지 않는다.
 - 공개 로그인과 가입 요청에는 쿠키의 Bearer를 붙이지 않는다. 경로와 서버 액션에서 각각 인증을 검사한다.
+- 로그아웃 요청이 401 밖의 이유로 실패해도 이 브라우저의 `me_session` 쿠키는 지우고, 로그인 화면에서 서버 세션 종료를 확인하지 못했다고 알린다. 그 서버 세션은 만료 시각에 끝난다.
 - `src/lib/config.ts`, 인증과 API 클라이언트는 `server-only`다. 브라우저는 백엔드를 직접 호출하지 않는다.
 - 필터 선택지도 `no-store`로 조회한다. 같은 세션 토큰으로 도입사를 바꿀 수 있어 Authorization만으로 응답을 캐시하지 않는다. 고객과 미터 변경 뒤에는 `revalidatePath`로 화면을 갱신한다.
 
@@ -140,7 +144,7 @@ docker run -p 3000:3000 \
 스타일 규칙은 다음과 같다.
 
 - 업무 화면은 antd 6 컴포넌트로 그린다. 공통 배치는 `globals.css`, 페이지 고유 스타일은 같은 폴더의 CSS Modules(예: `HomePage.module.css`)에 둔다.
-- 테마는 보라색 강조다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
+- 테마는 보라색 강조다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. `globals.css` 안에서는 `:root` 토큰과 같은 색을 리터럴로 다시 적지 않고 `var()`로 쓴다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
 - antd는 `"use client"` 파일에서만 import한다. Server Component는 직렬화할 수 있는 prop만 넘겨 그 래퍼를 그린다.
 - 폼은 HTML form 또는 antd Form과 antd 입력을 쓴다. 서버 액션과 작업 상태는 `useActionState`로 연결한다.
 - 페이지를 옮기는 버튼은 `LinkButton`, 토스트는 `App.useApp()`의 `message`를 쓴다.
@@ -152,7 +156,7 @@ docker run -p 3000:3000 \
 - 고객, 미터, 가격, 사용량, 청구 예정액과 인보이스는 서버 검색, 필터, 정렬, 페이지 처리와 조건 전체 CSV를 사용한다. 월, 고객, 검색어 등은 함께 선택한 뒤 `조건 적용`으로 제출한다. 청구 확정은 조회한 한 페이지가 아니라 해당 월 전체 대상에 적용하며 전체 규모를 확인한다.
 - 선택지와 조회 가능한 월은 서버에서 받는다. 이벤트도 같은 조건으로 CSV를 내려받고 원본 JSON 포함 여부를 선택한다. CSV는 최대 10,000행, 한도를 넘으면 조건을 좁혀야 한다.
 - 이벤트는 월별 조회 또는 날짜/초 단위 직접 범위를 선택한다. 상세를 닫으면 조회 조건과 페이지로 돌아간다.
-- URL과 제출 폼은 `organization_id`와 `environment`를 보존한다. 다른 탭에서 도입사가 바뀐 오래된 폼과 내보내기는 거절한다. test/live 1차 범위는 고객, 수집 로그, API 키, 감사와 수집 거절이며 나머지 업무 메뉴는 준비 중으로 표시한다.
+- URL과 제출 폼은 `organization_id`와 `environment`를 보존한다. 다른 탭에서 도입사가 바뀐 오래된 폼과 내보내기는 거절한다. 업무 메뉴는 모두 선택한 환경의 데이터를 보이고, 계정과 권한은 환경에 관계없이 같다.
 - 수집 성공 후 매핑되지 않은 문제는 `/event-issues`, 수집 단계의 거절은 `/event-rejections`에서 구분한다.
 
 ## 화면
@@ -165,7 +169,7 @@ docker run -p 3000:3000 \
 | `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 정정 확인, 원본 로그 조회 |
 | `/pricing`, `/billable-metrics` | 월과 고객별 단가 이력, 구간 요금, 기본료, 최소 과금과 미터 설정, 보관과 복원 |
 | `/billing`, `/invoices` | 단가 없는 조합과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
-| `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
+| `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 결제 실패 건만 보기, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
 | `/invoice-links` | 로그인 없이 확정 청구와 결제 상태 확인. 별도 허용된 링크에서 실패 결제의 금액을 확인한 뒤 등록 카드로 직접 재시도. 링크 원문은 URL fragment로 받고 주소창에서 제거하며 현재 탭의 sessionStorage에만 보존 |
 | `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 시험 통보와 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
@@ -178,7 +182,7 @@ docker run -p 3000:3000 \
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
 | `/organizations` | 소속 도입사 선택과 전환 |
-| `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
+| `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
@@ -200,6 +204,13 @@ pnpm test:e2e:contract
 
 계약 테스트는 임시 HTTP 대역과 standalone FE를 `38148`, `33148` 포트에서 실행하고 종료한다. 실제 Spring 검증과 구분한다.
 
+카드 등록과 업무 화면의 계약 테스트는 설정 파일을 지정해 돌린다. 둘 다 `pnpm build` 뒤 대역과 FE를 스스로 띄우고 끝내며 백엔드가 필요 없다.
+
+```bash
+pnpm exec playwright test -c playwright.payment.config.ts    # 대역 38149, FE 33149
+pnpm exec playwright test -c playwright.workspace.config.ts  # 대역 38150, FE 33150. 결과 폴더는 WORKSPACE_CONTRACT_OUTPUT_DIR
+```
+
 실제 S1 Spring 서버를 별도 테스트 DB로 `38147`에 실행한 뒤 아래를 실행한다. 테스트는 가입, 승인, 로그인과 고객 등록을 수행하므로 운영 환경을 지정하지 않는다. 테스트 설정은 로컬 HTTP 주소만 허용한다.
 
 ```bash
@@ -208,6 +219,10 @@ E2E_OPERATOR_EMAIL=operator@fe-e2e.local \
 E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
+
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+
+`playwright.mvp.config.ts` 시나리오 가운데 `customer-payment-retry`, `invoice-links`, `permissions`는 테스트 DB를 `docker exec ... psql`로 직접 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 

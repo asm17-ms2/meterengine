@@ -107,6 +107,54 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
+  // --- 이름과 인덱스 ---
+
+  @Test
+  void 단가에는_조건_없는_도입사와_미터_인덱스가_있다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE tablename = 'price_rate' AND indexname ="
+                    + " 'price_rate_organization_index'",
+                String.class))
+        .contains("(organization_id, billable_metric_code)")
+        .doesNotContain("WHERE");
+  }
+
+  @Test
+  void 집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다() {
+    List<String> names =
+        jdbcTemplate.queryForList(
+            "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conrelid::regclass::text IN"
+                + " ('billable_metric', 'invoice_line')",
+            String.class);
+    assertThat(names)
+        .contains(
+            "billable_metric_aggregation_check",
+            "billable_metric_aggregation_percentile_check",
+            "billable_metric_aggregation_target_property_check",
+            "invoice_line_quantity_fraction_check")
+        .doesNotContain(
+            "billable_metric_supported_aggregation",
+            "billable_metric_percentile_configuration",
+            "billable_metric_target_configuration",
+            "invoice_line_quantity_fraction_pair");
+  }
+
+  @Test
+  void 웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                    + " 'webhook_delivery_failure_reason_check'",
+                String.class))
+        .isEqualTo(
+            jdbcTemplate.queryForObject(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                        + " 'webhook_delivery_attempt_failure_reason_check'",
+                    String.class)
+                + " NOT VALID");
+  }
+
   // --- 단가 ---
 
   @Test
@@ -546,7 +594,8 @@ class SchemaConstraintTest {
             "target_property",
             "quantity_numerator",
             "quantity_denominator",
-            "environment_id");
+            "environment_id",
+            "billable_metric_name");
   }
 
   @Test

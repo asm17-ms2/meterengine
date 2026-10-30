@@ -17,7 +17,3 @@ export function useTenantAccess() {
 export function useTenantScope(scope: AccessScope) {
   return hasScope(useTenantAccess()?.scopes, scope);
 }
-
-export function TenantScope({ scope, children }: { scope: AccessScope; children: React.ReactNode }) {
-  return useTenantScope(scope) ? children : null;
-}

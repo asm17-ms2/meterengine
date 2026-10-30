@@ -20,11 +20,12 @@ const session = {
 const invoice = { id: INVOICE_ID, customer_id: "77777777-7777-4777-8777-777777777777", customer_name: "계약 고객", month: "2026-10", supply_amount: 10_000, tax_amount: 1_000, total_amount: 11_000, finalized_at: NOW, lines: [] };
 const attempt = { id: ATTEMPT_ID, invoice_id: INVOICE_ID, status: "done", amount: 11_000, mode: "test", failure_message: null, requested_at: NOW };
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const FAR_CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
 const initialState = () => ({
   scenario: "normal", cancellationCalls: [], cancellations: [], cancellationEffects: 0,
   cancellationCompletedAfterMs: null, idempotentResults: new Map(), lostResponseSent: false, rejectionSent: false,
   retryCalls: 0, deliveryStatus: "failed", keyCalls: [], apiKeys: [],
-  activeOrganization: organization, initialSessionReturned: false, customerSearchReturned: false, customerQueries: [], invoiceListCalls: [], invoiceSearchCalls: 0,
+  activeOrganization: organization, initialSessionReturned: false, customerSearchReturned: false, customerQueries: [], invoiceListCalls: [], invoiceSearchCalls: 0, customerOptionQueries: [],
 });
 let state = initialState();
 
@@ -63,6 +64,7 @@ const server = createServer(async (request, response) => {
       customerQueries: current.customerQueries,
       invoiceListCalls: current.invoiceListCalls,
       invoiceSearchCalls: current.invoiceSearchCalls,
+      customerOptionQueries: current.customerOptionQueries,
     });
     if (request.headers.authorization !== "Bearer workspace-contract-session") return error(response, 401, "invalid_credentials", "로그인이 필요합니다.");
     if (path === "/v1/sessions/current") {
@@ -88,6 +90,19 @@ const server = createServer(async (request, response) => {
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
     }
     if (path === "/v1/customers/export") return send(response, 400, { code: "validation_error", message: "요청 값이 올바르지 않습니다", errors: [{ field: "export", message: "10000행 이하가 되도록 검색 범위를 좁혀 주세요" }] });
+    if (current.scenario === "customer-options-retry" && path === "/v1/customers/options") {
+      current.customerOptionQueries.push(new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "");
+      if (current.customerOptionQueries.length === 1) return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
+      return send(response, 200, { items: [{ value: ZERO_CUSTOMER_ID, label: "다시 받은 고객", archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 200, summary: {} });
+    }
+    if (current.scenario === "customer-options" && path === `/v1/customers/${FAR_CUSTOMER_ID}`) return send(response, 200, { id: FAR_CUSTOMER_ID, name: "검색으로만 보이는 고객", external_id: null, billing_email: null, archived_at: null, created_at: NOW, version: 0 });
+    if (current.scenario === "customer-options" && path === "/v1/customers/options") {
+      const q = new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "";
+      current.customerOptionQueries.push(q);
+      if (q === "실패") return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
+      const items = q ? [{ value: FAR_CUSTOMER_ID, label: "검색으로만 보이는 고객", archived: false }] : [{ value: ZERO_CUSTOMER_ID, label: "첫 페이지 고객", archived: false }];
+      return send(response, 200, { items, total: items.length, total_unfiltered: 201, page: 1, size: 200, summary: {} });
+    }
     if (current.scenario === "finalized-month-zero-customer") {
       const url = new URL(request.url, "http://127.0.0.1");
       if (path === "/v1/customers/options") return send(response, 200, { items: [{ value: ZERO_CUSTOMER_ID, label: "인보이스 없는 0원 고객", archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 200, summary: {} });
@@ -107,6 +122,12 @@ const server = createServer(async (request, response) => {
         const invoices = selectedCustomer === ZERO_CUSTOMER_ID ? [] : Array.from({ length: 101 }, (_, index) => ({ ...invoice, id: `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`, customer_name: `다른 고객의 확정 청구 ${index}` }));
         return send(response, 200, { invoices });
       }
+    }
+    if (current.scenario === "failed-payments") {
+      const statuses = ["failed", "failed", "paid"];
+      const invoiceId = index => `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`;
+      if (path === "/v1/invoices") return send(response, 200, { invoices: statuses.map((_, index) => ({ ...invoice, id: invoiceId(index), customer_name: `다른 고객의 확정 청구 ${index}` })) });
+      if (path === "/v1/invoice-payments") return send(response, 200, { invoice_payments: statuses.map((status, index) => ({ invoice_id: invoiceId(index), status, mode: "test", amount: 11_000, canceled_amount: 0, attempt_count: 1, last_failure_code: status === "failed" ? "CARD_DECLINED" : null, next_retry_at: null, completed_at: NOW })) });
     }
     if (path === "/v1/invoice-payments") {
       const canceledAmount = current.cancellations.filter(cancellation => cancellation.status === "done").reduce((total, cancellation) => total + cancellation.amount, 0);
@@ -158,7 +179,7 @@ const server = createServer(async (request, response) => {
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}`) return send(response, 200, { id: ENDPOINT_ID, url: "https://receiver.contract.local/webhook", enabled: true, event_types: ["payment_succeeded"], description: null, archived_at: null });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries`) return send(response, 200, {
       page: 0, size: 20, total: 1,
-      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: 6, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
+      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: current.deliveryStatus === "failed" ? 6 : 0, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
     });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries/${DELIVERY_ID}/retries` && request.method === "POST") {
       current.retryCalls++;

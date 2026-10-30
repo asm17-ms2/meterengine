@@ -96,12 +96,13 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
+  - 로컬 시드 키는 기존 데이터(legacy) 범위 키다. test나 live 환경 대상에는 콘솔에서 그 업무 환경을 고른 뒤 발급한 키를 쓴다. 시드 키에 환경을 지정하면 403 `environment_mismatch`다.
 - 시작할 때 `GET /v1/organization`으로 키의 도입사를 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
 - 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 도입사 id(`organization_id`)를 남긴다. 옛 기록의 도입사 값은 읽지 않는다.
 
 ### send
 
-- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다.
+- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다. properties가 JSON 객체로 읽히지 않는 행은 묶음을 깨뜨리지 않게 단건으로 보낸다. 묶음 전체가 거절되면 각 행의 저장 여부를 알 수 없어 error로 세고 종료 코드 2로 끝난다.
 - 전송 중 끊긴 묶음은 `UNKNOWN`, 아직 보내지 않은 행은 `NOT_SENT`로 구분해 원래 순서대로 모두 기록한다. 두 상태의 로그 `outcome`은 `error`이고 `error`에 구분값이 남는다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.
@@ -261,6 +262,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
 - 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 도입사와 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
+  - 등록 전에 고객 목록에서 외부 ID 없이 같은 이름으로 만든 옛 고객을 찾으면 그 고객을 이어 쓴다.
 - 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 도입사 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
 
 ### 보내는 이벤트와 properties
@@ -377,7 +379,7 @@ await client.ingestEvent({
 - 이벤트 목록은 월 또는 `from`/`to` 기간과 검색/속성/정렬을 받는다. `listEventTypes`는 같은 기간과 고객/검색/속성 조건의 실제 유형을, `getEvent(transactionId)`는 기간과 무관한 단건을 조회한다. 기간 응답의 `month`는 null이다.
   - `properties` 객체는 JSON으로 직렬화하고, JSON 문자열은 그대로 보낸다. 서버는 JSON 객체 여부를 검증한다. 고객, 카드와 요금제 목록은 `status`(`active`, `archived`, `all`)를 받지만 미터별 가격 목록은 상태 필터를 받지 않는다.
 - 배치: `ingestEventBatch`는 100건씩 나눠 `POST /v1/event-batches`로 보내고, 결과의 `index`를 입력 전체의 순서로 맞춰 합친다. 중간 묶음이 실패하면 `MeterEngineBatchError`의 `results`에 앞 묶음 결과가 남는다.
-- 웹훅 검증: `verifyWebhookSignature({ payload, headers, secret })`는 Standard Webhooks v1 서명과 시각 차(기본 300초까지)를 확인하고 `{type, timestamp, data}`를 돌려준다. 실패하면 `WebhookVerificationError`를 던진다.
+- 웹훅 검증: `verifyWebhookSignature({ payload, headers, secret })`는 Standard Webhooks v1 서명과 시각 차(기본 300초까지)를 확인하고 `{environment, type, timestamp, data}`를 돌려준다. `environment`는 `legacy`, `test`, `live` 중 하나다. 실패하면 `WebhookVerificationError`를 던진다.
   - `payload`는 받은 본문 문자열 그대로 넘긴다. JSON을 파싱해 다시 직렬화하면 서명이 맞지 않는다.
   - `signWebhookPayload`는 같은 규칙으로 서명을 만든다. 시험 전송에 쓴다.
 
@@ -397,10 +399,10 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 변수 | 내용 |
 |---|---|
 | `METERENGINE_API_KEY` | `http://localhost:8080` 백엔드에 쓸 API 키. 대상 이름은 `local` |
-| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 키의 환경을 사용한다 |
-| `METERENGINE_TARGETS` | `[{"name": "local-test", "base_url": "http://localhost:8080", "api_key": "...", "environment": "test", "webhook_secret": "whsec_..."}]`. API 키와 웹훅 비밀값은 서버에서만 쓴다. 단일 대상 설정보다 먼저 적용한다 |
+| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 호출은 키의 환경을 쓰고 웹훅은 기존 데이터(legacy) 범위로 받는다. 지정하면 `METERENGINE_WEBHOOK_SECRET`으로 그 환경의 웹훅을 받는다 |
+| `METERENGINE_TARGETS` | `[{"name": "local-test", "base_url": "http://localhost:8080", "api_key": "...", "environment": "test", "webhook_secret": "whsec_..."}]`. `api_key`는 그 `environment`에서 발급한 키여야 한다. API 키와 웹훅 비밀값은 서버에서만 쓴다. 단일 대상 설정보다 먼저 적용한다 |
 | `METERENGINE_LEGACY_WEBHOOK_TARGET` | 기존 전역 비밀값과 수신 기록을 사용할 원래 무환경 대상 이름. 예: `e2e` |
-| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상의 웹훅 비밀값. 새 `test/live` 대상에는 적용하지 않는다 |
+| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상, 또는 환경을 지정한 단일 대상의 웹훅 비밀값. `METERENGINE_TARGETS`의 `test/live` 대상에는 적용하지 않는다 |
 | `METERENGINE_BRIDGE_URL` | 브리지 주소. 기본 `http://127.0.0.1:4318` |
 | `METERENGINE_CONSOLE_URL` | 공개 카드 등록 화면이 있는 콘솔 주소. 기본 `http://127.0.0.1:3000` |
 
@@ -418,7 +420,7 @@ corepack pnpm --filter @meterengine/demo-web dev
 
 ### 웹훅 받기
 
-대상마다 `webhook_secret`과 `?target=대상이름` 수신 URL을 사용한다. 등록 응답의 비밀값을 해당 대상 설정에 저장하고 서버를 다시 띄운다.
+대상마다 `webhook_secret`과 `?target=대상이름` 수신 URL을 사용한다. 등록 응답의 비밀값을 해당 대상 설정에 저장하고 서버를 다시 띄운다. 아래 `<API 키>`는 대상과 같은 환경의 키여야 한다. 기존 데이터 범위의 시드 키로 등록한 수신처는 legacy 통보만 보내 test, live 대상에서 `environment_mismatch`로 거절된다.
 
 ```bash
 curl -X POST http://localhost:8080/v1/webhook-endpoints \
@@ -430,6 +432,7 @@ curl -X POST http://localhost:8080/v1/webhook-endpoints/<id>/test-events \
 ```
 
 - 서명 검증 뒤 본문의 `environment`가 선택한 대상과 같은지 확인한다. 대상이 없거나 중복된 URL은 거절한다.
+- 브라우저가 보낸 요청(`Origin`이 있거나 `Sec-Fetch-Site`가 `none`이 아님)은 403, 256KB를 넘는 본문은 413으로 기록 없이 거절한다.
 - 기록은 대상 이름, API 주소, 환경과 키별로 분리한다. 같은 `webhook-id`의 재전송도 수신 기록에 남으므로 업무 처리의 중복 방지는 별도로 한다.
 - 기존 `.data/webhooks.jsonl`은 `METERENGINE_LEGACY_WEBHOOK_TARGET`으로 지정한 원래 legacy 연결에만 고정한다. 기존 파일을 복사하거나 `test/live`에 자동 배정하지 않는다. 연결 키나 주소를 바꾼 뒤에도 원래 파일은 보존한다.
 - 백엔드 없이 검증하려면 대상 설정을 담은 비공개 환경 파일로 시험 통보를 보낸다.
@@ -455,7 +458,7 @@ node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test --ol
 | `web/` | 테스트 웹 (`@meterengine/demo-web`) |
 | `llm-service/` | Lumen LLM 서비스 예제 (`@meterengine/llm-service`) |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` | `sdk/`, `web/`, `llm-service/`를 묶는 pnpm workspace |
-| `eslint-naming-rules.mjs` | `sdk/`와 `web/`이 같이 쓰는 식별자 이름 규칙(`@typescript-eslint/naming-convention`) |
+| `eslint-naming-rules.mjs` | `sdk/`, `web/`, `llm-service/`가 같이 쓰는 식별자 이름 규칙(`@typescript-eslint/naming-convention`) |
 | `sample-events.csv`, `sample-events-edge.csv` | 샘플 이벤트와 경계 케이스 |
 | `logs/` | 전송 기록 (gitignore) |
 
