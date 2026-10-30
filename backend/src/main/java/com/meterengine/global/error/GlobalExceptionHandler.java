@@ -2,6 +2,7 @@ package com.meterengine.global.error;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.global.error.ErrorResponse.FieldError;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
@@ -56,6 +57,12 @@ class GlobalExceptionHandler {
 
   private static final String BEARER_CHALLENGE = "Bearer";
 
+  private final List<RequestBodyRejectionListener> requestBodyRejectionListeners;
+
+  GlobalExceptionHandler(List<RequestBodyRejectionListener> requestBodyRejectionListeners) {
+    this.requestBodyRejectionListeners = requestBodyRejectionListeners;
+  }
+
   // 도메인 예외
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
@@ -78,7 +85,8 @@ class GlobalExceptionHandler {
   // 400 요청 본문 검증 실패
   @ExceptionHandler(MethodArgumentNotValidException.class)
   ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
-      MethodArgumentNotValidException exception) {
+      MethodArgumentNotValidException exception, HttpServletRequest request) {
+    notifyRequestBodyRejected(request, ErrorCode.VALIDATION_ERROR);
     Object target = exception.getBindingResult().getTarget();
     List<FieldError> errors =
         exception.getBindingResult().getFieldErrors().stream()
@@ -165,7 +173,8 @@ class GlobalExceptionHandler {
   // 400 읽을 수 없는 요청 본문
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
-      HttpMessageNotReadableException exception) {
+      HttpMessageNotReadableException exception, HttpServletRequest request) {
+    notifyRequestBodyRejected(request, ErrorCode.MALFORMED_REQUEST_BODY);
     return respond(ErrorCode.MALFORMED_REQUEST_BODY);
   }
 
@@ -215,6 +224,17 @@ class GlobalExceptionHandler {
   ResponseEntity<ErrorResponse> handleException(Exception exception) {
     logger.error("unhandled exception", exception);
     return respond(ErrorCode.INTERNAL_SERVER_ERROR);
+  }
+
+  private void notifyRequestBodyRejected(HttpServletRequest request, ErrorCode errorCode) {
+    for (RequestBodyRejectionListener listener : requestBodyRejectionListeners) {
+      try {
+        listener.onRejected(request, errorCode);
+      } catch (RuntimeException exception) {
+        // 알림은 부가 기록이라, 실패해도 400 오류 응답을 바꾸지 않는다.
+        logger.warn("request body rejection listener failed", exception);
+      }
+    }
   }
 
   private static ResponseEntity<ErrorResponse> respond(ErrorCode errorCode) {

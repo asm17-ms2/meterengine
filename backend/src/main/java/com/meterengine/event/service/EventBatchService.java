@@ -12,6 +12,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import jakarta.validation.Validator;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -23,7 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -32,19 +34,24 @@ import tools.jackson.databind.json.JsonMapper;
 public class EventBatchService {
   private static final String TRANSACTION_ID = jsonField("transactionId");
   private static final String TIMESTAMP = jsonField("occurredAt");
+  private static final String STORED = "stored";
+  private static final String DUPLICATE = "duplicate";
+  private static final String REJECTED = "rejected";
 
   private final EventRepository eventRepository;
   private final CustomerDirectory customerDirectory;
   private final EventIngestMetrics eventIngestMetrics;
   private final Validator validator;
   private final JsonMapper jsonMapper;
+  private final TransactionTemplate transactionTemplate;
 
   EventBatchService(
       EventRepository eventRepository,
       CustomerDirectory customerDirectory,
       EventIngestMetrics eventIngestMetrics,
       Validator validator,
-      JsonMapper jsonMapper) {
+      JsonMapper jsonMapper,
+      PlatformTransactionManager platformTransactionManager) {
     this.eventRepository = eventRepository;
     this.customerDirectory = customerDirectory;
     this.eventIngestMetrics = eventIngestMetrics;
@@ -55,11 +62,39 @@ public class EventBatchService {
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
             .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
             .build();
+    this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
 
-  @Transactional
+  // 커밋 실패는 트랜잭션을 닫을 때 나므로 결과는 트랜잭션 밖에서 센다.
   public IngestEventBatchResponse ingest(UUID organizationId, IngestEventBatchRequest batch) {
-    Instant now = Instant.now();
+    Instant receivedAt = Instant.now();
+    IngestedBatch ingested;
+    try {
+      ingested = transactionTemplate.execute(status -> store(organizationId, batch, receivedAt));
+    } catch (RuntimeException failure) {
+      eventIngestMetrics.recordFailed(batch.events().size());
+      throw failure;
+    }
+    recordResults(ingested, receivedAt);
+    return ingested.response();
+  }
+
+  private void recordResults(IngestedBatch ingested, Instant receivedAt) {
+    for (EventResult result : ingested.response().results()) {
+      switch (result.result()) {
+        case STORED -> {
+          IngestEventRequest stored = ingested.requestsByIndex().get(result.index());
+          eventIngestMetrics.recordStored(
+              Duration.between(stored.occurredAt().toInstant(), receivedAt));
+        }
+        case DUPLICATE -> eventIngestMetrics.recordDuplicate();
+        case REJECTED -> eventIngestMetrics.recordRejected(result.error().code());
+      }
+    }
+  }
+
+  private IngestedBatch store(
+      UUID organizationId, IngestEventBatchRequest batch, Instant receivedAt) {
     List<EventResult> results =
         new ArrayList<>(java.util.Collections.nCopies(batch.events().size(), null));
     Map<Integer, IngestEventRequest> requestsByIndex = new LinkedHashMap<>();
@@ -144,7 +179,7 @@ public class EventBatchService {
         results.set(
             index,
             rejected(index, request.transactionId(), ErrorCode.CUSTOMER_ARCHIVED, List.of()));
-      } else if (EventIngestionService.isTooOld(request.occurredAt().toInstant(), now)) {
+      } else if (EventIngestionService.isTooOld(request.occurredAt().toInstant(), receivedAt)) {
         results.set(
             index,
             rejected(
@@ -174,24 +209,21 @@ public class EventBatchService {
       }
       String transactionId = entry.getValue().transactionId();
       if (inserted.contains(transactionId)) {
-        results.set(entry.getKey(), new EventResult(entry.getKey(), transactionId, "stored", null));
-        eventIngestMetrics.recordStored();
+        results.set(entry.getKey(), new EventResult(entry.getKey(), transactionId, STORED, null));
       } else {
         results.set(entry.getKey(), duplicate(entry.getKey(), transactionId));
       }
     }
-    return new IngestEventBatchResponse(results);
+    return new IngestedBatch(new IngestEventBatchResponse(results), requestsByIndex);
   }
 
   private EventResult rejected(
       int index, String transactionId, ErrorCode code, List<FieldError> errors) {
-    eventIngestMetrics.recordRejected();
-    return new EventResult(index, transactionId, "rejected", ErrorResponse.of(code, errors));
+    return new EventResult(index, transactionId, REJECTED, ErrorResponse.of(code, errors));
   }
 
   private EventResult duplicate(int index, String transactionId) {
-    eventIngestMetrics.recordDuplicate();
-    return new EventResult(index, transactionId, "duplicate", null);
+    return new EventResult(index, transactionId, DUPLICATE, null);
   }
 
   private static String jsonField(String javaField) {
@@ -212,4 +244,7 @@ public class EventBatchService {
       return false;
     }
   }
+
+  private record IngestedBatch(
+      IngestEventBatchResponse response, Map<Integer, IngestEventRequest> requestsByIndex) {}
 }
