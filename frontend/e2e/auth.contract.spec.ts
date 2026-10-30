@@ -289,6 +289,16 @@ test("filter row controls on a list screen share one height", async ({ page }) =
   for (const control of heights) expect(control.height, control.name).toBe(44);
 });
 
+test("the events customer filter matches the 44px filter row at phone and desktop widths", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const customer = page.locator(".event-filter-grid .ant-select").first();
+    await expect(customer).toBeVisible();
+    expect(Math.round((await customer.boundingBox())!.height), `${width}px`).toBe(44);
+  }
+});
+
 test("list filters submit with a default 조건 적용 button and reset with 조건 초기화", async ({ page }) => {
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
