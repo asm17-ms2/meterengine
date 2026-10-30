@@ -22,7 +22,7 @@ import type { ArchiveStatus } from "@/lib/list-query";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import type { BillableMetricResponse } from "@/lib/api/billable-metrics";
 import { metricCalculationFormula } from "@/lib/billable-metric-calculation";
-import { isRepresentableUnitPrice, isZeroPriceRate } from "@/lib/price-rate";
+import { isRepresentableUnitPrice, isZeroPriceRate, UNIT_PRICE_PRECISION_MESSAGE } from "@/lib/price-rate";
 import { appliedPricePlan } from "@/lib/price-plan";
 import type { CustomerResponse } from "@/lib/api/customers";
 import type { BillableMetricPricePriceRate, ListBillableMetricPricesResponse, PricePlanResponse, PriceRateResponse } from "@/lib/api/pricing";
@@ -30,7 +30,6 @@ import styles from "./pricing.module.css";
 
 const MODEL_LABELS = { per_unit: "단일 단가", graduated: "누진 구간", volume: "총량 구간" };
 const MONEY = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
-const UNIT_PRICE_PRECISION_MESSAGE = "단가는 소수점 아래 10자리까지 입력하세요. 더 정밀한 단가는 API로 등록하세요.";
 
 export type PricingCustomer = Pick<CustomerResponse, "id" | "name" | "archived_at"> & { is_archived?: boolean };
 
