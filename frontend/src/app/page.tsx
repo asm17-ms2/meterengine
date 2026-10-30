@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./HomePage.module.css";
+import { BrandMark } from "@/components/shell/BrandMark";
+
+// 소개 화면 워드마크(24px)가 콘솔 헤더(21px)보다 큰 만큼 마크도 키운다.
+const HOME_MARK_SCALE = 24 / 21;
 
 export const metadata: Metadata = {
   title: "MeterEngine - 사용량과 청구의 근거를 연결하세요",
@@ -17,7 +21,7 @@ const FLOW = [
 export default function Home() {
   return <div className={styles.page}>
     <header className={styles.header}>
-      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><span className={styles.mark} aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><BrandMark scale={HOME_MARK_SCALE} />MeterEngine</Link>
       <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">운영 흐름</a><a href="#roles">역할과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입 신청</Link></nav>
     </header>
     <main id="main-content">

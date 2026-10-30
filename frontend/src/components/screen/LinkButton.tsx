@@ -1,10 +1,9 @@
 "use client";
 
-import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
-import { workspaceHref } from "@/lib/workspace-href";
+import { useScopedHref } from "@/components/workspace/ScopedLink";
 
 import { Button, type ButtonProps } from "antd";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export function LinkButton({
   href,
@@ -14,8 +13,7 @@ export function LinkButton({
   ...buttonProps
 }: Omit<ButtonProps, "href"> & { href: string; replace?: boolean; inheritFilters?: boolean }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const scopedHref = workspaceHref(href.startsWith("?") ? pathname + href : href, useWorkspaceSearch(), { inheritFilters });
+  const scopedHref = useScopedHref(href, { inheritFilters });
 
   function handleClick(event: React.MouseEvent<HTMLElement>) {
     onClick?.(event);
