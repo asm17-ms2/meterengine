@@ -4,16 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.event.controller.EventIssueController;
+import com.meterengine.event.dto.EventIssuesResponse;
+import jakarta.validation.constraints.Pattern;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,7 +125,16 @@ class EventIssueIntegrationTest {
     assertThat(number(reason, "$.total")).isEqualTo(1);
     assertThat(number(reason, "$.summary.unknown_event_type")).isZero();
     assertThat(number(body(get(read, "&q=diagnostic-client")), "$.total")).isEqualTo(3);
-    assertThat(number(body(get(read, "&q=%25")), "$.total")).isZero();
+    assertThat(
+            number(
+                body(
+                    mvc.get()
+                        .uri("/v1/event-issues/search?month=2026-10")
+                        .param("q", "%")
+                        .header(AUTHORIZATION, read)
+                        .exchange()),
+                "$.total"))
+        .isZero();
   }
 
   @Test
@@ -204,6 +220,48 @@ class EventIssueIntegrationTest {
     assertThat(number(body(scoped), "$.total")).isEqualTo(1);
     assertThat((String) JsonPath.read(body(scoped), "$.issues[0].transaction_id"))
         .isEqualTo("explicit-event");
+  }
+
+  @Test
+  void 확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다() {
+    jdbcTemplate.update(
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,'진단 고객','2026-10',0,0,0,now())",
+        organization,
+        customer);
+    String json = body(get(read, "&reason=unpriced_usage"));
+    assertThat((List<String>) JsonPath.read(json, "$.issues[*].action_hint"))
+        .singleElement()
+        .asString()
+        .contains("확정");
+  }
+
+  @Test
+  void 음수_경고는_이벤트와_미터_조합_수를_센다() {
+    metric("tokens-peak", "usage", "max", "tokens", "{model}");
+    assertThat(number(body(get(read, "")), "$.warnings.negative_event_metric_count")).isEqualTo(2);
+  }
+
+  @Test
+  void 이벤트_문제_사유의_조회_조건과_요약_필드가_같다() {
+    String regexp =
+        Arrays.stream(EventIssueController.class.getDeclaredMethods())
+            .flatMap(method -> Arrays.stream(method.getParameters()))
+            .filter(
+                parameter ->
+                    parameter.isAnnotationPresent(Pattern.class)
+                        && parameter
+                            .getAnnotation(Pattern.class)
+                            .regexp()
+                            .contains("unpriced_usage"))
+            .map(parameter -> parameter.getAnnotation(Pattern.class).regexp())
+            .findFirst()
+            .orElseThrow();
+    Set<String> summarized =
+        Arrays.stream(EventIssuesResponse.Summary.class.getDeclaredFields())
+            .filter(field -> field.isAnnotationPresent(JsonProperty.class))
+            .map(field -> field.getAnnotation(JsonProperty.class).value())
+            .collect(Collectors.toSet());
+    assertThat(Set.of(regexp.split("\\|"))).isEqualTo(summarized);
   }
 
   @Test

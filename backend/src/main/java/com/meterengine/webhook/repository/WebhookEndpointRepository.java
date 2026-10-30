@@ -46,6 +46,16 @@ public class WebhookEndpointRepository {
         BusinessEnvironmentContext.scopeId());
   }
 
+  public boolean existsByEventType(UUID organizationId, String eventType) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? AND enabled AND deleted_at IS NULL AND ? = ANY(event_types))",
+            Boolean.class,
+            organizationId,
+            BusinessEnvironmentContext.scopeId(),
+            eventType));
+  }
+
   public void insert(
       UUID organizationId,
       UUID id,
