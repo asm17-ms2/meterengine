@@ -1,13 +1,13 @@
-sha f780bf50bd1546c745652e3247cd2abb8fc21467, DB를 새로 만든 실환경(final2.sh payments-pricing-m2)
+sha 6db703e2ef76bd737fd79e175a8701155468f352, DB를 새로 만든 실환경(final2.sh payments-pricing-m3)
 aggregation: 통과 1 passed (8.7s) rc=0
-archive-filters: 통과 2 passed (13.5s) rc=0
+archive-filters: 통과 2 passed (13.7s) rc=0
 auth: 통과 3 passed (6.3s) rc=0
-customer-payment-retry: 통과 6 passed (7.1s) rc=0
-environment-cycle: 통과 1 passed (20.2s) rc=0
-events: 통과 1 passed (8.5s) rc=0
-invoice-links: 통과 3 passed (3.9s) rc=0
-mvp: 통과 1 passed (30.9s) rc=0
-operator-create: 통과 1 passed (2.4s) rc=0
-people: 통과 1 passed (8.6s) rc=0
-permissions: 통과 6 passed (16.4s) rc=0
-query-workspace: 통과 1 passed (10.0s) rc=0
+customer-payment-retry: 통과 6 passed (7.4s) rc=0
+environment-cycle: 통과 1 passed (20.7s) rc=0
+events: 통과 1 passed (8.7s) rc=0
+invoice-links: 통과 3 passed (4.0s) rc=0
+mvp: 통과 1 passed (31.2s) rc=0
+operator-create: 통과 1 passed (2.7s) rc=0
+people: 통과 1 passed (9.9s) rc=0
+permissions: 통과 6 passed (18.1s) rc=0
+query-workspace: 통과 1 passed (10.6s) rc=0
