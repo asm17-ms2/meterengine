@@ -20,13 +20,29 @@ public record TossPaymentsCredentialResponse(
     @JsonProperty("archived_at") OffsetDateTime archivedAt) {
 
   public static TossPaymentsCredentialResponse from(TossPaymentsCredential credential) {
-    return new TossPaymentsCredentialResponse(
+    return of(
         credential.getMode(),
         credential.getClientKey(),
         credential.getSecretKeyLastFour(),
-        inBillingZone(credential.getVerifiedAt()),
-        inBillingZone(credential.getUpdatedAt()),
+        credential.getVerifiedAt(),
+        credential.getUpdatedAt(),
         credential.getArchivedAt());
+  }
+
+  public static TossPaymentsCredentialResponse of(
+      String mode,
+      String clientKey,
+      String secretKeyLastFour,
+      OffsetDateTime verifiedAt,
+      OffsetDateTime updatedAt,
+      OffsetDateTime archivedAt) {
+    return new TossPaymentsCredentialResponse(
+        mode,
+        clientKey,
+        secretKeyLastFour,
+        inBillingZone(verifiedAt),
+        inBillingZone(updatedAt),
+        archivedAt);
   }
 
   private static OffsetDateTime inBillingZone(OffsetDateTime time) {

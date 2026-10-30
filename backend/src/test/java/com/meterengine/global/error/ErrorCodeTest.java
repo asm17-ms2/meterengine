@@ -22,4 +22,15 @@ class ErrorCodeTest {
       assertThat(errorCode.getMessage()).isNotBlank();
     }
   }
+
+  @Test
+  void 상수는_HTTP_상태_순서로_놓인다() {
+    int previous = 0;
+    for (ErrorCode errorCode : ErrorCode.values()) {
+      assertThat(errorCode.getStatus().value())
+          .as(errorCode.name())
+          .isGreaterThanOrEqualTo(previous);
+      previous = errorCode.getStatus().value();
+    }
+  }
 }
