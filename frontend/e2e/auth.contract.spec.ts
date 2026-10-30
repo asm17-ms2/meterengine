@@ -224,6 +224,16 @@ test("restoring a customer returns focus to the same button, now offering to arc
   await expect(page.getByRole("button", { name: "고객 보관", exact: true })).toBeFocused();
 });
 
+test("a customer address that is not a customer id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/customers/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
 test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
   await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
   await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
