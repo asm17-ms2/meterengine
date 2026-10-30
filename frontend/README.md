@@ -92,6 +92,7 @@ docker run -p 3000:3000 \
 
 - Next 서버가 `me_session` 쿠키를 백엔드 Bearer로 전달한다. 쿠키는 httpOnly, SameSite=Lax이며 프로덕션에서 Secure다. 도입사 API에 공용 API 키를 대신 쓰지 않는다.
 - 공개 로그인과 가입 요청에는 쿠키의 Bearer를 붙이지 않는다. 경로와 서버 액션에서 각각 인증을 검사한다.
+- 로그아웃 요청이 401 밖의 이유로 실패해도 이 브라우저의 `me_session` 쿠키는 지우고, 로그인 화면에서 서버 세션 종료를 확인하지 못했다고 알린다. 그 서버 세션은 만료 시각에 끝난다.
 - `src/lib/config.ts`, 인증과 API 클라이언트는 `server-only`다. 브라우저는 백엔드를 직접 호출하지 않는다.
 - 필터 선택지도 `no-store`로 조회한다. 같은 세션 토큰으로 도입사를 바꿀 수 있어 Authorization만으로 응답을 캐시하지 않는다. 고객과 미터 변경 뒤에는 `revalidatePath`로 화면을 갱신한다.
 
@@ -168,7 +169,7 @@ docker run -p 3000:3000 \
 | `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 정정 확인, 원본 로그 조회 |
 | `/pricing`, `/billable-metrics` | 월과 고객별 단가 이력, 구간 요금, 기본료, 최소 과금과 미터 설정, 보관과 복원 |
 | `/billing`, `/invoices` | 단가 없는 조합과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
-| `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
+| `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 결제 실패 건만 보기, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
 | `/invoice-links` | 로그인 없이 확정 청구와 결제 상태 확인. 별도 허용된 링크에서 실패 결제의 금액을 확인한 뒤 등록 카드로 직접 재시도. 링크 원문은 URL fragment로 받고 주소창에서 제거하며 현재 탭의 sessionStorage에만 보존 |
 | `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 시험 통보와 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
@@ -181,7 +182,7 @@ docker run -p 3000:3000 \
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
 | `/organizations` | 소속 도입사 선택과 전환 |
-| `/account/consents` | 첫 로그인 때 계정 이용 안내 확인 |
+| `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
@@ -220,6 +221,8 @@ pnpm test:e2e:real
 ```
 
 결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+
+`playwright.mvp.config.ts` 시나리오 가운데 `customer-payment-retry`, `invoice-links`, `permissions`는 테스트 DB를 `docker exec ... psql`로 직접 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 

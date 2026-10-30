@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { errorMessageForCode, InputFieldError, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
+import { InputFieldError, errorMessageForCode, existingCustomerMessage, readBusinessRegistrationNumber, readWholeNumber, staleCancellationMessage, successMessage, unconfirmedMessage } from "../src/app/(console)/workspace-action-feedback.ts";
 import { operationResultCopy } from "../src/lib/workspace-operation-results.ts";
 
 test("each workspace action that shows a toast says what it did", () => {
@@ -55,3 +55,17 @@ test("a missing Toss key says where to save it", () => {
   assert.match(message, /토스페이먼츠 연동/);
   assert.equal(errorMessageForCode("unknown_code"), undefined);
 });
+
+test("re-registering an existing external customer id is reported as not created", () => {
+  const input = { externalId: "customer-1", name: "새 고객", billingEmail: "new@example.com" };
+  assert.equal(existingCustomerMessage(input, { name: "카카오", billing_email: "old@example.com" }), "외부 고객 ID가 같은 기존 고객(이름: 카카오)이 있어 새로 등록하지 않았습니다.");
+  assert.equal(existingCustomerMessage(input, { name: "새 고객", billing_email: "new@example.com" }), undefined);
+  assert.equal(existingCustomerMessage({ ...input, externalId: "" }, { name: "기존 고객", billing_email: null }), undefined);
+});
+
+test("archiving a customer, a member or a receiver confirms what happened", () => {
+  assert.equal(successMessage("deleteCustomer"), "고객을 보관했습니다. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("archiveMember"), "사용자 소속을 보관했습니다. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("deleteWebhookEndpoint"), "수신 주소를 보관했습니다. 보관 목록에서 확인하세요.");
+});
+

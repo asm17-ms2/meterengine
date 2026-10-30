@@ -14,6 +14,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.dto.OperationsResponse;
+import com.meterengine.dashboard.service.OperationsService;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
@@ -65,6 +67,7 @@ class PaymentEnvironmentIntegrationTest {
   @Autowired private PaymentAttemptConfirmationService confirmation;
   @Autowired private PaymentRetryService retry;
   @Autowired private PaymentReconciliationService reconciliation;
+  @Autowired private OperationsService operations;
   @MockitoBean private TossPaymentsClient toss;
   private MockMvcTester mvc;
   private UUID organizationId;
@@ -603,6 +606,32 @@ class PaymentEnvironmentIntegrationTest {
                 organizationId))
         .isZero();
     assertThat(BusinessEnvironmentContext.current()).isNull();
+  }
+
+  @Test
+  void 운영_현황의_결제_대기와_실패_수는_test_결제를_세지_않는다() {
+    Payable test = payable("test");
+    Payable live = payable("live");
+    OperationsResponse before = operations.get();
+    for (String status : List.of("pending", "failed")) {
+      jdbcTemplate.update(
+          "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id,"
+              + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
+              + " failure_message) VALUES (?, ?, ?, ?, ?, 'test', 1100, '사용료', ?, now(), ?, ?, ?)",
+          UUID.randomUUID(),
+          organizationId,
+          environment("test"),
+          test.customer(),
+          test.invoice(),
+          status,
+          status.equals("failed") ? OffsetDateTime.now() : null,
+          status.equals("failed") ? "REJECT_CARD_PAYMENT" : null,
+          status.equals("failed") ? "거절" : null);
+    }
+    assertThat(operations.get().pendingPaymentCount()).isEqualTo(before.pendingPaymentCount());
+    assertThat(operations.get().failedPaymentCount()).isEqualTo(before.failedPaymentCount());
+    insertAttempt(live, "live", false);
+    assertThat(operations.get().pendingPaymentCount()).isEqualTo(before.pendingPaymentCount() + 1);
   }
 
   @Test

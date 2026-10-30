@@ -6144,7 +6144,8 @@ paths:
   /v1/payment-methods:
     get:
       description: |
-        지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. 빌링키 원문은 싣지 않는다.
+        지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. customer_id를 주면 그 고객의 카드만 돌려준다.
+        빌링키 원문은 싣지 않는다.
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
         status가 archived나 all이면 교체나 보관으로 물러난 이전 카드를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 카드는 새 결제에 다시 쓰이지 않는다.
       operationId: listPaymentMethods
@@ -6160,6 +6161,13 @@ paths:
           - active
           - archived
           - all
+      - description: 고객을 좁힌다. 생략하면 모든 고객의 카드다.
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
         "200":
           content:
@@ -6817,6 +6825,8 @@ paths:
       - session-controller
   /v1/sessions/current/consents:
     post:
+      description: 관리자나 운영자가 만든 계정은 처음 동의할 때 new_password로 본인 비밀번호를 정한다. 그때 이 세션 밖의
+        세션은 모두 끝낸다.
       operationId: acceptSessionConsents
       requestBody:
         content:
@@ -6839,7 +6849,8 @@ paths:
           description: |
             code=validation_error: consents가 없거나 비었거나, document가 terms_of_service나 privacy_policy가 아니거나,
             document_version이 비었거나 255자를 넘거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
-            동의가 남은 사용자면 consents에 terms_of_service와 privacy_policy가 한 번씩 있어야 한다.
+            동의가 남은 사용자면 consents에 terms_of_service와 privacy_policy가 한 번씩 있어야 하고,
+            new_password가 없거나 처음 받은 비밀번호와 같거나 8자 미만, 72자 또는 UTF-8 72바이트를 넘는다.
         "401":
           content:
             application/json:
@@ -7032,6 +7043,7 @@ paths:
   /v1/toss-payments-credentials/{mode}:
     delete:
       description: 새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.
+        저장과 같이 로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
       operationId: deleteTossPaymentsCredential
       parameters:
       - in: path
@@ -7067,20 +7079,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가\
             \ 없다"
-        "429":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
-            의 초만큼 기다린 뒤 다시 보낸다."
-          headers:
-            Retry-After:
-              description: 다시 보내기 전에 기다릴 초
-              required: true
-              schema:
-                type: integer
-                format: int32
       summary: 토스페이먼츠 키 보관
       tags:
       - toss-payments-credential-controller
@@ -8272,6 +8270,11 @@ components:
           items:
             $ref: "#/components/schemas/CreateSignupConsentRequest"
           minItems: 1
+        new_password:
+          type: string
+          description: 관리자나 운영자가 만든 계정이 처음 동의할 때 정하는 새 비밀번호. 처음 받은 비밀번호와 달라야 한다
+          maxLength: 72
+          minLength: 8
       required:
       - consents
     ApiKeyResponse:
@@ -9579,6 +9582,12 @@ components:
           format: int64
         billable_metric_code:
           type: string
+        billable_metric_name:
+          type:
+          - string
+          - "null"
+          description: "확정할 때의 미터 이름. 미터 이름을 나중에 바꿔도 그대로다. 기본료와 최소 사용료 조정 줄, 이 값을\
+            \ 저장하기 전에 확정한 줄은 null이다"
         dimension_values:
           type: object
           additionalProperties: {}

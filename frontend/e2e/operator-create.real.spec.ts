@@ -7,6 +7,7 @@ const FRONTEND_URL = "http://localhost:33147";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
 const CREATED_PASSWORD = " operator-create-e2e-password ";
+const CHANGED_PASSWORD = "operator-create-e2e-own-password";
 const DUPLICATE_PASSWORD = "changed-operator-e2e-password";
 const TENANT_PASSWORD = "operator-tenant-e2e-password";
 
@@ -42,7 +43,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
   const createdName = `신규 운영자 ${suffix.slice(0, 8)}`;
   const deniedEmail = `denied-operator-${suffix}@fe-e2e.local`;
   const contexts: BrowserContext[] = [];
-  const secrets = new Set([OPERATOR_PASSWORD, CREATED_PASSWORD, DUPLICATE_PASSWORD, TENANT_PASSWORD]);
+  const secrets = new Set([OPERATOR_PASSWORD, CREATED_PASSWORD, CHANGED_PASSWORD, DUPLICATE_PASSWORD, TENANT_PASSWORD]);
   let tenantToken = "";
   let tenantApiKeyId = "";
   let failure: unknown;
@@ -128,9 +129,12 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       await created.goto("/admin/users");
       await expect(created).toHaveURL(/\/account\/consents(?:\?|$)/);
       await expect(created.getByRole("checkbox")).toHaveCount(2);
+      await created.getByLabel(/^새 비밀번호 \(필수\)/).fill(CHANGED_PASSWORD);
+      await created.getByLabel(/^새 비밀번호 확인/).fill(CHANGED_PASSWORD);
       for (const checkbox of await created.getByRole("checkbox").all()) await checkbox.check();
       await created.getByRole("button", { name: "동의하고 운영 시작", exact: true }).click();
       await expect(created).toHaveURL(/\/admin(?:\/users)?$/);
+      expect((await request.post(`${API_URL}/v1/sessions`, { data: { email: createdEmail, password: CREATED_PASSWORD } })).status()).toBe(401);
       await created.goto("/admin/users");
       await expect(created.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
       const allowed = await request.get(`${API_URL}/v1/operations`, { headers });

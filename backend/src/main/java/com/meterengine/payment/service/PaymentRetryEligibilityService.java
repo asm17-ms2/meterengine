@@ -82,31 +82,22 @@ public class PaymentRetryEligibilityService {
                     ? failed.getRequestedAt()
                     : failed.getCredentialUpdatedAt());
     if (credential.isEmpty()) return PaymentRetryEligibility.blocked("credentials_missing");
-    if (paymentAttemptRepository
-        .findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(organizationId, invoiceId)
-        .stream()
-        .filter(
-            attempt ->
-                mode.equals(attempt.getMode())
-                    && PaymentAttempt.FAILED.equals(attempt.getStatus())
-                    && TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(attempt.getFailureCode()))
-        .anyMatch(
-            attempt ->
-                (BusinessEnvironmentContext.environmentId() == null
-                            && attempt.getCredentialUpdatedAt() == null
-                        ? java.util.Optional.of(credential.get())
-                        : tossPaymentsCredentialService.historical(
-                            organizationId,
-                            mode,
-                            attempt.getCredentialUpdatedAt() == null
-                                ? attempt.getRequestedAt()
-                                : attempt.getCredentialUpdatedAt()))
-                    .map(
-                        original ->
-                            PaymentRetryPolicy.isUnconfirmable(
-                                attempt, original.getUpdatedAt(), OffsetDateTime.now()))
-                    .orElse(true)))
-      return PaymentRetryEligibility.blocked("payment_result_unconfirmed");
+    // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 관리자 수동 결제처럼 7일 창은 최신 실패에만 건다.
+    if (TossPaymentsFailureCode.NOT_FOUND_PAYMENT.equals(failed.getFailureCode())
+        && (BusinessEnvironmentContext.environmentId() == null
+                    && failed.getCredentialUpdatedAt() == null
+                ? java.util.Optional.of(credential.get())
+                : tossPaymentsCredentialService.historical(
+                    organizationId,
+                    mode,
+                    failed.getCredentialUpdatedAt() == null
+                        ? failed.getRequestedAt()
+                        : failed.getCredentialUpdatedAt()))
+            .map(
+                original ->
+                    PaymentRetryPolicy.isUnconfirmable(
+                        failed, original.getUpdatedAt(), OffsetDateTime.now()))
+            .orElse(true)) return PaymentRetryEligibility.blocked("payment_result_unconfirmed");
     if (paymentRetryPolicy.nextRetryAt(
             failed.getFailureCode(),
             count,

@@ -594,7 +594,8 @@ class SchemaConstraintTest {
             "target_property",
             "quantity_numerator",
             "quantity_denominator",
-            "environment_id");
+            "environment_id",
+            "billable_metric_name");
   }
 
   @Test
