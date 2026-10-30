@@ -28,7 +28,7 @@ import tools.jackson.databind.JsonNode;
 @Service
 public class EventRejectionService {
   private static final Logger LOG = LoggerFactory.getLogger(EventRejectionService.class);
-  private static final Set<ErrorCode> REASONS =
+  static final Set<ErrorCode> REASONS =
       Set.of(
           ErrorCode.CUSTOMER_NOT_FOUND,
           ErrorCode.CUSTOMER_ARCHIVED,

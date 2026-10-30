@@ -8,7 +8,7 @@ import java.util.List;
 import tools.jackson.databind.JsonNode;
 
 public record IngestEventBatchRequest(
-    @NotEmpty @Size(max = 100) @ArraySchema(
+    @NotEmpty @Size(min = 1, max = 100) @ArraySchema(
             schema = @Schema(implementation = IngestEventRequest.class),
             minItems = 1,
             maxItems = 100)
