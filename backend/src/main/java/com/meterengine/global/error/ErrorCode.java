@@ -44,6 +44,7 @@ public enum ErrorCode {
   TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "토스페이먼츠 키를 찾을 수 없습니다"),
   PRICE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "요금제를 찾을 수 없습니다"),
   WEBHOOK_ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 엔드포인트를 찾을 수 없습니다"),
+  WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
   INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
 
   // 405 Method Not Allowed

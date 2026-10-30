@@ -9,8 +9,10 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.service.OperationsService;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.webhook.client.WebhookAddressPolicy;
 import com.meterengine.webhook.dto.CreateWebhookEndpointRequest;
 import com.meterengine.webhook.dto.UpdateWebhookEndpointRequest;
@@ -68,6 +70,7 @@ class WebhookIntegrationTest {
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private MeterRegistry meterRegistry;
+  @Autowired private OperationsService operationsService;
   @MockitoSpyBean private WebhookAddressPolicy webhookAddressPolicy;
   private HttpServer httpServer;
   private UUID organizationId;
@@ -308,6 +311,25 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 발송_경로의_claim은_바깥_트랜잭션이_있어도_따로_커밋된다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    webhookEndpointService.test(organizationId, endpoint.id());
+
+    WebhookClaim claim =
+        new TransactionTemplate(transactionManager)
+            .execute(
+                status -> {
+                  WebhookClaim claimed = webhookDeliveryRepository.claim(List.of()).orElseThrow();
+                  assertThat(committedClaimToken(claimed)).isEqualTo(claimed.claimToken());
+                  return claimed;
+                });
+
+    webhookDeliveryRepository.complete(claim, new WebhookOutcome(200, null, 1));
+  }
+
+  @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
@@ -322,7 +344,7 @@ class WebhookIntegrationTest {
               () -> {
                 List<WebhookClaim> values = new ArrayList<>();
                 for (int i = 0; i < 10; i++) {
-                  values.add(webhookDeliveryRepository.claim().orElseThrow());
+                  values.add(webhookDeliveryRepository.claim(List.of()).orElseThrow());
                 }
                 return values;
               });
@@ -331,7 +353,7 @@ class WebhookIntegrationTest {
               () -> {
                 List<WebhookClaim> values = new ArrayList<>();
                 for (int i = 0; i < 10; i++) {
-                  values.add(webhookDeliveryRepository.claim().orElseThrow());
+                  values.add(webhookDeliveryRepository.claim(List.of()).orElseThrow());
                 }
                 return values;
               });
@@ -343,7 +365,7 @@ class WebhookIntegrationTest {
     WebhookClaim old = claims.getFirst();
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE id = ?", old.id());
-    WebhookClaim replacement = webhookDeliveryRepository.claim().orElseThrow();
+    WebhookClaim replacement = webhookDeliveryRepository.claim(List.of()).orElseThrow();
     assertThat(replacement.id()).isEqualTo(old.id());
     assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isEmpty();
     assertThat(webhookDeliveryRepository.complete(replacement, new WebhookOutcome(200, null, 1)))
@@ -378,6 +400,64 @@ class WebhookIntegrationTest {
         .containsExactly("unexpected_status", "endpoint_disabled");
     assertThatThrownBy(
             () -> webhookDeliveryService.retry(organizationId, endpoint.id(), delivery.id()))
+        .isInstanceOf(ConflictException.class)
+        .extracting(exception -> ((ConflictException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
+  }
+
+  @Test
+  void 한_도입사의_전송이_밀려_있어도_다른_도입사의_전송이_다음_차례에_나간다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    List<String> backlog = new ArrayList<>();
+    for (int i = 0; i < 3; i++)
+      backlog.add(webhookEndpointService.test(organizationId, endpoint.id()).toString());
+    UUID otherOrganizationId = UUID.randomUUID();
+    TestCredentials.issueApiKey(jdbcTemplate, otherOrganizationId, "admin");
+    WebhookEndpointResponse otherEndpoint =
+        webhookEndpointService.create(
+            otherOrganizationId,
+            new CreateWebhookEndpointRequest(endpoint.url(), List.of("payment_succeeded"), null));
+    String other = webhookEndpointService.test(otherOrganizationId, otherEndpoint.id()).toString();
+
+    webhookDeliveryService.deliver();
+
+    assertThat(received)
+        .extracting(Received::id)
+        .containsExactly(backlog.get(0), other, backlog.get(1), backlog.get(2));
+  }
+
+  @Test
+  void 운영_현황의_웹훅_실패_수는_보관한_엔드포인트의_전송을_세지_않는다() {
+    long before = operationsService.get().failedWebhookCount();
+    UUID eventId = failOnce();
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET status = 'failed', next_attempt_at = NULL WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    assertThat(operationsService.get().failedWebhookCount()).isEqualTo(before + 1);
+
+    webhookEndpointService.delete(organizationId, endpoint.id());
+
+    assertThat(operationsService.get().failedWebhookCount()).isEqualTo(before);
+  }
+
+  @Test
+  void 없는_전송의_재시도는_404이고_실패하지_않은_전송의_재시도는_409다() {
+    assertThatThrownBy(
+            () -> webhookDeliveryService.retry(organizationId, endpoint.id(), UUID.randomUUID()))
+        .isInstanceOf(NotFoundException.class)
+        .extracting(exception -> ((NotFoundException) exception).getErrorCode())
+        .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_FOUND);
+    UUID eventId = failOnce();
+    UUID pending =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+            UUID.class,
+            organizationId,
+            eventId);
+    assertThatThrownBy(() -> webhookDeliveryService.retry(organizationId, endpoint.id(), pending))
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((ConflictException) exception).getErrorCode())
         .isEqualTo(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
@@ -542,4 +622,19 @@ class WebhookIntegrationTest {
   }
 
   private record Received(String id, String timestamp, String signature, String body) {}
+
+  private UUID committedClaimToken(WebhookClaim claim) {
+    try (var executor = Executors.newSingleThreadExecutor()) {
+      return executor
+          .submit(
+              () ->
+                  jdbcTemplate.queryForObject(
+                      "SELECT claim_token FROM webhook_delivery WHERE id = ?",
+                      UUID.class,
+                      claim.id()))
+          .get(5, TimeUnit.SECONDS);
+    } catch (Exception exception) {
+      throw new IllegalStateException("다른 연결에서 선점 상태를 읽지 못했다", exception);
+    }
+  }
 }

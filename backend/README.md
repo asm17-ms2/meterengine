@@ -226,7 +226,7 @@ unset SESSION
 - 계약의 정본은 `openapi.yaml`이다. 컨트롤러와 DTO에서 생성하므로 손으로 고치지 않는다.
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
-- 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다(이벤트 수집 요청은 감사 행을 남기지 않는다).
+- 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다. 이벤트 수집 요청과, 로그인과 가입이 아닌 요청의 주체 없는 401과 429는 감사 행을 남기지 않고 `http.server.requests` 지표와 요청 로그로만 센다.
 - 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
@@ -290,6 +290,8 @@ unset SESSION
 - 엔드포인트는 도입사의 환경마다 10개까지 등록한다. 서명 비밀값(`whsec_`)은 등록 응답에만 나온다.
 - 통보는 `webhook-id`, `webhook-timestamp`, `webhook-signature` 헤더와 `User-Agent: MeterEngine-Webhooks/1.0`을 싣는다. 수신 측 방화벽의 허용 목록에는 이 User-Agent를 쓴다.
 - 발송 작업은 30초마다 돌고 한 번에 최대 100건, 15초까지 보낸다. 시도마다 전송을 2분 선점한다.
+- 전송은 한 건씩 차례로 보낸다. 한 건을 최대 15초까지 기다리므로 응답하지 않는 수신 주소 하나가 실행 하나를 다 쓸 수 있다. 실행 안에서는 도입사 환경마다 돌아가며 꺼내, 한 도입사에 쌓인 전송이 다른 도입사의 통보를 계속 밀어내지 않게 한다.
+- 연결 거절, TLS 실패, 발송 중 내부 오류는 모두 실패 사유 `connection_error` 하나로 남는다. 원인은 백엔드 로그의 `Webhook <webhook-id> could not be sent` 줄로 가른다.
 - 실패하면 1분, 5분, 30분, 2시간, 8시간 뒤 다시 보내 모두 6번 시도한다. 성공(2xx), 6번 소진, 막힌 주소(`blocked_address`), 발송을 끄거나 지운 엔드포인트(`endpoint_disabled`)에서 끝난다.
 - 실패로 끝난 전송은 수동 재시도(`POST /v1/webhook-endpoints/{id}/deliveries/{delivery_id}/retries`)로 같은 `webhook-id`를 다시 보낸다.
 
@@ -314,7 +316,7 @@ unset SESSION
 - 고객과 미터 등록의 `Idempotency-Key`는 1~255자 문자열이다. 같은 키의 같은 본문은 최초 응답을 상태 코드까지 다시 돌려주고 `Idempotency-Replayed: true`를 붙이며, 다른 본문은 409 `idempotency_conflict`다. 최초 응답(고객은 이름과 billing_email 포함)을 `idempotent_request`에 기한 없이 보관하고 지우는 작업은 없다.
 - 고객 `external_id`는 도입사의 업무 환경 범위(기존 데이터, test, live) 안에서 고유하다. 같은 범위에서 같은 ID를 다시 등록하면 기존 고객과 200을 반환한다. 배치는 `POST /v1/event-batches`로 최대 100건을 받고 원소별 저장, 중복, 거절을 응답한다.
 - 키 발급 시 `rate_limit_per_minute`를 양수로 지정하거나 null로 비워 무제한으로 둘 수 있다. 유한 한도는 인스턴스별로 적용하고 초과 시 429와 `Retry-After`를 반환한다.
-- `read` 키로 고객, 요금, 사용량, 인보이스와 결제 상태, 마스킹된 결제 설정, 통보 내역과 대시보드를 조회할 수 있다. 키 발급과 폐기, 전체 운영 조회는 로그인 역할을 따른다.
+- `read` 키로 고객, 요금, 사용량, 인보이스와 결제 상태, 마스킹된 결제 설정, 통보 내역과 대시보드를 조회할 수 있다. 키 발급과 폐기, 키와 사용자 목록, 감사 기록 조회, 전체 운영 조회는 로그인 세션 전용이고 역할을 따른다.
 - 인보이스 조회 링크는 `admin` 권한으로 발급과 폐기하고 `read`로 목록을 조회한다. 기본 30일, 최대 90일이며 원문 토큰은 발급 때만 나온다. 고객에게 `/invoice-links#<token>`을 전달하고 공개 조회 API에는 본문으로 보낸다. 링크를 가진 사람이 조회할 수 있다.
 - `allow_payment_retry=true`로 발급하면 링크를 가진 사람이 등록 카드로 실패 결제를 다시 시도할 수 있다. 자동 재시도의 24시간 간격은 기다리지 않지만 실패 코드, 카드 갱신과 시도 상한은 공유한다. 최초 청구, 진행 중, 승인과 취소된 결제는 대상이 아니다. API 키로 이런 링크를 발급하면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면 409 `payment_mode_mismatch`다.
 - 고객 재시도는 조회 응답의 `payment_retry.version`을 보낸다. 같은 실패 버전의 재전송과 자동/관리자 재시도 경합은 새 승인을 중복 생성하지 않는다. 결제 승인 중 링크가 만료되거나 폐기돼도 수락한 요청의 결과는 반환하며, 이후 새 조회와 재시도는 차단한다.

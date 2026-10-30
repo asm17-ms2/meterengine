@@ -49,7 +49,11 @@ public class OperationsService {
         count(
             "select count(*) from payment_attempt where status = 'failed' and requested_at >= now()"
                 + " - interval '24 hours'"),
-        count("select count(*) from webhook_delivery where status = 'failed'"),
+        count(
+            "select count(*) from webhook_delivery d where d.status = 'failed' and exists (select 1"
+                + " from webhook_endpoint e where e.organization_id = d.organization_id and"
+                + " e.environment_scope_id = d.environment_scope_id and e.id = d.webhook_endpoint_id"
+                + " and e.deleted_at is null)"),
         jobs);
   }
 
