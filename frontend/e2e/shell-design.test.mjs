@@ -30,9 +30,10 @@ test("link buttons and scoped links resolve workspace addresses through one shar
   }
 });
 
-test("the console and the introduction page draw the logo mark from one component that only changes its size", () => {
+test("the console and the introduction page share the official SVG through one component that only changes its size", () => {
   const drawsBars = sourceFiles().filter(file => readFileSync(file, "utf8").includes("<i /><i /><i />")).map(file => file.slice(SRC.length));
-  assert.deepEqual(drawsBars, ["components/shell/BrandMark.tsx"]);
+  assert.deepEqual(drawsBars, []);
+  assert.ok(source("components/shell/BrandMark.tsx").includes('src="/brand/meterengine-mark.svg"'));
   assert.ok(source("components/shell/ConsoleShell.tsx").includes("<BrandMark />"));
   assert.ok(source("app/page.tsx").includes("<BrandMark scale={HOME_MARK_SCALE} />"));
   assert.doesNotMatch(source("app/HomePage.module.css"), /^\.mark\b/m);
