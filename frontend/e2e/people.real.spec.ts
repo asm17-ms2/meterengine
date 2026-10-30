@@ -167,7 +167,8 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       dialog = owner.getByRole("dialog");
       await dialog.getByRole("button", { name: "고객 보관", exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived");
+      await expect(owner.getByText("고객을 보관했습니다. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
+      await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived" && /^\d{4}-\d{2}$/.test(url.searchParams.get("month") ?? ""));
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toBeVisible();
       const status = owner.getByRole("combobox", { name: "관리 상태", exact: true });
       await status.selectOption("active");

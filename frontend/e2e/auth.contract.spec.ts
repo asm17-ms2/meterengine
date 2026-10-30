@@ -48,6 +48,12 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 4월 과금 운영");
 });
 
+test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
+  await login(page, "member@contract.local", "/overview");
+  const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
+  await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 결제 모드: 테스트", { exact: true })).toBeVisible();
+});
+
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
   expect((await request.get("/health")).status()).toBe(200);
   for (const path of ["/customers?q=abc", "/admin/users", "/organizations"]) {
@@ -178,6 +184,62 @@ test("a workspace action still follows the login redirect after its session is r
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
+});
+
+test("a customer edit that lost a version race offers to load the latest values and then saves", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("처음 이름");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("link", { name: "처음 이름", exact: true }).click();
+  await page.getByRole("button", { name: "고객 정보 수정", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("내가 고친 이름");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { renameCustomersElsewhere: "다른 사람이 고친 이름" } });
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toBeVisible();
+  await dialog.getByRole("button", { name: "최신 정보 불러오기", exact: true }).click();
+  await expect(dialog.getByLabel(/^고객명/)).toHaveValue("다른 사람이 고친 이름");
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toHaveCount(0);
+  await dialog.getByLabel(/^고객명/).fill("다시 고친 이름");
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
+});
+
+test("restoring a customer returns focus to the same button, now offering to archive", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("복원할 고객");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { archiveCustomers: true } });
+  await page.getByRole("link", { name: "복원할 고객", exact: true }).click();
+  await page.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await dialog.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "고객 보관", exact: true })).toBeFocused();
+});
+
+test("a customer address that is not a customer id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/customers/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
+test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByText("다른 도입사나 업무 환경의 고객일 수 있습니다", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "고객 목록으로", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
 });
 
 test("the sidebar lists page links in plain lists without menu roles", async ({ page }) => {

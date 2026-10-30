@@ -10,10 +10,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class PaymentArchiveRepository {
+  private static final RowMapper<PaymentMethodResponse> PAYMENT_METHOD_HISTORY =
+      (rs, n) ->
+          PaymentMethodResponse.of(
+              rs.getObject("customer_id", UUID.class),
+              rs.getString("card_issuer_code"),
+              rs.getString("card_number"),
+              rs.getString("mode"),
+              rs.getObject("authenticated_at", OffsetDateTime.class),
+              rs.getObject("archived_at", OffsetDateTime.class));
+
   private final JdbcTemplate jdbcTemplate;
   private final EncryptedStringConverter encryptedStringConverter;
 
@@ -62,16 +73,21 @@ public class PaymentArchiveRepository {
     return jdbcTemplate.query(
         "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
             + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
-        (rs, n) ->
-            PaymentMethodResponse.of(
-                rs.getObject("customer_id", UUID.class),
-                rs.getString("card_issuer_code"),
-                rs.getString("card_number"),
-                rs.getString("mode"),
-                rs.getObject("authenticated_at", OffsetDateTime.class),
-                rs.getObject("archived_at", OffsetDateTime.class)),
+        PAYMENT_METHOD_HISTORY,
         organizationId,
         mode,
+        BusinessEnvironmentContext.environmentId());
+  }
+
+  public List<PaymentMethodResponse> methods(UUID organizationId, String mode, UUID customerId) {
+    return jdbcTemplate.query(
+        "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
+            + " customer_id = ? AND environment_id IS NOT DISTINCT FROM ?"
+            + " ORDER BY retired_at DESC, history_id",
+        PAYMENT_METHOD_HISTORY,
+        organizationId,
+        mode,
+        customerId,
         BusinessEnvironmentContext.environmentId());
   }
 

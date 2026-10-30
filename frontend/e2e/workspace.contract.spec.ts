@@ -328,6 +328,26 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   }
 });
 
+test("the payments list can show only the month's failed payments and go back to all of them", async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await page.goto("/payments?month=2026-10&payment_status=failed");
+  await expect(page.getByText("결제 실패 2건만 표시합니다.", { exact: false })).toBeVisible();
+  for (const index of [0, 1]) await expect(page.getByRole("link", { name: `다른 고객의 확정 청구 ${index}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toHaveCount(0);
+  await expect(page.locator('form input[type="hidden"][name="payment_status"]')).toHaveValue("failed");
+  await page.getByRole("link", { name: "전체 수납 보기", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/payments" && !url.searchParams.has("payment_status") && url.searchParams.get("month") === "2026-10");
+  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toBeVisible();
+});
+
+test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
+  await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await page.getByRole("button", { name: "조회", exact: true }).click();
+  await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
+});
+
 test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다", async ({ page }) => {
   await page.goto("/invoices");
   const form = page.locator('form[aria-label="조회 조건"]');
@@ -388,4 +408,3 @@ test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으�
   await page.getByRole("combobox", { name: "고객", exact: true }).click();
   await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
 });
-

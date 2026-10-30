@@ -88,7 +88,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect.poll(() => new URL(page.url()).searchParams.get("metric")).toBe(metricCode);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const rateDialog = page.getByRole("dialog");
-    await rateDialog.getByLabel("사용량 1당 단가 (원)", { exact: true }).fill("100");
+    await rateDialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("100");
     await rateDialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(rateDialog).toHaveCount(0);
     await page.getByRole("button", { name: "요금제 버전 등록", exact: true }).click();
@@ -187,6 +187,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await dialog.getByRole("button", { name: "토스 키 저장", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await page.goto(`/customers/${customerId}?month=${month}`);
+    await expect(page.getByRole("cell", { name: `MVP 사용 단위 (${metricCode})`, exact: true }).first(), "고객 상세 사용량도 미터 코드를 함께 보인다").toBeVisible();
     await page.getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     const registration = page.getByRole("dialog").getByRole("link", { name: "카드 등록 링크 열기", exact: true });

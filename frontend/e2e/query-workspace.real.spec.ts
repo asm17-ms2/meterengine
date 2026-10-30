@@ -86,6 +86,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.goto(`/pricing?${new URLSearchParams(preserved)}`);
     const rail = page.getByRole("region", { name: "과금 미터 선택", exact: true });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(20);
+    await expect(rail.getByRole("button", { name: /등록 단가 \d+개/ }), "선택한 미터도 단가 개수를 보인다").toHaveCount(20);
     await rail.getByRole("link", { name: "다음", exact: true }).click();
     await expectScope(page, { ...preserved, page: "1" });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(1);
@@ -204,7 +205,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("per_unit");
-    await dialog.getByLabel("사용량 1당 단가 (원)", { exact: true }).fill("999");
+    await dialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("999");
     await context.addCookies([{ name: "me_session", value: tenantB.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
     await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("도입사가 바뀌었습니다");
