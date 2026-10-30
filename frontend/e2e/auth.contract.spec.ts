@@ -279,6 +279,93 @@ test("meter number inputs do not expose English stepper buttons", async ({ page 
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
 
+test("list screens keep the disclosure marker on the advanced filter summary", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const summary = page.locator(".resource-advanced > summary");
+  await expect(summary).toHaveCSS("display", "list-item");
+  const box = await summary.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
+test("filter row controls on a list screen share one height", async ({ page }) => {
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await expect(form.locator(".ant-picker").first()).toBeVisible();
+  const heights = await form.evaluate(element => Array.from(element.querySelectorAll(":scope > .workspace-field .ant-picker, :scope > .workspace-field .ant-select, :scope > .workspace-field > select, :scope > .workspace-field > input:not([type=hidden]), :scope > button[type=submit]"))
+    .map(control => ({ name: control.className || control.tagName, height: Math.round(control.getBoundingClientRect().height) })));
+  expect(heights.length).toBeGreaterThanOrEqual(3);
+  for (const control of heights) expect(control.height, control.name).toBe(44);
+});
+
+test("the events customer filter matches the 44px filter row at phone and desktop widths", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const customer = page.locator(".event-filter-grid .ant-select").first();
+    await expect(customer).toBeVisible();
+    expect(Math.round((await customer.boundingBox())!.height), `${width}px`).toBe(44);
+  }
+});
+
+test("an audit range whose end is not after its start is reported next to the end field without asking the server", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/audit?from=2026-10-10T00:00&to=2026-10-01T00:00");
+  await expect(page.getByText("종료 일시는 시작 일시보다 뒤여야 합니다.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("종료 일시 (KST, 미포함)")).toHaveAttribute("aria-invalid", "true");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.startsWith("/v1/audit-logs") && path.includes("from="))).toBe(false);
+});
+
+test("list filters submit with a default 조건 적용 button and reset with 조건 초기화", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const submit = page.locator('form[aria-label="조회 조건"]').getByRole("button", { name: "조건 적용", exact: true });
+  await expect(submit).toBeVisible();
+  await expect(submit).not.toHaveClass(/ant-btn-primary/);
+  await page.context().clearCookies();
+  await login(page, "member@contract.local", "/audit");
+  await expect(page.getByRole("button", { name: "조건 적용", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "조건 초기화", exact: true })).toBeVisible();
+});
+
+test("the customer search names every searched field and fits its hint on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const search = page.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true });
+  await expect(search).toBeVisible();
+  const fits = await search.evaluate(input => {
+    const element = input as HTMLInputElement;
+    const style = getComputedStyle(element);
+    const context = document.createElement("canvas").getContext("2d")!;
+    context.font = `${style.fontSize} ${style.fontFamily}`;
+    return context.measureText(element.placeholder).width <= element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  });
+  expect(fits).toBe(true);
+});
+
+test("phones do not show expand-all controls that only act on the desktop table", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await expect(page.locator(".data-mobile-records, .ant-empty, [role=status]").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "모두 펼치기", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
+});
+
+test("the month picker panel stays inside a phone screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await page.locator('form[aria-label="조회 조건"] .ant-picker').first().click();
+  const panel = page.locator(".ant-picker-dropdown:visible .ant-picker-panel").first();
+  await expect(panel).toBeVisible();
+  const box = await panel.boundingBox();
+  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+});
+
 test("a webhook receiver whose latest delivery is failing is flagged in the list", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");

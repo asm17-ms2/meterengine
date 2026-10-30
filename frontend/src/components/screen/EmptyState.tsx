@@ -8,7 +8,7 @@ export function EmptyState({
   title,
   body,
   resetHref,
-  resetLabel = "필터 초기화",
+  resetLabel = "조건 초기화",
   action,
 }: {
   title: string;
