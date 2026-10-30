@@ -1,8 +1,8 @@
 {
   "package": "T-yang",
   "owner": "양성지",
-  "status": "done",
-  "updated_at": "2026-10-30T00:30:44+09:00",
+  "status": "running",
+  "updated_at": "2026-10-30T10:48:49+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -1417,7 +1417,7 @@
         "backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java:94 @ af15d7f",
         "OrganizationPeopleIntegrationTest 직접_생성한_계정은_본인_동의에서_새_비밀번호를_정하고_초기_비밀번호와_먼저_연_세션이_막힌다: 실패 expected: 400 but was: 200",
         "커밋 34e8959",
-        "#485 리뷰 p4 반영 SessionPasswordChangeConcurrencyTest: 고치기 전 실패 옛 비밀번호로 세션 생성(CompletableFuture Completed)",
+        "SessionPasswordChangeConcurrencyTest(#485 리뷰 p4 반영, 고치기 전): 실패 옛 비밀번호로 세션 생성(CompletableFuture Completed)",
         "커밋 b562b3f"
       ],
       "commits": [
@@ -2184,7 +2184,7 @@
         "frontend/src/components/events/EventFilters.tsx:182 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
         "커밋 6dd3dc9",
-        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "auth 계약 'overview keeps the selected month'(#486 리뷰 p4 반영, 고치기 전): 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
         "커밋 ad54b89"
       ],
       "commits": [
@@ -2288,7 +2288,7 @@
         "frontend/e2e/events.real.spec.ts:127 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
         "커밋 6dd3dc9",
-        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "auth 계약 'overview keeps the selected month'(#486 리뷰 p4 반영, 고치기 전): 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
         "커밋 ad54b89"
       ],
       "commits": [
@@ -2485,7 +2485,7 @@
         "frontend/src/lib/field-validation.ts:7 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
         "커밋 6dd3dc9",
-        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "auth 계약 'overview keeps the selected month'(#486 리뷰 p4 반영, 고치기 전): 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
         "커밋 ad54b89"
       ],
       "commits": [
@@ -3726,7 +3726,7 @@
         "frontend/e2e/auth.contract.spec.ts:37 @ af15d7f",
         "month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceHeader의 type=month가 남음",
         "커밋 6dd3dc9",
-        "#486 리뷰 p4 반영 auth 계약 'overview keeps the selected month': 고치기 전 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
+        "auth 계약 'overview keeps the selected month'(#486 리뷰 p4 반영, 고치기 전): 실패 Received '2026년 10월 과금 운영'(직접 쓴 월을 조회 전에 확정하지 않음)",
         "커밋 ad54b89"
       ],
       "commits": [
@@ -4996,9 +4996,9 @@
         "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql:122 @ af15d7f",
         "backend/src/test/java/com/meterengine/payment/PaymentReconciliationIntegrationTest.java:263-281 @ af15d7f",
         "backend/README.md:326 @ af15d7f",
-        "PaymentReconciliationIntegrationTest 거래_목록이_거절된_날의_토스에만_있는_거래를_다음_실행이_남긴다: 옛 하루 창으로 되돌리면 실패 expected processedCount=1 but was 0(행 없음). 새 시험 셋은 고치기 전 메서드가 없어 컴파일 실패",
+        "PaymentReconciliationIntegrationTest 거래_목록이_거절된_날의_토스에만_있는_거래를_다음_실행이_남긴다(옛 하루 창으로 되돌림): 실패 expected processedCount=1 but was 0(행 없음). 새 시험 셋은 고치기 전 메서드가 없어 컴파일 실패",
         "커밋 1cd2190",
-        "#490 리뷰 p4 반영 시험(첫 대사 실패 뒤 다음 날 시작점): 고치기 전 earliest 없어 컴파일 실패",
+        "첫 대사 실패 뒤 다음 날 시작점 시험(#490 리뷰 p4 반영, 고치기 전): 실패 earliest 메서드가 없어 컴파일 실패",
         "커밋 8edf94b"
       ],
       "commits": [
@@ -7264,7 +7264,7 @@
         "demo/llm-service/src/components/LumenApplication.tsx:207 @ af15d7f",
         "부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다: 실패 actual '청구 예정액, 요금 설정를 확인하지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.'",
         "커밋 600c74c",
-        "#474 리뷰 p4 반영 시험 '일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다': 고치기 전 실패 actual 'ready'",
+        "시험 '일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다'(#474 리뷰 p4 반영, 고치기 전): 실패 actual 'ready'",
         "커밋 7ed660f"
       ],
       "commits": [
@@ -7565,9 +7565,9 @@
         "deploy/grafana/provisioning/alerting/alerting.yml:169-174 @ af15d7f",
         "대사는_창_안에_쓰이지_않은_옛_키를_부르지_않고_한_버전이_실패해도_다른_버전을_대사한다: 실패 expected: 0 but was: 1",
         "커밋 d255870",
-        "대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다: 고치기 전 루프로 되돌리면 실패 옛 키 listTransactions 호출 없음(Argument(s) are different)",
+        "대사는_현재_키가_실패해도_창_안에_쓰인_옛_키를_대사하고_실패를_한_번_센다(고치기 전 루프로 되돌림): 실패 옛 키 listTransactions 호출 없음(Argument(s) are different)",
         "커밋 cce95ba",
-        "#476 리뷰 p4 반영 시험 '대사하지_않는_옛_키로_승인한_결제의_토스에만_있는_취소는_현재_키_목록에서_남긴다': 고치기 전 실패 불일치 0건",
+        "시험 '대사하지_않는_옛_키로_승인한_결제의_토스에만_있는_취소는_현재_키_목록에서_남긴다'(#476 리뷰 p4 반영, 고치기 전): 실패 불일치 0건",
         "커밋 f7eb389"
       ],
       "commits": [
@@ -7893,7 +7893,7 @@
         "frontend/e2e/query-workspace.real.spec.ts:209 @ af15d7f",
         "격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다: 실패 Received '열어 둔 화면과 요청의 업무 환경이 다릅니다'",
         "커밋 c7898bb",
-        "#481 리뷰 p4 반영 업무 계약 '공백을 낀 환경 값도 다듬어 비교': 고치기 전 실패 Received '처리했습니다.'",
+        "업무 계약 '공백을 낀 환경 값도 다듬어 비교'(#481 리뷰 p4 반영, 고치기 전): 실패 Received '처리했습니다.'",
         "커밋 4d32e0b"
       ],
       "commits": [
@@ -13619,26 +13619,10 @@
     {
       "branch": "fix/s456-t-yang-ci-tests",
       "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
-      "kind": "ci",
-      "result": "pass",
-      "command": "PR #494 GitHub Actions CI(run 40868392114)",
-      "detail": "backend, demo, deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(2db50b4, #481이 고침)"
-    },
-    {
-      "branch": "fix/s456-t-yang-ci-tests",
-      "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
       "kind": "forbidden-chars",
       "result": "pass",
       "command": "8절 금지 문자 검사",
       "detail": "출력 없음"
-    },
-    {
-      "branch": "fix/s456-t-yang-ci-tests",
-      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
-      "kind": "ci",
-      "result": "pass",
-      "command": "PR #494 GitHub Actions CI(run 40871714563)",
-      "detail": "backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)"
     },
     {
       "branch": "fix/s456-t-yang-ci-tests",
@@ -15871,6 +15855,38 @@
       "result": "pass",
       "command": "cd frontend && corepack pnpm test:e2e:contract; playwright test -c playwright.workspace.config.ts; playwright test -c playwright.payment.config.ts",
       "detail": "인증 계약 66건, 카드 등록 계약 6건 통과. 업무 계약 7 통과 2 실패는 main 기준선과 같은 두 시험(#481이 고침)이라 나빠지지 않았다"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "a9ce8d11a9bba234af7510d46a71528bc9766bc8",
+      "kind": "static",
+      "result": "pass",
+      "command": "git show <sha>:.github/workflows/ci.yml > <tmp>; ruby -ryaml -e 'YAML.load_file(ARGV[0])' <tmp>",
+      "detail": "바뀐 .github 파일 중 YAML은 ci.yml 하나이고 통과(README.md는 10절 static 대상 형식이 아님). 10-30 이어 하기에서 그 sha의 파일로 다시 돌림"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "84c47c7a30ad6bd877b7b80a99ace32d712a7a35",
+      "kind": "static",
+      "result": "pass",
+      "command": "git show <sha>:.github/workflows/ci.yml > <tmp>; ruby -ryaml -e 'YAML.load_file(ARGV[0])' <tmp>",
+      "detail": "바뀐 .github 파일 중 YAML은 ci.yml 하나이고 통과(README.md는 10절 static 대상 형식이 아님). 10-30 이어 하기에서 그 sha의 파일로 다시 돌림"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "모두 성공. 10-30 이어 하기에서 그 sha의 detached worktree로 다시 돌림(push 때 기록이 빠져 있었음)"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "b562b3f2e3c8f75ef18be5b95664ff288e7fb2bd",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "tests 79, pass 79. 10-30 이어 하기에서 그 sha로 다시 돌림"
     }
   ],
   "pushes": [
@@ -16455,7 +16471,11 @@
     "2026-10-30: 화면 지적의 after 증거가 main 기준 수정에는 없어서, main(9df2768)에서 라우트 19개를 데스크톱과 모바일로 찍어 기준선으로 쓰고 프론트를 바꾼 브랜치 9개와 비교했다. 콘솔 오류, 가로 넘침, axe 위반이 늘어난 화면은 없다(evidence/final-<PR>/screens-compare.txt). 스크린샷 PNG는 용량 때문에 .s456-work/final에만 두고 screens.json만 올렸다.",
     "2026-10-30: reconcile-catchup(8edf94b)의 customer-payment-retry가 첫 실행(10-29 23:56)에서 1건 실패했다(정지 카드 재시도 허용이 true). 같은 sha에서 DB를 새로 띄워 두 번 다시 돌려 모두 통과했다. 카드 인증 시각은 PG 대역의 호스트 시계, 실패 시각은 컨테이너 DB 시계라 두 시계 차이로 보이며 이 브랜치의 대사 코드와 관계없다.",
     "2026-10-30: 점검 중 main이 움직였다(#471, 이어서 #472~#477, #479, #482, #484, #487, #489, #490이 마지막 push sha 그대로 머지됨). env-ui는 #471 판 environment-cycle을 얹으면 옛 '결제 환경' 문구로 실패해, 지침(나중에 머지하는 PR이 main을 받는다)대로 main을 받아 풀었다. 충돌은 environment-cycle 명세(8e8acaa)와 workspace-actions.ts(f062667)의 import 한 줄씩이라 둘 다 남겼다. 처음 프롬프트의 '충돌이면 중단'은 박성종 님 지침이 우선이라 따르지 않았다.",
-    "2026-10-30: #486 문인호 님 리뷰 p4(직접 쓴 월을 Enter 없이 조회하거나 Enter로 제출하면 이전 달을 조회)를 받아 월 선택기가 blur와 Enter 때 쓴 월을 먼저 확정하게 고쳤다(ad54b89). env-ui(f062667)와 month-picker(b19d150)는 새 main을 받은 sha에서 다시 점검해 실화면 명세 12개와 화면 비교가 통과했고, 옛 sha의 점검은 대체했다."
+    "2026-10-30: #486 문인호 님 리뷰 p4(직접 쓴 월을 Enter 없이 조회하거나 Enter로 제출하면 이전 달을 조회)를 받아 월 선택기가 blur와 Enter 때 쓴 월을 먼저 확정하게 고쳤다(ad54b89). env-ui(f062667)와 month-picker(b19d150)는 새 main을 받은 sha에서 다시 점검해 실화면 명세 12개와 화면 비교가 통과했고, 옛 sha의 점검은 대체했다.",
+    "2026-10-30T10:46:43+09:00 이어 하기(main 기준 2차): state.json branches에서 main에 squash 머지된 주제 브랜치 14개(#472~#477, #479, #481, #482, #484, #486, #487, #489, #490, GitHub에서 자동 삭제)를 빼고 main을 be62d91로 고쳤다. 남은 것은 열린 PR 다섯 개(#478 ops-metrics, #480 e2e, #483 demo-web-target, #485 auth-session, #494 ci-tests)의 브랜치다. 시작 점검은 Docker(OrbStack)가 꺼져 있어 세션이 orb start로 켠 뒤 통과했다.",
+    "2026-10-30T10:47:14+09:00 보고 검사 오류 22건 정리: 리뷰 p4 반영 기록 9항목의 evidence를 부록 A 형식('<시험 이름>: 실패 <출력>')으로 고쳐 썼고(뜻은 그대로), checks kind 'ci' 2건(GitHub Actions 결과)은 10절 kind가 아니어서 checks에서 빼 메모로 옮기고 10절 static 검사를 그 sha에서 다시 돌려 적었다. 로컬 도구 두 개를 고쳤다(커밋하지 않음): rpush-main.sh가 파이프 끝 grep 대신 check-report-main.mjs의 종료 코드로 멈추게 했고, check-report-main.mjs가 다른 세션의 fix/s456-t-yang-export-error(#497)를 이 보고의 주제 브랜치로 세지 않게 했다.",
+    "fix/s456-t-yang-ci-tests a9ce8d1 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40868392114): backend, demo, deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(2db50b4, #481이 고침)",
+    "fix/s456-t-yang-ci-tests 84c47c7 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40871714563): backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)"
   ],
   "final_checks": [
     {

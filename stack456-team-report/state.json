@@ -1,7 +1,7 @@
 {
   "package": "T-yang",
-  "status": "done",
-  "updated_at": "2026-10-30T00:30:44+09:00",
+  "status": "running",
+  "updated_at": "2026-10-30T10:48:49+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
@@ -340,38 +340,8 @@
   "since_report_push": 0,
   "branches": {
     "main": {
-      "origin_sha": "af15d7f",
-      "local_sha": "af15d7f",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-invoice-retry": {
-      "origin_sha": "59e548e",
-      "local_sha": "59e548e",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-public-invoice": {
-      "origin_sha": "22943db",
-      "local_sha": "22943db",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-lumen": {
-      "origin_sha": "7ed660f",
-      "local_sha": "7ed660f",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-demo-bridge-web": {
-      "origin_sha": "c1ee7a8",
-      "local_sha": "c1ee7a8",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-toss-key": {
-      "origin_sha": "f7eb389",
-      "local_sha": "f7eb389",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-audit-env": {
-      "origin_sha": "04c93d9",
-      "local_sha": "04c93d9",
+      "origin_sha": "be62d91",
+      "local_sha": "be62d91",
       "unpushed": []
     },
     "fix/s456-t-yang-ops-metrics": {
@@ -379,24 +349,9 @@
       "local_sha": "6152c0b",
       "unpushed": []
     },
-    "fix/s456-t-yang-readme": {
-      "origin_sha": "6da19c6",
-      "local_sha": "6da19c6",
-      "unpushed": []
-    },
     "fix/s456-t-yang-e2e": {
       "origin_sha": "b78630c",
       "local_sha": "b78630c",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-env-ui": {
-      "origin_sha": "f062667",
-      "local_sha": "f062667",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-backend-cleanup": {
-      "origin_sha": "6b954c5",
-      "local_sha": "6b954c5",
       "unpushed": []
     },
     "fix/s456-t-yang-demo-web-target": {
@@ -404,34 +359,9 @@
       "local_sha": "a34c969",
       "unpushed": []
     },
-    "fix/s456-t-yang-frontend-cleanup": {
-      "origin_sha": "395d4b7",
-      "local_sha": "395d4b7",
-      "unpushed": []
-    },
     "fix/s456-t-yang-auth-session": {
       "origin_sha": "b562b3f",
       "local_sha": "b562b3f",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-month-picker": {
-      "origin_sha": "b19d150",
-      "local_sha": "b19d150",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-sidebar-nav": {
-      "origin_sha": "63a0b57",
-      "local_sha": "63a0b57",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-pricing-archive": {
-      "origin_sha": "a937f8f",
-      "local_sha": "a937f8f",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-reconcile-catchup": {
-      "origin_sha": "8edf94b",
-      "local_sha": "8edf94b",
       "unpushed": []
     },
     "fix/s456-t-yang-ci-tests": {
