@@ -53,7 +53,7 @@
     {
       "id": 38,
       "type": "timeseries",
-      "title": "수집 API 초당 요청 수 (POST /v1/events)",
+      "title": "수집 API 초당 요청 수 (POST /v1/events, /v1/event-batches)",
       "description": "수집 API가 1초에 몇 번 불렸나. 같은 시간대의 처리 시간, p99, CPU 패널과 나란히 본다.",
       "gridPos": {
         "h": 8,
@@ -68,8 +68,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/v1/events\",method=\"POST\"}[1m]))",
-          "legendFormat": "요청"
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m]))",
+          "legendFormat": "{{uri}}"
         }
       ],
       "fieldConfig": {
@@ -92,7 +92,7 @@
     {
       "id": 39,
       "type": "timeseries",
-      "title": "수집 API 평균 처리 시간 (POST /v1/events)",
+      "title": "수집 API 평균 처리 시간 (POST /v1/events, /v1/event-batches)",
       "description": "수집 요청 한 건을 처리하는 데 평균 몇 초 걸렸나. 왼쪽 요청 수가 늘 때 같이 느는지 본다.",
       "gridPos": {
         "h": 8,
@@ -107,8 +107,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_server_requests_seconds_sum{uri=\"/v1/events\",method=\"POST\"}[1m])) / sum(rate(http_server_requests_seconds_count{uri=\"/v1/events\",method=\"POST\"}[1m]))",
-          "legendFormat": "평균"
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m])) / sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m]))",
+          "legendFormat": "{{uri}} 평균"
         }
       ],
       "fieldConfig": {
@@ -131,7 +131,7 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "수집 API 응답 p99 (POST /v1/events)",
+      "title": "수집 API 응답 p99 (POST /v1/events, /v1/event-batches)",
       "description": "서버가 받은 뒤 저장하고 응답할 때까지. 지금 구조는 요청 안에서 저장하므로 이 값이 곧 서버 쪽 저장 지연이다. 커넥션 쥔 시간과 비교해 DB 몫이 크면 아래 2, 3단계 행을 본다.",
       "gridPos": {
         "h": 8,
@@ -146,13 +146,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/events\",method=\"POST\"}[5m])))",
-          "legendFormat": "p99"
+          "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])))",
+          "legendFormat": "{{uri}} p99"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/events\",method=\"POST\"}[5m])))",
-          "legendFormat": "p50"
+          "expr": "histogram_quantile(0.50, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])))",
+          "legendFormat": "{{uri}} p50"
         }
       ],
       "fieldConfig": {
@@ -190,8 +190,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum(rate(http_server_requests_seconds_count{uri=\"/v1/events\",method=\"POST\",status=~\"5..\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{uri=\"/v1/events\",method=\"POST\"}[5m]))",
-          "legendFormat": "5xx %"
+          "expr": "100 * (sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\",status=~\"5..\"}[5m])) or sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])) * 0) / sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m]))",
+          "legendFormat": "{{uri}} 5xx %"
         }
       ],
       "fieldConfig": {

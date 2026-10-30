@@ -1,6 +1,7 @@
 package com.meterengine.webhook.dto;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 public record WebhookClaim(
@@ -41,5 +42,10 @@ public record WebhookClaim(
         attemptCount,
         lastAttemptedAt,
         null);
+  }
+
+  public boolean sameOrganizationEnvironment(WebhookClaim other) {
+    return organizationId.equals(other.organizationId)
+        && Objects.equals(environmentId, other.environmentId);
   }
 }

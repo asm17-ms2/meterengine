@@ -48,6 +48,38 @@ class OpenApiDocumentTest {
   private static final Set<String> HTTP_METHODS =
       Set.of("get", "put", "post", "delete", "patch", "head", "options", "trace");
 
+  private static final List<String> WORKSPACE_LOOKUPS =
+      List.of(
+          "/v1/customers/search",
+          "/v1/billable-metrics/search",
+          "/v1/billable-metric-prices/search",
+          "/v1/usage/search",
+          "/v1/invoices/draft/search",
+          "/v1/invoices/search",
+          "/v1/customers/options",
+          "/v1/billable-metrics/options",
+          "/v1/usage/months",
+          "/v1/invoices/months",
+          "/v1/billable-metric-prices/months");
+  private static final List<String> WORKSPACE_EXPORTS =
+      List.of(
+          "/v1/customers/export",
+          "/v1/billable-metrics/export",
+          "/v1/billable-metric-prices/export",
+          "/v1/usage/export",
+          "/v1/invoices/draft/export",
+          "/v1/invoices/export");
+  private static final List<String> CUSTOMER_CHECKED_SEARCHES =
+      List.of(
+          "/v1/billable-metric-prices/search",
+          "/v1/billable-metric-prices/export",
+          "/v1/usage/search",
+          "/v1/usage/export",
+          "/v1/invoices/draft/search",
+          "/v1/invoices/draft/export",
+          "/v1/invoices/search",
+          "/v1/invoices/export");
+
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -184,6 +216,155 @@ class OpenApiDocumentTest {
       List<String> documented = new ArrayList<>();
       eventTypes.path("items").path("enum").forEach(value -> documented.add(value.asText()));
       assertThat(documented).as(request).containsExactlyInAnyOrderElementsOf(accepted);
+    }
+  }
+
+  @Test
+  void 고객_등록은_보관한_외부_ID의_409와_조회_권한_없는_재등록의_빈_값을_문서화한다() {
+    JsonNode responses = root().path("paths").path("/v1/customers").path("post").path("responses");
+    assertErrorResponse(responses, "409", "code=customer_archived");
+    assertThat(responses.path("200").path("description").asText()).contains("read");
+  }
+
+  @Test
+  void 조회_권한_없는_재등록에서_비우는_고객_필드는_null을_허용한다() {
+    JsonNode properties =
+        root().path("components").path("schemas").path("CustomerResponse").path("properties");
+    for (String field : List.of("name", "billing_email", "created_at", "archived_at")) {
+      List<String> types = new ArrayList<>();
+      properties.path(field).path("type").forEach(type -> types.add(type.asText()));
+      assertThat(types).as(field).contains("null");
+    }
+  }
+
+  @Test
+  void 검색_결과_CSV는_바이트가_아닌_문자열로_문서화한다() {
+    for (String path : WORKSPACE_EXPORTS) {
+      JsonNode schema =
+          getResponses(path).path("200").path("content").path("text/csv").path("schema");
+      assertThat(schema.path("type").asText()).as(path).isEqualTo("string");
+      assertThat(schema.has("format")).as(path).isFalse();
+    }
+  }
+
+  @Test
+  void 작업_공간_조회는_잘못된_조건의_400을_문서화한다() {
+    List<String> paths = new ArrayList<>(WORKSPACE_LOOKUPS);
+    paths.addAll(WORKSPACE_EXPORTS);
+    for (String path : paths)
+      assertErrorResponse(getResponses(path), "400", "code=validation_error");
+  }
+
+  @Test
+  void 검색_결과_CSV의_400은_10000행_상한을_적는다() {
+    for (String path : WORKSPACE_EXPORTS)
+      assertThat(getResponses(path).path("400").path("description").asText())
+          .as(path)
+          .contains("10000");
+  }
+
+  @Test
+  void 고객을_확인하는_검색과_CSV는_없는_고객의_404를_문서화한다() {
+    for (String path : CUSTOMER_CHECKED_SEARCHES)
+      assertErrorResponse(getResponses(path), "404", "code=customer_not_found");
+  }
+
+  @Test
+  void 고객과_미터_수정은_버전_충돌_409와_If_Match_형식_400을_문서화한다() {
+    for (String path : List.of("/v1/customers/{id}", "/v1/billable-metrics/{code}")) {
+      for (String method : List.of("put", "patch")) {
+        JsonNode responses = root().path("paths").path(path).path(method).path("responses");
+        assertErrorResponse(responses, "409", "code=resource_version_conflict");
+        assertErrorResponse(responses, "400", "If-Match");
+        assertThat(responses.has("404")).as("%s %s 404", method, path).isTrue();
+      }
+    }
+  }
+
+  @Test
+  void 멱등_생성은_재시도_키_충돌_409와_재생_헤더를_문서화한다() {
+    for (String path : List.of("/v1/customers", "/v1/billable-metrics")) {
+      JsonNode responses = root().path("paths").path(path).path("post").path("responses");
+      assertErrorResponse(responses, "409", "code=idempotency_conflict");
+      assertErrorResponse(responses, "400", "Idempotency-Key");
+      assertThat(responses.path("201").path("headers").has("Idempotency-Replayed"))
+          .as(path)
+          .isTrue();
+    }
+  }
+
+  @Test
+  void 멱등_생성의_재시도_키는_최초_응답을_기한_없이_보관한다고_적는다() {
+    for (String path : List.of("/v1/customers", "/v1/billable-metrics")) {
+      List<String> descriptions = new ArrayList<>();
+      root()
+          .path("paths")
+          .path(path)
+          .path("post")
+          .path("parameters")
+          .forEach(
+              parameter -> {
+                if (parameter.path("name").asText().equals("Idempotency-Key"))
+                  descriptions.add(parameter.path("description").asText());
+              });
+      assertThat(descriptions).as(path).singleElement().asString().contains("기한 없이");
+    }
+  }
+
+  @Test
+  void 미터_등록의_400은_조회_경로와_겹쳐_쓸_수_없는_code를_적는다() {
+    JsonNode responses =
+        root().path("paths").path("/v1/billable-metrics").path("post").path("responses");
+    assertErrorResponse(responses, "400", "search", "options", "export");
+  }
+
+  @Test
+  void 결제_취소의_재시도_키는_등록_API와_다른_형식과_재생_규칙을_적는다() {
+    JsonNode operation =
+        root().path("paths").path("/v1/payment-attempts/{id}/cancellations").path("post");
+    assertErrorResponse(operation.path("responses"), "400", "Idempotency-Key");
+    assertThat(operation.path("description").asText())
+        .contains("UUID", "Idempotency-Replayed", "payment_cancellation_idempotency_conflict");
+  }
+
+  @Test
+  void 단가_응답의_tiers는_구간_객체의_배열이다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    for (String schema : List.of("PriceRateResponse", "BillableMetricPricePriceRate")) {
+      JsonNode tiers = schemas.path(schema).path("properties").path("tiers");
+      assertThat(tiers.path("type").asText()).as(schema).isEqualTo("array");
+      assertThat(tiers.path("items").path("$ref").asText())
+          .as(schema)
+          .isEqualTo("#/components/schemas/PriceRateTier");
+    }
+  }
+
+  @Test
+  void 단가_모델과_청구_라인_종류는_서버가_쓰는_값_목록을_적는다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    for (String schema :
+        List.of("PriceRateResponse", "BillableMetricPricePriceRate", "CreatePriceRateRequest")) {
+      List<String> models = new ArrayList<>();
+      schemas
+          .path(schema)
+          .path("properties")
+          .path("model")
+          .path("enum")
+          .forEach(value -> models.add(value.asText()));
+      assertThat(models).as(schema).containsExactlyInAnyOrder("per_unit", "graduated", "volume");
+    }
+    for (String schema : List.of("DraftInvoiceLine", "InvoiceLineResponse")) {
+      List<String> lineTypes = new ArrayList<>();
+      schemas
+          .path(schema)
+          .path("properties")
+          .path("line_type")
+          .path("enum")
+          .forEach(value -> lineTypes.add(value.asText()));
+      assertThat(lineTypes)
+          .as(schema)
+          .containsExactlyInAnyOrder(
+              "per_unit", "volume", "graduated_tier", "base_fee", "minimum_adjustment");
     }
   }
 
@@ -663,6 +844,10 @@ class OpenApiDocumentTest {
   }
 
   // ---------------------------------------------------------------------------
+
+  private JsonNode getResponses(String path) {
+    return root().path("paths").path(path).path("get").path("responses");
+  }
 
   private static void assertErrorResponse(JsonNode responses, String status, String... codes) {
     JsonNode response = responses.path(status);
