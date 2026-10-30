@@ -10,6 +10,7 @@ const OUTPUT = process.env.INVOICE_LINK_EVIDENCE_DIR ?? "/private/tmp/meterengin
 const PASSWORD = "local-invoice-link-e2e-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? "meterengine-0696-e2e";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -51,7 +52,7 @@ function safeFailure(error: unknown, secrets: Set<string>) {
 }
 
 function sql(statement: string) {
-  return execFileSync("docker", ["exec", "-i", "meterengine-0696-e2e", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], {
+  return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], {
     input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"],
   }).trim();
 }
@@ -304,8 +305,8 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     const linkId = (await metadata.json()).invoice_view_links[0].id as string;
     await consolePage.reload();
     await expect(consolePage.getByRole("button", { name: "고객 조회 링크 복사", exact: true })).toHaveCount(0);
-    consolePage.once("dialog", dialog => dialog.accept());
     await consolePage.getByRole("button", { name: "링크 폐기", exact: true }).click();
+    await consolePage.getByRole("dialog").getByRole("button", { name: "링크 폐기", exact: true }).click();
     await expect.poll(async () => (await lookup(request, token)).status()).toBe(404);
     await expect(section.getByText("폐기됨 / 테스트", { exact: true })).toBeVisible();
     await section.screenshot({ path: `${OUTPUT}/console-links-revoked.png` });

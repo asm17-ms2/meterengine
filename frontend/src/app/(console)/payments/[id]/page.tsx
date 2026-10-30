@@ -7,7 +7,7 @@ import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import { InvoiceViewLinks } from "@/components/workspace/InvoiceViewLinks";
-import type { InvoiceViewLink } from "@/lib/invoice-view-links";
+import type { InvoiceViewLinkResponse } from "@/lib/invoice-view-links";
 import { paymentReadiness } from "./card-state";
 import { INVOICE_PAYMENT_STATUS_LABELS } from "@/lib/invoice-payment-status";
 
@@ -36,7 +36,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   if (!cancellations.ok) return <section className="workspace-panel">
     <h2>승인 결제 취소</h2>
     <p className="field-hint">{formatKstDateTime(attempt.requested_at)} 승인 / {attempt.mode === "test" ? "테스트 결제" : "실결제"}</p>
-    <WorkspaceError message={cancellations.error.message} />
+    <WorkspaceError message={cancellations.error.message} status={cancellations.error.status} />
     <p className="muted">취소 내역을 확인한 뒤 새로 요청할 수 있습니다.</p>
   </section>;
 
@@ -76,7 +76,7 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
         {hasPending ? <p role="status"><strong>취소 결과 확인 중</strong><br />진행 중인 취소가 확정될 때까지 추가로 취소할 수 없습니다. 내역을 새로 조회해 주세요.</p>
           : isFullyCanceled ? <p role="status"><strong>전액 취소 완료</strong><br />이 승인 결제에서 추가로 취소할 금액이 없습니다.</p> : null}
       </>}
-    <WorkspaceTable rows={rows.map(row => ({ ...row, requested_at: formatKstDateTime(row.requested_at) }))}
+    <WorkspaceTable label={formatKstDateTime(attempt.requested_at) + " 승인 결제의 취소 내역"} rows={rows.map(row => ({ ...row, requested_at: formatKstDateTime(row.requested_at) }))}
       columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "취소액", isMoney: true }, { key: "reason", label: "사유" }]}
       empty="이 승인 결제에 요청한 취소가 없습니다." />
   </section>;
@@ -99,7 +99,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   const [invoice, attempts, viewLinks] = await Promise.all([
     workspaceFetch<InvoiceResponse>("/v1/invoices/" + encodeURIComponent(id)),
     workspaceFetch<{ payment_attempts: PaymentAttemptResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/payment-attempts"),
-    workspaceFetch<{ invoice_view_links: InvoiceViewLink[] }>("/v1/invoices/" + encodeURIComponent(id) + "/view-links"),
+    workspaceFetch<{ invoice_view_links: InvoiceViewLinkResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/view-links"),
   ]);
   if (!invoice.ok || !attempts.ok) {
     const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
@@ -110,7 +110,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   });
   const currentPayment = payments.ok ? payments.data.invoice_payments.find(payment => payment.invoice_id === id) : undefined;
   const [card, keys] = await Promise.all([
-    workspaceFetch<{ card_number: string }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
+    workspaceFetch<{ card_number: string; archived_at: string | null }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
     workspaceFetch<{ toss_payments_credentials: { mode: string }[] }>("/v1/toss-payments-credentials"),
   ]);
   const readiness = paymentReadiness(currentPayment?.mode, keys, card);
@@ -134,11 +134,11 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
           description={(currentPayment?.mode === "test" ? "테스트 결제: " : "실결제: ") + invoice.data.customer_name + "의 " + formatKrw(invoice.data.total_amount) + "을 " + (card.ok ? "등록 카드(" + card.data.card_number + ")로" : "등록 카드로") + " 청구합니다. 결과가 불확실한 이전 시도는 먼저 조회합니다."}
           fields={[{ name: "id", type: "hidden", label: "", value: id }]} />}
       </div>
-      {!payments.ok ? <WorkspaceError message={payments.error.message} />
+      {!payments.ok ? <WorkspaceError message={payments.error.message} status={payments.error.status} />
         : !currentPayment || !state ? <WorkspaceError message="현재 결제 상태를 확인하지 못했습니다. 내역을 다시 조회해 주세요." />
           : <><p role="status"><strong>{currentPayment.mode === "test" ? "테스트 결제" : "실결제"} / {state.label}</strong></p><p className="muted">{canCollect && readiness === "card-missing" ? "결제 모드에 맞는 등록 카드가 없어 결제를 요청할 수 없습니다. 카드 등록 링크를 만들어 고객에게 전달하세요." : canCollect && readiness === "key-missing" ? "결제 모드의 토스페이먼츠 키가 없어 결제를 요청할 수 없습니다. 설정에서 키를 저장하세요." : state.description}</p></>}
       <h3>결제 시도 기록</h3>
-      <WorkspaceTable rows={attempts.data.payment_attempts.map(attempt => ({ ...attempt, requested_at: formatKstDateTime(attempt.requested_at) }))}
+      <WorkspaceTable label="결제 시도 기록" rows={attempts.data.payment_attempts.map(attempt => ({ ...attempt, requested_at: formatKstDateTime(attempt.requested_at) }))}
         columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "결제 모드" }, { key: "failure_message", label: "실패 사유" }]} />
     </section>
     {attempts.data.payment_attempts.filter(attempt => attempt.status === "done").map(attempt => <CancellationHistory key={attempt.id} attempt={attempt} />)}

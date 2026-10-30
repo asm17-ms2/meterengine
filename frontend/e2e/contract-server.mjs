@@ -41,6 +41,8 @@ const server = createServer(async (req, res) => {
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
     if (body.suspend) { const entry = sessions.get(body.suspend); if (entry) entry.organization = organizations[2]; }
     if (typeof body.outage === "boolean") outage = body.outage;
+    if (body.archiveCustomers) for (const customer of customers) customer.archived_at = new Date().toISOString();
+    if (typeof body.renameCustomersElsewhere === "string") for (const customer of customers) Object.assign(customer, { name: body.renameCustomersElsewhere, version: customer.version + 1 });
     result = { status: 200, body: {} };
   } else if (path === "/__requests") result = { status: 200, body: requests };
   else {
@@ -86,6 +88,15 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/customers") {
       if (req.method === "POST") { const customer = { id: crypto.randomUUID(), name: body.name, external_id: body.external_id ?? null, version: 0, billing_email: body.billing_email, created_at: new Date().toISOString() }; customers.push(customer); result = { status: 201, body: customer }; }
       else result = { status: 200, body: { customers } };
+    } else if (req.method === "POST" && customers.some(customer => path === `/v1/customers/${customer.id}/restorations`)) {
+      const customer = customers.find(candidate => path === `/v1/customers/${candidate.id}/restorations`);
+      customer.archived_at = null;
+      result = { status: 200, body: customer };
+    } else if (customers.some(customer => path === `/v1/customers/${customer.id}`)) {
+      const customer = customers.find(candidate => path === `/v1/customers/${candidate.id}`);
+      if (req.method !== "PATCH") result = { status: 200, body: customer };
+      else if (req.headers["if-match"] !== `"${customer.version}"`) result = failure(409, "resource_version_conflict", "다른 요청이 변경한 항목입니다. 다시 조회한 뒤 수정하세요");
+      else { Object.assign(customer, { name: body.name, billing_email: body.billing_email, version: customer.version + 1 }); result = { status: 200, body: customer }; }
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
     else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };

@@ -131,7 +131,7 @@ export function BillableMetricsTable({
       fixed: "end",
       render: (_, row) => (
         <Flex justify="end" gap={4}>
-          {row.archivedAt ? <ActionPanel title="미터 복원" operation="restoreBillableMetric" description={`${row.name} 미터를 다시 사용합니다. 적용 월과 과거 사용량은 보존됩니다.`} fields={[{ name: "code", label: "", type: "hidden", value: row.code }]} /> : <><Button
+          {row.archivedAt ? <ActionPanel title="미터 복원" triggerType="link" operation="restoreBillableMetric" description={`${row.name} 미터를 다시 사용합니다. 적용 월과 과거 사용량은 보존됩니다.`} fields={[{ name: "code", label: "", type: "hidden", value: row.code }]} /> : <><Button
             type="link"
             size="small"
             aria-label={`${row.name} 수정`}

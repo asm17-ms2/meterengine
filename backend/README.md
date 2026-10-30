@@ -108,6 +108,7 @@ docker build -t meterengine-backend .
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
 - API 키는 로그인 관리 권한으로 발급, 폐기와 스코프를 변경한다. 조회 세션은 메타데이터만 읽고 API 키 자체는 키 관리 API를 부를 수 없다. 키의 권한 변경은 같은 원문으로 다음 요청부터 반영하며, 폐기하거나 만료된 키는 변경할 수 없다. 원문, 수명, 모드와 레이트 한도는 유지한다.
 - 원문은 발급 응답에만 나오고 다시 볼 수 없다(서버는 해시만 둔다).
+- 토스페이먼츠 키 저장과 보관, 결제 모드 변경도 로그인 관리 권한으로만 한다. API 키로는 부를 수 없다.
 - 업무 환경은 `X-MeterEngine-Environment: test|live`로 지정한다. 생략하면 기존 데이터 범위다. 새 환경 키는 발급 환경에 고정되며 헤더를 생략해도 그 환경을 쓴다. 다른 환경을 명시하면 거절한다. 기존 키의 test/live 접두사는 격리를 뜻하지 않으며 기존 키로 새 환경에 접근할 수 없다.
 - 고객, 수집, 미터와 가격, 집계와 청구, 카드와 결제, 공급자 설정, 웹훅과 메일 기록, 업무 감사와 진단을 환경별로 분리한다. 같은 고객 외부 ID, 미터 코드, 거래 ID와 멱등키를 각 환경에서 독립적으로 사용할 수 있다. 계정과 소속, 사용자 권한은 도입사 공통이다. 소속, 초대, 권한, 세션과 계정의 감사 기록은 환경을 붙이지 않고 모든 환경의 감사 조회에 함께 보인다.
 - 테스트 환경은 테스트 PG 키만, 실제 환경은 실제 PG 키만 사용한다. 등록 링크, 결제, 취소, 콜백과 예약 작업은 기록에 저장한 환경과 PG 키 버전을 사용한다. 해당 환경의 키가 없으면 결제를 거절한다.
@@ -247,7 +248,7 @@ unset SESSION
 - `errors`는 400에만 실리고 비면 나가지 않는다. `field`는 도입사가 보낸 이름이다.
 - 인증, 권한, 한도 오류도 같은 형식이다.
   - 401 `authentication_required`: Authorization 헤더가 없다. `invalid_credentials`: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다. 로그인 실패도 같다. 401에는 `WWW-Authenticate: Bearer`가 붙는다.
-  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다.
+  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다. 관리자나 운영자가 만든 계정은 이 동의 요청에 `new_password`를 실어 처음 받은 비밀번호를 바꾸고, 그때 다른 세션은 끝난다.
   - 429 `rate_limit_exceeded`: API 키의 분당 요청 한도를 넘었다. `Retry-After` 헤더의 초만큼 기다린 뒤 다시 보낸다.
 - 한도는 키마다 인스턴스별로 센다. 발급 시 `rate_limit_per_minute`를 양수로 지정하고, 생략하거나 null이면 무제한이다. 로그인 세션은 세지 않는다.
 - code 값의 정본은 `ErrorCode` enum이고 목록은 `openapi.yaml`이 낸다.
@@ -281,13 +282,14 @@ unset SESSION
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
-- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽는다(`payment` -> `invoice`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`).
+- `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽고, 토스 시크릿 키와 빌링키는 `global.crypto`로 암호화해 저장한다(`payment` -> `invoice`, `global.crypto`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`).
 - 인증은 키와 세션 검증을 `apikey`, `account`에, 도입사 상태를 `organization`에 묻는다(`global.security` -> `apikey`, `account`, `organization`). 로그인, 가입, 사용자 목록, 부트스트랩은 도입사를 `organization`에서 읽거나 넣고, 부트스트랩은 콘솔 키를 `apikey`에 넣는다(`account` -> `organization`, `apikey`). 소속 추가는 사용자를 확인한다(`organization` -> `account`).
-- 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다.
+- 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다. 결제 수는 live 결제만, 웹훅 실패 수는 test 환경 전송을 빼고 센다. 웹훅 전송 지표 `meterengine.webhook.delivery`는 `environment`(legacy, test, live) 태그를 붙인다.
 
 ### 웹훅
 
 - 엔드포인트는 도입사의 환경마다 10개까지 등록한다. 서명 비밀값(`whsec_`)은 등록 응답에만 나온다.
+- 통보는 Standard Webhooks 서명을 쓰고, 수신 측은 중복과 순서 변경을 전제로 받는다. 시험 통보의 202는 발송 대기 등록이며 전달 완료가 아니다.
 - 통보는 `webhook-id`, `webhook-timestamp`, `webhook-signature` 헤더와 `User-Agent: MeterEngine-Webhooks/1.0`을 싣는다. 수신 측 방화벽의 허용 목록에는 이 User-Agent를 쓴다.
 - 발송 작업은 30초마다 돌고 한 번에 최대 100건, 15초까지 보낸다. 시도마다 전송을 2분 선점한다.
 - 전송은 한 건씩 차례로 보낸다. 한 건을 최대 15초까지 기다리므로 응답하지 않는 수신 주소 하나가 실행 하나를 다 쓸 수 있다. 실행 안에서는 도입사 환경마다 돌아가며 꺼내, 한 도입사에 쌓인 전송이 다른 도입사의 통보를 계속 밀어내지 않게 한다.
@@ -306,6 +308,7 @@ unset SESSION
 - V41은 기존 인보이스에도 고유한 표시 번호를 부여하고, 조회 링크의 토큰 해시, 만료와 폐기, 발급 당시 결제 모드를 저장한다. 공개 조회 감사는 토큰 대신 링크 ID를 행위자로 남긴다.
 - V44는 링크의 고객 결제 재시도 권한을 추가한다. 기존 링크와 옵션을 생략한 새 링크는 모두 조회만 허용한다.
 - V27은 사용자 소속과 초대에 권한을 저장한다. 기존 소속과 미수락 초대는 관리 권한을 보존하며, 새 API 요청에서 권한을 생략하면 조회만 허용한다.
+- V53은 확정 라인에 그때의 미터 이름(`billable_metric_name`)을 남긴다. 미터 이름을 바꿔도 확정한 인보이스와 고객용 공개 청구서의 항목명은 그대로다. V53 전에 확정한 라인은 이름이 비어 있어 공개 청구서가 미터 코드로 보인다.
 - V45는 도입사마다 test, live 업무 환경을 만들고 기존 키, 고객, 이벤트와 감사 기록은 환경 없는 기존 데이터 범위로 둔다. 고객 `external_id` 고유 인덱스와 이벤트 기본키를 환경 범위로 바꾼다.
 
 ## 요금과 결제 연동
@@ -325,18 +328,16 @@ unset SESSION
 
 | 설정 | 기본값과 용도 |
 | --- | --- |
-| `CRYPTO_ENCRYPTION_KEY` | 32바이트 base64 암호화 키. 운영 기본값 없음. 변경 시 기존 토스 키와 빌링키를 읽을 수 없으므로 같은 값을 보존한다 |
 | `payment.retry-max-attempts`, `payment.retry-interval` | 3회, 24시간 |
 | `payment.confirmation-delay`, `payment.not-found-failure-delay` | 2분, 10분. 결과가 불명확한 시도는 재조회한다 |
 | `payment.reconciliation-lag` | 10분 |
-| `meterengine.webhook.allow-private-network` | 기본 false, local과 test는 true. 사설망 수신 허용은 격리 검증에만 사용한다 |
 | `meterengine.notification.unbilled-usage-cron` | 매일 09:00 KST. `UNBILLED_USAGE_REPORT_CRON`으로 변경 가능 |
 
-- 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST, 웹훅 발송 30초다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
+- 토스 키와 빌링키를 암호화하는 `CRYPTO_ENCRYPTION_KEY`와 사설망 웹훅 허용은 [설정](#설정)에 있다.
+- 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST다. 웹훅 발송 주기와 재전송은 [웹훅](#웹훅)에 있다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
 - 대사는 보통 직전 하루를 맞춘다. 실패하거나 항목이 실패했거나 빠진 날이 있으면 마지막으로 실패 없이 끝난 대사 슬롯부터 이어서 맞추고(그런 슬롯이 없으면 가장 이른 대사 실행의 창부터), 최대 7일 전까지 본다. 같은 불일치는 다시 돌려도 한 줄만 남는다.
 - 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 그 취소를 지금 상태로 반환하고 다른 내용이면 409 `payment_cancellation_idempotency_conflict`다. 고객과 미터 등록의 키와 달리 UUID만 받고 `Idempotency-Replayed` 헤더를 붙이지 않는다.
 - 결제 결과가 미확인인 상태를 실패로 단정하지 않는다. 7일을 넘긴 불확실한 이전 주문은 새 주문으로 자동 청구하지 않는다.
-- 웹훅은 Standard Webhooks 서명을 쓰고 중복과 순서 변경을 전제로 수신한다. 시험 통보의 202는 발송 대기 등록이며 전달 완료가 아니다. 실패한 통보는 같은 `webhook-id`로 재전송한다.
 - 인보이스 메일은 저장 기록과 실제 발송을 구분한다. 전자세금계산서 발행은 구현 범위에 포함하지 않는다.
 
 ## 문제 해결

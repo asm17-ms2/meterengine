@@ -122,6 +122,12 @@ const server = createServer(async (request, response) => {
         return send(response, 200, { invoices });
       }
     }
+    if (current.scenario === "failed-payments") {
+      const statuses = ["failed", "failed", "paid"];
+      const invoiceId = index => `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`;
+      if (path === "/v1/invoices") return send(response, 200, { invoices: statuses.map((_, index) => ({ ...invoice, id: invoiceId(index), customer_name: `다른 고객의 확정 청구 ${index}` })) });
+      if (path === "/v1/invoice-payments") return send(response, 200, { invoice_payments: statuses.map((status, index) => ({ invoice_id: invoiceId(index), status, mode: "test", amount: 11_000, canceled_amount: 0, attempt_count: 1, last_failure_code: status === "failed" ? "CARD_DECLINED" : null, next_retry_at: null, completed_at: NOW })) });
+    }
     if (path === "/v1/invoice-payments") {
       const canceledAmount = current.cancellations.filter(cancellation => cancellation.status === "done").reduce((total, cancellation) => total + cancellation.amount, 0);
       return send(response, 200, { invoice_payments: [{ invoice_id: INVOICE_ID, status: canceledAmount === attempt.amount ? "canceled" : canceledAmount > 0 ? "partially_canceled" : "paid", mode: "test", amount: attempt.amount, canceled_amount: canceledAmount, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: NOW }] });
@@ -172,7 +178,7 @@ const server = createServer(async (request, response) => {
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}`) return send(response, 200, { id: ENDPOINT_ID, url: "https://receiver.contract.local/webhook", enabled: true, event_types: ["payment_succeeded"], description: null, archived_at: null });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries`) return send(response, 200, {
       page: 0, size: 20, total: 1,
-      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: 6, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
+      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: current.deliveryStatus === "failed" ? 6 : 0, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
     });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries/${DELIVERY_ID}/retries` && request.method === "POST") {
       current.retryCalls++;

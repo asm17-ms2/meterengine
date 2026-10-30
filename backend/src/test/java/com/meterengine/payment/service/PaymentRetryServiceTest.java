@@ -540,15 +540,16 @@ class PaymentRetryServiceTest {
   }
 
   @Test
-  void 키를_보관했으면_키_버전을_고정한_실패_시도도_다시_하지_않고_skipped로_센다() {
+  void 키를_보관했으면_키_버전을_고정한_실패_시도도_다시_하지_않고_skipped로_센다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
-    failedAttempt(
-        organization,
-        invoiceId,
-        RETRYABLE_FAILURE_CODE,
-        Duration.ofHours(25),
-        OffsetDateTime.parse("2026-10-01T00:00:00Z"));
+    UUID failedAttemptId =
+        failedAttempt(
+            organization,
+            invoiceId,
+            RETRYABLE_FAILURE_CODE,
+            Duration.ofHours(25),
+            OffsetDateTime.parse("2026-10-01T00:00:00Z"));
     jdbcTemplate.update(
         "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
         organization.organizationId());
@@ -557,13 +558,20 @@ class PaymentRetryServiceTest {
 
     assertNotRetried(organization, invoiceId, 1);
     assertThat(result.skippedCount()).isPositive();
+    assertSkipped(
+        output,
+        failedAttemptId,
+        "payment retry skipped: failed_attempt_id="
+            + failedAttemptId
+            + ", mode=test, reason=toss_payments_credential_missing");
   }
 
   @Test
-  void 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다() {
+  void 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다(CapturedOutput output) {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
-    failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
+    UUID failedAttemptId =
+        failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
     when(tossPaymentsClient.findPaymentByOrderId(eq(organization.secretKey()), anyString()))
         .thenAnswer(
             invocation -> {
@@ -577,6 +585,12 @@ class PaymentRetryServiceTest {
 
     assertNotRetried(organization, invoiceId, 1);
     assertThat(result.skippedCount()).isPositive();
+    assertSkipped(
+        output,
+        failedAttemptId,
+        "payment retry skipped: failed_attempt_id="
+            + failedAttemptId
+            + ", mode=test, reason=toss_payments_credential_missing");
   }
 
   @Test

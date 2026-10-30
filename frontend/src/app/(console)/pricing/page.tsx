@@ -36,7 +36,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
     searchBillableMetricPrices({ ...query, customerId: undefined, metricCode: selectedCode, q: "", sort: "code", order: "asc", page: 0 }),
     listPriceRates(selectedCode, customerId, "all"),
   ]) : [null, null, null];
-  const metrics: PricingMetric[] = prices.data.items.map(metric => selectedMetric?.ok && selectedMetric.data.code === metric.billable_metric_code ? selectedMetric.data : ({ code: metric.billable_metric_code, name: metric.billable_metric_name, dimension_properties: metric.dimension_properties, archived_at: metric.archived_at, rate_count: metric.rate_count }));
+  const metrics: PricingMetric[] = prices.data.items.map(metric => selectedMetric?.ok && selectedMetric.data.code === metric.billable_metric_code ? { ...selectedMetric.data, rate_count: metric.rate_count } : ({ code: metric.billable_metric_code, name: metric.billable_metric_name, dimension_properties: metric.dimension_properties, archived_at: metric.archived_at, rate_count: metric.rate_count }));
   const customers: PricingCustomer[] = customerOptions.data.items.map(option => ({ id: option.value, name: option.label, is_archived: option.archived }));
   if (customerId && !customers.some(customer => customer.id === customerId)) {
     const selected = await serverFetch<CustomerResponse>(config.apiBaseUrl, `/v1/customers/${encodeURIComponent(customerId)}`);

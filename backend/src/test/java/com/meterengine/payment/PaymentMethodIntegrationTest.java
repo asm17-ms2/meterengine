@@ -17,6 +17,7 @@ import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.entity.BillingKey;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
+import com.meterengine.payment.repository.PaymentArchiveRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -53,6 +54,7 @@ class PaymentMethodIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private BillingKeyRepository billingKeyRepository;
+  @Autowired private PaymentArchiveRepository paymentArchiveRepository;
   @Autowired private TossPaymentsCredentialRepository tossPaymentsCredentialRepository;
   @Autowired private DataSource dataSource;
 
@@ -150,6 +152,33 @@ class PaymentMethodIntegrationTest {
         .hasStatus(200)
         .bodyJson()
         .isStrictlyEqualTo("{\"payment_methods\": []}");
+  }
+
+  @Test
+  void 카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    UUID otherCustomerId = insertCustomer(organizationId);
+    insertBillingKey(organizationId, customerId, "test", "key0001", "61", "4330****");
+    insertBillingKey(organizationId, otherCustomerId, "test", "key0002", "41", "5365****");
+    paymentArchiveRepository.method(organizationId, customerId, "test");
+    paymentArchiveRepository.method(organizationId, otherCustomerId, "test");
+
+    MvcTestResult listed =
+        withOrganization(
+                mvc.get()
+                    .uri("/v1/payment-methods")
+                    .param("status", "all")
+                    .param("customer_id", customerId.toString()),
+                organizationId)
+            .exchange();
+
+    assertThat(listed)
+        .hasStatus(200)
+        .bodyJson()
+        .extractingPath("$.payment_methods[*].customer_id")
+        .asArray()
+        .containsExactly(customerId.toString(), customerId.toString());
   }
 
   @Test

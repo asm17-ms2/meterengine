@@ -8,10 +8,15 @@ const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.PERMISSIONS_FRONTEND_URL ?? "http://localhost:33147";
 const OUTPUT = process.env.PERMISSIONS_EVIDENCE_DIR ?? "/private/tmp/meterengine-permissions-2026-10-27";
 const PASSWORD = "local-permissions-e2e-password";
+const CHANGED_PASSWORD = "local-permissions-e2e-own-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const BACKEND_ENV_FILE = process.env.E2E_BACKEND_ENV_FILE ?? "/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json";
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? "meterengine-0696-e2e";
 const SECRET_GROUPS: Set<string>[] = [];
 const CONSENTS = CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION }));
+// 직접 생성한 계정은 첫 동의에서 비밀번호를 바꾸므로 다음 로그인은 바뀐 비밀번호로 한다.
+const CONSENTED = new Set<string>();
 const READ = /^조회 \(read\):/;
 const INGEST = /^수집 \(ingest\):/;
 const ADMIN = /^전체 관리 \(admin\):/;
@@ -34,7 +39,7 @@ test.beforeAll(() => {
     const url = new URL(value);
     if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) throw new Error("권한 검증은 로컬 HTTP 서버에서만 실행합니다.");
   }
-  const env = JSON.parse(readFileSync("/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json", "utf8"));
+  const env = JSON.parse(readFileSync(BACKEND_ENV_FILE, "utf8"));
   if (env.TOSSPAYMENTS_BASE_URL !== "http://127.0.0.1:38447") throw new Error("격리된 PG 대역 설정을 확인하지 못했습니다.");
 });
 test.afterAll(() => {
@@ -46,7 +51,7 @@ test.afterAll(() => {
   else process.env.PLAYWRIGHT_NO_COPY_PROMPT = previousCopyPrompt;
 });
 
-function newSecrets() { const values = new Set([PASSWORD, OPERATOR_PASSWORD]); SECRET_GROUPS.push(values); return values; }
+function newSecrets() { const values = new Set([PASSWORD, CHANGED_PASSWORD, OPERATOR_PASSWORD]); SECRET_GROUPS.push(values); return values; }
 function safeFailure(error: unknown, secrets: Set<string>) {
   let message = error instanceof Error ? error.stack ?? error.message : "권한 E2E 검증을 마치지 못했습니다.";
   for (const secret of secrets) if (secret) message = message.split(secret).join("[redacted]");
@@ -56,7 +61,7 @@ function result(name: string, value: unknown) { writeFileSync(`${OUTPUT}/${name}
 function authorization(token: string): Headers { return { Authorization: `Bearer ${token}` }; }
 function uuid(value: string) { if (!/^[a-f\d-]{36}$/i.test(value)) throw new Error("검증 UUID가 잘못됐습니다."); return value; }
 function sql(statement: string) {
-  return execFileSync("docker", ["exec", "-i", "meterengine-0696-e2e", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 async function current(request: APIRequestContext, headers: Headers) {
   const response = await request.get(`${API_URL}/v1/sessions/current`, { headers });
@@ -64,13 +69,14 @@ async function current(request: APIRequestContext, headers: Headers) {
   return await response.json() as Session;
 }
 async function login(request: APIRequestContext, email: string, secrets: Set<string>, password = PASSWORD): Promise<Session> {
-  const response = await request.post(`${API_URL}/v1/sessions`, { data: { email, password } });
+  const response = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: CONSENTED.has(email) ? CHANGED_PASSWORD : password } });
   expect(response.status()).toBe(201);
   const session = await response.json() as Session;
   secrets.add(session.token);
   if (session.consent_required) {
-    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: authorization(session.token), data: { consents: CONSENTS } });
+    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: authorization(session.token), data: { consents: CONSENTS, new_password: CHANGED_PASSWORD } });
     expect(accepted.status()).toBe(200);
+    CONSENTED.add(email);
     return { ...await accepted.json(), token: session.token } as Session;
   }
   return session;

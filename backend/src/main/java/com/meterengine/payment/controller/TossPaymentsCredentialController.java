@@ -1,7 +1,6 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
@@ -127,12 +126,14 @@ public class TossPaymentsCredentialController {
   }
 
   @org.springframework.web.bind.annotation.DeleteMapping("/{mode}")
-  @AdminAccess
+  @MemberAdminAccess
   @org.springframework.web.bind.annotation.ResponseStatus(
       org.springframework.http.HttpStatus.NO_CONTENT)
   @Operation(
       summary = "토스페이먼츠 키 보관",
-      description = "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.")
+      description =
+          "새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다. 저장과 같이"
+              + " 로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "보관했다. 본문 없음"),
     @ApiResponse(

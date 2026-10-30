@@ -32,6 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Transactional
 class UserPermissionsIntegrationTest {
   private static final String PASSWORD = "permissions-test-password";
+  private static final String CHANGED_PASSWORD = "permissions-own-password";
   private static final List<Map<String, String>> CONSENTS =
       List.of(
           Map.of("document", "terms_of_service", "document_version", "2026-10-26-preview"),
@@ -73,7 +74,11 @@ class UserPermissionsIntegrationTest {
     assertThat(JsonPath.<String>read(body(created), "$.organization_role")).isEqualTo("member");
     String session = login(email);
     assertThat(get("/v1/sessions/current", session)).hasStatusOk();
-    assertThat(post("/v1/sessions/current/consents", session, Map.of("consents", CONSENTS)))
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                session,
+                Map.of("consents", CONSENTS, "new_password", CHANGED_PASSWORD)))
         .hasStatusOk();
     assertThat(get("/v1/customers", session)).hasStatusOk();
     assertThat(post("/v1/customers", session, Map.of("name", "허용 안 됨"))).hasStatus(403);
@@ -338,7 +343,11 @@ class UserPermissionsIntegrationTest {
                 "scopes",
                 List.of("admin")));
     String session = login(email);
-    assertThat(post("/v1/sessions/current/consents", session, Map.of("consents", CONSENTS)))
+    assertThat(
+            post(
+                "/v1/sessions/current/consents",
+                session,
+                Map.of("consents", CONSENTS, "new_password", CHANGED_PASSWORD)))
         .hasStatusOk();
     UUID id = UUID.fromString(JsonPath.read(body(created), "$.user_account_id"));
     assertThat(
@@ -349,7 +358,7 @@ class UserPermissionsIntegrationTest {
         .hasStatus(204);
     MvcTestResult issued = post("/v1/organization/invitations", owner, Map.of("email", email));
     String token = JsonPath.read(body(issued), "$.token");
-    String pendingSession = login(email);
+    String pendingSession = login(email, CHANGED_PASSWORD);
     assertThat(post("/v1/organization-invitations/" + token + "/accept", pendingSession, Map.of()))
         .hasStatus(201);
     assertThat(
@@ -495,7 +504,11 @@ class UserPermissionsIntegrationTest {
   }
 
   private String login(String email) {
-    MvcTestResult result = post("/v1/sessions", null, Map.of("email", email, "password", PASSWORD));
+    return login(email, PASSWORD);
+  }
+
+  private String login(String email, String password) {
+    MvcTestResult result = post("/v1/sessions", null, Map.of("email", email, "password", password));
     assertThat(result).hasStatus(201);
     return "Bearer " + JsonPath.read(body(result), "$.token");
   }

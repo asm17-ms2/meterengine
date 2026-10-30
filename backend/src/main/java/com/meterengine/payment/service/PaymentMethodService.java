@@ -10,6 +10,7 @@ import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.dto.ListPaymentMethodsResponse;
 import com.meterengine.payment.dto.PaymentMethodResponse;
+import com.meterengine.payment.entity.BillingKey;
 import com.meterengine.payment.entity.BillingKeyId;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -77,19 +79,32 @@ public class PaymentMethodService {
 
   @Transactional(readOnly = true)
   public ListPaymentMethodsResponse list(UUID organizationId, String status) {
+    return list(organizationId, status, null);
+  }
+
+  @Transactional(readOnly = true)
+  public ListPaymentMethodsResponse list(UUID organizationId, String status, UUID customerId) {
     ArchiveStatus filter = ArchiveStatus.parse(status);
     String mode = paymentSettingService.findMode(organizationId);
-    var methods =
-        new ArrayList<>(
-            billingKeyRepository
+    Stream<BillingKey> keys =
+        customerId == null
+            ? billingKeyRepository
                 .findByOrganizationIdAndModeOrderByCustomerIdAsc(organizationId, mode)
                 .stream()
-                .filter(key -> filter.includes(key.getArchivedAt()))
+            : billingKeyRepository
+                .findById(new BillingKeyId(organizationId, customerId, mode))
+                .stream();
+    var methods =
+        new ArrayList<>(
+            keys.filter(key -> filter.includes(key.getArchivedAt()))
                 .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
                 .map(PaymentMethodResponse::from)
                 .toList());
     if (filter != ArchiveStatus.ACTIVE)
-      methods.addAll(paymentArchiveRepository.methods(organizationId, mode));
+      methods.addAll(
+          customerId == null
+              ? paymentArchiveRepository.methods(organizationId, mode)
+              : paymentArchiveRepository.methods(organizationId, mode, customerId));
     return new ListPaymentMethodsResponse(methods);
   }
 

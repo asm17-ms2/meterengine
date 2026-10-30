@@ -6,6 +6,7 @@ const PG_URL = "http://127.0.0.1:38447";
 const PASSWORD = "local-member-e2e-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const kstMonth = (date: Date) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(date);
 
 async function login(page: Page, email: string, password = PASSWORD, returnTo = "") {
   await page.goto(`/login${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`);
@@ -33,7 +34,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
   const organizationName = `MVP 도입사 ${suffix}`;
   const customerName = `MVP 고객 ${suffix}`;
   const metricCode = `mvp-units-${suffix}`;
-  const month = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
+  const month = kstMonth(new Date());
   await test.step("새 도입사 가입과 운영자 승인", async () => {
     await page.goto("/signup");
     await page.getByLabel("도입사 이름", { exact: true }).fill(organizationName);
@@ -87,7 +88,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect.poll(() => new URL(page.url()).searchParams.get("metric")).toBe(metricCode);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const rateDialog = page.getByRole("dialog");
-    await rateDialog.getByLabel("사용량 1당 단가 (원)", { exact: true }).fill("100");
+    await rateDialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("100");
     await rateDialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(rateDialog).toHaveCount(0);
     await page.getByRole("button", { name: "요금제 버전 등록", exact: true }).click();
@@ -147,14 +148,17 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect((await repeated.json()).id).toBe(customerId);
     const event = (index: number, units: number, timestamp = new Date(Date.now() - 60_000).toISOString()) => ({ transaction_id: `mvp-${suffix}-${index}`, customer_id: customerId, type: metricCode, properties: { units }, timestamp });
     const first = event(1, 12);
-    const events = [first, event(2, 8), event(3, -2), event(4, 100, new Date(Date.now() + 60 * 60 * 1000).toISOString()), event(5, 99, "bad-timestamp"), first];
+    const futureAt = new Date(Date.now() + 60 * 60 * 1000);
+    const events = [first, event(2, 8), event(3, -2), event(4, 100, futureAt.toISOString()), event(5, 99, "bad-timestamp"), first];
     const response = await request.post(`${API_URL}/v1/event-batches`, { headers: apiHeaders, data: { events } });
     expect(response.status()).toBe(200);
     expect((await response.json()).results.map((row: { result: string }) => row.result)).toEqual(["stored", "stored", "stored", "stored", "rejected", "duplicate"]);
     const duplicate = await request.post(`${API_URL}/v1/event-batches`, { headers: apiHeaders, data: { events: events.slice(0, 4) } });
     expect((await duplicate.json()).results.every((row: { result: string }) => row.result === "duplicate")).toBe(true);
-    const exclusions = await request.get(`${API_URL}/v1/unbilled-events`, { headers: apiHeaders });
-    expect(await exclusions.json()).toMatchObject({ future_timestamp: { event_count: 1 }, negative_quantity: { event_count: 1 } });
+    const futureExclusions = await request.get(`${API_URL}/v1/unbilled-events?month=${kstMonth(futureAt)}`, { headers: apiHeaders });
+    expect(await futureExclusions.json()).toMatchObject({ future_timestamp: { event_count: 1 } });
+    const exclusions = await request.get(`${API_URL}/v1/unbilled-events?month=${month}`, { headers: apiHeaders });
+    expect(await exclusions.json()).toMatchObject({ negative_quantity: { event_count: 1 } });
     const draft = await request.get(`${API_URL}/v1/invoices/draft?month=${month}`, { headers: apiHeaders });
     expect(draft.status()).toBe(200);
     const customer = (await draft.json()).customers.find((entry: { customer_id: string }) => entry.customer_id === customerId);
@@ -183,6 +187,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await dialog.getByRole("button", { name: "토스 키 저장", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await page.goto(`/customers/${customerId}?month=${month}`);
+    await expect(page.getByRole("cell", { name: `MVP 사용 단위 (${metricCode})`, exact: true }).first(), "고객 상세 사용량도 미터 코드를 함께 보인다").toBeVisible();
     await page.getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     const registration = page.getByRole("dialog").getByRole("link", { name: "카드 등록 링크 열기", exact: true });

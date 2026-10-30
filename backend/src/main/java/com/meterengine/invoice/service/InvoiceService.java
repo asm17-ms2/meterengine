@@ -127,6 +127,7 @@ public class InvoiceService {
   private InvoiceLineResponse toInvoiceLineResponse(InvoiceLine invoiceLine) {
     return new InvoiceLineResponse(
         invoiceLine.getBillableMetricCode(),
+        invoiceLine.getBillableMetricName(),
         invoiceLine.getTargetProperty(),
         jsonMapper.readValue(invoiceLine.getDimensionValues(), DIMENSION_VALUES_TYPE),
         invoiceLine.getQuantity(),

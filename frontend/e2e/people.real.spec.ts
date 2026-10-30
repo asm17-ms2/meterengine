@@ -5,6 +5,7 @@ import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = "http://localhost:33147";
 const PASSWORD = "local-people-e2e-password";
+const CHANGED_PASSWORD = "local-people-e2e-own-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
 
@@ -54,7 +55,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
   const invitedEmail = `people-invited-${suffix}@fe-e2e.local`;
   const organizationName = `사람 관리 E2E ${suffix}`;
   const customerName = `복원 확인 고객 ${suffix}`;
-  const secrets = new Set([PASSWORD, OPERATOR_PASSWORD]);
+  const secrets = new Set([PASSWORD, CHANGED_PASSWORD, OPERATOR_PASSWORD]);
   const contexts: BrowserContext[] = [];
   let failure: unknown;
 
@@ -111,9 +112,15 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       expect(destination.pathname).toBe("/customers");
       const expectedOrganizationId = destination.searchParams.get("organization_id");
       expect(expectedOrganizationId).toMatch(/^[0-9a-f-]{36}$/);
+      await admin.getByLabel(/^새 비밀번호 \(필수\)/).fill(CHANGED_PASSWORD);
+      await admin.getByLabel(/^새 비밀번호 확인/).fill(`${CHANGED_PASSWORD}-typo`);
       await agree(admin);
       await admin.getByRole("button", { name: "동의하고 업무 시작", exact: true }).click();
+      await expect(admin.getByText("새 비밀번호와 확인 칸이 다릅니다.", { exact: true })).toBeVisible();
+      await admin.getByLabel(/^새 비밀번호 확인/).fill(CHANGED_PASSWORD);
+      await admin.getByRole("button", { name: "동의하고 업무 시작", exact: true }).click();
       await expect(admin).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === expectedOrganizationId);
+      expect((await request.post(`${API_URL}/v1/sessions`, { data: { email: adminEmail, password: PASSWORD } })).status()).toBe(401);
       await admin.goto("/members");
       await expectNoPeopleActions(admin);
     });
@@ -160,7 +167,8 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       dialog = owner.getByRole("dialog");
       await dialog.getByRole("button", { name: "고객 보관", exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived");
+      await expect(owner.getByText("고객을 보관했습니다. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
+      await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived" && /^\d{4}-\d{2}$/.test(url.searchParams.get("month") ?? ""));
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toBeVisible();
       const status = owner.getByRole("combobox", { name: "관리 상태", exact: true });
       await status.selectOption("active");

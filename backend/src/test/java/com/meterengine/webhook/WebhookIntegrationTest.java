@@ -165,8 +165,10 @@ class WebhookIntegrationTest {
         organizationId,
         created.id(),
         new UpdateWebhookEndpointRequest(url, List.of("webhook_test"), true, null));
+    webhookEndpointService.delete(organizationId, created.id());
+    webhookEndpointService.restore(organizationId, created.id());
 
-    assertThat(transactionActiveOnResolve).containsExactly(false, false);
+    assertThat(transactionActiveOnResolve).containsExactly(false, false, false);
   }
 
   @Test

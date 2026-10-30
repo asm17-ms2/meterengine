@@ -41,7 +41,8 @@ export function parseTargets(env: TargetEnv): Target[] {
   if (raw === undefined || raw.trim() === "") {
     const environment = env.METERENGINE_ENVIRONMENT || undefined;
     if (environment !== undefined && environment !== "test" && environment !== "live") throw new Error("METERENGINE_ENVIRONMENT는 test 또는 live여야 합니다");
-    return [{ name: LOCAL_TARGET_NAME, base_url: LOCAL_BASE_URL, api_key: env.METERENGINE_API_KEY ?? "", ...(environment ? { environment } : {}) }];
+    const webhookSecret = environment ? env.METERENGINE_WEBHOOK_SECRET || undefined : undefined;
+    return [{ name: LOCAL_TARGET_NAME, base_url: LOCAL_BASE_URL, api_key: env.METERENGINE_API_KEY ?? "", ...(environment ? { environment } : {}), ...(webhookSecret ? { webhook_secret: webhookSecret } : {}) }];
   }
   let parsed: unknown;
   try {
