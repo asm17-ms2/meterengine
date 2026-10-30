@@ -665,6 +665,16 @@ test("on a phone the sticky header keeps only the brand and environment and the 
   for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(drawer.getByRole("button", { name, exact: true })).toBeVisible();
 });
 
+test("turning on the demo guide from the phone menu closes the menu so the guide shows", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "시연 안내 보기", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "시연 안내" })).toBeInViewport();
+});
+
 test("between phone and desktop widths the header still leaves out the user name", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 900 });
   await login(page);
