@@ -174,6 +174,19 @@ def _load_csv_source(args, console: Console) -> Optional[VerifySource]:
     )
 
 
+def _applied_price_plan(plans: List[dict], month: str) -> Optional[dict]:
+    # 청구와 같은 규칙: 그 달에 걸린 가장 늦은 버전이 보관 효력으로 멈췄으면 이전 버전으로 돌아가지 않는다.
+    for plan in sorted(plans, key=lambda plan: plan["effective_from"], reverse=True):
+        if plan["effective_from"] > month or (plan.get("effective_until") and plan["effective_until"] <= month):
+            continue
+        archived_from = plan.get("archived_from")
+        if not archived_from or archived_from > month:
+            return plan
+        if plan["effective_from"] < archived_from:
+            return None
+    return None
+
+
 def _verify_month(
     client: ApiClient, console: Console, stored: List[StoredEvent], month: str, prices: ApiResult
 ) -> Optional[bool]:
@@ -194,15 +207,15 @@ def _verify_month(
         return None
     roster = roster_from_usage(usage.body)
     customer_ids = sorted(roster, key=lambda cid: roster[cid])
-    common_plans = client.get_price_plans(month)
+    common_plans = client.get_price_plans(month, status="all")
     if common_plans.status != 200 or common_plans.body is None:
         print("공통 요금제를 얻지 못했습니다", file=sys.stderr)
         return None
-    common_plan = next(iter(common_plans.body.get("price_plans") or []), None)
+    common_plan = _applied_price_plan(common_plans.body.get("price_plans") or [], month)
     price_plans = {}
     for customer_id in customer_ids:
         customer_prices = client.get_billable_metric_prices(month, customer_id)
-        customer_plans = client.get_price_plans(month, customer_id)
+        customer_plans = client.get_price_plans(month, customer_id, status="all")
         if customer_prices.status != 200 or customer_prices.body is None or customer_plans.status != 200 or customer_plans.body is None:
             print("고객 단가와 요금제를 얻지 못했습니다", file=sys.stderr)
             return None
@@ -210,7 +223,7 @@ def _verify_month(
             for common_metric in billable_metrics:
                 if common_metric.code == metric.code:
                     common_metric.customer_price_rates[customer_id] = metric.price_rates
-        plan = next(iter(customer_plans.body.get("price_plans") or []), common_plan)
+        plan = _applied_price_plan(customer_plans.body.get("price_plans") or [], month) or common_plan
         if plan:
             price_plans[customer_id] = plan
     cutoff = parse_rfc3339(invoice.body["calculated_at"]) if invoice.body.get("calculated_at") else None
