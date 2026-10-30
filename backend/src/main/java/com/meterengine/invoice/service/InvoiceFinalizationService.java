@@ -14,6 +14,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.organization.repository.OrganizationRepository;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -39,6 +40,7 @@ public class InvoiceFinalizationService {
   private final JsonMapper jsonMapper;
   private final AuditLogService auditLogService;
   private final BillableMetricRepository billableMetricRepository;
+  private final Clock clock;
 
   InvoiceFinalizationService(
       DraftInvoiceService draftInvoiceService,
@@ -49,7 +51,8 @@ public class InvoiceFinalizationService {
       InvoiceEmailService invoiceEmailService,
       JsonMapper jsonMapper,
       AuditLogService auditLogService,
-      BillableMetricRepository billableMetricRepository) {
+      BillableMetricRepository billableMetricRepository,
+      Clock clock) {
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
@@ -59,6 +62,7 @@ public class InvoiceFinalizationService {
     this.jsonMapper = jsonMapper;
     this.auditLogService = auditLogService;
     this.billableMetricRepository = billableMetricRepository;
+    this.clock = clock;
   }
 
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
@@ -117,7 +121,7 @@ public class InvoiceFinalizationService {
                 month.toString(),
                 supplyAmount,
                 Math.multiplyExact(supplyAmount, TAX_RATE_PERCENT) / 100,
-                OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE),
+                OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE)),
                 BusinessEnvironmentContext.environmentId()));
 
     Map<String, String> metricNames =

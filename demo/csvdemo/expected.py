@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from core.jsonl_log import SendRecord
 from core.model import (
+    KST,
     MAX_TRANSACTION_ID,
     Event,
     StoredEvent,
@@ -19,6 +20,7 @@ from core.model import (
 )
 
 CALC_PRECISION = 50
+CUTOFF_HOUR = 13
 SUPPORTED_AGGREGATIONS = frozenset({"sum", "count", "count_distinct", "min", "max", "avg", "first", "last", "median", "percentile"})
 
 
@@ -105,6 +107,7 @@ def stored_events_from_log(records: List[SendRecord]) -> List[StoredEvent]:
                     event_type=request["type"],
                     occurred_at=parse_rfc3339(request["timestamp"]),
                     properties=request.get("properties") or {},
+                    received_at=datetime.fromisoformat(record.sent_at) if record.sent_at else None,
                 )
             )
         except (KeyError, TypeError) as error:
@@ -186,6 +189,16 @@ def _typed_value(value) -> tuple:
     return ("json", json.dumps(value, sort_keys=True, default=str))
 
 
+def cutoff_at(month: str) -> datetime:
+    """서버가 그 달 사용량을 집계하는 마감 시각. 다음 달 1일 13:00 KST다."""
+    year, month_number = (int(part) for part in month.split("-"))
+    if month_number == 12:
+        year, month_number = year + 1, 1
+    else:
+        month_number += 1
+    return datetime(year, month_number, 1, CUTOFF_HOUR, tzinfo=KST)
+
+
 def sum_quantities_by_dimension_values(
     stored: List[StoredEvent], month: str, billable_metric: BillableMetricMeta, cutoff=None
 ) -> Dict[str, Dict[DimensionValuesKey, DimensionUsage]]:
@@ -200,10 +213,13 @@ def aggregate_quantities(
     totals: Dict[str, List[StoredEvent]] = {}
     groups: Dict[str, Dict[DimensionValuesKey, Tuple[dict, List[StoredEvent]]]] = {}
     cutoff = cutoff or datetime.now(timezone.utc)
+    received_cutoff = cutoff_at(month)
     for event in stored:
         if event.event_type != billable_metric.event_type:
             continue
         if kst_month(event.occurred_at) != month or event.occurred_at >= cutoff:
+            continue
+        if event.received_at is not None and event.received_at >= received_cutoff:
             continue
         value = event.properties.get(billable_metric.target_property)
         aggregation = billable_metric.aggregation

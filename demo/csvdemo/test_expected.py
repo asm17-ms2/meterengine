@@ -51,25 +51,26 @@ def _event(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00
     )
 
 
-def _sum_quantities(stored, month, event_type, target_property):
+def _sum_quantities(stored, month, event_type, target_property, cutoff=None):
     billable_metric = BillableMetricMeta(
         code="token-usage", event_type=event_type, aggregation="sum", target_property=target_property
     )
     return {
         customer_id: by_dimension_values[dimension_values_key({})].quantity
         for customer_id, by_dimension_values in sum_quantities_by_dimension_values(
-            stored, month, billable_metric
+            stored, month, billable_metric, cutoff
         ).items()
     }
 
 
-def _stored(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00:00+09:00", props=None):
+def _stored(tx, customer=ACME, event_type="chat_completion", ts="2026-08-10T12:00:00+09:00", props=None, received=None):
     return StoredEvent(
         transaction_id=tx,
         customer_id=customer,
         event_type=event_type,
         occurred_at=parse_rfc3339(ts),
         properties={"token": 500} if props is None else props,
+        received_at=parse_rfc3339(received) if received else None,
     )
 
 
@@ -143,6 +144,10 @@ class StoredEventsFromLogTest(unittest.TestCase):
         stored = stored_events_from_log(records)
         self.assertEqual([e.transaction_id for e in stored], ["evt-1"])
 
+    def test_보낸_시각을_서버가_받은_시각으로_본다(self):
+        stored = stored_events_from_log([self._record("new")])
+        self.assertEqual(stored[0].received_at, parse_rfc3339("2026-08-14T10:00:00+09:00"))
+
 
 class SumQuantitiesTest(unittest.TestCase):
     def test_80건분_token_합이_나온다(self):
@@ -160,6 +165,23 @@ class SumQuantitiesTest(unittest.TestCase):
         sep = _sum_quantities(stored, "2026-09", "chat_completion", "token")
         self.assertEqual(aug[ACME], Decimal("1000"))
         self.assertEqual(sep[ACME], Decimal("500"))
+
+    def test_마감_시각_전에_받은_이벤트만_합산하고_13시_정각에_받은_것은_뺀다(self):
+        stored = [
+            _stored("evt-1", ts="2026-09-30T10:00:00+09:00", received="2026-10-01T12:59:59+09:00"),
+            _stored("evt-2", ts="2026-09-30T11:00:00+09:00", received="2026-10-01T13:00:00+09:00"),
+        ]
+        sums = _sum_quantities(stored, "2026-09", "chat_completion", "token")
+        self.assertEqual(sums[ACME], Decimal("500"))
+
+    def test_십이월의_마감은_다음_해_일월_1일_13시다(self):
+        stored = [
+            _stored("evt-1", ts="2026-12-31T10:00:00+09:00", received="2027-01-01T12:00:00+09:00"),
+            _stored("evt-2", ts="2026-12-31T11:00:00+09:00", received="2027-01-01T14:00:00+09:00"),
+        ]
+        # 계산 시각을 그 달 뒤로 둬서 아직 오지 않은 달로 빠지지 않게 한다.
+        sums = _sum_quantities(stored, "2026-12", "chat_completion", "token", parse_rfc3339("2027-01-02T00:00:00+09:00"))
+        self.assertEqual(sums[ACME], Decimal("500"))
 
     def test_다른_event_type은_합산하지_않는다(self):
         stored = [_stored("evt-1"), _stored("evt-2", event_type="embedding")]

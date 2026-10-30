@@ -7,6 +7,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
@@ -494,16 +495,15 @@ class AuditLogIntegrationTest {
   }
 
   private void insertEvent(UUID organizationId, String transactionId, UUID customerId, int token) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
-        """,
+    OffsetDateTime occurredAt = OffsetDateTime.parse("2026-08-10T12:00:00+09:00");
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
+        "chat_completion",
         "{\"model\":\"opus\",\"token\":%d}".formatted(token),
-        OffsetDateTime.parse("2026-08-10T12:00:00+09:00"));
+        occurredAt,
+        occurredAt);
   }
 }

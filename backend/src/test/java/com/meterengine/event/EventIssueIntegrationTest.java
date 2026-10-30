@@ -6,46 +6,35 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jayway.jsonpath.JsonPath;
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.controller.EventIssueController;
 import com.meterengine.event.dto.EventIssuesResponse;
 import jakarta.validation.constraints.Pattern;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import({TestcontainersConfiguration.class, EventIssueIntegrationTest.FixedClock.class})
+@Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class EventIssueIntegrationTest {
-  @TestConfiguration(proxyBeanMethods = false)
-  static class FixedClock {
-    @Bean
-    @Primary
-    Clock eventIssueClock() {
-      return Clock.fixed(Instant.parse("2026-10-15T03:00:00Z"), ZoneOffset.UTC);
-    }
-  }
-
+  @Autowired private TestClock testClock;
   @Autowired private WebApplicationContext context;
   @Autowired private JdbcTemplate jdbcTemplate;
   private MockMvcTester mvc;
@@ -53,8 +42,14 @@ class EventIssueIntegrationTest {
   private UUID customer;
   private String read;
 
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
+
   @BeforeEach
   void setUp() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
     mvc = MockMvcTester.from(context, builder -> builder.apply(springSecurity()).build());
     organization = UUID.randomUUID();
     read = TestCredentials.issueApiKey(jdbcTemplate, organization, "read");

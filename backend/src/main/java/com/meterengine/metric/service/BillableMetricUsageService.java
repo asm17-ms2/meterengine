@@ -13,6 +13,8 @@ import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -25,17 +27,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class BillableMetricUsageService {
 
   public static final ZoneId BILLING_ZONE = BillingMonth.ZONE;
+  private static final LocalTime CUTOFF_TIME = LocalTime.of(13, 0);
 
   private final BillableMetricUsageRepository billableMetricUsageRepository;
   private final BillableMetricRepository billableMetricRepository;
   private final CustomerRepository customerRepository;
   private final BillableMetricPeriodRepository billableMetricPeriodRepository;
+  private final Clock clock;
 
   BillableMetricUsageService(
       BillableMetricUsageRepository billableMetricUsageRepository,
       BillableMetricRepository billableMetricRepository,
       CustomerRepository customerRepository,
-      BillableMetricPeriodRepository billableMetricPeriodRepository) {
+      BillableMetricPeriodRepository billableMetricPeriodRepository,
+      Clock clock) {
+    this.clock = clock;
     this.billableMetricUsageRepository = billableMetricUsageRepository;
     this.billableMetricRepository = billableMetricRepository;
     this.customerRepository = customerRepository;
@@ -46,13 +52,22 @@ public class BillableMetricUsageService {
     return YearMonth.now(BILLING_ZONE);
   }
 
+  public static YearMonth currentMonth(Clock clock) {
+    return YearMonth.now(clock.withZone(BILLING_ZONE));
+  }
+
+  // 그 달 사용량의 집계 마감 시각. 이 시각 전에 받은 그 달 이벤트만 집계하고 청구한다.
+  public static OffsetDateTime cutoffAt(YearMonth month) {
+    return month.plusMonths(1).atDay(1).atTime(CUTOFF_TIME).atZone(BILLING_ZONE).toOffsetDateTime();
+  }
+
   public static OffsetDateTime aggregationEnd(YearMonth month, OffsetDateTime now) {
     return BillingMonth.cutoff(month, now);
   }
 
   @Transactional(readOnly = true)
   public List<BillableMetricUsage> aggregate(UUID organizationId, YearMonth month) {
-    return aggregate(organizationId, month, OffsetDateTime.now(BILLING_ZONE));
+    return aggregate(organizationId, month, BillingMonth.now(clock));
   }
 
   @Transactional(readOnly = true)
@@ -91,7 +106,7 @@ public class BillableMetricUsageService {
                             interval ->
                                 interval.getBillableMetricCode().equals(metric.getCode())
                                     && interval.includes(period)))
-        .map(billableMetric -> aggregate(billableMetric, customers, start, end))
+        .map(billableMetric -> aggregate(billableMetric, customers, start, end, cutoffAt(month)))
         .toList();
   }
 
@@ -99,10 +114,12 @@ public class BillableMetricUsageService {
       BillableMetric billableMetric,
       List<Customer> customers,
       OffsetDateTime start,
-      OffsetDateTime end) {
+      OffsetDateTime end,
+      OffsetDateTime receivedBefore) {
     requireSupported(billableMetric);
 
-    var quantities = billableMetricUsageRepository.aggregate(billableMetric, start, end);
+    var quantities =
+        billableMetricUsageRepository.aggregate(billableMetric, start, end, receivedBefore);
     List<CustomerUsage> customerUsages =
         customers.stream()
             .map(

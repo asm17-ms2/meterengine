@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +59,7 @@ class InvoiceFinalizeIntegrationTest {
   @Autowired private EntityManager entityManager;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private WebApplicationContext webApplicationContext;
+  @Autowired private TestClock testClock;
 
   private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
 
@@ -66,6 +70,24 @@ class InvoiceFinalizeIntegrationTest {
     mvc =
         MockMvcTester.from(
             webApplicationContext, builder -> builder.apply(springSecurity()).build());
+  }
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
+
+  @Test
+  void 확정_시각은_서버_시계의_지금을_KST로_나타낸_것이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
+    testClock.fix(OffsetDateTime.parse("2026-09-01T05:00:00Z"));
+
+    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+
+    assertThat(invoice.getFinalizedAt())
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T14:00:00+09:00"));
   }
 
   @Test
@@ -555,17 +577,16 @@ class InvoiceFinalizeIntegrationTest {
 
   private void insertEvent(
       UUID organizationId, String transactionId, UUID customerId, String model, int token) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
-        """,
+    OffsetDateTime occurredAt = OffsetDateTime.parse("2026-08-10T12:00:00+09:00");
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
+        "chat_completion",
         "{\"model\":\"%s\",\"token\":%d}".formatted(model, token),
-        OffsetDateTime.parse("2026-08-10T12:00:00+09:00"));
+        occurredAt,
+        occurredAt);
   }
 
   private void insertEvent(
@@ -575,16 +596,14 @@ class InvoiceFinalizeIntegrationTest {
       String property,
       int value,
       String occurredAt) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
-        """,
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
+        "chat_completion",
         "{\"%s\":%d}".formatted(property, value),
+        OffsetDateTime.parse(occurredAt),
         OffsetDateTime.parse(occurredAt));
   }
 }
