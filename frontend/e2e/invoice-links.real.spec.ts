@@ -304,8 +304,8 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     const linkId = (await metadata.json()).invoice_view_links[0].id as string;
     await consolePage.reload();
     await expect(consolePage.getByRole("button", { name: "고객 조회 링크 복사", exact: true })).toHaveCount(0);
-    consolePage.once("dialog", dialog => dialog.accept());
     await consolePage.getByRole("button", { name: "링크 폐기", exact: true }).click();
+    await consolePage.getByRole("dialog").getByRole("button", { name: "링크 폐기", exact: true }).click();
     await expect.poll(async () => (await lookup(request, token)).status()).toBe(404);
     await expect(section.getByText("폐기됨 / 테스트", { exact: true })).toBeVisible();
     await section.screenshot({ path: `${OUTPUT}/console-links-revoked.png` });
