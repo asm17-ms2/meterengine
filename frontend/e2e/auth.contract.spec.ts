@@ -299,6 +299,14 @@ test("the events customer filter matches the 44px filter row at phone and deskto
   }
 });
 
+test("an audit range whose end is not after its start is reported next to the end field without asking the server", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/audit?from=2026-10-10T00:00&to=2026-10-01T00:00");
+  await expect(page.getByText("종료 일시는 시작 일시보다 뒤여야 합니다.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("종료 일시 (KST, 미포함)")).toHaveAttribute("aria-invalid", "true");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.startsWith("/v1/audit-logs") && path.includes("from="))).toBe(false);
+});
+
 test("list filters submit with a default 조건 적용 button and reset with 조건 초기화", async ({ page }) => {
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
