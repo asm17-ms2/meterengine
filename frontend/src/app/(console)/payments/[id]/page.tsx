@@ -1,4 +1,5 @@
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { isUuid } from "@/lib/uuid";
 import { workspaceFetch, type InvoicePaymentResponse } from "@/lib/api/workspace";
 import type { InvoiceResponse } from "@/lib/api/invoices";
 import { formatKrw, formatKstDateTime } from "@/lib/format";
@@ -81,8 +82,20 @@ async function CancellationHistory({ attempt }: { attempt: PaymentAttemptRespons
   </section>;
 }
 
+function PaymentLoadFailure({ message, status }: { message: string; status?: number }) {
+  return <>
+    <WorkspaceHeader title={status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"}
+      description={status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
+      <Link href="/payments">수납 목록으로</Link>
+    </WorkspaceHeader>
+    <WorkspaceError message={message} status={status} />
+  </>;
+}
+
 export default async function PaymentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // 인보이스 id 모양이 아니면 서버가 404가 아닌 400을 주므로, 묻지 않고 찾을 수 없다고 알린다.
+  if (!isUuid(id)) return <PaymentLoadFailure message="인보이스를 찾을 수 없습니다" status={404} />;
   const [invoice, attempts, viewLinks] = await Promise.all([
     workspaceFetch<InvoiceResponse>("/v1/invoices/" + encodeURIComponent(id)),
     workspaceFetch<{ payment_attempts: PaymentAttemptResponse[] }>("/v1/invoices/" + encodeURIComponent(id) + "/payment-attempts"),
@@ -90,13 +103,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   ]);
   if (!invoice.ok || !attempts.ok) {
     const failure = !invoice.ok ? invoice.error : !attempts.ok ? attempts.error : undefined;
-    return <>
-      <WorkspaceHeader title={failure?.status === 404 ? "수납 내역을 찾을 수 없습니다" : "수납 상세"}
-        description={failure?.status === 404 ? "주소가 잘못됐거나 다른 도입사의 인보이스일 수 있습니다. 현재 도입사를 확인하세요." : "수납 내역을 불러오지 못했습니다."}>
-        <Link href="/payments">수납 목록으로</Link>
-      </WorkspaceHeader>
-      <WorkspaceError message={failure?.message ?? "조회하지 못했습니다."} status={failure?.status} />
-    </>;
+    return <PaymentLoadFailure message={failure?.message ?? "조회하지 못했습니다."} status={failure?.status} />;
   }
   const payments = await workspaceFetch<{ invoice_payments: InvoicePaymentResponse[] }>("/v1/invoice-payments", {
     month: invoice.data.month, customer_id: invoice.data.customer_id,

@@ -180,6 +180,16 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
+test("a payment address that is not an invoice id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/payments/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "수납 내역을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
 test("the sidebar lists page links in plain lists without menu roles", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
