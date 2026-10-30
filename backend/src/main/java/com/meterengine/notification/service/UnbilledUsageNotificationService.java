@@ -42,7 +42,9 @@ public class UnbilledUsageNotificationService {
       } catch (RuntimeException exception) {
         failed++;
         LOGGER.error(
-            "unbilled usage environments failed for organization {}", organization.getId());
+            "unbilled usage environments failed for organization {}",
+            organization.getId(),
+            exception);
       }
       for (BusinessEnvironment environment : environments) {
         try {
@@ -55,7 +57,8 @@ public class UnbilledUsageNotificationService {
           LOGGER.error(
               "unbilled usage report failed for organization {} environment {}",
               organization.getId(),
-              environment.mode());
+              environment.mode(),
+              exception);
         }
       }
     }

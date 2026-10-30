@@ -1,6 +1,7 @@
 package com.meterengine.query.repository;
 
 import com.meterengine.customer.dto.CustomerResponse;
+import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.dto.BillableMetricResponse;
@@ -55,6 +56,10 @@ public class WorkspaceQueryRepository {
         LEFT JOIN rates r ON r.organization_id = bm.organization_id AND r.environment_scope_id = bm.environment_scope_id AND r.billable_metric_code = bm.code
         WHERE bm.organization_id = p.organization_id
           AND bm.environment_id IS NOT DISTINCT FROM p.environment_id
+          AND ((bm.archived_at IS NULL AND bm.active_from <= p.period)
+            OR EXISTS (SELECT 1 FROM billable_metric_period mp
+              WHERE mp.organization_id = bm.organization_id AND mp.environment_scope_id = bm.environment_scope_id
+                AND mp.billable_metric_code = bm.code AND mp.active_from <= p.period AND mp.active_until > p.period))
         GROUP BY bm.organization_id, bm.environment_scope_id, bm.code
       )
       """;
@@ -313,20 +318,22 @@ public class WorkspaceQueryRepository {
         switch (resource) {
           case "invoices" ->
               "SELECT DISTINCT period AS month FROM invoice WHERE organization_id = ? AND"
-                  + " environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
+                  + " environment_scope_id = ? ORDER BY month DESC";
           case "billable-metric-prices" ->
               "SELECT DISTINCT effective_from AS month FROM price_rate WHERE organization_id = ?"
-                  + " AND environment_id IS NOT DISTINCT FROM cast(? as uuid) ORDER BY month DESC";
-          default ->
+                  + " AND environment_scope_id = ? ORDER BY month DESC";
+          case "usage" ->
               "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month"
-                  + " FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM"
-                  + " cast(? as uuid) ORDER BY month DESC";
+                  + " FROM event WHERE organization_id = ? AND environment_scope_id = ?"
+                  + EventRepository.OPENABLE_MONTH_CONDITION
+                  + " ORDER BY month DESC";
+          default -> throw new IllegalArgumentException("Unknown months resource");
         };
     return jdbcTemplate.query(
         sql,
         (rs, row) -> rs.getString("month"),
         organizationId,
-        BusinessEnvironmentContext.environmentId());
+        BusinessEnvironmentContext.scopeId());
   }
 
   private static BillableMetricResponse metric(ResultSet rs, int row) throws SQLException {

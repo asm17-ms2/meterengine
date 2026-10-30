@@ -45,6 +45,11 @@ public class InvoiceService {
   }
 
   @Transactional(readOnly = true)
+  public long count(UUID organizationId) {
+    return invoiceRepository.countScoped(organizationId, BusinessEnvironmentContext.scopeId());
+  }
+
+  @Transactional(readOnly = true)
   public ListInvoicesResponse list(UUID organizationId, UUID customerId, YearMonth month) {
     if (customerId != null
         && !(BusinessEnvironmentContext.environmentId() == null
