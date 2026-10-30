@@ -1,4 +1,4 @@
-import type { PublicInvoice } from "./invoice-view-links";
+import type { PublicInvoiceResponse } from "./invoice-view-links";
 
 const RETRY_UNAVAILABLE_MESSAGES: Record<string, string> = {
   link_read_only: "이 링크는 조회 전용입니다. 결제 재시도는 청구서를 보낸 담당자에게 문의해 주세요.",
@@ -16,7 +16,7 @@ export function isValidInvoiceRetryVersion(value: unknown): value is string {
   return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
 
-export function canRetryInvoicePayment(invoice: PublicInvoice): boolean {
+export function canRetryInvoicePayment(invoice: PublicInvoiceResponse): boolean {
   return invoice.payment.status === "failed"
     && invoice.payment_retry?.allowed === true
     && invoice.payment_retry.reason === "available"

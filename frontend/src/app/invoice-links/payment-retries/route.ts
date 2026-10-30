@@ -1,6 +1,6 @@
 import { requestApi } from "@/lib/api/transport";
 import { isValidInvoiceRetryVersion } from "@/lib/invoice-payment-retry";
-import { isValidInvoiceViewToken, type PublicInvoice } from "@/lib/invoice-view-links";
+import { isValidInvoiceViewToken, type PublicInvoiceResponse } from "@/lib/invoice-view-links";
 import { isAllowedPublicInvoiceRequest } from "@/lib/public-invoice-request";
 
 const RESPONSE_HEADERS = { "Cache-Control": "no-store, private", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow, noarchive" };
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (!("retry_version" in parsed) || !isValidInvoiceRetryVersion(parsed.retry_version)
       || Object.keys(parsed).some(key => !["token", "retry_version"].includes(key))) return failure(400);
   try {
-    const result = await requestApi<PublicInvoice>("/v1/public/invoice-links/payment-retries", {
+    const result = await requestApi<PublicInvoiceResponse>("/v1/public/invoice-links/payment-retries", {
       method: "POST", body: { token: parsed.token, retry_version: parsed.retry_version }, timeoutMs: 120_000,
     });
     if (!result.ok) return failure([400, 404, 409].includes(result.error.status) ? result.error.status : 503);
