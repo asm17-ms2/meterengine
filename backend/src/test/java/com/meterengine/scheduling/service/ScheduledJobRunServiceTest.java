@@ -210,6 +210,59 @@ class ScheduledJobRunServiceTest {
   }
 
   @Test
+  void 성공하면_마지막_완료_시각을_기록한다() {
+    claimSlot();
+
+    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+
+    assertThat(lastCompletionGauge().gauge().value())
+        .isCloseTo(OffsetDateTime.now().toEpochSecond(), within(5.0));
+  }
+
+  @Test
+  void 실패해도_마지막_완료_시각을_기록하고_마지막_성공_시각은_두지_않는다() {
+    claimSlot();
+
+    assertThatThrownBy(
+        () ->
+            scheduledJobRunService.run(
+                JOB_NAME,
+                SCHEDULED_AT,
+                () -> {
+                  throw new IllegalStateException("DB 연결 끊김");
+                }));
+
+    assertThat(lastCompletionGauge().gauge().value())
+        .isCloseTo(OffsetDateTime.now().toEpochSecond(), within(5.0));
+    assertThat(lastSuccessGauge().gauge()).isNull();
+  }
+
+  @Test
+  void 등록하면_DB의_마지막_완료_시각으로_게이지를_낸다() {
+    OffsetDateTime lastFinishedAt = OffsetDateTime.parse("2026-10-31T23:59:45Z");
+    when(scheduledJobRunRepository.findLastFinishedAt(JOB_NAME))
+        .thenReturn(Optional.of(lastFinishedAt));
+
+    scheduledJobRunService.register(JOB_NAME);
+
+    assertThat(lastCompletionGauge().gauge().value())
+        .isEqualTo((double) lastFinishedAt.toEpochSecond());
+  }
+
+  @Test
+  void 다른_인스턴스가_슬롯을_잡았으면_DB의_마지막_완료_시각을_지표에_반영한다() {
+    OffsetDateTime otherFinish = OffsetDateTime.parse("2026-10-26T12:00:00Z");
+    when(scheduledJobRunRepository.insertIfAbsent(any(), eq(JOB_NAME), eq(SCHEDULED_AT), any()))
+        .thenReturn(0);
+    when(scheduledJobRunRepository.findLastFinishedAt(JOB_NAME))
+        .thenReturn(Optional.of(otherFinish));
+
+    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+
+    assertThat(lastCompletionGauge().gauge().value()).isEqualTo(otherFinish.toEpochSecond());
+  }
+
+  @Test
   void 실행으로_기록한_성공_시각을_더_이른_DB_시각으로_되돌리지_않는다() {
     claimSlot();
     scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
@@ -245,6 +298,12 @@ class ScheduledJobRunServiceTest {
   private Search lastSuccessGauge() {
     return meterRegistry
         .find(ScheduledJobRunService.LAST_SUCCESS_GAUGE_NAME)
+        .tag(ScheduledJobRunService.JOB_TAG, JOB_NAME);
+  }
+
+  private Search lastCompletionGauge() {
+    return meterRegistry
+        .find(ScheduledJobRunService.LAST_COMPLETION_GAUGE_NAME)
         .tag(ScheduledJobRunService.JOB_TAG, JOB_NAME);
   }
 

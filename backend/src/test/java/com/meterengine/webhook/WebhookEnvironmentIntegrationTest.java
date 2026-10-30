@@ -20,6 +20,7 @@ import com.meterengine.webhook.service.WebhookDeliveryService;
 import com.meterengine.webhook.service.WebhookEndpointService;
 import com.meterengine.webhook.service.WebhookEventService;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -100,6 +101,8 @@ class WebhookEnvironmentIntegrationTest {
                 .hasSize(1);
           });
     }
+    Map<String, Double> doneBefore =
+        Map.of("legacy", done("legacy"), "test", done("test"), "live", done("live"));
     deliveries.deliver();
     assertThat(received).hasSize(3);
     assertThat(received.stream().map(payload -> JsonPath.<String>read(payload, "$.environment")))
@@ -118,13 +121,7 @@ class WebhookEnvironmentIntegrationTest {
         .isEqualTo(3);
     assertThat(BusinessEnvironmentContext.current()).isNull();
     for (String environment : List.of("legacy", "test", "live")) {
-      assertThat(
-              meterRegistry
-                  .find("meterengine.webhook.delivery")
-                  .tags("result", "done", "environment", environment)
-                  .counter())
-          .as(environment)
-          .isNotNull();
+      assertThat(done(environment)).as(environment).isEqualTo(doneBefore.get(environment) + 1);
     }
   }
 
@@ -150,6 +147,21 @@ class WebhookEnvironmentIntegrationTest {
             + " WHERE organization_id=?",
         organization);
     assertThat(operations.get().failedWebhookCount()).isEqualTo(before + 1);
+  }
+
+  @Test
+  void 웹훅_적체는_업무_환경별로_나눠_센다() {
+    deliveries.measure();
+    double testBefore = backlog("test");
+    double liveBefore = backlog("live");
+    WebhookEndpointResponse endpoint = BusinessEnvironmentContext.run(scope("test"), this::create);
+    BusinessEnvironmentContext.run(
+        scope("test"), () -> endpoints.test(organization, endpoint.id()));
+
+    deliveries.measure();
+
+    assertThat(backlog("test")).isEqualTo(testBefore + 1);
+    assertThat(backlog("live")).isEqualTo(liveBefore);
   }
 
   @Test
@@ -223,6 +235,24 @@ class WebhookEnvironmentIntegrationTest {
             "http://127.0.0.1:" + receiver.getAddress().getPort() + "/hook",
             List.of("payment_succeeded"),
             "environment receiver"));
+  }
+
+  private double backlog(String environment) {
+    return meterRegistry
+        .get("meterengine.webhook.delivery.backlog")
+        .tag("environment", environment)
+        .gauge()
+        .value();
+  }
+
+  private double done(String environment) {
+    return meterRegistry
+        .find("meterengine.webhook.delivery")
+        .tags("result", "done", "environment", environment)
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   private BusinessEnvironment scope(String mode) {
