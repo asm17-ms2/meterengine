@@ -1,0 +1,13 @@
+sha 6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc, DB를 새로 만든 실환경(final2.sh ms2-537-1)
+aggregation: 통과 1 passed (9.0s) rc=0
+archive-filters: 통과 2 passed (15.1s) rc=0
+auth: 통과 3 passed (6.3s) rc=0
+customer-payment-retry: 통과 6 passed (7.4s) rc=0
+environment-cycle: 통과 1 passed (21.6s) rc=0
+events: 통과 1 passed (8.4s) rc=0
+invoice-links: 통과 3 passed (4.1s) rc=0
+mvp: 통과 1 passed (57.6s) rc=0
+operator-create: 통과 1 passed (2.7s) rc=0
+people: 통과 1 passed (10.6s) rc=0
+permissions: 통과 6 passed (18.6s) rc=0
+query-workspace: 통과 1 passed (10.6s) rc=0

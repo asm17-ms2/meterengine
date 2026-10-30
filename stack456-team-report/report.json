@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "done",
-  "updated_at": "2026-10-30T14:35:53+09:00",
+  "updated_at": "2026-10-30T15:36:16+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -20393,6 +20393,278 @@
       "result": "pass",
       "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
       "detail": "마지막 실화면 점검: 기준 main-544cd48, 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/feat/MS2-536-usage-cutoff..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 337 tests in 12.417s OK (skipped=7) "
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1483개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-536-usage-cutoff",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-536-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 150 ℹ pass 150 ℹ fail 0 "
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  92 passed (39.8s) "
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.3s) "
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  23 passed (23.8s) "
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ms2-537-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "feat/MS2-537-cutoff-stamp",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-3f7c226, 비교 38개 화면, 늘어난 것 0건"
     }
   ],
   "pushes": [
@@ -21121,7 +21393,9 @@
     "2026-10-30T13:55:28+09:00 양성지 님 지시로 30분 확인 때 머지 가능한 이 일의 PR을 머지한다. main은 merge queue(squash)라 graphql enqueuePullRequest로 넣었다: #478 #480 #483 #485 #494 #501 #502 #504 #505 #506 #507 #508 #509 #511 #512(넣기 전 차례대로 합쳐 보는 모의 merge에서 충돌 없음). #514는 본문대로 #498 뒤에 넣고, #510 #513은 리뷰 대기다. #497 #503 #457 #464는 이 일 범위가 아니라 넣지 않았다.",
     "2026-10-30T14:21:33+09:00 머지 진행: merge queue로 #478 #480 #483 #485 #494 #501 #502 #504~#513이 main에 들어갔다. #514는 #498이 들어간 뒤 main을 두 번 받아(#499, #498 충돌, 표 label만 다시 담) 검사와 실화면 12/12를 마치고 큐에 넣었다. #497(다른 세션 브랜치)은 main을 받아 검사를 마친 merge 커밋(bbcabfc, 로컬)을 만들었으나 push가 권한 검사(다른 세션 자원 수정)에서 막혀 올리지 못했다. #457/#464는 사용량 집계 코드가 크게 바뀐 main과 7개 파일이 충돌해 마감 규칙을 새 코드에 다시 얹어야 해 양성지 님 판단을 기다린다.",
     "2026-10-30T14:29:21+09:00 #514가 merge queue에서 빠졌다: merge group CI(run 41008021683)의 frontend job에서 업무 계약 설정이 웹 서버를 띄우지 못했다(EADDRINUSE 127.0.0.1:33150). 같은 head 6db703e의 PR CI frontend는 통과했고 이 PR은 시험 포트를 건드리지 않아 CI 실행기 흔들림으로 보고 고칠 것 없이 다시 큐에 넣었다.",
-    "2026-10-30T14:35:53+09:00 이 일로 연 PR 18개(#478 #480 #483 #485 #494 #501 #502 #504~#514)가 모두 merge queue로 main에 들어갔다(main 9647032). #497(다른 세션 브랜치, push가 권한 검사에 막힘)과 #457/#464(MS2, 다시 구현이 필요해 판단 대기)는 열려 있다."
+    "2026-10-30T14:35:53+09:00 이 일로 연 PR 18개(#478 #480 #483 #485 #494 #501 #502 #504~#514)가 모두 merge queue로 main에 들어갔다(main 9647032). #497(다른 세션 브랜치, push가 권한 검사에 막힘)과 #457/#464(MS2, 다시 구현이 필요해 판단 대기)는 열려 있다.",
+    "#457(MS2-536)을 main 919fc52와 병합했다. 충돌 7개 파일은 양쪽을 살려 main의 집계 코드에 받은 시각 마감을 다시 얹었다(집계 저장소 receivedBefore, 서비스의 모든 집계 경로가 cutoffAt을 넘김, 확정 서비스 Clock 주입, EventController는 main 구조). 병합 뒤 실패한 시험 25건은 시험 쪽에서 고쳤다(6e35268 데모 계산 시각, 2660dba main의 새 집계 시험 받은 시각과 TestClock 겹침). 2660dba 검사: 백엔드 1,483건, 데모 337건, 금지 문자 통과, 실화면 12/12. 해결 내용은 PR 본문에 적었다. 같이 본 것: 마감 뒤에 받아 청구에서 빠진 이벤트는 미청구 이벤트(UnbilledEventService 네 분류)와 이벤트 문제 진단 어디에도 나오지 않는다. API를 바꾸는 일이라 #457에 넣지 않고 후속으로 남긴다.",
+    "양성지 님 지시(10-30 \"남은 것들 중에 내 꺼 가능한 다시 리뷰 없이 고칠 꺼 다 고쳐서 머지해\")로 #457, #464, #497을 이 일 범위에 넣었다. #457은 2660dba에서 CI와 실화면 12/12 뒤 merge queue로 main에 들어갔다(3f7c226). #464는 #457 머지로 base가 main이 되어 main 3f7c226을 병합(6cbed6a, 충돌 없음)하고 검사(프론트 lint, build, 단위 150, 계약 92/6/23, 금지 문자)와 실화면 12/12, 화면 38개 비교(main 3f7c226 기준 늘어난 것 0건) 뒤 merge queue로 들어갔다(4a89a65). 두 PR의 push는 스택 브랜치가 아니라 pushes가 아니라 여기에 적는다(feat/MS2-536-usage-cutoff 2660dba, feat/MS2-537-cutoff-stamp 6cbed6a). #497은 main 3f7c226까지 병합한 로컬 80ff246에서 검사를 마쳤으나(단위 150, 계약 92/6/24) push가 권한 검사에 막혀 양성지 님 push를 기다린다."
   ],
   "final_checks": [
     {
@@ -21302,6 +21576,20 @@
     {
       "layer": "514",
       "sha": "6db703e2ef76bd737fd79e175a8701155468f352",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "457",
+      "sha": "2660dbacdc074acdf728edc75e1d3c60ab7c15e7",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "464",
+      "sha": "6cbed6a3cee8a0e55c07d5b2f8320dc55a4346fc",
       "passed": 12,
       "total": 12,
       "screens": "비교 38개 화면, 늘어난 것 0건"
