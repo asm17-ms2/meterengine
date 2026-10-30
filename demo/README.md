@@ -102,7 +102,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 ### send
 
-- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다.
+- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다. properties가 JSON 객체로 읽히지 않는 행은 묶음을 깨뜨리지 않게 단건으로 보낸다. 묶음 전체가 거절되면 각 행의 저장 여부를 알 수 없어 error로 세고 종료 코드 2로 끝난다.
 - 전송 중 끊긴 묶음은 `UNKNOWN`, 아직 보내지 않은 행은 `NOT_SENT`로 구분해 원래 순서대로 모두 기록한다. 두 상태의 로그 `outcome`은 `error`이고 `error`에 구분값이 남는다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.

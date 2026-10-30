@@ -20,6 +20,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      rds_auto_stop: ${{ steps.filter.outputs.rds_auto_stop }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -32,6 +33,11 @@ jobs:
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
+              - '.node-version'
+              - '.github/workflows/ci.yml'
+            rds_auto_stop:
+              - 'measurements/terraform/modules/rds-auto-stop/**'
+              - 'measurements/terraform/rds-auto-stop/**'
               - '.node-version'
               - '.github/workflows/ci.yml'
 
@@ -80,3 +86,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
+
+  rds-auto-stop:
+    name: rds-auto-stop
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.rds_auto_stop == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+      # 흐름 정의의 JSONata 실행 시험과 Terraform mock 시험이다. AWS 자원을 만들거나 부르지 않는다.
+      - run: npm --prefix measurements/terraform/modules/rds-auto-stop/tests ci --ignore-scripts
+      - run: npm --prefix measurements/terraform/modules/rds-auto-stop/tests test
+      - run: terraform fmt -check -recursive measurements/terraform/modules/rds-auto-stop measurements/terraform/rds-auto-stop
+      - run: |
+          rds_test_dir="$(mktemp -d)"
+          cp measurements/terraform/modules/rds-auto-stop/*.tf measurements/terraform/modules/rds-auto-stop/*.json "$rds_test_dir/"
+          cp measurements/terraform/rds-auto-stop/.terraform.lock.hcl "$rds_test_dir/"
+          mkdir "$rds_test_dir/tests"
+          cp measurements/terraform/modules/rds-auto-stop/tests/*.tftest.hcl "$rds_test_dir/tests/"
+          terraform -chdir="$rds_test_dir" init -backend=false -input=false
+          terraform -chdir="$rds_test_dir" test
+      - run: |
+          terraform -chdir=measurements/terraform/rds-auto-stop init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=measurements/terraform/rds-auto-stop test
