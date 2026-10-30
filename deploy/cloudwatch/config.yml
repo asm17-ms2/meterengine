@@ -19,11 +19,24 @@ metrics:
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
   - aws_namespace: AWS/RDS
+    aws_metric_name: ReadIOPS
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  # 디스크 지연은 AWS 권장 경보와 같은 p90으로 받는다.
+  - aws_namespace: AWS/RDS
     aws_metric_name: WriteLatency
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_extended_statistics: [p90]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: ReadLatency
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_extended_statistics: [p90]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: WriteThroughput
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
   - aws_namespace: AWS/RDS
-    aws_metric_name: WriteThroughput
+    aws_metric_name: ReadThroughput
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
   - aws_namespace: AWS/RDS
@@ -53,8 +66,18 @@ metrics:
     aws_metric_name: SwapUsage
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
+  # 남은 공간은 AWS 권장 경보와 같은 최솟값으로 받는다.
   - aws_namespace: AWS/RDS
     aws_metric_name: FreeStorageSpace
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Minimum]
+  - aws_namespace: AWS/RDS
+    aws_metric_name: MaximumUsedTransactionIDs
+    aws_dimensions: [DBInstanceIdentifier]
+    aws_statistics: [Average]
+  # Performance Insights가 켜진 인스턴스에서만 나온다.
+  - aws_namespace: AWS/RDS
+    aws_metric_name: DBLoad
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
   - aws_namespace: AWS/RDS

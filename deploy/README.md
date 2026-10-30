@@ -164,8 +164,9 @@ aws ssm send-command \
    - 돌고 있는 반대 색은 받지도 다시 만들지도 않는다. 그 태그가 ECR에서 지워졌어도 배포가 막히지 않는다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
 5. 대상 색의 `/actuator/health`(DB 포함)가 UP인지 최대 90초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
-6. Prometheus 설정을 다시 읽게 한다.
+6. Prometheus와 cloudwatch exporter 설정을 다시 읽게 한다.
    - prometheus.yml도 Caddyfile과 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+   - cloudwatch/config.yml도 같다. `docker compose -p meterengine-prod exec cloudwatch-exporter kill -HUP 1`로 다시 읽게 한다. 이것이 실패해도 배포는 멈추지 않는다.
 7. 백엔드 목록을 대상 색 하나로 바꾸고 Caddy를 reload 한다. 새 요청은 대상 색으로 가고, 반대 색이 받던 요청은 마저 끝난다. 이어 내부 사이트 `:8081`의 응답 헤더 `X-Upstream`이 대상 색인지 최대 60초 확인한다.
 8. 5초(Caddyfile의 `lb_try_duration`) 기다린 뒤 돌고 있던 반대 색을 `stop`으로 멈춘다. 지우지 않아 그 이미지가 정리되지 않는다. 블루그린 이전 `backend` 컨테이너가 있으면 이때 지운다.
 9. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
@@ -483,7 +484,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
     - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
     - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
     - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
-    - MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
+    - MeterEngine DB는 PostgreSQL과 RDS 지표다.
 
 ### 경보
 

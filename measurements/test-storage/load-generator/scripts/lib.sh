@@ -1,4 +1,5 @@
-readonly GRAFANA_DASHBOARD_URL="http://localhost:3001/d/meterengine-storage?var-db=meterengine-test-storage-db"
+readonly GRAFANA_INGEST_DASHBOARD_URL="http://localhost:3001/d/meterengine-ingest"
+readonly GRAFANA_DB_DASHBOARD_URL="http://localhost:3001/d/meterengine-db?var-db=meterengine-test-storage-db"
 readonly CLOUDWATCH_LAG_SECONDS=180
 readonly CPU_SAMPLE_SECONDS=10
 readonly CPU_LIMIT_PERCENT=80
@@ -44,7 +45,9 @@ kst() {
 }
 
 time_columns() {
-	printf '%s\t%s\t%s&from=%s000&to=%s000' "$(kst "$1")" "$(kst "$2")" "$GRAFANA_DASHBOARD_URL" "$1" "$(($2 + CLOUDWATCH_LAG_SECONDS))"
+	local range="from=${1}000&to=$(($2 + CLOUDWATCH_LAG_SECONDS))000"
+	printf '%s\t%s\t%s?%s\t%s&%s' "$(kst "$1")" "$(kst "$2")" \
+		"$GRAFANA_INGEST_DASHBOARD_URL" "$range" "$GRAFANA_DB_DASHBOARD_URL" "$range"
 }
 
 print_table() {

@@ -523,6 +523,13 @@ main() {
 	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
 	"${compose[@]}" exec -T prometheus kill -HUP 1
 	log "Prometheus 설정 반영 완료"
+	# cloudwatch exporter도 기동할 때만 config.yml을 읽는다.
+	# 실패해도 새 색은 멀쩡하므로 이것 때문에 새 색을 버리지 않는다.
+	if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
+		log "cloudwatch exporter 설정 반영 완료"
+	else
+		log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+	fi
 
 	# 옛 색을 멈추기 전에 목록에서 빼야 Caddy가 멈추는 색에 새 요청을 보내지 않는다.
 	switched=yes
