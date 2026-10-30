@@ -128,6 +128,8 @@ public class EventController {
           customer_id, month, type을 함께 주면 모두 만족하는 이벤트만 나오고, total은 조건을 적용한 뒤의 건수다.
           from과 to를 함께 주면 월 대신 자유 기간을 조회한다. 시작은 포함하고 종료 시각은 제외한다. 날짜만 준 to는 그 날짜의 하루 전체를 포함한다. 시간대 없는 날짜와 시각은 KST다.
           q는 transaction_id, 고객 이름과 외부 ID의 부분 검색이다. properties는 JSON 객체의 값이 포함된 이벤트를 찾는다.
+          from과 to는 함께 주어야 하고 month와 같이 쓸 수 없다. 인보이스 검색은 한쪽만 주거나 month와 함께 줄 수 있어 규칙이 다르다.
+          모르는 조회 조건은 무시한다. 내보내기, 월 목록, 이벤트 문제와 수집 거절 검색은 모르는 조회 조건을 400으로 거절한다.
           properties는 저장된 값 그대로다. 키 순서와 공백은 보낸 것과 다를 수 있고, 숫자 자릿수는 그대로다.
           """)
   @ApiResponses({
@@ -187,7 +189,7 @@ public class EventController {
   @ReadAccess
   @Operation(
       summary = "수집된 이벤트 유형 조회",
-      description = "미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 돌려준다. month 또는 from/to를 사용한다.")
+      description = "미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 돌려준다. month 또는 from/to를 사용한다. 모르는 조회 조건은 무시한다.")
   public Map<String, List<String>> listEventTypes(
       @CurrentOrganizationId UUID organizationId,
       @RequestParam(name = "customer_id", required = false) UUID customerId,
@@ -210,7 +212,7 @@ public class EventController {
   @Operation(
       summary = "이벤트가 있는 월 조회",
       description =
-          "현재 도입사와 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다.")
+          "현재 도입사와 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다. 모르는 조회 조건은 400 validation_error로 거절한다.")
   public Map<String, List<String>> listEventMonths(
       @CurrentOrganizationId UUID organizationId, HttpServletRequest request) {
     UnknownQueryParameterValidator.validate(request.getParameterMap(), Set.of());
@@ -221,7 +223,8 @@ public class EventController {
   @ReadAccess
   @Operation(
       summary = "이벤트 단건 조회",
-      description = "transaction_id 원문으로 조회한다. 목록의 페이지나 기간에 포함되지 않아도 상세 정보를 열 수 있다.")
+      description =
+          "transaction_id 원문으로 조회한다. 목록의 페이지나 기간에 포함되지 않아도 상세 정보를 열 수 있다. 모르는 조회 조건은 무시한다.")
   public ListEventsResponse.EventResponse getEvent(
       @CurrentOrganizationId UUID organizationId,
       @RequestParam(name = "transaction_id") @StorableText @Size(min = 1, max = 1024) String transactionId) {
