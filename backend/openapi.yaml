@@ -4483,7 +4483,8 @@ paths:
     post:
       description: "로그인 없이 인보이스 하나를 조회하는 링크를 만든다. token은 발급 응답에만 제공하고 해시만 저장한다. 기본\
         \ 30일, 최대 90일이며 폐기할 수 있다. 결제 상태는 발급 당시 test/live 모드로 조회한다. 링크를 가진 사람이 조회할\
-        \ 수 있으므로 고객에게만 전달한다."
+        \ 수 있으므로 고객에게만 전달한다. 재시도를 허용하는 링크를 API 키로 만들면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면\
+        \ 409 payment_mode_mismatch다."
       operationId: createInvoiceViewLink
       parameters:
       - in: path
@@ -4788,7 +4789,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/InvitationPreview"
+                $ref: "#/components/schemas/OrganizationInvitationPreviewResponse"
           description: "초대한 도입사, 초대 이메일, 만료 시각, 수락하면 받을 권한"
         "400":
           content:
@@ -4848,7 +4849,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/AcceptedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationAcceptanceResponse"
           description: 수락한 사용자와 소속된 도입사
         "400":
           content:
@@ -4982,7 +4983,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/IssuedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationSecretResponse"
           description: 발급한 초대와 링크 토큰. 토큰 원문은 이 응답에서만 볼 수 있다
         "400":
           content:
@@ -5913,6 +5914,7 @@ paths:
         지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. customer_id를 주면 그 고객의 카드만 돌려준다.
         빌링키 원문은 싣지 않는다.
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 카드를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 카드는 새 결제에 다시 쓰이지 않는다.
       operationId: listPaymentMethods
       parameters:
       - description: 보관 상태. 생략하면 active
@@ -6166,6 +6168,7 @@ paths:
       description: |
         customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
         month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+        청구는 보관 효력(archived_from)까지 따져 버전을 고르므로, 그 달 청구에 쓰이는 요금제는 status=all 목록에서 시작 월이 가장 늦은 버전을 보고 고른다. 그 버전이 archived_from부터 멈췄으면 이전 버전으로 돌아가지 않는다.
       operationId: listPricePlans
       parameters:
       - description: "이 달(yyyy-MM, KST)이 시작 월부터 종료 월 전까지에 드는 버전만 고른다. 보관 여부는 이 값과\
@@ -6725,6 +6728,7 @@ paths:
         선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
         시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
         verified_at과 updated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 키를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 키는 새 결제에 다시 쓰이지 않는다.
       operationId: listTossPaymentsCredentials
       parameters:
       - description: 보관 상태. 생략하면 active
@@ -7979,15 +7983,6 @@ components:
           minItems: 1
       required:
       - consents
-    AcceptedInvitation:
-      type: object
-      properties:
-        organization_id:
-          type: string
-          format: uuid
-        user_account_id:
-          type: string
-          format: uuid
     ApiKeyResponse:
       type: object
       properties:
@@ -8904,11 +8899,14 @@ components:
           - invalid_toss_payments_credential
           - payment_method_rejected
           - toss_payments_test_code_in_live_mode
+          - invalid_webhook_url
+          - invalid_webhook_event_type
           - authentication_required
           - invalid_credentials
           - permission_denied
           - organization_not_active
           - environment_mismatch
+          - consent_required
           - customer_not_found
           - event_not_found
           - billable_metric_not_found
@@ -8917,13 +8915,15 @@ components:
           - invoice_view_link_not_found
           - endpoint_not_found
           - api_key_not_found
-          - api_key_unavailable
           - organization_not_found
           - user_account_not_found
           - payment_method_not_found
           - payment_method_registration_not_found
           - payment_attempt_not_found
           - toss_payments_credential_not_found
+          - price_plan_not_found
+          - webhook_endpoint_not_found
+          - invitation_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
@@ -8957,19 +8957,13 @@ components:
           - webhook_delivery_not_retryable
           - price_rate_history_immutable
           - price_plan_history_immutable
-          - price_plan_not_found
-          - customer_has_pricing
-          - invalid_webhook_url
-          - invalid_webhook_event_type
-          - webhook_endpoint_not_found
           - webhook_endpoint_disabled
           - webhook_endpoint_limit_exceeded
-          - consent_required
-          - invitation_not_found
           - invitation_unavailable
           - last_owner_required
           - owner_scopes_required
           - last_operator_required
+          - api_key_unavailable
           - upload_size_exceeded
           - request_type_not_supported
           - rate_limit_exceeded
@@ -9249,22 +9243,6 @@ components:
       required:
       - document
       - document_version
-    InvitationPreview:
-      type: object
-      properties:
-        account_exists:
-          type: boolean
-        email:
-          type: string
-        expires_at:
-          type: string
-          format: date-time
-        organization_name:
-          type: string
-        scopes:
-          type: array
-          items:
-            type: string
     InvoiceLineResponse:
       type: object
       properties:
@@ -9424,13 +9402,6 @@ components:
         revoked_at:
           type: string
           format: date-time
-        token:
-          type: string
-    IssuedInvitation:
-      type: object
-      properties:
-        invitation:
-          $ref: "#/components/schemas/OrganizationInvitationResponse"
         token:
           type: string
     ListApiKeysResponse:
@@ -9742,6 +9713,31 @@ components:
           enum:
           - test
           - live
+    OrganizationInvitationAcceptanceResponse:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        user_account_id:
+          type: string
+          format: uuid
+    OrganizationInvitationPreviewResponse:
+      type: object
+      properties:
+        account_exists:
+          type: boolean
+        email:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        organization_name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
     OrganizationInvitationResponse:
       type: object
       properties:
@@ -9767,6 +9763,13 @@ components:
           items:
             type: string
         status:
+          type: string
+    OrganizationInvitationSecretResponse:
+      type: object
+      properties:
+        invitation:
+          $ref: "#/components/schemas/OrganizationInvitationResponse"
+        token:
           type: string
     OrganizationMemberResponse:
       type: object

@@ -226,8 +226,11 @@ function HistoryScreen({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   </>;
 }
 
+// 메뉴를 옮기면 화면이 다시 마운트되므로 마지막 세션으로 먼저 그리고 다시 확인한다.
+let lastSession: SessionResponse | null = null;
+
 export function LumenApplication({ section, initialMonth }: { section: Section; initialMonth?: string }) {
-  const [session, setSession] = useState<SessionResponse | null>(null);
+  const [session, setSession] = useState<SessionResponse | null>(() => lastSession);
   const [sessionError, setSessionError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -249,7 +252,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
   const generationController = useRef<AbortController | null>(null);
 
   const loadSession = useCallback(async () => {
-    try { const result = await readApi<SessionResponse>("/api/session"); setSession(result); setSessionError(""); }
+    try { const result = await readApi<SessionResponse>("/api/session"); lastSession = result; setSession(result); setSessionError(""); }
     catch (error) { setSessionError(errorMessage(error, "서비스에 연결하지 못했습니다. 잠시 후 다시 불러오세요.")); }
   }, []);
 
@@ -271,7 +274,7 @@ export function LumenApplication({ section, initialMonth }: { section: Section; 
   useEffect(() => {
     const controller = new AbortController();
     void readApi<SessionResponse>("/api/session", { signal: controller.signal }).then(result => {
-      setSession(result); setSessionError("");
+      lastSession = result; setSession(result); setSessionError("");
     }).catch(error => { if (!controller.signal.aborted) setSessionError(errorMessage(error, "서비스에 연결하지 못했습니다. 잠시 후 다시 불러오세요.")); });
     return () => controller.abort();
   }, []);

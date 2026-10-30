@@ -74,6 +74,7 @@ public class PaymentMethodController {
           지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. customer_id를 주면 그 고객의 카드만 돌려준다.
           빌링키 원문은 싣지 않는다.
           페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
+          status가 archived나 all이면 교체나 보관으로 물러난 이전 카드를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 카드는 새 결제에 다시 쓰이지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(

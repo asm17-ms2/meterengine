@@ -12,6 +12,8 @@ import { alertIcon } from "@/components/screen/alert-icon";
 import { LinkButton } from "@/components/screen/LinkButton";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
 import { useMutationScope } from "@/components/auth/use-mutation-scope";
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+import { ENVIRONMENT_LABELS, readEnvironment } from "@/lib/environment";
 import { formatKrw } from "@/lib/format";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
@@ -57,6 +59,8 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
 function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose: () => void }) {
   const [{ month, monthLabel, targetCount, supplyAmount, isUnfinishedMonth, hasUnpricedUsages }] =
     useState(target);
+  const search = useWorkspaceSearch();
+  const [environment] = useState(() => readEnvironment(search.get("environment")));
   const [state, formAction, isPending] = useActionState(
     finalizeInvoicesAction,
     FINALIZE_INVOICES_IDLE,
@@ -110,7 +114,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
       key="confirm"
       open
       width={MODAL_WIDTH}
-      title={`${monthLabel} 인보이스를 확정할까요?`}
+      title={`${ENVIRONMENT_LABELS[environment]} ${monthLabel} 인보이스를 확정할까요?`}
       onCancel={isPending ? undefined : onClose}
       keyboard={!isPending}
       mask={{ closable: !isPending }}

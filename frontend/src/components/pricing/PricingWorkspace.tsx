@@ -23,6 +23,7 @@ import { ActionPanel } from "@/components/workspace/ActionPanel";
 import type { BillableMetricResponse } from "@/lib/api/billable-metrics";
 import { metricCalculationFormula } from "@/lib/billable-metric-calculation";
 import { isRepresentableUnitPrice, isZeroPriceRate } from "@/lib/price-rate";
+import { appliedPricePlan } from "@/lib/price-plan";
 import type { CustomerResponse } from "@/lib/api/customers";
 import type { BillableMetricPricePriceRate, ListBillableMetricPricesResponse, PricePlanResponse, PriceRateResponse } from "@/lib/api/pricing";
 import styles from "./pricing.module.css";
@@ -37,7 +38,6 @@ export type PricingMetric = Pick<BillableMetricResponse, "code" | "name" | "dime
 
 type Props = { query: ListQuery; total: number; summary: { metric_count: number; no_rate_count: number }; planHistoryStatus: ArchiveStatus; rateHistoryStatus: ArchiveStatus; metricStatus: ArchiveStatus; month: string; currentMonth: string; customerId: string; customers: PricingCustomer[]; metrics: PricingMetric[]; commonPrices: ListBillableMetricPricesResponse["billable_metric_prices"]; scopedPrices: ListBillableMetricPricesResponse["billable_metric_prices"]; histories: Record<string, PriceRateResponse[]>; commonPlans: PricePlanResponse[]; scopedPlans: PricePlanResponse[] };
 
-function activePlan(plans: PricePlanResponse[], month: string) { return plans.find(plan => plan.effective_from <= month && (!plan.effective_until || plan.effective_until > month) && (!plan.archived_from || plan.archived_from > month)); }
 function dimensionKey(rate: Pick<PriceRateResponse, "dimension_values">) { return JSON.stringify(Object.entries(rate.dimension_values).sort(([left], [right]) => left.localeCompare(right))); }
 function dimensions(rate: Pick<PriceRateResponse, "dimension_values">) { return Object.entries(rate.dimension_values).map(([key, value]) => `${key}: ${String(value)}`).join(", ") || "모든 사용량"; }
 function dateRange(rate: { effective_from: string; effective_until: string | null }) { return `${rate.effective_from}부터${rate.effective_until ? ` ${rate.effective_until} 전까지` : " 계속"}`; }
@@ -59,8 +59,8 @@ export function PricingWorkspace(props: Props) {
   const resolved = new Map(common.map(rate => [dimensionKey(rate), { ...rate, isInherited: Boolean(props.customerId) }]));
   for (const rate of scoped) resolved.set(dimensionKey(rate), { ...rate, isInherited: false });
   const effectiveRates = [...resolved.values()];
-  const scopedPlan = activePlan(props.scopedPlans, props.month);
-  const plan = scopedPlan ?? activePlan(props.commonPlans, props.month);
+  const scopedPlan = appliedPricePlan(props.scopedPlans, props.month);
+  const plan = scopedPlan ?? appliedPricePlan(props.commonPlans, props.month);
   const isInheritedPlan = Boolean(props.customerId && !scopedPlan && plan);
   return <>
     <ResourceSearchControls query={props.query} capabilities={CAPABILITIES.listBillableMetricPrices} resource="billable-metric-prices" month={{ value: props.month }} customers={props.customers.map(customer => ({ value: customer.id, label: customer.name + (customer.archived_at || customer.is_archived ? " (보관됨)" : "") }))} />

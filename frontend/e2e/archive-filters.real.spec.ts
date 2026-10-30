@@ -287,12 +287,12 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await page.goto("/settings");
       const credentials = section(page, "토스페이먼츠 연동");
       await expectRecords(credentials, ["new2"], ["old1"]);
-      await selectedFilter(page, "PG 키 관리 상태", "보관됨");
+      await selectedFilter(page, "토스 키 관리 상태", "보관됨");
       await expectRecords(credentials, ["old1"], ["new2"]);
-      await selectedFilter(page, "PG 키 관리 상태", "전체");
+      await selectedFilter(page, "토스 키 관리 상태", "전체");
       await expectRecords(credentials, ["new2", "old1"]);
       await page.goto(`/customers/${activeCustomerId}?month=${currentMonth}`);
-      const cards = section(page, "현재 결제 환경의 카드 관리");
+      const cards = section(page, "현재 결제 모드의 카드 관리");
       const rows = cards.locator(".workspace-desktop-table").getByRole("row").filter({ hasText: "43301234****123*" });
       await expect(rows).toHaveCount(1);
       await expect(cards.getByRole("button", { name: "카드 보관", exact: true })).toBeVisible();
@@ -317,7 +317,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
         { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["미터 관리 상태", "요금제 관리 상태", "단가 관리 상태"] },
         { path: "/members?status=all", filters: ["사용자 관리 상태"] },
         { path: "/integrations?status=all&key_status=all", filters: ["API 키 상태", "통보 관리 상태"] },
-        { path: "/settings?status=all", filters: ["PG 키 관리 상태"] },
+        { path: "/settings?status=all", filters: ["토스 키 관리 상태"] },
         { path: `/customers/${activeCustomerId}?month=${currentMonth}&card_status=all`, filters: ["카드 관리 상태"] },
       ];
       for (const route of routes) {
@@ -335,7 +335,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         if (route.path.startsWith("/pricing?") && process.env.ARCHIVE_FILTER_PRICING_SCREENSHOT_PATH) await page.screenshot({ path: process.env.ARCHIVE_FILTER_PRICING_SCREENSHOT_PATH, fullPage: true });
       }
-      if (process.env.ARCHIVE_FILTER_SCREENSHOT_PATH) await section(page, "현재 결제 환경의 카드 관리").screenshot({ path: process.env.ARCHIVE_FILTER_SCREENSHOT_PATH });
+      if (process.env.ARCHIVE_FILTER_SCREENSHOT_PATH) await section(page, "현재 결제 모드의 카드 관리").screenshot({ path: process.env.ARCHIVE_FILTER_SCREENSHOT_PATH });
     });
   } catch (error) {
     failure = safeFailure(error, secrets);
