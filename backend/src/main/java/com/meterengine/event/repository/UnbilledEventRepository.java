@@ -97,14 +97,29 @@ public class UnbilledEventRepository {
             + condition
             + ")";
     Object[] parameters = {organizationId, BusinessEnvironmentContext.scopeId(), startAt, cutoffAt};
-    List<MetricCount> counts =
+    // 미터별 수와 서로 다른 이벤트 수를 같은 JOIN 한 번으로 센다. 빈 묶음 () 줄이 전체 합계다.
+    List<CountRow> rows =
         jdbcTemplate.query(
-            "SELECT m.code, count(*) AS event_count" + matched + " GROUP BY m.code ORDER BY m.code",
-            (rs, rowNum) -> new MetricCount(rs.getString("code"), rs.getLong("event_count")),
+            "SELECT m.code, GROUPING(m.code) = 1 AS is_total, count(*) AS event_count,"
+                + " count(DISTINCT e.transaction_id) AS distinct_event_count"
+                + matched
+                + " GROUP BY GROUPING SETS ((m.code), ()) ORDER BY m.code",
+            (rs, rowNum) ->
+                new CountRow(
+                    rs.getString("code"),
+                    rs.getBoolean("is_total"),
+                    rs.getLong("event_count"),
+                    rs.getLong("distinct_event_count")),
             parameters);
-    Long eventCount =
-        jdbcTemplate.queryForObject(
-            "SELECT count(DISTINCT e.transaction_id)" + matched, Long.class, parameters);
-    return new MetricCounts(eventCount == null ? 0 : eventCount, counts);
+    long eventCount =
+        rows.stream().filter(CountRow::isTotal).mapToLong(CountRow::distinctEventCount).sum();
+    List<MetricCount> counts =
+        rows.stream()
+            .filter(row -> !row.isTotal())
+            .map(row -> new MetricCount(row.code(), row.eventCount()))
+            .toList();
+    return new MetricCounts(eventCount, counts);
   }
+
+  private record CountRow(String code, boolean isTotal, long eventCount, long distinctEventCount) {}
 }
