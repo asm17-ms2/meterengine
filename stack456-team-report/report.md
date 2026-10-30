@@ -1,5 +1,5 @@
-미완료 13건, 결과: 끝 상태 328/328건 (fixed 263, refuted 20, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 6(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 2개(마지막 a38b0ed), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 2개(마지막 ffcf739), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 2개(마지막 62caa25), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 3개(마지막 ab6835d), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 3개(마지막 61ba35e), fix/s456-t-yang-mobile-heading 1개(마지막 dd5810c), fix/s456-t-yang-account-rules 1개(마지막 bb71176), fix/s456-t-yang-webhook-restore 1개(마지막 cd7193b), fix/s456-t-yang-demo-request 1개(마지막 f833734), fix/s456-t-yang-toss-key-archive 1개(마지막 f3fcbcc), fix/s456-t-yang-retry-window 1개(마지막 798d70d)
+미완료 11건, 결과: 끝 상태 328/328건 (fixed 263, refuted 20, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 6(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 2개(마지막 a38b0ed), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 2개(마지막 ffcf739), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 2개(마지막 62caa25), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 3개(마지막 ab6835d), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 3개(마지막 61ba35e), fix/s456-t-yang-mobile-heading 1개(마지막 dd5810c), fix/s456-t-yang-account-rules 1개(마지막 bb71176), fix/s456-t-yang-webhook-restore 1개(마지막 cd7193b), fix/s456-t-yang-demo-request 1개(마지막 f833734), fix/s456-t-yang-toss-key-archive 1개(마지막 f3fcbcc), fix/s456-t-yang-retry-window 1개(마지막 798d70d), fix/s456-t-yang-archived-card 1개(마지막 cb9bdda)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -238,6 +238,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | NT-yang-024 | #447 | f3fcbcc | 키 보관 DELETE가 @AdminAccess라 저장, 모드 변경과 권한 규칙이 달랐다. 저장과 같이 로그인 세션만 부르게 했다(보안 지적이라 재현 절차는 보고에 올리지 않는다). | TossPaymentsCredentialIntegrationTest admin_API_키로는_어느_모드의_토스_키도_보관할_수_없고_403이며_저장된_키는_그대로다: 실패 expected 403 but was 204 |
 | NT-yang-025 | #449 | 798d70d | 관리자 수동 결제는 더 새 시도가 있는 실패에 7일 창을 걸지 않는데 고객 재결제 가능 여부는 모든 NOT_FOUND 실패에 걸었다. 새 시도는 어느 길로 만들어도 그 전에 옛 실패의 미청구를 확인하고 고객 재결제도 관리자 결제와 같은 생성 경로를 지 | CustomerPaymentRetryIntegrationTest 최신_실패가_일반_거절이면_더_새_시도가_있는_옛_NOT_FOUND는_7일_창으로_막지_않는다: 실패 expected true but was false |
 | NT-yang-028 | #445 | f3fcbcc | PaymentRetryServiceTest의 키 보관 시험 두 개가 skippedCount만 봐 다른 까닭으로 건너뛰어도 통과했다. 이웃 시험처럼 건너뛴 까닭(toss_payments_credential_missing) 로그를 확인한다. 시험만 바꿨다 | 없음(./gradlew test --tests PaymentRetryServiceTest 27개 통과) |
+| NT-yang-026 | #447 | cb9bdda | 보관 카드도 GET payment-method가 200을 줘 paymentReadiness가 결제 버튼을 보였다. 백엔드를 404로 바꾸면 보관 카드를 보이는 API 계약이 바뀌므로 댓글 제안대로 프론트가 archived_at을 보고 card-miss | payment-card-state.test.mjs an archived card needs a new registration instead of a payment button: 실패 actual 'usable' |
+| NT-yang-027 | #447 | cb9bdda | 보관한 카드 뒤 재등록 감사 행이 보관 카드를 replaced_card_number로 실었다. 보관 카드는 이미 쓰지 않으므로 싣지 않는다. 옛 빌링키 정리는 그대로다. | PaymentMethodRegistrationIntegrationTest 보관한_카드_뒤에_다시_등록하면_감사_행에_보관한_카드를_교체한_카드로_싣지_않는다: 실패 replaced_card_number가 실림 |
 
 ## 정할 것
 
@@ -283,8 +285,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | NT-yang-019 | #449 | open | 조회 링크 화면의 상태 영역이 같은 문구를 다시 알리지 않고 InvoiceViewLinks는 영역을 새로 삽입한다(박성종 님 #449 10-29 00:28 p4) |
 | NT-yang-020 | #449 | open | 조회 링크 폐기가 빨간 테두리 버튼과 브라우저 확인 창이다(박성종 님 #449 10-29 00:28 p5) |
 | NT-yang-023 | #453 | open | 업무 계약 대역이 재전송 뒤 attempt_count를 0으로 되돌리지 않는다(박성종 님 #453 10-29 00:15 p4) |
-| NT-yang-026 | #447 | open | 보관한 카드로도 수납 상세가 결제 버튼을 보인다(박성종 님 #467 10-29 03:22 p3) |
-| NT-yang-027 | #447 | open | 보관한 카드 뒤 재등록 감사 행이 보관 카드를 replaced_card_number로 싣는다(박성종 님 #467 10-29 03:22 p4) |
+| NT-yang-026 | #447 | fixed | 보관한 카드로도 수납 상세가 결제 버튼을 보인다(박성종 님 #467 10-29 03:22 p3) |
+| NT-yang-027 | #447 | fixed | 보관한 카드 뒤 재등록 감사 행이 보관 카드를 replaced_card_number로 싣는다(박성종 님 #467 10-29 03:22 p4) |
 
 ## 돌리지 못한 검사
 
@@ -465,6 +467,10 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #483 | 62caa25 | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
 | #485 | ab6835d | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
 | #494 | 61ba35e | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
+| #480 | ffcf739 | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
+| #502 | bb71176 | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
+| #504 | cd7193b | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
+| #505 | f833734 | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
 
 ## 사용량
 
