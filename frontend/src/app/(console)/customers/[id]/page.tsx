@@ -19,7 +19,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 function CustomerLoadFailure({ message, status }: { message: string; status: number }) {
   return <>
-    <WorkspaceHeader title={status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"} kicker="도입사 콘솔"
+    <WorkspaceHeader title={status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"}
       description={status === 404 ? "주소가 잘못됐거나 다른 도입사나 업무 환경의 고객일 수 있습니다. 현재 도입사와 업무 환경을 확인하세요." : "고객 정보를 불러오지 못했습니다."}>
       <Link href="/customers">고객 목록으로</Link>
     </WorkspaceHeader>
@@ -48,7 +48,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: `${metric.name} (${metric.code})`, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];
   const cardRows = cards.ok ? cards.data.payment_methods.map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
-    <WorkspaceHeader title={detail.name} kicker="도입사 콘솔" description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
+    <WorkspaceHeader title={detail.name} description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
     <section className="workspace-panel">
       {detail.archived_at && <p role="status">보관된 고객입니다. 과거 내역은 유지되며 복원 전에는 신규 업무와 사용량 수집을 할 수 없습니다.</p>}
       <dl className="detail-strip"><div><dt>외부 고객 ID</dt><dd>{detail.external_id ?? "연결하지 않음"}</dd></div><div><dt>청구 이메일</dt><dd>{detail.billing_email ?? "등록하지 않음"}</dd></div><div><dt>현재 등록 카드</dt><dd>{card.ok ? `${card.data.card_number} (${card.data.mode === "test" ? "테스트 결제" : "실결제"}${card.data.archived_at ? ", 보관" : ""})` : card.error.status === 404 ? "등록 카드 없음" : "조회 실패"}</dd></div></dl>

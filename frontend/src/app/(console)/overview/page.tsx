@@ -9,7 +9,7 @@ import { WorkspaceError, WorkspaceTable } from "@/components/workspace/Workspace
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const month = readMonth((await searchParams).month);
   const result = await getDashboard(month);
-  if (!result.ok) return <><WorkspaceHeader title="과금 운영" kicker="도입사 콘솔" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
+  if (!result.ok) return <><WorkspaceHeader title="과금 운영" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
   const data = result.data;
   const unresolved = data.unresolved_invoice_payments;
   const paymentModeName = data.payment_mode === "test" ? "테스트" : "실결제";
@@ -22,7 +22,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   ];
   const formatMoney = (value: number) => `${new Intl.NumberFormat("ko-KR").format(value)}원`;
   return <>
-    <WorkspaceHeader title={(steps.every(step => step.isComplete) || data.invoice_payments.length > 0 || data.event_count > 0 || unresolved?.length > 0) ? `${formatKoreanMonth(month)} 과금 운영` : "첫 청구를 준비하세요"} kicker="도입사 콘솔" description="설정과 예외를 먼저 확인하고, 청구와 수납을 이어 진행하세요."><MonthFilter month={month} /></WorkspaceHeader>
+    <WorkspaceHeader title={(steps.every(step => step.isComplete) || data.invoice_payments.length > 0 || data.event_count > 0 || unresolved?.length > 0) ? `${formatKoreanMonth(month)} 과금 운영` : "첫 청구를 준비하세요"} description="설정과 예외를 먼저 확인하고, 청구와 수납을 이어 진행하세요."><MonthFilter month={month} /></WorkspaceHeader>
     <section className="finance-flow" aria-label="월별 금액 흐름"><div><span>청구 예정액</span><strong>{formatMoney(data.draft_supply_amount)}</strong><small>미확정 고객, 공급가액</small></div><div><span>확정 청구액</span><strong>{formatMoney(data.finalized_total_amount)}</strong><small>세금 포함</small></div><div><span>결제 대기액</span><strong>{formatMoney(data.outstanding_amount)}</strong><small>미결제와 결과 확인 중, 취소 별도</small></div><div><span>순수납액</span><strong>{formatMoney(data.collected_amount)}</strong><small>취소 {formatMoney(data.canceled_amount)} 제외</small></div></section>
     <section className="workspace-panel" aria-labelledby="overview-unresolved-title">
       <div className="workspace-heading"><h2 id="overview-unresolved-title">미해결 결제</h2><span className="muted">전체 청구 월, {data.payment_mode === "test" ? "테스트 결제" : "실결제"}</span></div>
