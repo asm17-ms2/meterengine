@@ -1,5 +1,5 @@
-미완료 7건, 결과: 끝 상태 328/328건 (fixed 269, refuted 20, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 0(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 3개(마지막 be26d96), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 2개(마지막 ffcf739), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 2개(마지막 62caa25), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 3개(마지막 ab6835d), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 3개(마지막 61ba35e), fix/s456-t-yang-mobile-heading 1개(마지막 dd5810c), fix/s456-t-yang-account-rules 1개(마지막 bb71176), fix/s456-t-yang-webhook-restore 1개(마지막 cd7193b), fix/s456-t-yang-demo-request 1개(마지막 f833734), fix/s456-t-yang-toss-key-archive 1개(마지막 f3fcbcc), fix/s456-t-yang-retry-window 2개(마지막 bbac6da), fix/s456-t-yang-archived-card 1개(마지막 cb9bdda), fix/s456-t-yang-invoice-line-name 1개(마지막 8d23297), fix/s456-t-yang-invoice-links-ui 1개(마지막 3b16755), fix/s456-t-yang-contract-redelivery 1개(마지막 9e58580)
+미완료 3건, 결과: 끝 상태 328/328건 (fixed 269, refuted 20, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 0(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 3개(마지막 be26d96), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 2개(마지막 ffcf739), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 2개(마지막 62caa25), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 3개(마지막 ab6835d), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 3개(마지막 61ba35e), fix/s456-t-yang-mobile-heading 1개(마지막 dd5810c), fix/s456-t-yang-account-rules 1개(마지막 bb71176), fix/s456-t-yang-webhook-restore 1개(마지막 cd7193b), fix/s456-t-yang-demo-request 1개(마지막 f833734), fix/s456-t-yang-toss-key-archive 1개(마지막 f3fcbcc), fix/s456-t-yang-retry-window 2개(마지막 bbac6da), fix/s456-t-yang-archived-card 1개(마지막 cb9bdda), fix/s456-t-yang-invoice-line-name 1개(마지막 8d23297), fix/s456-t-yang-invoice-links-ui 1개(마지막 3b16755), fix/s456-t-yang-contract-redelivery 1개(마지막 9e58580), fix/s456-t-yang-readme-rules 1개(마지막 6bc2459), fix/s456-t-yang-console-rules 1개(마지막 ccbace0)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
@@ -239,6 +239,10 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | NT-yang-024 | #447 | f3fcbcc | 키 보관 DELETE가 @AdminAccess라 저장, 모드 변경과 권한 규칙이 달랐다. 저장과 같이 로그인 세션만 부르게 했다(보안 지적이라 재현 절차는 보고에 올리지 않는다). | TossPaymentsCredentialIntegrationTest admin_API_키로는_어느_모드의_토스_키도_보관할_수_없고_403이며_저장된_키는_그대로다: 실패 expected 403 but was 204 |
 | NT-yang-025 | #449 | 798d70d | 관리자 수동 결제는 더 새 시도가 있는 실패에 7일 창을 걸지 않는데 고객 재결제 가능 여부는 모든 NOT_FOUND 실패에 걸었다. 새 시도는 어느 길로 만들어도 그 전에 옛 실패의 미청구를 확인하고 고객 재결제도 관리자 결제와 같은 생성 경로를 지 | CustomerPaymentRetryIntegrationTest 최신_실패가_일반_거절이면_더_새_시도가_있는_옛_NOT_FOUND는_7일_창으로_막지_않는다: 실패 expected true but was false |
 | NT-yang-028 | #445 | f3fcbcc | PaymentRetryServiceTest의 키 보관 시험 두 개가 skippedCount만 봐 다른 까닭으로 건너뛰어도 통과했다. 이웃 시험처럼 건너뛴 까닭(toss_payments_credential_missing) 로그를 확인한다. 시험만 바꿨다 | 없음(./gradlew test --tests PaymentRetryServiceTest 27개 통과) |
+| NT-yang-012 | #447 | ccbace0 | 고객 목록 조회 실패가 WorkspaceError에 status를 넘기지 않았다. error.status를 넘긴다. | workspace-load-rules.test.mjs a failed lookup passes its HTTP status: 실패 status 없는 WorkspaceError |
+| NT-yang-013 | #447 | ccbace0 | 고객 목록 업무 표에 label이 없었다. 고객 목록을 준다. | workspace-load-rules.test.mjs every workspace table on these pages names its scroll area: 실패 이름 없는 표 |
+| NT-yang-015 | #445 | 6bc2459 | 구조 절 의존 설명에 payment -> global.crypto가 없었다(payment 행의 Mock PG 문구는 main에서 이미 고쳐짐). 같은 줄에 더했다. | 없음(문서와 코드 대조(payment 패키지가 global.crypto를 import)) |
+| NT-yang-016 | #453 | 6bc2459 | CRYPTO_ENCRYPTION_KEY, 사설망 웹훅 허용, 웹훅 주기와 재전송을 두 절에 적었다. 설정 절과 웹훅 절에만 두고 요금과 결제 연동 절에서는 링크했다. 옮긴 문장은 남는 쪽과 대조해 빠진 내용이 없다. | 없음(문서 대조) |
 | NT-yang-018 | #449 | 3b16755 | 조회 링크와 공개 청구서 프론트 타입 이름이 백엔드 스키마 이름과 달랐다. 스키마 이름(InvoiceViewLinkResponse, InvoiceViewLinkSecretResponse, PublicInvoiceResponse)으로 바꿨다. 타입만 바 | invoice-view-links-ui.test.mjs invoice link API types use the backend schema names: 실패 export type InvoiceViewLinkResponse 없음 |
 | NT-yang-019 | #449 | 3b16755 | InvoiceViewLinks는 상태 영역을 문구와 함께 새로 삽입했고 두 화면 모두 같은 문구를 연달아 넣으면 다시 읽히지 않았다. 영역을 늘 두고 비운 뒤 다음 프레임에 넣는다. | invoice-view-links-ui.test.mjs link results are announced through a status region that is always present: 실패 feedback && role=status |
 | NT-yang-020 | #449 | 3b16755 | 링크 폐기가 빨간 테두리 버튼과 브라우저 확인 창이라 콘솔 위험 작업 위계와 거꾸로였다. 작은 위험 링크 버튼과 antd 확인 창(primary danger)으로 바꾸고 실화면 명세를 맞췄다. | invoice-view-links-ui.test.mjs revoking a link asks in the console dialog: 실패 window.confirm 있음 |
@@ -281,11 +285,11 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | NT-yang-028 | #445 | fixed | 보관 키 재시도 시험이 skipped 수만 확인한다(박성종 님 #467 10-29 03:22 p4) |
 | NT-yang-010 | #445 | open | 수납 목록, 수납 상세, 설정의 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #445 10-29 00:27 p3) |
 | NT-yang-011 | #445 | open | 수납 목록, 수납 상세, 설정의 업무 표에 label이 없다(박성종 님 #445 10-29 00:27 p4) |
-| NT-yang-012 | #447 | open | 고객 목록 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #447 10-29 00:27 p3) |
-| NT-yang-013 | #447 | open | 고객 목록 업무 표에 label이 없다(박성종 님 #447 10-29 00:27 p4) |
+| NT-yang-012 | #447 | fixed | 고객 목록 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #447 10-29 00:27 p3) |
+| NT-yang-013 | #447 | fixed | 고객 목록 업무 표에 label이 없다(박성종 님 #447 10-29 00:27 p4) |
 | NT-yang-014 | #447 | open | 요금제, 단가 이력 보관과 복원, 미터 복원 행 버튼이 link 버튼이 아니다(박성종 님 #447 10-29 00:27 p4) |
-| NT-yang-015 | #445 | open | backend README 의존 목록에 payment -> global.crypto가 없다(박성종 님 #445 10-29 00:27 p4) |
-| NT-yang-016 | #453 | open | backend README가 CRYPTO_ENCRYPTION_KEY, allow-private-network, 웹훅 주기와 재전송을 두 곳에 적는다(박성종 님 #453 10-29 00:15 p4) |
+| NT-yang-015 | #445 | fixed | backend README 의존 목록에 payment -> global.crypto가 없다(박성종 님 #445 10-29 00:27 p4) |
+| NT-yang-016 | #453 | fixed | backend README가 CRYPTO_ENCRYPTION_KEY, allow-private-network, 웹훅 주기와 재전송을 두 곳에 적는다(박성종 님 #453 10-29 00:15 p4) |
 | NT-yang-018 | #449 | fixed | 공개 청구서와 조회 링크 프론트 타입 이름이 백엔드 스키마 이름과 다르다(박성종 님 #449 10-29 00:28 p3) |
 | NT-yang-019 | #449 | fixed | 조회 링크 화면의 상태 영역이 같은 문구를 다시 알리지 않고 InvoiceViewLinks는 영역을 새로 삽입한다(박성종 님 #449 10-29 00:28 p4) |
 | NT-yang-020 | #449 | fixed | 조회 링크 폐기가 빨간 테두리 버튼과 브라우저 확인 창이다(박성종 님 #449 10-29 00:28 p5) |
@@ -482,6 +486,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | #508 | cb9bdda | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
 | #509 | 8d23297 | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
 | #510 | 3b16755 | 12/12 | 비교 38개 화면, 늘어난 것 0건 |
+| #478 | be26d96 | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
+| #507 | bbac6da | 12/12 | 화면 비교 없음(프론트를 바꾸지 않음) |
 
 ## 사용량
 
@@ -550,3 +556,4 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - D-216 마이그레이션 기동 점검(.s456-work/tools/mig-check.sh): 따로 띄운 PostgreSQL 18에 main 931b703 백엔드로 V52까지 올린 뒤 fix/s456-t-yang-invoice-line-name 8d23297 백엔드가 V53을 적용해 기동했고, 빈 DB에서도 기동했다.
 - 2026-10-30T12:12:33+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics 두 번째: #492가 들어간 main(18c4f64)과 OperationsService.java가 충돌했다. 이 PR의 결제 실패 수 live 한정과 웹훅 실패 수 test 환경 제외, #492의 지운 수신 주소 제외 조건을 한 쿼리에 모두 살렸다. #492 조건을 합쳐 쓴 곳이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.
 - 할 일 8(#494): origin/main(c661d80)을 받은 head 61ba35e의 PR CI frontend 체크가 초록이 됐다(run 40990363749, job 123851050243). #481의 업무 계약 수정이 main에 들어와 풀렸다. 따로 고칠 것은 없었다.
+- readme-rules 6bc2459의 첫 backend 검사(10-30 12:3x)는 다른 백엔드 빌드와 실화면 환경이 함께 돌던 중 Testcontainers PostgreSQL 연결이 끊겨 1452개 중 503개가 컨텍스트 기동 실패로 떨어졌다(FlywaySqlUnableToConnectToDbException). README만 바꾼 커밋이라 환경 탓으로 보고, 백엔드 빌드를 한 번에 하나만 돌리게 chk3.sh를 고친 뒤 같은 sha에서 다시 돌려 통과했다.

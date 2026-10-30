@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-30T12:20:45+09:00",
+  "updated_at": "2026-10-30T12:25:05+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -49,7 +49,9 @@
     "fix/s456-t-yang-archived-card": "cb9bdda",
     "fix/s456-t-yang-invoice-line-name": "8d23297",
     "fix/s456-t-yang-invoice-links-ui": "3b16755",
-    "fix/s456-t-yang-contract-redelivery": "9e58580"
+    "fix/s456-t-yang-contract-redelivery": "9e58580",
+    "fix/s456-t-yang-readme-rules": "6bc2459",
+    "fix/s456-t-yang-console-rules": "ccbace0"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -8819,16 +8821,18 @@
         "frontend/src/app/(console)/payments/page.tsx:13 @ c661d80",
         "frontend/src/app/(console)/settings/page.tsx:28-31 @ c661d80"
       ],
-      "commits": [],
+      "commits": [
+        "ccbace03"
+      ],
       "tests": [],
       "behavior_change": false,
       "layer": 445,
-      "branch": "main",
+      "branch": "fix/s456-t-yang-console-rules",
       "status": "open",
       "verdict": "confirmed",
       "title": "수납 목록, 수납 상세, 설정의 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #445 10-29 00:27 p3)",
       "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "문인호 님 열린 #498, #499가 같은 파일을 고치는 중이라 그 PR들이 들어간 뒤 main에서 고친다"
+      "left": "설정 세 곳과 수납 상세 두 곳은 ccbace0(#513)에서 고침. 수납 목록(payments/page.tsx)은 열린 #498이 같은 줄을 다시 써 그 PR이 들어간 뒤 main에서 고친다"
     },
     {
       "id": "NT-yang-011",
@@ -8838,50 +8842,67 @@
         "frontend/src/app/(console)/payments/[id]/page.tsx:78,134 @ c661d80",
         "frontend/src/app/(console)/settings/page.tsx:31 @ c661d80"
       ],
-      "commits": [],
+      "commits": [
+        "ccbace03"
+      ],
       "tests": [],
       "behavior_change": false,
       "layer": 445,
-      "branch": "main",
+      "branch": "fix/s456-t-yang-console-rules",
       "status": "open",
       "verdict": "confirmed",
       "title": "수납 목록, 수납 상세, 설정의 업무 표에 label이 없다(박성종 님 #445 10-29 00:27 p4)",
       "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "NT-yang-010과 같은 파일, 같은 순서로 고친다"
+      "left": "토스 키, 결제 시도 기록, 취소 내역 표는 ccbace0(#513)에서 고침. 수납 목록 표는 #498 뒤 main에서 고친다"
     },
     {
       "id": "NT-yang-012",
       "merged_ids": [],
       "evidence": [
-        "frontend/src/app/(console)/customers/page.tsx:30 @ c661d80"
+        "frontend/src/app/(console)/customers/page.tsx:31 @ c743f1f",
+        "workspace-load-rules.test.mjs a failed lookup passes its HTTP status: 실패 status 없는 WorkspaceError",
+        "커밋 ccbace0"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ccbace03"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-load-rules.test.mjs",
+        "frontend 검사와 계약 명세"
+      ],
       "behavior_change": false,
       "layer": 447,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-yang-console-rules",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "고객 목록 조회 실패가 WorkspaceError에 status를 넘기지 않는다(박성종 님 #447 10-29 00:27 p3)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "문인호 님 열린 #496, #499가 같은 파일을 고치는 중이라 그 뒤 main에서 고친다"
+      "reason": "고객 목록 조회 실패가 WorkspaceError에 status를 넘기지 않았다. error.status를 넘긴다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-013",
       "merged_ids": [],
       "evidence": [
-        "frontend/src/app/(console)/customers/page.tsx:28 @ c661d80"
+        "frontend/src/app/(console)/customers/page.tsx:29 @ c743f1f",
+        "workspace-load-rules.test.mjs every workspace table on these pages names its scroll area: 실패 이름 없는 표",
+        "커밋 ccbace0"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ccbace03"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-load-rules.test.mjs"
+      ],
       "behavior_change": false,
       "layer": 447,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-yang-console-rules",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "고객 목록 업무 표에 label이 없다(박성종 님 #447 10-29 00:27 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "NT-yang-012와 같이 고친다"
+      "reason": "고객 목록 업무 표에 label이 없었다. 고객 목록을 준다.",
+      "fails_without_fix": true,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-014",
@@ -8890,51 +8911,66 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:89,98 @ c661d80",
         "frontend/src/components/billable-metrics/BillableMetricsTable.tsx:134 @ c661d80"
       ],
-      "commits": [],
+      "commits": [
+        "ccbace03"
+      ],
       "tests": [],
       "behavior_change": false,
       "layer": 447,
-      "branch": "main",
+      "branch": "fix/s456-t-yang-console-rules",
       "status": "open",
       "verdict": "confirmed",
       "title": "요금제, 단가 이력 보관과 복원, 미터 복원 행 버튼이 link 버튼이 아니다(박성종 님 #447 10-29 00:27 p4)",
       "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "문인호 님 열린 #498이 PricingWorkspace를 고치는 중이라 그 뒤 main에서 고친다"
+      "left": "미터 복원은 ccbace0(#513)에서 고침. PricingWorkspace의 요금제, 단가 보관과 복원은 #498이 그 파일을 고치는 중이라 그 뒤 main에서 고친다"
     },
     {
       "id": "NT-yang-015",
       "merged_ids": [],
       "evidence": [
-        "backend/README.md:280-282 @ c661d80"
+        "backend/README.md:284 @ c743f1f",
+        "backend/src/main/java/com/meterengine/payment/entity/TossPaymentsCredential.java:1-20 @ c743f1f",
+        "커밋 6bc2459"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "6bc24590"
+      ],
+      "tests": [
+        "문서와 코드 대조(payment 패키지가 global.crypto를 import)"
+      ],
       "behavior_change": false,
       "layer": 445,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-yang-readme-rules",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "backend README 의존 목록에 payment -> global.crypto가 없다(박성종 님 #445 10-29 00:27 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "README 문서 주제로 모아 고친다"
+      "reason": "구조 절 의존 설명에 payment -> global.crypto가 없었다(payment 행의 Mock PG 문구는 main에서 이미 고쳐짐). 같은 줄에 더했다.",
+      "fails_without_fix": false,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-016",
       "merged_ids": [],
       "evidence": [
-        "backend/README.md:98,320 @ c661d80",
-        "backend/README.md:288,290,327,331 @ c661d80"
+        "backend/README.md:98,100,293,297,328,332,335,339 @ c743f1f",
+        "docs/contributing/documents.md:3 @ c743f1f",
+        "커밋 6bc2459"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "6bc24590"
+      ],
+      "tests": [
+        "문서 대조"
+      ],
       "behavior_change": false,
       "layer": 453,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-yang-readme-rules",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "backend README가 CRYPTO_ENCRYPTION_KEY, allow-private-network, 웹훅 주기와 재전송을 두 곳에 적는다(박성종 님 #453 10-29 00:15 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "README 문서 주제로 모아 고친다"
+      "reason": "CRYPTO_ENCRYPTION_KEY, 사설망 웹훅 허용, 웹훅 주기와 재전송을 두 절에 적었다. 설정 절과 웹훅 절에만 두고 요금과 결제 연동 절에서는 링크했다. 옮긴 문장은 남는 쪽과 대조해 빠진 내용이 없다.",
+      "fails_without_fix": false,
+      "top_head": "main c743f1f"
     },
     {
       "id": "NT-yang-018",
@@ -18857,6 +18893,262 @@
       "result": "pass",
       "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
       "detail": "계약 명세  13 passed (18.6s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<ops-metrics-m4 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-retry-window",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<retry-window-2 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1452개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 118 ℹ pass 118 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  75 passed (31.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  18 passed (22.0s) "
     }
   ],
   "pushes": [
@@ -19474,6 +19766,16 @@
       "branch": "fix/s456-t-yang-contract-redelivery",
       "sha": "9e58580ee8361956b65c61590d9052358851656e",
       "at": "2026-10-30T12:19:37+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-readme-rules",
+      "sha": "6bc24590f835b775c70155d4396f702e7941ec7c",
+      "at": "2026-10-30T12:24:11+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-console-rules",
+      "sha": "ccbace03e9c6d2498fe5e4e723195a9e9f79d08c",
+      "at": "2026-10-30T12:24:14+09:00"
     }
   ],
   "usage_log": [],
@@ -19539,7 +19841,8 @@
     "2026-10-30T11:41:45+09:00 blocked 5항목 결정: G-012, G-019, G-135는 (b) 근거와 함께 refuted, D-216은 (a) 새 V__로 고침(fix/s456-t-yang-invoice-line-name), X-057은 (a) 코드로 고침(#501). 근거는 각 항목 reason.",
     "D-216 마이그레이션 기동 점검(.s456-work/tools/mig-check.sh): 따로 띄운 PostgreSQL 18에 main 931b703 백엔드로 V52까지 올린 뒤 fix/s456-t-yang-invoice-line-name 8d23297 백엔드가 V53을 적용해 기동했고, 빈 DB에서도 기동했다.",
     "2026-10-30T12:12:33+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics 두 번째: #492가 들어간 main(18c4f64)과 OperationsService.java가 충돌했다. 이 PR의 결제 실패 수 live 한정과 웹훅 실패 수 test 환경 제외, #492의 지운 수신 주소 제외 조건을 한 쿼리에 모두 살렸다. #492 조건을 합쳐 쓴 곳이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.",
-    "할 일 8(#494): origin/main(c661d80)을 받은 head 61ba35e의 PR CI frontend 체크가 초록이 됐다(run 40990363749, job 123851050243). #481의 업무 계약 수정이 main에 들어와 풀렸다. 따로 고칠 것은 없었다."
+    "할 일 8(#494): origin/main(c661d80)을 받은 head 61ba35e의 PR CI frontend 체크가 초록이 됐다(run 40990363749, job 123851050243). #481의 업무 계약 수정이 main에 들어와 풀렸다. 따로 고칠 것은 없었다.",
+    "readme-rules 6bc2459의 첫 backend 검사(10-30 12:3x)는 다른 백엔드 빌드와 실화면 환경이 함께 돌던 중 Testcontainers PostgreSQL 연결이 끊겨 1452개 중 503개가 컨텍스트 기동 실패로 떨어졌다(FlywaySqlUnableToConnectToDbException). README만 바꾼 커밋이라 환경 탓으로 보고, 백엔드 빌드를 한 번에 하나만 돌리게 chk3.sh를 고친 뒤 같은 sha에서 다시 돌려 통과했다."
   ],
   "final_checks": [
     {
@@ -19653,6 +19956,20 @@
       "passed": 12,
       "total": 12,
       "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "478",
+      "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "507",
+      "sha": "bbac6da3bea77f5e070246dc868a0e0477daf880",
+      "passed": 12,
+      "total": 12,
+      "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
     }
   ],
   "usage_note": "사용량 도구가 없어 사람이 /usage로 지켜본다(주간 상한 70%). 층별 사용량은 기록하지 못한다."

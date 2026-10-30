@@ -1,13 +1,13 @@
-sha a38b0ed1b1139f9a3874492a7b77fef00300ab5f, DB를 새로 만든 실환경(final2.sh ops-metrics-m3)
-aggregation: 통과 1 passed (8.9s) rc=0
-archive-filters: 통과 2 passed (13.4s) rc=0
-auth: 통과 3 passed (6.3s) rc=0
-customer-payment-retry: 통과 6 passed (7.7s) rc=0
-environment-cycle: 통과 1 passed (20.3s) rc=0
+sha be26d96f1c62955b72439e72433f32e8bb7e4457, DB를 새로 만든 실환경(final2.sh ops-metrics-m4)
+aggregation: 통과 1 passed (9.7s) rc=0
+archive-filters: 통과 2 passed (13.1s) rc=0
+auth: 통과 3 passed (6.8s) rc=0
+customer-payment-retry: 통과 6 passed (7.2s) rc=0
+environment-cycle: 통과 1 passed (20.9s) rc=0
 events: 통과 1 passed (6.9s) rc=0
-invoice-links: 통과 3 passed (4.1s) rc=0
+invoice-links: 통과 3 passed (3.9s) rc=0
 mvp: 통과 1 passed (1.1m) rc=0
-operator-create: 통과 1 passed (2.6s) rc=0
-people: 통과 1 passed (10.2s) rc=0
-permissions: 통과 6 passed (13.7s) rc=0
-query-workspace: 통과 1 passed (10.7s) rc=0
+operator-create: 통과 1 passed (2.5s) rc=0
+people: 통과 1 passed (11.1s) rc=0
+permissions: 통과 6 passed (13.5s) rc=0
+query-workspace: 통과 1 passed (10.0s) rc=0
