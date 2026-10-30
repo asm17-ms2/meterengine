@@ -3,6 +3,7 @@ package com.meterengine.global.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.global.error.ErrorCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.FilterChain;
 import java.time.Clock;
 import java.time.Duration;
@@ -32,8 +33,11 @@ class RateLimitFilterTest {
 
   private final FilterChain countingChain = (request, response) -> passedCount.incrementAndGet();
 
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
   private final RateLimitFilter rateLimitFilter =
-      new RateLimitFilter(clock, new ErrorResponseWriter(JsonMapper.builder().build()));
+      new RateLimitFilter(
+          clock, new ErrorResponseWriter(JsonMapper.builder().build()), meterRegistry);
 
   @Test
   void 분당_한도_5인_키의_6번째_요청은_429_rate_limit_exceeded와_Retry_After_12초다() throws Exception {
@@ -49,6 +53,14 @@ class RateLimitFilterTest {
     assertThat(rejected.getContentAsString())
         .contains("\"code\":\"" + ErrorCode.RATE_LIMIT_EXCEEDED.getCode() + "\"");
     assertThat(passedCount).hasValue(5);
+  }
+
+  @Test
+  void 한도를_넘겨_거절한_요청만_거절_수로_센다() throws Exception {
+    exhaust(apiKeyPrincipal(), 5);
+
+    assertThat(meterRegistry.get(RateLimitFilter.REJECTION_COUNTER_NAME).counter().count())
+        .isEqualTo(1.0);
   }
 
   @Test
