@@ -223,7 +223,18 @@ class ChargeServiceTest {
     CustomerCharge customerCharge =
         calculate(
                 new BillableMetricUsage(
-                    billableMetric("token-usage", "token"),
+                    new BillableMetric(
+                        ORGANIZATION_ID,
+                        "token-usage",
+                        "token-usage 미터",
+                        "chat_completion",
+                        "sum",
+                        "token",
+                        List.of(),
+                        BigDecimal.ONE,
+                        "ceil",
+                        0,
+                        null),
                     List.of(
                         customerUsage(
                             ACME_ID,

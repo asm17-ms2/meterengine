@@ -154,6 +154,9 @@ input, textarea { caret-color: var(--blue); }
 .workspace-panel h2 + p { margin-top: -10px; }
 .workspace-panel .workspace-heading > div { display: grid; gap: 8px; }
 .workspace-field input, .workspace-field textarea, .workspace-field select, .organization-picker select, .month-apply { border-color: var(--control-border); min-height: 44px; }
+.workspace-field .ant-picker-input > input, .workspace-field .ant-select input { min-height: 0; }
+/* 조회 줄의 antd 컨트롤만 입력칸과 같은 44px로 맞춘다. 테마 토큰으로 바꾸면 월 선택기 팝업까지 커져 모바일 화면을 넘는다. */
+.resource-search form > .workspace-field .ant-picker, .resource-search form > .workspace-field .ant-select, .resource-search form > .ant-btn, .event-filter-grid > .workspace-field .ant-select { height: 44px; }
 .workspace-field input[aria-invalid=true], .workspace-field textarea[aria-invalid=true], .workspace-field select[aria-invalid=true] { border-color: #b72c3c; }
 .workspace-field input::placeholder, .workspace-field textarea::placeholder { color: var(--muted); opacity: 1; }
 .workspace-field label { line-height: 1.6; }
@@ -313,4 +316,6 @@ input, textarea { caret-color: var(--blue); }
 
 .resource-search { display: grid; gap: 12px; min-width: 0; width: 100%; }
 .resource-search > .field-hint { margin: 0; }
-.resource-advanced summary { min-height: 44px; display: flex; align-items: center; }
+.resource-search-text { flex: 1 1 240px; min-width: 240px; }
+@media (max-width: 767px) { .resource-search-text { flex-basis: 100%; min-width: 0; } }
+.resource-advanced summary { min-height: 44px; box-sizing: border-box; padding-block: 11px; }

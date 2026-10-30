@@ -38,7 +38,7 @@ public class EventIssueController {
       description =
           "현재 월 정의와 단가로 cutoff 이전 원본을 진단한다. total과 summary는 고객/검색/사유 필터 전체의 문제 행 수이며 한 이벤트에 여러 미터"
               + " 문제가 있을 수 있다. warnings는 조직/월 전체다. 고객을 찾지 못해 수집이 거절된 이벤트는 저장되지 않아 포함하지 않는다. 원본"
-              + " properties는 반환하지 않는다. 페이지는 0부터 시작한다.")
+              + " properties는 반환하지 않는다. 페이지는 0부터 시작한다. 모르는 조회 조건은 400 validation_error로 거절한다.")
   public EventIssuesResponse searchEventIssues(
       @CurrentOrganizationId UUID organizationId,
       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") @FourDigitYear

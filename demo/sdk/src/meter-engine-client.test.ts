@@ -7,7 +7,7 @@ import {
   MeterEngineConnectionError,
   MeterEngineTimeoutError,
 } from "./index.ts";
-import type { IngestEventInput, IngestEventRequest, MeterEngineClientOptions } from "./index.ts";
+import type { IngestEventInput, IngestEventRequest, InvoiceLineResponse, MeterEngineClientOptions } from "./index.ts";
 
 const BASE_URL = "http://localhost:8080";
 const API_KEY = "me_live_0123456789abcdefghijABCDEFGHIJKL";
@@ -534,4 +534,29 @@ test("배치 재시도에도 생성한 ID와 본문을 유지하고 다음 묶�
   assert.deepEqual(calls[1].body, calls[0].body);
   assert.equal((calls[2].body as { events: unknown[] }).events.length, 1);
   assert.equal(new Set(response.results.map((result) => result.transaction_id)).size, 101);
+});
+
+test("invoice line types allow a base fee line without a meter and only the server's line types", () => {
+  const baseFee: InvoiceLineResponse = { billable_metric_code: null, target_property: null, dimension_values: {}, quantity: 1, unit_price: 9990, amount: 9990, line_type: "base_fee", tier_index: 0 };
+  // @ts-expect-error 서버가 내지 않는 라인 종류는 타입에서 막는다
+  const unknownLineType: InvoiceLineResponse["line_type"] = "discount";
+  assert.equal(baseFee.billable_metric_code, null);
+  assert.equal(unknownLineType, "discount");
+});
+
+test("external_id 없는 createCustomer는 실패해도 다시 보내지 않는다", async () => {
+  const { client, calls } = createClient([apiError(503, "internal_server_error"), json(201, { id: CUSTOMER_ID })]);
+
+  await assert.rejects(client.createCustomer({ name: "고객" }), (error) => error instanceof MeterEngineApiError && error.status === 503);
+  assert.equal(calls.length, 1);
+});
+
+test("external_id 있는 createCustomer는 실패하면 같은 요청을 다시 보낸다", async () => {
+  const { client, calls } = createClient([apiError(503, "internal_server_error"), json(200, { id: CUSTOMER_ID })]);
+
+  const customer = await client.createCustomer({ name: "고객", external_id: "customer-1" });
+
+  assert.equal(customer.id, CUSTOMER_ID);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].body, calls[0].body);
 });

@@ -71,6 +71,7 @@ public class OrganizationService {
     return organization;
   }
 
+  // 공급자 정보를 돌려주고 도입사가 없으면 예외를 던진다. get은 같은 서비스의 도입사 조회가 쓴다.
   @Transactional(readOnly = true)
   public SupplierResponse find(UUID organizationId) {
     if (BusinessEnvironmentContext.environmentId() == null)

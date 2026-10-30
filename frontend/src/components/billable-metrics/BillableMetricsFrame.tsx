@@ -1,8 +1,6 @@
-import { FilterBar } from "@/components/screen/FilterBar";
-import { ListControls } from "@/components/screen/ListControls";
+import { ResourceSearchControls } from "@/components/screen/ResourceSearchControls";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
-import { SearchInput } from "@/components/screen/SearchInput";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
 
@@ -19,13 +17,7 @@ export function BillableMetricsFrame({
     <>
       <ScreenHeader title="미터" />
       <ScreenCard>
-        <FilterBar>
-          <ListControls
-            query={query}
-            capabilities={capabilities}
-            search={<SearchInput label="미터 이름 검색" value={query.q} disabled />}
-          />
-        </FilterBar>
+        <ResourceSearchControls query={query} capabilities={capabilities} resource="billable-metrics" />
         {children}
       </ScreenCard>
     </>

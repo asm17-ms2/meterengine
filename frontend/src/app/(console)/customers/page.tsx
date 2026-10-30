@@ -1,3 +1,4 @@
+import { customerCountText } from "@/lib/customer-count";
 import type { Metadata } from "next";
 import { listCustomers } from "@/lib/api/customers";
 import { CAPABILITIES } from "@/lib/api/capabilities";
@@ -24,7 +25,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <ResourceSearchControls query={query} capabilities={CAPABILITIES.listCustomers} resource="customers" />
       <CsvDownload resource="customers" />
       {result.ok ? <>
-        <p role="status">조건에 맞는 고객 {result.data.total ?? rows.length}곳, 검색 전 {result.data.total_unfiltered ?? result.data.total ?? rows.length}곳</p>
+        <p role="status">{customerCountText({ status: query.status, q: query.q, total: result.data.total ?? rows.length, totalUnfiltered: result.data.total_unfiltered ?? result.data.total ?? rows.length })}</p>
         <WorkspaceTable serverPaged rows={rows} columns={[{ key: "name", label: "고객", hrefPrefix: "/customers/", hrefSuffix: `?month=${month}` }, { key: "status", label: "관리 상태", isStatus: true }, { key: "external_id", label: "외부 고객 ID" }, { key: "billing_email", label: "청구 이메일" }, { key: "created_at", label: "등록 시각", isDate: true }, { key: "archived_at", label: "보관 시각", isDate: true }]} rowActions={Object.fromEntries(rows.filter(customer => customer.archived_at).map(customer => [customer.id, [{ title: "고객 복원", operation: "restoreCustomer", description: `${customer.name} 고객의 신규 업무와 사용량 수집을 다시 허용합니다. 과거 기록은 그대로 유지됩니다.`, fields: [{ name: "id", label: "", type: "hidden" as const, value: customer.id }] }]]))} empty={query.q ? "일치하는 고객이 없습니다. 검색어나 관리 상태를 바꿔 주세요." : query.status === "archived" ? "보관한 고객이 없습니다." : "현재 조건의 고객이 없습니다. 조건을 바꾸거나 새 고객을 등록하세요."} />
         <ListPagination query={query} capabilities={CAPABILITIES.listCustomers} total={result.data.total} />
       </> : <WorkspaceError message={result.error.message} />}
