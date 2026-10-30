@@ -47,7 +47,8 @@ public class PricePlanController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "기본료와 최소 과금 요금제 등록",
-      description = "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다.")
+      description =
+          "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다. 청구할 때 기본료와 최소 사용료는 10원 미만을 버린 값을 쓰며, 버린 기본료가 0원이면 기본료 라인이 생기지 않는다.")
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "저장된 요금제. 같은 고객 범위와 시작 월의 버전을 덮어쓴 경우에도 201이다"),
     @ApiResponse(

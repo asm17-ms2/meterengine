@@ -180,6 +180,7 @@ class MetricAggregationIntegrationTest {
             "ceil,1,2.4",
             "floor,1,2.3",
             "round,1,2.3",
+            "round,2,2.33",
             "none,0,2.325")) {
       setUp();
       String[] values = sample.split(",");
