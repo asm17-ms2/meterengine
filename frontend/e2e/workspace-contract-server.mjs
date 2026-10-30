@@ -102,6 +102,12 @@ const server = createServer(async (request, response) => {
       const items = q ? [{ value: FAR_CUSTOMER_ID, label: "검색으로만 보이는 고객", archived: false }] : [{ value: ZERO_CUSTOMER_ID, label: "첫 페이지 고객", archived: false }];
       return send(response, 200, { items, total: items.length, total_unfiltered: 201, page: 1, size: 200, summary: {} });
     }
+    if (current.scenario === "draft-failure") {
+      if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
+      if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-09"] });
+      if (path === "/v1/invoices/draft/search") return error(response, 503, "service_unavailable", "청구 예정액을 계산하지 못했습니다.");
+      if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
+    }
     if (current.scenario === "finalize-month") {
       const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `확정할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [] }));
       if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });

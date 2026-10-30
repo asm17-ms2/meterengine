@@ -426,3 +426,11 @@ test("격리 계약: 청구할 고객이 없어 월 전체 확정이 비활성�
   await expect(button).toBeDisabled();
   await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.");
 });
+
+test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 확정이 비활성이고 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
+  await control(request, "draft-failure");
+  await page.goto("/billing?month=2026-09&environment=legacy");
+  const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription("청구 예정액을 불러오지 못해 확정할 수 없습니다.");
+});
