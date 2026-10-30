@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = path => readFileSync(new URL(`../src/${path}`, import.meta.url), "utf8");
+// 줄바꿈, 공백, 끝 세미콜론만 다른 CSS도 같은 규칙으로 보도록 기호 앞뒤 공백을 지우고 나머지는 한 칸으로 줄인다.
+const compactCss = css => css.replace(/\s*([{}:;,>()])\s*/g, "$1").replace(/;}/g, "}").replace(/\s+/g, " ");
 
 test("pricing history empty states use the readable Empty component instead of the faint default text", () => {
   const pricing = source("components/pricing/PricingWorkspace.tsx");
@@ -21,13 +23,13 @@ test("unit prices say they are per billed quantity, not per raw usage", () => {
 });
 
 test("the pricing CSS module does not rely on global class selectors that the module hashes away", () => {
-  const css = source("components/pricing/pricing.module.css");
+  const css = compactCss(source("components/pricing/pricing.module.css"));
   assert.ok(!css.includes(".tierEditorRow>.ant-btn") && !css.includes(".tierEditorRow .workspace-field"));
   assert.ok(css.includes(".tierEditorRow label{font-size:12px}"));
 });
 
 test("the pricing meter rail stays a wrapping row of chips at 900px and below", () => {
-  const css = source("components/pricing/pricing.module.css");
+  const css = compactCss(source("components/pricing/pricing.module.css"));
   assert.ok(css.includes("@media(max-width:900px){.meterRail.meterRail{flex-direction:row}.meterRail>:not(button){width:100%}}"));
 });
 
