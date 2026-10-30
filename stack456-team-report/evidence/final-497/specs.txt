@@ -1,0 +1,13 @@
+sha 80ff24632e3f72054b26d910abdde8b228279a57, DB를 새로 만든 실환경(final2.sh export-error-3)
+aggregation: 통과 1 passed (9.2s) rc=0
+archive-filters: 통과 2 passed (14.7s) rc=0
+auth: 통과 3 passed (6.8s) rc=0
+customer-payment-retry: 통과 6 passed (7.6s) rc=0
+environment-cycle: 통과 1 passed (20.4s) rc=0
+events: 통과 1 passed (8.3s) rc=0
+invoice-links: 통과 3 passed (4.1s) rc=0
+mvp: 통과 1 passed (25.4s) rc=0
+operator-create: 통과 1 passed (2.7s) rc=0
+people: 통과 1 passed (10.2s) rc=0
+permissions: 통과 6 passed (18.5s) rc=0
+query-workspace: 통과 1 passed (10.6s) rc=0
