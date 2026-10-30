@@ -156,11 +156,14 @@ public class WebhookEndpointService {
         id);
   }
 
-  @Transactional
   public WebhookEndpointResponse restore(UUID organizationId, UUID id) {
     WebhookEndpointResponse endpoint = get(organizationId, id);
     if (endpoint.archivedAt() == null) return endpoint;
     validate(endpoint.url(), endpoint.eventTypes());
+    return transactionOperations.execute(status -> restoreEndpoint(organizationId, id));
+  }
+
+  private WebhookEndpointResponse restoreEndpoint(UUID organizationId, UUID id) {
     if (webhookEndpointRepository.countAndLock(organizationId) >= 10)
       throw new ConflictException(ErrorCode.WEBHOOK_ENDPOINT_LIMIT_EXCEEDED);
     webhookEndpointRepository.restore(organizationId, id);
