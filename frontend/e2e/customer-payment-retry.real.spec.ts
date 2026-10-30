@@ -11,6 +11,8 @@ const OUTPUT = process.env.CUSTOMER_RETRY_EVIDENCE_DIR ?? "/private/tmp/metereng
 const PASSWORD = "local-customer-retry-e2e-password";
 const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
 const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
+const BACKEND_ENV_FILE = process.env.E2E_BACKEND_ENV_FILE ?? "/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json";
+const DB_CONTAINER = process.env.E2E_DB_CONTAINER ?? "meterengine-0696-e2e";
 const SECRET_GROUPS: Set<string>[] = [];
 const RETRY_VERSIONS = new Set<string>();
 
@@ -34,7 +36,7 @@ test.beforeAll(() => {
     const url = new URL(value);
     if (url.protocol !== "http:" || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) throw new Error("고객 재시도 검증은 로컬 HTTP 서버에서만 실행합니다.");
   }
-  const env = JSON.parse(readFileSync("/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json", "utf8"));
+  const env = JSON.parse(readFileSync(BACKEND_ENV_FILE, "utf8"));
   if (env.TOSSPAYMENTS_BASE_URL !== PG_URL) throw new Error("결제 요청의 대상이 격리된 로컬 PG 대역이 아닙니다.");
 });
 test.afterAll(() => {
@@ -55,7 +57,7 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:invoice|session|test|live)_[A-Za-z0-9_-]+/g, "[redacted token]"));
 }
 function sql(statement: string) {
-  return execFileSync("docker", ["exec", "-i", "meterengine-0696-e2e", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 function uuid(value: string) {
   if (!/^[a-f\d-]{36}$/i.test(value)) throw new Error("검증 데이터의 UUID가 잘못됐습니다.");

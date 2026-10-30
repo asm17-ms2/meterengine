@@ -40,6 +40,7 @@ const response = await fetch(url, {
   method: "POST",
   headers: {
     "content-type": "application/json",
+    "user-agent": "MeterEngine-Webhooks/1.0",
     "webhook-id": id,
     "webhook-timestamp": String(timestamp),
     "webhook-signature": signature,

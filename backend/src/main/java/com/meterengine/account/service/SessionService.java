@@ -123,6 +123,14 @@ public class SessionService {
     UserSession session =
         transactionTemplate.execute(
             status -> {
+              // 확인 뒤 첫 동의 등으로 비밀번호가 바뀌었으면 옛 비밀번호로 세션을 만들지 않는다.
+              String passwordHash =
+                  userAccountRepository
+                      .findForUpdateById(userAccount.getId())
+                      .map(UserAccount::getPasswordHash)
+                      .orElse(null);
+              if (!userAccount.getPasswordHash().equals(passwordHash))
+                throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS);
               UserSession saved =
                   userSessionRepository.save(
                       new UserSession(

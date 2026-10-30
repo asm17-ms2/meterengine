@@ -4,6 +4,7 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.crypto.EncryptedStringConverter;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.webhook.client.WebhookClient;
 import com.meterengine.webhook.dto.ListWebhookDeliveriesResponse;
@@ -15,6 +16,8 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -98,12 +101,15 @@ public class WebhookDeliveryService {
     int skipped = 0;
     int failed = 0;
     long started = nanoTime.getAsLong();
+    List<WebhookClaim> turn = new ArrayList<>();
     for (int index = 0; index < 100 && nanoTime.getAsLong() - started < RUN_BUDGET_NANOS; index++) {
-      Optional<WebhookClaim> candidate = webhookDeliveryRepository.claim();
+      Optional<WebhookClaim> candidate = webhookDeliveryRepository.claim(turn);
       if (candidate.isEmpty()) {
         break;
       }
       WebhookClaim claim = candidate.get();
+      if (turn.stream().anyMatch(served -> served.sameOrganizationEnvironment(claim))) turn.clear();
+      turn.add(claim);
       Tally tally;
       try {
         tally = attempt(claim);
@@ -153,14 +159,25 @@ public class WebhookDeliveryService {
   }
 
   private void countExpiredLeases() {
-    int expired = webhookDeliveryRepository.expireLeases();
-    if (expired == 0) {
+    Map<String, Integer> expired = webhookDeliveryRepository.expireLeases();
+    if (expired.isEmpty()) {
       return;
     }
-    meterRegistry
-        .counter("meterengine.webhook.delivery", "result", "failed", "reason", "lease_expired")
-        .increment(expired);
-    logger.warn("{} webhook deliveries failed because their last attempt lease expired", expired);
+    expired.forEach(
+        (environment, count) ->
+            meterRegistry
+                .counter(
+                    "meterengine.webhook.delivery",
+                    "result",
+                    "failed",
+                    "reason",
+                    "lease_expired",
+                    "environment",
+                    environment)
+                .increment(count));
+    logger.warn(
+        "{} webhook deliveries failed because their last attempt lease expired",
+        expired.values().stream().mapToInt(Integer::intValue).sum());
   }
 
   private Tally record(WebhookClaim claim, WebhookOutcome outcome, Tally recorded) {
@@ -170,8 +187,19 @@ public class WebhookDeliveryService {
     }
     String reason = outcome.failureReason() == null ? "none" : outcome.failureReason();
     String result = "pending".equals(status.get()) ? "retry" : status.get();
+    String environment =
+        claim.environmentId() == null
+            ? "legacy"
+            : webhookDeliveryRepository.environmentOf(claim.environmentId());
     meterRegistry
-        .counter("meterengine.webhook.delivery", "result", result, "reason", reason)
+        .counter(
+            "meterengine.webhook.delivery",
+            "result",
+            result,
+            "reason",
+            reason,
+            "environment",
+            environment)
         .increment();
     if ("failed".equals(result)) {
       logger.warn(
@@ -199,6 +227,8 @@ public class WebhookDeliveryService {
   public void retry(UUID organizationId, UUID endpointId, UUID id) {
     webhookEndpointService.get(organizationId, endpointId);
     if (webhookDeliveryRepository.retry(organizationId, endpointId, id) == 0) {
+      if (!webhookDeliveryRepository.exists(organizationId, endpointId, id))
+        throw new NotFoundException(ErrorCode.WEBHOOK_DELIVERY_NOT_FOUND);
       throw new ConflictException(ErrorCode.WEBHOOK_DELIVERY_NOT_RETRYABLE);
     }
     auditLogService.record(

@@ -31,6 +31,7 @@ public class RequestLogFilter extends OncePerRequestFilter {
 
   private static final int MAX_DECODE_ROUNDS = 4;
 
+  // deploy/caddy/Caddyfile의 redacted_path와 같은 경로 목록이다. 바꾸면 같이 바꾼다.
   private static final Pattern PAYMENT_METHOD_REGISTRATION_TOKEN =
       Pattern.compile(
           "(/(?:payment-method-registrations|organization-invitations)).+",

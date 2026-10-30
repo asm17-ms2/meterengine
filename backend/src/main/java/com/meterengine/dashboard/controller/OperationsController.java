@@ -23,7 +23,7 @@ public class OperationsController {
       summary = "운영자 현황 조회",
       description =
           "운영자 세션으로 전체 도입사와 결제, 통보 장애, DB의 예약 작업 마지막 성공 시각을 확인한다. 결제 실패는 최근 24시간이고 웹훅 실패는 현재 failed"
-              + " 상태인 전송이다.")
+              + " 상태인 전송 가운데 보관하지 않은 엔드포인트의 것이다. 꺼 둔 엔드포인트의 실패는 센다.")
   public OperationsResponse getOperations() {
     return operationsService.get();
   }

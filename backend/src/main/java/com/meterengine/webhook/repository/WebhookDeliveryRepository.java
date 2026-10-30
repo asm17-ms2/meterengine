@@ -9,11 +9,13 @@ import com.meterengine.webhook.dto.WebhookOutcome;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,22 +30,56 @@ public class WebhookDeliveryRepository {
     this.jdbcTemplate = jdbcTemplate;
   }
 
-  // 마지막 시도의 선점이 끝나도록 결과가 없던 전송을 실패로 끝내고 그 건수를 돌려준다.
+  // 마지막 시도의 선점이 끝나도록 결과가 없던 전송을 실패로 끝내고 업무 환경별 건수를 돌려준다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public int expireLeases() {
-    return jdbcTemplate.update(
-        "UPDATE webhook_delivery SET status = 'failed', failure_reason = 'lease_expired', next_attempt_at = NULL WHERE status = 'pending' AND attempt_count >= ? AND next_attempt_at <= clock_timestamp()",
+  public Map<String, Integer> expireLeases() {
+    Map<String, Integer> expired = new LinkedHashMap<>();
+    jdbcTemplate.query(
+        """
+        WITH expired AS (
+          UPDATE webhook_delivery SET status = 'failed', failure_reason = 'lease_expired', next_attempt_at = NULL
+          WHERE status = 'pending' AND attempt_count >= ? AND next_attempt_at <= clock_timestamp()
+          RETURNING environment_id
+        )
+        SELECT coalesce(e.mode, 'legacy') AS environment, count(*) AS expired
+        FROM expired x LEFT JOIN organization_environment e ON e.id = x.environment_id GROUP BY 1
+        """,
+        (RowCallbackHandler) rs -> expired.put(rs.getString("environment"), rs.getInt("expired")),
         MAX_ATTEMPTS);
+    return expired;
   }
 
+  // 전송의 업무 환경 이름. 환경이 없으면 기존 데이터 범위인 legacy다.
+  public String environmentOf(UUID environmentId) {
+    if (environmentId == null) return "legacy";
+    return jdbcTemplate.queryForObject(
+        "SELECT mode FROM organization_environment WHERE id = ?", String.class, environmentId);
+  }
+
+  // 이번 차례에 이미 꺼낸 도입사 환경을 먼저 빼고 찾아, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
+  // 제외를 정렬이 아닌 조건으로 둬야 대기 전송 색인 순서로 읽다가 첫 행에서 멈춘다.
+  // 선점은 부르는 쪽 트랜잭션과 따로 커밋해야 complete()가 같은 행 잠금을 기다리지 않는다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public Optional<WebhookClaim> claim() {
+  public Optional<WebhookClaim> claim(List<WebhookClaim> servedThisTurn) {
+    if (!servedThisTurn.isEmpty()) {
+      Optional<WebhookClaim> unserved =
+          claim(
+              " AND (organization_id, environment_scope_id) NOT IN (SELECT * FROM unnest(?::uuid[], ?::uuid[]))",
+              MAX_ATTEMPTS,
+              servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new),
+              servedThisTurn.stream().map(WebhookDeliveryRepository::scope).toArray(UUID[]::new));
+      if (unserved.isPresent()) return unserved;
+    }
+    return claim("", MAX_ATTEMPTS);
+  }
+
+  private Optional<WebhookClaim> claim(String exclusion, Object... arguments) {
     return jdbcTemplate
         .query(
             """
         WITH picked AS (
           SELECT id FROM webhook_delivery WHERE status = 'pending'
-            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()
+            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()%s
           ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
         ), claimed AS (
           UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
@@ -54,7 +90,8 @@ public class WebhookDeliveryRepository {
         SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload
         FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.environment_scope_id = c.environment_scope_id AND e.id = c.webhook_endpoint_id
         JOIN webhook_event v ON v.organization_id = c.organization_id AND v.environment_scope_id = c.environment_scope_id AND v.id = c.webhook_event_id
-        """,
+        """
+                .formatted(exclusion),
             (rs, rowNum) ->
                 new WebhookClaim(
                     rs.getObject("id", UUID.class),
@@ -69,7 +106,7 @@ public class WebhookDeliveryRepository {
                     rs.getInt("attempt_count"),
                     rs.getObject("last_attempted_at", OffsetDateTime.class),
                     rs.getObject("environment_id", UUID.class)),
-            MAX_ATTEMPTS)
+            arguments)
         .stream()
         .findFirst();
   }
@@ -194,6 +231,17 @@ public class WebhookDeliveryRepository {
         BusinessEnvironmentContext.scopeId(),
         endpointId,
         id);
+  }
+
+  public boolean exists(UUID organizationId, UUID endpointId, UUID id) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE organization_id = ? AND environment_scope_id = ? AND webhook_endpoint_id = ? AND id = ?)",
+            Boolean.class,
+            organizationId,
+            BusinessEnvironmentContext.scopeId(),
+            endpointId,
+            id));
   }
 
   private static UUID scope(WebhookClaim claim) {

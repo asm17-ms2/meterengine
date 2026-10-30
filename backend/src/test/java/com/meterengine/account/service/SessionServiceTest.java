@@ -74,9 +74,11 @@ class SessionServiceTest {
   }
 
   @Test
-  void 로그인은_비밀번호를_트랜잭션_밖에서_확인하고_세션_저장과_감사만_트랜잭션에서_한다() {
+  void 로그인은_비밀번호를_트랜잭션_밖에서_확인하고_트랜잭션에서는_잠근_해시를_다시_본_뒤_세션과_감사를_남긴다() {
     UserAccount operator = userAccount(UserAccount.OPERATOR);
     when(userAccountRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(operator));
+    when(userAccountRepository.findForUpdateById(operator.getId()))
+        .thenReturn(Optional.of(operator));
     when(passwordEncoder.matches(PASSWORD, PASSWORD_HASH)).thenReturn(true);
     when(userSessionRepository.save(any(UserSession.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -97,6 +99,7 @@ class SessionServiceTest {
     order.verify(userAccountRepository).findByEmailIgnoreCase(EMAIL);
     order.verify(passwordEncoder).matches(PASSWORD, PASSWORD_HASH);
     order.verify(transactionTemplate).execute(any());
+    order.verify(userAccountRepository).findForUpdateById(operator.getId());
     order.verify(userSessionRepository).save(any(UserSession.class));
     order
         .verify(auditLogService)
@@ -106,6 +109,34 @@ class SessionServiceTest {
             eq("user_session"),
             anyString(),
             eq(Map.of()));
+  }
+
+  @Test
+  void 확인한_뒤_비밀번호가_바뀌었으면_세션을_저장하지_않고_401이다() {
+    UserAccount operator = userAccount(UserAccount.OPERATOR);
+    when(userAccountRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(operator));
+    when(userAccountRepository.findForUpdateById(operator.getId()))
+        .thenReturn(
+            Optional.of(
+                new UserAccount(
+                    operator.getId(),
+                    EMAIL,
+                    "{bcrypt}changed-hash",
+                    "사용자",
+                    UserAccount.OPERATOR,
+                    OffsetDateTime.now())));
+    when(passwordEncoder.matches(PASSWORD, PASSWORD_HASH)).thenReturn(true);
+    when(transactionTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> invocation.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
+
+    assertThatThrownBy(() -> sessionService.create(EMAIL, PASSWORD))
+        .isInstanceOfSatisfying(
+            UnauthorizedException.class,
+            exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_CREDENTIALS));
+    verify(userSessionRepository, never()).save(any(UserSession.class));
+    verifyNoInteractions(auditLogService);
   }
 
   @Test

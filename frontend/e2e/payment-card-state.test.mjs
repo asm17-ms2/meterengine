@@ -14,3 +14,8 @@ test("a payment can be requested only with the mode's Toss key and a registered 
   assert.equal(paymentReadiness("live", keys(["live"]), failed(500)), "unknown");
   assert.equal(paymentReadiness("live", keys(["live"]), failed(0)), "unknown");
 });
+
+test("an archived card needs a new registration instead of a payment button", () => {
+  const archived = { ok: true, data: { card_number: "4330****1234", archived_at: "2026-10-01T09:00:00+09:00" } };
+  assert.equal(paymentReadiness("live", keys(["live"]), archived), "card-missing");
+});

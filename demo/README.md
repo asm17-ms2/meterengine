@@ -102,7 +102,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 ### send
 
-- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다.
+- 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다. properties가 JSON 객체로 읽히지 않는 행은 묶음을 깨뜨리지 않게 단건으로 보낸다. 묶음 전체가 거절되면 각 행의 저장 여부를 알 수 없어 error로 세고 종료 코드 2로 끝난다.
 - 전송 중 끊긴 묶음은 `UNKNOWN`, 아직 보내지 않은 행은 `NOT_SENT`로 구분해 원래 순서대로 모두 기록한다. 두 상태의 로그 `outcome`은 `error`이고 `error`에 구분값이 남는다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.
@@ -399,10 +399,10 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 변수 | 내용 |
 |---|---|
 | `METERENGINE_API_KEY` | `http://localhost:8080` 백엔드에 쓸 API 키. 대상 이름은 `local` |
-| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 키의 환경을 사용한다 |
+| `METERENGINE_ENVIRONMENT` | 단일 대상의 `test` 또는 `live`. 비우면 API 호출은 키의 환경을 쓰고 웹훅은 기존 데이터(legacy) 범위로 받는다. 지정하면 `METERENGINE_WEBHOOK_SECRET`으로 그 환경의 웹훅을 받는다 |
 | `METERENGINE_TARGETS` | `[{"name": "local-test", "base_url": "http://localhost:8080", "api_key": "...", "environment": "test", "webhook_secret": "whsec_..."}]`. `api_key`는 그 `environment`에서 발급한 키여야 한다. API 키와 웹훅 비밀값은 서버에서만 쓴다. 단일 대상 설정보다 먼저 적용한다 |
 | `METERENGINE_LEGACY_WEBHOOK_TARGET` | 기존 전역 비밀값과 수신 기록을 사용할 원래 무환경 대상 이름. 예: `e2e` |
-| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상의 웹훅 비밀값. 새 `test/live` 대상에는 적용하지 않는다 |
+| `METERENGINE_WEBHOOK_SECRET` | 위에서 지정한 기존 대상, 또는 환경을 지정한 단일 대상의 웹훅 비밀값. `METERENGINE_TARGETS`의 `test/live` 대상에는 적용하지 않는다 |
 | `METERENGINE_BRIDGE_URL` | 브리지 주소. 기본 `http://127.0.0.1:4318` |
 | `METERENGINE_CONSOLE_URL` | 공개 카드 등록 화면이 있는 콘솔 주소. 기본 `http://127.0.0.1:3000` |
 

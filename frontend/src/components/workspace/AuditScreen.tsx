@@ -20,15 +20,22 @@ function localTime(input: string) {
   return Number.isFinite(time) ? new Date(time + 9 * 3600_000).toISOString().slice(0, 19) : "";
 }
 
+function withSeconds(input: string) { return input.length === 16 ? `${input}:00` : input; }
+const RANGE_ERROR = "종료 일시는 시작 일시보다 뒤여야 합니다.";
+
 export async function AuditScreen({ query, isOperator = false }: { query: Query; isOperator?: boolean }) {
+  const from = withSeconds(localTime(value(query, "from")));
+  const to = withSeconds(localTime(value(query, "to")));
+  const isRangeInvalid = Boolean(from && to && from >= to);
   const params = new URLSearchParams();
   for (const key of ["action", "actor_type", "q", "from", "to", "sort", "page", "size"]) {
     const input = value(query, key);
     if (input) params.set(key, key === "from" || key === "to" ? apiTime(input) : input);
   }
   const path = `${isOperator ? "/v1/operations/audit-logs" : "/v1/audit-logs"}?${params}`;
+  // 거꾸로 된 기간은 서버에 묻지 않고 종료 일시 옆에 알린다.
   const [result, people, organizations] = await Promise.all([
-    isOperator ? operatorRequest<AuditLogsResponse>(path) : workspaceFetch<AuditLogsResponse>(path),
+    isRangeInvalid ? Promise.resolve(undefined) : isOperator ? operatorRequest<AuditLogsResponse>(path) : workspaceFetch<AuditLogsResponse>(path),
     isOperator ? listUserAccounts() : listOrganizationMembers(),
     isOperator ? listOrganizations() : Promise.resolve(null),
   ]);
@@ -41,7 +48,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
   const pagePath = isOperator ? "/admin/audit" : "/audit";
   function pageHref(page: number) { const next = new URLSearchParams(params); next.set("page", String(page)); return `${pagePath}?${next}`; }
   return <>
-    <WorkspaceHeader title="감사 기록" kicker={isOperator ? "MeterEngine 플랫폼 운영" : "도입사 설정"} description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
+    <WorkspaceHeader title="감사 기록" description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
     <section className="workspace-panel"><h2>기록 찾기</h2><form method="get" className="workspace-form">
       <EnvironmentInput />
       <div className="settings-grid">
@@ -50,10 +57,11 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
         <div className="workspace-field"><label htmlFor="audit-action">행동</label><select id="audit-action" name="action" defaultValue={value(query, "action")}><option value="">모든 행동</option>{AUDIT_ACTION_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
         <div className="workspace-field"><label htmlFor="audit-sort">정렬</label><select id="audit-sort" name="sort" defaultValue={value(query, "sort") || "occurred_at_desc"}><option value="occurred_at_desc">최신 기록부터</option><option value="occurred_at_asc">오래된 기록부터</option></select></div>
         <label className="workspace-field"><span>시작 일시 (KST)</span><input name="from" type="datetime-local" step="1" defaultValue={localTime(value(query, "from"))} /></label>
-        <label className="workspace-field"><span>종료 일시 (KST, 미포함)</span><input name="to" type="datetime-local" step="1" defaultValue={localTime(value(query, "to"))} /></label>
-      </div><div className="workspace-actions"><button className="month-apply" type="submit">조건으로 조회</button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
+        <label className="workspace-field"><span>종료 일시 (KST, 미포함)</span><input name="to" type="datetime-local" step="1" defaultValue={localTime(value(query, "to"))} aria-invalid={isRangeInvalid} aria-describedby={isRangeInvalid ? "audit-range-error" : undefined} /></label>
+        {isRangeInvalid && <p id="audit-range-error" role="alert" className="field-error">{RANGE_ERROR}</p>}
+      </div><div className="workspace-actions"><button className="month-apply" type="submit">조건 적용</button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
     </form></section>
-    {!result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST입니다. 조회 요청도 감사 대상이므로 새로 조회하면 기록이 추가됩니다.</p></div>
+    {!result ? null : !result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST입니다. 조회 요청도 감사 대상이므로 새로 조회하면 기록이 추가됩니다.</p></div>
       {result.data.audit_logs.length === 0 ? <p className="muted">이 조건에 해당하는 기록이 없습니다. 기간이나 행동 조건을 조정하세요.</p> : <div className="audit-list">{result.data.audit_logs.map(log => {
         const status = Number(log.detail.status);
         const isRequest = log.action === "api_request_completed" && Number.isFinite(status);

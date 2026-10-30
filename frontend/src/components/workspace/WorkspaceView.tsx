@@ -65,7 +65,7 @@ export function WorkspaceTable({ rows, columns, rowKey = "id", empty = "등록�
       ...(hasActions ? [{ title: "작업", key: "actions", fixed: "end" as const, render: (_: unknown, row: Record<string, unknown>) => <RowActions actions={rowActions[keyOf(row)] ?? []} /> }] : []),
     ]} /></div>
     <div className="workspace-mobile-records">
-      {visibleRows.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} /> : visibleRows.map(row => <article key={keyOf(row)} className="workspace-mobile-record"><h3><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></h3><dl>{columns.slice(1).map(column => <div key={column.key}><dt>{column.label}</dt><dd><CellValue value={row[column.key]} column={column} row={row} /></dd></div>)}</dl>{hasActions && <RowActions actions={rowActions[keyOf(row)] ?? []} />}</article>)}
+      {visibleRows.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} /> : visibleRows.map(row => <article key={keyOf(row)} className="workspace-mobile-record"><p className="workspace-mobile-title"><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></p><dl>{columns.slice(1).map(column => <div key={column.key}><dt>{column.label}</dt><dd><CellValue value={row[column.key]} column={column} row={row} /></dd></div>)}</dl>{hasActions && <RowActions actions={rowActions[keyOf(row)] ?? []} />}</article>)}
       {!serverPaged && <Pagination size="small" current={currentPage} total={rows.length} pageSize={20} showSizeChanger={false} hideOnSinglePage onChange={setPage} />}
     </div>
   </>;

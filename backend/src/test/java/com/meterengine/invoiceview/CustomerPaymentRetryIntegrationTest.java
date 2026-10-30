@@ -450,10 +450,41 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   @Test
-  void 최신_실패가_일반_거절이어도_옛_NOT_FOUND를_확인할_수_없으면_재시도를_안내하지_않는다() {
+  void 최신_실패가_일반_거절이면_더_새_시도가_있는_옛_NOT_FOUND는_7일_창으로_막지_않는다() {
     Fixture fixture = fixture(false, null);
     insertAttempt(fixture, "failed", "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
     insertAttempt(fixture, "failed", "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusMinutes(1));
+    String token = value(create(fixture, true), "$.token");
+    assertThat(lookup(token)).bodyJson().extractingPath("$.payment_retry.allowed").isEqualTo(true);
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void 요청_시각이_같은_두_실패에서도_재결제는_조회와_같은_실패를_최신으로_본다() {
+    Fixture fixture = fixture(false, null);
+    OffsetDateTime requestedAt = OffsetDateTime.now().minusDays(8);
+    List<UUID> ids =
+        List.of(UUID.randomUUID(), UUID.randomUUID()).stream()
+            .sorted((left, right) -> left.toString().compareTo(right.toString()))
+            .toList();
+    insertAttempt(ids.get(0), fixture, "failed", "NOT_FOUND_PAYMENT", requestedAt);
+    insertAttempt(ids.get(1), fixture, "failed", "REJECT_CARD_PAYMENT", requestedAt);
+    String token = value(create(fixture, true), "$.token");
+    String version = value(lookup(token), "$.payment_retry.version");
+    when(tossPaymentsClient.approveBilling(anyString(), anyString(), any(), anyString(), any()))
+        .thenReturn(approved(fixture));
+    assertThat(retry(token, version))
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.payment.status")
+        .isEqualTo("paid");
+  }
+
+  @Test
+  void 최신_실패가_확인할_수_없는_NOT_FOUND이면_재시도를_안내하지_않는다() {
+    Fixture fixture = fixture(false, null);
+    insertAttempt(fixture, "failed", "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusDays(9));
+    insertAttempt(fixture, "failed", "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
     String token = value(create(fixture, true), "$.token");
     assertThat(lookup(token))
         .bodyJson()
@@ -666,7 +697,11 @@ class CustomerPaymentRetryIntegrationTest {
 
   private UUID insertAttempt(
       Fixture fixture, String status, String code, OffsetDateTime requestedAt) {
-    UUID id = UUID.randomUUID();
+    return insertAttempt(UUID.randomUUID(), fixture, status, code, requestedAt);
+  }
+
+  private UUID insertAttempt(
+      UUID id, Fixture fixture, String status, String code, OffsetDateTime requestedAt) {
     jdbcTemplate.update(
         "INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,payment_key,failure_code,requested_at,completed_at) VALUES (?,?,?,?,'test',1100,'2026-10 사용료',?,?,?,?,?)",
         id,

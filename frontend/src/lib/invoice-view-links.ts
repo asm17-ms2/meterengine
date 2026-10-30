@@ -1,4 +1,4 @@
-export type InvoiceViewLink = {
+export type InvoiceViewLinkResponse = {
   id: string;
   created_at: string;
   expires_at: string;
@@ -7,9 +7,9 @@ export type InvoiceViewLink = {
   allow_payment_retry: boolean;
 };
 
-export type CreatedInvoiceViewLink = InvoiceViewLink & { token: string };
+export type InvoiceViewLinkSecretResponse = InvoiceViewLinkResponse & { token: string };
 
-export type PublicInvoice = {
+export type PublicInvoiceResponse = {
   invoice_number: string;
   organization_name: string;
   customer_name: string;
@@ -20,6 +20,7 @@ export type PublicInvoice = {
   total_amount: number;
   lines: {
     billable_metric_code: string | null;
+    billable_metric_name?: string | null;
     target_property: string | null;
     dimension_values: Record<string, unknown>;
     quantity: number;
@@ -47,12 +48,12 @@ export type PublicInvoice = {
   expires_at: string;
 };
 
-type PublicInvoiceLine = PublicInvoice["lines"][number];
+type PublicInvoiceLine = PublicInvoiceResponse["lines"][number];
 
-export function publicInvoiceLineName(line: Pick<PublicInvoiceLine, "line_type" | "billable_metric_code">): string {
+export function publicInvoiceLineName(line: Pick<PublicInvoiceLine, "line_type" | "billable_metric_code" | "billable_metric_name">): string {
   if (line.line_type === "base_fee") return "기본료";
   if (line.line_type === "minimum_adjustment") return "최소 사용료 조정";
-  return line.billable_metric_code ?? "사용량";
+  return line.billable_metric_name ?? line.billable_metric_code ?? "사용량";
 }
 
 export function publicInvoiceLineTier(line: Pick<PublicInvoiceLine, "line_type" | "tier_index">): string | null {

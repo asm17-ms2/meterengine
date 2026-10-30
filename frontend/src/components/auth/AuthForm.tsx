@@ -7,13 +7,14 @@ import { loginAction, signupAction } from "@/app/(public)/actions";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
 import type { ActionState } from "@/lib/auth/types";
 
-export function AuthForm({ mode, returnTo = "", expired = false }: { mode: "login" | "signup"; returnTo?: string; expired?: boolean }) {
+export function AuthForm({ mode, returnTo = "", expired = false, logoutUnconfirmed = false }: { mode: "login" | "signup"; returnTo?: string; expired?: boolean; logoutUnconfirmed?: boolean }) {
   const [state, action, isPending] = useActionState<ActionState, FormData>(mode === "login" ? loginAction : signupAction, {});
   const errorRef = useRef<HTMLDivElement>(null);
   const isSignup = mode === "signup";
   useEffect(() => { if (state.message) errorRef.current?.focus(); }, [state]);
   return <form onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => action(data)); }} className="auth-form" aria-busy={isPending}>
     {expired && <Alert type="info" showIcon title="로그인이 만료되었거나 종료되었습니다. 다시 로그인하세요." />}
+    {logoutUnconfirmed && <Alert type="warning" showIcon title="이 브라우저에서는 로그아웃했습니다. 서버의 세션 종료는 확인하지 못했고, 그 세션은 만료 시각에 끝납니다." />}
     {state.message && <div ref={errorRef} tabIndex={-1}><Alert type="error" showIcon title={state.message} /></div>}
     <input type="hidden" name="returnTo" value={returnTo} />
     {isSignup && <><div className="form-field"><label htmlFor="organization_name">도입사 이름</label><Input id="organization_name" name="organization_name" autoComplete="organization" required maxLength={255} size="large" /></div><div className="form-field"><label htmlFor="name">담당자 이름</label><Input id="name" name="name" autoComplete="name" required maxLength={255} size="large" /></div></>}

@@ -35,11 +35,11 @@ JSON 설정 파일은 다음 환경변수의 문자열 맵이다. `.env.example`
 | `METERENGINE_API_BASE_URL` | 서버에서 접근하는 MeterEngine API 주소. |
 | `METERENGINE_ENVIRONMENT` | `test` 또는 `live`. 생략하면 API 키의 환경을 사용하며 초기화 스크립트의 기본값은 `test`다. |
 | `METERENGINE_API_KEY` | 수집과 조회용 `read`, `ingest` 키. 브라우저에 전달하지 않는다. |
-| `METERENGINE_BILLING_API_KEY` | 카드 등록 링크 발급용 선택 키. 현재 API 계약의 `admin` 권한이 필요하며 본인 고객의 링크에만 사용한다. |
+| `METERENGINE_BILLING_API_KEY` | 카드 등록 링크 발급용 선택 키. 현재 API 계약의 `admin` 권한이 필요하며 본인 고객의 링크에만 사용한다. 실제 E2E는 이 키로 이번 달 인보이스 확정도 검증한다. |
 | `METERENGINE_CONSOLE_URL` | 카드 등록을 진행할 MeterEngine 화면 주소. |
 | `LUMEN_AUTO_FLUSH_INTERVAL_MS` | 주기 재전송 간격. 기본 3000ms, 0이면 주기 작업만 끈다. 생성 직후와 직접 재전송은 실행한다. |
 
-카드 등록은 지정한 업무 환경의 PG 설정을 사용한다. 환경을 생략한 시연 연결은 테스트 카드 등록만 허용한다. 이 앱에서 결제 실행이나 인보이스 확정은 하지 않는다.
+카드 등록은 지정한 업무 환경의 PG 설정을 사용한다. 환경을 생략한 시연 연결은 테스트 카드 등록만 허용한다. 이 앱에서 결제 실행이나 인보이스 확정은 하지 않는다. 실제 E2E만 검증을 위해 이번 달 인보이스를 되돌릴 수 없게 확정하므로, 같은 달에 다시 돌리려면 새 출력 경로로 시드하고 앱을 다시 띄운다.
 
 SQLite는 API 주소, 업무 환경과 서버 키에 고정된다. 연결 설정을 바꿀 때는 기존 파일을 보존하고 별도 `LUMEN_DATABASE_PATH`를 지정한다. 연결 범위가 없는 기존 요청 파일도 자동 이행하지 않는다.
 
@@ -88,4 +88,4 @@ pnpm --filter @meterengine/llm-service lint
 pnpm --filter @meterengine/llm-service test
 ```
 
-실제 E2E는 별도 시연 도입사와 SQLite를 사용한다. `LUMEN_E2E_ENV_FILE`에 비공개 JSON 설정 경로를, `LUMEN_E2E_URL`에 해당 앱 주소를 지정한다. `LUMEN_E2E_STANDALONE_URL`이 있으면 같은 자체 DB를 연결한 복사본의 세션과 요청 영속성도 확인한다.
+실제 E2E는 별도 시연 도입사와 SQLite를 사용한다. `LUMEN_E2E_ENV_FILE`에 비공개 JSON 설정 경로를, `LUMEN_E2E_URL`에 해당 앱 주소를 지정한다. `LUMEN_E2E_STANDALONE_URL`이 있으면 같은 자체 DB를 연결한 복사본의 세션과 요청 영속성도 확인한다. 화면과 결과 파일은 `LUMEN_E2E_ARTIFACT_DIR`(기본은 OS 임시 폴더 아래 `meterengine-llm-tenant`)에 남는다.

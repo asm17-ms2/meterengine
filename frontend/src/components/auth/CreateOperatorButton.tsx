@@ -3,6 +3,7 @@
 import { Alert, App, Button, Modal } from "antd";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { createOperatorAction, type CreateOperatorField, type CreateOperatorState } from "@/app/admin/actions";
+import { fieldValidationMessage } from "@/lib/field-validation";
 
 const FIELDS = [
   { name: "name", label: "이름", type: "text", autoComplete: "name", maxLength: 255 },
@@ -17,6 +18,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
   const feedbackRef = useRef<HTMLDivElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [dismissedErrors, setDismissedErrors] = useState<{ state: CreateOperatorState; names: string[] }>({ state: {}, names: [] });
+  const [clientErrors, setClientErrors] = useState<Partial<Record<CreateOperatorField, string>>>({});
   const [state, action, isPending] = useActionState<CreateOperatorState, FormData>(async (previous, data) => {
     const result = await createOperatorAction(previous, data);
     if (result.isCreated) {
@@ -27,8 +29,9 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
     if (result.isUnconfirmed) setIsDirty(false);
     return result;
   }, {});
-  const errors = Object.fromEntries(Object.entries(state.fieldErrors ?? {}).filter(([name]) => dismissedErrors.state !== state || !dismissedErrors.names.includes(name))) as Partial<Record<CreateOperatorField, string>>;
-  const hasFeedback = Boolean(state.message && (!state.fieldErrors || Object.keys(errors).length));
+  const serverErrors = Object.fromEntries(Object.entries(state.fieldErrors ?? {}).filter(([name]) => dismissedErrors.state !== state || !dismissedErrors.names.includes(name))) as Partial<Record<CreateOperatorField, string>>;
+  const errors = { ...serverErrors, ...clientErrors };
+  const hasFeedback = Boolean(state.message && (!state.fieldErrors || Object.keys(serverErrors).length));
 
   useEffect(() => {
     if (!state.message || state.isCreated) return;
@@ -39,7 +42,17 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const nextErrors: Partial<Record<CreateOperatorField, string>> = {};
+    for (const field of FIELDS) {
+      const input = form.querySelector<HTMLInputElement>(`#${CSS.escape(`${formId}-${field.name}`)}`);
+      const message = input ? fieldValidationMessage(input.validity, { type: field.type, maxLength: field.maxLength, minLength: input.minLength > 0 ? input.minLength : undefined }) : undefined;
+      if (message) nextErrors[field.name] = message;
+    }
+    setClientErrors(nextErrors);
+    const first = FIELDS.find(field => nextErrors[field.name]);
+    if (first) { form.querySelector<HTMLElement>(`[name="${first.name}"]`)?.focus(); return; }
+    const data = new FormData(form);
     startTransition(() => action(data));
   }
 
@@ -53,11 +66,12 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
     afterOpenChange={isOpen => { if (isOpen) formRef.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus(); }}
     footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={isPending || state.isUnconfirmed}>운영자 계정 생성</Button></div>}
     onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }}>
-    <form id={formId} ref={formRef} onSubmit={submit} onChange={event => {
+    <form id={formId} ref={formRef} noValidate onSubmit={submit} onChange={event => {
       setIsDirty(true);
       const target = event.nativeEvent.target;
       const name = target instanceof HTMLInputElement ? target.name : "";
       setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] }));
+      setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name)));
     }} className="workspace-form" aria-busy={isPending}>
       <p className="muted">MeterEngine의 가입 승인과 플랫폼 권한을 관리할 계정을 만듭니다. 도입사 소속은 추가하지 않습니다.</p>
       <p className="field-hint">새 운영자는 처음 로그인해 이용 안내에 동의한 뒤 운영을 시작합니다. 초기 로그인 정보는 본인에게 안전하게 전달하세요.</p>

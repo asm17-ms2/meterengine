@@ -10,6 +10,8 @@ import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
+import com.meterengine.metric.entity.BillableMetric;
+import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.organization.repository.OrganizationRepository;
 import java.time.OffsetDateTime;
@@ -36,6 +38,7 @@ public class InvoiceFinalizationService {
   private final InvoiceEmailService invoiceEmailService;
   private final JsonMapper jsonMapper;
   private final AuditLogService auditLogService;
+  private final BillableMetricRepository billableMetricRepository;
 
   InvoiceFinalizationService(
       DraftInvoiceService draftInvoiceService,
@@ -45,7 +48,8 @@ public class InvoiceFinalizationService {
       OrganizationRepository organizationRepository,
       InvoiceEmailService invoiceEmailService,
       JsonMapper jsonMapper,
-      AuditLogService auditLogService) {
+      AuditLogService auditLogService,
+      BillableMetricRepository billableMetricRepository) {
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
@@ -54,6 +58,7 @@ public class InvoiceFinalizationService {
     this.invoiceEmailService = invoiceEmailService;
     this.jsonMapper = jsonMapper;
     this.auditLogService = auditLogService;
+    this.billableMetricRepository = billableMetricRepository;
   }
 
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
@@ -115,9 +120,20 @@ public class InvoiceFinalizationService {
                 OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE),
                 BusinessEnvironmentContext.environmentId()));
 
+    Map<String, String> metricNames =
+        (BusinessEnvironmentContext.environmentId() == null
+                ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
+                : billableMetricRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream().collect(Collectors.toMap(BillableMetric::getCode, BillableMetric::getName));
     invoiceLineRepository.saveAll(
         draftInvoiceCustomer.lines().stream()
-            .map(draftInvoiceLine -> toInvoiceLine(invoice, draftInvoiceLine))
+            .map(
+                draftInvoiceLine ->
+                    toInvoiceLine(
+                        invoice,
+                        draftInvoiceLine,
+                        metricNames.get(draftInvoiceLine.billableMetricCode())))
             .toList());
 
     return invoice;
@@ -136,7 +152,8 @@ public class InvoiceFinalizationService {
         draftInvoiceCustomer.negativeUsages());
   }
 
-  private InvoiceLine toInvoiceLine(Invoice invoice, DraftInvoiceLine draftInvoiceLine) {
+  private InvoiceLine toInvoiceLine(
+      Invoice invoice, DraftInvoiceLine draftInvoiceLine, String billableMetricName) {
     return new InvoiceLine(
         UUID.randomUUID(),
         invoice.getOrganizationId(),
@@ -151,6 +168,7 @@ public class InvoiceFinalizationService {
         draftInvoiceLine.tierIndex(),
         draftInvoiceLine.quantityNumerator(),
         draftInvoiceLine.quantityDenominator(),
-        invoice.getEnvironmentId());
+        invoice.getEnvironmentId(),
+        billableMetricName);
   }
 }

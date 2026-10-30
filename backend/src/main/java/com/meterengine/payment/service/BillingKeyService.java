@@ -156,7 +156,11 @@ public class BillingKeyService {
     String replacedBillingKey = existing.map(BillingKey::getBillingKey).orElse(null);
     OffsetDateTime replacedCredentialAt =
         existing.map(BillingKey::getCredentialUpdatedAt).orElse(null);
-    String replacedCardNumber = existing.map(BillingKey::getCardNumber).orElse(null);
+    String replacedCardNumber =
+        existing
+            .filter(found -> found.getArchivedAt() == null)
+            .map(BillingKey::getCardNumber)
+            .orElse(null);
     BillingKey billingKey =
         existing
             .map(

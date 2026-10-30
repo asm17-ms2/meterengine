@@ -48,6 +48,12 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 4월 과금 운영");
 });
 
+test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
+  await login(page, "member@contract.local", "/overview");
+  const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
+  await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 결제 모드: 테스트", { exact: true })).toBeVisible();
+});
+
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
   expect((await request.get("/health")).status()).toBe(200);
   for (const path of ["/customers?q=abc", "/admin/users", "/organizations"]) {
@@ -180,6 +186,62 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
+test("a customer edit that lost a version race offers to load the latest values and then saves", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("처음 이름");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("link", { name: "처음 이름", exact: true }).click();
+  await page.getByRole("button", { name: "고객 정보 수정", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("내가 고친 이름");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { renameCustomersElsewhere: "다른 사람이 고친 이름" } });
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toBeVisible();
+  await dialog.getByRole("button", { name: "최신 정보 불러오기", exact: true }).click();
+  await expect(dialog.getByLabel(/^고객명/)).toHaveValue("다른 사람이 고친 이름");
+  await expect(dialog.getByText("다른 사람이 먼저 고객 정보를 바꿨습니다.", { exact: false })).toHaveCount(0);
+  await dialog.getByLabel(/^고객명/).fill("다시 고친 이름");
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
+});
+
+test("restoring a customer returns focus to the same button, now offering to archive", async ({ page, request }) => {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill("복원할 고객");
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await request.post(`${FIXTURE_URL}/__control`, { data: { archiveCustomers: true } });
+  await page.getByRole("link", { name: "복원할 고객", exact: true }).click();
+  await page.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await dialog.getByRole("button", { name: "고객 복원", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "고객 보관", exact: true })).toBeFocused();
+});
+
+test("a customer address that is not a customer id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/customers/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
+test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByText("다른 도입사나 업무 환경의 고객일 수 있습니다", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "고객 목록으로", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+});
+
 test("the sidebar lists page links in plain lists without menu roles", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
@@ -279,6 +341,103 @@ test("meter number inputs do not expose English stepper buttons", async ({ page 
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
 
+test("list screens keep the disclosure marker on the advanced filter summary", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const summary = page.locator(".resource-advanced > summary");
+  await expect(summary).toHaveCSS("display", "list-item");
+  const box = await summary.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
+test("filter row controls on a list screen share one height", async ({ page }) => {
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await expect(form.locator(".ant-picker").first()).toBeVisible();
+  const heights = await form.evaluate(element => Array.from(element.querySelectorAll(":scope > .workspace-field .ant-picker, :scope > .workspace-field .ant-select, :scope > .workspace-field > select, :scope > .workspace-field > input:not([type=hidden]), :scope > button[type=submit]"))
+    .map(control => ({ name: control.className || control.tagName, height: Math.round(control.getBoundingClientRect().height) })));
+  expect(heights.length).toBeGreaterThanOrEqual(3);
+  for (const control of heights) expect(control.height, control.name).toBe(44);
+});
+
+test("the events customer filter matches the 44px filter row at phone and desktop widths", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const customer = page.locator(".event-filter-grid .ant-select").first();
+    await expect(customer).toBeVisible();
+    expect(Math.round((await customer.boundingBox())!.height), `${width}px`).toBe(44);
+  }
+});
+
+test("an audit range whose end is not after its start is reported next to the end field without asking the server", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/audit?from=2026-10-10T00:00&to=2026-10-01T00:00");
+  await expect(page.getByText("종료 일시는 시작 일시보다 뒤여야 합니다.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("종료 일시 (KST, 미포함)")).toHaveAttribute("aria-invalid", "true");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.startsWith("/v1/audit-logs") && path.includes("from="))).toBe(false);
+});
+
+test("list filters submit with a default 조건 적용 button and reset with 조건 초기화", async ({ page }) => {
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const submit = page.locator('form[aria-label="조회 조건"]').getByRole("button", { name: "조건 적용", exact: true });
+  await expect(submit).toBeVisible();
+  await expect(submit).not.toHaveClass(/ant-btn-primary/);
+  await page.context().clearCookies();
+  await login(page, "member@contract.local", "/audit");
+  await expect(page.getByRole("button", { name: "조건 적용", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "조건 초기화", exact: true })).toBeVisible();
+});
+
+test("the customer search names every searched field and fits its hint on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/customers");
+  await expectTenantUrl(page, "/customers");
+  const search = page.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true });
+  await expect(search).toBeVisible();
+  const fits = await search.evaluate(input => {
+    const element = input as HTMLInputElement;
+    const style = getComputedStyle(element);
+    const context = document.createElement("canvas").getContext("2d")!;
+    context.font = `${style.fontSize} ${style.fontFamily}`;
+    return context.measureText(element.placeholder).width <= element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  });
+  expect(fits).toBe(true);
+});
+
+test("phones do not show expand-all controls that only act on the desktop table", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await expect(page.locator(".data-mobile-records, .ant-empty, [role=status]").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "모두 펼치기", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
+});
+
+test("the month picker panel stays inside a phone screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, "member@contract.local", "/usage");
+  await expectTenantUrl(page, "/usage");
+  await page.locator('form[aria-label="조회 조건"] .ant-picker').first().click();
+  const panel = page.locator(".ant-picker-dropdown:visible .ant-picker-panel").first();
+  await expect(panel).toBeVisible();
+  const box = await panel.boundingBox();
+  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+});
+
+test("a webhook receiver whose latest delivery is failing is flagged in the list", async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  const failing = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" });
+  const healthy = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/healthy" });
+  await expect(failing).toContainText("최근 발송 실패");
+  await expect(healthy).toContainText("발송 중");
+  await expect(healthy).not.toContainText("최근 발송 실패");
+});
+
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
@@ -335,6 +494,32 @@ test("accepting an invitation as a new account does not send a stale session", a
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   const accept = calls.find((call: { path: string; method: string }) => call.path.endsWith("/accept") && call.method === "POST");
   expect(accept.hasAuthorization).toBe(false);
+});
+
+test("the automatic login after accepting an invitation sends the visitor's client address", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-meterengine-client-ip": "198.51.100.77" });
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await page.getByLabel(/^이름/).fill("초대 받은 사용자");
+  await page.getByLabel(/^비밀번호/).fill("invited-password");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
+  await page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+  await expectTenantUrl(page, "/overview");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const login = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
+  expect(login.clientIp).toBe("198.51.100.77");
+});
+
+test("every page refuses framing and MIME sniffing without naming the framework, and invoice links keep their own policy", async ({ request }) => {
+  for (const path of ["/login", "/signup", "/organization-invitations/me_invite_ContractInvitation00000000000001"]) {
+    const response = await request.get(path);
+    expect(response.headers()["x-frame-options"], path).toBe("DENY");
+    expect(response.headers()["content-security-policy"], path).toContain("frame-ancestors 'none'");
+    expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
+    expect(response.headers()["x-powered-by"], path).toBeUndefined();
+  }
+  const invoiceLink = await request.get("/invoice-links");
+  expect(invoiceLink.headers()["content-security-policy"]).toContain("default-src 'self'");
+  expect(invoiceLink.headers()["x-content-type-options"]).toBe("nosniff");
 });
 
 test("logging in to a return path of another member organization opens that organization", async ({ page }) => {
@@ -506,6 +691,30 @@ test("a disabled operator action explains itself through its description", async
   await expect(button).toHaveAccessibleDescription(/.+/);
 });
 
+test("operator dialogs report invalid input inline instead of browser bubbles", async ({ page, request }) => {
+  await login(page, "operator@contract.local", "/admin/users");
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await page.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
+  const create = page.getByRole("dialog", { name: "플랫폼 운영자 계정 생성" });
+  await create.getByLabel(/^이메일/).fill("not-an-email");
+  await create.getByLabel(/^초기 비밀번호/).fill("short");
+  await create.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
+  await expect(create.getByText("값을 입력하세요.")).toBeVisible();
+  await expect(create.getByText("이메일 주소 형식으로 입력하세요.")).toBeVisible();
+  await expect(create.getByText("8자 이상으로 입력하세요.")).toBeVisible();
+  await expect(create.getByLabel(/^초기 비밀번호/)).toHaveAttribute("aria-invalid", "true");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
+  await page.goto("/admin/users");
+  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
+  await card.getByRole("button", { name: "도입사 소속 연결", exact: true }).click();
+  const attach = page.getByRole("dialog", { name: "도입사 소속 연결" });
+  await attach.getByRole("button", { name: "소속 연결", exact: true }).click();
+  await expect(attach.getByText("항목을 선택하세요.")).toBeVisible();
+  await expect(attach.getByLabel(/^연결할 도입사/)).toHaveAttribute("aria-invalid", "true");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string; method: string }) => call.method === "POST" && (call.path === "/v1/user-accounts" || /^\/v1\/organizations\/[^/]+\/members$/.test(call.path)))).toBe(false);
+});
+
 test("a missing required field is reported inline like other form errors", async ({ page, request }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
@@ -541,20 +750,21 @@ test("suspended tenant blocks mutations but permits switching", async ({ page, r
   await expect(page.getByRole("status")).toContainText("이용 가능 여부");
 });
 
-test("network failure is recoverable and logout does not claim success before revocation", async ({ page, request }) => {
+test("network failure is recoverable and an unconfirmed logout clears this browser without claiming success", async ({ page, request }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
-  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "로그아웃을 완료하지 못했습니다" })).toContainText("로그아웃을 완료하지 못했습니다");
-  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.locator(".organization-link")).toContainText("계약 테스트 도입사");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?reason=logout_unconfirmed$/);
+  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(false);
+  await expect(page.getByText("서버의 세션 종료는 확인하지 못했고", { exact: false })).toBeVisible();
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
 });
 
 test("375px forms and tenant header fit, keyboard focus and menu work", async ({ page }) => {
@@ -673,6 +883,38 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
   });
 }
 
+test("on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const header = page.locator(".workspace-header");
+  await expect(header.getByRole("combobox", { name: "업무 환경" })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(header.getByRole("button", { name, exact: true })).toBeHidden();
+  expect((await header.boundingBox())!.height).toBeLessThan(130);
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByText("전체 관리", { exact: true })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(drawer.getByRole("button", { name, exact: true })).toBeVisible();
+});
+
+test("turning on the demo guide from the phone menu closes the menu so the guide shows", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "시연 안내 보기", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "시연 안내" })).toBeInViewport();
+});
+
+test("between phone and desktop widths the header still leaves out the user name", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-header .workspace-user-name")).toBeHidden();
+  await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
+});
+
 test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
@@ -770,4 +1012,20 @@ test("screen titles use the same size whichever header component draws them", as
   await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
   const customersTitle = await page.getByRole("heading", { level: 1, name: "고객" }).evaluate(element => getComputedStyle(element).fontSize);
   expect(membersTitle).toBe(customersTitle);
+});
+
+test("operator list titles use the shared screen title size", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "operator@contract.local", "/admin");
+  await expect(page).toHaveURL(url => url.pathname === "/admin");
+  for (const path of ["/admin/organizations", "/admin/users"]) {
+    await page.goto(path);
+    const sizes = await page.getByRole("heading", { level: 1 }).evaluate(element => [getComputedStyle(element).fontSize, getComputedStyle(document.documentElement).getPropertyValue("--screen-title-size").trim()]);
+    expect(sizes[0], path).toBe(sizes[1]);
+  }
+});
+
+test("registering a customer is the primary action in the customer list title row", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("button", { name: "고객 등록", exact: true })).toHaveClass(/ant-btn-primary/);
 });
