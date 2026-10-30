@@ -16,7 +16,7 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/login-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/login-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -29,7 +29,7 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/login-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/login-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -53,7 +53,7 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/login-logout-unconfirmed-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/login-logout-unconfirmed-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -66,7 +66,7 @@
         "title": "로그인 | MeterEngine",
         "h1": "로그인",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/login-logout-unconfirmed-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/login-logout-unconfirmed-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -90,7 +90,7 @@
         "title": "도입사 가입 신청 | MeterEngine",
         "h1": "도입사 가입 신청",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/signup-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/signup-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -103,7 +103,7 @@
         "title": "도입사 가입 신청 | MeterEngine",
         "h1": "도입사 가입 신청",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/signup-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/signup-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -127,7 +127,7 @@
         "title": "청구서 조회 | MeterEngine | MeterEngine",
         "h1": "청구서 조회 정보가 없습니다",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/invoice-links-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/invoice-links-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -140,7 +140,7 @@
         "title": "청구서 조회 | MeterEngine | MeterEngine",
         "h1": "청구서 조회 정보가 없습니다",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/invoice-links-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/invoice-links-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -164,7 +164,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "첫 청구를 준비하세요",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/overview-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/overview-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -177,7 +177,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "첫 청구를 준비하세요",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/overview-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/overview-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -201,7 +201,7 @@
         "title": "고객 | MeterEngine",
         "h1": "고객",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/customers-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/customers-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -214,7 +214,7 @@
         "title": "고객 | MeterEngine",
         "h1": "고객",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/customers-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/customers-mobile.png",
         "consoleErrors": [],
         "violations": [
           {
@@ -248,7 +248,7 @@
         "title": "수집 로그 | MeterEngine",
         "h1": "수집 로그",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/events-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/events-desktop.png",
         "consoleErrors": [],
         "violations": [
           {
@@ -271,7 +271,7 @@
         "title": "수집 로그 | MeterEngine",
         "h1": "수집 로그",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/events-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/events-mobile.png",
         "consoleErrors": [],
         "violations": [
           {
@@ -305,7 +305,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "이벤트 매핑 진단",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/event-issues-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/event-issues-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -318,7 +318,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "이벤트 매핑 진단",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/event-issues-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/event-issues-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -342,7 +342,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "수집 거절",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/event-rejections-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/event-rejections-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -355,7 +355,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "수집 거절",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/event-rejections-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/event-rejections-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -379,7 +379,7 @@
         "title": "확정 인보이스 | MeterEngine",
         "h1": "인보이스 - 2026년 10월",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/invoices-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/invoices-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -392,7 +392,7 @@
         "title": "확정 인보이스 | MeterEngine",
         "h1": "인보이스 - 2026년 10월",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/invoices-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/invoices-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -416,7 +416,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "수납과 취소",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/payments-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/payments-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -429,7 +429,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "수납과 취소",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/payments-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/payments-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -453,7 +453,7 @@
         "title": "미터 | MeterEngine",
         "h1": "미터",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/billable-metrics-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/billable-metrics-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -466,7 +466,7 @@
         "title": "미터 | MeterEngine",
         "h1": "미터",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/billable-metrics-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/billable-metrics-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -490,7 +490,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "무엇에 얼마를 청구할까요",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/pricing-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/pricing-desktop.png",
         "consoleErrors": [],
         "violations": [
           {
@@ -513,7 +513,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "무엇에 얼마를 청구할까요",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/pricing-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/pricing-mobile.png",
         "consoleErrors": [],
         "violations": [
           {
@@ -556,7 +556,7 @@
         "title": "API 키와 통보 | MeterEngine",
         "h1": "API 키와 통보",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/integrations-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/integrations-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -569,7 +569,7 @@
         "title": "API 키와 통보 | MeterEngine",
         "h1": "API 키와 통보",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/integrations-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/integrations-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -593,7 +593,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "도입사 설정",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/settings-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/settings-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -606,7 +606,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "도입사 설정",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/settings-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/settings-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -630,7 +630,7 @@
         "title": "사용자 관리 | MeterEngine",
         "h1": "사용자 관리",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/members-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/members-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -643,7 +643,7 @@
         "title": "사용자 관리 | MeterEngine",
         "h1": "사용자 관리",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/members-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/members-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -667,7 +667,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "서비스 운영 현황",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -680,7 +680,7 @@
         "title": "MeterEngine 관리자 콘솔",
         "h1": "서비스 운영 현황",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -704,7 +704,7 @@
         "title": "가입 승인과 도입사 | MeterEngine",
         "h1": "가입 승인과 도입사",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-organizations-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-organizations-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -717,7 +717,7 @@
         "title": "가입 승인과 도입사 | MeterEngine",
         "h1": "가입 승인과 도입사",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-organizations-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-organizations-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -741,7 +741,7 @@
         "title": "사용자와 플랫폼 권한 | MeterEngine",
         "h1": "사용자와 플랫폼 권한",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-users-desktop.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-users-desktop.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null
@@ -754,7 +754,7 @@
         "title": "사용자와 플랫폼 권한 | MeterEngine",
         "h1": "사용자와 플랫폼 권한",
         "horizontalOverflow": false,
-        "screenshot": "./.s456-work/final/payments-pricing-1/screens/admin-users-mobile.png",
+        "screenshot": "./.s456-work/final/payments-pricing-m2/screens/admin-users-mobile.png",
         "consoleErrors": [],
         "violations": [],
         "axeError": null

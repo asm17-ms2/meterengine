@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "done",
-  "updated_at": "2026-10-30T12:58:37+09:00",
+  "updated_at": "2026-10-30T13:49:36+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -52,7 +52,7 @@
     "fix/s456-t-yang-contract-redelivery": "9e58580",
     "fix/s456-t-yang-readme-rules": "6bc2459",
     "fix/s456-t-yang-console-rules": "ccbace0",
-    "fix/s456-t-yang-payments-pricing-rules": "a2eb1db"
+    "fix/s456-t-yang-payments-pricing-rules": "f780bf5"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -20081,6 +20081,158 @@
       "result": "pass",
       "command": "SRC=<ci-tests-m4 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
       "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-payments-pricing-rules..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 122 ℹ pass 122 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  82 passed (33.2s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.2s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  18 passed (22.8s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<payments-pricing-m2 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-279d102, 비교 38개 화면, 늘어난 것 0건"
     }
   ],
   "pushes": [
@@ -20723,6 +20875,11 @@
       "branch": "fix/s456-t-yang-ci-tests",
       "sha": "64a790fc6b6589fe11dd38632f853b55579bbea4",
       "at": "2026-10-30T12:54:19+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-payments-pricing-rules",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "at": "2026-10-30T13:40:32+09:00"
     }
   ],
   "usage_log": [],
@@ -20794,7 +20951,8 @@
     "2026-10-30T12:54:46+09:00 main 받기 #494 fix/s456-t-yang-ci-tests 세 번째: #493, #495가 들어간 main(6ddb8f4)과 ci.yml, workflows README가 충돌했다. #495의 rds-auto-stop job이 이 PR의 terraform job과 같은 일을 하고 루트 모듈 시험까지 돌아, 지금 main 동작인 rds-auto-stop job을 남기고 이 PR의 terraform job과 필터를 뺐다. frontend 계약 단계와 demo, deploy job은 살렸다. 머지 조건 문서의 job 이름은 64a790f에서 고쳤다. #495 쪽을 남긴 결정이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.",
     "2026-10-30T12:58:30+09:00 main 기준 2차 마무리: 열린 PR 다섯 개(#478 #480 #483 #485 #494)는 main(6ddb8f4)과 충돌이 없고 필수 체크가 초록이다. 새 주제 PR 14개(#501 #502 #504~#514)를 열었다. 모든 주제 브랜치의 마지막 push sha에서 DB를 새로 만든 마지막 실화면 점검이 12/12로 통과했고(console-rules 첫 실행 1건은 흔들림 판정), 프론트를 바꾼 브랜치의 화면 비교는 그 브랜치 base main 기준으로 늘어난 위반이 없다.",
     "2026-10-30T12:58:30+09:00 승인을 기다리는 PR(끝을 막지 않음, 머지는 박성종 님): #514(REVIEW_REQUIRED) #513(REVIEW_REQUIRED) #512(APPROVED) #511(REVIEW_REQUIRED) #510(REVIEW_REQUIRED) #509() #508(APPROVED) #507(APPROVED) #506(APPROVED) #505(APPROVED) #504(APPROVED) #502(APPROVED) #501(APPROVED) #494(APPROVED) #485(APPROVED) #483(APPROVED) #480(APPROVED) #478(APPROVED). #514는 #498 뒤에 머지한다. #509는 새 V53이라 V53보다 큰 번호가 먼저 머지되면 나중 쪽이 번호를 올린다.",
-    "2026-10-30T12:58:30+09:00 이번에 쓴 로컬 도구(커밋하지 않음): .s456-work/tools/chk3.sh(워크트리 검사, 백엔드 빌드 한 번에 하나), ingest3.py, push3.sh(검사한 sha만, main과 충돌 없을 때만 올리고 ls-remote로 확인한 뒤 기록), final2.sh(워크트리판 마지막 실화면 점검), final-record2.py, pr-final.py, mig-check.sh(새 V__ 기동 점검), ntset.py. 앞서 적은 rpush-main.sh와 check-report-main.mjs 수정도 커밋하지 않았다."
+    "2026-10-30T12:58:30+09:00 이번에 쓴 로컬 도구(커밋하지 않음): .s456-work/tools/chk3.sh(워크트리 검사, 백엔드 빌드 한 번에 하나), ingest3.py, push3.sh(검사한 sha만, main과 충돌 없을 때만 올리고 ls-remote로 확인한 뒤 기록), final2.sh(워크트리판 마지막 실화면 점검), final-record2.py, pr-final.py, mig-check.sh(새 V__ 기동 점검), ntset.py. 앞서 적은 rpush-main.sh와 check-report-main.mjs 수정도 커밋하지 않았다.",
+    "2026-10-30T13:49:36+09:00 30분 확인: #499가 main(279d102)에 들어가 #514 fix/s456-t-yang-payments-pricing-rules가 payments/page.tsx에서 충돌했다. #499의 헤더와 표 줄을 쓰고 표 label만 다시 달아 merge했다(f780bf5). 검사와 DB를 새로 만든 마지막 실화면 점검(12/12, main 279d102 기준 화면 비교 늘어난 것 0건)을 마쳤다. PR 본문에도 적었다."
   ],
   "final_checks": [
     {
@@ -20964,6 +21122,13 @@
       "passed": 12,
       "total": 12,
       "screens": "화면 비교 없음(프론트를 바꾸지 않음)"
+    },
+    {
+      "layer": "514",
+      "sha": "f780bf50bd1546c745652e3247cd2abb8fc21467",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
     }
   ],
   "usage_note": "사용량 도구가 없어 사람이 /usage로 지켜본다(주간 상한 70%). 층별 사용량은 기록하지 못한다."

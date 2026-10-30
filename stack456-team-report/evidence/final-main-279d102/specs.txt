@@ -1,0 +1,13 @@
+sha 279d102f3c05f5ba933246592d17ee0c33abdf19, DB를 새로 만든 실환경(final2.sh main-279d102), 바꾸지 않은 main 기준선
+aggregation: 통과   1 passed (8.3s) rc=0
+archive-filters: 통과   2 passed (13.0s) rc=0
+auth: 통과   3 passed (6.1s) rc=0
+customer-payment-retry: 통과   6 passed (7.1s) rc=0
+environment-cycle: 통과   1 passed (19.6s) rc=0
+events: 통과   1 passed (8.5s) rc=0
+invoice-links: 통과   3 passed (3.9s) rc=0
+mvp: 통과   1 passed (1.1m) rc=0
+operator-create: 통과   1 passed (2.5s) rc=0
+people: 통과   1 passed (10.9s) rc=0
+permissions: 통과   6 passed (16.9s) rc=0
+query-workspace: 통과   1 passed (10.4s) rc=0
