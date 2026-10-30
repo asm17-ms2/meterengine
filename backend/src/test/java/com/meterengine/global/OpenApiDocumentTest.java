@@ -227,6 +227,17 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 조회_권한_없는_재등록에서_비우는_고객_필드는_null을_허용한다() {
+    JsonNode properties =
+        root().path("components").path("schemas").path("CustomerResponse").path("properties");
+    for (String field : List.of("name", "billing_email", "created_at", "archived_at")) {
+      List<String> types = new ArrayList<>();
+      properties.path(field).path("type").forEach(type -> types.add(type.asText()));
+      assertThat(types).as(field).contains("null");
+    }
+  }
+
+  @Test
   void 검색_결과_CSV는_바이트가_아닌_문자열로_문서화한다() {
     for (String path : WORKSPACE_EXPORTS) {
       JsonNode schema =

@@ -8948,21 +8948,32 @@ components:
       type: object
       properties:
         archived_at:
-          type: string
+          type:
+          - string
+          - "null"
           format: date-time
+          description: 보관 시각. 보관하지 않았거나 read 권한 없이 받은 재등록 응답이면 null
         billing_email:
-          type: string
-          description: 청구 메일을 받을 주소. 등록하지 않았으면 null
+          type:
+          - string
+          - "null"
+          description: 청구 메일을 받을 주소. 등록하지 않았거나 read 권한 없이 받은 재등록 응답이면 null
         created_at:
-          type: string
+          type:
+          - string
+          - "null"
           format: date-time
+          description: 등록 시각. read 권한 없이 받은 재등록 응답이면 null
         external_id:
           type: string
         id:
           type: string
           format: uuid
         name:
-          type: string
+          type:
+          - string
+          - "null"
+          description: 고객명. read 권한 없이 받은 재등록 응답이면 null
         version:
           type: integer
           format: int64
