@@ -1,7 +1,7 @@
 {
   "package": "T-yang",
   "status": "done",
-  "updated_at": "2026-10-30T14:29:21+09:00",
+  "updated_at": "2026-10-30T14:35:53+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
@@ -340,98 +340,8 @@
   "since_report_push": 0,
   "branches": {
     "main": {
-      "origin_sha": "279d102",
-      "local_sha": "279d102",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-ops-metrics": {
-      "origin_sha": "be26d96",
-      "local_sha": "be26d96",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-e2e": {
-      "origin_sha": "ffcf739",
-      "local_sha": "ffcf739",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-demo-web-target": {
-      "origin_sha": "62caa25",
-      "local_sha": "62caa25",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-auth-session": {
-      "origin_sha": "ab6835d",
-      "local_sha": "ab6835d",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-ci-tests": {
-      "origin_sha": "64a790f",
-      "local_sha": "64a790f",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-mobile-heading": {
-      "origin_sha": "dd5810c",
-      "local_sha": "dd5810c",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-account-rules": {
-      "origin_sha": "0943e24",
-      "local_sha": "0943e24",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-webhook-restore": {
-      "origin_sha": "cd7193b",
-      "local_sha": "cd7193b",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-demo-request": {
-      "origin_sha": "f833734",
-      "local_sha": "f833734",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-toss-key-archive": {
-      "origin_sha": "f3fcbcc",
-      "local_sha": "f3fcbcc",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-retry-window": {
-      "origin_sha": "bbac6da",
-      "local_sha": "bbac6da",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-archived-card": {
-      "origin_sha": "cb9bdda",
-      "local_sha": "cb9bdda",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-invoice-line-name": {
-      "origin_sha": "8d23297",
-      "local_sha": "8d23297",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-invoice-links-ui": {
-      "origin_sha": "3b16755",
-      "local_sha": "3b16755",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-contract-redelivery": {
-      "origin_sha": "9e58580",
-      "local_sha": "9e58580",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-readme-rules": {
-      "origin_sha": "6bc2459",
-      "local_sha": "6bc2459",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-console-rules": {
-      "origin_sha": "ccbace0",
-      "local_sha": "ccbace0",
-      "unpushed": []
-    },
-    "fix/s456-t-yang-payments-pricing-rules": {
-      "origin_sha": "6db703e",
-      "local_sha": "6db703e",
+      "origin_sha": "9647032",
+      "local_sha": "9647032",
       "unpushed": []
     }
   },
