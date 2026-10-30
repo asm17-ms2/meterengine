@@ -23,6 +23,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
+import com.meterengine.pricing.dto.DimensionCharge;
 import com.meterengine.pricing.dto.PricePlanResponse;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.dto.PriceRateTier;
@@ -371,6 +372,21 @@ class VersionedPricingIntegrationTest {
     pricePlanService.create(
         organizationId, new CreatePricePlanRequest(customerId, month, null, 5L, 0L));
     assertThat(amount(month, "100")).isEqualTo(100);
+  }
+
+  @Test
+  void 버린_기본료가_0원이면_기본료_라인을_만들지_않는다() {
+    rate(null, month, null, "per_unit", BigDecimal.ONE, null);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(customerId, month, null, 5L, 0L));
+
+    List<DimensionCharge> charges =
+        chargeService
+            .calculate(organizationId, month, List.of(usage("100")))
+            .get(customerId)
+            .dimensionCharges();
+
+    assertThat(charges).extracting(DimensionCharge::lineType).doesNotContain("base_fee");
   }
 
   @Test
