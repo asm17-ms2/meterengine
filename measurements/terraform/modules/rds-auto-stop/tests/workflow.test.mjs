@@ -62,6 +62,7 @@ async function run(options = {}) {
     trace.push({ resource, args: structuredClone(args) });
     if (options.sdkFailure && resource.endsWith(options.sdkFailure)) throw failure('Service.UnavailableException');
     if (resource.endsWith('dynamodb:putItem')) {
+      assert.equal(args.TableName, config.claim_table);
       assert.equal(args.ConditionExpression, 'attribute_not_exists(event_key)');
       const key = args.Item.event_key.S;
       if (claims.has(key)) throw failure('DynamoDb.ConditionalCheckFailedException');
@@ -79,6 +80,7 @@ async function run(options = {}) {
       return { Events: nativeEvents, ...(options.eventMarker ? { Marker: options.eventMarker } : {}) };
     }
     if (resource.endsWith('rds:stopDBInstance')) {
+      assert.deepEqual(args, { DbInstanceIdentifier: db });
       if (options.stopFailure) throw failure('Rds.InvalidDBInstanceStateException');
       return { DbInstance: { DbInstanceStatus: 'stopping' } };
     }

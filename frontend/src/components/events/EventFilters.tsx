@@ -180,7 +180,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
         <p className="field-hint" id={`${id}-properties-help`}>입력한 속성과 값이 모두 일치하는 이벤트를 찾습니다. 문자, 숫자와 불리언 값을 구분합니다.</p>
         {error?.field === "properties" && <p id={`${id}-properties-error`} role="alert" className="field-error">{error.message}</p>}
       </details>
-      <div className="event-filter-submit"><Button type="primary" htmlType="submit" loading={isPending}>이 조건으로 조회</Button><Link href={resetHref}>필터 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건 변경됨. 조회 버튼을 눌러 적용하세요.</span>}</div>
+      <div className="event-filter-submit"><Button htmlType="submit" loading={isPending}>조건 적용</Button><Link href={resetHref}>조건 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건 변경됨. 조건 적용을 눌러 반영하세요.</span>}</div>
     </fieldset>
     <p role="status" aria-label="현재 조회 기간" className="event-applied-period">{isPending ? "조회 중입니다." : `현재 조회: ${appliedPeriod(query)}`}</p>
     {optionsError && <p role="status" className="field-hint">{optionsError} 유형은 직접 입력할 수 있습니다. <a href="">후보 다시 불러오기</a></p>}

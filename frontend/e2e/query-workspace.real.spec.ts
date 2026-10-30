@@ -166,11 +166,11 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       await page.goto(`/customers?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId })}`);
       const form = page.getByRole("form", { name: "조회 조건", exact: true });
       const advanced = await expandAdvanced(page);
-      await form.getByRole("searchbox", { name: "이름 또는 외부 ID로 찾기", exact: true }).fill(needle);
+      await form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true }).fill(needle);
       await form.getByRole("combobox", { name: "관리 상태", exact: true }).selectOption("all");
       await form.getByRole("combobox", { name: "페이지 크기", exact: true }).selectOption("50");
       await advanced.locator("summary").click();
-      await expect(form.getByRole("searchbox", { name: "이름 또는 외부 ID로 찾기", exact: true })).toHaveValue(needle);
+      await expect(form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true })).toHaveValue(needle);
       await form.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectScope(page, { q: needle, size: "50", status: "all" });
       await expect(page.locator(".workspace-desktop-table").getByRole("row").filter({ hasText: needle })).toHaveCount(25);

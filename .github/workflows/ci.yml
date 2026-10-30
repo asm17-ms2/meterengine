@@ -22,7 +22,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       demo: ${{ steps.filter.outputs.demo }}
       deploy: ${{ steps.filter.outputs.deploy }}
-      terraform: ${{ steps.filter.outputs.terraform }}
+      rds_auto_stop: ${{ steps.filter.outputs.rds_auto_stop }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -31,6 +31,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'deploy/grafana/provisioning/alerting/alerting.yml'
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
@@ -47,9 +48,9 @@ jobs:
               - 'measurements/test-slo/k6/README.md'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
               - '.github/workflows/ci.yml'
-            terraform:
-              - 'measurements/terraform/**'
-              - 'measurements/test-slo/sut/terraform/.terraform.lock.hcl'
+            rds_auto_stop:
+              - 'measurements/terraform/modules/rds-auto-stop/**'
+              - 'measurements/terraform/rds-auto-stop/**'
               - '.node-version'
               - '.github/workflows/ci.yml'
 
@@ -144,31 +145,33 @@ jobs:
       - run: docker pull caddy:2.11.7-alpine
       - run: python3 -m unittest discover -s deploy/tests -v
 
-  terraform:
-    name: terraform
+
+  rds-auto-stop:
+    name: rds-auto-stop
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.terraform == 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.rds_auto_stop == 'true') }}
     runs-on: ubuntu-latest
-    env:
-      MODULE: measurements/terraform/modules/rds-auto-stop
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.16.6"
           terraform_wrapper: false
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .node-version
-      - run: terraform fmt -check -recursive "$MODULE"
-      # mock_provider라 AWS 자격 증명 없이 돈다. 모듈 README대로 SUT 잠금 파일의 공급자 버전으로 임시 폴더에서 돌린다
+      # 흐름 정의의 JSONata 실행 시험과 Terraform mock 시험이다. AWS 자원을 만들거나 부르지 않는다.
+      - run: npm --prefix measurements/terraform/modules/rds-auto-stop/tests ci --ignore-scripts
+      - run: npm --prefix measurements/terraform/modules/rds-auto-stop/tests test
+      - run: terraform fmt -check -recursive measurements/terraform/modules/rds-auto-stop measurements/terraform/rds-auto-stop
       - run: |
-          dir="$(mktemp -d)"
-          cp "$MODULE"/*.tf "$MODULE"/*.json "$dir/"
-          cp measurements/test-slo/sut/terraform/.terraform.lock.hcl "$dir/"
-          mkdir "$dir/tests"
-          cp "$MODULE"/tests/*.tftest.hcl "$dir/tests/"
-          terraform -chdir="$dir" init -backend=false -input=false
-          terraform -chdir="$dir" test
-      - run: npm --prefix "$MODULE/tests" ci --ignore-scripts
-      - run: npm --prefix "$MODULE/tests" test
+          rds_test_dir="$(mktemp -d)"
+          cp measurements/terraform/modules/rds-auto-stop/*.tf measurements/terraform/modules/rds-auto-stop/*.json "$rds_test_dir/"
+          cp measurements/terraform/rds-auto-stop/.terraform.lock.hcl "$rds_test_dir/"
+          mkdir "$rds_test_dir/tests"
+          cp measurements/terraform/modules/rds-auto-stop/tests/*.tftest.hcl "$rds_test_dir/tests/"
+          terraform -chdir="$rds_test_dir" init -backend=false -input=false
+          terraform -chdir="$rds_test_dir" test
+      - run: |
+          terraform -chdir=measurements/terraform/rds-auto-stop init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=measurements/terraform/rds-auto-stop test

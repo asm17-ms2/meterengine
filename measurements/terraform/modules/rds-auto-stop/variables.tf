@@ -2,8 +2,9 @@ variable "name_prefix" {
   type = string
 
   validation {
-    condition     = can(regex("^[a-z0-9-]{1,45}$", var.name_prefix))
-    error_message = "name_prefix는 45자 이내의 소문자, 숫자, 하이픈이어야 한다."
+    # IAM 역할 이름 한도 64자에서 가장 긴 접미 "-rds-auto-stop-workflow"(23자)를 뺀 값이다.
+    condition     = can(regex("^[a-z0-9-]{1,41}$", var.name_prefix))
+    error_message = "name_prefix는 41자 이내의 소문자, 숫자, 하이픈이어야 한다."
   }
 }
 

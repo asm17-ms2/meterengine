@@ -12,6 +12,7 @@ import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.MemberAccess;
 import com.meterengine.global.security.PublicAccess;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -89,7 +90,13 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다")
+        description = "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다",
+        headers =
+            @Header(
+                name = "Retry-After",
+                description = "다시 보내기 전에 기다릴 초",
+                required = true,
+                schema = @Schema(type = "integer")))
   })
   public SessionTokenResponse createSession(
       @Valid @RequestBody CreateSessionRequest request, HttpServletRequest servletRequest) {

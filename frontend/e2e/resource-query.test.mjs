@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeResourceQuery, searchParametersFromUrl } from "../src/lib/resource-query.ts";
+import { normalizeResourceQuery, resourceRangeErrors, searchParametersFromUrl } from "../src/lib/resource-query.ts";
 
 test("pricing screen and CSV share the metric archive scope, not plan history status", () => {
   const screen = { metric_status: "archived", status: "all", q: "tokens", customer_id: "customer", sort: "rate_count", order: "desc" };
@@ -135,4 +135,10 @@ test("event CSV follows the applied first-value filters without silently enablin
   assert.equal(query.has("include_properties"), false);
   assert.equal(query.has("page"), false);
   assert.equal(query.has("size"), false);
+});
+
+test("reversed amount and finalized time ranges are caught before the request", () => {
+  assert.deepEqual(resourceRangeErrors(new URLSearchParams({ min_amount: "5000", max_amount: "100", from: "2026-10-02T00:00:00", to: "2026-10-01T00:00:00" })).map(error => error.field), ["max_amount", "to"]);
+  assert.deepEqual(resourceRangeErrors(new URLSearchParams({ min_amount: "100", max_amount: "100", from: "2026-10-01T00:00:00", to: "2026-10-02T00:00:00" })), []);
+  assert.deepEqual(resourceRangeErrors(new URLSearchParams({ from: "2026-10-01T00:00:00", to: "2026-10-01T00:00:00" })).map(error => error.field), ["to"]);
 });

@@ -43,3 +43,17 @@ export function submittedResourceParameters(fields: Iterable<readonly [string, F
   if (query.has("from") || query.has("to")) query.delete("month");
   return query;
 }
+
+export type ResourceRangeError = { field: "max_amount" | "to"; message: string };
+
+// 서버도 거꾸로 된 범위를 400으로 거절하지만, 화면에서 먼저 막아야 입력칸 옆에 고칠 곳을 보여 줄 수 있다.
+export function resourceRangeErrors(parameters: URLSearchParams): ResourceRangeError[] {
+  const errors: ResourceRangeError[] = [];
+  const minAmount = parameters.get("min_amount");
+  const maxAmount = parameters.get("max_amount");
+  if (minAmount && maxAmount && Number(minAmount) > Number(maxAmount)) errors.push({ field: "max_amount", message: "최대 금액은 최소 금액보다 작을 수 없습니다." });
+  const from = parameters.get("from");
+  const to = parameters.get("to");
+  if (from && to && from >= to) errors.push({ field: "to", message: "확정 시각 끝은 시작보다 뒤여야 합니다." });
+  return errors;
+}

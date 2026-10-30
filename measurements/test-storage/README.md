@@ -89,6 +89,16 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 
 ## 켜고 끄기
 
+켜기 전에 RDS 자동 재기동을 처리하는 흐름이 돌고 있지 않은지 확인한다. 돌고 있으면 측정 도중에 그 흐름이 DB를 끌 수 있으니, 결과가 0이 될 때까지 기다린 뒤 켠다(흐름은 최대 2시간 돈다).
+
+```bash
+aws stepfunctions list-executions --region ap-northeast-2 \
+  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-storage-rds-auto-stop \
+  --status-filter RUNNING --query 'length(executions)'
+```
+
+"환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
+
 ```bash
 measurements/test-storage/sut/scripts/sut-start.sh
 measurements/test-storage/sut/scripts/sut-stop.sh
@@ -428,6 +438,8 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 - 상태 파일은 apply한 컴퓨터에만 있고 커밋하지 않는다. 잃으면 Terraform으로 지울 수 없으니 지우지 않는다.
 - 다른 컴퓨터에서 apply 하지 않는다. 이름이 겹쳐 실패한다.
 - 평소에는 지우지 않고 끈다. 다시 만들면 인증서를 새로 받는다. RDS는 최종 스냅숏 없이 지워진다.
+
+지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-storage의 자동 재기동 감지를 먼저 뺀다.
 
 ```bash
 terraform -chdir=measurements/test-storage/load-generator/terraform destroy

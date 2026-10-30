@@ -5,6 +5,7 @@ const INVOICE_ID = "11111111-1111-4111-8111-111111111111";
 const ENDPOINT_ID = "33333333-3333-4333-8333-333333333333";
 type FixtureState = {
   kind: string;
+  customerOptionQueries: string[];
   cancellationCalls: { idempotencyKey: string; amount: number; reason: string }[];
   cancellationEffects: number;
   cancellationCompletedAfterMs: number | null;
@@ -326,3 +327,65 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
     expect(call.size).toBeUndefined();
   }
 });
+
+test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다", async ({ page }) => {
+  await page.goto("/invoices");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await form.locator("summary").click();
+  await form.getByLabel("최소 금액 (원)").fill("5000");
+  await form.getByLabel("최대 금액 (원)").fill("100");
+  await form.getByRole("button", { name: "조건 적용", exact: true }).click();
+  await expect(form.getByRole("alert")).toHaveText("최대 금액은 최소 금액보다 작을 수 없습니다.");
+  await expect(form.getByRole("spinbutton", { name: "최대 금액 (원)", exact: true })).toBeFocused();
+  expect(new URL(page.url()).searchParams.get("min_amount")).toBeNull();
+});
+
+test("격리 계약: 고객 선택지는 입력을 멈춘 뒤 한 번만 찾고 빈 검색어로 열 때는 다시 받지 않는다", async ({ page, request }) => {
+  await control(request, "customer-options");
+  await page.goto("/invoices");
+  const filter = page.getByRole("combobox", { name: "고객", exact: true });
+  await expect(filter).toBeVisible();
+  const loadedWithPage = (await readState(request)).customerOptionQueries.length;
+  await filter.click();
+  await filter.pressSequentially("검색고객", { delay: 30 });
+  await expect(page.locator(".ant-select-item-option").filter({ hasText: "검색으로만 보이는 고객" })).toBeVisible();
+  expect((await readState(request)).customerOptionQueries.slice(loadedWithPage)).toEqual(["검색고객"]);
+});
+
+test("격리 계약: 검색으로 고른 고객은 필터를 다시 열어도 이름으로 보인다", async ({ page, request }) => {
+  await control(request, "customer-options");
+  await page.goto("/invoices");
+  const filter = page.getByRole("combobox", { name: "고객", exact: true });
+  await filter.click();
+  await filter.pressSequentially("검색고객");
+  await page.locator(".ant-select-item-option").filter({ hasText: "검색으로만 보이는 고객" }).click();
+  await page.locator('form[aria-label="조회 조건"]').getByRole("button", { name: "조건 적용", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("customer_id")).toBe("77777777-7777-4777-8777-777777777777");
+  await page.reload();
+  await filter.click();
+  await page.keyboard.press("Escape");
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await expect(form.getByText("검색으로만 보이는 고객", { exact: true }).filter({ visible: true })).toHaveCount(1);
+  await expect(form.getByText("77777777-7777-4777-8777-777777777777")).toHaveCount(0);
+});
+
+test("격리 계약: 고객 검색이 실패하면 조회 중에서 멈추지 않고 실패를 알린다", async ({ page, request }) => {
+  await control(request, "customer-options");
+  await page.goto("/invoices");
+  const filter = page.getByRole("combobox", { name: "고객", exact: true });
+  await filter.click();
+  await filter.pressSequentially("실패");
+  const empty = page.locator(".ant-select-dropdown .ant-select-item-empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).not.toHaveText("조회 중");
+  await expect(empty).not.toHaveText("일치하는 고객이 없습니다");
+  await expect(page.locator(".ant-select-item-option")).toHaveCount(0);
+});
+
+test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으면 필터를 열 때 다시 받는다", async ({ page, request }) => {
+  await control(request, "customer-options-retry");
+  await page.goto("/invoices");
+  await page.getByRole("combobox", { name: "고객", exact: true }).click();
+  await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
+});
+

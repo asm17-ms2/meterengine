@@ -23,6 +23,7 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
+import com.meterengine.pricing.dto.DimensionCharge;
 import com.meterengine.pricing.dto.PricePlanResponse;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.dto.PriceRateTier;
@@ -363,6 +364,32 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 기본료와_최소_사용료는_청구할_때_10원_미만을_버린다() {
+    rate(null, month, null, "per_unit", BigDecimal.ONE, null);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(null, month, null, 9999L, 15005L));
+    assertThat(amount(month, "100")).isEqualTo(100 + (15000 - 100) + 9990);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(customerId, month, null, 5L, 0L));
+    assertThat(amount(month, "100")).isEqualTo(100);
+  }
+
+  @Test
+  void 버린_기본료가_0원이면_기본료_라인을_만들지_않는다() {
+    rate(null, month, null, "per_unit", BigDecimal.ONE, null);
+    pricePlanService.create(
+        organizationId, new CreatePricePlanRequest(customerId, month, null, 5L, 0L));
+
+    List<DimensionCharge> charges =
+        chargeService
+            .calculate(organizationId, month, List.of(usage("100")))
+            .get(customerId)
+            .dimensionCharges();
+
+    assertThat(charges).extracting(DimensionCharge::lineType).doesNotContain("base_fee");
+  }
+
+  @Test
   void 구간_기본료_최소조정은_실제_인보이스로_확정되고_조회된다() {
     rate(null, month, null, "graduated", null, tiers());
     pricePlanService.create(
@@ -433,6 +460,31 @@ class VersionedPricingIntegrationTest {
                 .header(AUTHORIZATION, foreign)
                 .exchange())
         .hasStatus(404);
+  }
+
+  @Test
+  void 다른_도입사의_단가_ID_삭제는_404이고_보관과_감사_기록을_남기지_않는다() {
+    PriceRateResponse created = rate(null, month, null, "per_unit", BigDecimal.TEN, null);
+    String foreign = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID());
+    assertThat(
+            mvc.delete()
+                .uri("/v1/billable-metrics/tokens/price-rates/" + created.id())
+                .header(AUTHORIZATION, foreign)
+                .exchange())
+        .hasStatus(404);
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT archived_at IS NULL FROM price_rate WHERE id = ?",
+                Boolean.class,
+                created.id()))
+        .isTrue();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE target_id = ? AND action = 'price_rate_archived'",
+                Integer.class,
+                created.id().toString()))
+        .isZero();
   }
 
   @Test

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { requestApi, toDisplayMessage } from "@/lib/api/transport";
 import { readSessionToken, saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
@@ -52,7 +52,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   (await cookies()).set("me_invitation_flow", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/organization-invitations", maxAge: 0 });
   let activeToken = sessionToken;
   if (!preview.data.account_exists) {
-    const login = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email: preview.data.email, password } });
+    const login = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email: preview.data.email, password }, clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined });
     if (!login.ok) return { isAccepted: true, message: "초대를 수락했습니다. 로그인 화면에서 도입사로 이동하세요." };
     await saveSession(login.data.token, login.data.expires_at);
     activeToken = login.data.token;

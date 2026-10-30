@@ -7,7 +7,10 @@ import com.meterengine.audit.repository.AuditLogRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -76,29 +79,17 @@ public class AuditLogQueryService {
                         .replace("%", "\\%")
                         .replace("_", "\\_")
                     + "%";
-            filters.add(
-                cb.or(
-                    cb.like(cb.lower(root.get("action")), term, '\\'),
-                    cb.like(cb.lower(root.get("targetType")), term, '\\'),
-                    cb.like(cb.lower(root.get("targetId")), term, '\\'),
-                    cb.like(
-                        cb.lower(
-                            cb.function(
-                                "jsonb_extract_path_text",
-                                String.class,
-                                root.get("detail"),
-                                cb.literal("request_id"))),
-                        term,
-                        '\\'),
-                    cb.like(
-                        cb.lower(
-                            cb.function(
-                                "jsonb_extract_path_text",
-                                String.class,
-                                root.get("detail"),
-                                cb.literal("route"))),
-                        term,
-                        '\\')));
+            List<Predicate> matches = new ArrayList<>();
+            matches.add(cb.like(cb.lower(root.get("action")), term, '\\'));
+            matches.add(cb.like(cb.lower(root.get("targetType")), term, '\\'));
+            matches.add(cb.like(cb.lower(root.get("targetId")), term, '\\'));
+            matches.add(cb.like(cb.lower(detail(root, cb, "request_id")), term, '\\'));
+            matches.add(cb.like(cb.lower(detail(root, cb, "route")), term, '\\'));
+            if (organizationId == null)
+              matches.add(
+                  cb.like(
+                      cb.function("text", String.class, root.get("organizationId")), term, '\\'));
+            filters.add(cb.or(matches.toArray(Predicate[]::new)));
           }
           return cb.and(filters.toArray(Predicate[]::new));
         };
@@ -112,6 +103,11 @@ public class AuditLogQueryService {
         result.getTotalElements(),
         page,
         size);
+  }
+
+  private static Expression<String> detail(Root<AuditLog> root, CriteriaBuilder cb, String key) {
+    return cb.function(
+        "jsonb_extract_path_text", String.class, root.get("detail"), cb.literal(key));
   }
 
   private static OffsetDateTime boundary(String text, boolean end) {
