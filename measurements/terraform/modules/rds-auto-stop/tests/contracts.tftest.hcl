@@ -29,6 +29,16 @@ run "scoped_automatic_restart" {
   }
 
   assert {
+    condition     = toset(flatten(regexall("\\$config\\.([a-z_]+)", output.workflow_definition))) == toset(keys(jsondecode(output.workflow_definition).States.Configure.Assign.config))
+    error_message = "Every $config key the workflow reads must be assigned by Terraform, and every assigned key must be read."
+  }
+
+  assert {
+    condition     = jsondecode(output.workflow_definition).States.Configure.Assign.config.claim_table == aws_dynamodb_table.claims.name
+    error_message = "The workflow must claim through this module's table."
+  }
+
+  assert {
     condition     = local.workflow_policy.Statement[0].Resource == var.db_arn
     error_message = "StopDBInstance must be scoped to one database."
   }
@@ -65,4 +75,22 @@ run "disabled_detector" {
     condition     = aws_cloudwatch_event_rule.automatic_restart.state == "DISABLED"
     error_message = "The detector must support an explicit operational disable."
   }
+}
+
+run "name_prefix_fits_iam_role_names" {
+  command = plan
+
+  variables {
+    name_prefix = "a23456789-123456789-123456789-1234567890b"
+  }
+}
+
+run "name_prefix_too_long_for_iam_role_names" {
+  command = plan
+
+  variables {
+    name_prefix = "a23456789-123456789-123456789-1234567890bc"
+  }
+
+  expect_failures = [var.name_prefix]
 }

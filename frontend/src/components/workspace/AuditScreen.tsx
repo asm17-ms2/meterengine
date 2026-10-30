@@ -48,7 +48,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
   const pagePath = isOperator ? "/admin/audit" : "/audit";
   function pageHref(page: number) { const next = new URLSearchParams(params); next.set("page", String(page)); return `${pagePath}?${next}`; }
   return <>
-    <WorkspaceHeader title="감사 기록" kicker={isOperator ? "MeterEngine 플랫폼 운영" : "도입사 설정"} description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
+    <WorkspaceHeader title="감사 기록" description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
     <section className="workspace-panel"><h2>기록 찾기</h2><form method="get" className="workspace-form">
       <EnvironmentInput />
       <div className="settings-grid">

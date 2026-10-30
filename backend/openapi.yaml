@@ -6747,6 +6747,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의\
             \ 초만큼 기다린 뒤 재시도한다"
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+              style: simple
       security: []
       summary: 로그인
       tags:
@@ -6944,6 +6951,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=rate_limit_exceeded: 가입 시도 한도를 넘었다. Retry-After 헤더의 초\
             만큼 기다린 뒤 재시도한다"
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+              style: simple
       security: []
       summary: 가입 신청
       tags:

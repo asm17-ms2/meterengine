@@ -434,6 +434,32 @@ test("accepting an invitation as a new account does not send a stale session", a
   expect(accept.hasAuthorization).toBe(false);
 });
 
+test("the automatic login after accepting an invitation sends the visitor's client address", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-meterengine-client-ip": "198.51.100.77" });
+  await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
+  await page.getByLabel(/^이름/).fill("초대 받은 사용자");
+  await page.getByLabel(/^비밀번호/).fill("invited-password");
+  for (const box of await page.getByRole("checkbox").all()) await box.check();
+  await page.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+  await expectTenantUrl(page, "/overview");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const login = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
+  expect(login.clientIp).toBe("198.51.100.77");
+});
+
+test("every page refuses framing and MIME sniffing without naming the framework, and invoice links keep their own policy", async ({ request }) => {
+  for (const path of ["/login", "/signup", "/organization-invitations/me_invite_ContractInvitation00000000000001"]) {
+    const response = await request.get(path);
+    expect(response.headers()["x-frame-options"], path).toBe("DENY");
+    expect(response.headers()["content-security-policy"], path).toContain("frame-ancestors 'none'");
+    expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
+    expect(response.headers()["x-powered-by"], path).toBeUndefined();
+  }
+  const invoiceLink = await request.get("/invoice-links");
+  expect(invoiceLink.headers()["content-security-policy"]).toContain("default-src 'self'");
+  expect(invoiceLink.headers()["x-content-type-options"]).toBe("nosniff");
+});
+
 test("logging in to a return path of another member organization opens that organization", async ({ page }) => {
   const other = "22222222-2222-4222-8222-222222222222";
   await login(page, "member@contract.local", `/customers?organization_id=${other}&q=abc`);
@@ -770,6 +796,38 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
   });
 }
 
+test("on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const header = page.locator(".workspace-header");
+  await expect(header.getByRole("combobox", { name: "업무 환경" })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(header.getByRole("button", { name, exact: true })).toBeHidden();
+  expect((await header.boundingBox())!.height).toBeLessThan(130);
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByText("전체 관리", { exact: true })).toBeVisible();
+  for (const name of ["시연 안내 보기", "권한 새로 조회", "로그아웃"]) await expect(drawer.getByRole("button", { name, exact: true })).toBeVisible();
+});
+
+test("turning on the demo guide from the phone menu closes the menu so the guide shows", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.getByRole("button", { name: "업무 메뉴 열기" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "시연 안내 보기", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "시연 안내" })).toBeInViewport();
+});
+
+test("between phone and desktop widths the header still leaves out the user name", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await expect(page.locator(".workspace-header .workspace-user-name")).toBeHidden();
+  await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
+});
+
 test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
@@ -867,4 +925,20 @@ test("screen titles use the same size whichever header component draws them", as
   await page.goto(`/customers?organization_id=${ORGANIZATION_ID}`);
   const customersTitle = await page.getByRole("heading", { level: 1, name: "고객" }).evaluate(element => getComputedStyle(element).fontSize);
   expect(membersTitle).toBe(customersTitle);
+});
+
+test("operator list titles use the shared screen title size", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, "operator@contract.local", "/admin");
+  await expect(page).toHaveURL(url => url.pathname === "/admin");
+  for (const path of ["/admin/organizations", "/admin/users"]) {
+    await page.goto(path);
+    const sizes = await page.getByRole("heading", { level: 1 }).evaluate(element => [getComputedStyle(element).fontSize, getComputedStyle(document.documentElement).getPropertyValue("--screen-title-size").trim()]);
+    expect(sizes[0], path).toBe(sizes[1]);
+  }
+});
+
+test("registering a customer is the primary action in the customer list title row", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("button", { name: "고객 등록", exact: true })).toHaveClass(/ant-btn-primary/);
 });

@@ -2,6 +2,8 @@ package com.meterengine.account.service;
 
 import com.meterengine.account.config.AuthRateLimitProperties;
 import com.meterengine.account.repository.AuthRequestRateLimitRepository;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Bucket;
+import com.meterengine.account.repository.AuthRequestRateLimitRepository.Rejection;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.TooManyRequestsException;
 import com.meterengine.global.security.SecureTokens;
@@ -11,12 +13,17 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthRequestRateLimitService {
   public static final String CLIENT_IP_HEADER = "X-MeterEngine-Client-IP";
+  private static final Logger logger = LoggerFactory.getLogger(AuthRequestRateLimitService.class);
+  // 로그인 계정 한도는 계정과 IP 쌍으로 세고, 여러 IP에 나눈 시도는 이 배수의 계정 전체 상한으로 막는다.
+  static final int LOGIN_ACCOUNT_TOTAL_MULTIPLIER = 10;
   private final AuthRequestRateLimitRepository authRequestRateLimitRepository;
   private final AuthRateLimitProperties authRateLimitProperties;
   private final List<Network> trustedProxies;
@@ -31,45 +38,66 @@ public class AuthRequestRateLimitService {
   }
 
   public void login(String email, HttpServletRequest request) {
+    if (!authRateLimitProperties.enabled()) return;
+    String address = clientAddress(request);
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
+    int accountLimit = authRateLimitProperties.loginAccountLimit();
     check(
         "login",
-        email,
-        request,
-        authRateLimitProperties.loginIpLimit(),
-        authRateLimitProperties.loginAccountLimit(),
+        address,
+        new Bucket("login_ip", SecureTokens.hash(address), authRateLimitProperties.loginIpLimit()),
+        List.of(
+            new Bucket(
+                "login_account",
+                accountKey("account_ip", account, address),
+                accountLimit,
+                "login_account_ip"),
+            new Bucket(
+                "login_account",
+                accountKey("account", account),
+                accountLimit * LOGIN_ACCOUNT_TOTAL_MULTIPLIER)),
         authRateLimitProperties.loginWindow());
   }
 
   public void signup(String email, HttpServletRequest request) {
+    if (!authRateLimitProperties.enabled()) return;
+    String address = clientAddress(request);
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
     check(
         "signup",
-        email,
-        request,
-        authRateLimitProperties.signupIpLimit(),
-        authRateLimitProperties.signupAccountLimit(),
+        address,
+        new Bucket(
+            "signup_ip", SecureTokens.hash(address), authRateLimitProperties.signupIpLimit()),
+        List.of(
+            new Bucket(
+                "signup_account",
+                SecureTokens.hash(account),
+                authRateLimitProperties.signupAccountLimit())),
         authRateLimitProperties.signupWindow());
   }
 
   private void check(
-      String action,
-      String email,
-      HttpServletRequest request,
-      int addressLimit,
-      int accountLimit,
-      Duration window) {
-    if (!authRateLimitProperties.enabled()) return;
-    String account = email.strip().toLowerCase(Locale.ROOT);
-    authRequestRateLimitRepository.cleanExpired();
-    long retryAfter =
-        authRequestRateLimitRepository.consume(
+      String action, String address, Bucket addressBucket, List<Bucket> accounts, Duration window) {
+    Optional<Rejection> rejection =
+        authRequestRateLimitRepository.consume(addressBucket, accounts, window.toSeconds());
+    if (rejection.isPresent()) {
+      // 같은 창의 반복 거절까지 남기면 한 IP의 폭주가 컨테이너 로그를 밀어내므로 처음 넘을 때만 남긴다.
+      if (rejection.get().firstInWindow())
+        logger.warn(
+            "Authentication request limited action={} client_address={} limit={} retry_after={}",
             action,
-            SecureTokens.hash(clientAddress(request)),
-            SecureTokens.hash(account),
-            addressLimit,
-            accountLimit,
-            window.toSeconds());
-    if (retryAfter > 0)
-      throw new TooManyRequestsException(ErrorCode.RATE_LIMIT_EXCEEDED, retryAfter);
+            address,
+            rejection.get().limit(),
+            rejection.get().retryAfterSeconds());
+      throw new TooManyRequestsException(
+          ErrorCode.RATE_LIMIT_EXCEEDED, rejection.get().retryAfterSeconds());
+    }
+    authRequestRateLimitRepository.cleanExpired();
+  }
+
+  // 두 키가 같은 범위를 쓰므로 종류를 앞에 붙여, 줄바꿈을 넣은 이메일이 다른 키와 같아지지 않게 한다.
+  private static byte[] accountKey(String kind, String... parts) {
+    return SecureTokens.hash(kind + "\n" + String.join("\n", parts));
   }
 
   String clientAddress(HttpServletRequest request) {

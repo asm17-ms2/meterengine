@@ -1,5 +1,7 @@
 package com.meterengine.account.repository;
 
+import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,24 +24,36 @@ public class AuthRequestRateLimitRepository {
           AS retry_after_seconds
       """;
 
+  private static final String LIMITED_SQL =
+      """
+      SELECT GREATEST(1, CEIL(EXTRACT(EPOCH FROM expires_at - statement_timestamp())))
+      FROM auth_request_rate_limit
+      WHERE scope = ? AND identity_hash = ? AND expires_at > statement_timestamp() AND attempts > ?
+      """;
+
   private final JdbcTemplate jdbcTemplate;
 
   public AuthRequestRateLimitRepository(JdbcTemplate jdbcTemplate) {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  // 로그인 조회(lower(email))와 같은 DB 규칙으로 계정 키를 정규화해야 대소문자 변형이 다른 계정 키가 되지 않는다.
+  public String normalizeAccount(String email) {
+    return jdbcTemplate.queryForObject("SELECT lower(?)", String.class, email.strip());
+  }
+
   // 거절된 시도도 저장하며, 로그인/가입 트랜잭션이 실패해도 카운터는 유지한다.
+  // 앞 한도가 거절한 요청은 뒤 한도에 세지 않는다. IP 한도를 넘었거나 계정과 IP 쌍 한도를 넘은 시도가
+  // 계정 전체 상한을 채워, 한 IP의 폭주가 남의 계정을 잠그지 못하게 한다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public long consume(
-      String action,
-      byte[] addressHash,
-      byte[] accountHash,
-      int addressLimit,
-      int accountLimit,
-      long windowSeconds) {
-    Window address = take(action + "_ip", addressHash, addressLimit, windowSeconds);
-    Window account = take(action + "_account", accountHash, accountLimit, windowSeconds);
-    return Math.max(address.retryAfter(addressLimit), account.retryAfter(accountLimit));
+  public Optional<Rejection> consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
+    Optional<Rejection> blocked = take(address, windowSeconds);
+    if (blocked.isPresent()) return blocked;
+    for (Bucket account : accounts) {
+      Optional<Rejection> rejection = take(account, windowSeconds);
+      if (rejection.isPresent()) return rejection;
+    }
+    return Optional.empty();
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -55,16 +69,39 @@ public class AuthRequestRateLimitRepository {
         """);
   }
 
-  private Window take(String scope, byte[] hash, int limit, long seconds) {
-    return jdbcTemplate.queryForObject(
-        CONSUME_SQL,
-        (resultSet, rowNumber) ->
-            new Window(resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
-        scope,
-        hash,
-        seconds,
-        (long) limit + 1);
+  // 이미 한도를 넘은 카운터는 upsert해도 값이 같으므로, 잠금 없이 읽고 끝내 거절 경로에서 쓰기와 행 잠금을 없앤다.
+  // 한도를 처음 넘기는 시도만 카운터를 올리며 거절되므로, 그 거절에만 firstInWindow를 둔다.
+  private Optional<Rejection> take(Bucket bucket, long seconds) {
+    List<Long> limited =
+        jdbcTemplate.queryForList(
+            LIMITED_SQL, Long.class, bucket.scope(), bucket.identityHash(), bucket.limit());
+    if (!limited.isEmpty())
+      return Optional.of(new Rejection(bucket.name(), limited.getFirst(), false));
+    long retryAfter =
+        jdbcTemplate
+            .queryForObject(
+                CONSUME_SQL,
+                (resultSet, rowNumber) ->
+                    new Window(
+                        resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
+                bucket.scope(),
+                bucket.identityHash(),
+                seconds,
+                (long) bucket.limit() + 1)
+            .retryAfter(bucket.limit());
+    return retryAfter > 0
+        ? Optional.of(new Rejection(bucket.name(), retryAfter, true))
+        : Optional.empty();
   }
+
+  // name은 로그에 남길 한도 이름이다. 같은 범위를 나눠 쓰는 한도는 이름으로 구분한다.
+  public record Bucket(String scope, byte[] identityHash, int limit, String name) {
+    public Bucket(String scope, byte[] identityHash, int limit) {
+      this(scope, identityHash, limit, scope);
+    }
+  }
+
+  public record Rejection(String limit, long retryAfterSeconds, boolean firstInWindow) {}
 
   private record Window(long attempts, long retryAfterSeconds) {
     long retryAfter(int limit) {
