@@ -81,12 +81,14 @@ public class AuthRequestRateLimitService {
     Optional<Rejection> rejection =
         authRequestRateLimitRepository.consume(addressBucket, accounts, window.toSeconds());
     if (rejection.isPresent()) {
-      logger.warn(
-          "Authentication request limited action={} client_address={} limit={} retry_after={}",
-          action,
-          address,
-          rejection.get().limit(),
-          rejection.get().retryAfterSeconds());
+      // 같은 창의 반복 거절까지 남기면 한 IP의 폭주가 컨테이너 로그를 밀어내므로 처음 넘을 때만 남긴다.
+      if (rejection.get().firstInWindow())
+        logger.warn(
+            "Authentication request limited action={} client_address={} limit={} retry_after={}",
+            action,
+            address,
+            rejection.get().limit(),
+            rejection.get().retryAfterSeconds());
       throw new TooManyRequestsException(
           ErrorCode.RATE_LIMIT_EXCEEDED, rejection.get().retryAfterSeconds());
     }

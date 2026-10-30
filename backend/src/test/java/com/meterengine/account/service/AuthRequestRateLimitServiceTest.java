@@ -21,9 +21,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AuthRequestRateLimitServiceTest {
   private final AuthRequestRateLimitRepository repository =
       mock(AuthRequestRateLimitRepository.class);
@@ -103,7 +107,7 @@ class AuthRequestRateLimitServiceTest {
     var service = service(List.of());
     when(repository.normalizeAccount("  User@Example.COM  ")).thenReturn("user@example.com");
     when(repository.consume(any(), any(), anyLong()))
-        .thenReturn(Optional.of(new Rejection("login_account", 23L)));
+        .thenReturn(Optional.of(new Rejection("login_account", 23L, true)));
     assertThatThrownBy(() -> service.login("  User@Example.COM  ", request("203.0.113.10")))
         .isInstanceOfSatisfying(
             TooManyRequestsException.class,
@@ -124,6 +128,23 @@ class AuthRequestRateLimitServiceTest {
                 10,
                 "login_account_ip"),
             new Bucket("login_account", SecureTokens.hash("account\nuser@example.com"), 100));
+  }
+
+  @Test
+  void 이미_한도를_넘은_창의_반복_거절은_경고를_다시_남기지_않는다(CapturedOutput output) {
+    var service = service(List.of());
+    when(repository.normalizeAccount("user@example.com")).thenReturn("user@example.com");
+    when(repository.consume(any(), any(), anyLong()))
+        .thenReturn(
+            Optional.of(new Rejection("login_ip", 30L, true)),
+            Optional.of(new Rejection("login_ip", 29L, false)),
+            Optional.of(new Rejection("login_ip", 28L, false)));
+
+    for (int attempt = 0; attempt < 3; attempt++)
+      assertThatThrownBy(() -> service.login("user@example.com", request("203.0.113.10")))
+          .isInstanceOf(TooManyRequestsException.class);
+
+    assertThat(output.getOut().split("Authentication request limited", -1)).hasSize(2);
   }
 
   @Test

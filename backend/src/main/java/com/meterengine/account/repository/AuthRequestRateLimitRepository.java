@@ -47,11 +47,11 @@ public class AuthRequestRateLimitRepository {
   // 계정 전체 상한을 채워, 한 IP의 폭주가 남의 계정을 잠그지 못하게 한다.
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public Optional<Rejection> consume(Bucket address, List<Bucket> accounts, long windowSeconds) {
-    long blocked = take(address, windowSeconds);
-    if (blocked > 0) return Optional.of(new Rejection(address.name(), blocked));
+    Optional<Rejection> blocked = take(address, windowSeconds);
+    if (blocked.isPresent()) return blocked;
     for (Bucket account : accounts) {
-      long retryAfter = take(account, windowSeconds);
-      if (retryAfter > 0) return Optional.of(new Rejection(account.name(), retryAfter));
+      Optional<Rejection> rejection = take(account, windowSeconds);
+      if (rejection.isPresent()) return rejection;
     }
     return Optional.empty();
   }
@@ -70,21 +70,28 @@ public class AuthRequestRateLimitRepository {
   }
 
   // 이미 한도를 넘은 카운터는 upsert해도 값이 같으므로, 잠금 없이 읽고 끝내 거절 경로에서 쓰기와 행 잠금을 없앤다.
-  private long take(Bucket bucket, long seconds) {
+  // 한도를 처음 넘기는 시도만 카운터를 올리며 거절되므로, 그 거절에만 firstInWindow를 둔다.
+  private Optional<Rejection> take(Bucket bucket, long seconds) {
     List<Long> limited =
         jdbcTemplate.queryForList(
             LIMITED_SQL, Long.class, bucket.scope(), bucket.identityHash(), bucket.limit());
-    if (!limited.isEmpty()) return limited.getFirst();
-    return jdbcTemplate
-        .queryForObject(
-            CONSUME_SQL,
-            (resultSet, rowNumber) ->
-                new Window(resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
-            bucket.scope(),
-            bucket.identityHash(),
-            seconds,
-            (long) bucket.limit() + 1)
-        .retryAfter(bucket.limit());
+    if (!limited.isEmpty())
+      return Optional.of(new Rejection(bucket.name(), limited.getFirst(), false));
+    long retryAfter =
+        jdbcTemplate
+            .queryForObject(
+                CONSUME_SQL,
+                (resultSet, rowNumber) ->
+                    new Window(
+                        resultSet.getLong("attempts"), resultSet.getLong("retry_after_seconds")),
+                bucket.scope(),
+                bucket.identityHash(),
+                seconds,
+                (long) bucket.limit() + 1)
+            .retryAfter(bucket.limit());
+    return retryAfter > 0
+        ? Optional.of(new Rejection(bucket.name(), retryAfter, true))
+        : Optional.empty();
   }
 
   // name은 로그에 남길 한도 이름이다. 같은 범위를 나눠 쓰는 한도는 이름으로 구분한다.
@@ -94,7 +101,7 @@ public class AuthRequestRateLimitRepository {
     }
   }
 
-  public record Rejection(String limit, long retryAfterSeconds) {}
+  public record Rejection(String limit, long retryAfterSeconds, boolean firstInWindow) {}
 
   private record Window(long attempts, long retryAfterSeconds) {
     long retryAfter(int limit) {
