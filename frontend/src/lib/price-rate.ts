@@ -4,6 +4,7 @@ export function isZeroPriceRate(model: string, unitPrice: string, tierPrices: st
 }
 
 const MAX_UNIT_PRICE_FRACTION_DIGITS = 10;
+export const UNIT_PRICE_PRECISION_MESSAGE = "화면에서 정확히 보일 수 없는 단가입니다. 소수 10자리를 넘거나 자릿수가 많은 단가는 API로 등록하세요.";
 const MAX_DECIMAL_EXPONENT = 400;
 
 // 화면은 단가를 소수 10자리까지 보여 주므로, 그 표기로 되돌렸을 때 입력한 값과 같은 단가만 받고 나머지는 API로 등록하게 한다.

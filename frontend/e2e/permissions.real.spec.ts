@@ -287,7 +287,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
       await expect(reader.page).not.toHaveURL(/\/login/);
     }
     await reader.page.goto("/customers?status=all");
-    await reader.page.getByLabel("이름 또는 외부 ID로 찾기", { exact: true }).fill(data.customerName);
+    await reader.page.getByLabel("이름, 외부 ID, 청구 이메일로 찾기", { exact: true }).fill(data.customerName);
     await reader.page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expect(reader.page.getByRole("link", { name: data.customerName, exact: true })).toBeVisible();
     await capture(reader.page, "read-only-customers-desktop");
@@ -356,7 +356,10 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
       await view.page.goto(path);
       await expect(view.page.getByRole("heading", { name: "업무 조회 권한이 없습니다", exact: true })).toBeVisible();
       await expect(view.page.getByRole("link", { name: "다른 도입사 선택", exact: true })).toBeVisible();
-      await expect(view.page.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
+      await view.page.getByRole("button", { name: "업무 메뉴 열기", exact: true }).click();
+      await expect(view.page.getByRole("dialog").getByRole("button", { name: "로그아웃", exact: true }), "폰에서는 메뉴 서랍에서 로그아웃한다").toBeVisible();
+      await view.page.keyboard.press("Escape");
+      await expect(view.page.getByRole("dialog")).toHaveCount(0);
       await expect(view.page).not.toHaveURL(/\/login/);
     }
     await capture(view.page, "ingest-only-mobile");

@@ -37,6 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillableMetricService {
 
+  // GET /v1/billable-metrics/{code}와 겹치는 조회 경로 이름.
+  private static final Set<String> RESERVED_CODES = Set.of("search", "options", "export");
+
   private final BillableMetricRepository billableMetricRepository;
   private final EventPresence eventPresence;
   private final BillableMetricPeriodRepository billableMetricPeriodRepository;
@@ -61,6 +64,8 @@ public class BillableMetricService {
 
   @Transactional
   public BillableMetricResponse create(UUID organizationId, CreateBillableMetricRequest request) {
+    if (RESERVED_CODES.contains(request.code()))
+      throw invalid("code", "search, options, export는 조회 경로라 미터 code로 쓸 수 없습니다");
     lock(organizationId);
     Calculation calculation =
         validate(

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { isRepresentableUnitPrice, isZeroPriceRate } from "../src/lib/price-rate.ts";
+import { isRepresentableUnitPrice, isZeroPriceRate, UNIT_PRICE_PRECISION_MESSAGE } from "../src/lib/price-rate.ts";
 
 const editor = readFileSync(new URL("../src/components/pricing/PricingWorkspace.tsx", import.meta.url), "utf8");
 
@@ -31,3 +31,6 @@ test("a unit price whose decimals the screen would round away is sent to the API
   for (const text of ["12345678.0000000001", "1234567.1234567891"]) assert.equal(isRepresentableUnitPrice(text), false, text);
 });
 
+test("the unit price precision message covers both too many decimals and too many digits", () => {
+  assert.equal(UNIT_PRICE_PRECISION_MESSAGE, "화면에서 정확히 보일 수 없는 단가입니다. 소수 10자리를 넘거나 자릿수가 많은 단가는 API로 등록하세요.");
+});

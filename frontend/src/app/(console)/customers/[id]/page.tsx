@@ -15,11 +15,25 @@ import { readArchiveStatus } from "@/lib/list-query";
 type CustomerResponse = { version: number; id: string; name: string; billing_email: string | null; external_id: string | null; created_at: string; archived_at?: string | null };
 type CardResponse = { customer_id: string; card_number: string; mode: string; authenticated_at: string; archived_at?: string | null };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function CustomerLoadFailure({ message, status }: { message: string; status: number }) {
+  return <>
+    <WorkspaceHeader title={status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"}
+      description={status === 404 ? "주소가 잘못됐거나 다른 도입사나 업무 환경의 고객일 수 있습니다. 현재 도입사와 업무 환경을 확인하세요." : "고객 정보를 불러오지 못했습니다."}>
+      <Link href="/customers">고객 목록으로</Link>
+    </WorkspaceHeader>
+    <WorkspaceError message={message} status={status} />
+  </>;
+}
+
 export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params;
   const query = await searchParams;
   const month = readMonth(query.month);
   const cardStatus = readArchiveStatus(query.card_status);
+  // 고객 id 모양이 아니면 서버가 404가 아닌 400을 주므로, 묻지 않고 찾을 수 없다고 알린다.
+  if (!UUID_PATTERN.test(id)) return <CustomerLoadFailure message="고객을 찾을 수 없습니다" status={404} />;
   const [customer, invoices, payments, card, usages, cards] = await Promise.all([
     workspaceFetch<CustomerResponse>(`/v1/customers/${encodeURIComponent(id)}`),
     listAllInvoices(readListQuery({ month, customer_id: id }, CAPABILITIES.listInvoices, { hasMonth: true }), "normal"),
@@ -28,20 +42,14 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     aggregateBillableMetricUsages(readListQuery({ month, customer_id: id }, CAPABILITIES.aggregateBillableMetricUsages, { hasMonth: true }), "normal"),
     workspaceFetch<{ payment_methods: CardResponse[] }>("/v1/payment-methods", { status: cardStatus, customer_id: id }),
   ]);
-  if (!customer.ok) return <>
-    <WorkspaceHeader title={customer.error.status === 404 ? "고객을 찾을 수 없습니다" : "고객 상세"} kicker="도입사 콘솔"
-      description={customer.error.status === 404 ? "주소가 잘못됐거나 다른 도입사나 업무 환경의 고객일 수 있습니다. 현재 도입사와 업무 환경을 확인하세요." : "고객 정보를 불러오지 못했습니다."}>
-      <Link href="/customers">고객 목록으로</Link>
-    </WorkspaceHeader>
-    <WorkspaceError message={customer.error.message} status={customer.error.status} />
-  </>;
+  if (!customer.ok) return <CustomerLoadFailure message={customer.error.message} status={customer.error.status} />;
   const detail = customer.data;
   const paymentById = new Map(payments.ok ? payments.data.invoice_payments.map(payment => [payment.invoice_id, payment]) : []);
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: `${metric.name} (${metric.code})`, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];
   // customer_id를 모르는 백엔드는 모든 고객의 카드를 돌려주므로 화면에서도 거른다. 카드 보관은 이 고객 id로 나간다.
   const cardRows = cards.ok ? cards.data.payment_methods.filter(method => method.customer_id === id).map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
-    <WorkspaceHeader title={detail.name} kicker="도입사 콘솔" description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
+    <WorkspaceHeader title={detail.name} description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
     <section className="workspace-panel">
       {detail.archived_at && <p role="status">보관된 고객입니다. 과거 내역은 유지되며 복원 전에는 신규 업무와 사용량 수집을 할 수 없습니다.</p>}
       <dl className="detail-strip"><div><dt>외부 고객 ID</dt><dd>{detail.external_id ?? "연결하지 않음"}</dd></div><div><dt>청구 이메일</dt><dd>{detail.billing_email ?? "등록하지 않음"}</dd></div><div><dt>현재 등록 카드</dt><dd>{card.ok ? `${card.data.card_number} (${card.data.mode === "test" ? "테스트 결제" : "실결제"}${card.data.archived_at ? ", 보관" : ""})` : card.error.status === 404 ? "등록 카드 없음" : "조회 실패"}</dd></div></dl>

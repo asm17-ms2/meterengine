@@ -108,3 +108,9 @@ test("base fee and minimum fee accept any whole won and only say the billed amou
     assert.ok(!field.includes("step:10") && field.includes("청구할 때 10원 미만은 버립니다."), field);
   }
 });
+
+test("tier unit price inputs say they are per billed quantity like the single unit price", () => {
+  const pricing = source("components/pricing/PricingWorkspace.tsx");
+  assert.ok(!pricing.includes("<span>1당 단가 (원)</span>"));
+  assert.equal(pricing.split("<span>과금 수량 1당 단가 (원)</span>").length - 1, 2);
+});

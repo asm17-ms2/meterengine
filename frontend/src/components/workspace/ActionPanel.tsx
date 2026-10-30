@@ -32,7 +32,7 @@ export type WorkspaceField = {
   autoComplete?: string;
 };
 
-export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean; triggerType?: "default" | "link" };
+export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean; triggerType?: "default" | "primary" | "link" };
 
 function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: (isConfirmedFailure?: boolean) => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
@@ -165,7 +165,7 @@ export function ActionPanel(props: ActionPanelProps) {
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button id={triggerId} danger={props.isDanger} type={props.triggerType === "link" ? "link" : "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
+    <Button id={triggerId} danger={props.isDanger} type={props.triggerType ?? "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
     {isOpen && <ActionBody key={`${requestId}-${version}`} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }

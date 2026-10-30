@@ -1,0 +1,39 @@
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import test from "node:test";
+
+const SRC = new URL("../src/", import.meta.url).pathname;
+const source = path => readFileSync(join(SRC, path), "utf8");
+const sourceFiles = (dir = SRC) => readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? sourceFiles(join(dir, entry.name)) : /\.(tsx?|css)$/.test(entry.name) ? [join(dir, entry.name)] : []);
+
+test("workspace headers no longer carry a kicker that is always hidden", () => {
+  assert.ok(!source("components/workspace/WorkspaceHeader.tsx").includes("kicker"));
+  assert.ok(!source("app/globals.css").includes(".workspace-kicker"));
+  const callers = sourceFiles().filter(file => readFileSync(file, "utf8").includes("kicker="));
+  assert.deepEqual(callers, []);
+});
+
+test("globals.css uses its own color tokens instead of repeating the same literal values", () => {
+  const rules = source("app/globals.css").split("\n").filter(line => !line.startsWith(":root { color-scheme: light;")).join("\n");
+  for (const literal of ["#202b40", "#5a6578", "#dce1eb", "#5746ad", "#f3f5f9", "#7c8799"]) assert.doesNotMatch(rules, new RegExp(`${literal}(?![0-9a-f])`, "i"));
+  assert.doesNotMatch(rules, /background(?:-color)?:\s*#fff\b/i);
+});
+
+test("link buttons and scoped links resolve workspace addresses through one shared hook", () => {
+  const button = source("components/screen/LinkButton.tsx");
+  const link = source("components/workspace/ScopedLink.tsx");
+  assert.ok(link.includes("export function useScopedHref("));
+  for (const file of [button, link.slice(link.indexOf("export function ScopedLink"))]) {
+    assert.ok(file.includes("useScopedHref(href, { inheritFilters })"));
+    assert.ok(!file.includes('href.startsWith("?")'));
+  }
+});
+
+test("the console and the introduction page draw the logo mark from one component that only changes its size", () => {
+  const drawsBars = sourceFiles().filter(file => readFileSync(file, "utf8").includes("<i /><i /><i />")).map(file => file.slice(SRC.length));
+  assert.deepEqual(drawsBars, ["components/shell/BrandMark.tsx"]);
+  assert.ok(source("components/shell/ConsoleShell.tsx").includes("<BrandMark />"));
+  assert.ok(source("app/page.tsx").includes("<BrandMark scale={HOME_MARK_SCALE} />"));
+  assert.doesNotMatch(source("app/HomePage.module.css"), /^\.mark\b/m);
+});

@@ -3,6 +3,7 @@ package com.meterengine.metric.service;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.time.BillingMonth;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillableMetricUsageService {
 
-  public static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
+  public static final ZoneId BILLING_ZONE = BillingMonth.ZONE;
 
   private final BillableMetricUsageRepository billableMetricUsageRepository;
   private final BillableMetricRepository billableMetricRepository;
@@ -46,9 +47,7 @@ public class BillableMetricUsageService {
   }
 
   public static OffsetDateTime aggregationEnd(YearMonth month, OffsetDateTime now) {
-    OffsetDateTime monthEnd =
-        month.plusMonths(1).atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
-    return now.isBefore(monthEnd) ? now : monthEnd;
+    return BillingMonth.cutoff(month, now);
   }
 
   @Transactional(readOnly = true)
@@ -68,7 +67,7 @@ public class BillableMetricUsageService {
       return List.of();
     }
 
-    OffsetDateTime start = month.atDay(1).atStartOfDay(BILLING_ZONE).toOffsetDateTime();
+    OffsetDateTime start = BillingMonth.start(month);
     OffsetDateTime end = aggregationEnd(month, cutoff);
 
     List<Customer> customers =
@@ -103,7 +102,7 @@ public class BillableMetricUsageService {
       OffsetDateTime end) {
     requireSupported(billableMetric);
 
-    var quantities = quantities(billableMetric, start, end);
+    var quantities = billableMetricUsageRepository.aggregate(billableMetric, start, end);
     List<CustomerUsage> customerUsages =
         customers.stream()
             .map(
@@ -128,43 +127,6 @@ public class BillableMetricUsageService {
             .toList();
 
     return new BillableMetricUsage(billableMetric, customerUsages);
-  }
-
-  private BillableMetricUsageRepository.AggregatedQuantities quantities(
-      BillableMetric metric, OffsetDateTime start, OffsetDateTime end) {
-    if (metric.isSum()
-        && metric.getUnitSize().compareTo(BigDecimal.ONE) == 0
-        && "none".equals(metric.getRoundingMode())) {
-      var dimensions =
-          (metric.getEnvironmentId() == null
-              ? billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-                  metric.getOrganizationId(),
-                  metric.getEventType(),
-                  metric.getTargetProperty(),
-                  metric.getDimensionProperties(),
-                  start,
-                  end)
-              : billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-                  metric.getOrganizationId(),
-                  metric.getEnvironmentId(),
-                  metric.getEventType(),
-                  metric.getTargetProperty(),
-                  metric.getDimensionProperties(),
-                  start,
-                  end));
-      var totals = new java.util.HashMap<UUID, DimensionUsage>();
-      dimensions.forEach(
-          (customer, values) ->
-              totals.put(
-                  customer,
-                  new DimensionUsage(
-                      java.util.Map.of(),
-                      values.stream()
-                          .map(DimensionUsage::quantity)
-                          .reduce(BigDecimal.ZERO, BigDecimal::add))));
-      return new BillableMetricUsageRepository.AggregatedQuantities(totals, dimensions);
-    }
-    return billableMetricUsageRepository.aggregate(metric, start, end);
   }
 
   private void requireSupported(BillableMetric billableMetric) {

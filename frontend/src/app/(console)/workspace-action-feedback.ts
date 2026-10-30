@@ -67,5 +67,5 @@ export function readBusinessRegistrationNumber(value: string, field: string): st
 export function existingCustomerMessage(input: { externalId: string; name: string; billingEmail: string }, response: Record<string, unknown> | undefined): string | undefined {
   if (!input.externalId || !response) return undefined;
   const isSameCustomer = response.name === input.name && String(response.billing_email ?? "") === input.billingEmail;
-  return isSameCustomer ? undefined : `외부 고객 ID가 같은 기존 고객 "${String(response.name ?? "")}"이 있어 새로 등록하지 않았습니다.`;
+  return isSameCustomer ? undefined : `외부 고객 ID가 같은 기존 고객(이름: ${String(response.name ?? "")})이 있어 새로 등록하지 않았습니다.`;
 }

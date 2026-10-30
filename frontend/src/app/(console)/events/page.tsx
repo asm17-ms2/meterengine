@@ -38,9 +38,8 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const events = query.devState === "loading" ? null : listEvents(query, query.devState);
   const transactionId = typeof params.transaction_id === "string" ? params.transaction_id : undefined;
   return <>
-    <nav className="workspace-tabs"><ScopedLink inheritFilters href="/usage">월별 사용량</ScopedLink><ScopedLink inheritFilters href="/events" aria-current="page">수집 로그</ScopedLink><ScopedLink inheritFilters href="/integrations">서버 연동 설정</ScopedLink></nav>
+    <ScreenHeader title="수집 로그">사용량의 원본과 발생 시각, 수신 시각을 확인하세요. 고객, 유형과 기간을 좁힌 뒤 이벤트를 열어 전송 속성을 확인할 수 있습니다. 서버 연동은 <ScopedLink href="/integrations">API 키와 통보</ScopedLink>에서 설정합니다. {events && <Suspense fallback={null}><EventsMeta events={events} /></Suspense>}</ScreenHeader>
     {(query.from || query.to) && <p className="field-hint">사용량과 청구는 월별로 집계합니다. 해당 업무로 이동하면 조회 시작 시각이 속한 월로 전환합니다.</p>}
-    <ScreenHeader title="수집 로그">사용량의 원본과 발생 시각, 수신 시각을 확인하세요. 고객, 유형과 기간을 좁힌 뒤 이벤트를 열어 전송 속성을 확인할 수 있습니다. {events && <Suspense fallback={null}><EventsMeta events={events} /></Suspense>}</ScreenHeader>
     {transactionId && <Suspense fallback={<p role="status">이벤트 상세를 불러오고 있습니다.</p>}><SelectedEvent transactionId={transactionId} /></Suspense>}
     <ScreenCard><Suspense fallback={<p role="status">조회 조건을 준비하고 있습니다.</p>}><Filters query={query} /></Suspense><Suspense fallback={null}><DataMonths resource="events" pathname="/events" query={query} filterForm="event-search" /></Suspense><CsvDownload resource="events" /><p className="field-hint">조회 시각 {formatKstStamp(new Date())}</p>{events ? <Suspense fallback={<TableSkeleton />}><EventsSection events={events} query={query} /></Suspense> : <TableSkeleton />}</ScreenCard>
   </>;

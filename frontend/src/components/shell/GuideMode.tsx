@@ -29,9 +29,9 @@ export function useGuideMode() {
   return { isGuideMode, setGuideMode };
 }
 
-export function GuideModeToggle() {
+export function GuideModeToggle({ onToggle }: { onToggle?: () => void }) {
   const { isGuideMode, setGuideMode } = useGuideMode();
-  return <Button onClick={() => setGuideMode(!isGuideMode)}>{isGuideMode ? "업무 화면으로" : "시연 안내 보기"}</Button>;
+  return <Button onClick={() => { setGuideMode(!isGuideMode); onToggle?.(); }}>{isGuideMode ? "업무 화면으로" : "시연 안내 보기"}</Button>;
 }
 
 export function GuideOnly({ children }: { children: React.ReactNode }) {

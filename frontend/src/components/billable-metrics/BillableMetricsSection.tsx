@@ -50,6 +50,7 @@ export async function BillableMetricsSection({
     <BillableMetricsScreen
       rows={rows}
       total={result.data.total}
+      totalUnfiltered={result.data.total_unfiltered}
       query={query}
       capabilities={CAPABILITIES.listBillableMetrics}
     />
