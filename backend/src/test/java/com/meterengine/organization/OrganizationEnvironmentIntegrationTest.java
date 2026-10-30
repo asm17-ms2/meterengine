@@ -276,6 +276,33 @@ class OrganizationEnvironmentIntegrationTest {
   }
 
   @Test
+  void 도입사_공통_작업의_감사는_모든_환경의_감사_조회에_보인다() {
+    jdbcTemplate.update(
+        "UPDATE organization_member SET role='owner' WHERE organization_id=?", organizationId);
+    assertThat(
+            post(
+                session,
+                "test",
+                "/v1/organization/invitations",
+                "{\"email\":\"audit-common@example.com\"}"))
+        .hasStatus(201);
+    for (String mode : new String[] {"legacy", "test", "live"}) {
+      assertThat(get(session, mode, "/v1/audit-logs?action=organization_invitation_created"))
+          .hasStatusOk()
+          .bodyJson()
+          .extractingPath("$.total")
+          .isEqualTo(1);
+    }
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE organization_id=? AND"
+                    + " action='organization_invitation_created' AND environment_id IS NULL",
+                Integer.class,
+                organizationId))
+        .isEqualTo(1);
+  }
+
+  @Test
   void 조직_고정_헤더가_공유_세션의_도입사_전환_뒤_옛_폼을_차단한다() {
     UUID otherOrganization = UUID.randomUUID();
     TestCredentials.issueApiKey(jdbcTemplate, otherOrganization);

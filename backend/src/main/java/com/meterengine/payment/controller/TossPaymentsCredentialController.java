@@ -49,6 +49,7 @@ public class TossPaymentsCredentialController {
           선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
           시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
           verified_at과 updated_at은 KST(+09:00)로 나온다.
+          status가 archived나 all이면 교체나 보관으로 물러난 이전 키를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 키는 새 결제에 다시 쓰이지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(

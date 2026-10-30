@@ -31,6 +31,7 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,8 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 @Transactional
 class BusinessArchiveIntegrationTest {
+  private static final ZoneOffset KST_OFFSET = ZoneOffset.ofHours(9);
+
   @Autowired private JdbcTemplate jdbc;
   @Autowired private CustomerService customers;
   @Autowired private EventIngestionService ingestion;
@@ -208,8 +211,17 @@ class BusinessArchiveIntegrationTest {
         "dummy-new-key", "61", "9876****1234", OffsetDateTime.now(), "v1", OffsetDateTime.now());
     credential.update("test_ck_new", "test_sk_new", OffsetDateTime.now());
     entityManager.flush();
-    assertThat(methods.list(organizationId, "all").paymentMethods()).hasSize(2);
-    assertThat(credentialService.list(organizationId, "all").tossPaymentsCredentials()).hasSize(2);
+    assertThat(methods.list(organizationId, "all").paymentMethods())
+        .hasSize(2)
+        .allSatisfy(
+            method -> assertThat(method.authenticatedAt().getOffset()).isEqualTo(KST_OFFSET));
+    assertThat(credentialService.list(organizationId, "all").tossPaymentsCredentials())
+        .hasSize(2)
+        .allSatisfy(
+            stored -> {
+              assertThat(stored.verifiedAt().getOffset()).isEqualTo(KST_OFFSET);
+              assertThat(stored.updatedAt().getOffset()).isEqualTo(KST_OFFSET);
+            });
     assertThat(archives.historical(organizationId, "test", before.plusHours(1))).isPresent();
   }
 
