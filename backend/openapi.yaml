@@ -6797,6 +6797,7 @@ paths:
   /v1/toss-payments-credentials/{mode}:
     delete:
       description: 새 결제와 카드 등록을 중단한다. 진행 중 결제 확인과 취소에는 보존한 키를 사용한다. 다시 사용하려면 키를 재등록한다.
+        저장과 같이 로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
       operationId: deleteTossPaymentsCredential
       parameters:
       - in: path
@@ -6832,20 +6833,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=toss_payments_credential_not_found: 경로의 mode에 저장한 키가\
             \ 없다"
-        "429":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
-            의 초만큼 기다린 뒤 다시 보낸다."
-          headers:
-            Retry-After:
-              description: 다시 보내기 전에 기다릴 초
-              required: true
-              schema:
-                type: integer
-                format: int32
       summary: 토스페이먼츠 키 보관
       tags:
       - toss-payments-credential-controller
