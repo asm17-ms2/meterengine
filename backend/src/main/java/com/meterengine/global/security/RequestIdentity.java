@@ -16,13 +16,17 @@ public record RequestIdentity(String actorType, UUID actorId, UUID requestId) {
     String type =
         principal == null
             ? "system"
-            : principal.kind() == PrincipalKind.API_KEY ? "api_key" : "user_account";
+            : switch (principal.kind()) {
+              case API_KEY -> "api_key";
+              case SESSION -> "user_account";
+            };
     UUID actorId =
         principal == null
             ? null
-            : principal.kind() == PrincipalKind.API_KEY
-                ? principal.apiKeyId()
-                : principal.userAccountId();
+            : switch (principal.kind()) {
+              case API_KEY -> principal.apiKeyId();
+              case SESSION -> principal.userAccountId();
+            };
     RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
     UUID requestId =
         attributes == null
