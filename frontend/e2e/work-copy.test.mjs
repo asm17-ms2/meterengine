@@ -95,10 +95,10 @@ test("the overview failed payment item opens the payments list filtered to failu
   assert.ok(overview.includes("<Link href={`/payments?month=${month}&payment_status=failed`}>수납 확인</Link>"));
 });
 
-test("customer detail asks the server for only that customer's cards instead of filtering every card", () => {
+test("customer detail asks the server for only that customer's cards and still drops cards of other customers", () => {
   const detail = source("app/(console)/customers/[id]/page.tsx");
   assert.ok(detail.includes('"/v1/payment-methods", { status: cardStatus, customer_id: id }'));
-  assert.ok(!detail.includes("payment_methods.filter(method => method.customer_id === id)"));
+  assert.ok(detail.includes("payment_methods.filter(method => method.customer_id === id)"));
 });
 
 test("base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won", () => {

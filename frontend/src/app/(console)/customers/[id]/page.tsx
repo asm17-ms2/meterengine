@@ -38,7 +38,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const detail = customer.data;
   const paymentById = new Map(payments.ok ? payments.data.invoice_payments.map(payment => [payment.invoice_id, payment]) : []);
   const usageRows = usages.ok ? usages.data.billable_metric_usages.flatMap(metric => metric.customers.filter(entry => entry.customer_id === id).flatMap(entry => entry.dimension_usages.map((dimension, index) => ({ id: `${metric.code}-${index}`, metric: `${metric.name} (${metric.code})`, dimension_values: Object.entries(dimension.dimension_values).map(([key, value]) => `${key}: ${value ?? "값 없음"}`).join(", ") || "모든 사용량", quantity: dimension.quantity })))) : [];
-  const cardRows = cards.ok ? cards.data.payment_methods.map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
+  // customer_id를 모르는 백엔드는 모든 고객의 카드를 돌려주므로 화면에서도 거른다. 카드 보관은 이 고객 id로 나간다.
+  const cardRows = cards.ok ? cards.data.payment_methods.filter(method => method.customer_id === id).map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
     <WorkspaceHeader title={detail.name} kicker="도입사 콘솔" description="고객의 사용량과 청구, 카드와 수납을 이어 확인하세요."><MonthFilter month={month} preserve={["card_status"]} /></WorkspaceHeader>
     <section className="workspace-panel">
