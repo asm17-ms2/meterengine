@@ -283,7 +283,7 @@ unset SESSION
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
 - `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽는다(`payment` -> `invoice`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`).
 - 인증은 키와 세션 검증을 `apikey`, `account`에, 도입사 상태를 `organization`에 묻는다(`global.security` -> `apikey`, `account`, `organization`). 로그인, 가입, 사용자 목록, 부트스트랩은 도입사를 `organization`에서 읽거나 넣고, 부트스트랩은 콘솔 키를 `apikey`에 넣는다(`account` -> `organization`, `apikey`). 소속 추가는 사용자를 확인한다(`organization` -> `account`).
-- 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다.
+- 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다. 결제 수는 live 결제만, 웹훅 실패 수는 test 환경 전송을 빼고 센다. 웹훅 전송 지표 `meterengine.webhook.delivery`는 `environment`(legacy, test, live) 태그를 붙인다.
 
 ### 웹훅
 
