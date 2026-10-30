@@ -12,6 +12,7 @@
 .frame button:disabled { opacity: .6; cursor: wait; }
 .frame button:focus-visible, .tableScroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .message button { margin-top: 24px; }
+.message .retryStatus { margin-top: 12px; color: var(--ink); }
 .testNotice { background: #f7f4ff; border: 1px solid #b5a8ec; border-radius: 6px; padding: 14px 18px; color: #48358f; margin: 28px 0 0; }
 .feedback { color: #176d59; margin: 20px 0 0; }
 .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; padding: 28px 0; margin: 32px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -20,7 +21,6 @@
 .section { padding-top: 36px; }
 .section h2 { margin: 0 0 18px; font-size: 20px; letter-spacing: -.02em; }
 .section > p { max-width: 70ch; }
-.scrollHint { display: none; color: var(--muted); font-size: 13px; margin: 0 0 14px; }
 .tableScroll { overflow-x: auto; scrollbar-color: #b8b0d4 #f3f0fa; }
 .tableScroll table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
 .tableScroll th, .tableScroll td { border-bottom: 1px solid var(--line); padding: 16px 12px; vertical-align: top; text-align: right; font-variant-numeric: tabular-nums; }
@@ -31,6 +31,14 @@
 .tableScroll thead th:last-child { padding-right: 12px; }
 .tableScroll tbody th { font-weight: 400; overflow-wrap: anywhere; }
 .tableScroll small { display: block; color: var(--muted); margin-top: 6px; font-size: 12px; }
+.lineRecords { display: none; list-style: none; margin: 0; padding: 0; }
+.lineRecords li { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.lineRecords li:first-child { padding-top: 0; }
+.recordHead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.recordHead > span { min-width: 0; overflow-wrap: anywhere; }
+.recordHead > strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lineRecords small { display: block; color: var(--muted); margin-top: 4px; font-size: 12px; }
+.lineRecords p { margin: 6px 0 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .totals { margin: 24px 0 0 auto; max-width: 360px; }
 .totals > div { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; padding: 9px 0; }
 .totals dt { color: var(--muted); }
@@ -38,12 +46,15 @@
 .totals .total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 18px; font-size: 21px; }
 .total dt { color: var(--ink); font-weight: 650; }
 .hint { color: var(--muted); font-size: 13px; margin: 20px 0 0; }
-.status { font-size: 18px; font-weight: 650; margin: 0 0 8px; }
+.status { display: inline-block; font-size: 15px; font-weight: 650; line-height: 1.5; margin: 0 0 12px; padding: 3px 12px; border: 1px solid var(--line); border-radius: 999px; background: #f5f6fa; }
+.status.success { color: #176d59; border-color: #9fd3c4; background: #eef8f4; }
+.status.error { color: #a92334; border-color: #f0b8bf; background: #fdf1f2; }
+.status.warning { color: #7a4b00; border-color: #ecd29b; background: #fff8e8; }
 .paymentAmounts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 22px; border: 1px solid var(--line); border-radius: 8px; margin: 24px 0 0; }
 .paymentAmounts dd { font-size: 17px; }
 .footer { border-top: 1px solid var(--line); margin-top: 36px; padding-top: 22px; color: var(--muted); font-size: 13px; }
 .footer p { margin: 6px 0; max-width: 75ch; overflow-wrap: anywhere; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-@media (max-width: 720px) { .scrollHint { display: block; } }
+@media screen and (max-width: 720px) { .tableScroll { display: none; }.lineRecords { display: block; } }
 @media (max-width: 600px) { .frame { padding: 22px 14px 40px; }.brand { padding-bottom: 18px; }.brand strong { font-size: 20px; }.invoice, .message { padding: 24px 20px; }.heading { gap: 22px; }.details { gap: 20px; margin-top: 24px; }.details dd { font-size: 14px; }.paymentAmounts { grid-template-columns: 1fr; gap: 18px; padding: 18px; }.paymentAmounts > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }.paymentAmounts dd { margin: 0; }.totals { max-width: none; }.actions { width: 100%; }.actions button { flex: 1; }.section { padding-top: 30px; } }
-@media print { .frame { max-width: none; padding: 0; }.invoice { border: 0; padding: 16px; }.actions, .footer p:last-child, .scrollHint { display: none; }.tableScroll { overflow: visible; }.tableScroll table { min-width: 0; } }
+@media print { .frame { max-width: none; padding: 0; }.invoice { border: 0; padding: 16px; }.actions, .footer p:last-child, .lineRecords { display: none; }.tableScroll { overflow: visible; }.tableScroll table { min-width: 0; } }

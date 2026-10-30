@@ -20,7 +20,7 @@ export function unconfirmedMessage(operation: string): string {
 }
 
 const ERROR_MESSAGES: Partial<Record<string, string>> = {
-  toss_payments_credential_missing: "현재 결제 환경의 토스페이먼츠 키가 없습니다. 도입사 설정의 토스페이먼츠 연동에서 키를 저장한 뒤 다시 시도하세요.",
+  toss_payments_credential_missing: "현재 결제 모드의 토스페이먼츠 키가 없습니다. 도입사 설정의 토스페이먼츠 연동에서 키를 저장한 뒤 다시 시도하세요.",
 };
 
 export function errorMessageForCode(code: string): string | undefined {
