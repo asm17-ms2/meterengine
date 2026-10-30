@@ -664,20 +664,21 @@ test("suspended tenant blocks mutations but permits switching", async ({ page, r
   await expect(page.getByRole("status")).toContainText("이용 가능 여부");
 });
 
-test("network failure is recoverable and logout does not claim success before revocation", async ({ page, request }) => {
+test("network failure is recoverable and an unconfirmed logout clears this browser without claiming success", async ({ page, request }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
-  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "로그아웃을 완료하지 못했습니다" })).toContainText("로그아웃을 완료하지 못했습니다");
-  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toBeVisible();
   await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.locator(".organization-link")).toContainText("계약 테스트 도입사");
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: true } });
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?reason=logout_unconfirmed$/);
+  expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(false);
+  await expect(page.getByText("서버의 세션 종료는 확인하지 못했고", { exact: false })).toBeVisible();
+  await request.post(`${FIXTURE_URL}/__control`, { data: { outage: false } });
 });
 
 test("375px forms and tenant header fit, keyboard focus and menu work", async ({ page }) => {
