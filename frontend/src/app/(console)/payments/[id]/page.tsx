@@ -103,7 +103,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
   });
   const currentPayment = payments.ok ? payments.data.invoice_payments.find(payment => payment.invoice_id === id) : undefined;
   const [card, keys] = await Promise.all([
-    workspaceFetch<{ card_number: string }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
+    workspaceFetch<{ card_number: string; archived_at: string | null }>("/v1/customers/" + encodeURIComponent(invoice.data.customer_id) + "/payment-method"),
     workspaceFetch<{ toss_payments_credentials: { mode: string }[] }>("/v1/toss-payments-credentials"),
   ]);
   const readiness = paymentReadiness(currentPayment?.mode, keys, card);

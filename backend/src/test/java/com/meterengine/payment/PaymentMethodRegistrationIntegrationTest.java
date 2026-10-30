@@ -542,6 +542,43 @@ class PaymentMethodRegistrationIntegrationTest {
   }
 
   @Test
+  void 보관한_카드_뒤에_다시_등록하면_감사_행에_보관한_카드를_교체한_카드로_싣지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId);
+    insertCredential(organizationId, "test");
+    tossIssues(issued(BILLING_KEY, "61", "43301234****123*"));
+    assertThat(
+            createBillingKey(
+                createToken(organizationId, customerId),
+                AUTH_KEY,
+                customerId.toString(),
+                CONSENT_DOCUMENT_VERSION))
+        .hasStatus(201);
+    jdbcTemplate.update(
+        "UPDATE billing_key SET archived_at = now() WHERE organization_id = ?", organizationId);
+    String token = createToken(organizationId, customerId);
+    tossIssues(issued(NEW_BILLING_KEY, "41", "53651234****456*"));
+    assertThat(createBillingKey(token, AUTH_KEY, customerId.toString(), CONSENT_DOCUMENT_VERSION))
+        .hasStatus(201);
+    entityManager.flush();
+
+    Map<String, Object> latest =
+        jdbcTemplate.queryForMap(
+            """
+            SELECT detail::text AS detail FROM audit_log
+            WHERE organization_id = ? AND action = 'payment_method_created'
+            ORDER BY occurred_at DESC LIMIT 1
+            """,
+            organizationId);
+    assertThat(detailOf(latest))
+        .isEqualTo(
+            Map.of(
+                "mode", "test",
+                "payment_method_registration_id", registrationId(token),
+                "card_number", "53651234****456*"));
+  }
+
+  @Test
   void 발급하는_사이에_링크가_쓰이면_404이고_막_발급한_빌링키를_지우며_기존_카드는_그대로다() {
     UUID organizationId = insertOrganization();
     UUID customerId = insertCustomer(organizationId);
