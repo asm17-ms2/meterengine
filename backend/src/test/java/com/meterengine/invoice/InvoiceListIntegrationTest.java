@@ -64,18 +64,30 @@ class InvoiceListIntegrationTest {
         .isStrictlyEqualTo(
             """
             {"invoices": [{
-              "id": "%s", "customer_id": "%s", "customer_name": "아크메", "month": "2026-08",
+              "id": "%s", "invoice_number": "%s", "customer_id": "%s", "customer_name": "아크메", "month": "2026-08",
               "finalized_at": "2026-09-01T14:00:00+09:00",
               "supply_amount": 12000, "tax_amount": 1200, "total_amount": 13200,
               "lines": [
-                {"billable_metric_code": "api-call", "target_property": null,
-                 "dimension_values": {}, "quantity": 600, "unit_price": 10, "amount": 6000},
-                {"billable_metric_code": "token-usage", "target_property": "token",
-                 "dimension_values": {}, "quantity": 24000, "unit_price": 0.25, "amount": 6000}
+                {"billable_metric_code": "api-call", "billable_metric_name": null, "target_property": null,
+                 "dimension_values": {}, "quantity": 600, "unit_price": 10, "amount": 6000, "line_type": "per_unit", "tier_index": 0,
+                 "quantity_numerator": 600, "quantity_denominator": 1},
+                {"billable_metric_code": "token-usage", "billable_metric_name": null, "target_property": "token",
+                 "dimension_values": {}, "quantity": 24000, "unit_price": 0.25, "amount": 6000, "line_type": "per_unit", "tier_index": 0,
+                 "quantity_numerator": 24000, "quantity_denominator": 1}
               ]
             }]}
             """
-                .formatted(invoiceId, acme));
+                .formatted(
+                    invoiceId,
+                    "ME-202608-"
+                        + String.format(
+                            java.util.Locale.ROOT,
+                            "%08d",
+                            jdbcTemplate.queryForObject(
+                                "SELECT display_number FROM invoice WHERE id=?",
+                                Long.class,
+                                invoiceId)),
+                    acme));
   }
 
   @Test

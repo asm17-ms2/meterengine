@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http.client
+import hashlib
 import json
 import socket
 import time
@@ -99,10 +100,18 @@ def require_organization(client) -> Organization:
 
 
 class ApiClient:
-    def __init__(self, base_url: str, api_key: str, timeout_seconds: float = 10.0):
+    def __init__(self, base_url: str, api_key: str, timeout_seconds: float = 10.0, environment: Optional[str] = None):
+        if environment not in (None, "test", "live"):
+            raise ValueError("environment는 test 또는 live여야 합니다")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
+        self.environment = environment
+
+    @property
+    def source_fingerprint(self) -> str:
+        source = json.dumps([self.base_url, self.environment, self.api_key], separators=(",", ":"))
+        return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
     def get_organization(self) -> ApiResult:
         return self._request("GET", "/v1/organization")
@@ -121,8 +130,19 @@ class ApiClient:
     def get_invoice(self, month: Optional[str]) -> ApiResult:
         return self._request("GET", "/v1/invoices/draft", query=_month_query(month))
 
-    def get_billable_metric_prices(self) -> ApiResult:
-        return self._request("GET", "/v1/billable-metric-prices")
+    def get_billable_metric_prices(self, month: Optional[str] = None, customer_id: Optional[str] = None) -> ApiResult:
+        query = _month_query(month)
+        if customer_id:
+            query["customer_id"] = customer_id
+        return self._request("GET", "/v1/billable-metric-prices", query=query)
+
+    def get_price_plans(self, month: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None) -> ApiResult:
+        query = _month_query(month)
+        if customer_id:
+            query["customer_id"] = customer_id
+        if status:
+            query["status"] = status
+        return self._request("GET", "/v1/price-plans", query=query)
 
     def get_events_page(self, month: Optional[str]) -> ApiResult:
         query = _month_query(month)
@@ -132,8 +152,14 @@ class ApiClient:
     def get_customers(self) -> ApiResult:
         return self._request("GET", "/v1/customers")
 
-    def create_customer(self, name: str) -> ApiResult:
-        body = json.dumps({"name": name}, ensure_ascii=False).encode("utf-8")
+    def post_events(self, body_text: str) -> ApiResult:
+        return self._request("POST", "/v1/event-batches", body=body_text.encode("utf-8"), content_type="application/json")
+
+    def create_customer(self, name: str, external_id: Optional[str] = None) -> ApiResult:
+        fields = {"name": name}
+        if external_id is not None:
+            fields["external_id"] = external_id
+        body = json.dumps(fields, ensure_ascii=False).encode("utf-8")
         return self._request("POST", "/v1/customers", body=body, content_type="application/json")
 
     def _request(self, method, path, query=None, body=None, content_type=None) -> ApiResult:
@@ -142,6 +168,8 @@ class ApiClient:
             url += "?" + urllib.parse.urlencode(query)
         request = urllib.request.Request(url, data=body, method=method)
         request.add_header("Authorization", "Bearer " + self.api_key)
+        if self.environment:
+            request.add_header("X-MeterEngine-Environment", self.environment)
         request.add_header("Accept", "application/json")
         if content_type:
             request.add_header("Content-Type", content_type)

@@ -26,6 +26,7 @@
 - 테스트 클래스와 메서드 이름, 테스트 위치: ArchUnit(`TestNamingConventionTest.java`).
 - API 파라미터와 JSON 키의 snake_case, operationId 유일: `OpenApiDocumentTest.java`.
 - 프론트 케이스, boolean 접두사, 모듈 수준 상수, 파일과 폴더 이름: ESLint(`frontend/eslint.config.mjs`).
+- 데모의 이름 규칙 `demo/eslint-naming-rules.mjs`는 `frontend/eslint.config.mjs`의 naming-convention 사본이다. 둘이 같은지는 `cd frontend && corepack pnpm test:unit`의 `naming-rules-sync.test.mjs`로 본다. CI는 이 시험을 돌리지 않으니 어느 한쪽을 고치면 직접 돌린다.
 
 ## 도구가 보지 않는 것
 

@@ -1,0 +1,17 @@
+.retry { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.retry h3 { font-size: 18px; margin: 0 0 10px; }
+.retry p { max-width: 70ch; margin: 10px 0 18px; }
+.unavailable { color: var(--muted); font-size: 14px; }
+.error { color: #a92334; }
+.confirmation { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 20px; }
+.confirmation h4 { font-size: 17px; margin: 0 0 20px; }
+.confirmation h4:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
+.confirmation dl { margin: 0; display: grid; gap: 12px; }
+.confirmation dl > div { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 20px; }
+.confirmation dt { color: var(--muted); }
+.confirmation dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; }
+.retry .confirmButton { background: var(--blue); color: #fff; border-color: var(--blue); }
+.retry .confirmButton:hover { background: var(--blue); filter: brightness(.94); }
+@media (max-width: 600px) { .controls { flex-direction: column; align-items: stretch; }.controls button { width: 100%; } }
+@media print { .retry { display: none; } }

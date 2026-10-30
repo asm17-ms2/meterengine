@@ -11,9 +11,11 @@ import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.service.PriceRateService;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -40,6 +42,7 @@ class PriceRateIntegrationTest {
 
   @Autowired private PriceRateService priceRateService;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private EntityManager entityManager;
   @Autowired private WebApplicationContext webApplicationContext;
 
   private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
@@ -131,15 +134,19 @@ class PriceRateIntegrationTest {
   }
 
   @Test
-  void DELETE하면_204이고_그_조합만_사라진다() {
+  void DELETE하면_204이고_그_조합의_이력을_보관한다() {
     UUID organizationId = insertOrganizationWithDimensionProperties("{model}");
     create(organizationId, Map.of("model", "opus"), "0.007");
     create(organizationId, Map.of("model", "haiku"), "1");
 
     assertThat(delete(organizationId, "{\"model\":\"opus\"}")).hasStatus(204);
+    entityManager.flush();
 
-    assertThat(priceRateCount(organizationId)).isEqualTo(1);
+    assertThat(priceRateCount(organizationId)).isEqualTo(2);
     assertThat(storedUnitPrice(organizationId, "{\"model\": \"haiku\"}")).isEqualByComparingTo("1");
+    assertThat(archivedFrom(organizationId, "{\"model\": \"opus\"}"))
+        .isEqualTo(BillableMetricUsageService.currentMonth().plusMonths(1).toString());
+    assertThat(archivedFrom(organizationId, "{\"model\": \"haiku\"}")).isNull();
   }
 
   @Test
@@ -236,6 +243,23 @@ class PriceRateIntegrationTest {
         organizationId,
         BILLABLE_METRIC_CODE,
         dimensionValuesJson);
+  }
+
+  private String archivedFrom(UUID organizationId, String dimensionValuesJson) {
+    return jdbcTemplate
+        .queryForList(
+            """
+            SELECT archived_from FROM price_rate
+            WHERE organization_id = ? AND billable_metric_code = ? AND dimension_values = ?::jsonb
+              AND archived_at IS NOT NULL
+            """,
+            String.class,
+            organizationId,
+            BILLABLE_METRIC_CODE,
+            dimensionValuesJson)
+        .stream()
+        .findFirst()
+        .orElse(null);
   }
 
   private Integer priceRateCount(UUID organizationId) {

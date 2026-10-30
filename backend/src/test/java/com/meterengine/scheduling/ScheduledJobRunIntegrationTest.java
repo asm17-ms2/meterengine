@@ -66,6 +66,53 @@ class ScheduledJobRunIntegrationTest {
   }
 
   @Test
+  void 마지막_깨끗한_슬롯은_실패와_항목_실패와_실행_중_기록을_건너뛴다() {
+    String jobName = newJobName();
+    OffsetDateTime clean = SCHEDULED_AT.minusDays(4);
+    scheduledJobRunService.run(jobName, clean, () -> new ScheduledJobResult(1, 0, 0));
+    scheduledJobRunService.run(
+        jobName, SCHEDULED_AT.minusDays(3), () -> new ScheduledJobResult(1, 0, 1));
+    assertThatThrownBy(
+            () ->
+                scheduledJobRunService.run(
+                    jobName,
+                    SCHEDULED_AT.minusDays(2),
+                    () -> {
+                      throw new IllegalStateException("실패");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+    scheduledJobRunRepository.insertIfAbsent(
+        UUID.randomUUID(), jobName, SCHEDULED_AT.minusDays(1), OffsetDateTime.now());
+    scheduledJobRunService.run(jobName, SCHEDULED_AT, () -> new ScheduledJobResult(1, 0, 0));
+    scheduledJobRunService.run(
+        newJobName(), SCHEDULED_AT.minusDays(1), () -> new ScheduledJobResult(1, 0, 0));
+
+    assertThat(scheduledJobRunService.watermark(jobName, SCHEDULED_AT))
+        .hasValueSatisfying(slot -> assertThat(slot).isAtSameInstantAs(clean));
+    assertThat(scheduledJobRunService.watermark(jobName, clean)).isEmpty();
+  }
+
+  @Test
+  void 첫_실행이_실패만_남겼으면_기준점은_없고_가장_이른_슬롯은_그_실패다() {
+    String jobName = newJobName();
+    OffsetDateTime failed = SCHEDULED_AT.minusDays(1);
+    assertThatThrownBy(
+            () ->
+                scheduledJobRunService.run(
+                    jobName,
+                    failed,
+                    () -> {
+                      throw new IllegalStateException("실패");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(scheduledJobRunService.watermark(jobName, SCHEDULED_AT)).isEmpty();
+    assertThat(scheduledJobRunService.earliest(jobName, SCHEDULED_AT))
+        .hasValueSatisfying(slot -> assertThat(slot).isAtSameInstantAs(failed));
+    assertThat(scheduledJobRunService.earliest(jobName, failed)).isEmpty();
+  }
+
+  @Test
   void 슬롯이_다르면_둘_다_실행된다() throws Exception {
     String jobName = newJobName();
     AtomicInteger executions = new AtomicInteger();

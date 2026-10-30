@@ -17,17 +17,33 @@ x-backend: &backend
     SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 없다}
     # 값을 바꾸면 이미 저장한 암호문을 풀지 못한다.
     CRYPTO_ENCRYPTION_KEY: ${CRYPTO_ENCRYPTION_KEY:?CRYPTO_ENCRYPTION_KEY가 없다}
+    METERENGINE_AUTH_RATE_LIMIT_ENABLED: ${METERENGINE_AUTH_RATE_LIMIT_ENABLED:-true}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT:-100}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT:-10}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW:-5m}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT:-20}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT:-3}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW:-30m}
+    METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES: ${METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES:-172.30.0.8/29}
     OPERATOR_EMAIL: ${OPERATOR_EMAIL:?OPERATOR_EMAIL이 없다}
     OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?OPERATOR_PASSWORD가 없다}
-    # 프론트가 쓰는 키와 그 키가 속할 도입사. 백엔드가 기동할 때 없으면 넣는다.
-    FRONTEND_API_KEY: ${FRONTEND_API_KEY:?FRONTEND_API_KEY가 없다}
-    FRONTEND_ORGANIZATION_ID: ${ORGANIZATION_ID:?ORGANIZATION_ID가 없다}
     # 메모리 한도가 1792MB보다 작으면 JVM이 SerialGC를 고르므로, 한도가 없던 때와 같은 G1을 지정한다.
     JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:MaxRAMPercentage=${BACKEND_MAX_RAM_PERCENTAGE:?BACKEND_MAX_RAM_PERCENTAGE가 없다}
   mem_limit: ${BACKEND_MEM_LIMIT:?BACKEND_MEM_LIMIT가 없다}
   # Spring의 종료 단계 한도(30s)보다 길어야 처리 중 요청을 마치기 전에 SIGKILL되지 않는다.
   stop_grace_period: 35s
+  # default에도 붙으면 Caddy가 어느 쪽 주소로 붙을지 정해지지 않아 proxy에만 둔다.
+  networks:
+    - proxy
   logging: *default-logging
+
+# Caddy와 프론트만 고정 주소 대역(172.30.0.8/29)을 받아 백엔드가 그 대역만 신뢰한다. 나머지는 ip_range에서 받는다.
+networks:
+  proxy:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.128/25
 
 services:
   caddy:
@@ -45,6 +61,11 @@ services:
       # 지우면 인증서를 새로 발급받아 발급 횟수 제한에 걸릴 수 있다.
       - caddy-data:/data
       - caddy-config:/config
+    # default는 proxy가 없던 때 뜬 색에 닿도록 남긴다.
+    networks:
+      default:
+      proxy:
+        ipv4_address: 172.30.0.10
     # 백엔드를 넣으면 caddy를 올릴 때 두 색이 함께 뜬다.
     depends_on:
       - frontend
@@ -65,11 +86,13 @@ services:
     environment:
       # 브라우저가 아니라 프론트 서버가 백엔드를 부른다. 살아 있는 색에 닿도록 Caddy를 거친다.
       METERENGINE_API_BASE_URL: http://caddy:8081
-      METERENGINE_ORGANIZATION_ID: ${ORGANIZATION_ID:?ORGANIZATION_ID가 없다}
-      METERENGINE_ORGANIZATION_NAME: ${ORGANIZATION_NAME:?ORGANIZATION_NAME이 없다}
-      METERENGINE_API_KEY: ${FRONTEND_API_KEY:?FRONTEND_API_KEY가 없다}
+      # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 Caddy가 SITE_DOMAIN으로 리다이렉트한다.
+      METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
     ports:
       - "127.0.0.1:3000:3000"
+    networks:
+      proxy:
+        ipv4_address: 172.30.0.11
     logging: *default-logging
 
   prometheus:
@@ -84,6 +107,9 @@ services:
     volumes:
       - ./prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
+    networks:
+      - default
+      - proxy
     logging: *default-logging
 
   node-exporter:

@@ -175,8 +175,12 @@ class InvoiceFinalizeIntegrationTest {
         .containsExactly(tuple(Map.of("model", "a"), 250L), tuple(Map.of("model", "b"), 2000L));
     assertThat(invoiceLines)
         .usingRecursiveComparison()
+        .ignoringFields("billableMetricName")
         .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .isEqualTo(draftInvoiceLines);
+    assertThat(invoiceLines)
+        .extracting(InvoiceLineResponse::billableMetricName)
+        .containsOnly("토큰 사용량");
   }
 
   @Test
@@ -203,6 +207,27 @@ class InvoiceFinalizeIntegrationTest {
               assertThat(invoiceLine.getUnitPrice()).isEqualByComparingTo("0.5");
               assertThat(invoiceLine.getAmount()).isEqualTo(1640);
             });
+  }
+
+  @Test
+  void 확정한_라인은_그때의_미터_이름을_남겨_미터_이름을_바꿔도_인보이스의_이름은_그대로다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
+    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    flushAndClear();
+    jdbcTemplate.update(
+        "UPDATE billable_metric SET name = '바꾼 이름' WHERE organization_id = ?", organizationId);
+
+    assertThat(
+            mvc.get()
+                .uri("/v1/invoices/{id}", invoice.getId())
+                .header(AUTHORIZATION, authorization(organizationId))
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.lines[0].billable_metric_name")
+        .isEqualTo("token-usage 미터");
   }
 
   @Test
@@ -300,10 +325,11 @@ class InvoiceFinalizeIntegrationTest {
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
 
-    assertThat(finalizeInvoices(organizationId, "?month=2026-08"))
-        .hasStatusOk()
-        .bodyJson()
-        .isStrictlyEqualTo("{\"month\": \"2026-08\", \"finalized_count\": 1}");
+    MvcTestResult finalized = finalizeInvoices(organizationId, "?month=2026-08");
+    assertThat(finalized).hasStatusOk().bodyJson().extractingPath("$.finalized_count").isEqualTo(1);
+    assertThat(finalized).bodyJson().extractingPath("$.invoices").asArray().hasSize(1);
+    assertThat(finalized).bodyJson().extractingPath("$.total_amount").isEqualTo(1804);
+    assertThat(finalized).bodyJson().extractingPath("$.invoices[0].total_amount").isEqualTo(1804);
     insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-08-20T12:00:00+09:00");
     assertThat(finalizeInvoices(organizationId, "?month=2026-08"))
         .bodyJson()

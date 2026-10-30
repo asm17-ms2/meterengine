@@ -1,7 +1,6 @@
 package com.meterengine.global.security;
 
-import com.meterengine.account.service.SessionService;
-import com.meterengine.apikey.service.ApiKeyService;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -27,16 +26,19 @@ public class SecurityConfig {
   }
 
   @Bean
-  RequestRejectedHandler requestRejectedHandler(ErrorResponseWriter errorResponseWriter) {
-    return new JsonRequestRejectedHandler(errorResponseWriter);
+  RequestRejectedHandler requestRejectedHandler(
+      ErrorResponseWriter errorResponseWriter, RequestAuditRecorder requestAuditRecorder) {
+    return new JsonRequestRejectedHandler(errorResponseWriter, requestAuditRecorder);
   }
 
   @Bean
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
-      ApiKeyService apiKeyService,
-      SessionService sessionService,
+      ApiKeyCredentials apiKeyCredentials,
+      SessionCredentials sessionCredentials,
       ErrorResponseWriter errorResponseWriter,
+      RequestAuditRecorder requestAuditRecorder,
+      MeterRegistry meterRegistry,
       Clock clock)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
@@ -59,6 +61,22 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/v1/sessions", "/v1/signups")
                     .permitAll()
                     .requestMatchers(
+                        HttpMethod.POST,
+                        "/v1/public/invoice-links/lookup",
+                        "/v1/public/invoice-links/payment-retries")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/organization-invitations/*")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/organization-invitations/*/accept")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/payment-method-registrations/*")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/v1/payment-method-registrations/*/billing-keys",
+                        "/v1/toss-payments-webhooks/*")
+                    .permitAll()
+                    .requestMatchers(
                         "/actuator/health",
                         "/actuator/health/**",
                         "/actuator/prometheus",
@@ -72,8 +90,10 @@ public class SecurityConfig {
                     .authenticated())
         .addFilterBefore(new RequestLogFilter(), DisableEncodeUrlFilter.class)
         .addFilterBefore(
+            new RequestAuditFilter(requestAuditRecorder, meterRegistry), RequestLogFilter.class)
+        .addFilterBefore(
             new ApiCredentialAuthenticationFilter(
-                apiKeyService, sessionService, errorResponseWriter),
+                apiKeyCredentials, sessionCredentials, errorResponseWriter),
             AnonymousAuthenticationFilter.class)
         .addFilterAfter(
             new RateLimitFilter(clock, errorResponseWriter),

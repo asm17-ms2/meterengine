@@ -22,7 +22,7 @@ public record DraftInvoiceResponse(
       @Schema(description = "단가가 없어 라인에서 빠진 조합의 사용량. 금액에 들지 않는다. 수량이 0인 조합은 싣지 않고, 없으면 빈 배열이다")
           @JsonProperty("unpriced_usages")
           List<DraftInvoiceUnpricedUsage> unpricedUsages,
-      @Schema(description = "수량 합이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈 배열이다")
+      @Schema(description = "변환 전 집계량이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈 배열이다")
           @JsonProperty("negative_usages")
           List<DraftInvoiceNegativeUsage> negativeUsages) {}
 
@@ -43,10 +43,28 @@ public record DraftInvoiceResponse(
       @JsonProperty("target_property") String targetProperty,
       @Schema(
               description =
-                  "미터의 dimension_properties마다 이벤트 properties에서 뽑은 값. 같은 조합의 단가를 곱한다. 미터에 dimension_properties가 없으면 빈 객체다")
+                  "미터의 dimension_properties마다 이벤트 properties에서 뽑은 값. 같은 조합의 단가를 곱한다. 미터에"
+                      + " dimension_properties가 없으면 빈 객체다")
           @JsonProperty("dimension_values")
           Map<String, Object> dimensionValues,
-      BigDecimal quantity,
+      @Schema(description = "표시용 수량. 금액 계산에는 quantity_numerator/quantity_denominator를 사용한다")
+          BigDecimal quantity,
       @JsonProperty("unit_price") BigDecimal unitPrice,
-      long amount) {}
+      long amount,
+      @Schema(
+              allowableValues = {
+                "per_unit",
+                "volume",
+                "graduated_tier",
+                "base_fee",
+                "minimum_adjustment"
+              })
+          @JsonProperty("line_type")
+          String lineType,
+      @JsonProperty("tier_index") int tierIndex,
+      @Schema(description = "금액과 구간 판정에 사용한 정확 청구 수량의 분자") @JsonProperty("quantity_numerator")
+          BigDecimal quantityNumerator,
+      @Schema(description = "정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다")
+          @JsonProperty("quantity_denominator")
+          BigDecimal quantityDenominator) {}
 }

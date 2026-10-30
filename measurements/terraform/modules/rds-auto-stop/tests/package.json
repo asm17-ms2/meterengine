@@ -1,0 +1,11 @@
+{
+  "name": "rds-auto-stop-contract-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test workflow.test.mjs"
+  },
+  "devDependencies": {
+    "jsonata": "2.0.6"
+  }
+}

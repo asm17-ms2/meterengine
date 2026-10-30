@@ -5,6 +5,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.IngestAccess;
 import com.meterengine.global.security.MemberAccess;
+import com.meterengine.global.security.MemberAdminAccess;
+import com.meterengine.global.security.MemberReadAccess;
 import com.meterengine.global.security.OperatorAccess;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.security.ReadAccess;
@@ -30,6 +32,8 @@ class ApiAccessCoverageTest {
           ReadAccess.class,
           AdminAccess.class,
           MemberAccess.class,
+          MemberReadAccess.class,
+          MemberAdminAccess.class,
           OperatorAccess.class,
           PublicAccess.class);
 

@@ -1,9 +1,30 @@
 # 리버스 프록시. 사이트 주소만 적으면 Caddy가 인증서 발급과 HTTPS 리다이렉트를 맡는다.
 
+# 접속 로그와 오류 로그의 토큰 가림. 백엔드 RequestLogFilter의 경로 목록을 바꾸면 같이 바꾼다.
+# 인코딩, 세미콜론, 점 세그먼트가 든 경로는 백엔드가 디코딩해 등록 경로로 읽을 수 있어 경로 전체를 가린다.
+# 토큰 규칙보다 먼저 돌려야 토큰 규칙이 그 표식을 지우기 전에 걸린다.
+(redacted_path) {
+	{args[0]} multi_regexp {
+		regexp "^[^?]*(?:%|;|/\.{1,2}(?:[/?]|$)).*$" "REDACTED"
+		regexp "(?i)(/(?:payment-method-registrations|organization-invitations)/)[^/?]+([^?]*)(?:[?].*)?" "${1}REDACTED${2}"
+	}
+}
+
+(log_redaction) {
+	import redacted_path request>uri
+	import redacted_path request>headers>Referer
+	import redacted_path resp_headers>Location
+}
+
 # 목록의 백엔드가 아직 안 떴거나 죽으면 헬스체크가 계속 실패한다. 그 info 로그가 컨테이너 로그 한도를 채우지 않게 경고 이상만 남긴다.
 {
 	log {
 		exclude http.handlers.reverse_proxy.health_checker.active
+		# 접속 로그를 꺼도 프록시 오류에는 요청이 남는다.
+		format filter {
+			import log_redaction
+			wrap json
+		}
 	}
 	log health {
 		include http.handlers.reverse_proxy.health_checker.active
@@ -37,10 +58,15 @@
 	# access-log.caddy는 deploy.sh가 deploy.conf의 CADDY_ACCESS_LOG(기본 discard)로 배포마다 쓰는 output 줄이다.
 	log {
 		import access-log.caddy
+		format filter {
+			import log_redaction
+			wrap json
+		}
 	}
 
 	@alias not host {$SITE_DOMAIN}
 	redir @alias https://{$SITE_DOMAIN}{uri} permanent
+	request_header X-MeterEngine-Client-IP {remote_host}
 
 	# handle_path는 접두사를 벗겨 백엔드가 404를 내므로 handle을 쓴다.
 	handle /v1/* {
@@ -60,6 +86,9 @@
 
 # 프론트엔드와 deploy.sh만 compose 네트워크 안에서 부른다. compose가 8081을 서버 밖으로 열지 않는다.
 http://:8081 {
+	# 프론트 고정 주소가 아닌 연결이 보낸 클라이언트 IP는 접속 주소로 덮어쓴다. compose의 프론트 주소를 바꾸면 같이 바꾼다.
+	@not_frontend not remote_ip {$FRONTEND_ADDRESS:172.30.0.11}
+	request_header @not_frontend X-MeterEngine-Client-IP {remote_host}
 	import backend
 }
 

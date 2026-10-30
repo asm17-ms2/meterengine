@@ -28,6 +28,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springframework.boot:spring-boot-starter-restclient")
 	implementation(libs.springdoc.openapi.starter.webmvc.scalar)
 	implementation("org.flywaydb:flyway-database-postgresql")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")

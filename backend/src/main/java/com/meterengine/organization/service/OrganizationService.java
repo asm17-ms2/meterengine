@@ -6,11 +6,15 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.organization.dto.SupplierResponse;
+import com.meterengine.organization.dto.UpdateSupplierRequest;
 import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.repository.OrganizationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +23,15 @@ public class OrganizationService {
 
   private final OrganizationRepository organizationRepository;
   private final AuditLogService auditLogService;
+  private final JdbcTemplate jdbcTemplate;
 
   OrganizationService(
-      OrganizationRepository organizationRepository, AuditLogService auditLogService) {
+      OrganizationRepository organizationRepository,
+      AuditLogService auditLogService,
+      JdbcTemplate jdbcTemplate) {
     this.organizationRepository = organizationRepository;
     this.auditLogService = auditLogService;
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   @Transactional(readOnly = true)
@@ -61,5 +69,48 @@ public class OrganizationService {
         organizationId.toString(),
         Map.of("from", previousStatus, "to", status));
     return organization;
+  }
+
+  // 공급자 정보를 돌려주고 도입사가 없으면 예외를 던진다. get은 같은 서비스의 도입사 조회가 쓴다.
+  @Transactional(readOnly = true)
+  public SupplierResponse find(UUID organizationId) {
+    if (BusinessEnvironmentContext.environmentId() == null)
+      return SupplierResponse.from(get(organizationId));
+    return jdbcTemplate.queryForObject(
+        "SELECT business_registration_number, representative_name, business_address FROM organization_environment WHERE organization_id = ? AND id = ?",
+        (rs, row) ->
+            new SupplierResponse(
+                rs.getString("business_registration_number"),
+                rs.getString("representative_name"),
+                rs.getString("business_address")),
+        organizationId,
+        BusinessEnvironmentContext.environmentId());
+  }
+
+  @Transactional
+  public SupplierResponse update(UUID organizationId, UpdateSupplierRequest request) {
+    if (BusinessEnvironmentContext.environmentId() != null) {
+      jdbcTemplate.update(
+          "UPDATE organization_environment SET business_registration_number = ?, representative_name = ?, business_address = ? WHERE organization_id = ? AND id = ?",
+          request.businessRegistrationNumber(),
+          request.representativeName(),
+          request.businessAddress(),
+          organizationId,
+          BusinessEnvironmentContext.environmentId());
+      auditLogService.record(
+          organizationId, "supplier_updated", "organization", organizationId.toString(), Map.of());
+      return find(organizationId);
+    }
+    Organization organization =
+        organizationRepository
+            .findForUpdateById(organizationId)
+            .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    organization.updateSupplier(
+        request.businessRegistrationNumber(),
+        request.representativeName(),
+        request.businessAddress());
+    auditLogService.record(
+        organizationId, "supplier_updated", "organization", organizationId.toString(), Map.of());
+    return SupplierResponse.from(organization);
   }
 }

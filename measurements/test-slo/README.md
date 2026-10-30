@@ -89,6 +89,16 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 
 ## 켜고 끄기
 
+켜기 전에 RDS 자동 재기동을 처리하는 흐름이 돌고 있지 않은지 확인한다. 돌고 있으면 측정 도중에 그 흐름이 DB를 끌 수 있으니, 결과가 0이 될 때까지 기다린 뒤 켠다(흐름은 최대 2시간 돈다).
+
+```bash
+aws stepfunctions list-executions --region ap-northeast-2 \
+  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-slo-rds-auto-stop \
+  --status-filter RUNNING --query 'length(executions)'
+```
+
+"환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
+
 ```bash
 measurements/test-slo/sut/scripts/sut-start.sh
 measurements/test-slo/sut/scripts/sut-stop.sh
@@ -106,7 +116,7 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 
-- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. 자동 중지가 다음 04:00에 다시 끈다.
+- RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
 - 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
 
 ```bash
@@ -153,6 +163,8 @@ aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-slo/db-pa
 바꾸는 절차는 [`test-storage/README.md`](../test-storage/README.md) "비밀번호"를 따르되 test-storage를 test-slo로 바꾼다.
 
 ## 지우기
+
+지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-slo의 자동 재기동 감지를 먼저 뺀다.
 
 ```bash
 terraform -chdir=measurements/test-slo/sut/terraform destroy

@@ -16,6 +16,12 @@ import { toMeterRows, type MeterRow } from "@/lib/grouped-rows";
 import type { ListQuery } from "@/lib/list-query";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
+
+function toDimensionText(values: Record<string, unknown>): string {
+  const entries = Object.entries(values);
+  return entries.length ? entries.map(([key, value]) => `${key}: ${String(value)}`).join(", ") : "차원 값 없음";
+}
+
 export type UsageGroupView = {
   customerId: string;
   customerName: string;
@@ -27,6 +33,8 @@ export type UsageLineView = {
   labelTooltip?: string;
   dimensionValues: Record<string, unknown>;
   quantity: string;
+  rawQuantity?: string;
+  overallRawQuantity?: string;
 };
 
 type CustomerRow = {
@@ -108,6 +116,7 @@ export function UsageTable({
       title: "고객 / 미터",
       ellipsis: true,
       clientSorter: byCustomerName,
+      sortKey: "customer_name",
       onCell: (row) => ({ colSpan: row.kind === "customer" ? 2 : 1 }),
       render: (_, row) => {
         if (row.kind === "customer") {
@@ -132,7 +141,7 @@ export function UsageTable({
           return <DimensionValues dimensionValues={row.line.dimensionValues} slotCount={slotCount} />;
         }
         if (row.kind === "meter") {
-          return <Typography.Text type="secondary">조합 {row.combinationCount}개</Typography.Text>;
+          return <Typography.Text type="secondary">전체 집계값 / 조합 {row.combinationCount}개</Typography.Text>;
         }
         return null;
       },
@@ -143,11 +152,14 @@ export function UsageTable({
       align: "right",
       width: 200,
       clientSorter: byLineCount,
+      sortKey: "line_count",
+      showSorterTooltip: { title: "집계 라인 수로 정렬" },
       render: (_, row) => {
         if (row.kind === "customer") {
           return <Typography.Text type="secondary">집계 라인 {row.lineCount}줄</Typography.Text>;
         }
-        return <NumberText strong>{row.kind === "meter" ? row.quantity : row.line.quantity}</NumberText>;
+        const rawQuantity = row.kind === "meter" ? row.children[0]?.line.overallRawQuantity : row.line.rawQuantity;
+        return <div><NumberText strong>{row.kind === "meter" ? row.quantity : row.line.quantity}</NumberText>{rawQuantity != null ? <p className="field-hint">단위 / 반올림 적용 전 {rawQuantity}</p> : null}</div>;
       },
     },
   ];
@@ -155,7 +167,9 @@ export function UsageTable({
   const { columns, onChange } = useTableSort(query, capabilities, sortableColumns);
 
   return (
-    <Table<UsageRow>
+    <>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><h3>{group.customerName}</h3>{group.items.map((item, index) => <div key={index}>{item.kind === "meter" && <><div className="data-mobile-line"><span>{item.label} / 전체 집계값</span><strong className="numeric">{item.quantity}</strong></div>{item.lines[0]?.overallRawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {item.lines[0].overallRawQuantity}</p>}</>}{item.kind === "meter" ? <div style={{ paddingLeft: 12, borderLeft: "2px solid var(--line)" }}><p className="field-hint">차원별 집계값</p>{linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{toDimensionText(line.dimensionValues)}</span><strong className="numeric">{line.quantity}</strong></div>{line.rawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {line.rawQuantity}</p>}</div>)}</div> : linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.quantity}</strong></div>{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{toDimensionText(line.dimensionValues)}</p>}{line.rawQuantity != null && <p className="field-hint">단위 / 반올림 적용 전 {line.rawQuantity}</p>}</div>)}</div>)}</article>)}</div>
+    <div className="data-desktop-table"><Table<UsageRow>
       rowKey="key"
       columns={columns}
       dataSource={rows}
@@ -169,6 +183,7 @@ export function UsageTable({
       onRow={(row) =>
         hasChildRows(row) ? { onClick: () => toggle(row.key), style: { cursor: "pointer" } } : {}
       }
-    />
+    /></div>
+    </>
   );
 }

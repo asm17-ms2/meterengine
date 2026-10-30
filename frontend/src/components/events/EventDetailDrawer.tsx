@@ -3,6 +3,8 @@
 import { Button, Descriptions, Drawer, theme, Typography } from "antd";
 import { useRef } from "react";
 
+import { ScopedLink } from "@/components/workspace/ScopedLink";
+
 import type { EventRowView } from "@/components/events/EventsTable";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
 import { DRAWER_SIZE } from "@/components/table/table-defaults";
@@ -41,7 +43,7 @@ export function EventDetailDrawer({
         items={[
           {
             key: "transactionId",
-            label: "transaction_id",
+            label: "전송 ID",
             children: (
               <Typography.Text style={{ fontFamily: token.fontFamilyCode, wordBreak: "break-all" }}>
                 {row.transactionId}
@@ -49,14 +51,17 @@ export function EventDetailDrawer({
             ),
           },
           { key: "customerName", label: "고객", children: row.customerName },
-          { key: "eventType", label: "type", children: row.eventType },
-          { key: "occurredAt", label: "occurred_at", children: row.occurredAt },
-          { key: "receivedAt", label: "received_at", children: row.receivedAt },
+          { key: "eventType", label: "이벤트 유형", children: row.eventType },
+          { key: "occurredAt", label: "발생 시각 (KST)", children: row.occurredAt },
+          { key: "receivedAt", label: "수신 시각 (KST)", children: row.receivedAt },
+          ...(row.requestId ? [{ key: "requestId", label: "수집 요청", children: <ScopedLink href={`/audit?q=${encodeURIComponent(row.requestId)}`}>이 요청의 감사 기록 보기</ScopedLink> }] : []),
+          ...(row.actorType ? [{ key: "actor", label: "전송 주체", children: `${row.actorType === "api_key" ? "API 키" : row.actorType === "user_account" ? "로그인 사용자" : row.actorType}${row.actorId ? ` (${row.actorId})` : ""}` }] : []),
         ]}
       />
       <Typography.Title level={5} style={{ marginTop: token.marginLG }}>
         원본 JSON
       </Typography.Title>
+      <Typography.Text type="secondary">API 원본 값, 시각은 UTC</Typography.Text>
       <Typography>
         <pre>{row.rawJson}</pre>
       </Typography>

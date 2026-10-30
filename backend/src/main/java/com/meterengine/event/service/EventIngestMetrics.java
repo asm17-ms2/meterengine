@@ -15,15 +15,17 @@ public class EventIngestMetrics {
 
   private final Counter storedCounter;
   private final Counter duplicateCounter;
+  private final Counter rejectedCounter;
 
   EventIngestMetrics(MeterRegistry meterRegistry) {
     this.storedCounter = ingestCounter(meterRegistry, STORED);
     this.duplicateCounter = ingestCounter(meterRegistry, DUPLICATE);
+    this.rejectedCounter = ingestCounter(meterRegistry, "rejected");
   }
 
   private static Counter ingestCounter(MeterRegistry meterRegistry, String result) {
     return Counter.builder(INGEST_COUNTER_NAME)
-        .description("수집 요청에 200으로 답한 건수. result가 duplicate면 이미 저장된 이벤트다")
+        .description("이벤트 수집 결과 건수. result로 신규 저장, 중복, 거절을 구분한다")
         .tag(RESULT_TAG, result)
         .register(meterRegistry);
   }
@@ -34,5 +36,9 @@ public class EventIngestMetrics {
 
   public void recordDuplicate() {
     duplicateCounter.increment();
+  }
+
+  public void recordRejected() {
+    rejectedCounter.increment();
   }
 }

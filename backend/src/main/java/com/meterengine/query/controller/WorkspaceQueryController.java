@@ -1,0 +1,1103 @@
+package com.meterengine.query.controller;
+
+import com.meterengine.customer.dto.CustomerResponse;
+import com.meterengine.global.error.ErrorResponse;
+import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.ReadAccess;
+import com.meterengine.global.validation.StorableJson;
+import com.meterengine.global.validation.UnknownQueryParameterValidator;
+import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
+import com.meterengine.metric.dto.BillableMetricResponse;
+import com.meterengine.query.dto.InvoiceSearchResponse;
+import com.meterengine.query.dto.OptionResponse;
+import com.meterengine.query.dto.PriceSearchResponse;
+import com.meterengine.query.dto.SearchPageResponse;
+import com.meterengine.query.dto.UsageCustomerResponse;
+import com.meterengine.query.service.SearchCsvService;
+import com.meterengine.query.service.SearchParameters;
+import com.meterengine.query.service.WorkspaceQueryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@EnvironmentReady
+public class WorkspaceQueryController {
+  private static final String INVALID_SEARCH =
+      "code=validation_error: 받지 않는 쿼리 파라미터가 있거나 값의 형식이나 범위가 틀렸다. 어느 값인지는 errors에 있다.";
+  private static final String INVALID_EXPORT =
+      INVALID_SEARCH + " 조건 전체가 10000행을 넘어도 이 코드이며 errors의 field는 export다. 범위를 좁혀 다시 보낸다.";
+  private static final String UNKNOWN_PARAMETER = "code=validation_error: 받지 않는 쿼리 파라미터가 있다.";
+  private static final String CUSTOMER_NOT_FOUND =
+      "code=customer_not_found: customer_id의 고객이 현재 도입사와 업무 환경에 없다.";
+  private static final String SEARCH_PAGE = "조건에 맞는 페이지. total은 조건 전체 건수다.";
+  private static final String SEARCH_CSV =
+      "같은 검색 조건 전체의 CSV. UTF-8 BOM과 CRLF를 쓰고, 수식으로 읽힐 문자열은 앞에 작은따옴표를 붙인다.";
+
+  private final WorkspaceQueryService workspaceQueryService;
+  private final SearchCsvService searchCsvService;
+
+  WorkspaceQueryController(
+      WorkspaceQueryService workspaceQueryService, SearchCsvService searchCsvService) {
+    this.workspaceQueryService = workspaceQueryService;
+    this.searchCsvService = searchCsvService;
+  }
+
+  @GetMapping("/v1/customers/search")
+  @ReadAccess
+  @EnvironmentReady
+  @Operation(
+      summary = "고객 검색과 서버 페이지 조회",
+      description =
+          "q, external_id, customer_id, status(active/archived/all),"
+              + " sort(name/external_id/created_at/archived_at/id/billing_email), order, page,"
+              + " size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수다. 페이지는 1부터, size 기본"
+              + " 25/최대 200이다. summary는 active_count, archived_count다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "external_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid"))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<CustomerResponse> searchCustomers(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.search(
+        organizationId, SearchParameters.parse(parameters, "customers"));
+  }
+
+  @GetMapping("/v1/billable-metrics/search")
+  @ReadAccess
+  @Operation(
+      summary = "미터 검색과 서버 페이지 조회",
+      description =
+          "q, billable_metric_code, status(active/archived/all),"
+              + " sort(code/name/event_type/aggregation/archived_at), order, page, size를 받는다. summary는"
+              + " active_count, archived_count다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<BillableMetricResponse> searchBillableMetrics(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.metrics(
+        organizationId, SearchParameters.parse(parameters, "metrics"));
+  }
+
+  @GetMapping("/v1/billable-metric-prices/search")
+  @ReadAccess
+  @Operation(
+      summary = "월별 가격 검색과 서버 페이지 조회",
+      description =
+          "month, customer_id, billable_metric_code, q, status(미터 보관 상태),"
+              + " sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단가 수, 조건"
+              + " 전체 no_rate_count를 포함한다. summary는 month, metric_count, no_rate_count다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<PriceSearchResponse> searchBillableMetricPrices(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.prices(
+        organizationId, SearchParameters.parse(parameters, "prices"));
+  }
+
+  @GetMapping("/v1/usage/search")
+  @ReadAccess
+  @Operation(
+      summary = "고객 단위 사용량 검색과 서버 페이지 조회",
+      description =
+          "month, customer_id, billable_metric_code, q, status(고객 보관 상태, 기본 all),"
+              + " sort(customer_name/customer_id/line_count), order, page, size를 받는다. 한 고객의 모든 미터를"
+              + " 같은 페이지에 둔다. summary는 month, customer_count, metric_count, line_count,"
+              + " nonzero_customer_count다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<UsageCustomerResponse> searchUsage(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.usage(organizationId, SearchParameters.parse(parameters, "usage"));
+  }
+
+  @GetMapping("/v1/invoices/draft/search")
+  @ReadAccess
+  @Operation(
+      summary = "청구 예정액 검색과 페이지 독립 요약",
+      description =
+          "month, customer_id, billable_metric_code, q, min_amount, max_amount,"
+              + " sort(customer_name/customer_id/amount/line_count), order, page, size를 받는다."
+              + " amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를 확정하므로"
+              + " finalization_scope는 month다. summary는 month, calculated_at, amount, customer_count,"
+              + " billable_customer_count, line_count, unpriced_count, negative_count와 같은 이름의 month_ 월 전체 값,"
+              + " finalization_scope다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "min_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0")),
+    @Parameter(
+        name = "max_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0"))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<DraftInvoiceCustomer> searchDraftInvoices(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.drafts(
+        organizationId, SearchParameters.parse(parameters, "drafts"));
+  }
+
+  @GetMapping("/v1/invoices/search")
+  @ReadAccess
+  @Operation(
+      summary = "인보이스와 결제 상태 검색",
+      description =
+          "customer_id, month, from/to(확정 시각, 날짜 종료일 포함/KST), status, mode, min_amount, max_amount,"
+              + " billable_metric_code, q,"
+              + " sort(month/customer_name/total_amount/finalized_at/invoice_number/status), order,"
+              + " page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립이며 pending이 있으면"
+              + " outstanding_amount는 null이다. summary는 mode, invoice_count, supply_amount, tax_amount,"
+              + " total_amount, canceled_amount, has_pending, outstanding_amount, status_counts(결제 상태별 건수)다."
+              + " from과 to는 한쪽만 줘도 되고 month와 함께 주면 둘 다 만족하는 인보이스만 나온다. 이벤트 목록과 내보내기는"
+              + " from과 to를 함께 요구한다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "from",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "to",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "mode",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"test", "live"})),
+    @Parameter(
+        name = "min_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0")),
+    @Parameter(
+        name = "max_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0"))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = SEARCH_PAGE),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<InvoiceSearchResponse> searchInvoices(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.invoices(organizationId, invoiceParameters(parameters));
+  }
+
+  @GetMapping("/v1/customers/options")
+  @ReadAccess
+  @EnvironmentReady
+  @Operation(
+      summary = "고객 선택지 검색",
+      description =
+          "고객 검색과 같은 조건을 받으며 value/label/archived와 페이지 정보를 반환한다. 보관 고객 선택에는 status=all을 사용한다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "external_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid"))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "조건에 맞는 선택지 페이지"),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<OptionResponse> suggestCustomers(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.suggest(
+        organizationId, SearchParameters.parse(parameters, "customers"), "customers");
+  }
+
+  @GetMapping("/v1/billable-metrics/options")
+  @ReadAccess
+  @Operation(summary = "미터 선택지 검색")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "page",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "integer", minimum = "1", maximum = "2147483647", defaultValue = "1")),
+    @Parameter(
+        name = "size",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", minimum = "1", maximum = "200", defaultValue = "25")),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "조건에 맞는 선택지 페이지"),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_SEARCH,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public SearchPageResponse<OptionResponse> suggestBillableMetrics(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return workspaceQueryService.suggest(
+        organizationId, SearchParameters.parse(parameters, "metrics"), "metrics");
+  }
+
+  @GetMapping("/v1/usage/months")
+  @ReadAccess
+  @Operation(summary = "이벤트가 있는 월 목록", description = "KST 발생 시각 기준의 월을 중복 없이 내림차순으로 반환한다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "내림차순 월 목록"),
+    @ApiResponse(
+        responseCode = "400",
+        description = UNKNOWN_PARAMETER,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public Map<String, List<String>> listUsageMonths(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    UnknownQueryParameterValidator.validate(parameters, Set.of());
+    return workspaceQueryService.list(organizationId, "usage");
+  }
+
+  @GetMapping("/v1/invoices/months")
+  @ReadAccess
+  @Operation(summary = "확정 인보이스가 있는 월 목록")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "내림차순 월 목록"),
+    @ApiResponse(
+        responseCode = "400",
+        description = UNKNOWN_PARAMETER,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public Map<String, List<String>> listInvoiceMonths(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    UnknownQueryParameterValidator.validate(parameters, Set.of());
+    return workspaceQueryService.list(organizationId, "invoices");
+  }
+
+  @GetMapping("/v1/billable-metric-prices/months")
+  @ReadAccess
+  @Operation(summary = "단가 버전이 시작된 월 목록")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "내림차순 월 목록"),
+    @ApiResponse(
+        responseCode = "400",
+        description = UNKNOWN_PARAMETER,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public Map<String, List<String>> listPriceMonths(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    UnknownQueryParameterValidator.validate(parameters, Set.of());
+    return workspaceQueryService.list(organizationId, "billable-metric-prices");
+  }
+
+  @GetMapping(value = "/v1/customers/export", produces = "text/csv")
+  @ReadAccess
+  @EnvironmentReady
+  @Operation(
+      summary = "고객 검색 결과 CSV",
+      description = "현재 페이지가 아니라 같은 검색 조건의 전체 결과를 내보낸다. 최대 10000행이며 초과하면 범위를 좁히도록 400을 반환한다.")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "external_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid"))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportCustomers(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "customers",
+        workspaceQueryService.search(
+            organizationId, SearchParameters.parse(parameters, "customers").forExport()),
+        CustomerResponse.class);
+  }
+
+  @GetMapping(value = "/v1/billable-metrics/export", produces = "text/csv")
+  @ReadAccess
+  @Operation(summary = "미터 검색 결과 CSV")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportMetrics(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "billable-metrics",
+        workspaceQueryService.metrics(
+            organizationId, SearchParameters.parse(parameters, "metrics").forExport()),
+        BillableMetricResponse.class);
+  }
+
+  @GetMapping(value = "/v1/billable-metric-prices/export", produces = "text/csv")
+  @ReadAccess
+  @Operation(summary = "미터별 가격 검색 결과 CSV")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportPrices(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "billable-metric-prices",
+        workspaceQueryService.prices(
+            organizationId, SearchParameters.parse(parameters, "prices").forExport()),
+        PriceSearchResponse.class);
+  }
+
+  @GetMapping(value = "/v1/usage/export", produces = "text/csv")
+  @ReadAccess
+  @Operation(summary = "고객별 사용량 검색 결과 CSV")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportUsage(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "usage",
+        workspaceQueryService.usage(
+            organizationId, SearchParameters.parse(parameters, "usage").forExport()),
+        UsageCustomerResponse.class);
+  }
+
+  @GetMapping(value = "/v1/invoices/draft/export", produces = "text/csv")
+  @ReadAccess
+  @Operation(summary = "청구 예정액 검색 결과 CSV")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "min_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0")),
+    @Parameter(
+        name = "max_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0"))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportDrafts(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "draft-invoices",
+        workspaceQueryService.drafts(
+            organizationId, SearchParameters.parse(parameters, "drafts").forExport()),
+        DraftInvoiceCustomer.class);
+  }
+
+  @GetMapping(value = "/v1/invoices/export", produces = "text/csv")
+  @ReadAccess
+  @Operation(summary = "인보이스 검색 결과 CSV")
+  @Parameters({
+    @Parameter(
+        name = "q",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "sort",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "order",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"asc", "desc"})),
+    @Parameter(
+        name = "month",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(type = "string", pattern = "^[0-9]{4}-(0[1-9]|1[0-2])$", example = "2026-08")),
+    @Parameter(
+        name = "customer_id",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", format = "uuid")),
+    @Parameter(
+        name = "billable_metric_code",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "from",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "to",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "status",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "string", maxLength = 2000)),
+    @Parameter(
+        name = "mode",
+        in = ParameterIn.QUERY,
+        schema =
+            @Schema(
+                type = "string",
+                allowableValues = {"test", "live"})),
+    @Parameter(
+        name = "min_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0")),
+    @Parameter(
+        name = "max_amount",
+        in = ParameterIn.QUERY,
+        schema = @Schema(type = "integer", format = "int64", minimum = "0"))
+  })
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = SEARCH_CSV,
+        content = @Content(mediaType = "text/csv", schema = @Schema(type = "string"))),
+    @ApiResponse(
+        responseCode = "400",
+        description = INVALID_EXPORT,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+        responseCode = "404",
+        description = CUSTOMER_NOT_FOUND,
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)))
+  })
+  public ResponseEntity<byte[]> exportInvoices(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
+    return searchCsvService.export(
+        "invoices",
+        workspaceQueryService.invoices(organizationId, invoiceParameters(parameters).forExport()),
+        InvoiceSearchResponse.class);
+  }
+
+  private static SearchParameters invoiceParameters(Map<String, String> values) {
+    Map<String, String> parameters = new LinkedHashMap<>(values);
+    parameters.putIfAbsent("order", "desc");
+    return SearchParameters.parse(parameters, "invoices");
+  }
+}

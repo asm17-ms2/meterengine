@@ -2,6 +2,7 @@ package com.meterengine.invoice.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/invoices/draft")
 public class DraftInvoiceController {
 
@@ -53,7 +55,8 @@ public class DraftInvoiceController {
     @ApiResponse(
         responseCode = "200",
         description =
-            "고객별 청구 예정액. 단가가 있는 조합의 사용량이 없는 고객은 lines가 빈 배열이다. 모든 고객이 확정됐으면 customers가 빈 배열이고 total_amount가 0이다"),
+            "고객별 청구 예정액. 단가가 있는 조합의 사용량이 없는 고객은 lines가 빈 배열이다. 모든 고객이 확정됐으면 customers가 빈 배열이고"
+                + " total_amount가 0이다"),
     @ApiResponse(
         responseCode = "400",
         content =

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-import com.meterengine.organization.service.OrganizationService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
@@ -12,7 +11,7 @@ import org.springframework.core.MethodParameter;
 class CurrentOrganizationIdArgumentResolverTest {
 
   private final CurrentOrganizationIdArgumentResolver resolver =
-      new CurrentOrganizationIdArgumentResolver(mock(OrganizationService.class));
+      new CurrentOrganizationIdArgumentResolver(mock(OrganizationAccessPolicy.class));
 
   @Test
   void UUID_파라미터에_붙은_어노테이션을_맡는다() {

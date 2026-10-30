@@ -14,8 +14,8 @@ export async function BillingMeta({
 
   return (
     <>
-      고객 <b>{result.data.customers.length}</b>곳, 청구 라인{" "}
-      <b>{countDraftInvoiceLines(result.data.customers)}</b>줄
+      고객 <b>{result.data.summary?.customer_count ?? result.data.customers.length}</b>곳, 청구 라인{" "}
+      <b>{result.data.summary?.line_count ?? countDraftInvoiceLines(result.data.customers)}</b>줄
     </>
   );
 }

@@ -4,16 +4,20 @@ import com.meterengine.account.dto.CreateSessionRequest;
 import com.meterengine.account.dto.SessionResponse;
 import com.meterengine.account.dto.SessionTokenResponse;
 import com.meterengine.account.dto.UpdateSessionOrganizationRequest;
+import com.meterengine.account.service.AuthRequestRateLimitService;
 import com.meterengine.account.service.SessionService;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.MemberAccess;
 import com.meterengine.global.security.PublicAccess;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,13 +31,17 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/sessions")
 public class SessionController {
 
   private final SessionService sessionService;
+  private final AuthRequestRateLimitService authRequestRateLimitService;
 
-  SessionController(SessionService sessionService) {
+  SessionController(
+      SessionService sessionService, AuthRequestRateLimitService authRequestRateLimitService) {
     this.sessionService = sessionService;
+    this.authRequestRateLimitService = authRequestRateLimitService;
   }
 
   @PostMapping
@@ -75,9 +83,24 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인 곳이 없다")
+        description = "code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인 곳이 없다"),
+    @ApiResponse(
+        responseCode = "429",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다",
+        headers =
+            @Header(
+                name = "Retry-After",
+                description = "다시 보내기 전에 기다릴 초",
+                required = true,
+                schema = @Schema(type = "integer")))
   })
-  public SessionTokenResponse createSession(@Valid @RequestBody CreateSessionRequest request) {
+  public SessionTokenResponse createSession(
+      @Valid @RequestBody CreateSessionRequest request, HttpServletRequest servletRequest) {
+    authRequestRateLimitService.login(request.email(), servletRequest);
     return SessionTokenResponse.from(sessionService.create(request.email(), request.password()));
   }
 

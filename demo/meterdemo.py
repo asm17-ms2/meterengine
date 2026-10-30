@@ -30,12 +30,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="API 키. Authorization: Bearer로 보낸다 (기본: 환경변수 %s, 없으면 로컬 live 키)" % API_KEY_ENV,
     )
     common.add_argument("--no-color", action="store_true", help="ANSI 색 비활성화")
+    common.add_argument("--environment", choices=("test", "live"), default=os.environ.get("METERENGINE_ENVIRONMENT") or None, help="업무 환경. 생략하면 API 키의 환경을 사용한다")
     common.add_argument("--timeout", type=float, default=10.0, help="HTTP 타임아웃 초 (기본 10)")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     send = subparsers.add_parser("send", parents=[common], help="CSV의 이벤트를 순차 전송하고 요청:응답을 대조 출력")
     send.add_argument("--csv", required=True, help="이벤트 CSV 경로 (스키마는 MS2-142 확정 대기)")
+    send.add_argument("--batch-size", type=int, choices=range(1, 101), default=1, metavar="1-100", help="한 요청에 보낼 이벤트 수 (기본 1)")
     send.add_argument("--interval", type=float, default=0.0, help="전송 간격 초 (기본 0)")
     send.add_argument("--jitter", type=float, default=0.0, help="간격에 더할 랜덤 슬립 상한 초 (기본 0)")
     send.add_argument("--yes", action="store_true", help="전송 전 확인 게이트 생략")

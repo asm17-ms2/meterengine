@@ -1,153 +1,45 @@
 import "server-only";
 
-import { config } from "@/lib/config";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { requestApi, type Result } from "@/lib/api/transport";
+import { readSessionToken, requireTenantSession } from "@/lib/auth/session";
+import { hasScope, tenantRequestScope } from "@/lib/auth/permissions";
+import { expiredLoginHref } from "@/lib/auth/navigation";
 
-export type FieldError = {
-  field: string;
-  message: string;
-};
+export { toDisplayMessage } from "@/lib/api/transport";
+export type { ApiError, FieldError, Result } from "@/lib/api/transport";
 
-/** 백엔드가 내려주는 오류 응답을 화면이 쓸 형태로 줄인 것. */
-export type ApiError = {
-  status: number;
-  code: string;
-  message: string;
-  errors?: FieldError[];
-};
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: ApiError };
-
-export function toDisplayMessage(error: ApiError): string {
-  if (error.errors && error.errors.length > 0) {
-    return error.errors.map((fieldError) => fieldError.message).join(" / ");
-  }
-  return error.message;
-}
-
-const TIMEOUT_MS = 5_000;
-const CACHE_REVALIDATE_SECONDS = 60;
-
-type ErrorBody = {
-  code?: unknown;
-  message?: unknown;
-  errors?: unknown;
-};
-
-function toFieldErrors(raw: unknown): FieldError[] | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const errors = raw.filter(
-    (item): item is FieldError =>
-      typeof item === "object" &&
-      item !== null &&
-      typeof (item as FieldError).field === "string" &&
-      typeof (item as FieldError).message === "string",
-  );
-  return errors.length > 0 ? errors : undefined;
-}
-
-async function toApiError(response: Response): Promise<ApiError> {
-  let body: ErrorBody = {};
-  try {
-    body = (await response.json()) as ErrorBody;
-  } catch {
-  }
-  return {
-    status: response.status,
-    code: typeof body.code === "string" ? body.code : "http_error",
-    message:
-      typeof body.message === "string"
-        ? body.message
-        : "서버가 오류 응답 형식이 아닌 응답을 보냈습니다.",
-    errors: toFieldErrors(body.errors),
-  };
-}
-
-async function readJson<T>(response: Response): Promise<Result<T>> {
-  try {
-    return { ok: true, data: (await response.json()) as T };
-  } catch {
-    return {
-      ok: false,
-      error: {
-        status: response.status,
-        code: "malformed_response",
-        message: "응답을 읽지 못했습니다. 서버가 보낸 응답이 JSON 형식이 아닙니다.",
-      },
-    };
-  }
-}
-
-function toCacheInit(cacheTag?: string): RequestInit {
-  if (cacheTag === undefined) return { cache: "no-store" };
-  return { next: { revalidate: CACHE_REVALIDATE_SECONDS, tags: [cacheTag] } };
-}
-
-async function call(
-  url: URL,
-  init: { method: string; body?: string; cacheTag?: string },
-): Promise<Result<Response>> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: init.method,
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        Accept: "application/json",
-        ...(init.body === undefined
-          ? {}
-          : { "Content-Type": "application/json" }),
-      },
-      body: init.body,
-      ...toCacheInit(init.cacheTag),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch (cause) {
-    const isTimedOut = cause instanceof Error && cause.name === "TimeoutError";
-    return {
-      ok: false,
-      error: {
-        status: 0,
-        code: "network_error",
-        message: isTimedOut
-          ? `응답 시간 초과. ${TIMEOUT_MS / 1000}초 안에 응답이 오지 않았습니다.`
-          : "서버에 연결하지 못했습니다. 백엔드가 실행 중인지 확인해주세요.",
-      },
-    };
-  }
-
-  if (!response.ok) return { ok: false, error: await toApiError(response) };
-  return { ok: true, data: response };
+async function tenantRequest<T>(path: string, options: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; timeoutMs?: number; idempotencyKey?: string; isEmptyResponse?: boolean; ifMatch?: string; environment?: WorkspaceEnvironment; responseType?: "text" }): Promise<Result<T>> {
+  const session = await requireTenantSession();
+  const scope = tenantRequestScope(path, options.method);
+  if (!hasScope(session.scopes, scope)) return { ok: false, error: { status: 403, code: "permission_denied", message: scope === "read" ? "현재 도입사의 조회 권한이 없습니다. 대표관리자에게 권한을 요청하세요." : "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." } };
+  const environment = options.environment ?? readEnvironment((await headers()).get("x-meterengine-environment"));
+  const result = await requestApi<T>(path, { ...options, organizationId: (await headers()).get("x-meterengine-organization-id") || session.organization!.id, environment: environment === "legacy" ? undefined : environment, token: await readSessionToken() });
+  if (!result.ok && result.error.status === 401) redirect(expiredLoginHref((await headers()).get("x-meterengine-current-path")));
+  if (!result.ok && result.error.code === "organization_not_active") redirect("/organizations");
+  return result;
 }
 
 export async function serverFetch<T>(
-  baseUrl: string,
-  path: string,
-  searchParams?: Record<string, string | undefined>,
-  cacheTag?: string,
+  _baseUrl: string, path: string, searchParams?: Record<string, string | undefined>,
 ): Promise<Result<T>> {
-  const url = new URL(path, baseUrl);
+  const query = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams ?? {})) {
-    if (value !== undefined) url.searchParams.set(key, value);
+    if (value !== undefined) query.set(key, value);
   }
-
-  const result = await call(url, { method: "GET", cacheTag });
-  if (!result.ok) return result;
-  return readJson<T>(result.data);
+  return tenantRequest<T>(`${path}${query.size ? `?${query}` : ""}`, {});
 }
 
 export async function serverSend<T>(
-  baseUrl: string,
-  path: string,
-  options: { method: "POST" | "PUT" | "DELETE"; body?: unknown },
+  _baseUrl: string, path: string, options: { method: "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; timeoutMs?: number; idempotencyKey?: string; isEmptyResponse?: boolean; ifMatch?: string; environment?: WorkspaceEnvironment },
 ): Promise<Result<T>> {
-  const result = await call(new URL(path, baseUrl), {
-    method: options.method,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  if (!result.ok) return result;
+  return tenantRequest<T>(path, options);
+}
 
-  if (result.data.status === 204) return { ok: true, data: undefined as T };
-  return readJson<T>(result.data);
+export async function tenantExport(path: string, searchParams?: Record<string, string | undefined>): Promise<Result<{ body: string; contentType: string; filename?: string }>> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams ?? {})) if (value !== undefined && key !== "environment") query.set(key, value);
+  return tenantRequest(`${path}${query.size ? `?${query}` : ""}`, { responseType: "text", timeoutMs: 30_000 });
 }

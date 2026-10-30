@@ -30,6 +30,7 @@
 - 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
 - `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`과 Caddy 내부 사이트 `8081`은 compose 네트워크 안에서만 닿는다.
+- 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - compose 프로젝트 이름은 `meterengine-prod`다.
 - 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
 - 마지막으로 성공한 배포의 색과 SHA는 `/etc/meterengine/deploy-state`에 `LIVE_COLOR`, `LIVE_SHA`로 남는다.
@@ -93,6 +94,7 @@ EOF
 
 - **적지 않은 변수는 개발 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 개발 서버의 DB에 붙는다.
 - `SITE_ALIASES`에 적은 주소는 `SITE_DOMAIN`으로 리다이렉트되고, 비우면 `SITE_DOMAIN` 하나만 받는다.
+- 프론트는 `https://<SITE_DOMAIN>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
 - Caddy가 인증서를 받으려면 `SITE_DOMAIN`과 `SITE_ALIASES`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
 - 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
 
@@ -108,6 +110,7 @@ EOF
   - `BACKEND_MAX_RAM_PERCENTAGE`: 그 한도 중 JVM 힙의 최대 비율(%). 기본 `50`.
 - 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
   - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
+  - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, 경로에 퍼센트 인코딩, 세미콜론, 점 세그먼트가 있으면 경로 전체를 가린다. 규칙은 Caddyfile의 `redacted_path` 한 곳에 있다. `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
 
 ## 배포
 
@@ -381,6 +384,17 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
   --parameters '{"portNumber":["3000"],"localPortNumber":["3000"]}'
 ```
 
+## 공개 인증의 실제 IP
+
+공개 Caddy는 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓴다. 내부 8081 사이트는 프론트 고정 주소(172.30.0.11)에서 온 값만 유지하고, 다른 연결이 보낸 값은 접속 IP로 덮어쓴다. 프론트 주소를 바꾸면 Caddyfile의 `FRONTEND_ADDRESS` 기본값도 같이 바꾼다. 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에 든 직접 연결에서 온 헤더만 믿는다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
+
+- 백엔드 두 색은 compose의 `proxy` 네트워크(`172.30.0.0/24`)에만 붙는다. Caddy는 `172.30.0.10`, 프론트는 `172.30.0.11`로 주소를 고정한다.
+- compose가 이 값의 기본값을 고정 주소 대역 `172.30.0.8/29`로 넣어 Parameter Store 파라미터가 따로 필요 없다. 다른 컨테이너는 `172.30.0.128/25`에서 주소를 받아 이 대역에 들지 않는다.
+- 주소나 대역을 바꾸면 compose의 고정 주소, `ip_range`, 이 기본값을 같이 바꾼다. 비우면 모든 사용자가 Caddy IP 하나의 한도를 나눠 쓴다. 전체 사설망을 일괄 신뢰하지 않는다.
+- 서버에 `172.30.0.0/24`와 겹치는 docker 네트워크가 있으면 compose가 `proxy` 네트워크를 만들지 못해 배포가 실패한다.
+- `proxy` 네트워크가 생기는 첫 배포에서 Caddy, 프론트, Prometheus가 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 80과 443이 닫혀 공개 접속이 끊긴다. 다시 뜬 Caddy는 `default`에도 붙어 있어 그때까지 받던 색에 계속 보낸다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
+- `proxy` 네트워크가 없던 SHA로 롤백하면 Caddy가 `default`에만 붙어, 새 색이 뜰 때까지 `proxy`에만 있는 받던 색에 보내지 못한다.
+
 ## 설정값
 
 - 전부 Parameter Store `/meterengine/prod/` 아래에 있다.
@@ -394,14 +408,15 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `db-username` | String | 백엔드 datasource |
 | `db-password` | SecureString | 백엔드 datasource. 배포 때 KMS로 복호화한다 |
 | `db-exporter-password` | SecureString | postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
-| `organization-id` | String | 프론트가 조회할 도입사. 프론트 API 키도 이 도입사에 속한다 |
-| `organization-name` | String | 프론트 상단 바에 표시할 이름 |
+| `organization-id` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트가 조회하던 도입사이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
+| `organization-name` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트 상단 바의 이름이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
-| `frontend-api-key` | SecureString | 프론트가 백엔드를 부를 때 쓰는 API 키 원문. 백엔드가 기동할 때 없으면 넣는다 |
+| `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
+| `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 
 - 새 파라미터를 등록한다.
 
@@ -475,10 +490,11 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | CPU 사용률 초과 | 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
 | 예약 작업 미실행 | 마지막 성공 뒤 5분(30초, 1분 주기), 30분(10분 주기), 25시간(하루 주기) | 작업이 멈췄거나 계속 실패한다. 한 번도 실행되지 않은 작업은 잡지 못한다 |
-| 결제 결과 모름 미해결 | 확정 작업 뒤에도 결과를 모르는 결제 > 0, 10분 지속 | 고객이 돈을 냈는지 모른다 |
-| 결제 재시도 소진 | 1시간 안에 재시도 상한까지 실패한 인보이스 > 0 | 자동 청구가 멈췄다. 고객에게 연락해야 한다 |
-| 결제 대사 불일치 | 1시간 안에 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |
-| 웹훅 전송 실패 | 15분 안에 재시도 상한까지 실패한 웹훅 > 0 | 도입사가 이벤트를 받지 못했다 |
+| 결제 결과 모름 미해결 | 확정 작업 뒤에도 결과를 모르는 live 결제 > 0, 10분 지속 | 고객이 돈을 냈는지 모른다 |
+| 결제 재시도 소진 | 1시간 안에 재시도 상한까지 실패한 live 인보이스 > 0 | 자동 청구가 멈췄다. 고객에게 연락해야 한다 |
+| 결제 대사 불일치 | 1시간 안에 live 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |
+| 웹훅 전송 실패 | 15분 안에 실패로 끝난 웹훅 > 0. 재시도 상한, 마지막 시도의 선점 만료(`lease_expired`), 첫 시도에 끝나는 막힌 주소(`blocked_address`)를 센다. 도입사가 끄거나 지운 엔드포인트(`endpoint_disabled`)와 test 환경 전송은 뺀다 | 도입사가 이벤트를 받지 못했다 |
+| 웹훅 발송 적체 | 보낼 때가 지난 웹훅 가운데 가장 오래 밀린 것 > 10분, 5분 지속 | 발송이 처리량을 따라가지 못해 도입사 통보가 늦다 |
 
 - 예약 작업 경보는 결제, 웹훅 발송, 청구 제외 통보 작업만 본다.
 - 결제 경보는 테스트 모드 결제에서도 울리고 `mode` 라벨로 구분한다.

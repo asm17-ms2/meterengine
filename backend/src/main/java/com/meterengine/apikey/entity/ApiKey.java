@@ -1,5 +1,6 @@
 package com.meterengine.apikey.entity;
 
+import com.meterengine.global.security.AccessScopes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -20,12 +21,15 @@ public class ApiKey implements Persistable<UUID> {
 
   public static final String MODE_PATTERN = "^(live|test)$";
 
-  public static final String SCOPE_PATTERN = "^(ingest|read|admin)$";
+  public static final String SCOPE_PATTERN = AccessScopes.PATTERN;
 
   @Id private UUID id;
 
   @Column(name = "organization_id", nullable = false, updatable = false)
   private UUID organizationId;
+
+  @Column(name = "environment_id", updatable = false)
+  private UUID environmentId;
 
   @Column(nullable = false, updatable = false)
   private String mode;
@@ -70,8 +74,35 @@ public class ApiKey implements Persistable<UUID> {
       Integer rateLimitPerMinute,
       OffsetDateTime createdAt,
       OffsetDateTime expiresAt) {
+    this(
+        id,
+        organizationId,
+        mode,
+        label,
+        keyHash,
+        lastFour,
+        scopes,
+        rateLimitPerMinute,
+        createdAt,
+        expiresAt,
+        null);
+  }
+
+  public ApiKey(
+      UUID id,
+      UUID organizationId,
+      String mode,
+      String label,
+      byte[] keyHash,
+      String lastFour,
+      List<String> scopes,
+      Integer rateLimitPerMinute,
+      OffsetDateTime createdAt,
+      OffsetDateTime expiresAt,
+      UUID environmentId) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = environmentId;
     this.mode = mode;
     this.label = label;
     this.keyHash = keyHash.clone();
@@ -106,6 +137,10 @@ public class ApiKey implements Persistable<UUID> {
     return mode;
   }
 
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public String getLabel() {
     return label;
   }
@@ -116,6 +151,10 @@ public class ApiKey implements Persistable<UUID> {
 
   public List<String> getScopes() {
     return scopes;
+  }
+
+  public void changeScopes(List<String> scopes) {
+    this.scopes = List.copyOf(scopes);
   }
 
   public Integer getRateLimitPerMinute() {
@@ -137,6 +176,11 @@ public class ApiKey implements Persistable<UUID> {
   // 폐기되지 않았고 주어진 시각에 아직 만료되지 않았으면 참이다.
   public boolean isUsableAt(OffsetDateTime now) {
     return revokedAt == null && (expiresAt == null || expiresAt.isAfter(now));
+  }
+
+  public String statusAt(OffsetDateTime now) {
+    if (revokedAt != null) return "revoked";
+    return isUsableAt(now) ? "active" : "expired";
   }
 
   public void revoke(OffsetDateTime now) {

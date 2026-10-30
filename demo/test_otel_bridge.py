@@ -94,7 +94,7 @@ class ServeCommandTest(BridgeCommandTestCase):
         )
         self.served = []
         original_serve = server.serve
-        server.serve = lambda *args: self.served.append(args) or 0
+        server.serve = lambda *args, **kwargs: self.served.append(args) or 0
         self.addCleanup(setattr, server, "serve", original_serve)
 
     def serve(self, *extra):

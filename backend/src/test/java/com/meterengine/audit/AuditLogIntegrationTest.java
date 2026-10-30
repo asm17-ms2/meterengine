@@ -16,6 +16,7 @@ import com.meterengine.global.security.PrincipalKind;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.service.InvoiceFinalizationService;
 import jakarta.persistence.EntityManager;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -34,8 +35,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -45,6 +49,7 @@ class AuditLogIntegrationTest {
   private static final String BILLABLE_METRIC_CODE = "input-tokens";
 
   @Autowired private AuditLogService auditLogService;
+  @Autowired private JsonMapper jsonMapper;
   @Autowired private InvoiceFinalizationService invoiceFinalizationService;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private EntityManager entityManager;
@@ -70,14 +75,20 @@ class AuditLogIntegrationTest {
     String authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
     UUID apiKeyId = apiKeyIdOf(authorization);
 
-    assertThat(
-            mvc.post()
-                .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
-                .header(AUTHORIZATION, authorization)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dimension_values\": {\"model\": \"opus\"}, \"unit_price\": 0.007}")
-                .exchange())
-        .hasStatus(201);
+    MvcTestResult created =
+        mvc.post()
+            .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
+            .header(AUTHORIZATION, authorization)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"dimension_values\": {\"model\": \"opus\"}, \"unit_price\": 0.007}")
+            .exchange();
+    assertThat(created).hasStatus(201);
+    String priceRateId =
+        jsonMapper
+            .readTree(
+                new String(created.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
+            .path("id")
+            .asString();
     assertThat(
             mvc.delete()
                 .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
@@ -86,29 +97,101 @@ class AuditLogIntegrationTest {
                 .exchange())
         .hasStatus(204);
 
-    assertThat(auditLogsOf(organizationId))
+    List<Map<String, Object>> logs = auditLogsOf(organizationId);
+    assertThat(logs).hasSize(2);
+    assertThat(logs)
         .extracting(
             row -> row.get("action"),
             row -> row.get("actor_type"),
             row -> row.get("actor_id"),
             row -> row.get("target_type"),
-            row -> row.get("target_id"),
-            row -> row.get("detail"))
+            row -> row.get("target_id"))
         .containsExactlyInAnyOrder(
-            tuple(
-                "price_rate_created",
-                "api_key",
-                apiKeyId,
-                "price_rate",
-                BILLABLE_METRIC_CODE,
-                "{\"unit_price\": 0.007, \"dimension_values\": {\"model\": \"opus\"}}"),
-            tuple(
-                "price_rate_deleted",
-                "api_key",
-                apiKeyId,
-                "price_rate",
-                BILLABLE_METRIC_CODE,
-                "{\"dimension_values\": {\"model\": \"opus\"}}"));
+            tuple("price_rate_created", "api_key", apiKeyId, "price_rate", priceRateId),
+            tuple("price_rate_archived", "api_key", apiKeyId, "price_rate", priceRateId));
+    for (Map<String, Object> log : logs) {
+      JsonNode detail = jsonMapper.readTree((String) log.get("detail"));
+      assertThat(detail.path("unit_price").decimalValue()).isEqualByComparingTo("0.007");
+      assertThat(detail.path("dimension_values").path("model").asString()).isEqualTo("opus");
+      assertThat(detail.path("billable_metric_code").asString()).isEqualTo(BILLABLE_METRIC_CODE);
+      assertThat(detail.path("effective_from").asString())
+          .isEqualTo(
+              YearMonth.now(com.meterengine.metric.service.BillableMetricUsageService.BILLING_ZONE)
+                  .toString());
+      assertThat(detail.path("effective_until").isNull()).isTrue();
+      assertThat(detail.path("model").asString()).isEqualTo("per_unit");
+      assertThat(detail.path("tiers").isNull()).isTrue();
+    }
+  }
+
+  @Test
+  void 과거_단가_보관은_원래구간과_다음월_중단시점을_감사에_남긴다() {
+    UUID organizationId = insertOrganizationWithBillableMetric();
+    UUID priceRateId =
+        jdbcTemplate.queryForObject(
+            "INSERT INTO"
+                + " price_rate(organization_id,billable_metric_code,dimension_values,model,unit_price,tiers)"
+                + " VALUES"
+                + " (?,?,'{\"model\":\"opus\"}','graduated',NULL,'[{\"up_to\":100,\"unit_price\":10},{\"up_to\":null,\"unit_price\":8}]')"
+                + " RETURNING id",
+            UUID.class,
+            organizationId,
+            BILLABLE_METRIC_CODE);
+    String authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
+    assertThat(
+            mvc.delete()
+                .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
+                .queryParam("dimension_values", "{\"model\":\"opus\"}")
+                .header(AUTHORIZATION, authorization)
+                .exchange())
+        .hasStatus(204);
+    List<Map<String, Object>> logs = auditLogsOfTarget(priceRateId.toString());
+    assertThat(logs).hasSize(1);
+    assertThat(logs.getFirst().get("action")).isEqualTo("price_rate_archived");
+    JsonNode detail = jsonMapper.readTree((String) logs.getFirst().get("detail"));
+    assertThat(detail.path("effective_from").asString()).isEqualTo("2000-01");
+    assertThat(detail.path("effective_until").isNull()).isTrue();
+    assertThat(detail.path("archived_from").asString())
+        .isEqualTo(
+            YearMonth.now(com.meterengine.metric.service.BillableMetricUsageService.BILLING_ZONE)
+                .plusMonths(1)
+                .toString());
+    assertThat(detail.path("unit_price").isNull()).isTrue();
+    assertThat(detail.path("tiers").get(0).path("unit_price").decimalValue())
+        .isEqualByComparingTo("10");
+    assertThat(detail.path("tiers").get(1).path("up_to").isNull()).isTrue();
+  }
+
+  @Test
+  void 현재_단가를_갱신하면_이전_가격과_변경된_구간을_감사에_남긴다() {
+    UUID organizationId = insertOrganizationWithBillableMetric();
+    String authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
+    for (String body :
+        List.of(
+            "{\"dimension_values\":{\"model\":\"opus\"},\"unit_price\":0.007}",
+            "{\"dimension_values\":{\"model\":\"opus\"},\"model\":\"volume\",\"tiers\":[{\"up_to\":null,\"unit_price\":10}]}")) {
+      assertThat(
+              mvc.post()
+                  .uri("/v1/billable-metrics/" + BILLABLE_METRIC_CODE + "/price-rates")
+                  .header(AUTHORIZATION, authorization)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body)
+                  .exchange())
+          .hasStatus(201);
+    }
+    List<JsonNode> snapshots =
+        auditLogsOf(organizationId).stream()
+            .map(log -> jsonMapper.readTree((String) log.get("detail")))
+            .toList();
+    assertThat(snapshots).hasSize(2);
+    JsonNode changed =
+        snapshots.stream().filter(node -> node.has("previous")).findFirst().orElseThrow();
+    assertThat(changed.path("model").asString()).isEqualTo("volume");
+    assertThat(changed.path("tiers").get(0).path("unit_price").decimalValue())
+        .isEqualByComparingTo("10");
+    assertThat(changed.path("previous").path("unit_price").decimalValue())
+        .isEqualByComparingTo("0.007");
+    assertThat(changed.path("previous").path("model").asString()).isEqualTo("per_unit");
   }
 
   @Test
@@ -351,7 +434,7 @@ class AuditLogIntegrationTest {
         """
         SELECT action, actor_type, actor_id, organization_id, target_type, target_id,
                detail::text AS detail, occurred_at
-        FROM audit_log WHERE organization_id = ?
+        FROM audit_log WHERE organization_id = ? AND action <> 'api_request_completed'
         """,
         organizationId);
   }

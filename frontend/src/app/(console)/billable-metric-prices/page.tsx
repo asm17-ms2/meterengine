@@ -1,34 +1,17 @@
-import { Suspense } from "react";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { requireTenantSession } from "@/lib/auth/session";
+import { workspaceHref } from "@/lib/workspace-href";
 
-import { BillableMetricPricesLoading } from "@/components/billable-metric-prices/BillableMetricPricesLoading";
-import { BillableMetricPricesSection } from "@/components/billable-metric-prices/BillableMetricPricesSection";
-import { listBillableMetricPrices } from "@/lib/api/billable-metric-prices";
-import { listBillableMetrics } from "@/lib/api/billable-metrics";
-import { CAPABILITIES } from "@/lib/api/capabilities";
-import { readListQuery } from "@/lib/list-query";
+export const metadata: Metadata = { title: "가격" };
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export default async function BillableMetricPricesPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default async function BillableMetricPricesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
-  const capabilities = CAPABILITIES.listBillableMetricPrices;
-  const query = readListQuery(params, capabilities);
-  const { devState } = query;
-  const metricsQuery = readListQuery({}, CAPABILITIES.listBillableMetrics);
-
-  if (devState === "loading") return <BillableMetricPricesLoading query={query} capabilities={capabilities} />;
-
-  return (
-    <Suspense fallback={<BillableMetricPricesLoading query={query} capabilities={capabilities} />}>
-      <BillableMetricPricesSection
-        query={query}
-        billableMetricPrices={listBillableMetricPrices(query, devState)}
-        billableMetrics={listBillableMetrics(metricsQuery, devState)}
-      />
-    </Suspense>
-  );
+  const session = await requireTenantSession();
+  const query = new URLSearchParams();
+  if (typeof params.month === "string") query.set("month", params.month);
+  if (typeof params.customer_id === "string") query.set("customer_id", params.customer_id);
+  const scope = new URLSearchParams({ organization_id: typeof params.organization_id === "string" ? params.organization_id : session.organization!.id });
+  if (typeof params.environment === "string") scope.set("environment", params.environment);
+  redirect(workspaceHref(`/pricing${query.size ? `?${query}` : ""}`, scope));
 }

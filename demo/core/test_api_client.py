@@ -78,6 +78,18 @@ class AuthorizationHeaderTest(unittest.TestCase):
         names = [name.lower() for name in backend.requests[0][2]]
         self.assertEqual([name for name in names if name.startswith("x-")], [])
 
+    def test_명시한_업무_환경을_모든_요청에_보낸다(self):
+        backend = self.backend()
+        for environment in ("test", "live"):
+            client = ApiClient(backend.base_url, LIVE_KEY, environment=environment)
+            client.get_customers()
+            client.post_event("{}")
+            for _, _, headers in backend.requests[-2:]:
+                normalized = {name.lower(): value for name, value in headers.items()}
+                self.assertEqual(normalized.get("x-meterengine-environment"), environment)
+        with self.assertRaises(ValueError):
+            ApiClient(backend.base_url, LIVE_KEY, environment="legacy")
+
     def test_키의_도입사를_조회한다(self):
         body = {"id": ORGANIZATION_ID, "name": "데모 도입사", "status": "active", "created_at": "2026-08-01T00:00:00Z"}
         backend = self.backend(body=body)

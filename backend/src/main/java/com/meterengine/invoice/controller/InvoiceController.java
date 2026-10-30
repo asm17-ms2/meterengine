@@ -3,9 +3,11 @@ package com.meterengine.invoice.controller;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.FinalizeInvoicesResponse;
+import com.meterengine.invoice.dto.InvoiceResponse;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
 import com.meterengine.invoice.service.InvoiceFinalizationService;
 import com.meterengine.invoice.service.InvoiceService;
@@ -19,12 +21,14 @@ import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/invoices")
 public class InvoiceController {
 
@@ -59,7 +63,8 @@ public class InvoiceController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터 9999-12까지의 범위 밖이다"),
+            "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이 아니거나 0001-01부터"
+                + " 9999-12까지의 범위 밖이다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -79,6 +84,38 @@ public class InvoiceController {
           @FourDigitYear
           YearMonth month) {
     return invoiceService.list(organizationId, customerId, month);
+  }
+
+  @GetMapping("/{id}")
+  @ReadAccess
+  @Operation(
+      summary = "인보이스 조회",
+      description =
+          """
+          확정된 인보이스 하나를 돌려준다. 응답은 인보이스 목록 조회의 같은 인보이스 원소와 같다.
+          finalized_at은 KST(+09:00)로 나온다.
+          """)
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "인보이스"),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=validation_error: 경로의 id가 UUID가 아니다"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=invoice_not_found: 그런 인보이스가 없다")
+  })
+  public InvoiceResponse getInvoice(
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(description = "인보이스의 id.") @PathVariable UUID id) {
+    return invoiceService.get(organizationId, id);
   }
 
   @PostMapping
@@ -111,7 +148,11 @@ public class InvoiceController {
           @DateTimeFormat(pattern = "yyyy-MM")
           @FourDigitYear
           YearMonth month) {
-    return new FinalizeInvoicesResponse(
-        month.toString(), invoiceFinalizationService.finalize(organizationId, month).size());
+    var finalized = invoiceFinalizationService.finalize(organizationId, month);
+    return FinalizeInvoicesResponse.from(
+        month.toString(),
+        finalized.stream()
+            .map(invoice -> invoiceService.get(organizationId, invoice.getId()))
+            .toList());
   }
 }

@@ -1,7 +1,10 @@
 "use client";
 
+import { useTenantScope } from "@/components/auth/TenantAccess";
+
 import { Button, Flex, Table, Tag, theme, Typography } from "antd";
 
+import { ActionPanel } from "@/components/workspace/ActionPanel";
 import type { BillableMetricRowView } from "@/app/(console)/billable-metrics/state";
 import { koreanCompare, TABLE_STICKY } from "@/components/table/table-defaults";
 import {
@@ -11,8 +14,9 @@ import {
 } from "@/components/table/table-sort";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
+import { metricAggregationLabel, metricCalculationFormula } from "@/lib/billable-metric-calculation";
 
-const MIN_WIDTH = 940;
+const MIN_WIDTH = 1340;
 
 function DimensionPropertyTags({
   dimensionProperties,
@@ -51,6 +55,7 @@ export function BillableMetricsTable({
   clientSortSelection?: ClientSortSelectionState;
 }) {
   const { token } = theme.useToken();
+  const canManage = useTenantScope("admin");
   const monoStyle = { fontFamily: token.fontFamilyCode };
 
   const sortableColumns: SortableColumn<BillableMetricRowView>[] = [
@@ -70,6 +75,7 @@ export function BillableMetricsTable({
     {
       key: "name",
       title: "이름",
+      width: 180,
       ellipsis: true,
       sortKey: "name",
       clientSorter: (left, right) => koreanCompare(left.name, right.name),
@@ -90,9 +96,9 @@ export function BillableMetricsTable({
     },
     {
       key: "aggregation",
-      title: "집계 함수",
-      width: 90,
-      render: (_, row) => row.aggregation,
+      title: "집계 / 변환",
+      width: 240,
+      render: (_, row) => <><span>{metricAggregationLabel(row.aggregation, row.percentile)}</span><p className="field-hint" style={{ overflowWrap: "anywhere" }}>{metricCalculationFormula({ aggregation: row.aggregation, target_property: row.targetProperty, percentile: row.percentile, unit_size: row.unitSize, rounding_mode: row.roundingMode, rounding_precision: row.roundingPrecision })}</p></>,
     },
     {
       key: "targetProperty",
@@ -101,7 +107,7 @@ export function BillableMetricsTable({
       ellipsis: true,
       render: (_, row) => (
         <Typography.Text type="secondary" style={monoStyle}>
-          {row.targetProperty}
+          {row.targetProperty ?? "속성 불필요"}
         </Typography.Text>
       ),
     },
@@ -116,6 +122,7 @@ export function BillableMetricsTable({
         />
       ),
     },
+    { key: "managementStatus", title: "관리 상태 / 적용", width: 170, render: (_, row) => <><Tag color={row.archivedAt ? "default" : "success"}>{row.archivedAt ? "보관됨" : "사용 중"}</Tag>{row.inactiveFrom && <p className="field-hint">{row.inactiveFrom}부터 집계 중단</p>}{row.isReactivationScheduled && <p className="field-hint">{row.activeFrom}부터 집계 재개</p>}</> },
     {
       key: "actions",
       title: "작업",
@@ -124,7 +131,7 @@ export function BillableMetricsTable({
       fixed: "end",
       render: (_, row) => (
         <Flex justify="end" gap={4}>
-          <Button
+          {row.archivedAt ? <ActionPanel title="미터 복원" triggerType="link" operation="restoreBillableMetric" description={`${row.name} 미터를 다시 사용합니다. 적용 월과 과거 사용량은 보존됩니다.`} fields={[{ name: "code", label: "", type: "hidden", value: row.code }]} /> : <><Button
             type="link"
             size="small"
             aria-label={`${row.name} 수정`}
@@ -136,17 +143,17 @@ export function BillableMetricsTable({
             type="link"
             size="small"
             danger
-            aria-label={`${row.name} 삭제`}
+            aria-label={`${row.name} 보관`}
             onClick={() => onDelete(row)}
           >
-            삭제
-          </Button>
+            보관
+          </Button></>}
         </Flex>
       ),
     },
   ];
 
-  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns, {
+  const { columns, onChange } = useTableSort(query, capabilities, sortableColumns.filter(column => column.key !== "actions" || canManage), {
     clientSortSelection,
   });
 

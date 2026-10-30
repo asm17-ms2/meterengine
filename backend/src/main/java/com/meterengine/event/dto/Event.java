@@ -10,4 +10,28 @@ public record Event(
     String type,
     String propertiesJson,
     OffsetDateTime occurredAt,
-    OffsetDateTime receivedAt) {}
+    OffsetDateTime receivedAt,
+    UUID requestId,
+    String actorType,
+    UUID actorId) {
+  public Event(
+      String transactionId,
+      UUID customerId,
+      String customerName,
+      String type,
+      String propertiesJson,
+      OffsetDateTime occurredAt,
+      OffsetDateTime receivedAt) {
+    this(
+        transactionId,
+        customerId,
+        customerName,
+        type,
+        propertiesJson,
+        occurredAt,
+        receivedAt,
+        null,
+        null,
+        null);
+  }
+}
