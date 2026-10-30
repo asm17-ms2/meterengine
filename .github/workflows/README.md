@@ -4,7 +4,7 @@
 
 | 워크플로 | 언제 | 무엇을 |
 | --- | --- | --- |
-| `ci.yml` | PR, merge queue, main push | backend 빌드/테스트, frontend lint/빌드. main 룰셋의 필수 체크다. 바뀐 쪽만 돌고, 안 바뀐 쪽은 skip되어 통과로 친다 |
+| `ci.yml` | PR, merge queue, main push | backend 빌드/테스트, frontend lint/빌드. main 룰셋의 필수 체크다. 바뀐 쪽만 돌고, 안 바뀐 쪽은 skip되어 통과로 친다. `rds-auto-stop` job은 `measurements/terraform/modules/rds-auto-stop/`나 `measurements/terraform/rds-auto-stop/`가 바뀔 때만 흐름 정의의 JSONata 시험과 Terraform fmt, mock 시험을 돌린다. AWS 자원을 만들거나 부르지 않는다 |
 | `cd.yml` | main 머지에서 `backend/`, `frontend/`, `deploy/`, `cd.yml` 중 하나라도 바뀌었을 때 | 이미지를 굽고 ECR에 올린 뒤 배포한다 |
 | `claude-code-review.yml` | PR과 push | Claude 리뷰. 인라인 코멘트로 달리고 머지를 막지 않는다 |
 | `claude.yml` | `@claude` 호출 | 이슈나 PR 코멘트에 응답한다 |
