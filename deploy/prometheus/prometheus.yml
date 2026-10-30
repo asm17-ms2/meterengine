@@ -35,6 +35,11 @@ scrape_configs:
     static_configs:
       - targets: ["postgres-exporter:9187"]
 
+  # 앞단 Caddy. 사이트별 요청 수, 상태 코드, 지연과 백엔드 색별 헬스체크 결과가 여기서 나온다.
+  - job_name: caddy
+    static_configs:
+      - targets: ["caddy:2020"]
+
   # RDS 인스턴스 자원. CloudWatch가 1분 단위라 1분마다 긁고, API 호출이 몇 초 걸려 timeout을 넉넉히 둔다.
   - job_name: cloudwatch
     scrape_interval: 60s
