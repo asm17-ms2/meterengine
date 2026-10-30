@@ -3,7 +3,6 @@ package com.meterengine.global.security;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ForbiddenException;
 import com.meterengine.global.error.UnauthorizedException;
-import com.meterengine.organization.service.OrganizationService;
 import java.util.UUID;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
@@ -15,12 +14,10 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 public class CurrentOrganizationIdArgumentResolver implements HandlerMethodArgumentResolver {
 
-  private static final String ACTIVE_STATUS = "active";
+  private final OrganizationAccessPolicy organizationAccessPolicy;
 
-  private final OrganizationService organizationService;
-
-  public CurrentOrganizationIdArgumentResolver(OrganizationService organizationService) {
-    this.organizationService = organizationService;
+  public CurrentOrganizationIdArgumentResolver(OrganizationAccessPolicy organizationAccessPolicy) {
+    this.organizationAccessPolicy = organizationAccessPolicy;
   }
 
   @Override
@@ -51,9 +48,7 @@ public class CurrentOrganizationIdArgumentResolver implements HandlerMethodArgum
     if (organizationId == null) {
       throw new ForbiddenException(ErrorCode.PERMISSION_DENIED);
     }
-    if (!ACTIVE_STATUS.equals(organizationService.get(organizationId).getStatus())) {
-      throw new ForbiddenException(ErrorCode.ORGANIZATION_NOT_ACTIVE);
-    }
+    organizationAccessPolicy.check(organizationId);
     return organizationId;
   }
 }

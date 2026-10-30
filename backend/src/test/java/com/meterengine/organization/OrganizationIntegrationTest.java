@@ -8,6 +8,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.security.BusinessEnvironmentInterceptor;
 import jakarta.persistence.EntityManager;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -262,9 +263,12 @@ class OrganizationIntegrationTest {
     assertThat(result).hasStatus(201);
     String body = body(result);
     assertThat((Map<String, Object>) JsonPath.read(body, "$"))
-        .containsOnlyKeys("organization_id", "user_account_id", "created_at")
+        .containsOnlyKeys(
+            "organization_id", "user_account_id", "created_at", "organization_role", "scopes")
         .containsEntry("organization_id", second.toString())
-        .containsEntry("user_account_id", userAccountId.toString());
+        .containsEntry("user_account_id", userAccountId.toString())
+        .containsEntry("organization_role", "owner")
+        .containsEntry("scopes", List.of("admin"));
     assertThat(OffsetDateTime.parse(JsonPath.read(body, "$.created_at")))
         .isBetween(OffsetDateTime.now().minusMinutes(1), OffsetDateTime.now().plusMinutes(1));
 
@@ -395,6 +399,33 @@ class OrganizationIntegrationTest {
   }
 
   // --- 헬퍼 ---
+
+  @Test
+  void 소속이_있는_운영자가_test_환경을_고른_채_다른_도입사_상태를_바꿔도_200이고_감사는_환경_없이_남는다() {
+    String homeOperator = TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID());
+    jdbcTemplate.update(
+        "UPDATE user_account SET role='operator' WHERE id=?", userAccountIdOf(homeOperator));
+    UUID target = insertOrganization("다른 도입사", "pending", "2100-01-01T00:00:00Z");
+
+    MvcTestResult result =
+        mvc.put()
+            .uri(ORGANIZATIONS + "/{id}/status", target)
+            .header(AUTHORIZATION, homeOperator)
+            .header(BusinessEnvironmentInterceptor.HEADER, "test")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"status\":\"active\"}")
+            .exchange();
+
+    assertThat(result).hasStatusOk();
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE organization_id=? AND"
+                    + " action='organization_status_updated' AND environment_id IS NULL",
+                Integer.class,
+                target))
+        .isEqualTo(1);
+  }
 
   private MvcTestResult updateStatus(String authorization, UUID organizationId, String status) {
     return mvc.put()

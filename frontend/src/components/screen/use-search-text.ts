@@ -1,4 +1,5 @@
-import { usePathname, useSearchParams } from "next/navigation";
+import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useListNavigation } from "@/components/screen/use-list-navigation";
@@ -25,7 +26,7 @@ function toSearchHref(pathname: string, currentSearch: string, searchText: strin
 export function useSearchText(query: ListQuery, capabilities: ListCapabilities): SearchText {
   const { replace } = useListNavigation(query, capabilities);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useWorkspaceSearch();
   const urlText = (searchParams.get("q") ?? "").trim();
   const [text, setText] = useState(urlText);
   const [seenUrlText, setSeenUrlText] = useState(urlText);

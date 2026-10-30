@@ -3,7 +3,7 @@
 import { DoubleLeftOutlined, DoubleRightOutlined, EllipsisOutlined } from "@ant-design/icons";
 import { Pagination, theme, type PaginationProps } from "antd";
 import koreanLocale from "antd/locale/ko_KR";
-import Link from "next/link";
+import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname } from "next/navigation";
 import { cloneElement, isValidElement } from "react";
 

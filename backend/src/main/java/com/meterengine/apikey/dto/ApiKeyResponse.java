@@ -1,5 +1,6 @@
 package com.meterengine.apikey.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.apikey.entity.ApiKey;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -25,7 +26,17 @@ public record ApiKeyResponse(
         @JsonProperty("expires_at")
         OffsetDateTime expiresAt,
     @Schema(description = "키를 폐기한 시각. 폐기하지 않았으면 null") @JsonProperty("revoked_at")
-        OffsetDateTime revokedAt) {
+        OffsetDateTime revokedAt,
+    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다") @JsonProperty("rate_limit_per_minute")
+        Integer rateLimitPerMinute,
+    @Schema(
+            description = "서버 조회 시점의 키 상태. 폐기된 키는 만료 시각과 관계없이 revoked다",
+            allowableValues = {"active", "revoked", "expired"})
+        String status,
+    @JsonProperty("environment_id")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+        UUID environmentId) {
 
   public static ApiKeyResponse from(ApiKey apiKey) {
     return new ApiKeyResponse(
@@ -36,6 +47,9 @@ public record ApiKeyResponse(
         apiKey.getLastFour(),
         apiKey.getCreatedAt(),
         apiKey.getExpiresAt(),
-        apiKey.getRevokedAt());
+        apiKey.getRevokedAt(),
+        apiKey.getRateLimitPerMinute(),
+        apiKey.statusAt(OffsetDateTime.now()),
+        apiKey.getEnvironmentId());
   }
 }

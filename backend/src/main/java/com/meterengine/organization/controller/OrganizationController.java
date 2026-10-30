@@ -2,6 +2,7 @@ package com.meterengine.organization.controller;
 
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.organization.dto.CreateOrganizationMemberRequest;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@EnvironmentReady
 @RequestMapping("/v1/organizations")
 public class OrganizationController {
 
@@ -171,6 +173,6 @@ public class OrganizationController {
       @Parameter(description = "사용자를 소속시킬 도입사의 ID.") @PathVariable UUID id,
       @Valid @RequestBody CreateOrganizationMemberRequest request) {
     return OrganizationMemberResponse.from(
-        organizationMemberService.create(principal, id, request.userAccountId()));
+        organizationMemberService.create(principal, id, request.userAccountId(), request.scopes()));
   }
 }

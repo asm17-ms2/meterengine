@@ -1,8 +1,10 @@
 package com.meterengine.payment.entity;
 
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -20,11 +22,20 @@ public class PaymentAttempt implements Persistable<UUID> {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
+  @Column(name = "environment_id")
+  private UUID environmentId;
+
+  @Column(name = "credential_updated_at")
+  private OffsetDateTime credentialUpdatedAt;
+
   @Column(name = "customer_id", nullable = false)
   private UUID customerId;
 
   @Column(name = "invoice_id", nullable = false)
   private UUID invoiceId;
+
+  @Column(nullable = false)
+  private String mode;
 
   @Column(nullable = false)
   private long amount;
@@ -50,6 +61,17 @@ public class PaymentAttempt implements Persistable<UUID> {
   @Column(name = "completed_at")
   private OffsetDateTime completedAt;
 
+  @Transient private String billingKeySnapshot;
+
+  public PaymentAttempt pinBillingKey(String billingKey) {
+    this.billingKeySnapshot = billingKey;
+    return this;
+  }
+
+  public String getBillingKeySnapshot() {
+    return billingKeySnapshot;
+  }
+
   protected PaymentAttempt() {}
 
   private PaymentAttempt(
@@ -57,35 +79,39 @@ public class PaymentAttempt implements Persistable<UUID> {
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
+      String mode,
       long amount,
       String orderName,
-      String status,
-      String paymentKey,
-      OffsetDateTime requestedAt,
-      OffsetDateTime completedAt) {
+      OffsetDateTime requestedAt) {
     this.id = id;
     this.organizationId = organizationId;
+    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.customerId = customerId;
     this.invoiceId = invoiceId;
+    this.mode = mode;
     this.amount = amount;
     this.orderName = orderName;
-    this.status = status;
-    this.paymentKey = paymentKey;
+    this.status = PENDING;
     this.requestedAt = requestedAt;
-    this.completedAt = completedAt;
   }
 
-  public static PaymentAttempt done(
+  public static PaymentAttempt pending(
       UUID id,
       UUID organizationId,
       UUID customerId,
       UUID invoiceId,
+      String mode,
       long amount,
-      String orderName,
-      String paymentKey) {
-    OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+      String orderName) {
     return new PaymentAttempt(
-        id, organizationId, customerId, invoiceId, amount, orderName, DONE, paymentKey, now, now);
+        id,
+        organizationId,
+        customerId,
+        invoiceId,
+        mode,
+        amount,
+        orderName,
+        OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS));
   }
 
   @Override
@@ -98,6 +124,19 @@ public class PaymentAttempt implements Persistable<UUID> {
     return true;
   }
 
+  public OffsetDateTime getCredentialUpdatedAt() {
+    return credentialUpdatedAt;
+  }
+
+  public PaymentAttempt pinCredential(OffsetDateTime credentialUpdatedAt) {
+    this.credentialUpdatedAt = credentialUpdatedAt;
+    return this;
+  }
+
+  public UUID getEnvironmentId() {
+    return environmentId;
+  }
+
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -108,6 +147,10 @@ public class PaymentAttempt implements Persistable<UUID> {
 
   public UUID getInvoiceId() {
     return invoiceId;
+  }
+
+  public String getMode() {
+    return mode;
   }
 
   public long getAmount() {

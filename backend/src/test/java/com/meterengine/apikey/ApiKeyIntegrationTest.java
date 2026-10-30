@@ -195,7 +195,16 @@ class ApiKeyIntegrationTest {
         .containsExactly(firstId.toString(), secondId.toString());
     assertThat(apiKeys.get(0).keySet())
         .containsExactlyInAnyOrder(
-            "id", "label", "mode", "scopes", "last_four", "created_at", "expires_at", "revoked_at");
+            "id",
+            "label",
+            "mode",
+            "scopes",
+            "last_four",
+            "created_at",
+            "expires_at",
+            "revoked_at",
+            "rate_limit_per_minute",
+            "status");
     assertThat(apiKeys.get(0).get("revoked_at")).isNotNull();
     assertThat(apiKeys.get(1))
         .containsEntry("label", "둘째 키")
@@ -203,6 +212,70 @@ class ApiKeyIntegrationTest {
         .containsEntry("scopes", List.of("ingest"))
         .containsEntry("revoked_at", null);
     assertThat(body).doesNotContain(secretOf(first)).doesNotContain(secretOf(second));
+  }
+
+  @Test
+  void 상태별_목록은_현재_사용가능한_키와_폐기와_만료를_구분하고_도입사를_격리한다() {
+    MvcTestResult active = createApiKey(member, "사용 중", "live", "read");
+    MvcTestResult revoked = createApiKey(member, "폐기", "live", "read");
+    MvcTestResult expired = createApiKey(member, "만료", "test", "ingest");
+    MvcTestResult revokedExpired = createApiKey(member, "폐기 뒤 만료", "live", "read");
+    assertThat(deleteApiKey(member, idOf(revoked))).hasStatus(204);
+    assertThat(deleteApiKey(member, idOf(revokedExpired))).hasStatus(204);
+    entityManager.flush();
+    jdbcTemplate.update(
+        "UPDATE api_key SET expires_at = now() - interval '1 second' WHERE id IN (?, ?)",
+        idOf(expired),
+        idOf(revokedExpired));
+    entityManager.clear();
+    String otherMember = TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID());
+    createApiKey(otherMember, "다른 도입사", "live", "read");
+
+    Map<String, List<String>> expected =
+        Map.of(
+            "active", List.of(idOf(active).toString()),
+            "revoked", List.of(idOf(revoked).toString(), idOf(revokedExpired).toString()),
+            "expired", List.of(idOf(expired).toString()),
+            "all",
+                List.of(
+                    idOf(active).toString(),
+                    idOf(revoked).toString(),
+                    idOf(expired).toString(),
+                    idOf(revokedExpired).toString()));
+    expected.forEach(
+        (status, ids) -> {
+          MvcTestResult result =
+              mvc.get()
+                  .uri(API_KEYS + "?status=" + status)
+                  .header(AUTHORIZATION, member)
+                  .exchange();
+          assertThat(result).hasStatusOk();
+          assertThat(JsonPath.<List<String>>read(body(result), "$.api_keys[*].id"))
+              .containsExactlyInAnyOrderElementsOf(ids);
+          if (!status.equals("all"))
+            assertThat(JsonPath.<List<String>>read(body(result), "$.api_keys[*].status"))
+                .containsOnly(status);
+          assertThat(body(result))
+              .doesNotContain(secretOf(active), secretOf(revoked), secretOf(expired));
+        });
+    assertThat(
+            mvc.get().uri("/v1/usage").header(AUTHORIZATION, bearer(secretOf(expired))).exchange())
+        .hasStatus(401);
+    assertThat(mvc.get().uri(API_KEYS).header(AUTHORIZATION, member).exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.api_keys.length()")
+        .isEqualTo(4);
+  }
+
+  @Test
+  void API키_목록의_알수없는_상태는_전체목록으로_무시하지_않는다() {
+    assertThat(
+            mvc.get().uri(API_KEYS + "?status=archived").header(AUTHORIZATION, member).exchange())
+        .hasStatus(400)
+        .bodyJson()
+        .extractingPath("$.errors[0].field")
+        .isEqualTo("status");
   }
 
   // --- 교체 ---
@@ -372,7 +445,8 @@ class ApiKeyIntegrationTest {
     UUID oldId = idOf(old);
     MvcTestResult replacement = replace(member, oldId);
     UUID newId = idOf(replacement);
-    assertThat(deleteApiKey(member, oldId)).hasStatus(204);
+    MvcTestResult deleted = deleteApiKey(member, oldId);
+    assertThat(deleted).hasStatus(204);
     entityManager.flush();
     UUID userAccountId =
         jdbcTemplate.queryForObject(
@@ -389,11 +463,15 @@ class ApiKeyIntegrationTest {
             """,
             organizationId);
 
-    assertThat(rows)
+    List<Map<String, Object>> semanticRows =
+        rows.stream().filter(row -> !"api_request_completed".equals(row.get("action"))).toList();
+    List<Map<String, Object>> requestRows =
+        rows.stream().filter(row -> "api_request_completed".equals(row.get("action"))).toList();
+    assertThat(semanticRows)
         .extracting(row -> row.get("action") + " " + row.get("target_id"))
         .containsExactlyInAnyOrder(
             "api_key_created " + oldId, "api_key_created " + newId, "api_key_deleted " + oldId);
-    assertThat(rows)
+    assertThat(semanticRows)
         .allSatisfy(
             row -> {
               assertThat(row.get("actor_type")).isEqualTo("user_account");
@@ -403,7 +481,7 @@ class ApiKeyIntegrationTest {
     Map<String, Object> replacedDetail =
         JsonPath.read(
             (String)
-                rows.stream()
+                semanticRows.stream()
                     .filter(row -> row.get("target_id").equals(newId.toString()))
                     .findFirst()
                     .orElseThrow()
@@ -423,7 +501,7 @@ class ApiKeyIntegrationTest {
     Map<String, Object> createdDetail =
         JsonPath.read(
             (String)
-                rows.stream()
+                semanticRows.stream()
                     .filter(
                         row ->
                             row.get("target_id").equals(oldId.toString())
@@ -435,6 +513,39 @@ class ApiKeyIntegrationTest {
     assertThat(createdDetail).containsEntry("replaced_api_key_id", null);
     assertThat(createdDetail.keySet())
         .containsExactlyInAnyOrder("label", "mode", "scopes", "replaced_api_key_id");
+    assertThat(requestRows).hasSize(3);
+    for (MvcTestResult request : List.of(old, replacement, deleted)) {
+      String requestId = request.getResponse().getHeader("X-Request-ID");
+      Map<String, Object> requestRow =
+          requestRows.stream()
+              .filter(
+                  row ->
+                      requestId.equals(JsonPath.read((String) row.get("detail"), "$.request_id")))
+              .findFirst()
+              .orElseThrow();
+      Map<String, Object> requestDetail = JsonPath.read((String) requestRow.get("detail"), "$");
+      assertThat(requestDetail)
+          .containsEntry("method", request == deleted ? "DELETE" : "POST")
+          .containsEntry("route", request == deleted ? API_KEYS + "/{id}" : API_KEYS)
+          .containsEntry("status", request == deleted ? 204 : 201);
+      if (request == deleted) {
+        assertThat(requestRow.get("target_id")).isEqualTo(oldId.toString());
+        assertThat(requestDetail)
+            .containsOnlyKeys("method", "route", "status", "duration_ms", "request_id", "path_ids")
+            .containsEntry("path_ids", Map.of("id", oldId.toString()));
+      } else {
+        assertThat(requestRow.get("target_id")).isNull();
+        assertThat(requestDetail)
+            .containsOnlyKeys("method", "route", "status", "duration_ms", "request_id");
+      }
+    }
+    assertThat(requestRows)
+        .allSatisfy(
+            row -> {
+              assertThat(row.get("actor_type")).isEqualTo("user_account");
+              assertThat(row.get("actor_id")).isEqualTo(userAccountId);
+              assertThat(row.get("target_type")).isEqualTo("http_request");
+            });
     for (MvcTestResult created : List.of(old, replacement)) {
       String secret = secretOf(created);
       String hashHex = HexFormat.of().formatHex(SecureTokens.hash(secret));

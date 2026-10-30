@@ -30,6 +30,7 @@ class ClassNamingConventionTest {
           .haveFullyQualifiedName("com.meterengine.MeterEngineApplication")
           .orShould()
           .resideInAnyPackage(
+              "com.meterengine.*.api",
               "com.meterengine.*.client",
               "com.meterengine.*.config",
               "com.meterengine.*.controller",

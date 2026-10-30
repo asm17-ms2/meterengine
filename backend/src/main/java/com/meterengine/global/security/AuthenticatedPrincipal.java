@@ -15,7 +15,33 @@ public record AuthenticatedPrincipal(
     UUID userSessionId,
     String mode,
     String role,
-    Set<String> scopes) {
+    Set<String> scopes,
+    UUID environmentId) {
+
+  public AuthenticatedPrincipal(
+      PrincipalKind kind,
+      UUID organizationId,
+      UUID apiKeyId,
+      UUID userAccountId,
+      UUID userSessionId,
+      String mode,
+      String role,
+      Set<String> scopes) {
+    this(kind, organizationId, apiKeyId, userAccountId, userSessionId, mode, role, scopes, null);
+  }
+
+  public AuthenticatedPrincipal inEnvironment(UUID environmentId) {
+    return new AuthenticatedPrincipal(
+        kind,
+        organizationId,
+        apiKeyId,
+        userAccountId,
+        userSessionId,
+        mode,
+        role,
+        scopes,
+        environmentId);
+  }
 
   private static final String ADMIN_SCOPE = "admin";
 
@@ -44,6 +70,6 @@ public record AuthenticatedPrincipal(
   }
 
   private boolean grants(String scope) {
-    return kind == PrincipalKind.SESSION || scopes.contains(ADMIN_SCOPE) || scopes.contains(scope);
+    return AccessScopes.grants(scopes, scope);
   }
 }

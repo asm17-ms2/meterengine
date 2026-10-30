@@ -76,6 +76,20 @@ class JsonlLogRoundTripTest(unittest.TestCase):
         self.assertEqual(record.request["properties"]["token"], Decimal("500.00"))
         self.assertEqual(str(record.request["properties"]["token"]), "500.00")
 
+    def test_다른_연결_범위의_기록을_합쳐_검증하지_않는다(self):
+        _write_sample(self.path)
+        with JsonlLogWriter(self.path, append=True) as writer:
+            writer.write_run_header("2026-08-14T10:01:00+09:00", "http://localhost:8080", "org", None, [], environment="test", source_fingerprint="test-source")
+        with self.assertRaises(ValueError):
+            read_log(self.path)
+
+    def test_업무_환경과_연결_지문을_보존한다(self):
+        with JsonlLogWriter(self.path) as writer:
+            writer.write_run_header("2026-08-14T10:01:00+09:00", "http://localhost:8080", "org", None, [], environment="test", source_fingerprint="test-source")
+        header = read_log(self.path).header
+        self.assertEqual(header.environment, "test")
+        self.assertEqual(header.source_fingerprint, "test-source")
+
     def test_거절_응답의_오류_본문이_보존된다(self):
         _write_sample(self.path)
         record = read_log(self.path).records[1]

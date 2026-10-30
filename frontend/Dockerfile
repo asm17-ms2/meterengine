@@ -17,8 +17,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-# 백엔드가 없어도 통과해야 한다. 조회 fetch는 cache: "no-store"이거나 searchParams를 읽은
-# 뒤에 나가서 빌드 타임에 나가지 않는다(src/lib/api/client.ts).
+# 백엔드 없이 빌드한다. 인증 쿠키와 no-store 조회는 요청 시점에 읽는다
+# (src/lib/auth/session.ts, src/lib/api/transport.ts).
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
@@ -39,14 +39,12 @@ ENV HOSTNAME=0.0.0.0
 # CSS와 JS 청크만 404가 난다.
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
-
-# public/을 만들면 여기에 COPY 한 줄을 더한다. 지금은 그 디렉터리가 없다.
+COPY --from=build --chown=node:node /app/public ./public
 
 # node 이미지가 미리 만들어 둔 비root 사용자다.
 USER node
 
 EXPOSE 3000
 
-# METERENGINE_API_BASE_URL, METERENGINE_API_KEY, METERENGINE_ORGANIZATION_ID, METERENGINE_ORGANIZATION_NAME은 이미지에 굽지 않고 런타임 환경변수로 받는다.
-# 주지 않으면 src/lib/config.ts의 로컬 개발용 기본값으로 떨어진다.
+# METERENGINE_API_BASE_URL은 런타임에 받으며, 생략하면 로컬 개발용 주소를 쓴다.
 CMD ["node", "server.js"]

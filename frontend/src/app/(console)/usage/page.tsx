@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
+import { CsvDownload } from "@/components/screen/CsvDownload";
+import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
+import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { UsageQuality } from "@/components/workspace/UsageQuality";
 
 import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
-import { ListControls } from "@/components/screen/ListControls";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { QueryStamp } from "@/components/screen/QueryStamp";
 import { ScreenCard } from "@/components/screen/ScreenCard";
@@ -12,9 +16,7 @@ import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
 import { UsageMeta } from "@/components/usage/UsageMeta";
 import { UsageSection } from "@/components/usage/UsageSection";
-import { listBillableMetrics } from "@/lib/api/billable-metrics";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { listCustomers } from "@/lib/api/customers";
 import { aggregateBillableMetricUsages } from "@/lib/api/usage";
 import { formatKoreanMonth, formatKstStamp } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
@@ -22,6 +24,8 @@ import { readListQuery } from "@/lib/list-query";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const USAGE_CAPABILITIES = CAPABILITIES.aggregateBillableMetricUsages;
+
+export const metadata: Metadata = { title: "사용량" };
 
 export default async function UsagePage({
   searchParams,
@@ -45,6 +49,7 @@ export default async function UsagePage({
           </Suspense>
         ) : null}
       </ScreenHeader>
+      <Suspense fallback={<p role="status" className="field-hint">수집 상태를 확인하는 중입니다.</p>}><UsageQuality selectedMonth={month} /></Suspense>
 
       <ScreenCard>
         <FilterBar
@@ -57,34 +62,18 @@ export default async function UsagePage({
           }
         >
           <Suspense
-            fallback={
-              <ListControls
-                query={query}
-                capabilities={USAGE_CAPABILITIES}
-                month={{ value: month }}
-                customers={[]}
-                eventTypes={[]}
-                isLoadingOptions
-              />
-            }
+            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
           >
             <ListControlsLoader
+              resource="usage"
               query={query}
               capabilities={USAGE_CAPABILITIES}
               month={{ value: month }}
-              customers={
-                USAGE_CAPABILITIES.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
-                  : undefined
-              }
-              metrics={
-                USAGE_CAPABILITIES.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
-                  : undefined
-              }
             />
           </Suspense>
         </FilterBar>
+        <CsvDownload resource="usage" />
+        <Suspense fallback={null}><DataMonths filterForm="resource-search-usage" resource="usage" pathname="/usage" query={query} /></Suspense>
 
         {usage ? (
           <Suspense fallback={<TableSkeleton />}>
@@ -94,6 +83,7 @@ export default async function UsagePage({
           <TableSkeleton />
         )}
       </ScreenCard>
+      <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인합니다.</p>
     </CollapseProvider>
   );
 }

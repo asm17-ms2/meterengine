@@ -55,16 +55,27 @@ class InvoiceEmailService {
             recipientEmail,
             subject,
             templateEngine.process("mail/invoice", context),
-            invoice.getFinalizedAt()));
+            invoice.getFinalizedAt(),
+            invoice.getEnvironmentId()));
   }
 
   private static EmailLine toEmailLine(DraftInvoiceLine draftInvoiceLine) {
     return new EmailLine(
-        draftInvoiceLine.billableMetricCode(),
+        label(draftInvoiceLine),
         dimensionValues(draftInvoiceLine.dimensionValues()),
         decimal(draftInvoiceLine.quantity()),
         krw(draftInvoiceLine.unitPrice()),
         krw(draftInvoiceLine.amount()));
+  }
+
+  private static String label(DraftInvoiceLine line) {
+    return switch (line.lineType()) {
+      case "base_fee" -> "기본료";
+      case "minimum_adjustment" -> "최소 사용료 조정";
+      case "graduated_tier" -> line.billableMetricCode() + " / 구간 " + (line.tierIndex() + 1);
+      case "volume" -> line.billableMetricCode() + " / 총량 단가";
+      default -> line.billableMetricCode();
+    };
   }
 
   private static String dimensionValues(Map<String, Object> dimensionValues) {

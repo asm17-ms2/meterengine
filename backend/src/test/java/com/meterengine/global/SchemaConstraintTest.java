@@ -41,7 +41,8 @@ class SchemaConstraintTest {
     assertThatThrownBy(
             () ->
                 jdbcTemplate.update(
-                    "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE transaction_id = 'tx-1'"))
+                    "UPDATE event SET occurred_at = occurred_at + interval '1 hour' WHERE"
+                        + " transaction_id = 'tx-1'"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("append-only");
   }
@@ -106,6 +107,54 @@ class SchemaConstraintTest {
     assertThat(customerExists(customerId)).isFalse();
   }
 
+  // --- 이름과 인덱스 ---
+
+  @Test
+  void 단가에는_조건_없는_도입사와_미터_인덱스가_있다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE tablename = 'price_rate' AND indexname ="
+                    + " 'price_rate_organization_index'",
+                String.class))
+        .contains("(organization_id, billable_metric_code)")
+        .doesNotContain("WHERE");
+  }
+
+  @Test
+  void 집계와_수량_분수_제약은_테이블_대상_종류_순서의_이름을_쓴다() {
+    List<String> names =
+        jdbcTemplate.queryForList(
+            "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conrelid::regclass::text IN"
+                + " ('billable_metric', 'invoice_line')",
+            String.class);
+    assertThat(names)
+        .contains(
+            "billable_metric_aggregation_check",
+            "billable_metric_aggregation_percentile_check",
+            "billable_metric_aggregation_target_property_check",
+            "invoice_line_quantity_fraction_check")
+        .doesNotContain(
+            "billable_metric_supported_aggregation",
+            "billable_metric_percentile_configuration",
+            "billable_metric_target_configuration",
+            "invoice_line_quantity_fraction_pair");
+  }
+
+  @Test
+  void 웹훅_전송의_실패_사유도_시도_기록과_같은_값만_받는다() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                    + " 'webhook_delivery_failure_reason_check'",
+                String.class))
+        .isEqualTo(
+            jdbcTemplate.queryForObject(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname ="
+                        + " 'webhook_delivery_attempt_failure_reason_check'",
+                    String.class)
+                + " NOT VALID");
+  }
+
   // --- 단가 ---
 
   @Test
@@ -143,11 +192,18 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 같은_도입사에서_event_type과_target_property가_같은_미터는_두_번_저장되지_않는다() {
+  void 같은_도입사에서_같은_속성의_다른_코드는_허용하고_동일_코드는_금지한다() {
     UUID organizationId = insertOrganization();
     insertBillableMetric(organizationId, "token-usage");
 
-    assertThatThrownBy(() -> insertBillableMetric(organizationId, "token-usage-copy"))
+    insertBillableMetric(organizationId, "token-usage-copy");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM billable_metric WHERE organization_id = ?",
+                Long.class,
+                organizationId))
+        .isEqualTo(2L);
+    assertThatThrownBy(() -> insertBillableMetric(organizationId, "token-usage"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -182,6 +238,7 @@ class SchemaConstraintTest {
   void 사람이_읽는_이름_컬럼은_한국어_collation을_쓴다() {
     assertThat(collationOf("customer", "name")).isEqualTo("korean");
     assertThat(collationOf("organization", "name")).isEqualTo("korean");
+    assertThat(collationOf("organization", "representative_name")).isEqualTo("korean");
     assertThat(collationOf("billable_metric", "name")).isEqualTo("korean");
     assertThat(collationOf("invoice", "customer_name")).isEqualTo("korean");
     assertThat(collationOf("user_account", "name")).isEqualTo("korean");
@@ -445,7 +502,11 @@ class SchemaConstraintTest {
 
   @Test
   void 인보이스_테이블은_TRUNCATE할_수_없다() {
-    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice, invoice_line, outbound_email"))
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.execute(
+                    "TRUNCATE invoice, invoice_line, outbound_email, payment_attempt,"
+                        + " payment_cancellation, invoice_view_link"))
         .isInstanceOf(UncategorizedSQLException.class)
         .hasMessageContaining("invoice is append-only");
   }
@@ -519,7 +580,7 @@ class SchemaConstraintTest {
   }
 
   @Test
-  void 확정_라인에서_비울_수_있는_열은_집계_기준뿐이다() {
+  void 기본료_라인의_미터와_집계_기준은_비울_수_있다() {
     assertThat(
             jdbcTemplate.queryForList(
                 """
@@ -528,7 +589,13 @@ class SchemaConstraintTest {
                   AND is_nullable = 'YES'
                 """,
                 String.class))
-        .containsExactly("target_property");
+        .containsExactlyInAnyOrder(
+            "billable_metric_code",
+            "target_property",
+            "quantity_numerator",
+            "quantity_denominator",
+            "environment_id",
+            "billable_metric_name");
   }
 
   @Test
@@ -808,7 +875,9 @@ class SchemaConstraintTest {
 
   @Test
   void 감사_테이블의_제약과_인덱스는_마이그레이션이_정한_이름으로_있다() {
-    assertThat(constraintNames()).contains("audit_log_pk", "audit_log_organization_fk");
+    assertThat(constraintNames())
+        .contains("audit_log_pk")
+        .doesNotContain("audit_log_organization_fk");
     assertThat(
             jdbcTemplate.queryForList(
                 """

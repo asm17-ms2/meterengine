@@ -1,18 +1,21 @@
 import "server-only";
+import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 import { formatTargetPropertyTooltip } from "@/lib/format";
+import { metricCalculationFormula, type MetricCalculation } from "@/lib/billable-metric-calculation";
 import { toServerParams, type MonthlyListQuery, type PaginationFields } from "@/lib/list-query";
 
 export type ListBillableMetricUsagesResponse = PaginationFields & {
   month: string;
+  summary?: { month: string; customer_count: number; metric_count: number; line_count: number; nonzero_customer_count: number };
   billable_metric_usages: BillableMetricUsageResponse[];
 };
 
-export type BillableMetricUsageResponse = {
+export type BillableMetricUsageResponse = MetricCalculation & {
   code: string;
   name: string;
   event_type: string;
@@ -26,11 +29,17 @@ export type BillableMetricUsageCustomer = {
   customer_name: string;
   dimension_usages: BillableMetricUsageDimensionUsage[];
   quantity: number;
+  raw_quantity?: number;
+  raw_quantity_numerator?: number;
+  raw_quantity_denominator?: number;
 };
 
 export type BillableMetricUsageDimensionUsage = {
   dimension_values: Record<string, string | number | boolean | null>;
   quantity: number;
+  raw_quantity?: number;
+  raw_quantity_numerator?: number;
+  raw_quantity_denominator?: number;
 };
 
 export type CustomerGroup = {
@@ -44,6 +53,9 @@ export type BillableMetricLine = {
   labelTooltip?: string;
   dimensionValues: BillableMetricUsageDimensionUsage["dimension_values"];
   quantity: number;
+  rawQuantity?: number;
+  overallQuantity: number;
+  overallRawQuantity?: number;
 };
 
 const NO_USAGE_DIMENSION_USAGE: BillableMetricUsageDimensionUsage = {
@@ -54,14 +66,18 @@ const NO_USAGE_DIMENSION_USAGE: BillableMetricUsageDimensionUsage = {
 function toBillableMetricLines(
   label: string,
   labelTooltip: string | undefined,
-  dimensionUsages: BillableMetricUsageDimensionUsage[],
+  customer: BillableMetricUsageCustomer,
 ): BillableMetricLine[] {
+  const dimensionUsages = customer.dimension_usages;
   const rows = dimensionUsages.length === 0 ? [NO_USAGE_DIMENSION_USAGE] : dimensionUsages;
   return rows.map((dimensionUsage) => ({
     label,
     labelTooltip,
     dimensionValues: dimensionUsage.dimension_values,
     quantity: dimensionUsage.quantity,
+    rawQuantity: dimensionUsage.raw_quantity,
+    overallQuantity: customer.quantity,
+    overallRawQuantity: customer.raw_quantity,
   }));
 }
 
@@ -70,7 +86,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
 
   for (const billableMetricUsage of usage.billable_metric_usages) {
     const label = billableMetricUsage.code;
-    const labelTooltip = formatTargetPropertyTooltip(billableMetricUsage.target_property);
+    const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip(billableMetricUsage.target_property), `계산: ${metricCalculationFormula(billableMetricUsage)}`].filter(Boolean).join(" / ");
 
     for (const customer of billableMetricUsage.customers) {
       let group = customerGroupByCustomerId.get(customer.customer_id);
@@ -82,7 +98,7 @@ export function toCustomerGroups(usage: ListBillableMetricUsagesResponse): Custo
         };
         customerGroupByCustomerId.set(customer.customer_id, group);
       }
-      group.billableMetricLines.push(...toBillableMetricLines(label, labelTooltip, customer.dimension_usages));
+      group.billableMetricLines.push(...toBillableMetricLines(label, labelTooltip, customer));
     }
   }
 
@@ -107,13 +123,20 @@ export async function aggregateBillableMetricUsages(
         status: 503,
         code: "dev_forced",
         message:
-          "개발 모드에서 강제한 에러 상태입니다. 사이드바의 표 상태 스위치를 정상으로 되돌리면 사라집니다.",
+          "개발 모드에서 강제한 에러 상태입니다. 주소의 state 파라미터를 지우면 사라집니다.",
       },
     };
   }
-  return serverFetch<ListBillableMetricUsagesResponse>(
-    config.apiBaseUrl,
-    "/v1/usage",
-    toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages),
+  const result = await serverFetch<SearchPage<{ customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] }, NonNullable<ListBillableMetricUsagesResponse["summary"]>>>(
+    config.apiBaseUrl, "/v1/usage/search", toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages),
   );
+  if (!result.ok) return result;
+  const metrics = new Map<string, BillableMetricUsageResponse>();
+  for (const customer of result.data.items) for (const metric of customer.metrics) {
+    const existing = metrics.get(metric.code);
+    if (existing) existing.customers.push(...metric.customers);
+    else metrics.set(metric.code, { ...metric, customers: [...metric.customers] });
+  }
+  return { ok: true, data: { ...result.data, page: result.data.page - 1, month: result.data.summary.month, billable_metric_usages: [...metrics.values()] } };
+
 }

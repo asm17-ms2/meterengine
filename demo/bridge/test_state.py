@@ -12,6 +12,7 @@ from bridge.state import (
     SKIPPED,
     BridgeConfig,
     BridgeState,
+    ConfigFieldError,
     CustomerResolver,
     project_for_cwd,
     repo_name,
@@ -40,10 +41,13 @@ class FakeClient:
         self.list_calls += 1
         return FakeResult(200, {"customers": list(self.customers)})
 
-    def create_customer(self, name):
+    def create_customer(self, name, external_id=None):
+        for customer in self.customers:
+            if external_id is not None and customer.get("external_id") == external_id:
+                return FakeResult(200, customer)
         self.created.append(name)
         customer_id = OTHER_CUSTOMER if len(self.created) > 1 else DEMO_CUSTOMER
-        self.customers.append({"id": customer_id, "name": name})
+        self.customers.append({"id": customer_id, "name": name, "external_id": external_id})
         return FakeResult(201, {"id": customer_id, "name": name})
 
 
@@ -296,6 +300,7 @@ class ForgetCustomerTest(unittest.TestCase):
             self.assertIsNone(state.cached_customer("meterengine(박성종)"))
             resolver.resolve("meterengine(박성종)")
         self.assertEqual(client.list_calls, 2)
+        self.assertEqual(len(client.customers), 1)
 
     def test_버린_것은_재시작_뒤에도_없다(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -311,10 +316,17 @@ class CustomerResolverTest(unittest.TestCase):
         return CustomerResolver(client, BridgeState(os.path.join(directory, "state.json")))
 
     def test_이미_있으면_등록하지_않는다(self):
-        client = FakeClient([{"id": DEMO_CUSTOMER, "name": "meterengine(박성종)"}])
+        client = FakeClient([{"id": DEMO_CUSTOMER, "name": "meterengine(박성종)", "external_id": "meterengine(박성종)"}])
         with tempfile.TemporaryDirectory() as directory:
             customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
         self.assertEqual(customer_id, DEMO_CUSTOMER)
+        self.assertEqual(client.created, [])
+
+    def test_외부_ID_없이_만든_옛_고객은_이름으로_이어_받는다(self):
+        client = FakeClient([{"id": OTHER_CUSTOMER, "name": "meterengine(박성종)", "external_id": None}])
+        with tempfile.TemporaryDirectory() as directory:
+            customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
+        self.assertEqual(customer_id, OTHER_CUSTOMER)
         self.assertEqual(client.created, [])
 
     def test_없으면_등록한다(self):
@@ -342,9 +354,9 @@ class CustomerResolverTest(unittest.TestCase):
         self.assertNotEqual(first, second)
         self.assertEqual(client.created, ["meterengine(박성종)", "기타 프로젝트(박성종)"])
 
-    def test_조회가_실패하면_알린다(self):
+    def test_멱등_등록이_실패하면_알린다(self):
         class Broken(FakeClient):
-            def get_customers(self):
+            def create_customer(self, name, external_id=None):
                 return FakeResult(500, None)
 
         with tempfile.TemporaryDirectory() as directory:
@@ -353,7 +365,7 @@ class CustomerResolverTest(unittest.TestCase):
 
     def test_등록_응답에_id가_없으면_알린다(self):
         class Broken(FakeClient):
-            def create_customer(self, name):
+            def create_customer(self, name, external_id=None):
                 return FakeResult(201, {"name": name})
 
         with tempfile.TemporaryDirectory() as directory:
@@ -466,9 +478,11 @@ class CustomerCacheScopeTest(unittest.TestCase):
             BridgeState(path, self.PROD).remember_customer("고객", OTHER_CUSTOMER)
             self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
 
-    def test_scope는_전송_대상과_도입사로_만든다(self):
+    def test_scope는_전송_대상과_도입사와_키로_만든다(self):
         config = BridgeConfig(base_url="http://localhost:8080/", api_key=LIVE_KEY)
-        self.assertEqual(config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e"), self.LOCAL)
+        self.assertTrue(config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e").startswith(self.LOCAL + "|"))
+        other = BridgeConfig(base_url=config.base_url, api_key="me_test_" + "a" * 32)
+        self.assertNotEqual(config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e"), other.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e"))
 
     def test_scope에는_키가_들어가지_않는다(self):
         config = BridgeConfig(api_key=LIVE_KEY)
@@ -549,6 +563,33 @@ class ConfigValidateTest(unittest.TestCase):
             path = os.path.join(directory, "bridge.json")
             BridgeConfig(owner="박성종", base_url="https://meterengine.com").save(path)
             self.assertEqual(BridgeConfig.load(path).owner, "박성종")
+
+
+class ConfigDictTest(unittest.TestCase):
+    def test_to_dict는_save가_쓰는_것과_같다(self):
+        config = BridgeConfig(owner="박성종", allow=["meterengine"], deny=["비밀"], timeout_seconds=3.0)
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "bridge.json")
+            config.save(path)
+            with open(path, encoding="utf-8") as f:
+                saved = json.load(f)
+        self.assertEqual(saved, config.to_dict())
+
+    def test_merged는_원본을_바꾸지_않는다(self):
+        config = BridgeConfig(owner="박성종", allow=["meterengine"])
+        merged = config.merged({"owner": "문인호", "allow": ["다른"]})
+        self.assertEqual(merged.owner, "문인호")
+        self.assertEqual(merged.allow, ["다른"])
+        self.assertEqual(config.owner, "박성종")
+        self.assertEqual(config.allow, ["meterengine"])
+        merged.deny.append("비밀")
+        self.assertEqual(config.deny, [])
+
+    def test_merged의_필드_오류는_field를_알린다(self):
+        with self.assertRaises(ConfigFieldError) as caught:
+            BridgeConfig().merged({"base_url": "localhost"})
+        self.assertEqual(caught.exception.field, "base_url")
+        self.assertIsInstance(caught.exception, ValueError)
 
 
 class SnapshotTest(unittest.TestCase):

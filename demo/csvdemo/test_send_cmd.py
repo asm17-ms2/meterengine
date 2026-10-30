@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bridge.const import LOGS_DIR as BRIDGE_LOGS_DIR
-from core.api_client import ApiResult, Organization
+from core.api_client import ApiResult, Organization, TransportError
 from core.model import Event
 from csvdemo import send_cmd
 from csvdemo.render import Console, format_gate
@@ -141,6 +141,131 @@ class FormatGateTest(unittest.TestCase):
         self.assertNotIn(KEY, text)
         self.assertIn("me_live_****2LtA", text)
         self.assertIn("데모 도입사 (%s)" % ORGANIZATION.id, text)
+
+
+class BatchSendTest(unittest.TestCase):
+    setUp = SendLoopTest.setUp
+    log_text = SendLoopTest.log_text
+
+    def test_배치_실패_뒤_모든_입력행을_UNKNOWN과_NOT_SENT로_구분해_남긴다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                rows = json.loads(body_text)["events"]
+                self.posted.append(body_text)
+                if len(self.posted) > 1:
+                    raise TransportError("connection lost")
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(_events(5), client, ORGANIZATION, Console(False), args)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(client.posted), 2)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3, 4, 5])
+        self.assertEqual([row["outcome"] for row in records[:2]], ["new", "new"])
+        self.assertIn("UNKNOWN", records[2]["error"])
+        self.assertIn("UNKNOWN", records[3]["error"])
+        self.assertIn("NOT_SENT", records[4]["error"])
+
+    def test_속성이_깨진_행만_단건으로_보내고_나머지는_배치로_저장한다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                try:
+                    rows = json.loads(body_text)["events"]
+                except ValueError:
+                    return _result(400, {"code": "malformed_request_body", "message": "본문을 읽을 수 없습니다"})
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        events = _events(3)
+        events[1].properties_text = '{"quantity":'
+        args = Args()
+        args.batch_size = 3
+        client = BatchClient([(400, {"code": "malformed_request_body", "message": "본문을 읽을 수 없습니다"})])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(events, client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3])
+        self.assertEqual([row["outcome"] for row in records], ["new", "rejected", "new"])
+        self.assertEqual(code, 0)
+
+    def test_객체가_아닌_JSON_속성은_묶음에_남겨_배치_API가_그_행만_거절하게_한다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                rows = json.loads(body_text)["events"]
+                return _result(200, {"results": [
+                    {"index": i, "transaction_id": row["transaction_id"], "result": "stored"} if isinstance(row["properties"], dict)
+                    else {"index": i, "transaction_id": row["transaction_id"], "result": "rejected", "code": "validation_error", "message": "properties는 객체여야 합니다"}
+                    for i, row in enumerate(rows)]})
+
+        events = _events(3)
+        events[1].properties_text = '[1]'
+        args = Args()
+        args.batch_size = 3
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(events, client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual(len(client.posted), 1)
+        self.assertEqual([row["outcome"] for row in records], ["new", "rejected", "new"])
+        self.assertEqual(code, 0)
+
+    def test_단건으로_보낸_깨진_행이_인증에_실패하면_같은_묶음의_다음_깨진_행을_보내지_않는다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                rows = json.loads(body_text)["events"]
+                return _result(200, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "stored"} for i, row in enumerate(rows)]})
+
+        events = _events(3)
+        events[0].properties_text = '{"quantity":'
+        events[1].properties_text = '{"quantity":'
+        args = Args()
+        args.batch_size = 3
+        client = BatchClient([(401, {"code": "invalid_credentials", "message": "인증 실패"})])
+        with contextlib.redirect_stdout(io.StringIO()) as output, contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(events, client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual(len(client.posted), 1)
+        self.assertEqual([row["seq"] for row in records], [1, 2, 3])
+        self.assertIn("NOT_SENT", records[1]["error"])
+        self.assertEqual(records[2]["outcome"], "new")
+        self.assertIn("전송 2건", output.getvalue())
+        self.assertEqual(code, 2)
+
+    def test_봉투_전체를_거절한_4xx는_rejected가_아닌_error로_센다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                return _result(400, {"code": "validation_error", "message": "요청 값이 올바르지 않습니다"})
+
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(_events(2), client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual([row["outcome"] for row in records], ["error", "error"])
+        self.assertEqual(code, 2)
+
+    def test_배치의_속성_숫자는_원문_자릿수를_그대로_보낸다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                self.posted.append(body_text)
+                return _result(200, {"results": [{"index": 0, "transaction_id": "evt-1", "result": "stored"}]})
+
+        events = _events(1)
+        number = "12345678901234567890.12345678901234567890"
+        events[0].properties_text = '{"quantity":' + number + '}'
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(send_cmd.send_events(events, client, ORGANIZATION, Console(False), args), 0)
+        self.assertIn(number, client.posted[0])
 
 
 if __name__ == "__main__":

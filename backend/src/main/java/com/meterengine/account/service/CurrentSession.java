@@ -9,9 +9,29 @@ public record CurrentSession(
     UserSession session,
     UserAccount userAccount,
     Organization organization,
-    List<Organization> organizations) {
+    List<Organization> organizations,
+    String organizationRole,
+    List<String> scopes) {
+
+  public CurrentSession(
+      UserSession session,
+      UserAccount userAccount,
+      Organization organization,
+      List<Organization> organizations) {
+    this(session, userAccount, organization, organizations, null, List.of());
+  }
+
+  public CurrentSession(
+      UserSession session,
+      UserAccount userAccount,
+      Organization organization,
+      List<Organization> organizations,
+      String organizationRole) {
+    this(session, userAccount, organization, organizations, organizationRole, List.of());
+  }
 
   public CurrentSession {
     organizations = List.copyOf(organizations);
+    scopes = List.copyOf(scopes);
   }
 }

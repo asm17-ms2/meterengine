@@ -1,13 +1,25 @@
 package com.meterengine.pricing.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 
 public record BillableMetricPricePriceRate(
-    @Schema(description = "단가가 적용되는 속성 값 조합. 빈 객체는 속성 조건 없이 적용되는 기본 단가다")
-        @JsonProperty("dimension_values")
-        Map<String, Object> dimensionValues,
-    @Schema(description = "그 조합의 단가. 0은 무료라는 뜻이다") @JsonProperty("unit_price")
-        BigDecimal unitPrice) {}
+    @JsonProperty("dimension_values") Map<String, Object> dimensionValues,
+    @Schema(description = "per_unit 모델의 단가. graduated, volume 모델에서는 null이다")
+        @JsonProperty("unit_price")
+        BigDecimal unitPrice,
+    UUID id,
+    @JsonProperty("customer_id") UUID customerId,
+    @JsonProperty("effective_from") String effectiveFrom,
+    @JsonProperty("effective_until") String effectiveUntil,
+    @Schema(allowableValues = {"per_unit", "graduated", "volume"}) String model,
+    @JsonRawValue
+        @Schema(
+            implementation = PriceRateTier[].class,
+            description = "graduated, volume 모델의 구간. per_unit이면 null이다")
+        String tiers,
+    @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
+    @JsonProperty("archived_from") String archivedFrom) {}

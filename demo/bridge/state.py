@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import math
 import os
 import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from bridge.const import CONFIG_PATH, STATE_PATH
 from core.api_client import ApiClient
@@ -23,6 +25,15 @@ SKIPPED = "보내지 않음"
 PROJECT_STATES = [NAMED, MERGED, SKIPPED]
 
 MAX_CUSTOMER_NAME = 255
+
+SECRET_FIELDS: Dict[str, Callable[[str], str]] = {"api_key": mask_api_key}
+HIDDEN_FIELDS: Tuple[str, ...] = ()
+
+
+class ConfigFieldError(ValueError):
+    def __init__(self, field: str, message: str):
+        super().__init__(message)
+        self.field = field
 
 
 @dataclass
@@ -60,9 +71,45 @@ class BridgeConfig:
 
     def validate(self) -> None:
         if self.api_key and not is_api_key(self.api_key):
-            raise ValueError("api_key가 API 키 형식이 아닙니다 (me_live_ 또는 me_test_ 뒤에 영문과 숫자 32자)")
+            raise ConfigFieldError("api_key", "me_live_ 또는 me_test_ 뒤에 영문과 숫자 32자인 API 키를 입력하세요")
         if not self.base_url.startswith(("http://", "https://")):
-            raise ValueError("base_url이 http:// 또는 https://로 시작해야 합니다: " + self.base_url)
+            raise ConfigFieldError(
+                "base_url", "base_url이 http:// 또는 https://로 시작해야 합니다: " + self.base_url
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "owner": self.owner,
+            "base_url": self.base_url,
+            "api_key": self.api_key,
+            "allow": list(self.allow),
+            "deny": list(self.deny),
+            "fallback_project": self.fallback_project,
+            "timeout_seconds": self.timeout_seconds,
+        }
+
+    def public_dict(self) -> dict:
+        values = self.to_dict()
+        for name in HIDDEN_FIELDS:
+            values.pop(name, None)
+        for name, mask in SECRET_FIELDS.items():
+            if values.get(name):
+                values[name] = mask(values[name])
+        return values
+
+    def merged(self, changes: dict) -> "BridgeConfig":
+        values = self.to_dict()
+        for name, value in changes.items():
+            if name not in values:
+                raise ConfigFieldError(name, "알 수 없는 설정입니다: " + str(name))
+            _check_field_type(name, values[name], value)
+            if name in SECRET_FIELDS and value == "":
+                continue
+            values[name] = list(value) if isinstance(value, list) else value
+        values["timeout_seconds"] = float(values["timeout_seconds"])
+        config = BridgeConfig(**values)
+        config.validate()
+        return config
 
     def save(self, path: str = CONFIG_PATH) -> None:
         self.validate()
@@ -85,7 +132,7 @@ class BridgeConfig:
     def scope(self, organization_id: str) -> str:
         if not is_uuid(organization_id):
             raise ValueError("도입사 id가 UUID가 아닙니다: " + organization_id)
-        return "%s|%s" % (self.base_url.rstrip("/"), organization_id)
+        return "%s|%s|%s" % (self.base_url.rstrip("/"), organization_id, hashlib.sha256(self.api_key.encode("utf-8")).hexdigest())
 
     def project_state(self, project: str) -> str:
         """이 프로젝트가 지금 어떤 상태인지."""
@@ -106,6 +153,27 @@ class BridgeConfig:
     def customer_name(self, project: str) -> str:
         name = "%s(%s)" % (project, self.owner) if self.owner else project
         return name[:MAX_CUSTOMER_NAME]
+
+
+def _check_field_type(name: str, current, value) -> None:
+    if isinstance(current, str):
+        if not isinstance(value, str):
+            raise ConfigFieldError(name, "%s는 문자열이어야 합니다" % name)
+    elif isinstance(current, list):
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ConfigFieldError(name, "%s는 문자열 목록이어야 합니다" % name)
+    elif not _positive_number(value):
+        raise ConfigFieldError(name, "%s는 0보다 큰 수여야 합니다" % name)
+
+
+def _positive_number(value) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        number = float(value)
+    except OverflowError:
+        return False
+    return math.isfinite(number) and number > 0
 
 
 def repo_name(cwd: str) -> Optional[str]:
@@ -292,25 +360,23 @@ class CustomerResolver:
             cached = self.state.cached_customer(name)
             if cached:
                 return cached
-            found = self._find(name)
-            customer_id = found or self._create(name)
+            customer_id = self._find_legacy(name) or self._create(name)
             self.state.remember_customer(name, customer_id)
             return customer_id
 
-    def _find(self, name: str) -> Optional[str]:
+    def _find_legacy(self, name: str) -> Optional[str]:
         result = self.client.get_customers()
         if result.status != 200 or not isinstance(result.body, dict):
             raise RuntimeError("고객 목록 조회 실패: HTTP %d %s" % (result.status, result.body_text[:200]))
         for customer in result.body.get("customers") or []:
-            if customer.get("name") == name:
-                customer_id = customer.get("id")
-                if isinstance(customer_id, str) and is_uuid(customer_id):
-                    return customer_id
+            customer_id = customer.get("id")
+            if customer.get("external_id") is None and customer.get("name") == name and isinstance(customer_id, str) and is_uuid(customer_id):
+                return customer_id
         return None
 
     def _create(self, name: str) -> str:
-        result = self.client.create_customer(name)
-        if result.status != 201 or not isinstance(result.body, dict):
+        result = self.client.create_customer(name, external_id=name)
+        if result.status not in (200, 201) or not isinstance(result.body, dict):
             raise RuntimeError("고객 등록 실패: HTTP %d %s" % (result.status, result.body_text[:200]))
         customer_id = result.body.get("id")
         if not isinstance(customer_id, str) or not is_uuid(customer_id):

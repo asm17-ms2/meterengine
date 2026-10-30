@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { CsvDownload } from "@/components/screen/CsvDownload";
+import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
 
 import { BillingCalculatedStamp } from "@/components/billing/BillingCalculatedStamp";
@@ -10,17 +13,14 @@ import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButto
 import { InvoiceFinalizeSection } from "@/components/billing/InvoiceFinalizeSection";
 import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
-import { ListControls } from "@/components/screen/ListControls";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { TableSkeleton } from "@/components/screen/TableSkeleton";
 import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
-import { listBillableMetrics } from "@/lib/api/billable-metrics";
-import { previewDraftInvoice } from "@/lib/api/billing";
+import { previewDraftInvoice, resolveIsFinalizedMonth } from "@/lib/api/billing";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { listCustomers } from "@/lib/api/customers";
 import { listAllInvoices } from "@/lib/api/invoices";
 import { formatKoreanMonth } from "@/lib/format";
 import { readListQuery, type MonthlyListQuery } from "@/lib/list-query";
@@ -28,6 +28,8 @@ import { readListQuery, type MonthlyListQuery } from "@/lib/list-query";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const BILLING_CAPABILITIES = CAPABILITIES.previewDraftInvoice;
+
+export const metadata: Metadata = { title: "청구 검토" };
 
 export default async function BillingPage({
   searchParams,
@@ -38,8 +40,8 @@ export default async function BillingPage({
   const query = readListQuery(params, BILLING_CAPABILITIES, { hasMonth: true });
   const { month, devState } = query;
 
-  const isCustomerFiltered = query.customerId !== undefined;
-  const monthQuery: MonthlyListQuery = { ...query, customerId: undefined };
+  const isCustomerFiltered = Boolean(query.customerId || query.metricCode || query.q || query.minAmount || query.maxAmount || query.page);
+  const monthQuery: MonthlyListQuery = { ...query, customerId: undefined, metricCode: undefined, q: "", minAmount: undefined, maxAmount: undefined, page: 0 };
   const monthInvoicesQuery = readListQuery({ month }, CAPABILITIES.listInvoices, { hasMonth: true });
   const invoicesQuery: MonthlyListQuery = { ...monthInvoicesQuery, customerId: query.customerId };
 
@@ -49,6 +51,7 @@ export default async function BillingPage({
   const monthDraftInvoice =
     draftInvoice && isCustomerFiltered ? previewDraftInvoice(monthQuery, devState) : draftInvoice;
   const monthInvoices = isCustomerFiltered ? listAllInvoices(monthInvoicesQuery, devState) : invoices;
+  const isMonthFinalized = monthDraftInvoice ? resolveIsFinalizedMonth(monthDraftInvoice, monthInvoices) : Promise.resolve(false);
 
   return (
     <CollapseProvider>
@@ -91,7 +94,7 @@ export default async function BillingPage({
                   <BillingCalculatedStamp draftInvoice={draftInvoice} />
                 </Suspense>
                 <Suspense fallback={null}>
-                  <BillingExpandControls draftInvoice={draftInvoice} invoices={invoices} />
+                  <BillingExpandControls draftInvoice={draftInvoice} isMonthFinalized={isMonthFinalized} />
                 </Suspense>
               </>
             ) : (
@@ -100,38 +103,22 @@ export default async function BillingPage({
           }
         >
           <Suspense
-            fallback={
-              <ListControls
-                query={query}
-                capabilities={BILLING_CAPABILITIES}
-                month={{ value: month }}
-                customers={[]}
-                eventTypes={[]}
-                isLoadingOptions
-              />
-            }
+            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
           >
             <ListControlsLoader
+              resource="billing"
               query={query}
               capabilities={BILLING_CAPABILITIES}
               month={{ value: month }}
-              customers={
-                BILLING_CAPABILITIES.customer_id
-                  ? listCustomers(readListQuery({}, CAPABILITIES.listCustomers), "normal")
-                  : undefined
-              }
-              metrics={
-                BILLING_CAPABILITIES.type
-                  ? listBillableMetrics(readListQuery({}, CAPABILITIES.listBillableMetrics), "normal")
-                  : undefined
-              }
             />
           </Suspense>
         </FilterBar>
+        <CsvDownload resource="billing" />
+        <Suspense fallback={null}><DataMonths filterForm="resource-search-billing" resource="usage" pathname="/billing" query={query} /></Suspense>
 
         {draftInvoice ? (
           <Suspense fallback={<TableSkeleton />}>
-            <BillingSection draftInvoice={draftInvoice} invoices={invoices} query={query} />
+            <BillingSection draftInvoice={draftInvoice} invoices={invoices} isMonthFinalized={isMonthFinalized} query={query} />
           </Suspense>
         ) : (
           <TableSkeleton />

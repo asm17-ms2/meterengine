@@ -1,5 +1,6 @@
 package com.meterengine.account.entity;
 
+import com.meterengine.organization.api.OrganizationPerson;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -18,13 +19,13 @@ public class UserAccount implements Persistable<UUID> {
 
   public static final String ROLE_PATTERN = "member|operator";
 
-  public static final int NAME_MAX_LENGTH = 255;
-  public static final int EMAIL_MAX_LENGTH = 254;
-  public static final String EMAIL_PATTERN = ".+@.+\\..+";
-  public static final String EMAIL_FORMAT_MESSAGE = "올바른 형식의 이메일 주소여야 합니다";
+  public static final int NAME_MAX_LENGTH = OrganizationPerson.NAME_MAX_LENGTH;
+  public static final int EMAIL_MAX_LENGTH = OrganizationPerson.EMAIL_MAX_LENGTH;
+  public static final String EMAIL_PATTERN = OrganizationPerson.EMAIL_PATTERN;
+  public static final String EMAIL_FORMAT_MESSAGE = OrganizationPerson.EMAIL_FORMAT_MESSAGE;
 
-  public static final int PASSWORD_MIN_LENGTH = 8;
-  public static final int PASSWORD_MAX_LENGTH = 72;
+  public static final int PASSWORD_MIN_LENGTH = OrganizationPerson.PASSWORD_MIN_LENGTH;
+  public static final int PASSWORD_MAX_LENGTH = OrganizationPerson.PASSWORD_MAX_LENGTH;
   public static final int PASSWORD_MAX_BYTES = 72;
 
   @Id private UUID id;
@@ -43,6 +44,9 @@ public class UserAccount implements Persistable<UUID> {
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private OffsetDateTime createdAt;
+
+  @Column(name = "consent_required", nullable = false)
+  private boolean consentRequired;
 
   @Transient private boolean isNew = true;
 
@@ -97,6 +101,18 @@ public class UserAccount implements Persistable<UUID> {
 
   public OffsetDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  public boolean isConsentRequired() {
+    return consentRequired;
+  }
+
+  public void requireConsent() {
+    consentRequired = true;
+  }
+
+  public void acceptConsent() {
+    consentRequired = false;
   }
 
   public void changeRole(String role) {

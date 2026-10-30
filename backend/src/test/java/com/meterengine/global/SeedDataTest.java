@@ -14,11 +14,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 @Transactional
 class SeedDataTest {
 
@@ -84,6 +86,21 @@ class SeedDataTest {
   }
 
   @Test
+  void 백분위로_바꾼_시드_미터도_시드를_다시_실행하면_백분위가_비워진_합계로_돌아온다() {
+    jdbcTemplate.update(
+        "UPDATE billable_metric SET aggregation = 'percentile', percentile = 95 WHERE code ="
+            + " 'token-usage'");
+
+    jdbcTemplate.execute(readSeedScript());
+
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT aggregation, percentile FROM billable_metric WHERE code = 'token-usage'"))
+        .containsEntry("aggregation", "sum")
+        .containsEntry("percentile", null);
+  }
+
+  @Test
   void 입력과_출력_토큰은_model별_단가이고_나머지_미터는_무차원_단가_1행이다() {
     assertThat(
             jdbcTemplate.queryForList(
@@ -113,7 +130,7 @@ class SeedDataTest {
   }
 
   @Test
-  void 무차원_단가가_남은_DB에서_시드를_다시_실행하면_model_단가만_남는다() {
+  void 시드_재실행은_무차원_단가를_보관하고_model_단가를_활성으로_둔다() {
     jdbcTemplate.update(
         "DELETE FROM price_rate WHERE billable_metric_code IN ('input-tokens', 'output-tokens')");
     jdbcTemplate.update(
@@ -136,7 +153,12 @@ class SeedDataTest {
         .containsOnly("{model}");
     assertThat(modelsPricedFor("input-tokens")).isEqualTo(MODELS);
     assertThat(modelsPricedFor("output-tokens")).isEqualTo(MODELS);
-    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES);
+    assertThat(rowCount("price_rate")).isEqualTo(PRICE_RATES + 2);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM price_rate WHERE billable_metric_code IN ('input-tokens', 'output-tokens') AND dimension_values = '{}' AND archived_at IS NOT NULL",
+                Integer.class))
+        .isEqualTo(2);
   }
 
   @Test
@@ -196,7 +218,7 @@ class SeedDataTest {
 
   private List<String> modelsPricedFor(String billableMetricCode) {
     return jdbcTemplate.queryForList(
-        "SELECT dimension_values ->> 'model' FROM price_rate WHERE billable_metric_code = ?"
+        "SELECT dimension_values ->> 'model' FROM price_rate WHERE billable_metric_code = ? AND archived_at IS NULL"
             + " ORDER BY 1",
         String.class,
         billableMetricCode);
