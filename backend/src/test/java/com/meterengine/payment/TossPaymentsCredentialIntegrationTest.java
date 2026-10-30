@@ -353,6 +353,34 @@ class TossPaymentsCredentialIntegrationTest {
   }
 
   @Test
+  void admin_API_키로는_어느_모드의_토스_키도_보관할_수_없고_403이며_저장된_키는_그대로다() {
+    UUID organizationId = insertOrganization();
+    tossAnswers(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다."));
+    assertThat(updateCredential(organizationId, "test", TEST_CLIENT_KEY, TEST_SECRET_KEY))
+        .hasStatus(200);
+    assertThat(
+            updateCredential(
+                organizationId, "live", "live_ck_live0000", "live_sk_live00000000LIVE"))
+        .hasStatus(200);
+
+    for (String keyMode : List.of("test", "live")) {
+      String authorization = apiKey(organizationId, keyMode);
+      for (String mode : List.of("test", "live")) {
+        assertError(
+            mvc.delete()
+                .uri("/v1/toss-payments-credentials/" + mode)
+                .header("Authorization", authorization)
+                .exchange(),
+            403,
+            ErrorCode.PERMISSION_DENIED);
+      }
+    }
+
+    assertThat(credentialRow(organizationId, "test")).containsEntry("archived_at", null);
+    assertThat(credentialRow(organizationId, "live")).containsEntry("archived_at", null);
+  }
+
+  @Test
   void 모드_경로가_test나_live가_아니면_400_validation_error이고_토스를_부르지_않는다() {
     UUID organizationId = insertOrganization();
 
