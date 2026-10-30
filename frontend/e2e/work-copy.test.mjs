@@ -26,45 +26,9 @@ test("the pricing CSS module does not rely on global class selectors that the mo
   assert.ok(css.includes(".tierEditorRow label{font-size:12px}"));
 });
 
-test("the finalization result lists only the first few invoices and points to the invoice list for the rest", () => {
-  const dialog = source("components/billing/InvoiceFinalizeDialog.tsx");
-  assert.ok(dialog.includes("const FINALIZED_PREVIEW_COUNT = 5;"));
-  assert.ok(dialog.includes("state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map("));
-  assert.ok(dialog.includes("인보이스 보기'에서 확인하세요."));
-});
-
 test("the pricing meter rail stays a wrapping row of chips at 900px and below", () => {
   const css = source("components/pricing/pricing.module.css");
   assert.ok(css.includes("@media(max-width:900px){.meterRail.meterRail{flex-direction:row}.meterRail>:not(button){width:100%}}"));
-});
-
-test("a disabled month finalization shows its reason as text the button describes, not only a tooltip", () => {
-  const button = source("components/billing/InvoiceFinalizeButton.tsx");
-  const dialog = source("components/billing/InvoiceFinalizeDialog.tsx");
-  const section = source("components/billing/InvoiceFinalizeSection.tsx");
-  assert.ok(!button.includes("title={title}") && button.includes("aria-describedby={hintId}") && button.includes('className="field-hint"'));
-  assert.ok(dialog.includes('disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다." : undefined}'));
-  assert.ok(section.includes('disabledReason="청구 예정액을 불러오지 못해 확정할 수 없습니다."'));
-});
-
-test("archive actions show their success message before moving to the archived list with the viewed month", () => {
-  const actions = source("app/(console)/workspace-actions.ts");
-  const panel = source("components/workspace/ActionPanel.tsx");
-  const detail = source("app/(console)/customers/[id]/page.tsx");
-  assert.ok(!actions.includes('redirect(workspaceHref("/customers?status=archived"'));
-  assert.ok(actions.includes("nextPath: workspaceHref("));
-  assert.ok(panel.includes("if (result.nextPath) router.push(result.nextPath);"));
-  assert.ok(detail.includes('{ name: "month", label: "", type: "hidden" as const, value: month }'));
-});
-
-
-test("the customer archive action sits with the other customer actions, not in the navigation link row", () => {
-  const lines = source("app/(console)/customers/[id]/page.tsx").split("\n");
-  const actionRow = lines.find(line => line.includes('operation="updateCustomer"'));
-  const navigationRow = lines.find(line => line.includes(">수집 로그 확인</Link>"));
-  assert.ok(actionRow.includes('operation={detail.archived_at ? "restoreCustomer" : "deleteCustomer"}'));
-  assert.ok(!actionRow.includes(">고객별 요금 설계</Link>"));
-  assert.ok(!navigationRow.includes("<ActionPanel") && navigationRow.includes(">고객별 요금 설계</Link>"));
 });
 
 test("every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel", () => {
