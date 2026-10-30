@@ -64,7 +64,7 @@ pnpm build
 
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
-상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
+상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
 
 ## 컨테이너 이미지
 
@@ -140,7 +140,7 @@ docker run -p 3000:3000 \
 스타일 규칙은 다음과 같다.
 
 - 업무 화면은 antd 6 컴포넌트로 그린다. 공통 배치는 `globals.css`, 페이지 고유 스타일은 같은 폴더의 CSS Modules(예: `HomePage.module.css`)에 둔다.
-- 테마는 보라색 강조다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
+- 테마는 보라색 강조다. 컴포넌트 토큰은 `AppProviders.tsx`, 인증과 셸의 배치는 `globals.css`에 둔다. 같은 색을 쓰는 CSS 변수는 `globals.css`와 CSS Modules에도 있으니 함께 바꾼다. `globals.css` 안에서는 `:root` 토큰과 같은 색을 리터럴로 다시 적지 않고 `var()`로 쓴다. 토큰은 `theme.useToken()`의 `token.paddingLG`처럼 멤버 접근으로 읽는다.
 - antd는 `"use client"` 파일에서만 import한다. Server Component는 직렬화할 수 있는 prop만 넘겨 그 래퍼를 그린다.
 - 폼은 HTML form 또는 antd Form과 antd 입력을 쓴다. 서버 액션과 작업 상태는 `useActionState`로 연결한다.
 - 페이지를 옮기는 버튼은 `LinkButton`, 토스트는 `App.useApp()`의 `message`를 쓴다.
