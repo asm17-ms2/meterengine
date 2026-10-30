@@ -18,7 +18,10 @@ import com.meterengine.organization.api.OrganizationPerson;
 import com.meterengine.organization.dto.AcceptOrganizationInvitationRequest;
 import com.meterengine.organization.dto.CreateManagedMemberRequest;
 import com.meterengine.organization.dto.ManagedMemberResponse;
+import com.meterengine.organization.dto.OrganizationInvitationAcceptanceResponse;
+import com.meterengine.organization.dto.OrganizationInvitationPreviewResponse;
 import com.meterengine.organization.dto.OrganizationInvitationResponse;
+import com.meterengine.organization.dto.OrganizationInvitationSecretResponse;
 import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.entity.OrganizationInvitation;
 import com.meterengine.organization.entity.OrganizationMember;
@@ -163,13 +166,13 @@ public class OrganizationPeopleService {
   }
 
   @Transactional
-  public IssuedInvitation invite(
+  public OrganizationInvitationSecretResponse invite(
       AuthenticatedPrincipal principal, UUID organizationId, String email) {
     return invite(principal, organizationId, email, AccessScopes.READ);
   }
 
   @Transactional
-  public IssuedInvitation invite(
+  public OrganizationInvitationSecretResponse invite(
       AuthenticatedPrincipal principal, UUID organizationId, String email, List<String> scopes) {
     lockOwner(principal, organizationId);
     organizationAccounts
@@ -200,7 +203,8 @@ public class OrganizationPeopleService {
         "organization_invitation",
         invitation.getId().toString(),
         Map.of("scopes", invitation.getScopes()));
-    return new IssuedInvitation(OrganizationInvitationResponse.from(invitation), token);
+    return new OrganizationInvitationSecretResponse(
+        OrganizationInvitationResponse.from(invitation), token);
   }
 
   @Transactional
@@ -222,11 +226,11 @@ public class OrganizationPeopleService {
   }
 
   @Transactional(readOnly = true)
-  public InvitationPreview preview(String token) {
+  public OrganizationInvitationPreviewResponse preview(String token) {
     OrganizationInvitation invitation = byToken(token);
     usable(invitation);
     Organization organization = activeOrganization(invitation.getOrganizationId(), false);
-    return new InvitationPreview(
+    return new OrganizationInvitationPreviewResponse(
         organization.getName(),
         invitation.getEmail(),
         invitation.getExpiresAt(),
@@ -235,7 +239,7 @@ public class OrganizationPeopleService {
   }
 
   @Transactional
-  public AcceptedInvitation accept(
+  public OrganizationInvitationAcceptanceResponse accept(
       String token, AuthenticatedPrincipal principal, AcceptOrganizationInvitationRequest request) {
     byte[] tokenHash = SecureTokens.hash(token);
     UUID organizationId =
@@ -260,7 +264,7 @@ public class OrganizationPeopleService {
           || request.name() == null
           || request.name().isBlank()
           || request.password() == null
-          || request.password().length() < 8
+          || request.password().length() < OrganizationPerson.PASSWORD_MIN_LENGTH
           || request.consents() == null)
         throw new InvalidRequestException(ErrorCode.VALIDATION_ERROR);
       List<MembershipConsent> accepted =
@@ -291,7 +295,7 @@ public class OrganizationPeopleService {
         "organization_invitation",
         invitation.getId().toString(),
         Map.of("scopes", invitation.getScopes()));
-    return new AcceptedInvitation(user.id(), invitation.getOrganizationId());
+    return new OrganizationInvitationAcceptanceResponse(user.id(), invitation.getOrganizationId());
   }
 
   private OrganizationInvitation byToken(String token) {
@@ -367,22 +371,4 @@ public class OrganizationPeopleService {
   private static OffsetDateTime now() {
     return OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
   }
-
-  public record IssuedInvitation(OrganizationInvitationResponse invitation, String token) {
-    @Override
-    public String toString() {
-      return "IssuedInvitation[token=(redacted)]";
-    }
-  }
-
-  public record InvitationPreview(
-      @com.fasterxml.jackson.annotation.JsonProperty("organization_name") String organizationName,
-      String email,
-      @com.fasterxml.jackson.annotation.JsonProperty("expires_at") OffsetDateTime expiresAt,
-      @com.fasterxml.jackson.annotation.JsonProperty("account_exists") boolean accountExists,
-      List<String> scopes) {}
-
-  public record AcceptedInvitation(
-      @com.fasterxml.jackson.annotation.JsonProperty("user_account_id") UUID userAccountId,
-      @com.fasterxml.jackson.annotation.JsonProperty("organization_id") UUID organizationId) {}
 }

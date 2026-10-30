@@ -286,6 +286,33 @@ class PaymentReconciliationIntegrationTest {
   }
 
   @Test
+  void 거래_목록이_거절된_날의_토스에만_있는_거래를_다음_실행이_남긴다() {
+    Organization organization = organization();
+    when(tossPaymentsClient.listTransactions(
+            organization.secretKey(), TOSS_START, TOSS_END, null, 1000))
+        .thenReturn(new TossPaymentsResult.Rejected<>(500, "PROVIDER_ERROR", "일시 장애"));
+    reconcile(SLOT, 0, 0, 1);
+    when(tossPaymentsClient.listTransactions(
+            organization.secretKey(), TOSS_START, TOSS_END.plusDays(1), null, 1000))
+        .thenReturn(
+            new TossPaymentsResult.Success<>(
+                List.of(
+                    transaction(
+                        "tx_late",
+                        "tgen_late",
+                        ORDER_ID_PREFIX + UUID.randomUUID(),
+                        "DONE",
+                        "2026-10-25T19:10:00+09:00",
+                        5000))));
+
+    reconcile(SLOT.plusDays(1), SLOT.minusDays(1), 1, 0, 0);
+
+    assertThat(mismatchRows(organization))
+        .extracting(row -> row.get("kind"), row -> row.get("transaction_key"))
+        .containsExactly(tuple("missing_in_meterengine", "tx_late"));
+  }
+
+  @Test
   void 맞는_거래만_있으면_한_줄도_남기지_않는다() {
     Organization organization = organization();
     UUID attemptId = doneAttempt(organization, 13200, "2026-10-25T10:00:03+09:00");
@@ -943,9 +970,14 @@ class PaymentReconciliationIntegrationTest {
   }
 
   private void reconcile(OffsetDateTime slot, int processed, int skipped, int failed) {
+    reconcile(slot, slot.minusDays(1), processed, skipped, failed);
+  }
+
+  private void reconcile(
+      OffsetDateTime slot, OffsetDateTime fromSlot, int processed, int skipped, int failed) {
     long otherCredentials = tossPaymentsCredentialRepository.count() - processed - skipped - failed;
 
-    PaymentJobResult result = paymentReconciliationService.reconcile(slot);
+    PaymentJobResult result = paymentReconciliationService.reconcile(slot, fromSlot);
 
     assertThat(result)
         .isEqualTo(new PaymentJobResult(processed, skipped, failed + (int) otherCredentials));

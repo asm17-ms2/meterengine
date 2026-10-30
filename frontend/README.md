@@ -49,8 +49,11 @@ pnpm dev
 cd frontend
 pnpm lint
 pnpm typecheck
+pnpm test:unit
 pnpm build
 ```
+
+- `pnpm test:unit`은 `e2e/*.test.mjs` 단위 검사다. 백엔드와 브라우저가 필요 없다.
 
 - `pnpm build`는 백엔드가 꺼져 있어도 통과한다. CI가 그 상태로 돌린다.
   - 인증 쿠키와 `cache: "no-store"` 조회는 요청 시점에 읽는다 (`src/lib/auth/session.ts`, `src/lib/api/transport.ts`).
@@ -153,7 +156,7 @@ docker run -p 3000:3000 \
 - 고객, 미터, 가격, 사용량, 청구 예정액과 인보이스는 서버 검색, 필터, 정렬, 페이지 처리와 조건 전체 CSV를 사용한다. 월, 고객, 검색어 등은 함께 선택한 뒤 `조건 적용`으로 제출한다. 청구 확정은 조회한 한 페이지가 아니라 해당 월 전체 대상에 적용하며 전체 규모를 확인한다.
 - 선택지와 조회 가능한 월은 서버에서 받는다. 이벤트도 같은 조건으로 CSV를 내려받고 원본 JSON 포함 여부를 선택한다. CSV는 최대 10,000행, 한도를 넘으면 조건을 좁혀야 한다.
 - 이벤트는 월별 조회 또는 날짜/초 단위 직접 범위를 선택한다. 상세를 닫으면 조회 조건과 페이지로 돌아간다.
-- URL과 제출 폼은 `organization_id`와 `environment`를 보존한다. 다른 탭에서 도입사가 바뀐 오래된 폼과 내보내기는 거절한다. test/live 1차 범위는 고객, 수집 로그, API 키, 감사와 수집 거절이며 나머지 업무 메뉴는 준비 중으로 표시한다.
+- URL과 제출 폼은 `organization_id`와 `environment`를 보존한다. 다른 탭에서 도입사가 바뀐 오래된 폼과 내보내기는 거절한다. 업무 메뉴는 모두 선택한 환경의 데이터를 보이고, 계정과 권한은 환경에 관계없이 같다.
 - 수집 성공 후 매핑되지 않은 문제는 `/event-issues`, 수집 단계의 거절은 `/event-rejections`에서 구분한다.
 
 ## 화면
@@ -201,6 +204,13 @@ pnpm test:e2e:contract
 
 계약 테스트는 임시 HTTP 대역과 standalone FE를 `38148`, `33148` 포트에서 실행하고 종료한다. 실제 Spring 검증과 구분한다.
 
+카드 등록과 업무 화면의 계약 테스트는 설정 파일을 지정해 돌린다. 둘 다 `pnpm build` 뒤 대역과 FE를 스스로 띄우고 끝내며 백엔드가 필요 없다.
+
+```bash
+pnpm exec playwright test -c playwright.payment.config.ts    # 대역 38149, FE 33149
+pnpm exec playwright test -c playwright.workspace.config.ts  # 대역 38150, FE 33150. 결과 폴더는 WORKSPACE_CONTRACT_OUTPUT_DIR
+```
+
 실제 S1 Spring 서버를 별도 테스트 DB로 `38147`에 실행한 뒤 아래를 실행한다. 테스트는 가입, 승인, 로그인과 고객 등록을 수행하므로 운영 환경을 지정하지 않는다. 테스트 설정은 로컬 HTTP 주소만 허용한다.
 
 ```bash
@@ -209,6 +219,8 @@ E2E_OPERATOR_EMAIL=operator@fe-e2e.local \
 E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
+
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 
