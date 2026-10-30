@@ -309,11 +309,15 @@ public class WorkspaceQueryService {
             : search.mode() == null
                 ? paymentSettingService.get(organizationId).mode()
                 : search.mode();
-    List<InvoiceResponse> invoices = invoiceService.list(organizationId, null, null).invoices();
-    Map<UUID, InvoicePaymentResponse> payments =
-        invoicePaymentService.list(organizationId, null, null, mode).invoicePayments().stream()
-            .collect(Collectors.toMap(InvoicePaymentResponse::invoiceId, Function.identity()));
     if (search.customerId() != null) customerService.get(organizationId, search.customerId());
+    List<InvoiceResponse> invoices =
+        invoiceService.list(organizationId, search.customerId(), search.month()).invoices();
+    Map<UUID, InvoicePaymentResponse> payments =
+        invoicePaymentService
+            .list(organizationId, search.month(), search.customerId(), mode)
+            .invoicePayments()
+            .stream()
+            .collect(Collectors.toMap(InvoicePaymentResponse::invoiceId, Function.identity()));
     List<InvoiceSearchResponse> selected =
         invoices.stream()
             .filter(
@@ -413,7 +417,7 @@ public class WorkspaceQueryService {
                     value -> value.payment() == null ? "unpaid" : value.payment().status(),
                     LinkedHashMap::new,
                     Collectors.counting())));
-    return page(selected, invoices.size(), search, summary);
+    return page(selected, invoiceService.count(organizationId), search, summary);
   }
 
   private static DraftInvoiceCustomer filterMetric(DraftInvoiceCustomer customer, String code) {

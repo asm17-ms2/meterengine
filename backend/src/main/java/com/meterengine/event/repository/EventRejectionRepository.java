@@ -5,7 +5,6 @@ import com.meterengine.event.dto.EventRejectionsResponse;
 import com.meterengine.event.service.EventRejection;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.BusinessEnvironmentContext;
-import com.meterengine.global.security.PrincipalKind;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -36,13 +35,17 @@ public class EventRejectionRepository {
     String actorType =
         principal == null
             ? "system"
-            : principal.kind() == PrincipalKind.API_KEY ? "api_key" : "user_account";
+            : switch (principal.kind()) {
+              case API_KEY -> "api_key";
+              case SESSION -> "user_account";
+            };
     UUID actorId =
         principal == null
             ? null
-            : principal.kind() == PrincipalKind.API_KEY
-                ? principal.apiKeyId()
-                : principal.userAccountId();
+            : switch (principal.kind()) {
+              case API_KEY -> principal.apiKeyId();
+              case SESSION -> principal.userAccountId();
+            };
     List<Object> values = new ArrayList<>();
     for (EventRejection rejection : rejections) {
       values.add(organizationId);
@@ -77,12 +80,15 @@ public class EventRejectionRepository {
       String query,
       int page,
       int size) {
+    UUID environmentId = BusinessEnvironmentContext.environmentId();
     StringBuilder where =
         new StringBuilder(
-            " WHERE organization_id=? AND environment_id IS NOT DISTINCT FROM ?::uuid AND recorded_at>=? AND recorded_at<?");
+            environmentId == null
+                ? " WHERE organization_id=? AND environment_id IS NULL AND recorded_at>=? AND recorded_at<?"
+                : " WHERE organization_id=? AND environment_id=?::uuid AND recorded_at>=? AND recorded_at<?");
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    if (environmentId != null) parameters.add(environmentId);
     parameters.add(start);
     parameters.add(end);
     if (customerId != null) {

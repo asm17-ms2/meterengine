@@ -3,6 +3,7 @@ package com.meterengine.metric.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -64,18 +65,14 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            any(), any(), any(), any(), any(), any()))
-        .thenReturn(Map.of());
+    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any()))
+        .thenReturn(quantities(Map.of(), Map.of()));
 
     billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
 
     verify(billableMetricUsageRepository)
-        .sumQuantityByCustomerIdAndDimensionValues(
-            eq(ORGANIZATION_ID),
-            eq("chat_completion"),
-            eq("token"),
-            eq(List.of()),
+        .aggregate(
+            argThat(metric -> "token".equals(metric.getTargetProperty())),
             startCaptor.capture(),
             endCaptor.capture());
     assertThat(startCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00+09:00"));
@@ -126,9 +123,11 @@ class BillableMetricUsageServiceTest {
             List.of(
                 new Customer(withEvents, ORGANIZATION_ID, "아크메", null),
                 new Customer(withoutEvents, ORGANIZATION_ID, "베타", null)));
-    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            any(), any(), any(), any(), any(), any()))
-        .thenReturn(Map.of(withEvents, List.of(baseDimensionUsage("1200"))));
+    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any()))
+        .thenReturn(
+            quantities(
+                Map.of(withEvents, baseDimensionUsage("1200")),
+                Map.of(withEvents, List.of(baseDimensionUsage("1200")))));
 
     List<CustomerUsage> customerUsages =
         billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST).getFirst().customers();
@@ -141,7 +140,7 @@ class BillableMetricUsageServiceTest {
   }
 
   @Test
-  void 고객의_수량은_조합별_수량의_합이다() {
+  void 고객의_수량은_집계_결과의_고객_합계다() {
     UUID customerId = UUID.randomUUID();
     DimensionUsage opus = new DimensionUsage(Map.of("model", "opus-5"), new BigDecimal("500"));
     DimensionUsage haiku = new DimensionUsage(Map.of("model", "haiku-5"), new BigDecimal("300"));
@@ -149,9 +148,11 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            any(), any(), any(), any(), any(), any()))
-        .thenReturn(Map.of(customerId, List.of(opus, haiku)));
+    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any()))
+        .thenReturn(
+            quantities(
+                Map.of(customerId, baseDimensionUsage("800")),
+                Map.of(customerId, List.of(opus, haiku))));
 
     CustomerUsage customerUsage =
         billableMetricUsageService
@@ -173,12 +174,16 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(tokens, requests));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            any(), any(), eq("token"), any(), any(), any()))
-        .thenReturn(Map.of(customerId, List.of(baseDimensionUsage("1200"))));
-    when(billableMetricUsageRepository.sumQuantityByCustomerIdAndDimensionValues(
-            any(), any(), eq("request"), any(), any(), any()))
-        .thenReturn(Map.of(customerId, List.of(baseDimensionUsage("7"))));
+    when(billableMetricUsageRepository.aggregate(eq(tokens), any(), any()))
+        .thenReturn(
+            quantities(
+                Map.of(customerId, baseDimensionUsage("1200")),
+                Map.of(customerId, List.of(baseDimensionUsage("1200")))));
+    when(billableMetricUsageRepository.aggregate(eq(requests), any(), any()))
+        .thenReturn(
+            quantities(
+                Map.of(customerId, baseDimensionUsage("7")),
+                Map.of(customerId, List.of(baseDimensionUsage("7")))));
 
     List<BillableMetricUsage> billableMetricUsages =
         billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
@@ -223,8 +228,7 @@ class BillableMetricUsageServiceTest {
         .hasMessageContaining("api-calls")
         .hasMessageContaining("COUNT");
 
-    verify(billableMetricUsageRepository, never())
-        .sumQuantityByCustomerIdAndDimensionValues(any(), any(), any(), any(), any(), any());
+    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any());
   }
 
   @Test
@@ -247,8 +251,14 @@ class BillableMetricUsageServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("target_property");
 
-    verify(billableMetricUsageRepository, never())
-        .sumQuantityByCustomerIdAndDimensionValues(any(), any(), any(), any(), any(), any());
+    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any());
+  }
+
+  private static BillableMetricUsageRepository.AggregatedQuantities quantities(
+      Map<UUID, DimensionUsage> totalByCustomerId,
+      Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId) {
+    return new BillableMetricUsageRepository.AggregatedQuantities(
+        totalByCustomerId, dimensionUsagesByCustomerId);
   }
 
   private static DimensionUsage baseDimensionUsage(String quantity) {

@@ -369,6 +369,22 @@ class OpenApiDocumentTest {
   }
 
   @Test
+  void 배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_세_값만_적는다() {
+    JsonNode schemas = root().path("components").path("schemas");
+    JsonNode events = schemas.path("IngestEventBatchRequest").path("properties").path("events");
+    assertThat(events.path("minItems").asInt()).isOne();
+    assertThat(events.path("maxItems").asInt()).isEqualTo(100);
+    List<String> results = new ArrayList<>();
+    schemas
+        .path("EventResult")
+        .path("properties")
+        .path("result")
+        .path("enum")
+        .forEach(value -> results.add(value.asText()));
+    assertThat(results).containsExactlyInAnyOrder("stored", "duplicate", "rejected");
+  }
+
+  @Test
   void 요금제_이력_조회는_생략한_파라미터의_뜻과_400_404를_적는다() {
     JsonNode operation = root().path("paths").path("/v1/price-plans").path("get");
     assertThat(operation.path("description").asText()).isNotBlank();

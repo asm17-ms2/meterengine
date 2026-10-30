@@ -67,7 +67,7 @@ public class WorkspaceQueryController {
           "q, external_id, customer_id, status(active/archived/all),"
               + " sort(name/external_id/created_at/archived_at/id/billing_email), order, page,"
               + " size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수다. 페이지는 1부터, size 기본"
-              + " 25/최대 200이다.")
+              + " 25/최대 200이다. summary는 active_count, archived_count다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -129,7 +129,8 @@ public class WorkspaceQueryController {
       summary = "미터 검색과 서버 페이지 조회",
       description =
           "q, billable_metric_code, status(active/archived/all),"
-              + " sort(code/name/event_type/aggregation/archived_at), order, page, size를 받는다.")
+              + " sort(code/name/event_type/aggregation/archived_at), order, page, size를 받는다. summary는"
+              + " active_count, archived_count다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -188,7 +189,7 @@ public class WorkspaceQueryController {
       description =
           "month, customer_id, billable_metric_code, q, status(미터 보관 상태),"
               + " sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단가 수, 조건"
-              + " 전체 no_rate_count를 포함한다.")
+              + " 전체 no_rate_count를 포함한다. summary는 month, metric_count, no_rate_count다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -263,7 +264,8 @@ public class WorkspaceQueryController {
       description =
           "month, customer_id, billable_metric_code, q, status(고객 보관 상태, 기본 all),"
               + " sort(customer_name/customer_id/line_count), order, page, size를 받는다. 한 고객의 모든 미터를"
-              + " 같은 페이지에 둔다.")
+              + " 같은 페이지에 둔다. summary는 month, customer_count, metric_count, line_count,"
+              + " nonzero_customer_count다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -338,7 +340,9 @@ public class WorkspaceQueryController {
           "month, customer_id, billable_metric_code, q, min_amount, max_amount,"
               + " sort(customer_name/customer_id/amount/line_count), order, page, size를 받는다."
               + " amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를 확정하므로"
-              + " finalization_scope는 month다.")
+              + " finalization_scope는 month다. summary는 month, calculated_at, amount, customer_count,"
+              + " billable_customer_count, line_count, unpriced_count, negative_count와 같은 이름의 month_ 월 전체 값,"
+              + " finalization_scope다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -419,7 +423,10 @@ public class WorkspaceQueryController {
               + " billable_metric_code, q,"
               + " sort(month/customer_name/total_amount/finalized_at/invoice_number/status), order,"
               + " page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립이며 pending이 있으면"
-              + " outstanding_amount는 null이다.")
+              + " outstanding_amount는 null이다. summary는 mode, invoice_count, supply_amount, tax_amount,"
+              + " total_amount, canceled_amount, has_pending, outstanding_amount, status_counts(결제 상태별 건수)다."
+              + " from과 to는 한쪽만 줘도 되고 month와 함께 주면 둘 다 만족하는 인보이스만 나온다. 이벤트 목록과 내보내기는"
+              + " from과 to를 함께 요구한다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -739,7 +746,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "customers",
         workspaceQueryService.search(
-            organizationId, SearchParameters.parse(parameters, "customers").forExport()));
+            organizationId, SearchParameters.parse(parameters, "customers").forExport()),
+        CustomerResponse.class);
   }
 
   @GetMapping(value = "/v1/billable-metrics/export", produces = "text/csv")
@@ -789,7 +797,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "billable-metrics",
         workspaceQueryService.metrics(
-            organizationId, SearchParameters.parse(parameters, "metrics").forExport()));
+            organizationId, SearchParameters.parse(parameters, "metrics").forExport()),
+        BillableMetricResponse.class);
   }
 
   @GetMapping(value = "/v1/billable-metric-prices/export", produces = "text/csv")
@@ -855,7 +864,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "billable-metric-prices",
         workspaceQueryService.prices(
-            organizationId, SearchParameters.parse(parameters, "prices").forExport()));
+            organizationId, SearchParameters.parse(parameters, "prices").forExport()),
+        PriceSearchResponse.class);
   }
 
   @GetMapping(value = "/v1/usage/export", produces = "text/csv")
@@ -921,7 +931,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "usage",
         workspaceQueryService.usage(
-            organizationId, SearchParameters.parse(parameters, "usage").forExport()));
+            organizationId, SearchParameters.parse(parameters, "usage").forExport()),
+        UsageCustomerResponse.class);
   }
 
   @GetMapping(value = "/v1/invoices/draft/export", produces = "text/csv")
@@ -991,7 +1002,8 @@ public class WorkspaceQueryController {
     return searchCsvService.export(
         "draft-invoices",
         workspaceQueryService.drafts(
-            organizationId, SearchParameters.parse(parameters, "drafts").forExport()));
+            organizationId, SearchParameters.parse(parameters, "drafts").forExport()),
+        DraftInvoiceCustomer.class);
   }
 
   @GetMapping(value = "/v1/invoices/export", produces = "text/csv")
@@ -1079,7 +1091,8 @@ public class WorkspaceQueryController {
       @Parameter(hidden = true) @RequestParam @StorableJson Map<String, String> parameters) {
     return searchCsvService.export(
         "invoices",
-        workspaceQueryService.invoices(organizationId, invoiceParameters(parameters).forExport()));
+        workspaceQueryService.invoices(organizationId, invoiceParameters(parameters).forExport()),
+        InvoiceSearchResponse.class);
   }
 
   private static SearchParameters invoiceParameters(Map<String, String> values) {
