@@ -94,7 +94,8 @@ const server = createServer(async (req, res) => {
       result = { status: 200, body: customer };
     } else if (customers.some(customer => path === `/v1/customers/${customer.id}`)) {
       const customer = customers.find(candidate => path === `/v1/customers/${candidate.id}`);
-      if (req.method !== "PATCH") result = { status: 200, body: customer };
+      if (req.method === "DELETE") { customer.archived_at = new Date().toISOString(); result = { status: 204 }; }
+      else if (req.method !== "PATCH") result = { status: 200, body: customer };
       else if (req.headers["if-match"] !== `"${customer.version}"`) result = failure(409, "resource_version_conflict", "다른 요청이 변경한 항목입니다. 다시 조회한 뒤 수정하세요");
       else { Object.assign(customer, { name: body.name, billing_email: body.billing_email, version: customer.version + 1 }); result = { status: 200, body: customer }; }
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
@@ -107,8 +108,8 @@ const server = createServer(async (req, res) => {
       result = { status: 201, body: { ...key, secret: "me_live_ContractSecretValue0000000000" } };
     }
     else if (path === "/v1/webhook-endpoints" && req.method === "GET") result = { status: 200, body: { endpoints: [
-      { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
-      { id: HEALTHY_WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/healthy", event_types: ["payment_succeeded"], enabled: true, created_at: new Date().toISOString(), archived_at: null },
+      { id: WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/meterengine", event_types: ["payment_failed", "webhook_test"], enabled: true, created_at: new Date().toISOString(), archived_at: null, latest_attempt_failed: true },
+      { id: HEALTHY_WEBHOOK_ENDPOINT_ID, url: "https://hooks.contract.local/healthy", event_types: ["payment_succeeded"], enabled: true, created_at: new Date().toISOString(), archived_at: null, latest_attempt_failed: false },
     ] } };
     else if (path === `/v1/webhook-endpoints/${HEALTHY_WEBHOOK_ENDPOINT_ID}/deliveries` && req.method === "GET") result = deliveryPage(url, [
       { id: "99999999-9999-4999-8999-0000000000b0", status: "pending", type: "payment_succeeded", attempt_count: 1, response_status: null, failure_reason: null, next_attempt_at: expiresAt(), created_at: new Date().toISOString(), attempts: [] },

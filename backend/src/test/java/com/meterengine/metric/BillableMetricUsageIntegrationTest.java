@@ -6,6 +6,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageCustomer;
 import com.meterengine.metric.dto.BillableMetricUsageResponse.BillableMetricUsageDimensionUsage;
@@ -149,6 +150,82 @@ class BillableMetricUsageIntegrationTest {
     assertThat(draft).hasStatusOk().bodyJson().extractingPath("$.total_amount").isEqualTo(250);
     assertThat(draft).bodyJson().extractingPath("$.customers[0].lines[0].quantity").isEqualTo(500);
     assertThat(draft).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(250);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 집계 마감 시각
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void 마감이_지난_달은_마감_시각_전에_받은_이벤트만_집계하고_13시_정각에_받은_것은_빠진다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-before",
+        customerId,
+        500,
+        "2026-09-30T10:00:00+09:00",
+        "2026-10-01T12:59:59+09:00");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-at",
+        customerId,
+        700,
+        "2026-09-30T11:00:00+09:00",
+        "2026-10-01T13:00:00+09:00");
+
+    assertThat(quantityOf(organizationId, SEPTEMBER, customerId)).isEqualByComparingTo("500");
+  }
+
+  @Test
+  void 마감이_지난_달은_사이에_그_달_이벤트가_더_들어와도_두_번_읽은_값이_같다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-before",
+        customerId,
+        500,
+        "2026-09-30T10:00:00+09:00",
+        "2026-10-01T09:00:00+09:00");
+    BigDecimal first = quantityOf(organizationId, SEPTEMBER, customerId);
+
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-late",
+        customerId,
+        700,
+        "2026-09-30T11:00:00+09:00",
+        OffsetDateTime.now(KST).toString());
+
+    assertThat(quantityOf(organizationId, SEPTEMBER, customerId))
+        .isEqualByComparingTo(first)
+        .isEqualByComparingTo("500");
+  }
+
+  @Test
+  void 그_달_이벤트를_마감_뒤에만_받은_고객은_사용량과_청구_예정액이_0이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    insertPriceRate(organizationId, "0.5");
+    UUID customerId = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-late",
+        customerId,
+        700,
+        "2026-09-30T11:00:00+09:00",
+        "2026-10-02T09:00:00+09:00");
+
+    assertThat(quantityOf(organizationId, SEPTEMBER, customerId)).isEqualByComparingTo("0");
+    MvcTestResult draft = getDraftInvoice(organizationId, SEPTEMBER);
+    assertThat(draft).hasStatusOk().bodyJson().extractingPath("$.total_amount").isEqualTo(0);
+    assertThat(draft).bodyJson().extractingPath("$.customers[0].lines.length()").isEqualTo(0);
   }
 
   // ---------------------------------------------------------------------------
@@ -544,17 +621,14 @@ class BillableMetricUsageIntegrationTest {
       String eventType,
       String propertiesJson,
       OffsetDateTime occurredAt) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, ?, ?::jsonb, ?)
-        """,
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
         eventType,
         propertiesJson,
+        occurredAt,
         occurredAt);
   }
 }

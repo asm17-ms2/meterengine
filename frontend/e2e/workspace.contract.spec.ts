@@ -415,3 +415,29 @@ test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으�
   await page.getByRole("combobox", { name: "고객", exact: true }).click();
   await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
 });
+
+test("격리 계약: 월 확정 결과 창은 다섯 건까지만 펼치고 나머지는 인보이스 화면으로 안내한다", async ({ page, request }) => {
+  await control(request, "finalize-month");
+  await page.goto("/billing?month=2026-09&environment=legacy");
+  await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
+  const result = page.getByRole("dialog", { name: /인보이스 7건을 확정했습니다/ });
+  await expect(result.getByRole("listitem")).toHaveCount(5);
+  await expect(result.getByText("나머지 2건은 '인보이스 보기'에서 확인하세요.", { exact: true })).toBeVisible();
+});
+
+test("격리 계약: 청구할 고객이 없어 월 전체 확정이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
+  await control(request, "finalized-month-zero-customer");
+  await page.goto("/billing?month=2026-10&environment=legacy");
+  const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.");
+});
+
+test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 확정이 비활성이고 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
+  await control(request, "draft-failure");
+  await page.goto("/billing?month=2026-09&environment=legacy");
+  const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription("청구 예정액을 불러오지 못해 확정할 수 없습니다.");
+});

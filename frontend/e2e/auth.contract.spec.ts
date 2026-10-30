@@ -186,6 +186,34 @@ test("a workspace action still follows the login redirect after its session is r
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
 });
 
+async function openNewCustomer(page: Page, name: string) {
+  await login(page);
+  await page.getByRole("button", { name: "고객 등록", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^고객명/).fill(name);
+  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("link", { name, exact: true }).click();
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+}
+
+test("archiving a customer shows its success message and opens the archived list for the viewed month", async ({ page }) => {
+  await openNewCustomer(page, "보관할 고객");
+  const month = new URL(page.url()).searchParams.get("month");
+  await page.getByRole("button", { name: "고객 보관", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "고객 보관", exact: true }).click();
+  await expect(page.getByText("고객을 보관했습니다. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived" && url.searchParams.get("month") === month);
+});
+
+test("the customer archive button sits with the other customer actions, not in the navigation link row", async ({ page }) => {
+  await openNewCustomer(page, "배치를 볼 고객");
+  const actionRow = page.locator(".workspace-actions").filter({ has: page.getByRole("button", { name: "고객 정보 수정", exact: true }) });
+  await expect(actionRow.getByRole("button", { name: "고객 보관", exact: true })).toBeVisible();
+  const navigationRow = page.locator(".workspace-actions").filter({ has: page.getByRole("link", { name: "수집 로그 확인", exact: true }) });
+  await expect(navigationRow.getByRole("button", { name: "고객 보관", exact: true })).toHaveCount(0);
+});
+
 test("a customer edit that lost a version race offers to load the latest values and then saves", async ({ page, request }) => {
   await login(page);
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
@@ -229,6 +257,16 @@ test("a customer address that is not a customer id is treated as not found witho
   await expectTenantUrl(page, "/customers");
   await page.goto(`/customers/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
   await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
+test("a payment address that is not an invoice id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/payments/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "수납 내역을 찾을 수 없습니다", level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
   const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
   expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
@@ -436,6 +474,14 @@ test("a webhook receiver whose latest delivery is failing is flagged in the list
   await expect(failing).toContainText("최근 발송 실패");
   await expect(healthy).toContainText("발송 중");
   await expect(healthy).not.toContainText("최근 발송 실패");
+});
+
+test("the integrations list reads the failure flag from the receiver list without asking each receiver's deliveries", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 발송 실패");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.filter((path: string) => path.includes("/deliveries"))).toEqual([]);
 });
 
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {

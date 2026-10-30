@@ -45,6 +45,7 @@ class StoredEvent:
     event_type: str
     occurred_at: datetime
     properties: dict
+    received_at: Optional[datetime] = None
 
 
 def parse_rfc3339(text: str) -> datetime:

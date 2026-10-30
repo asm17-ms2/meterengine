@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,9 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DraftInvoiceController {
 
   private final DraftInvoiceService draftInvoiceService;
+  private final Clock clock;
 
-  DraftInvoiceController(DraftInvoiceService draftInvoiceService) {
+  DraftInvoiceController(DraftInvoiceService draftInvoiceService, Clock clock) {
     this.draftInvoiceService = draftInvoiceService;
+    this.clock = clock;
   }
 
   @GetMapping
@@ -42,6 +45,7 @@ public class DraftInvoiceController {
           아직 확정하지 않은 고객의 청구 예정액을 미터의 속성 값 조합별 사용량 x 그 조합의 단가로 계산해 돌려준다.
           그 달이 확정된 고객은 나오지 않고 total_amount는 남은 고객의 합이다. 확정된 금액은 인보이스 목록 조회로 본다.
           조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
+          그 달 이벤트 중 집계 마감 시각(다음 달 1일 13:00 KST) 전에 서버가 받은(received_at) 것만 집계한다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않는다.
           금액은 원 단위 정수다. 라인(고객 x 미터 x 조합)마다 10원 미만을 버린 뒤 합산한다. 10원이 안 되는 라인은 0원이다.
           라인은 사용량이 있는 조합 가운데 같은 dimension_values의 단가가 있는 것만 나온다. 이벤트가 없는 고객은 lines가 빈 배열이다.
           단가가 없는 조합은 라인과 금액에서 빠지고, 수량이 0이 아니면 그 고객의 unpriced_usages에 미터 code, target_property, 조합, 수량으로 나온다. 순서는 라인과 같다.
@@ -68,7 +72,7 @@ public class DraftInvoiceController {
           @DateTimeFormat(pattern = "yyyy-MM")
           @FourDigitYear
           YearMonth month) {
-    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth() : month;
+    YearMonth targetMonth = month == null ? BillableMetricUsageService.currentMonth(clock) : month;
     return draftInvoiceService.preview(organizationId, targetMonth);
   }
 }

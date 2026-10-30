@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -14,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,7 @@ class DraftInvoiceIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private TestClock testClock;
 
   private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
 
@@ -45,6 +49,11 @@ class DraftInvoiceIntegrationTest {
     mvc =
         MockMvcTester.from(
             webApplicationContext, builder -> builder.apply(springSecurity()).build());
+  }
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
   }
 
   @Test
@@ -224,14 +233,16 @@ class DraftInvoiceIntegrationTest {
         VALUES (?, 'api-calls', 'API 호출량', 'api_call', 'sum', 'count')
         """,
         organizationId);
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, 'tx-2', ?, 'api_call', '{"count": 3}', '2026-08-10T13:00:00+09:00')
-        """,
+    OffsetDateTime occurredAt = OffsetDateTime.parse("2026-08-10T13:00:00+09:00");
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
-        acme);
+        "tx-2",
+        acme,
+        "api_call",
+        "{\"count\": 3}",
+        occurredAt,
+        occurredAt);
 
     MvcTestResult result = get(organizationId, AUGUST);
 
@@ -270,6 +281,51 @@ class DraftInvoiceIntegrationTest {
         .bodyJson()
         .extractingPath("$.total_amount")
         .isEqualTo(350);
+  }
+
+  @Test
+  void 마감이_지난_달은_13시_정각에_받은_그_달_이벤트를_금액에_넣지_않는다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-before",
+        acme,
+        500,
+        "2026-09-30T10:00:00+09:00",
+        "2026-10-01T12:59:59+09:00");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-at",
+        acme,
+        700,
+        "2026-09-30T11:00:00+09:00",
+        "2026-10-01T13:00:00+09:00");
+
+    MvcTestResult result = get(organizationId, "2026-09");
+
+    assertThat(result).hasStatusOk().bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines[0].quantity").isEqualTo(500);
+  }
+
+  @Test
+  void month를_생략하면_서버_시계의_KST_달이고_계산_시각도_서버_시계를_따른다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    testClock.fix(OffsetDateTime.parse("2026-08-31T15:00:00Z"));
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/invoices/draft")
+            .header(AUTHORIZATION, authorization(organizationId))
+            .exchange();
+
+    assertThat(result).hasStatusOk().bodyJson().extractingPath("$.month").isEqualTo("2026-09");
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.calculated_at")
+        .isEqualTo("2026-09-01T00:00:00+09:00");
   }
 
   @Test
@@ -428,16 +484,14 @@ class DraftInvoiceIntegrationTest {
       String model,
       int token,
       OffsetDateTime occurredAt) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, 'chat_completion', ?::jsonb, ?)
-        """,
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
+        "chat_completion",
         "{\"model\":\"%s\",\"token\":%d}".formatted(model, token),
+        occurredAt,
         occurredAt);
   }
 }

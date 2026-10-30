@@ -5,12 +5,14 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -302,7 +304,7 @@ class EventListIntegrationTest {
   @Test
   void month를_생략하면_이번_달이고_응답이_어느_달인지_알려준다() {
     UUID organizationId = insertOrganization("도입사");
-    String thisMonth = BillableMetricUsageService.currentMonth().toString();
+    String thisMonth = BillableMetricUsageService.currentMonth(Clock.systemUTC()).toString();
 
     assertThat(get(organizationId, ""))
         .hasStatusOk()
@@ -840,17 +842,14 @@ class EventListIntegrationTest {
       String eventType,
       String propertiesJson,
       String occurredAt) {
-    jdbcTemplate.update(
-        """
-        INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at)
-        VALUES (?, ?, ?, ?, ?::jsonb, ?)
-        """,
+    TestEvents.insert(
+        jdbcTemplate,
         organizationId,
         transactionId,
         customerId,
         eventType,
         propertiesJson,
+        OffsetDateTime.parse(occurredAt),
         OffsetDateTime.parse(occurredAt));
   }
 }

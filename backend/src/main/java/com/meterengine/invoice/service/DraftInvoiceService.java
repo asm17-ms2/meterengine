@@ -15,6 +15,7 @@ import com.meterengine.pricing.dto.DimensionCharge;
 import com.meterengine.pricing.dto.NegativeUsage;
 import com.meterengine.pricing.dto.UnpricedUsage;
 import com.meterengine.pricing.service.ChargeService;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -31,21 +32,25 @@ public class DraftInvoiceService {
   private final CustomerRepository customerRepository;
   private final ChargeService chargeService;
   private final InvoiceRepository invoiceRepository;
+  private final Clock clock;
 
   DraftInvoiceService(
       BillableMetricUsageService billableMetricUsageService,
       CustomerRepository customerRepository,
       ChargeService chargeService,
-      InvoiceRepository invoiceRepository) {
+      InvoiceRepository invoiceRepository,
+      Clock clock) {
     this.billableMetricUsageService = billableMetricUsageService;
     this.customerRepository = customerRepository;
     this.chargeService = chargeService;
     this.invoiceRepository = invoiceRepository;
+    this.clock = clock;
   }
 
   @Transactional(readOnly = true)
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
-    OffsetDateTime calculatedAt = OffsetDateTime.now(BillableMetricUsageService.BILLING_ZONE);
+    OffsetDateTime calculatedAt =
+        OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE));
 
     Set<UUID> finalizedCustomerIds =
         Set.copyOf(

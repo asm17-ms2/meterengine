@@ -17,6 +17,9 @@ import com.meterengine.pricing.dto.NegativeUsage;
 import com.meterengine.pricing.dto.UnpricedUsage;
 import com.meterengine.pricing.service.ChargeService;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -46,11 +49,15 @@ class DraftInvoiceServiceTest {
   void setUp() {
     draftInvoiceService =
         new DraftInvoiceService(
-            billableMetricUsageService, customerRepository, chargeService, invoiceRepository);
+            billableMetricUsageService,
+            customerRepository,
+            chargeService,
+            invoiceRepository,
+            Clock.fixed(Instant.parse("2026-10-26T01:00:00Z"), ZoneOffset.UTC));
   }
 
   @Test
-  void 계산_시각은_KST다() {
+  void 계산_시각은_주입한_시계의_지금을_KST로_나타낸_것이다() {
     Customer acme = customer("아크메");
     stubCustomers(acme);
     stubCustomerCharges(Map.of());
@@ -58,7 +65,8 @@ class DraftInvoiceServiceTest {
     DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.month()).isEqualTo("2026-08");
-    assertThat(response.calculatedAt()).isNotNull();
+    assertThat(response.calculatedAt())
+        .isEqualTo(OffsetDateTime.parse("2026-10-26T10:00:00+09:00"));
     assertThat(response.calculatedAt().getOffset()).isEqualTo(ZoneOffset.ofHours(9));
   }
 

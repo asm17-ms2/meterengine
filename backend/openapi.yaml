@@ -3810,6 +3810,7 @@ paths:
         아직 확정하지 않은 고객의 청구 예정액을 미터의 속성 값 조합별 사용량 x 그 조합의 단가로 계산해 돌려준다.
         그 달이 확정된 고객은 나오지 않고 total_amount는 남은 고객의 합이다. 확정된 금액은 인보이스 목록 조회로 본다.
         조회할 때마다 계산하며 저장하지 않는다. 기간은 KST 기준의 달이다.
+        그 달 이벤트 중 집계 마감 시각(다음 달 1일 13:00 KST) 전에 서버가 받은(received_at) 것만 집계한다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않는다.
         금액은 원 단위 정수다. 라인(고객 x 미터 x 조합)마다 10원 미만을 버린 뒤 합산한다. 10원이 안 되는 라인은 0원이다.
         라인은 사용량이 있는 조합 가운데 같은 dimension_values의 단가가 있는 것만 나온다. 이벤트가 없는 고객은 lines가 빈 배열이다.
         단가가 없는 조합은 라인과 금액에서 빠지고, 수량이 0이 아니면 그 고객의 unpriced_usages에 미터 code, target_property, 조합, 수량으로 나온다. 순서는 라인과 같다.
@@ -7253,6 +7254,7 @@ paths:
         기간은 KST 기준의 달이다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
         2026-09-01T00:00:00+09:00 이벤트는 9월에 든다.
         지금 이후 시각의 이벤트는 집계에 들지 않는다.
+        그 달 이벤트 중 집계 마감 시각(다음 달 1일 13:00 KST) 전에 서버가 받은(received_at) 것만 집계한다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않는다.
         모든 고객이 응답에 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열이다.
         dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 값의 조합별로 수량을 나눈 것이고,
         고객 전체 수량은 원본 이벤트를 따로 집계하므로 조합별 수량의 합과 다를 수 있다. 청구는 조합별 정확 수량에 단가를 적용한다. none이면 raw_quantity_numerator/(raw_quantity_denominator*unit_size), 반올림 모드이면 처리한 quantity를 사용한다.
@@ -11198,6 +11200,9 @@ components:
         id:
           type: string
           format: uuid
+        latest_attempt_failed:
+          type: boolean
+          description: 기록된 가장 최근 발송 시도가 실패했으면 true. 시도 기록이 없으면 false
         secret:
           type: string
         url:
