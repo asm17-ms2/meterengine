@@ -28,7 +28,9 @@ public record CreatePriceRateRequest(
     @JsonProperty("customer_id") UUID customerId,
     @FourDigitYear @JsonProperty("effective_from") YearMonth effectiveFrom,
     @FourDigitYear @JsonProperty("effective_until") YearMonth effectiveUntil,
-    @StorableText @Pattern(regexp = "per_unit|graduated|volume") String model,
+    @StorableText
+        @Pattern(regexp = "per_unit|graduated|volume") @Schema(allowableValues = {"per_unit", "graduated", "volume"})
+        String model,
     @Valid @Size(min = 1, max = 100) List<@NotNull PriceRateTier> tiers) {
   public CreatePriceRateRequest(Map<String, Object> dimensionValues, BigDecimal unitPrice) {
     this(dimensionValues, unitPrice, null, null, null, null, null);

@@ -28,6 +28,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'deploy/grafana/provisioning/alerting/alerting.yml'
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'

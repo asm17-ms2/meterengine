@@ -86,8 +86,12 @@ public class PaymentReconciliationService {
   }
 
   public PaymentJobResult reconcile(OffsetDateTime slot) {
-    OffsetDateTime windowEnd = slot.minus(paymentProperties.reconciliationLag());
-    Window window = new Window(windowEnd.minus(WINDOW), windowEnd, slot);
+    return reconcile(slot, slot.minus(WINDOW));
+  }
+
+  public PaymentJobResult reconcile(OffsetDateTime slot, OffsetDateTime fromSlot) {
+    Duration lag = paymentProperties.reconciliationLag();
+    Window window = new Window(fromSlot.minus(lag), slot.minus(lag), slot);
     PaymentJobTally tally = new PaymentJobTally();
     for (TossPaymentsCredentialId credentialId : tossPaymentsCredentialRepository.findAllIds()) {
       try {
@@ -133,23 +137,29 @@ public class PaymentReconciliationService {
     Map<OffsetDateTime, TossPaymentsCredential> versions = new LinkedHashMap<>();
     versions.put(credential.get().getUpdatedAt(), credential.get());
     for (TossPaymentsCredential historical :
-        paymentArchiveRepository.credentialVersions(
-            credentialId.getOrganizationId(), credentialId.getMode())) {
+        paymentArchiveRepository.credentialVersionsInUse(
+            credentialId.getOrganizationId(), credentialId.getMode(), window.lookbackStartAt())) {
       versions.putIfAbsent(historical.getUpdatedAt(), historical);
     }
     Outcome outcome = Outcome.NOTHING_TO_COMPARE;
     for (TossPaymentsCredential version : versions.values()) {
       Outcome result =
           reconcileVersion(
-              version, window, version.getUpdatedAt().isEqual(credential.get().getUpdatedAt()));
-      if (result == Outcome.FAILED) return result;
-      if (result == Outcome.COMPARED) outcome = result;
+              version,
+              window,
+              version.getUpdatedAt().isEqual(credential.get().getUpdatedAt()),
+              versions.keySet());
+      if (result == Outcome.FAILED || outcome == Outcome.FAILED) outcome = Outcome.FAILED;
+      else if (result == Outcome.COMPARED) outcome = result;
     }
     return outcome;
   }
 
   private Outcome reconcileVersion(
-      TossPaymentsCredential credential, Window window, boolean current) {
+      TossPaymentsCredential credential,
+      Window window,
+      boolean current,
+      Set<OffsetDateTime> reconciledVersions) {
     Optional<List<TossPaymentsTransaction>> transactions = listTransactions(credential, window);
     if (transactions.isEmpty()) {
       return Outcome.FAILED;
@@ -181,7 +191,8 @@ public class PaymentReconciliationService {
     reconciliation.useFallbackAttempts(
         findAttempts(organizationId, mode, reconciliation.fallbackAttemptIds(transactions.get())));
     for (TossPaymentsTransaction transaction : transactions.get()) {
-      if (belongsToCredential(transaction, credential, current)) reconciliation.match(transaction);
+      if (belongsToCredential(transaction, credential, current, reconciledVersions))
+        reconciliation.match(transaction);
     }
     boolean complete = reconciliation.collectMissingInTossPayments(credential);
     OffsetDateTime detectedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
@@ -206,13 +217,21 @@ public class PaymentReconciliationService {
   }
 
   private boolean belongsToCredential(
-      TossPaymentsTransaction transaction, TossPaymentsCredential credential, boolean current) {
+      TossPaymentsTransaction transaction,
+      TossPaymentsCredential credential,
+      boolean current,
+      Set<OffsetDateTime> reconciledVersions) {
     Optional<PaymentAttempt> original =
         parseAttemptId(transaction.orderId()).flatMap(paymentAttemptRepository::findById);
     if (original.isEmpty()) return current;
-    return credential.getOrganizationId().equals(original.get().getOrganizationId())
-        && BusinessEnvironmentContext.matches(original.get().getEnvironmentId())
-        && usesCredential(original.get(), credential, current);
+    if (!credential.getOrganizationId().equals(original.get().getOrganizationId())
+        || !BusinessEnvironmentContext.matches(original.get().getEnvironmentId())) return false;
+    if (usesCredential(original.get(), credential, current)) return true;
+    // 창 안에 쓰이지 않아 이번에 부르지 않은 옛 키의 결제도 현재 키 목록에 보이면 현재 키가 맡는다.
+    OffsetDateTime originalVersion = original.get().getCredentialUpdatedAt();
+    return current
+        && originalVersion != null
+        && reconciledVersions.stream().noneMatch(originalVersion::isEqual);
   }
 
   private static Optional<UUID> parseAttemptId(String orderId) {

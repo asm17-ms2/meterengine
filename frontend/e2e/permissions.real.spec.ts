@@ -287,7 +287,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
       await expect(reader.page).not.toHaveURL(/\/login/);
     }
     await reader.page.goto("/customers?status=all");
-    await reader.page.getByLabel("이름 또는 외부 ID로 찾기", { exact: true }).fill(data.customerName);
+    await reader.page.getByLabel("이름, 외부 ID, 청구 이메일로 찾기", { exact: true }).fill(data.customerName);
     await reader.page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expect(reader.page.getByRole("link", { name: data.customerName, exact: true })).toBeVisible();
     await capture(reader.page, "read-only-customers-desktop");

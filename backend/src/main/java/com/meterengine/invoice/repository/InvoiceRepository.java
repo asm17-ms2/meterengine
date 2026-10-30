@@ -71,6 +71,13 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   @Query(
       value =
+          "SELECT count(*) FROM invoice WHERE organization_id = :organizationId AND"
+              + " environment_scope_id = :environmentScopeId",
+      nativeQuery = true)
+  long countScoped(UUID organizationId, UUID environmentScopeId);
+
+  @Query(
+      value =
           "SELECT * FROM invoice WHERE organization_id = :organizationId AND environment_id IS NOT"
               + " DISTINCT FROM CAST(:environmentId AS UUID) AND id = :id FOR UPDATE",
       nativeQuery = true)

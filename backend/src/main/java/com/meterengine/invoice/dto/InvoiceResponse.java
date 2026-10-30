@@ -32,51 +32,20 @@ public record InvoiceResponse(
           BigDecimal quantity,
       @JsonProperty("unit_price") BigDecimal unitPrice,
       long amount,
-      @JsonProperty("line_type") String lineType,
+      @Schema(
+              allowableValues = {
+                "per_unit",
+                "volume",
+                "graduated_tier",
+                "base_fee",
+                "minimum_adjustment"
+              })
+          @JsonProperty("line_type")
+          String lineType,
       @JsonProperty("tier_index") int tierIndex,
       @Schema(description = "금액과 구간 판정에 사용한 정확 청구 수량의 분자") @JsonProperty("quantity_numerator")
           BigDecimal quantityNumerator,
       @Schema(description = "정확 청구 수량의 양수 분모. 분자/분모에 단가를 곱해 라인별 10원 미만을 버린다")
           @JsonProperty("quantity_denominator")
-          BigDecimal quantityDenominator) {
-    public InvoiceLineResponse(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount,
-        String lineType,
-        int tierIndex) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          lineType,
-          tierIndex,
-          quantity,
-          BigDecimal.ONE);
-    }
-
-    public InvoiceLineResponse(
-        String billableMetricCode,
-        String targetProperty,
-        Map<String, Object> dimensionValues,
-        BigDecimal quantity,
-        BigDecimal unitPrice,
-        long amount) {
-      this(
-          billableMetricCode,
-          targetProperty,
-          dimensionValues,
-          quantity,
-          unitPrice,
-          amount,
-          "per_unit",
-          0);
-    }
-  }
+          BigDecimal quantityDenominator) {}
 }

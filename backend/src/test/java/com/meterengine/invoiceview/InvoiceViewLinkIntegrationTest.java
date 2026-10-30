@@ -292,6 +292,27 @@ class InvoiceViewLinkIntegrationTest {
   }
 
   @Test
+  void test_API_키로_live_결제모드의_재시도_링크를_만들면_409이고_링크를_남기지_않는다() {
+    jdbcTemplate.update(
+        "INSERT INTO payment_setting (organization_id,mode,updated_at) VALUES (?,'live',now())",
+        organizationId);
+    assertError(create("{\"allow_payment_retry\":true}"), 409, ErrorCode.PAYMENT_MODE_MISMATCH);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM invoice_view_link WHERE invoice_id=?",
+                Integer.class,
+                invoiceId))
+        .isZero();
+    assertThat(create("{\"allow_payment_retry\":false}")).hasStatus(201);
+    authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "live", "admin");
+    assertThat(create("{\"allow_payment_retry\":true}"))
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.mode")
+        .isEqualTo("live");
+  }
+
+  @Test
   void 고객을_보관해도_과거_인보이스는_보이고_도입사_정지는_404다() {
     String token = value(create(null), "$.token");
     jdbcTemplate.update("UPDATE customer SET archived_at=now() WHERE id=?", customerId);

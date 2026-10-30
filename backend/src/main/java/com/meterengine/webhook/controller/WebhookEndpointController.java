@@ -150,6 +150,27 @@ public class WebhookEndpointController {
   @Operation(
       summary = "실패한 웹훅 전송 재시도",
       description = "실패한 전송을 같은 webhook-id로 다시 대기시킨다. 엔드포인트가 활성 상태여야 한다. 이전 시도 이력은 보존한다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "202", description = "다시 대기시켰다. 본문 없음"),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=webhook_endpoint_not_found: 그런 엔드포인트가 없다.
+            code=webhook_delivery_not_found: 그 엔드포인트에 그런 전송이 없다.
+            """),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=webhook_delivery_not_retryable: 전송이 failed가 아니거나, 엔드포인트가 비활성이거나 삭제됐다.")
+  })
   public void retryWebhookDelivery(
       @CurrentOrganizationId UUID organizationId,
       @PathVariable UUID id,

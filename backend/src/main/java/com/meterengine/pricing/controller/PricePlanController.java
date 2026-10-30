@@ -47,7 +47,8 @@ public class PricePlanController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "기본료와 최소 과금 요금제 등록",
-      description = "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다.")
+      description =
+          "사용료에 최소 과금을 적용한 뒤 기본료를 더한다. 수량이 없는 고객에게는 적용하지 않는다. 청구할 때 기본료와 최소 사용료는 10원 미만을 버린 값을 쓰며, 버린 기본료가 0원이면 기본료 라인이 생기지 않는다.")
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "저장된 요금제. 같은 고객 범위와 시작 월의 버전을 덮어쓴 경우에도 201이다"),
     @ApiResponse(
@@ -77,6 +78,7 @@ public class PricePlanController {
           """
           customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
           month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+          청구는 보관 효력(archived_from)까지 따져 버전을 고르므로, 그 달 청구에 쓰이는 요금제는 status=all 목록에서 시작 월이 가장 늦은 버전을 보고 고른다. 그 버전이 archived_from부터 멈췄으면 이전 버전으로 돌아가지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(

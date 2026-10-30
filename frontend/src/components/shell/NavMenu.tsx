@@ -2,7 +2,7 @@
 
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
-import { Menu } from "antd";
+import { useId } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname } from "next/navigation";
 import { workspaceHref } from "@/lib/workspace-href";
@@ -17,9 +17,11 @@ const NAV_GROUPS = [
 
 export function NavMenu({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const id = useId();
   const canRead = useTenantScope("read");
   const search = useWorkspaceSearch().toString();
   const selected = NAV_GROUPS.flatMap(group => group.items).find(item => pathname === item.href || pathname.startsWith(item.href + "/"))?.href;
   if (!canRead) return <nav aria-label="도입사 업무"><Link href="/organizations" onClick={onNavigate}>도입사 선택</Link></nav>;
-  return <nav aria-label="도입사 업무"><Menu mode="inline" tabIndex={-1} selectedKeys={selected ? [selected] : []} onClick={onNavigate} items={NAV_GROUPS.map(group => ({ type: "group", key: group.label, label: group.label, children: group.items.map(item => ({ key: item.href, label: <Link href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined}>{item.label}</Link> })) }))} /></nav>;
+  // 페이지 이동 링크라 menu 역할 없이 그룹 제목과 링크 목록으로 둔다.
+  return <nav aria-label="도입사 업무">{NAV_GROUPS.map((group, index) => <div key={group.label} className="nav-group"><div className="nav-group-title" id={`${id}-group-${index}`}>{group.label}</div><ul className="nav-list" aria-labelledby={`${id}-group-${index}`}>{group.items.map(item => <li key={item.href}><Link className="nav-link" href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined} onClick={onNavigate}>{item.label}</Link></li>)}</ul></div>)}</nav>;
 }

@@ -11,7 +11,15 @@ import { WorkspaceError, WorkspaceTable } from "@/components/workspace/Workspace
 
 export type ApiKeyResponse = { id: string; label: string; mode: string; scopes: string[]; last_four: string; expires_at: string | null; revoked_at: string | null; rate_limit_per_minute: number | null; status: "active" | "revoked" | "expired" };
 type WebhookEndpointResponse = { id: string; url: string; event_types: string[]; enabled: boolean; created_at: string; archived_at?: string | null };
+type WebhookAttempt = { attempted_at: string; failure_reason: string | null };
+type WebhookDeliveryResponse = { attempts: WebhookAttempt[] };
 const WEBHOOK_TYPES = [{ value: "payment_succeeded", label: "결제 성공" }, { value: "payment_failed", label: "결제 실패" }, { value: "payment_canceled", label: "결제 취소" }, { value: "unbilled_usage_detected", label: "과금 제외 사용량" }, { value: "webhook_test", label: "시험 통보" }];
+const RECENT_DELIVERY_COUNT = "20";
+// 새 전송은 아직 시도하지 않았을 수 있어, 최근 전송들에서 기록된 마지막 시도의 결과로 판단한다.
+const isLatestAttemptFailed = (deliveries: WebhookDeliveryResponse[]) => {
+  const latest = deliveries.flatMap(delivery => delivery.attempts).reduce<WebhookAttempt | null>((found, attempt) => !found || Date.parse(attempt.attempted_at) > Date.parse(found.attempted_at) ? attempt : found, null);
+  return latest?.failure_reason != null;
+};
 const KEY_STATUS_OPTIONS = [{ value: "active", label: "사용 중" }, { value: "revoked", label: "폐기됨" }, { value: "expired", label: "만료됨" }, { value: "all", label: "전체" }];
 
 export const metadata: Metadata = { title: "API 키와 통보" };
@@ -24,6 +32,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const activeKeysRequest = workspaceFetch<{ api_keys: ApiKeyResponse[] }>("/v1/api-keys", { status: "active" });
   const [keys, activeKeys, webhooks] = await Promise.all([keyStatus === "active" ? activeKeysRequest : workspaceFetch<{ api_keys: ApiKeyResponse[] }>("/v1/api-keys", { status: keyStatus }), activeKeysRequest, workspaceFetch<{ endpoints: WebhookEndpointResponse[] }>("/v1/webhook-endpoints", { status })]);
   const keyRows = keys.ok ? keys.data.api_keys : [];
+  const sendingEndpoints = webhooks.ok ? webhooks.data.endpoints.filter(endpoint => !endpoint.archived_at && endpoint.enabled) : [];
+  const latestDeliveries = await Promise.all(sendingEndpoints.map(async endpoint => ({ id: endpoint.id, result: await workspaceFetch<{ deliveries: WebhookDeliveryResponse[] }>(`/v1/webhook-endpoints/${encodeURIComponent(endpoint.id)}/deliveries`, { page: "0", size: RECENT_DELIVERY_COUNT }) })));
+  const failingEndpointIds = new Set(latestDeliveries.filter(({ result }) => result.ok && isLatestAttemptFailed(result.data.deliveries)).map(({ id }) => id));
   return <>
     <WorkspaceHeader title="API 키와 통보" kicker="도입사 콘솔" description="사용량 전송과 청구 조회에 사용할 서버 연동 키를 관리하고, 처리 결과를 웹훅으로 받으세요." />
     <section className="workspace-panel">
@@ -42,7 +53,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     <section className="workspace-panel">
       <div className="workspace-heading"><div><h2>처리 결과 통보</h2><p className="field-hint">수신 서버에서 서명을 검증하세요. 발송 실패는 재시도하며 모든 시도를 기록합니다.</p></div><ActionPanel title="수신 주소 등록" operation="createWebhookEndpoint" description="서명 비밀값은 등록 직후 한 번만 표시됩니다. 수신 서버에 안전하게 저장하세요." fields={[{ name: "url", label: "수신 URL", type: "url", placeholder: "https://service.example.com/webhooks/meterengine", maxLength: 2048 }, { name: "event_types", label: "받을 통보", isMultiple: true, value: "payment_succeeded,payment_failed,payment_canceled,unbilled_usage_detected", options: WEBHOOK_TYPES }]} /></div>
       <ArchiveFilter label="통보 관리 상태" />
-      {webhooks.ok ? webhooks.data.endpoints.length ? <ul className="setup-list">{webhooks.data.endpoints.map(endpoint => <li key={endpoint.id}><div><strong>{endpoint.url}</strong><p>{endpoint.archived_at ? "보관됨" : endpoint.enabled ? "발송 중" : "일시 중지"} / {endpoint.event_types.map(type => WEBHOOK_TYPES.find(option => option.value === type)?.label ?? type).join(", ")}</p></div><Link href={`/integrations/${endpoint.id}`}>발송 내역과 설정</Link></li>)}</ul> : <p className="muted">{status === "archived" ? "보관된 수신 주소가 없습니다." : status === "all" ? "등록한 수신 주소가 없습니다. 수신 주소를 등록하고 시험 통보로 연결을 확인하세요." : "사용 중인 수신 주소가 없습니다. 보관 목록에서 복원하거나 새 수신 주소를 등록하세요."}</p> : <WorkspaceError message={webhooks.error.message} />}
+      {webhooks.ok ? webhooks.data.endpoints.length ? <ul className="setup-list">{webhooks.data.endpoints.map(endpoint => <li key={endpoint.id}><div><strong>{endpoint.url}</strong><p>{endpoint.archived_at ? "보관됨" : endpoint.enabled ? "발송 중" : "일시 중지"}{failingEndpointIds.has(endpoint.id) && <> <span className="status-label status-rejected">최근 발송 실패</span></>} / {endpoint.event_types.map(type => WEBHOOK_TYPES.find(option => option.value === type)?.label ?? type).join(", ")}</p></div><Link href={`/integrations/${endpoint.id}`}>발송 내역과 설정</Link></li>)}</ul> : <p className="muted">{status === "archived" ? "보관된 수신 주소가 없습니다." : status === "all" ? "등록한 수신 주소가 없습니다. 수신 주소를 등록하고 시험 통보로 연결을 확인하세요." : "사용 중인 수신 주소가 없습니다. 보관 목록에서 복원하거나 새 수신 주소를 등록하세요."}</p> : <WorkspaceError message={webhooks.error.message} />}
     </section>
   </>;
 }

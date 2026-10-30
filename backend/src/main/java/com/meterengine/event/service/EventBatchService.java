@@ -1,5 +1,6 @@
 package com.meterengine.event.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.meterengine.customer.api.CustomerDirectory;
 import com.meterengine.event.dto.EventInsertion;
 import com.meterengine.event.dto.IngestEventBatchRequest;
@@ -29,6 +30,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class EventBatchService {
+  private static final String TRANSACTION_ID = jsonField("transactionId");
+  private static final String TIMESTAMP = jsonField("occurredAt");
+
   private final EventRepository eventRepository;
   private final CustomerDirectory customerDirectory;
   private final EventIngestMetrics eventIngestMetrics;
@@ -62,25 +66,25 @@ public class EventBatchService {
     for (int index = 0; index < batch.events().size(); index++) {
       JsonNode node = batch.events().get(index);
       String transactionId =
-          node != null && node.isObject() && node.path("transaction_id").isString()
-              ? node.path("transaction_id").asString()
+          node != null && node.isObject() && node.path(TRANSACTION_ID).isString()
+              ? node.path(TRANSACTION_ID).asString()
               : null;
       IngestEventRequest request;
       try {
         if (node == null || !node.isObject()) {
           throw new IllegalArgumentException();
         }
-        if (node.hasNonNull("timestamp")) {
-          OffsetDateTime.parse(node.path("timestamp").asString());
+        if (node.hasNonNull(TIMESTAMP)) {
+          OffsetDateTime.parse(node.path(TIMESTAMP).asString());
         }
         request = jsonMapper.treeToValue(node, IngestEventRequest.class);
       } catch (RuntimeException exception) {
         String field =
             node != null
                     && node.isObject()
-                    && node.has("timestamp")
-                    && !validTimestamp(node.path("timestamp"))
-                ? ".timestamp"
+                    && node.has(TIMESTAMP)
+                    && !validTimestamp(node.path(TIMESTAMP))
+                ? "." + TIMESTAMP
                 : "";
         results.set(
             index,
@@ -190,13 +194,14 @@ public class EventBatchService {
     return new EventResult(index, transactionId, "duplicate", null);
   }
 
-  private static String jsonField(String field) {
-    return switch (field) {
-      case "transactionId" -> "transaction_id";
-      case "customerId" -> "customer_id";
-      case "occurredAt" -> "timestamp";
-      default -> field;
-    };
+  private static String jsonField(String javaField) {
+    try {
+      JsonProperty property =
+          IngestEventRequest.class.getDeclaredField(javaField).getAnnotation(JsonProperty.class);
+      return property == null || property.value().isEmpty() ? javaField : property.value();
+    } catch (NoSuchFieldException exception) {
+      return javaField;
+    }
   }
 
   private static boolean validTimestamp(JsonNode node) {

@@ -24,7 +24,7 @@ export function ErrorAlert({
     <Flex gap="small" wrap>
       <RetryButton />
       {narrowerHref ? <LinkButton href={narrowerHref}>기간 좁히기</LinkButton> : null}
-      {resetHref ? <LinkButton href={resetHref}>필터 초기화</LinkButton> : null}
+      {resetHref ? <LinkButton href={resetHref}>조건 초기화</LinkButton> : null}
     </Flex>
   );
 
