@@ -262,6 +262,16 @@ test("a customer address that is not a customer id is treated as not found witho
   expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
 });
 
+test("a payment address that is not an invoice id is treated as not found without asking the server", async ({ page, request }) => {
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  await page.goto(`/payments/not-a-uuid?organization_id=${ORGANIZATION_ID}`);
+  await expect(page.getByRole("heading", { name: "수납 내역을 찾을 수 없습니다", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.some((path: string) => path.includes("not-a-uuid"))).toBe(false);
+});
+
 test("a missing customer says it was not found and links back to the customer list without a retry", async ({ page }) => {
   await login(page, "member@contract.local", "/customers/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
   await expect(page.getByRole("heading", { name: "고객을 찾을 수 없습니다", level: 1 })).toBeVisible();
@@ -464,6 +474,14 @@ test("a webhook receiver whose latest delivery is failing is flagged in the list
   await expect(failing).toContainText("최근 발송 실패");
   await expect(healthy).toContainText("발송 중");
   await expect(healthy).not.toContainText("최근 발송 실패");
+});
+
+test("the integrations list reads the failure flag from the receiver list without asking each receiver's deliveries", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await expectTenantUrl(page, "/integrations");
+  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 발송 실패");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+  expect(paths.filter((path: string) => path.includes("/deliveries"))).toEqual([]);
 });
 
 test("a workspace table scroll area is a named keyboard stop", async ({ page }) => {

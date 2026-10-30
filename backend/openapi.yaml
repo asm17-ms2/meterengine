@@ -11198,6 +11198,9 @@ components:
         id:
           type: string
           format: uuid
+        latest_attempt_failed:
+          type: boolean
+          description: 기록된 가장 최근 발송 시도가 실패했으면 true. 시도 기록이 없으면 false
         secret:
           type: string
         url:

@@ -9,6 +9,8 @@ MeterEngine 관리자 콘솔. Next.js App Router + TypeScript.
 - API 계약은 `backend/openapi.yaml`에서 확인한다. 로그인 세션으로 도입사를 선택하고, 도입사 서버는 별도 API 키로 같은 조회 API를 쓴다.
 - 코드와 문서 작성 규칙은 `docs/contributing/`에 있다.
 
+로고 심볼 원본은 `public/brand/meterengine-mark.svg`다. 홈페이지와 콘솔에서 함께 사용하며, 같은 폴더의 PNG는 투명 배경 배포용이다. `src/app/icon.svg`, `favicon.ico`, `apple-icon.png`는 원본에서 만든 아이콘이다. 색상은 `#5746ad`다.
+
 ## 사전 준비
 
 - Node.js 24 (`Dockerfile`의 빌드 이미지가 `node:24-alpine`).
@@ -81,7 +83,7 @@ docker run -p 3000:3000 \
   meterengine-frontend
 ```
 
-- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`을 따로 복사한다. 빼면 화면은 뜨는데 CSS와 JS가 404다.
+- standalone 출력에는 정적 자산이 없어 `Dockerfile`이 `.next/static`과 `public`을 따로 복사한다. 빼면 CSS, JS와 로고 이미지가 404다.
 - 백엔드 주소는 런타임 환경변수로 받는다. 생략하면 로컬 기본값을 쓴다.
 
 ## 백엔드 연동
@@ -171,7 +173,7 @@ docker run -p 3000:3000 \
 | `/billing`, `/invoices` | 단가 없는 조합과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
 | `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 결제 실패 건만 보기, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
 | `/invoice-links` | 로그인 없이 확정 청구와 결제 상태 확인. 별도 허용된 링크에서 실패 결제의 금액을 확인한 뒤 등록 카드로 직접 재시도. 링크 원문은 URL fragment로 받고 주소창에서 제거하며 현재 탭의 sessionStorage에만 보존 |
-| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 시험 통보와 실패 재전송 |
+| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 마지막 시도가 실패한 수신 주소 표시, 시험 통보와 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
 | `/settings` | 환경별 공급자와 토스 키, 기존 데이터의 결제 모드 설정 |
