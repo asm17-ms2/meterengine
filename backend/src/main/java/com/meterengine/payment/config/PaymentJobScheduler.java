@@ -7,6 +7,7 @@ import com.meterengine.payment.service.PaymentRetryService;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.scheduling.service.ScheduledJobRunService;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -25,6 +26,7 @@ public class PaymentJobScheduler {
   private static final String RETRY = "payment_retry";
   private static final String RECONCILIATION = "payment_reconciliation";
   private static final ZoneId BILLING_ZONE = ZoneId.of("Asia/Seoul");
+  private static final Duration MAX_CATCH_UP = Duration.ofDays(7);
 
   private final ScheduledJobRunService scheduledJobRunService;
   private final PaymentAttemptConfirmationService paymentAttemptConfirmationService;
@@ -71,7 +73,26 @@ public class PaymentJobScheduler {
             .atTime(4, 0)
             .atZone(BILLING_ZONE)
             .toOffsetDateTime();
-    run(RECONCILIATION, slot, () -> paymentReconciliationService.reconcile(slot));
+    run(
+        RECONCILIATION,
+        slot,
+        () -> paymentReconciliationService.reconcile(slot, reconciliationStart(slot)));
+  }
+
+  // 실패하거나 빠진 날은 마지막으로 실패 없이 끝난 슬롯부터 최대 7일 전까지 이어서 맞춘다.
+  // 실패 없이 끝난 적이 없으면 가장 이른 실행의 창부터 맞춘다.
+  private OffsetDateTime reconciliationStart(OffsetDateTime slot) {
+    OffsetDateTime limit = slot.minus(MAX_CATCH_UP);
+    OffsetDateTime start =
+        scheduledJobRunService
+            .watermark(RECONCILIATION, slot)
+            .or(
+                () ->
+                    scheduledJobRunService
+                        .earliest(RECONCILIATION, slot)
+                        .map(first -> first.minusDays(1)))
+            .orElse(slot.minusDays(1));
+    return start.isBefore(limit) ? limit : start;
   }
 
   private OffsetDateTime minute() {

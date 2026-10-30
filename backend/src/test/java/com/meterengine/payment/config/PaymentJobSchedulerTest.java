@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
@@ -69,12 +70,56 @@ class PaymentJobSchedulerTest {
   @Test
   void 대사는_KST_날짜의_새벽_4시_슬롯을_쓴다() {
     OffsetDateTime slot = OffsetDateTime.parse("2026-10-27T04:00+09:00");
-    when(paymentReconciliationService.reconcile(slot)).thenReturn(new PaymentJobResult(2, 3, 1));
+    when(paymentReconciliationService.reconcile(slot, slot.minusDays(1)))
+        .thenReturn(new PaymentJobResult(2, 3, 1));
     assertResult("payment_reconciliation", slot);
 
     paymentJobScheduler.reconcile();
 
-    verify(paymentReconciliationService).reconcile(slot);
+    verify(paymentReconciliationService).reconcile(slot, slot.minusDays(1));
+  }
+
+  @Test
+  void 대사는_마지막으로_실패_없이_끝난_슬롯부터_이어서_맞춘다() {
+    OffsetDateTime slot = OffsetDateTime.parse("2026-10-27T04:00+09:00");
+    when(scheduledJobRunService.watermark("payment_reconciliation", slot))
+        .thenReturn(Optional.of(slot.minusDays(3)));
+    when(paymentReconciliationService.reconcile(slot, slot.minusDays(3)))
+        .thenReturn(new PaymentJobResult(2, 3, 1));
+    assertResult("payment_reconciliation", slot);
+
+    paymentJobScheduler.reconcile();
+
+    verify(paymentReconciliationService).reconcile(slot, slot.minusDays(3));
+  }
+
+  @Test
+  void 대사는_7일보다_오래된_기록이면_7일_전까지만_본다() {
+    OffsetDateTime slot = OffsetDateTime.parse("2026-10-27T04:00+09:00");
+    when(scheduledJobRunService.watermark("payment_reconciliation", slot))
+        .thenReturn(Optional.of(slot.minusDays(30)));
+    when(paymentReconciliationService.reconcile(slot, slot.minusDays(7)))
+        .thenReturn(new PaymentJobResult(2, 3, 1));
+    assertResult("payment_reconciliation", slot);
+
+    paymentJobScheduler.reconcile();
+
+    verify(paymentReconciliationService).reconcile(slot, slot.minusDays(7));
+  }
+
+  @Test
+  void 성공_기록_없이_첫_대사가_실패했으면_다음_날은_그_실행의_창부터_맞춘다() {
+    OffsetDateTime firstSlot = OffsetDateTime.parse("2026-10-26T04:00+09:00");
+    OffsetDateTime slot = OffsetDateTime.parse("2026-10-27T04:00+09:00");
+    when(scheduledJobRunService.earliest("payment_reconciliation", slot))
+        .thenReturn(Optional.of(firstSlot));
+    when(paymentReconciliationService.reconcile(slot, firstSlot.minusDays(1)))
+        .thenReturn(new PaymentJobResult(2, 3, 1));
+    assertResult("payment_reconciliation", slot);
+
+    paymentJobScheduler.reconcile();
+
+    verify(paymentReconciliationService).reconcile(slot, firstSlot.minusDays(1));
   }
 
   private void assertResult(String name, OffsetDateTime slot) {

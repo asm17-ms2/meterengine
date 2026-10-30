@@ -14,6 +14,8 @@ public enum ErrorCode {
   INVALID_TOSS_PAYMENTS_CREDENTIAL(HttpStatus.BAD_REQUEST, "토스페이먼츠 키로 성립하지 않습니다"),
   PAYMENT_METHOD_REJECTED(HttpStatus.BAD_REQUEST, "카드 인증이 거절되었습니다"),
   TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE(HttpStatus.BAD_REQUEST, "실제 모드에서는 토스페이먼츠 테스트 코드를 쓸 수 없습니다"),
+  INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "올바른 웹훅 URL을 입력하세요"),
+  INVALID_WEBHOOK_EVENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 웹훅 이벤트 종류입니다"),
 
   // 401 Unauthorized
   AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다"),
@@ -23,6 +25,7 @@ public enum ErrorCode {
   PERMISSION_DENIED(HttpStatus.FORBIDDEN, "이 요청을 할 권한이 없습니다"),
   ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 도입사입니다"),
   ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
+  CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -33,13 +36,16 @@ public enum ErrorCode {
   INVOICE_VIEW_LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "인보이스 조회 링크를 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
   API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "API 키를 찾을 수 없습니다"),
-  API_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "폐기되거나 만료된 API 키의 권한은 변경할 수 없습니다"),
   ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "도입사를 찾을 수 없습니다"),
   USER_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자 계정을 찾을 수 없습니다"),
   PAYMENT_METHOD_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 카드가 없습니다"),
   PAYMENT_METHOD_REGISTRATION_NOT_FOUND(HttpStatus.NOT_FOUND, "카드 등록 링크를 찾을 수 없습니다"),
   PAYMENT_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 시도를 찾을 수 없습니다"),
   TOSS_PAYMENTS_CREDENTIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "토스페이먼츠 키를 찾을 수 없습니다"),
+  PRICE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "요금제를 찾을 수 없습니다"),
+  WEBHOOK_ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 엔드포인트를 찾을 수 없습니다"),
+  WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
+  INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
@@ -79,24 +85,15 @@ public enum ErrorCode {
   PAYMENT_CANCELLATION_IN_PROGRESS(HttpStatus.CONFLICT, "진행 중인 취소가 있습니다"),
   PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 멱등 키로 다른 취소 요청을 보낼 수 없습니다"),
   WEBHOOK_DELIVERY_NOT_RETRYABLE(HttpStatus.CONFLICT, "다시 전송할 수 없는 웹훅입니다"),
-  WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
-
   PRICE_RATE_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 단가 버전은 바꿀 수 없습니다"),
   PRICE_PLAN_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 요금제 버전은 바꿀 수 없습니다"),
-  PRICE_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "요금제를 찾을 수 없습니다"),
-  CUSTOMER_HAS_PRICING(HttpStatus.CONFLICT, "고객별 단가나 요금제가 있어 고객을 삭제할 수 없습니다"),
-  INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "올바른 웹훅 URL을 입력하세요"),
-  INVALID_WEBHOOK_EVENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 웹훅 이벤트 종류입니다"),
-  WEBHOOK_ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 엔드포인트를 찾을 수 없습니다"),
   WEBHOOK_ENDPOINT_DISABLED(HttpStatus.CONFLICT, "비활성 상태인 웹훅 엔드포인트입니다"),
   WEBHOOK_ENDPOINT_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "웹훅 엔드포인트 등록 한도를 넘었습니다"),
-
-  CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
-  INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
   INVITATION_UNAVAILABLE(HttpStatus.CONFLICT, "만료되었거나 이미 사용 또는 취소된 초대입니다"),
   LAST_OWNER_REQUIRED(HttpStatus.CONFLICT, "마지막 대표 관리자는 제거하거나 권한을 낮출 수 없습니다"),
   OWNER_SCOPES_REQUIRED(HttpStatus.CONFLICT, "대표관리자는 관리 권한이 필요합니다"),
   LAST_OPERATOR_REQUIRED(HttpStatus.CONFLICT, "마지막 운영자는 권한을 낮출 수 없습니다"),
+  API_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "폐기되거나 만료된 API 키의 권한은 변경할 수 없습니다"),
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),

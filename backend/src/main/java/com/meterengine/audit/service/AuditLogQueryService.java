@@ -60,10 +60,12 @@ public class AuditLogQueryService {
           if (organizationId != null) {
             filters.add(cb.equal(root.get("organizationId"), organizationId));
             filters.add(
-                BusinessEnvironmentContext.environmentId() == null
-                    ? cb.isNull(root.get("environmentId"))
-                    : cb.equal(
-                        root.get("environmentId"), BusinessEnvironmentContext.environmentId()));
+                cb.or(
+                    BusinessEnvironmentContext.environmentId() == null
+                        ? cb.isNull(root.get("environmentId"))
+                        : cb.equal(
+                            root.get("environmentId"), BusinessEnvironmentContext.environmentId()),
+                    root.get("action").in(AuditLogService.ORGANIZATION_WIDE_ACTIONS)));
           }
           if (action != null) filters.add(cb.equal(root.get("action"), action));
           if (actorType != null) filters.add(cb.equal(root.get("actorType"), actorType));

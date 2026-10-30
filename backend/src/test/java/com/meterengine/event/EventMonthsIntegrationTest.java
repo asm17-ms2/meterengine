@@ -51,6 +51,14 @@ class EventMonthsIntegrationTest {
   }
 
   @Test
+  void 네_자리_연도로_열_수_없는_달은_월_목록에서_뺀다() {
+    UUID customer = customer(organizationId, null);
+    insert(organizationId, customer, null, "far-future", "55835-03-10T00:00:00Z");
+    insert(organizationId, customer, null, "october", "2026-10-10T00:00:00Z");
+    assertThat(months(get(authorization, null))).containsExactly("2026-10");
+  }
+
+  @Test
   void 같은_조직의_세_환경과_다른_조직의_월을_분리한다() {
     UUID testEnvironment = environment("test");
     UUID liveEnvironment = environment("live");

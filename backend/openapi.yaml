@@ -528,7 +528,8 @@ paths:
     get:
       description: "month, customer_id, billable_metric_code, q, status(미터 보관 상태),\
         \ sort(code/name/rate_count/archived_at), order, page, size를 받는다. 미터 이름과 단\
-        가 수, 조건 전체 no_rate_count를 포함한다."
+        가 수, 조건 전체 no_rate_count를 포함한다. summary는 month, metric_count, no_rate_count다\
+        ."
       operationId: searchBillableMetricPrices
       parameters:
       - in: query
@@ -920,7 +921,7 @@ paths:
   /v1/billable-metrics/search:
     get:
       description: "q, billable_metric_code, status(active/archived/all), sort(code/name/event_type/aggregation/archived_at),\
-        \ order, page, size를 받는다."
+        \ order, page, size를 받는다. summary는 active_count, archived_count다."
       operationId: searchBillableMetrics
       parameters:
       - in: query
@@ -1974,7 +1975,7 @@ paths:
     get:
       description: "q, external_id, customer_id, status(active/archived/all), sort(name/external_id/created_at/archived_at/id/billing_email),\
         \ order, page, size를 받는다. total은 조건 전체, total_unfiltered는 현재 조직과 환경의 전체 건수\
-        다. 페이지는 1부터, size 기본 25/최대 200이다."
+        다. 페이지는 1부터, size 기본 25/최대 200이다. summary는 active_count, archived_count다."
       operationId: searchCustomers
       parameters:
       - in: query
@@ -2682,7 +2683,8 @@ paths:
     get:
       description: 현재 월 정의와 단가로 cutoff 이전 원본을 진단한다. total과 summary는 고객/검색/사유 필터 전체의
         문제 행 수이며 한 이벤트에 여러 미터 문제가 있을 수 있다. warnings는 조직/월 전체다. 고객을 찾지 못해 수집이 거절된 이벤트는
-        저장되지 않아 포함하지 않는다. 원본 properties는 반환하지 않는다. 페이지는 0부터 시작한다.
+        저장되지 않아 포함하지 않는다. 원본 properties는 반환하지 않는다. 페이지는 0부터 시작한다. 모르는 조회 조건은 400 validation_error로
+        거절한다.
       operationId: searchEventIssues
       parameters:
       - in: query
@@ -2771,7 +2773,7 @@ paths:
     get:
       description: "month는 거절을 기록한 달이다. 신규 기록 시작 이후 파싱된 단건 업무 거절과 배치 rejected 행만 포\
         함한다. 최상위 JSON 파싱/입력 검증, 인증/한도 거절과 과거 거절은 포함하지 않는다. 원본 properties, 오류 원문과 행\
-        위자 ID는 반환하지 않는다. 페이지는 0부터 시작한다."
+        위자 ID는 반환하지 않는다. 페이지는 0부터 시작한다. 모르는 조회 조건은 400 validation_error로 거절한다."
       operationId: searchEventRejections
       parameters:
       - in: query
@@ -2866,6 +2868,8 @@ paths:
         customer_id, month, type을 함께 주면 모두 만족하는 이벤트만 나오고, total은 조건을 적용한 뒤의 건수다.
         from과 to를 함께 주면 월 대신 자유 기간을 조회한다. 시작은 포함하고 종료 시각은 제외한다. 날짜만 준 to는 그 날짜의 하루 전체를 포함한다. 시간대 없는 날짜와 시각은 KST다.
         q는 transaction_id, 고객 이름과 외부 ID의 부분 검색이다. properties는 JSON 객체의 값이 포함된 이벤트를 찾는다.
+        from과 to는 함께 주어야 하고 month와 같이 쓸 수 없다. 인보이스 검색은 한쪽만 주거나 month와 함께 줄 수 있어 규칙이 다르다.
+        모르는 조회 조건은 무시한다. 내보내기, 월 목록, 이벤트 문제와 수집 거절 검색은 모르는 조회 조건을 400으로 거절한다.
         properties는 저장된 값 그대로다. 키 순서와 공백은 보낸 것과 다를 수 있고, 숫자 자릿수는 그대로다.
       operationId: listEvents
       parameters:
@@ -3089,9 +3093,10 @@ paths:
   /v1/events/export:
     get:
       description: "이벤트 목록과 같은 월 또는 자유 기간, 고객, 유형, 검색, 속성 조건과 정렬을 적용한다. page와 size는\
-        \ 목록 링크 호환을 위해 받지만 내보내기에는 적용하지 않는다. 조건 전체가 10000행을 넘으면 400 validation_error로\
-        \ 거절한다. UTF-8 BOM과 CRLF를 사용하며 문자열의 스프레드시트 수식을 이스케이프한다. include_properties=true를\
-        \ 선택한 경우에만 원본 properties JSON 열을 추가하며 숫자 자릿수를 보존한다."
+        \ 목록 링크 호환을 위해 받지만 내보내기에는 적용하지 않는다. 조건 전체가 10000행을 넘거나, include_properties=true일\
+        \ 때 원본 properties 합계가 32MB를 넘으면 400 validation_error로 거절한다. UTF-8 BOM과 CRLF를\
+        \ 사용하며 문자열의 스프레드시트 수식을 이스케이프한다. include_properties=true를 선택한 경우에만 원본 properties\
+        \ JSON 열을 추가하며 숫자 자릿수를 보존한다. 모르는 조회 조건은 400 validation_error로 거절한다."
       operationId: exportEvents
       parameters:
       - description: 목록 호환용이며 CSV 행 범위에는 적용하지 않는다.
@@ -3221,6 +3226,7 @@ paths:
   /v1/events/lookup:
     get:
       description: transaction_id 원문으로 조회한다. 목록의 페이지나 기간에 포함되지 않아도 상세 정보를 열 수 있다.
+        모르는 조회 조건은 무시한다.
       operationId: getEvent
       parameters:
       - in: query
@@ -3274,7 +3280,8 @@ paths:
   /v1/events/months:
     get:
       description: "현재 도입사와 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터\
-        \ 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다."
+        \ 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다. 모르는 조회 조건은 400 validation_error로\
+        \ 거절한다."
       operationId: listEventMonths
       responses:
         "200":
@@ -3323,7 +3330,8 @@ paths:
       - event-controller
   /v1/events/types:
     get:
-      description: 미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 돌려준다. month 또는 from/to를 사용한다.
+      description: 미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 돌려준다. month 또는 from/to를 사용한다. 모르는
+        조회 조건은 무시한다.
       operationId: listEventTypes
       parameters:
       - in: query
@@ -3796,7 +3804,9 @@ paths:
       description: "month, customer_id, billable_metric_code, q, min_amount, max_amount,\
         \ sort(customer_name/customer_id/amount/line_count), order, page, size를 받는\
         다. amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를\
-        \ 확정하므로 finalization_scope는 month다."
+        \ 확정하므로 finalization_scope는 month다. summary는 month, calculated_at, amount,\
+        \ customer_count, billable_customer_count, line_count, unpriced_count, negative_count와\
+        \ 같은 이름의 month_ 월 전체 값, finalization_scope다."
       operationId: searchDraftInvoices
       parameters:
       - in: query
@@ -4065,7 +4075,10 @@ paths:
       description: "customer_id, month, from/to(확정 시각, 날짜 종료일 포함/KST), status, mode,\
         \ min_amount, max_amount, billable_metric_code, q, sort(month/customer_name/total_amount/finalized_at/invoice_number/status),\
         \ order, page, size를 받는다. mode 기본은 현재 결제 설정이다. 조건 전체 금액과 결제 상태 건수는 페이지와 독립\
-        이며 pending이 있으면 outstanding_amount는 null이다."
+        이며 pending이 있으면 outstanding_amount는 null이다. summary는 mode, invoice_count,\
+        \ supply_amount, tax_amount, total_amount, canceled_amount, has_pending, outstanding_amount,\
+        \ status_counts(결제 상태별 건수)다. from과 to는 한쪽만 줘도 되고 month와 함께 주면 둘 다 만족하는 인보이\
+        스만 나온다. 이벤트 목록과 내보내기는 from과 to를 함께 요구한다."
       operationId: searchInvoices
       parameters:
       - in: query
@@ -4470,7 +4483,8 @@ paths:
     post:
       description: "로그인 없이 인보이스 하나를 조회하는 링크를 만든다. token은 발급 응답에만 제공하고 해시만 저장한다. 기본\
         \ 30일, 최대 90일이며 폐기할 수 있다. 결제 상태는 발급 당시 test/live 모드로 조회한다. 링크를 가진 사람이 조회할\
-        \ 수 있으므로 고객에게만 전달한다."
+        \ 수 있으므로 고객에게만 전달한다. 재시도를 허용하는 링크를 API 키로 만들면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면\
+        \ 409 payment_mode_mismatch다."
       operationId: createInvoiceViewLink
       parameters:
       - in: path
@@ -4779,7 +4793,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/InvitationPreview"
+                $ref: "#/components/schemas/OrganizationInvitationPreviewResponse"
           description: "초대한 도입사, 초대 이메일, 만료 시각, 수락하면 받을 권한"
         "400":
           content:
@@ -4839,7 +4853,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/AcceptedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationAcceptanceResponse"
           description: 수락한 사용자와 소속된 도입사
         "400":
           content:
@@ -4973,7 +4987,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/IssuedInvitation"
+                $ref: "#/components/schemas/OrganizationInvitationSecretResponse"
           description: 발급한 초대와 링크 토큰. 토큰 원문은 이 응답에서만 볼 수 있다
         "400":
           content:
@@ -5903,6 +5917,7 @@ paths:
       description: |
         지금 결제 모드로 등록한 고객 카드를 customer_id 오름차순으로 전부 돌려준다. 빌링키 원문은 싣지 않는다.
         페이지를 나누지 않는다. authenticated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 카드를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 카드는 새 결제에 다시 쓰이지 않는다.
       operationId: listPaymentMethods
       parameters:
       - description: 보관 상태. 생략하면 active
@@ -6149,6 +6164,7 @@ paths:
       description: |
         customer_id를 주면 그 고객의 요금제만, 생략하면 도입사 공통 요금제만 돌려준다. 고객 요금제는 customer_id로 따로 조회한다.
         month를 주면 시작 월부터 종료 월 전까지에 그 달이 드는 버전만, 생략하면 기간과 상관없이 버전 이력을 돌려준다. 보관 여부는 month와 상관없이 status로 고른다. 시작 월 내림차순이다.
+        청구는 보관 효력(archived_from)까지 따져 버전을 고르므로, 그 달 청구에 쓰이는 요금제는 status=all 목록에서 시작 월이 가장 늦은 버전을 보고 고른다. 그 버전이 archived_from부터 멈췄으면 이전 버전으로 돌아가지 않는다.
       operationId: listPricePlans
       parameters:
       - description: "이 달(yyyy-MM, KST)이 시작 월부터 종료 월 전까지에 드는 버전만 고른다. 보관 여부는 이 값과\
@@ -6708,6 +6724,7 @@ paths:
         선택한 환경에 저장한 토스페이먼츠 키를 mode 오름차순으로 돌려준다. 저장한 모드만 나온다.
         시크릿 키 원문은 돌려주지 않고 마지막 네 자만 secret_key_last_four로 준다.
         verified_at과 updated_at은 KST(+09:00)로 나온다.
+        status가 archived나 all이면 교체나 보관으로 물러난 이전 키를 현재 행 뒤에 물러난 시각 내림차순으로 붙이고, archived_at에 물러난 시각을 담는다. 이전 키는 새 결제에 다시 쓰이지 않는다.
       operationId: listTossPaymentsCredentials
       parameters:
       - description: 보관 상태. 생략하면 active
@@ -7195,7 +7212,8 @@ paths:
     get:
       description: "month, customer_id, billable_metric_code, q, status(고객 보관 상태,\
         \ 기본 all), sort(customer_name/customer_id/line_count), order, page, size를\
-        \ 받는다. 한 고객의 모든 미터를 같은 페이지에 둔다."
+        \ 받는다. 한 고객의 모든 미터를 같은 페이지에 둔다. summary는 month, customer_count, metric_count,\
+        \ line_count, nonzero_customer_count다."
       operationId: searchUsage
       parameters:
       - in: query
@@ -7977,15 +7995,6 @@ components:
           minItems: 1
       required:
       - consents
-    AcceptedInvitation:
-      type: object
-      properties:
-        organization_id:
-          type: string
-          format: uuid
-        user_account_id:
-          type: string
-          format: uuid
     ApiKeyResponse:
       type: object
       properties:
@@ -8902,11 +8911,14 @@ components:
           - invalid_toss_payments_credential
           - payment_method_rejected
           - toss_payments_test_code_in_live_mode
+          - invalid_webhook_url
+          - invalid_webhook_event_type
           - authentication_required
           - invalid_credentials
           - permission_denied
           - organization_not_active
           - environment_mismatch
+          - consent_required
           - customer_not_found
           - event_not_found
           - billable_metric_not_found
@@ -8915,13 +8927,16 @@ components:
           - invoice_view_link_not_found
           - endpoint_not_found
           - api_key_not_found
-          - api_key_unavailable
           - organization_not_found
           - user_account_not_found
           - payment_method_not_found
           - payment_method_registration_not_found
           - payment_attempt_not_found
           - toss_payments_credential_not_found
+          - price_plan_not_found
+          - webhook_endpoint_not_found
+          - webhook_delivery_not_found
+          - invitation_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
@@ -8953,22 +8968,15 @@ components:
           - payment_cancellation_in_progress
           - payment_cancellation_idempotency_conflict
           - webhook_delivery_not_retryable
-          - webhook_delivery_not_found
           - price_rate_history_immutable
           - price_plan_history_immutable
-          - price_plan_not_found
-          - customer_has_pricing
-          - invalid_webhook_url
-          - invalid_webhook_event_type
-          - webhook_endpoint_not_found
           - webhook_endpoint_disabled
           - webhook_endpoint_limit_exceeded
-          - consent_required
-          - invitation_not_found
           - invitation_unavailable
           - last_owner_required
           - owner_scopes_required
           - last_operator_required
+          - api_key_unavailable
           - upload_size_exceeded
           - request_type_not_supported
           - rate_limit_exceeded
@@ -9132,6 +9140,10 @@ components:
           format: int32
         result:
           type: string
+          enum:
+          - stored
+          - duplicate
+          - rejected
         transaction_id:
           type: string
     FieldError:
@@ -9192,7 +9204,7 @@ components:
           items:
             $ref: "#/components/schemas/IngestEventRequest"
           maxItems: 100
-          minItems: 0
+          minItems: 1
       required:
       - events
     IngestEventBatchResponse:
@@ -9248,22 +9260,6 @@ components:
       required:
       - document
       - document_version
-    InvitationPreview:
-      type: object
-      properties:
-        account_exists:
-          type: boolean
-        email:
-          type: string
-        expires_at:
-          type: string
-          format: date-time
-        organization_name:
-          type: string
-        scopes:
-          type: array
-          items:
-            type: string
     InvoiceLineResponse:
       type: object
       properties:
@@ -9423,13 +9419,6 @@ components:
         revoked_at:
           type: string
           format: date-time
-        token:
-          type: string
-    IssuedInvitation:
-      type: object
-      properties:
-        invitation:
-          $ref: "#/components/schemas/OrganizationInvitationResponse"
         token:
           type: string
     ListApiKeysResponse:
@@ -9741,6 +9730,31 @@ components:
           enum:
           - test
           - live
+    OrganizationInvitationAcceptanceResponse:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        user_account_id:
+          type: string
+          format: uuid
+    OrganizationInvitationPreviewResponse:
+      type: object
+      properties:
+        account_exists:
+          type: boolean
+        email:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        organization_name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
     OrganizationInvitationResponse:
       type: object
       properties:
@@ -9766,6 +9780,13 @@ components:
           items:
             type: string
         status:
+          type: string
+    OrganizationInvitationSecretResponse:
+      type: object
+      properties:
+        invitation:
+          $ref: "#/components/schemas/OrganizationInvitationResponse"
+        token:
           type: string
     OrganizationMemberResponse:
       type: object

@@ -48,6 +48,7 @@ public class PricePlanService {
     return list(organizationId, month, customerId, "active");
   }
 
+  @Transactional(readOnly = true)
   public ListPricePlansResponse list(
       UUID organizationId, YearMonth month, UUID customerId, String status) {
     validateCustomer(organizationId, customerId);

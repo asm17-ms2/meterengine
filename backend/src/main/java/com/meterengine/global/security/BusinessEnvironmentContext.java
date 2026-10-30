@@ -28,7 +28,10 @@ public final class BusinessEnvironmentContext {
   }
 
   public static UUID scopeId() {
-    UUID environmentId = environmentId();
+    return scopeId(environmentId());
+  }
+
+  public static UUID scopeId(UUID environmentId) {
     return environmentId == null ? LEGACY_SCOPE : environmentId;
   }
 
