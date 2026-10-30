@@ -97,6 +97,8 @@ aws stepfunctions list-executions --region ap-northeast-2 \
   --status-filter RUNNING --query 'length(executions)'
 ```
 
+"환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
+
 ```bash
 measurements/test-storage/sut/scripts/sut-start.sh
 measurements/test-storage/sut/scripts/sut-stop.sh
