@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-30T12:12:33+09:00",
+  "updated_at": "2026-10-30T12:20:45+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -48,7 +48,8 @@
     "fix/s456-t-yang-retry-window": "bbac6da",
     "fix/s456-t-yang-archived-card": "cb9bdda",
     "fix/s456-t-yang-invoice-line-name": "8d23297",
-    "fix/s456-t-yang-invoice-links-ui": "3b16755"
+    "fix/s456-t-yang-invoice-links-ui": "3b16755",
+    "fix/s456-t-yang-contract-redelivery": "9e58580"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -9015,19 +9016,26 @@
       "id": "NT-yang-023",
       "merged_ids": [],
       "evidence": [
-        "frontend/e2e/workspace-contract-server.mjs:160-165 @ c661d80",
-        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:192 @ c661d80"
+        "frontend/e2e/workspace-contract-server.mjs:160-165 @ 18c4f64",
+        "backend/src/main/java/com/meterengine/webhook/repository/WebhookDeliveryRepository.java:207-213 @ 18c4f64",
+        "업무 계약 웹훅 재전송의 202 빈 응답을 성공으로 받고 발송 상태를 갱신한다(기대를 발송 대기로 바꿈): 실패 getByRole cell 발송 대기 not visible",
+        "커밋 9e58580"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "9e58580e"
+      ],
+      "tests": [
+        "playwright test -c playwright.workspace.config.ts 13건 통과"
+      ],
       "behavior_change": false,
       "layer": 453,
-      "branch": "main",
-      "status": "open",
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "status": "fixed",
       "verdict": "confirmed",
       "title": "업무 계약 대역이 재전송 뒤 attempt_count를 0으로 되돌리지 않는다(박성종 님 #453 10-29 00:15 p4)",
-      "reason": "main(c661d80)에서 지적한 코드가 그대로 남아 있다(경로는 evidence).",
-      "left": "문인호 님 열린 #496, #498과 #497이 같은 대역을 고치는 중이라 그 뒤 main에서 고친다"
+      "reason": "업무 계약 대역이 재전송 뒤에도 attempt_count 6을 돌려 재시도 대기로 보였다. 실제 백엔드처럼 재전송 뒤 0을 돌리고 시험 기대를 발송 대기로 바꿨다. #498이 고치는 상태 초기값 옆 줄은 건드리지 않았다.",
+      "fails_without_fix": true,
+      "top_head": "main 18c4f64"
     },
     {
       "id": "NT-yang-026",
@@ -18697,6 +18705,158 @@
       "result": "pass",
       "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
       "detail": "BUILD SUCCESSFUL, 시험 1454개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec aggregation",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec archive-filters",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec auth",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec customer-payment-retry",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec environment-cycle",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec events",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec invoice-links",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec mvp",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec operator-create",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec people",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec permissions",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "SRC=<invoice-links-ui-1 워크트리> bash .s456-work/tools/live2.sh spec query-workspace",
+      "detail": "마지막 실화면 점검"
+    },
+    {
+      "branch": "fix/s456-t-yang-invoice-links-ui",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "node .stack456-team/tools/screens.mjs .s456-work/screens-input.json <out>; compare-screens.py",
+      "detail": "마지막 실화면 점검: 기준 main-c661d80, 비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 93 ℹ pass 93 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  67 passed (28.3s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.2s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (18.6s) "
     }
   ],
   "pushes": [
@@ -19309,6 +19469,11 @@
       "branch": "fix/s456-t-yang-ops-metrics",
       "sha": "be26d96f1c62955b72439e72433f32e8bb7e4457",
       "at": "2026-10-30T12:12:16+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-contract-redelivery",
+      "sha": "9e58580ee8361956b65c61590d9052358851656e",
+      "at": "2026-10-30T12:19:37+09:00"
     }
   ],
   "usage_log": [],
@@ -19373,7 +19538,8 @@
     "2026-10-30T11:14:51+09:00 main 받기 #494 fix/s456-t-yang-ci-tests: be62d91, c661d80 merge 모두 충돌 없음.",
     "2026-10-30T11:41:45+09:00 blocked 5항목 결정: G-012, G-019, G-135는 (b) 근거와 함께 refuted, D-216은 (a) 새 V__로 고침(fix/s456-t-yang-invoice-line-name), X-057은 (a) 코드로 고침(#501). 근거는 각 항목 reason.",
     "D-216 마이그레이션 기동 점검(.s456-work/tools/mig-check.sh): 따로 띄운 PostgreSQL 18에 main 931b703 백엔드로 V52까지 올린 뒤 fix/s456-t-yang-invoice-line-name 8d23297 백엔드가 V53을 적용해 기동했고, 빈 DB에서도 기동했다.",
-    "2026-10-30T12:12:33+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics 두 번째: #492가 들어간 main(18c4f64)과 OperationsService.java가 충돌했다. 이 PR의 결제 실패 수 live 한정과 웹훅 실패 수 test 환경 제외, #492의 지운 수신 주소 제외 조건을 한 쿼리에 모두 살렸다. #492 조건을 합쳐 쓴 곳이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다."
+    "2026-10-30T12:12:33+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics 두 번째: #492가 들어간 main(18c4f64)과 OperationsService.java가 충돌했다. 이 PR의 결제 실패 수 live 한정과 웹훅 실패 수 test 환경 제외, #492의 지운 수신 주소 제외 조건을 한 쿼리에 모두 살렸다. #492 조건을 합쳐 쓴 곳이라 문인호 님을 리뷰어로 지정했다. PR 본문에도 적었다.",
+    "할 일 8(#494): origin/main(c661d80)을 받은 head 61ba35e의 PR CI frontend 체크가 초록이 됐다(run 40990363749, job 123851050243). #481의 업무 계약 수정이 main에 들어와 풀렸다. 따로 고칠 것은 없었다."
   ],
   "final_checks": [
     {
@@ -19477,6 +19643,13 @@
     {
       "layer": "509",
       "sha": "8d232971c203de58f5803bfc53ba377d7d0cae77",
+      "passed": 12,
+      "total": 12,
+      "screens": "비교 38개 화면, 늘어난 것 0건"
+    },
+    {
+      "layer": "510",
+      "sha": "3b167556440b5571fde494a958e93d278ff7e13f",
       "passed": 12,
       "total": 12,
       "screens": "비교 38개 화면, 늘어난 것 0건"
