@@ -34,6 +34,12 @@ export function formatKstStamp(value: Date): string {
   return `${formatKstDateTime(value.toISOString())} KST`;
 }
 
+/** `2026-10-01 13:00 KST` - 분 단위로 충분한 시각. */
+export function formatKstMinuteStamp(value: Date): string {
+  const parts = toDateTimeParts(value);
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} KST`;
+}
+
 export function formatKoreanMonth(month: string): string {
   const [year, monthOfYear] = month.split("-");
   return `${year}년 ${Number(monthOfYear)}월`;

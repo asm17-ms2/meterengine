@@ -26,6 +26,12 @@ export function shiftMonth(month: string, delta: number): string {
   return `${shiftedYear}-${shiftedMonth}`;
 }
 
+/** 그 달 사용량의 집계 마감 시각(다음 달 1일 13:00 KST). 뒤에 받은 그 달 이벤트는 집계와 청구에 들지 않는다. */
+export function cutoffOf(month: string): Date {
+  const [year, monthOfYear] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthOfYear, 1, 4));
+}
+
 export function readMonth(
   raw: string | string[] | undefined,
   now: Date = new Date(),

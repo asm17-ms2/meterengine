@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { UsageQuality } from "@/components/workspace/UsageQuality";
 
+import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { QueryStamp } from "@/components/screen/QueryStamp";
@@ -34,6 +35,7 @@ export default async function UsagePage({
   const params = await searchParams;
   const query = readListQuery(params, USAGE_CAPABILITIES, { hasMonth: true });
   const { month, devState } = query;
+  const now = new Date();
 
   const usage =
     devState === "loading" ? null : aggregateBillableMetricUsages(query, devState);
@@ -53,7 +55,8 @@ export default async function UsagePage({
         <FilterBar
           end={
             <>
-              <QueryStamp text={formatKstStamp(new Date())} />
+              <CutoffStamp month={month} now={now} />
+              <QueryStamp text={formatKstStamp(now)} />
               <ExpandControls />
             </>
           }
