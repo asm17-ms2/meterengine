@@ -15,6 +15,7 @@ test("native validity becomes a short inline message without the label", () => {
   assert.equal(fieldValidationMessage(broken("stepMismatch"), {}), "정수로 입력하세요.");
   assert.equal(fieldValidationMessage(broken("badInput"), { step: "any" }), "숫자로 입력하세요.");
   assert.equal(fieldValidationMessage(broken("tooLong"), { maxLength: 255 }), "255자 이하로 입력하세요.");
+  assert.equal(fieldValidationMessage(broken("tooShort"), { minLength: 8 }), "8자 이상으로 입력하세요.");
   assert.equal(fieldValidationMessage(valid, {}), undefined);
 });
 
