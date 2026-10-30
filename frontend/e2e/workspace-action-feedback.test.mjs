@@ -58,7 +58,7 @@ test("a missing Toss key says where to save it", () => {
 
 test("re-registering an existing external customer id is reported as not created", () => {
   const input = { externalId: "customer-1", name: "새 고객", billingEmail: "new@example.com" };
-  assert.equal(existingCustomerMessage(input, { name: "기존 고객", billing_email: "old@example.com" }), '외부 고객 ID가 같은 기존 고객 "기존 고객"이 있어 새로 등록하지 않았습니다.');
+  assert.equal(existingCustomerMessage(input, { name: "카카오", billing_email: "old@example.com" }), "외부 고객 ID가 같은 기존 고객(이름: 카카오)이 있어 새로 등록하지 않았습니다.");
   assert.equal(existingCustomerMessage(input, { name: "새 고객", billing_email: "new@example.com" }), undefined);
   assert.equal(existingCustomerMessage({ ...input, externalId: "" }, { name: "기존 고객", billing_email: null }), undefined);
 });
