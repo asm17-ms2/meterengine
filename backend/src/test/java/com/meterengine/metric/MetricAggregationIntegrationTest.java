@@ -3,6 +3,7 @@ package com.meterengine.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.repository.UnbilledEventRepository;
 import com.meterengine.global.error.ConflictException;
@@ -92,11 +93,15 @@ class MetricAggregationIntegrationTest {
     }
     event("before", "{\"value\":999}", START.minusNanos(1000));
     event("after", "{\"value\":999}", END);
-    jdbc.update(
-        "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at) VALUES (?, 'other-type', ?, 'other', '{\"value\":999}', ?)",
-        organization,
-        customer,
-        START);
+    TestEvents.withGivenReceivedAt(
+        jdbc,
+        () ->
+            jdbc.update(
+                "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at) VALUES (?, 'other-type', ?, 'other', '{\"value\":999}', ?, ?)",
+                organization,
+                customer,
+                START,
+                START));
     CustomerUsage result = quantity("metric");
     assertThat(result.rawQuantity()).isEqualByComparingTo(expected);
     assertThat(result.quantity()).isEqualByComparingTo(expected);
@@ -502,13 +507,18 @@ class MetricAggregationIntegrationTest {
         .getFirst();
   }
 
+  // 받은 시각을 발생 시각으로 둬서 그 달 집계 마감 전에 받은 이벤트로 넣는다.
   private void event(String transaction, String properties, OffsetDateTime occurredAt) {
-    jdbc.update(
-        "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at) VALUES (?, ?, ?, 'observed', ?::jsonb, ?)",
-        organization,
-        transaction,
-        customer,
-        properties,
-        occurredAt);
+    TestEvents.withGivenReceivedAt(
+        jdbc,
+        () ->
+            jdbc.update(
+                "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at) VALUES (?, ?, ?, 'observed', ?::jsonb, ?, ?)",
+                organization,
+                transaction,
+                customer,
+                properties,
+                occurredAt,
+                occurredAt));
   }
 }

@@ -39,6 +39,16 @@ public final class TestEvents {
     }
   }
 
+  // received_at 트리거를 끈 채 넣기를 돌린다. 넣는 SQL이 received_at을 직접 정한다.
+  public static void withGivenReceivedAt(JdbcTemplate jdbcTemplate, Runnable insert) {
+    jdbcTemplate.execute("ALTER TABLE event DISABLE TRIGGER event_set_received_at");
+    try {
+      insert.run();
+    } finally {
+      jdbcTemplate.execute("ALTER TABLE event ENABLE TRIGGER event_set_received_at");
+    }
+  }
+
   // 토큰 미터용 chat_completion 이벤트를 받은 시각을 정해 넣는다.
   public static void insertToken(
       JdbcTemplate jdbcTemplate,

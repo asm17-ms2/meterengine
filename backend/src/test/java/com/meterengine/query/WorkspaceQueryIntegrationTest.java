@@ -7,6 +7,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.query.repository.WorkspaceQueryRepository;
@@ -435,15 +436,20 @@ class WorkspaceQueryIntegrationTest {
         archivedFrom);
   }
 
+  // 받은 시각을 발생 시각으로 둬서 그 달 집계 마감 전에 받은 이벤트로 넣는다.
   private void event(UUID customer, String type, int quantity) {
-    jdbc.update(
-        "INSERT INTO event (organization_id,transaction_id,customer_id,type,properties,occurred_at) VALUES (?,?,?,?,cast(? AS jsonb),cast(? AS timestamptz))",
-        organizationId,
-        UUID.randomUUID().toString(),
-        customer,
-        type,
-        "{\"tokens\":" + quantity + "}",
-        "2026-08-10T12:00:00+09:00");
+    TestEvents.withGivenReceivedAt(
+        jdbc,
+        () ->
+            jdbc.update(
+                "INSERT INTO event (organization_id,transaction_id,customer_id,type,properties,occurred_at,received_at) VALUES (?,?,?,?,cast(? AS jsonb),cast(? AS timestamptz),cast(? AS timestamptz))",
+                organizationId,
+                UUID.randomUUID().toString(),
+                customer,
+                type,
+                "{\"tokens\":" + quantity + "}",
+                "2026-08-10T12:00:00+09:00",
+                "2026-08-10T12:00:00+09:00"));
   }
 
   private UUID invoice(UUID customer, String name, long supply, String finalized) {
