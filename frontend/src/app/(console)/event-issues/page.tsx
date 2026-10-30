@@ -8,6 +8,7 @@ import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
 import { formatKstDateTime } from "@/lib/format";
 import { CustomerFilterField } from "@/components/screen/CustomerFilterField";
+import { MonthField } from "@/components/screen/MonthField";
 import { customerOptions } from "@/lib/api/search";
 import { readListQuery } from "@/lib/list-query";
 import { CAPABILITIES } from "@/lib/api/capabilities";
@@ -36,7 +37,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
     <section className="workspace-panel">
       <form method="get" className="workspace-actions">
         <Suspense><EnvironmentInput /></Suspense>
-        <label className="workspace-field"><span>대상 월</span><input type="month" name="month" defaultValue={month} required /></label>
+        <MonthField key={month} month={month} label="대상 월" />
         <label className="workspace-field"><span>문제 종류</span><select name="reason" defaultValue={reason ?? ""}><option value="">전체</option>{Object.entries(REASONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />
         <label className="workspace-field"><span>전송 ID, 고객과 유형 검색</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>

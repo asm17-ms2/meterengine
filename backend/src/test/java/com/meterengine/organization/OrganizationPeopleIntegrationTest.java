@@ -119,6 +119,25 @@ class OrganizationPeopleIntegrationTest {
   }
 
   @Test
+  void 직접생성과_초대의_이메일_형식_오류는_가입과_같은_문구다() {
+    for (String email : List.of("a@b", "abc")) {
+      for (MvcTestResult result :
+          List.of(
+              post(
+                  "/v1/organization/members",
+                  owner,
+                  Map.of("email", email, "name", "형식 확인", "password", PASSWORD)),
+              post("/v1/organization/invitations", owner, Map.of("email", email)))) {
+        assertThat(result).as(email).hasStatus(400);
+        List<String> fields = JsonPath.read(body(result), "$.errors[*].field");
+        List<String> messages = JsonPath.read(body(result), "$.errors[*].message");
+        assertThat(fields).as(email).containsOnly("email");
+        assertThat(messages).as(email).containsOnly("올바른 형식의 이메일 주소여야 합니다");
+      }
+    }
+  }
+
+  @Test
   void 기존_이메일의_직접생성은_409이며_비밀번호를_바꾸지_않는다() {
     String email =
         jdbcTemplate.queryForObject(

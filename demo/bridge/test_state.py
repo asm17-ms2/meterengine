@@ -299,7 +299,7 @@ class ForgetCustomerTest(unittest.TestCase):
             state.forget_customer("meterengine(박성종)")
             self.assertIsNone(state.cached_customer("meterengine(박성종)"))
             resolver.resolve("meterengine(박성종)")
-        self.assertEqual(client.list_calls, 0)
+        self.assertEqual(client.list_calls, 2)
         self.assertEqual(len(client.customers), 1)
 
     def test_버린_것은_재시작_뒤에도_없다(self):
@@ -322,6 +322,13 @@ class CustomerResolverTest(unittest.TestCase):
         self.assertEqual(customer_id, DEMO_CUSTOMER)
         self.assertEqual(client.created, [])
 
+    def test_외부_ID_없이_만든_옛_고객은_이름으로_이어_받는다(self):
+        client = FakeClient([{"id": OTHER_CUSTOMER, "name": "meterengine(박성종)", "external_id": None}])
+        with tempfile.TemporaryDirectory() as directory:
+            customer_id = self.resolver(directory, client).resolve("meterengine(박성종)")
+        self.assertEqual(customer_id, OTHER_CUSTOMER)
+        self.assertEqual(client.created, [])
+
     def test_없으면_등록한다(self):
         client = FakeClient()
         with tempfile.TemporaryDirectory() as directory:
@@ -335,7 +342,7 @@ class CustomerResolverTest(unittest.TestCase):
             resolver = self.resolver(directory, client)
             resolver.resolve("meterengine(박성종)")
             resolver.resolve("meterengine(박성종)")
-        self.assertEqual(client.list_calls, 0)
+        self.assertEqual(client.list_calls, 1)
         self.assertEqual(client.created, ["meterengine(박성종)"])
 
     def test_다른_이름은_따로_등록한다(self):

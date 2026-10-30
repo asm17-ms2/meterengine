@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { readEnvironment } from "@/lib/environment";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
+import { mutationScopeError } from "@/lib/auth/mutation-scope";
+import { credentialFieldErrors } from "@/lib/auth/credentials";
 import { requireTenantSession } from "@/lib/auth/session";
 import { config } from "@/lib/config";
 import { canPerformWorkspaceOperation } from "@/lib/auth/permissions";
@@ -26,8 +27,9 @@ function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_IN
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
   const session = await requireTenantSession();
+  const scopeError = await mutationScopeError(data, session.organization?.id);
+  if (scopeError) return { message: scopeError };
   const environment = readEnvironment(text(data, "environment"));
-  if (environment !== readEnvironment((await headers()).get("x-meterengine-environment"))) return { message: "열어 둔 화면과 요청의 업무 환경이 다릅니다. 환경을 확인한 뒤 다시 시도하세요." };
 
   let path: string;
   let method: "POST" | "PUT" | "PATCH" | "DELETE" = "POST";
@@ -35,10 +37,14 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   const operation = text(data, "operation");
   if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
-  if (!text(data, "organization_id") || text(data, "organization_id") !== session.organization?.id) return { message: "열어 둔 화면의 도입사가 바뀌었습니다. 현재 도입사를 확인한 뒤 다시 시도하세요." };
   try {
     switch (operation) {
-      case "createMember": path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password: typeof data.get("password") === "string" ? data.get("password") : "", scopes: data.getAll("scopes") }; break;
+      case "createMember": {
+        const password = typeof data.get("password") === "string" ? String(data.get("password")) : "";
+        const fieldErrors = credentialFieldErrors({ name: text(data, "name"), email: text(data, "email"), password });
+        if (Object.keys(fieldErrors).length) return { message: "입력한 내용을 확인하세요.", fieldErrors };
+        path = "/v1/organization/members"; body = { email: text(data, "email"), name: text(data, "name"), password, scopes: data.getAll("scopes") }; break;
+      }
       case "updateMemberRole": path = `/v1/organization/members/${identifier(data)}/role`; method = "PUT"; body = { organization_role: text(data, "organization_role") }; break;
       case "updateMemberScopes": path = `/v1/organization/members/${identifier(data)}/scopes`; method = "PUT"; body = { scopes: data.getAll("scopes") }; break;
       case "archiveMember": path = `/v1/organization/members/${identifier(data)}`; method = "DELETE"; break;

@@ -107,6 +107,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     const downloaded = page.waitForEvent("download");
     await page.getByRole("button", { name: "조건 전체 CSV 내보내기", exact: true }).click();
     const download = await downloaded;
+    expect(download.suggestedFilename(), "CSV 파일 이름에 조회 월").toMatch(/^billable-metric-prices-\d{4}-\d{2}(-test|-live)?\.csv$/);
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("검증 CSV 파일이 없습니다.");
     const csv = await readFile(downloadPath, "utf8");

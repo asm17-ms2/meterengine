@@ -9,7 +9,7 @@ const CUSTOMER_LIST_OVERRIDES: ClientOverrides = { maxRetries: 0, timeoutMs: 300
 async function loadCustomers(name: string): Promise<TargetCustomers> {
   try {
     const response = await clientFor(name, CUSTOMER_LIST_OVERRIDES).listCustomers();
-    return { name, customers: response.customers.map((customer) => ({ id: customer.id, name: customer.name })) };
+    return { name, customers: response.customers.map((customer) => ({ id: customer.id, name: customer.name ?? customer.id })) };
   } catch (error) {
     return { name, customers: [], error: toErrorView(error).message };
   }

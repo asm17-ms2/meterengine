@@ -208,7 +208,18 @@ class EventRejectionIntegrationTest {
                     + "&error_code=customer_not_found&size=1&page=1"));
     assertThat(number(result, "$.total")).isEqualTo(2);
     assertThat((List<?>) JsonPath.read(result, "$.rejections")).hasSize(1);
-    assertThat(number(body(get(authorization, null, "&q=%25")), "$.total")).isZero();
+    assertThat(
+            number(
+                body(
+                    mvc.get()
+                        .uri(
+                            "/v1/event-rejections/search?month="
+                                + YearMonth.now(ZoneId.of("Asia/Seoul")))
+                        .param("q", "%")
+                        .header(AUTHORIZATION, authorization)
+                        .exchange()),
+                "$.total"))
+        .isZero();
     assertThat(
             mvc.get()
                 .uri("/v1/event-rejections/search?month=2000-01")

@@ -560,6 +560,26 @@ class PaymentRetryServiceTest {
   }
 
   @Test
+  void 재시도_확인_뒤_토스_조회_중에_키를_보관하면_새_시도를_만들지_않고_skipped로_센다() {
+    Organization organization = organization(true);
+    UUID invoiceId = invoice(organization);
+    failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
+    when(tossPaymentsClient.findPaymentByOrderId(eq(organization.secretKey()), anyString()))
+        .thenAnswer(
+            invocation -> {
+              jdbcTemplate.update(
+                  "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
+                  organization.organizationId());
+              return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
+            });
+
+    PaymentJobResult result = paymentRetryService.retry();
+
+    assertNotRetried(organization, invoiceId, 1);
+    assertThat(result.skippedCount()).isPositive();
+  }
+
+  @Test
   void 세_번째_시도가_실패하면_retry_exhausted가_한_번_오르고_상한을_넘긴_실패는_세지_않는다() {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
