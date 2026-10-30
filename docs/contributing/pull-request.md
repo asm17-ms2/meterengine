@@ -4,7 +4,7 @@
 
 - 작성자 외 1명 이상의 approve. 보호 경로를 건드리면 `protected-reviewers` 팀원의 approve 둘.
   - 강제는 main 룰셋의 required reviewer 패턴이 하고, 리뷰 요청은 `.github/CODEOWNERS`가 한다.
-- `ci.yml`의 `backend`, `frontend`, `demo`, `deploy`, `terraform`이 통과해야 한다. 안 바뀐 쪽은 skip되어 통과로 친다.
+- `ci.yml`의 `backend`, `frontend`, `demo`, `deploy`, `rds-auto-stop`이 통과해야 한다. 안 바뀐 쪽은 skip되어 통과로 친다.
 - 리뷰 스레드를 모두 resolve해야 한다.
 - 머지는 Merge when ready로 merge queue에 넣는다. 큐가 최신 main과 앞선 PR을 합친 상태로 CI를 돌리고, 통과하면 squash로 머지한다. main을 따라잡지 않아도 된다.
   - GitHub 네이티브 스택은 `gh stack merge`로 넣는다. 아래 몇 층만 넣으려면 `gh stack merge <PR 번호>`.
