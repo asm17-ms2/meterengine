@@ -36,13 +36,10 @@ public class WebhookDeliveryRepository {
         MAX_ATTEMPTS);
   }
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public Optional<WebhookClaim> claim() {
-    return claim(List.of());
-  }
-
   // 이번 차례에 이미 꺼낸 도입사 환경을 먼저 빼고 찾아, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
   // 제외를 정렬이 아닌 조건으로 둬야 대기 전송 색인 순서로 읽다가 첫 행에서 멈춘다.
+  // 선점은 부르는 쪽 트랜잭션과 따로 커밋해야 complete()가 같은 행 잠금을 기다리지 않는다.
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public Optional<WebhookClaim> claim(List<WebhookClaim> servedThisTurn) {
     if (!servedThisTurn.isEmpty()) {
       Optional<WebhookClaim> unserved =

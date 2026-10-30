@@ -311,6 +311,25 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 발송_경로의_claim은_바깥_트랜잭션이_있어도_따로_커밋된다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    webhookEndpointService.test(organizationId, endpoint.id());
+
+    WebhookClaim claim =
+        new TransactionTemplate(transactionManager)
+            .execute(
+                status -> {
+                  WebhookClaim claimed = webhookDeliveryRepository.claim(List.of()).orElseThrow();
+                  assertThat(committedClaimToken(claimed)).isEqualTo(claimed.claimToken());
+                  return claimed;
+                });
+
+    webhookDeliveryRepository.complete(claim, new WebhookOutcome(200, null, 1));
+  }
+
+  @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
@@ -325,7 +344,7 @@ class WebhookIntegrationTest {
               () -> {
                 List<WebhookClaim> values = new ArrayList<>();
                 for (int i = 0; i < 10; i++) {
-                  values.add(webhookDeliveryRepository.claim().orElseThrow());
+                  values.add(webhookDeliveryRepository.claim(List.of()).orElseThrow());
                 }
                 return values;
               });
@@ -334,7 +353,7 @@ class WebhookIntegrationTest {
               () -> {
                 List<WebhookClaim> values = new ArrayList<>();
                 for (int i = 0; i < 10; i++) {
-                  values.add(webhookDeliveryRepository.claim().orElseThrow());
+                  values.add(webhookDeliveryRepository.claim(List.of()).orElseThrow());
                 }
                 return values;
               });
@@ -346,7 +365,7 @@ class WebhookIntegrationTest {
     WebhookClaim old = claims.getFirst();
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() WHERE id = ?", old.id());
-    WebhookClaim replacement = webhookDeliveryRepository.claim().orElseThrow();
+    WebhookClaim replacement = webhookDeliveryRepository.claim(List.of()).orElseThrow();
     assertThat(replacement.id()).isEqualTo(old.id());
     assertThat(webhookDeliveryRepository.complete(old, new WebhookOutcome(200, null, 1))).isEmpty();
     assertThat(webhookDeliveryRepository.complete(replacement, new WebhookOutcome(200, null, 1)))
@@ -603,4 +622,19 @@ class WebhookIntegrationTest {
   }
 
   private record Received(String id, String timestamp, String signature, String body) {}
+
+  private UUID committedClaimToken(WebhookClaim claim) {
+    try (var executor = Executors.newSingleThreadExecutor()) {
+      return executor
+          .submit(
+              () ->
+                  jdbcTemplate.queryForObject(
+                      "SELECT claim_token FROM webhook_delivery WHERE id = ?",
+                      UUID.class,
+                      claim.id()))
+          .get(5, TimeUnit.SECONDS);
+    } catch (Exception exception) {
+      throw new IllegalStateException("다른 연결에서 선점 상태를 읽지 못했다", exception);
+    }
+  }
 }
