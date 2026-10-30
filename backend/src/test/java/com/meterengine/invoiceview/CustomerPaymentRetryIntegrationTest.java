@@ -450,10 +450,20 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   @Test
-  void 최신_실패가_일반_거절이어도_옛_NOT_FOUND를_확인할_수_없으면_재시도를_안내하지_않는다() {
+  void 최신_실패가_일반_거절이면_더_새_시도가_있는_옛_NOT_FOUND는_7일_창으로_막지_않는다() {
     Fixture fixture = fixture(false, null);
     insertAttempt(fixture, "failed", "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
     insertAttempt(fixture, "failed", "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusMinutes(1));
+    String token = value(create(fixture, true), "$.token");
+    assertThat(lookup(token)).bodyJson().extractingPath("$.payment_retry.allowed").isEqualTo(true);
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
+  void 최신_실패가_확인할_수_없는_NOT_FOUND이면_재시도를_안내하지_않는다() {
+    Fixture fixture = fixture(false, null);
+    insertAttempt(fixture, "failed", "REJECT_CARD_PAYMENT", OffsetDateTime.now().minusDays(9));
+    insertAttempt(fixture, "failed", "NOT_FOUND_PAYMENT", OffsetDateTime.now().minusDays(8));
     String token = value(create(fixture, true), "$.token");
     assertThat(lookup(token))
         .bodyJson()
