@@ -1,7 +1,7 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-30T10:17:22+09:00",
+  "updated_at": "2026-10-30T10:18:48+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
@@ -9,7 +9,7 @@
     "id": null,
     "step": "done",
     "branch": null,
-    "note": "8개 PR 모두 올림(#488 #491 #492 #493 #495 #496 #498 #499). #498은 main 이동으로 merge(df26abce) 뒤 검사 통과하고 push. 글꼴 5건 등 needs-decision 7건. 실화면 환경 정리 예정."
+    "note": "8개 PR 모두 올림(#488 #491 #492 #493 #495 #496 #498 #499). #498은 main 이동으로 merge(df26abce) 뒤 검사 통과하고 push. 글꼴 5건 등 needs-decision 7건. 실화면 환경 정리 완료."
   },
   "finished_ids": [
     "C443-000",
@@ -465,5 +465,5 @@
       "live": 5
     }
   },
-  "live_env": "up"
+  "live_env": "down"
 }
