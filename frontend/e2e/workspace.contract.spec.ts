@@ -119,7 +119,7 @@ test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 �
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "다시 보내기", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("cell", { name: "재시도 대기", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "발송 대기", exact: true })).toBeVisible();
   await expect(retry).toHaveCount(0);
   await expect(page.getByText("응답을 읽지 못했습니다", { exact: false })).toHaveCount(0);
   const state = await readState(request);

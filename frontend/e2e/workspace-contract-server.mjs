@@ -157,7 +157,7 @@ const server = createServer(async (request, response) => {
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}`) return send(response, 200, { id: ENDPOINT_ID, url: "https://receiver.contract.local/webhook", enabled: true, event_types: ["payment_succeeded"], description: null, archived_at: null });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries`) return send(response, 200, {
       page: 0, size: 20, total: 1,
-      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: 6, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
+      deliveries: [{ id: DELIVERY_ID, type: "payment_succeeded", status: current.deliveryStatus, attempt_count: current.deliveryStatus === "failed" ? 6 : 0, response_status: 503, failure_reason: current.deliveryStatus === "failed" ? "receiver_unavailable" : null, next_attempt_at: NOW }],
     });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries/${DELIVERY_ID}/retries` && request.method === "POST") {
       current.retryCalls++;
