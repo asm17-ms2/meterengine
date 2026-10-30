@@ -251,7 +251,7 @@ export function BillingTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, {group.unpricedUsage.lines.length}개 조합</p>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "공급가액 합계"}</span><span className="numeric">{totalAmount}</span></div></div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, {group.unpricedUsage.lines.length}개 조합</p>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</span><span className="numeric">{totalAmount}</span></div></div>
     <div className="data-desktop-table"><Table<BillingRow>
       rowKey="key"
       columns={columns}
@@ -273,7 +273,7 @@ export function BillingTable({
         <Table.Summary>
           <Table.Summary.Row>
             <Table.Summary.Cell index={0}>
-              <Typography.Text strong>{query.customerId ? "선택 고객 합계" : "합계"}</Typography.Text>
+              <Typography.Text strong>{query.customerId ? "선택 고객 합계" : "조건 전체 합계"}</Typography.Text>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={1} colSpan={3} />
             <Table.Summary.Cell index={4} align="right">

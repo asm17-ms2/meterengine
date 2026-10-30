@@ -37,7 +37,7 @@ public class EventIssueRepository {
       String unpricedJson) {
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(start);
     parameters.add(cutoff);
     StringBuilder filters = new StringBuilder();
@@ -55,7 +55,7 @@ public class EventIssueRepository {
       parameters.add(query);
     }
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(month.toString());
     parameters.add(month.toString());
     parameters.add(month.toString());
@@ -70,13 +70,13 @@ public class EventIssueRepository {
         WITH selected_events AS (
           SELECT e.*, c.name AS customer_name FROM event e
           JOIN customer c ON c.organization_id = e.organization_id AND c.environment_scope_id = e.environment_scope_id AND c.id = e.customer_id
-          WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid
+          WHERE e.organization_id = ? AND e.environment_scope_id = ?
             AND e.occurred_at >= ? AND e.occurred_at < ?
         """
             + filters
             + """
             ), active_metrics AS (
-              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_id IS NOT DISTINCT FROM ?::uuid AND (
+              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_scope_id = ? AND (
                 (m.archived_at IS NULL AND m.active_from <= ?)
                 OR EXISTS (SELECT 1 FROM billable_metric_period p
                   WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code
@@ -87,11 +87,11 @@ public class EventIssueRepository {
             ), issues AS (
               SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
                 'unknown_event_type'::text AS reason, NULL::text AS billable_metric_code,
-                NULL::text AS target_property, false AS negative_quantity
+                NULL::text AS target_property, false AS negative_quantity, false AS finalized
               FROM selected_events e WHERE NOT EXISTS (SELECT 1 FROM active_metrics m WHERE m.event_type = e.type)
               UNION ALL
               SELECT e.transaction_id, e.customer_id, e.customer_name, e.type, e.occurred_at, e.received_at,
-                'invalid_target_property'::text, m.code, m.target_property, false
+                'invalid_target_property'::text, m.code, m.target_property, false, false
               FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
               WHERE NOT coalesce(
             """
@@ -103,7 +103,10 @@ public class EventIssueRepository {
                 'unpriced_usage'::text, m.code, m.target_property,
                 CASE WHEN m.aggregation NOT IN ('count', 'count_distinct')
                   AND jsonb_typeof(e.properties -> m.target_property) = 'number'
-                  THEN (e.properties ->> m.target_property)::numeric < 0 ELSE false END
+                  THEN (e.properties ->> m.target_property)::numeric < 0 ELSE false END,
+                EXISTS (SELECT 1 FROM invoice i WHERE i.organization_id = e.organization_id
+                  AND i.environment_scope_id = e.environment_scope_id AND i.customer_id = e.customer_id
+                  AND i.period = to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))
               FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
               JOIN unpriced_groups g ON g.customer_id = e.customer_id AND g.billable_metric_code = m.code
                 AND g.dimension_values = coalesce((SELECT jsonb_object_agg(dimension_key, e.properties -> dimension_key)
@@ -153,7 +156,10 @@ public class EventIssueRepository {
         switch (reason) {
           case "unknown_event_type" -> "이벤트 유형에 맞는 미터를 정의하거나 전송 유형을 확인하세요";
           case "invalid_target_property" -> "미터의 수량 속성과 전송 값의 형식을 확인하세요";
-          default -> "고객, 미터와 차원에 적용되는 단가를 등록하세요";
+          default ->
+              rs.getBoolean("finalized")
+                  ? "인보이스를 확정한 달이라 단가를 등록해도 이 달 청구에는 반영되지 않습니다"
+                  : "고객, 미터와 차원에 적용되는 단가를 등록하세요";
         };
     return new EventIssueResponse(
         rs.getString("transaction_id"),

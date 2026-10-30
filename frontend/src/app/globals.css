@@ -105,8 +105,13 @@ p { line-height: 1.7; }
 .workspace-user { font-size: 13px; }
 .workspace-sidebar { background: #fff; border-right: 1px solid #dce1eb; padding-top: 28px; position: sticky; top: var(--workspace-header-height); align-self: start; box-sizing: border-box; height: calc(100dvh - var(--workspace-header-height)); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
 .workspace-sidebar-label { padding: 0 24px 20px; font-size: 11px; font-weight: 750; color: #78839a; letter-spacing: .12em; }
-.workspace-sidebar .ant-menu { border: 0 !important; }
-.workspace-sidebar .ant-menu .ant-menu-item-group-title { padding-inline-start: 24px; font-size: 11px; margin-top: 10px; }
+.nav-group-title { padding: 8px 16px; font-size: 14px; line-height: 1.5714; color: #5a6578; }
+.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-link { display: block; height: 47.5px; line-height: 47.5px; margin: 4px 10px; padding: 0 16px 0 24px; border-radius: 6px; color: #202b40; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background-color .2s, color .2s; }
+.nav-link:hover { background: rgba(0, 0, 0, .06); color: #202b40; }
+.nav-link[aria-current=page] { background: #eeeafb; color: #48339a; }
+.nav-link:focus-visible { outline-offset: -3px; }
+.workspace-sidebar .nav-group-title { padding-inline-start: 24px; font-size: 11px; margin-top: 10px; }
 .workspace-sidebar-note { margin: auto 24px 26px; padding-top: 40px; font-size: 12px; color: #5a6578; }
 .workspace-sidebar-note p { margin: 10px 0; }
 .workspace-main { min-width: 0; }
@@ -151,6 +156,9 @@ input, textarea { caret-color: var(--blue); }
 .workspace-panel h2 + p { margin-top: -10px; }
 .workspace-panel .workspace-heading > div { display: grid; gap: 8px; }
 .workspace-field input, .workspace-field textarea, .workspace-field select, .organization-picker select, .month-apply { border-color: var(--control-border); min-height: 44px; }
+.workspace-field .ant-picker-input > input, .workspace-field .ant-select input { min-height: 0; }
+/* 조회 줄의 antd 컨트롤만 입력칸과 같은 44px로 맞춘다. 테마 토큰으로 바꾸면 월 선택기 팝업까지 커져 모바일 화면을 넘는다. */
+.resource-search form > .workspace-field .ant-picker, .resource-search form > .workspace-field .ant-select, .resource-search form > .ant-btn, .event-filter-grid > .workspace-field .ant-select { height: 44px; }
 .workspace-field input[aria-invalid=true], .workspace-field textarea[aria-invalid=true], .workspace-field select[aria-invalid=true] { border-color: #b72c3c; }
 .workspace-field input::placeholder, .workspace-field textarea::placeholder { color: #5a6578; opacity: 1; }
 .workspace-field label { line-height: 1.6; }
@@ -297,10 +305,10 @@ input, textarea { caret-color: var(--blue); }
 @media (max-width: 767px) { .organization-link { max-width: calc(100vw - 225px); font-size: 12px; } }
 
 .workspace-environment { display: flex; align-items: center; gap: 8px; font-size: 12px; white-space: nowrap; }
-.workspace-environment select { max-width: 180px; min-height: 38px; border: 1px solid var(--control-border); border-radius: 6px; padding: 6px 8px; background: #fff; color: var(--ink); font: inherit; }
-.workspace-environment-live select { border-color: #9a620c; }
+.workspace-environment .ant-select { width: 132px; max-width: 180px; min-height: 38px; }
 .environment-notice { margin: 0; padding: 16px 20px; border: 1px solid #c6c0df; border-radius: 6px; background: #f1eff9; color: #473b70; line-height: 1.6; }
-@media (max-width: 767px) { .workspace-environment { margin-right: auto; gap: 6px; }.workspace-environment select { min-height: 44px; max-width: 170px; } }
+.environment-notice-live { border-color: #9a620c; background: #fff8e9; color: #874d00; }
+@media (max-width: 767px) { .workspace-environment { margin-right: auto; gap: 6px; }.workspace-environment .ant-select { min-height: 44px; max-width: 170px; } }
 
 .workspace-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 20px; padding-top: 20px; }.workspace-pagination a { padding: 10px 12px; min-height: 44px; }
 
@@ -308,4 +316,6 @@ input, textarea { caret-color: var(--blue); }
 
 .resource-search { display: grid; gap: 12px; min-width: 0; width: 100%; }
 .resource-search > .field-hint { margin: 0; }
-.resource-advanced summary { min-height: 44px; display: flex; align-items: center; }
+.resource-search-text { flex: 1 1 240px; min-width: 240px; }
+@media (max-width: 767px) { .resource-search-text { flex-basis: 100%; min-width: 0; } }
+.resource-advanced summary { min-height: 44px; box-sizing: border-box; padding-block: 11px; }

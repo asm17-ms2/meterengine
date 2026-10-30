@@ -15,6 +15,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class EventRepository {
 
+  // 월 조회(month)가 네 자리 연도까지만 받아 그 밖의 달은 열 수 없다.
+  public static final String OPENABLE_MONTH_CONDITION =
+      " AND occurred_at < TIMESTAMPTZ '10000-01-01 00:00:00+09'";
+
   private final JdbcTemplate jdbcTemplate;
 
   EventRepository(JdbcTemplate jdbcTemplate) {
@@ -84,10 +88,10 @@ public class EventRepository {
     }
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.addAll(transactionIds);
     return jdbcTemplate.query(
-        "SELECT transaction_id FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND transaction_id IN ("
+        "SELECT transaction_id FROM event WHERE organization_id = ? AND environment_scope_id = ? AND transaction_id IN ("
             + String.join(",", java.util.Collections.nCopies(transactionIds.size(), "?"))
             + ")",
         (rs, rowNum) -> rs.getString("transaction_id"),
@@ -95,37 +99,38 @@ public class EventRepository {
   }
 
   public List<Event> findPage(
+      UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
+    return queryPage("e.properties::text", organizationId, customerId, type, search, page, size);
+  }
+
+  // 원본 속성을 싣지 않는 내보내기는 큰 JSON을 메모리에 올리지 않도록 그 열을 읽지 않는다.
+  public List<Event> findPageWithoutProperties(
+      UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
+    return queryPage("NULL", organizationId, customerId, type, search, page, size);
+  }
+
+  private List<Event> queryPage(
+      String propertiesColumn,
       UUID organizationId,
       UUID customerId,
       String type,
-      OffsetDateTime start,
-      OffsetDateTime end,
+      EventSearch search,
       int page,
       int size) {
-    return findPage(
-        organizationId,
-        customerId,
-        type,
-        new EventSearch(null, start, end, null, "occurred_at", "desc", null),
-        page,
-        size);
-  }
-
-  public List<Event> findPage(
-      UUID organizationId, UUID customerId, String type, EventSearch search, int page, int size) {
     List<Object> parameters = new ArrayList<>();
     String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
     parameters.add(size);
     parameters.add((long) page * size);
 
     return jdbcTemplate.query(
-        """
-        SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
-               e.properties::text AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
-        FROM event e
-        LEFT JOIN customer c
-          ON c.organization_id = e.organization_id AND c.id = e.customer_id
-        """
+        "SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type, "
+            + propertiesColumn
+            + """
+             AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
+            FROM event e
+            LEFT JOIN customer c
+              ON c.organization_id = e.organization_id AND c.id = e.customer_id
+            """
             + where
             + " ORDER BY "
             + orderColumn(search.sort())
@@ -149,13 +154,17 @@ public class EventRepository {
         parameters.toArray());
   }
 
-  public long count(
-      UUID organizationId, UUID customerId, String type, OffsetDateTime start, OffsetDateTime end) {
-    return count(
-        organizationId,
-        customerId,
-        type,
-        new EventSearch(null, start, end, null, "occurred_at", "desc", null));
+  public long sumPropertiesBytes(
+      UUID organizationId, UUID customerId, String type, EventSearch search) {
+    List<Object> parameters = new ArrayList<>();
+    String where = buildSearchWhere(organizationId, customerId, type, search, parameters);
+    Long total =
+        jdbcTemplate.queryForObject(
+            "SELECT COALESCE(SUM(octet_length(e.properties::text)), 0) FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id "
+                + where,
+            Long.class,
+            parameters.toArray());
+    return total == null ? 0 : total;
   }
 
   public long count(UUID organizationId, UUID customerId, String type, EventSearch search) {
@@ -184,10 +193,12 @@ public class EventRepository {
 
   public List<String> findMonths(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid ORDER BY month DESC",
+        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_scope_id = ?"
+            + OPENABLE_MONTH_CONDITION
+            + " ORDER BY month DESC",
         (rs, rowNum) -> rs.getString("month"),
         organizationId,
-        BusinessEnvironmentContext.environmentId());
+        BusinessEnvironmentContext.scopeId());
   }
 
   public java.util.Optional<Event> find(UUID organizationId, String transactionId) {
@@ -197,7 +208,7 @@ public class EventRepository {
         SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
                e.properties::text AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
         FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id
-        WHERE e.organization_id=? AND e.environment_id IS NOT DISTINCT FROM ?::uuid AND e.transaction_id=?
+        WHERE e.organization_id=? AND e.environment_scope_id = ? AND e.transaction_id=?
         """,
             (rs, rowNum) ->
                 new Event(
@@ -212,7 +223,7 @@ public class EventRepository {
                     rs.getString("actor_type"),
                     rs.getObject("actor_id", UUID.class)),
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             transactionId)
         .stream()
         .findFirst();
@@ -259,10 +270,10 @@ public class EventRepository {
   public boolean existsWithType(UUID organizationId, String type) {
     return Boolean.TRUE.equals(
         jdbcTemplate.queryForObject(
-            "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND type = ?)",
+            "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND environment_scope_id = ? AND type = ?)",
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             type));
   }
 
@@ -273,14 +284,14 @@ public class EventRepository {
             SELECT EXISTS(
               SELECT 1 FROM event
               WHERE organization_id = ?
-                AND environment_id IS NOT DISTINCT FROM ?::uuid
+                AND environment_scope_id = ?
                 AND type = ?
                 AND jsonb_typeof(properties -> ?::text) = 'number'
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             type,
             property));
   }
@@ -291,12 +302,12 @@ public class EventRepository {
             """
             SELECT EXISTS(
               SELECT 1 FROM event
-              WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND transaction_id = ?
+              WHERE organization_id = ? AND environment_scope_id = ? AND transaction_id = ?
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             transactionId));
   }
 
@@ -306,12 +317,12 @@ public class EventRepository {
             """
             SELECT EXISTS(
               SELECT 1 FROM event
-              WHERE organization_id = ? AND environment_id IS NOT DISTINCT FROM ?::uuid AND customer_id = ?
+              WHERE organization_id = ? AND environment_scope_id = ? AND customer_id = ?
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
+            BusinessEnvironmentContext.scopeId(),
             customerId));
   }
 
@@ -324,9 +335,9 @@ public class EventRepository {
       List<Object> parameters) {
     StringBuilder where =
         new StringBuilder(
-            "WHERE e.organization_id = ? AND e.environment_id IS NOT DISTINCT FROM ?::uuid AND e.occurred_at >= ? AND e.occurred_at < ?");
+            "WHERE e.organization_id = ? AND e.environment_scope_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?");
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.environmentId());
+    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(start);
     parameters.add(end);
 

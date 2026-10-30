@@ -142,7 +142,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       const beforeInvalidRange = page.url();
       await filters.getByLabel("시작 날짜 (포함)", { exact: true }).fill(followingDate);
       await filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true }).fill(previousDate);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       const rangeError = filters.getByRole("alert");
       await expect(rangeError).toContainText("종료는 시작보다 뒤여야 합니다.");
       await expect(filters.getByLabel("시작 날짜 (포함)", { exact: true })).toBeFocused();
@@ -179,14 +179,14 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await propertiesInput.fill("{invalid");
       await advanced.locator("summary").press("Enter");
       await expect(propertiesInput).toBeHidden();
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(propertiesInput).toBeVisible();
       await expect(propertiesInput).toBeFocused();
       await expect(propertiesInput).toHaveAttribute("aria-invalid", "true");
       await expect(filters.getByRole("alert")).toContainText("JSON 객체로 입력하세요.");
       expect(page.url()).toBe(beforeInvalidRange);
       await propertiesInput.fill(properties);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
       await expect(page.getByText("총 56건, 이 페이지 50줄", { exact: false })).toBeVisible();
@@ -200,23 +200,23 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
     await test.step("같은 기간에서 검색만 적용해도 편집 상태를 해제", async () => {
       const narrowedQuery = `${queryText}/거래/54`;
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(narrowedQuery);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, q: narrowedQuery, page: null });
       await expect(eventLinks(page)).toHaveText([ids[54]]);
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       await expect(filters.getByLabel("이벤트 또는 고객 찾기", { exact: true })).toHaveValue(narrowedQuery);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       const unchangedUrl = page.url();
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(`${queryText}-edited`);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(filters).toHaveAttribute("aria-busy", "false");
-      await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       expect(page.url()).toBe(unchangedUrl);
     });
 
@@ -224,7 +224,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await filters.getByLabel(/^지정 단위/).selectOption("datetime");
       await filters.getByLabel("시작 시각 (포함)", { exact: true }).fill(secondsFrom);
       await filters.getByLabel("종료 시각 (미포함)", { exact: true }).fill(secondsTo);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...preserved, from: secondsFrom, to: secondsTo, range_mode: null, month: null, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(20, 23));
       await expect(filters.getByLabel("시작 시각 (포함)", { exact: true })).toHaveValue(secondsFrom);
@@ -237,8 +237,9 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
 
     await test.step("월별 전환과 다시 자유 기간으로 복귀", async () => {
       await filters.getByRole("radio", { name: "월별", exact: true }).check();
+      // 직접 쓴 월을 Enter만 눌러 제출해도 그 월로 조회한다.
       await filters.getByLabel("조회 월", { exact: true }).fill(previousMonth);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await filters.getByLabel("조회 월", { exact: true }).press("Enter");
       await expectQuery(page, { ...preserved, month: previousMonth, from: null, to: null, range_mode: null, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
       await expect(page.getByText("총 56건, 이 페이지 50줄", { exact: false })).toBeVisible();
@@ -249,7 +250,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await filters.getByLabel(/^지정 단위/).selectOption("date");
       await filters.getByLabel("시작 날짜 (포함)", { exact: true }).fill(previousDate);
       await filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true }).fill(firstDate);
-      await page.getByRole("button", { name: "이 조건으로 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
       await page.getByRole("navigation", { name: "페이지", exact: true }).getByRole("link", { name: "다음", exact: true }).click();
@@ -262,7 +263,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       for (const [label, days] of [["최근 24시간", 1], ["최근 7일", 7]] as const) {
         const draftQuery = days === 1 ? `${queryText}-draft` : queryText;
         await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(draftQuery);
-        await expect(filters.getByText("조건 변경됨. 조회 버튼을 눌러 적용하세요.", { exact: true })).toBeVisible();
+        await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
         await filters.getByRole("button", { name: label, exact: true }).click();
         await expectQuery(page, { ...preserved, q: draftQuery, month: null, range_mode: null, page: null });
         await expect(filters.getByRole("radio", { name: "직접 지정", exact: true })).toBeChecked();
@@ -310,6 +311,11 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expect(drawer).toHaveCount(0);
       await expect.poll(() => new URL(page.url()).searchParams.toString()).toBe(listSearch);
       await expect(eventLinks(page)).toHaveText([...ids.slice(50), inclusiveEndId]);
+      await page.getByRole("link", { name: ids[54], exact: true }).click();
+      await expect(drawer).toBeVisible();
+      await drawer.getByRole("button", { name: "닫기", exact: true }).click();
+      await expect(drawer).toHaveCount(0);
+      await expect(page.getByRole("link", { name: ids[54], exact: true })).toBeFocused();
     });
     await test.step("390px에서도 직접 지정은 보이고 상세 조건은 키보드로 펼친다", async () => {
       await page.setViewportSize({ width: 390, height: 844 });
@@ -339,7 +345,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expect(options.filter({ hasText: "자유 기간 검증 고객" })).toHaveCount(2);
       await options.filter({ hasText: customerId }).click();
       expect(page.url()).toBe(before);
-      await page.getByRole("button", { name: "진단 조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { customer_id: customerId, month: previousMonth });
       await expect(page.locator('input[name="customer_id"]')).toHaveValue(customerId);
     });

@@ -83,7 +83,7 @@ class AuditTargetIntegrationTest {
   @Test
   void 권한실패와_없는대상에도_UUID를_남기고_다른조직의_데이터와_감사는_노출하지_않는다() {
     UUID second = UUID.randomUUID();
-    String secondRead = TestCredentials.issueApiKey(jdbcTemplate, second, "read");
+    String secondMember = TestCredentials.issueMemberSession(jdbcTemplate, second);
     UUID foreignCustomer =
         jdbcTemplate.queryForObject(
             "INSERT INTO customer(organization_id,name) VALUES (?, 'foreign-private-name') RETURNING id",
@@ -110,7 +110,7 @@ class AuditTargetIntegrationTest {
     assertThat(
             mvc.get()
                 .uri("/v1/audit-logs")
-                .header(AUTHORIZATION, secondRead)
+                .header(AUTHORIZATION, secondMember)
                 .queryParam("q", foreignCustomer.toString())
                 .exchange())
         .hasStatusOk()
@@ -120,7 +120,8 @@ class AuditTargetIntegrationTest {
     assertThat(
             mvc.get()
                 .uri("/v1/audit-logs")
-                .header(AUTHORIZATION, read)
+                .header(
+                    AUTHORIZATION, TestCredentials.issueMemberSession(jdbcTemplate, organizationId))
                 .queryParam("q", foreignCustomer.toString())
                 .exchange())
         .hasStatusOk()

@@ -2,10 +2,10 @@ package com.meterengine.event.service;
 
 import com.meterengine.event.dto.UnbilledEventsResponse;
 import com.meterengine.event.repository.UnbilledEventRepository;
+import com.meterengine.global.time.BillingMonth;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,19 +27,16 @@ public class UnbilledEventService {
 
   @Transactional(readOnly = true)
   public UnbilledEventsResponse get(UUID organizationId, YearMonth month) {
-    OffsetDateTime now =
-        OffsetDateTime.now(clock).atZoneSameInstant(ZoneId.of("Asia/Seoul")).toOffsetDateTime();
+    OffsetDateTime now = BillingMonth.now(clock);
     return aggregate(organizationId, month == null ? YearMonth.from(now) : month, now);
   }
 
   @Transactional(readOnly = true)
   public UnbilledEventsResponse aggregate(
       UUID organizationId, YearMonth month, OffsetDateTime now) {
-    OffsetDateTime startAt =
-        month.atDay(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toOffsetDateTime();
-    OffsetDateTime endAt =
-        month.plusMonths(1).atDay(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toOffsetDateTime();
-    OffsetDateTime cutoffAt = (now.isBefore(endAt) ? now : endAt);
+    OffsetDateTime startAt = BillingMonth.start(month);
+    OffsetDateTime endAt = BillingMonth.end(month);
+    OffsetDateTime cutoffAt = BillingMonth.cutoff(month, now);
     return new UnbilledEventsResponse(
         month.toString(),
         cutoffAt,

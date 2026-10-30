@@ -65,6 +65,50 @@ class CustomerExternalIdIntegrationTest {
   }
 
   @Test
+  void 조회_권한_없는_수집_키로_다시_등록하면_기존_고객의_이름과_이메일을_돌려주지_않는다() {
+    create(
+        "{\"name\":\"원래 이름\",\"billing_email\":\"billing@example.com\",\"external_id\":\"customer-ingest\"}");
+    String ingestOnly = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "ingest");
+    MvcTestResult repeated =
+        mvc.post()
+            .uri("/v1/customers")
+            .header("Authorization", ingestOnly)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"추측한 이름\",\"external_id\":\"customer-ingest\"}")
+            .exchange();
+    assertThat(repeated).hasStatusOk();
+    assertThat(body(repeated).path("id").asString()).isNotBlank();
+    assertThat(body(repeated).path("name").isNull()).isTrue();
+    assertThat(body(repeated).path("billing_email").isNull()).isTrue();
+    assertThat(
+            body(create("{\"name\":\"추측한 이름\",\"external_id\":\"customer-ingest\"}"))
+                .path("billing_email")
+                .asString())
+        .isEqualTo("billing@example.com");
+  }
+
+  @Test
+  void 보관한_고객의_외부_ID로_다시_등록하면_409_customer_archived이고_고객을_새로_만들지_않는다() {
+    create("{\"name\":\"보관할 고객\",\"external_id\":\"customer-archived\"}");
+    jdbcTemplate.update(
+        "UPDATE customer SET archived_at = now() WHERE organization_id = ? AND external_id ="
+            + " 'customer-archived'",
+        organizationId);
+    assertThat(create("{\"name\":\"보관할 고객\",\"external_id\":\"customer-archived\"}"))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("customer_archived");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM customer WHERE organization_id = ? AND external_id ="
+                    + " 'customer-archived'",
+                Integer.class,
+                organizationId))
+        .isOne();
+  }
+
+  @Test
   void 두_요청이_동시에_생성해도_고객은_하나다() throws Exception {
     CountDownLatch start = new CountDownLatch(1);
     try (var executor = Executors.newFixedThreadPool(2)) {

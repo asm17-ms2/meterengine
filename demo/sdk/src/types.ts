@@ -64,9 +64,9 @@ export interface ListEventsResponse {
 
 export interface CustomerResponse {
   id: string;
-  name: string;
+  name: string | null;
   billing_email: string | null;
-  created_at: string;
+  created_at: string | null;
   version?: number;
   external_id?: string | null;
   archived_at?: string | null;

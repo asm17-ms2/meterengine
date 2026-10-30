@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { buildListHref, PAGE_SIZE_OPTIONS, rangeEndpoint, type ListQueryOverrides, type MonthlyListQuery } from "@/lib/list-query";
 import { CustomerFilter, type CustomerOption } from "@/components/screen/CustomerFilter";
+import { MonthPicker } from "@/components/screen/MonthPicker";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 
 type RangeUnit = "date" | "datetime";
@@ -155,7 +156,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
           </fieldset>
           <div className="event-period-shortcuts"><Button onClick={() => recent(1)}>최근 24시간</Button><Button onClick={() => recent(7)}>최근 7일</Button></div>
         </div>
-        {period === "month" ? <label className="workspace-field event-month"><span>조회 월</span><input name="month" type="month" value={month} onChange={event => selectMonth(event.target.value)} required /></label> : <div className="event-range-grid">
+        {period === "month" ? <div className="workspace-field event-month"><label htmlFor={`${id}-month`}>조회 월</label><MonthPicker id={`${id}-month`} label="조회 월" query={{ ...query, month }} capabilities={CAPABILITIES.listEvents} month={month} onChange={value => { selectMonth(value); setIsEdited(true); setError(undefined); }} /><input type="hidden" name="month" value={month} /></div> : <div className="event-range-grid">
           <label className="workspace-field"><span>지정 단위</span><select name="range_unit" value={unit} onChange={event => changeUnit(event.target.value as RangeUnit)}><option value="date">날짜</option><option value="datetime">날짜와 시각 (초 단위)</option></select></label>
           <label className="workspace-field"><span>시작 {unit === "date" ? "날짜" : "시각"} (포함)</span><input name="from" type={unit === "date" ? "date" : "datetime-local"} step={1} value={from} onChange={event => setFrom(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>
           <label className="workspace-field"><span>종료 {unit === "date" ? "날짜 (해당 일 포함)" : "시각 (미포함)"}</span><input name="to" type={unit === "date" ? "date" : "datetime-local"} step={1} value={to} onChange={event => setTo(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>
@@ -179,7 +180,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
         <p className="field-hint" id={`${id}-properties-help`}>입력한 속성과 값이 모두 일치하는 이벤트를 찾습니다. 문자, 숫자와 불리언 값을 구분합니다.</p>
         {error?.field === "properties" && <p id={`${id}-properties-error`} role="alert" className="field-error">{error.message}</p>}
       </details>
-      <div className="event-filter-submit"><Button type="primary" htmlType="submit" loading={isPending}>이 조건으로 조회</Button><Link href={resetHref}>필터 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건 변경됨. 조회 버튼을 눌러 적용하세요.</span>}</div>
+      <div className="event-filter-submit"><Button htmlType="submit" loading={isPending}>조건 적용</Button><Link href={resetHref}>조건 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건 변경됨. 조건 적용을 눌러 반영하세요.</span>}</div>
     </fieldset>
     <p role="status" aria-label="현재 조회 기간" className="event-applied-period">{isPending ? "조회 중입니다." : `현재 조회: ${appliedPeriod(query)}`}</p>
     {optionsError && <p role="status" className="field-hint">{optionsError} 유형은 직접 입력할 수 있습니다. <a href="">후보 다시 불러오기</a></p>}

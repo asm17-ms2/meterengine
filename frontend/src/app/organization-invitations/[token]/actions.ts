@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { requestApi, toDisplayMessage } from "@/lib/api/transport";
 import { readSessionToken, saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
+import { isValidPassword, NAME_MAX_LENGTH, PASSWORD_RULE_MESSAGE } from "@/lib/auth/credentials";
 import type { SessionTokenResponse } from "@/lib/auth/types";
 import { workspaceHref } from "@/lib/workspace-href";
 
@@ -41,8 +42,8 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
     const name = String(data.get("name") ?? "").trim();
     password = String(data.get("password") ?? "");
     if (!name) return { message: "이름을 입력하세요." };
-    if (name.length > 255) return { message: "이름은 255자 이내로 입력하세요." };
-    if (password.length < 8 || new TextEncoder().encode(password).length > 72) return { message: "비밀번호는 8자 이상 72자 이하로 입력하세요. 한글은 1자를 3자로 계산합니다." };
+    if (name.length > NAME_MAX_LENGTH) return { message: "이름은 255자 이내로 입력하세요." };
+    if (!isValidPassword(password)) return { message: PASSWORD_RULE_MESSAGE };
     if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "두 안내를 읽고 필수 동의에 체크하세요." };
     body = { name, password, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) };
   }
@@ -51,7 +52,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   (await cookies()).set("me_invitation_flow", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/organization-invitations", maxAge: 0 });
   let activeToken = sessionToken;
   if (!preview.data.account_exists) {
-    const login = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email: preview.data.email, password } });
+    const login = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email: preview.data.email, password }, clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined });
     if (!login.ok) return { isAccepted: true, message: "초대를 수락했습니다. 로그인 화면에서 도입사로 이동하세요." };
     await saveSession(login.data.token, login.data.expires_at);
     activeToken = login.data.token;

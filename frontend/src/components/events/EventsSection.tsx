@@ -56,7 +56,7 @@ export async function EventsSection({
             : `${periodLabel}에 조건과 일치하는 이벤트가 없습니다. 기간이나 검색어를 바꾸고 이벤트 수집이 동작하는지 확인하세요.`
         }
         resetHref={isOutOfRange ? buildListHref("/events", query, { page: 0 }) : resetHref}
-        resetLabel={isOutOfRange ? "첫 페이지 보기" : "검색 조건 초기화"}
+        resetLabel={isOutOfRange ? "첫 페이지 보기" : "조건 초기화"}
       />
     );
   }
