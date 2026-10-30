@@ -56,7 +56,7 @@ class EligibleEventDefinitionIntegrationTest {
           metric[2]);
     }
     YearMonth month = YearMonth.now(BillingMonth.ZONE);
-    OffsetDateTime occurredAt = OffsetDateTime.now().minusMinutes(1);
+    OffsetDateTime occurredAt = month.atDay(1).atStartOfDay(BillingMonth.ZONE).toOffsetDateTime();
     List<String> properties =
         List.of("{\"q\":3}", "{\"q\":\"text\"}", "{\"q\":true}", "{\"q\":null}", "{}");
     for (int index = 0; index < properties.size(); index++) {
