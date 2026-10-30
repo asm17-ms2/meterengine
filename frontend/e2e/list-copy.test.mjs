@@ -98,3 +98,7 @@ test("the event issue summary uses the same reason names as the filter and the p
   assert.ok(issues.includes("{REASONS.unpriced_usage} {result.data.summary.unpriced_usage}건"));
 });
 
+test("the overview unpriced usage item also links to events filtered to a missing price", () => {
+  const overview = appSource("(console)/overview/page.tsx");
+  assert.ok(overview.includes("<Link href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</Link>"));
+});
