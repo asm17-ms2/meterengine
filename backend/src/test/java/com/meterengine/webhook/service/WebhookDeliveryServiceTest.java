@@ -34,7 +34,8 @@ class WebhookDeliveryServiceTest {
     AtomicLong now = new AtomicLong();
     WebhookClaim first = claim();
     WebhookClaim second = claim();
-    when(repository.claim()).thenReturn(Optional.of(first), Optional.of(second), Optional.empty());
+    when(repository.claim(any()))
+        .thenReturn(Optional.of(first), Optional.of(second), Optional.empty());
     when(repository.complete(any(), any())).thenReturn(Optional.of("done"));
     when(converter.convertToEntityAttribute(anyString())).thenReturn("whsec_secret");
     when(signer.sign(anyString(), anyString(), anyString(), anyString()))
@@ -56,10 +57,10 @@ class WebhookDeliveryServiceTest {
             new SimpleMeterRegistry(),
             now::get);
     assertThat(service.deliver().processedCount()).isEqualTo(1);
-    verify(repository, times(1)).claim();
+    verify(repository, times(1)).claim(any());
     verify(repository).complete(first, new WebhookOutcome(200, null, 15_000));
     assertThat(service.deliver().processedCount()).isEqualTo(1);
-    verify(repository, times(3)).claim();
+    verify(repository, times(3)).claim(any());
     verify(repository).complete(second, new WebhookOutcome(200, null, 15_000));
   }
 
@@ -69,7 +70,7 @@ class WebhookDeliveryServiceTest {
     WebhookClient client = mock(WebhookClient.class);
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     WebhookClaim claim = claim("v1:cipher", true, 6);
-    when(repository.claim()).thenReturn(Optional.of(claim), Optional.empty());
+    when(repository.claim(any())).thenReturn(Optional.of(claim), Optional.empty());
     when(repository.complete(any(), any())).thenReturn(Optional.of("pending"));
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(503, "unexpected_status", 10));
@@ -88,7 +89,7 @@ class WebhookDeliveryServiceTest {
     WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
     WebhookClient client = mock(WebhookClient.class);
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    when(repository.claim())
+    when(repository.claim(any()))
         .thenReturn(Optional.of(claim("v1:cipher", false, 1)), Optional.empty());
     when(repository.complete(any(), any())).thenReturn(Optional.of("failed"));
 
@@ -106,7 +107,8 @@ class WebhookDeliveryServiceTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     WebhookClaim broken = claim("v1:broken", true, 1);
     WebhookClaim next = claim("v1:cipher", true, 1);
-    when(repository.claim()).thenReturn(Optional.of(broken), Optional.of(next), Optional.empty());
+    when(repository.claim(any()))
+        .thenReturn(Optional.of(broken), Optional.of(next), Optional.empty());
     when(repository.complete(eq(broken), any())).thenReturn(Optional.of("pending"));
     when(repository.complete(eq(next), any())).thenReturn(Optional.of("done"));
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))

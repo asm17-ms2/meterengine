@@ -15,7 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class UnbilledUsageNotificationServiceTest {
   @Test
   void 한_도입사의_실패가_다른_도입사의_통보를_막지_않는다() {
@@ -75,5 +79,22 @@ class UnbilledUsageNotificationServiceTest {
     assertThat(observed)
         .containsExactly(new BusinessEnvironment(organizationId, null, null), test, live);
     assertThat(BusinessEnvironmentContext.current()).isNull();
+  }
+
+  @Test
+  void 통보와_환경_조회가_실패하면_예외_종류와_메시지를_로그에_남긴다(CapturedOutput output) {
+    OrganizationRepository repository = mock(OrganizationRepository.class);
+    UnbilledUsageReportService reporter = mock(UnbilledUsageReportService.class);
+    OrganizationEnvironments environments = mock(OrganizationEnvironments.class);
+    UUID organizationId = UUID.randomUUID();
+    when(repository.findByStatusOrderByCreatedAtAscIdAsc(Organization.ACTIVE))
+        .thenReturn(List.of(new Organization(organizationId, "도입사", Organization.ACTIVE)));
+    when(environments.list(organizationId))
+        .thenThrow(new IllegalStateException("environments down"));
+    when(reporter.report(organizationId)).thenThrow(new IllegalArgumentException("report down"));
+    new UnbilledUsageNotificationService(repository, reporter, environments).report();
+    assertThat(output.getOut())
+        .contains("java.lang.IllegalStateException: environments down")
+        .contains("java.lang.IllegalArgumentException: report down");
   }
 }

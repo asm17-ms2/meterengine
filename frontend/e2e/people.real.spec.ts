@@ -183,13 +183,13 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
     await test.step("감사 행동 필터와 API 경로 검색", async () => {
       await owner.goto("/audit");
       await owner.getByLabel("행동", { exact: true }).selectOption("organization_invitation_accepted");
-      await owner.getByRole("button", { name: "조건으로 조회", exact: true }).click();
+      await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(owner.locator(".audit-summary strong")).toHaveText(["초대 수락"]);
       await owner.locator(".audit-summary").click();
       await expect(owner.locator(".audit-detail")).toContainText(invitedEmail);
       await owner.getByLabel("행동", { exact: true }).selectOption("api_request_completed");
       await owner.getByLabel("행동 또는 대상 검색", { exact: true }).fill("/v1/organization/members");
-      await owner.getByRole("button", { name: "조건으로 조회", exact: true }).click();
+      await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(owner.locator(".audit-summary strong").first()).toHaveText("API 요청");
       await owner.locator(".audit-summary").first().click();
       const detail = owner.locator(".audit-detail").first();

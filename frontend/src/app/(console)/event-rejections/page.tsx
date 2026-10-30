@@ -28,10 +28,10 @@ export default async function EventRejectionsPage({ searchParams }: { searchPara
         <Suspense><EnvironmentInput /></Suspense>
         <MonthField key={month} month={month} label="거절 기록 월" />
         <label className="workspace-field"><span>거절 사유</span><select name="error_code" defaultValue={params.error_code ?? ""}><option value="">전체</option>{Object.entries(ERRORS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label className="workspace-field"><span>요청의 고객 ID (선택)</span><input name="customer_id" defaultValue={params.customer_id ?? ""} maxLength={36} placeholder="존재하지 않는 고객 ID도 조회할 수 있습니다" /></label>
+        <label className="workspace-field"><span>요청의 고객 ID (선택)</span><input name="customer_id" defaultValue={params.customer_id ?? ""} maxLength={36} /><small className="field-hint">요청에 담긴 고객 ID(UUID)로 찾습니다. 등록되지 않은 ID도 조회됩니다.</small></label>
         <label className="workspace-field"><span>전송 ID와 유형 검색</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
         <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={size}>{[20, 50, 100].map(value => <option key={value} value={value}>{value}개</option>)}</select></label>
-        <button className="month-apply" type="submit">거절 기록 조회</button>
+        <button className="month-apply" type="submit">조건 적용</button>
       </form>
       {result.ok ? <>
         <p role="status">선택한 조건의 수집 거절 {result.data.total.toLocaleString("ko-KR")}건입니다.</p>

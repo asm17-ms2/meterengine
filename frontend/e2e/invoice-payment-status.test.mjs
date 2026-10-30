@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { INVOICE_PAYMENT_STATUS_LABELS, INVOICE_PAYMENT_STATUSES } from "../src/lib/invoice-payment-status.ts";
 
 test("each invoice payment status has one name used by both the list and the detail", () => {
@@ -10,3 +11,11 @@ test("each invoice payment status has one name used by both the list and the det
   assert.equal(new Set(labels).size, labels.length);
   for (const label of labels) assert.ok(!["미청구", "미납", "납부 완료"].includes(label), label);
 });
+
+test("invoice screens read payment status names and colors from the shared map", () => {
+  const section = readFileSync(new URL("../src/components/invoices/InvoicesSection.tsx", import.meta.url), "utf8");
+  const filters = readFileSync(new URL("../src/components/screen/ResourceSearchControls.tsx", import.meta.url), "utf8");
+  for (const source of [section, filters]) for (const stale of ["\"미납\"", "\"납부 완료\""]) assert.ok(!source.includes(stale), stale);
+  assert.match(section, /INVOICE_PAYMENT_STATUSES\[payment\.status\]/);
+});
+

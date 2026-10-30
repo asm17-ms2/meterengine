@@ -25,12 +25,12 @@ npm --prefix measurements/terraform/modules/rds-auto-stop/tests test
 terraform fmt -check -recursive measurements/terraform/modules/rds-auto-stop
 ```
 
-Terraform mock 시험은 AWS 자원을 만들지 않는다. SUT 잠금 파일의 공급자 버전을 써서 임시 폴더에서 실행한다.
+Terraform mock 시험은 AWS 자원을 만들지 않는다. 배포 root(`measurements/terraform/rds-auto-stop`)의 잠금 파일로 공급자 버전을 맞춰 임시 폴더에서 실행한다.
 
 ```bash
 rds_test_dir="$(mktemp -d)"
 cp measurements/terraform/modules/rds-auto-stop/*.tf measurements/terraform/modules/rds-auto-stop/*.json "$rds_test_dir/"
-cp measurements/test-slo/sut/terraform/.terraform.lock.hcl "$rds_test_dir/"
+cp measurements/terraform/rds-auto-stop/.terraform.lock.hcl "$rds_test_dir/"
 mkdir "$rds_test_dir/tests"
 cp measurements/terraform/modules/rds-auto-stop/tests/*.tftest.hcl "$rds_test_dir/tests/"
 terraform -chdir="$rds_test_dir" init -backend=false

@@ -494,6 +494,56 @@ class EventListIntegrationTest {
         .containsExactly("month");
   }
 
+  @Test
+  void 저장할_수_없는_속성_조건은_500이_아니라_400이다() {
+    UUID organizationId = insertOrganization("도입사");
+
+    for (String properties :
+        List.of("{\"k\":\"\\u0000\"}", "{\"k\":\"\\ud800\"}", "{\"k\":1e200000}")) {
+      MvcTestResult result =
+          mvc.get()
+              .uri("/v1/events")
+              .param("month", AUGUST)
+              .param("properties", properties)
+              .header(AUTHORIZATION, authorization(organizationId))
+              .exchange();
+
+      assertThat(result)
+          .as(properties)
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.errors[*].field")
+          .asArray()
+          .containsExactly("properties");
+    }
+  }
+
+  @Test
+  void 저장_범위를_넘는_기간은_500이_아니라_400이다() {
+    UUID organizationId = insertOrganization("도입사");
+
+    for (List<String> range :
+        List.of(
+            List.of("2026-01-01", "+300000-01-01T00:00:00Z", "to"),
+            List.of("-5000-01-01T00:00:00Z", "2026-01-01", "from"))) {
+      MvcTestResult result =
+          mvc.get()
+              .uri("/v1/events")
+              .param("from", range.get(0))
+              .param("to", range.get(1))
+              .header(AUTHORIZATION, authorization(organizationId))
+              .exchange();
+
+      assertThat(result)
+          .as(range.toString())
+          .hasStatus(400)
+          .bodyJson()
+          .extractingPath("$.errors[*].field")
+          .asArray()
+          .containsExactly(range.get(2));
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // 응답 항목
   // ---------------------------------------------------------------------------

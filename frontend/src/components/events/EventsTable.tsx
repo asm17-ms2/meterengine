@@ -49,6 +49,12 @@ export function EventsTable({
   function detailHref(row: EventRowView) { const next = new URLSearchParams(searchParams.toString()); next.set("transaction_id", row.transactionId); return `/events?${next}`; }
 
   function openDetail(row: EventRowView) { startOpening(() => router.push(detailHref(row), { scroll: false })); }
+  // 수정 키가 없으면 페이지를 다시 읽지 않고 서랍을 연다. 데스크톱 행과 모바일 카드가 같이 쓴다.
+  function openOnPlainClick(event: React.MouseEvent, row: EventRowView) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    openDetail(row);
+  }
 
   const codeCell = () => ({ style: { fontFamily: token.fontFamilyCode } });
 
@@ -63,12 +69,11 @@ export function EventsTable({
       render: (_, row) => (
         <Typography.Link
           href={detailHref(row)}
+          data-transaction-id={row.transactionId}
           style={{ fontFamily: token.fontFamilyCode }}
           onClick={(event) => {
             event.stopPropagation();
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            openDetail(row);
+            openOnPlainClick(event, row);
           }}
         >
           {row.transactionId}
@@ -111,7 +116,7 @@ export function EventsTable({
   return (
     <>
       {isOpening && <p role="status" className="field-hint">이벤트 상세를 불러오고 있습니다.</p>}
-      <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
+      <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)} data-transaction-id={row.transactionId} onClick={event => openOnPlainClick(event, row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
       <div className="data-desktop-table"><Table<EventRowView>
         rowKey="transactionId"
         columns={columns}
