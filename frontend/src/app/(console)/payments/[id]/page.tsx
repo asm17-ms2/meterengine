@@ -132,7 +132,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
           : <><p role="status"><strong>{currentPayment.mode === "test" ? "테스트 결제" : "실결제"} / {state.label}</strong></p><p className="muted">{canCollect && readiness === "card-missing" ? "결제 모드에 맞는 등록 카드가 없어 결제를 요청할 수 없습니다. 카드 등록 링크를 만들어 고객에게 전달하세요." : canCollect && readiness === "key-missing" ? "결제 모드의 토스페이먼츠 키가 없어 결제를 요청할 수 없습니다. 설정에서 키를 저장하세요." : state.description}</p></>}
       <h3>결제 시도 기록</h3>
       <WorkspaceTable rows={attempts.data.payment_attempts.map(attempt => ({ ...attempt, requested_at: formatKstDateTime(attempt.requested_at) }))}
-        columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "모드" }, { key: "failure_message", label: "실패 사유" }]} />
+        columns={[{ key: "requested_at", label: "요청 시각 (KST)" }, { key: "status", label: "결과", isStatus: true }, { key: "amount", label: "금액", isMoney: true }, { key: "mode", label: "결제 모드" }, { key: "failure_message", label: "실패 사유" }]} />
     </section>
     {attempts.data.payment_attempts.filter(attempt => attempt.status === "done").map(attempt => <CancellationHistory key={attempt.id} attempt={attempt} />)}
     <InvoiceViewLinks invoiceId={id} initialLinks={viewLinks.ok ? viewLinks.data.invoice_view_links : []} loadError={viewLinks.ok ? undefined : viewLinks.error.message} checkedAt={new Date().getTime()} />

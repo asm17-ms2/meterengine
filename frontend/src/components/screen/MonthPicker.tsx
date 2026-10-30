@@ -11,6 +11,7 @@ import type { ListQuery } from "@/lib/list-query";
 import { ALL_MONTHS, formatKstMonth } from "@/lib/month";
 
 const MONTH_FORMAT = "YYYY-MM";
+const TYPED_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 type CellRender = NonNullable<DatePickerProps["cellRender"]>;
 
@@ -42,6 +43,12 @@ export function MonthPicker({
     else push({ month: nextMonth, from: undefined, to: undefined, rangeMode: undefined });
   }
 
+  // 직접 쓴 월은 조회 버튼을 누르거나 Enter로 제출하기 전에 확정한다.
+  function commitTyped(input: EventTarget) {
+    const text = input instanceof HTMLInputElement ? input.value.trim() : "";
+    if (TYPED_MONTH.test(text) && text !== month) handleChange(dayjs(`${text}-01`));
+  }
+
   const renderCell: CellRender = (current, info) => {
     const isCurrentMonth =
       info.type === "month" &&
@@ -67,6 +74,8 @@ export function MonthPicker({
       suffixIcon={<CalendarOutlined aria-hidden aria-label={undefined} />}
       cellRender={renderCell}
       onChange={handleChange}
+      onBlur={event => commitTyped(event.target)}
+      onKeyDown={event => { if (event.key === "Enter") commitTyped(event.target); }}
     />
   );
 }

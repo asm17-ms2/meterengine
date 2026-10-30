@@ -48,12 +48,6 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
 
   @Query(
       value =
-          "SELECT * FROM customer WHERE organization_id = :organizationId AND environment_id IS NULL AND id IN :ids",
-      nativeQuery = true)
-  List<Customer> findByOrganizationIdAndIdIn(UUID organizationId, java.util.Collection<UUID> ids);
-
-  @Query(
-      value =
           "SELECT * FROM customer WHERE organization_id = :organizationId AND environment_id IS NOT DISTINCT FROM CAST(:environmentId AS UUID) ORDER BY name, id",
       nativeQuery = true)
   List<Customer> listScoped(UUID organizationId, UUID environmentId);
@@ -82,10 +76,4 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
       nativeQuery = true)
   List<Customer> lockScoped(
       UUID organizationId, UUID environmentId, java.util.Collection<UUID> ids);
-
-  @Query(
-      value =
-          "SELECT EXISTS(SELECT 1 FROM price_rate WHERE organization_id = :organizationId AND customer_id = :id) OR EXISTS(SELECT 1 FROM price_plan WHERE organization_id = :organizationId AND customer_id = :id)",
-      nativeQuery = true)
-  boolean existsWithPricing(UUID organizationId, UUID id);
 }
