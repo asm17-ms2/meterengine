@@ -12,12 +12,12 @@ import { reviewConsentsForInvitation, signInForInvitation } from "./actions";
 
 export const metadata: Metadata = { title: "도입사 초대", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
-type InvitationPreview = { organization_name: string; email: string; expires_at: string; account_exists: boolean; scopes: string[] };
+type OrganizationInvitationPreviewResponse = { organization_name: string; email: string; expires_at: string; account_exists: boolean; scopes: string[] };
 
 export default async function OrganizationInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!/^me_invite_[A-Za-z0-9]{32}$/.test(token)) return <AuthFrame variant="join" title="초대 링크 확인" description="올바르지 않은 초대 링크입니다."><Link href="/login">로그인으로</Link></AuthFrame>;
-  const result = await requestApi<InvitationPreview>(`/v1/organization-invitations/${encodeURIComponent(token)}`);
+  const result = await requestApi<OrganizationInvitationPreviewResponse>(`/v1/organization-invitations/${encodeURIComponent(token)}`);
   if (!result.ok) return <AuthFrame variant="join" title="초대 링크 확인" description={result.error.message}><p>만료되거나 취소된 링크라면 대표관리자에게 새 초대를 요청하세요.</p><Link href="/login">로그인으로</Link></AuthFrame>;
   const invitation = result.data;
   const sessionToken = await readSessionToken();

@@ -36,12 +36,6 @@ async function openCancellation(page: Page) {
   return dialog;
 }
 
-async function copySecret(page: Page, dialog: Locator) {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
-  await expect(dialog.getByText("복사했습니다.", { exact: true })).toBeVisible();
-}
-
 async function closeDialog(dialog: Locator) {
   await dialog.locator("button.ant-modal-close").click();
   await expect(dialog).toHaveCount(0);
@@ -156,11 +150,55 @@ test("격리 계약: 발급 중 닫기를 막고 도착한 비밀값을 그 창�
   expect(state.keyCount).toBe(1);
   expect(state.keyCalls).toHaveLength(1);
   expect(state.keyCalls[0].rateLimitPerMinute).toBeNull();
-  await copySecret(page, dialog);
+  page.once("dialog", confirm => void confirm.accept());
   await closeDialog(dialog);
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.locator(".secret-result code")).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+});
+
+test("격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 거절하고 전송하지 않는다", async ({ page, request }) => {
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("바뀐 환경");
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = "test"; });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(0);
+});
+
+test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 거치고 화살표 키로는 바뀌지 않는다", async ({ page }) => {
+  let nativeDialogs = 0;
+  page.on("dialog", dialog => { nativeDialogs++; void dialog.dismiss(); });
+  await page.goto("/customers");
+  const environment = page.getByRole("combobox", { name: "업무 환경", exact: true });
+  await environment.focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  await environment.click();
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  const confirm = page.getByRole("dialog");
+  await expect(confirm).toContainText("실제 환경으로 전환할까요?");
+  await confirm.getByRole("button", { name: "취소", exact: true }).click();
+  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  await environment.click();
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("environment")).toBe("live");
+  expect(nativeDialogs).toBe(0);
+});
+
+test("격리 계약: 공백을 낀 환경 값도 다듬어 비교해 다른 환경으로 보내지 않는다", async ({ page, request }) => {
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("공백 환경");
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = " live "; });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(0);
 });
 
 test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 보낸다", async ({ page, request }) => {
@@ -172,7 +210,7 @@ test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 
     await dialog.getByLabel(/^분당 요청 한도/).fill(limit);
     await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
     await expect(dialog.locator(".secret-result code")).toBeVisible();
-    await copySecret(page, dialog);
+    page.once("dialog", confirm => void confirm.accept());
     await closeDialog(dialog);
   }
   const state = await readState(request);
