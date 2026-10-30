@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import styles from "./HomePage.module.css";
 
@@ -17,7 +18,7 @@ const FLOW = [
 export default function Home() {
   return <div className={styles.page}>
     <header className={styles.header}>
-      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><span className={styles.mark} aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+      <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><Image src="/brand/meterengine-mark.svg" width={26} height={27} alt="" className={styles.mark} unoptimized />MeterEngine</Link>
       <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">운영 흐름</a><a href="#roles">역할과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입 신청</Link></nav>
     </header>
     <main id="main-content">

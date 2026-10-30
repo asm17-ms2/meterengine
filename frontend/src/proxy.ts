@@ -12,7 +12,7 @@ export function proxy(request: NextRequest) {
   const environment = request.nextUrl.searchParams.get("environment");
   if (environment && !["legacy", "test", "live"].includes(environment)) return new NextResponse("업무 환경을 확인하세요.", { status: 400 });
   requestHeaders.set("x-meterengine-environment", environment ?? "legacy");
-  if (["/", "/login", "/signup", "/pending", "/health", "/favicon.ico", "/invoice-links", "/invoice-links/lookup", "/invoice-links/payment-retries"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/")) return NextResponse.next();
+  if (["/", "/login", "/signup", "/pending", "/health", "/favicon.ico", "/icon.svg", "/apple-icon.png", "/brand/meterengine-mark.svg", "/brand/meterengine-mark.png", "/invoice-links", "/invoice-links/lookup", "/invoice-links/payment-retries"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/")) return NextResponse.next();
   if (!request.cookies.get("me_session")?.value && !request.headers.has("next-action")) {
     const url = new URL("/login", request.url);
     url.searchParams.set("returnTo", path + request.nextUrl.search);

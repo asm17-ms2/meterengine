@@ -97,9 +97,7 @@ p { line-height: 1.7; }
 .workspace-header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; background: #fff; border-bottom: 1px solid #dce1eb; position: sticky; top: 0; z-index: 30; }
 .workspace-brand, .workspace-user { display: flex; align-items: center; gap: 24px; min-width: 0; }
 .workspace-brand .wordmark { display: flex; gap: 10px; align-items: center; font-size: 21px; letter-spacing: -.055em; }
-.meter-mark { display: flex; gap: 3px; height: 24px; align-items: end; }
-.meter-mark i { width: 5px; border-radius: 2px; background: #5746ad; height: 14px; }
-.meter-mark i:nth-child(2) { height: 23px; }.meter-mark i:nth-child(3) { height: 19px; }
+.meter-mark { display: block; flex: none; width: 23px; height: auto; }
 .workspace-divider { width: 1px; height: 22px; background: #dce1eb; }
 .organization-link { display: flex; gap: 12px; align-items: center; text-decoration: none; color: #202b40; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-user { font-size: 13px; }

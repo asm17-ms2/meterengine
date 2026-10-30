@@ -2,6 +2,7 @@
 
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
+import Image from "next/image";
 import { App, Button, Drawer } from "antd";
 import { MenuOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
@@ -63,7 +64,7 @@ function ShellContent({ organizationId, organizationLabel, userLabel, isOperator
     <header ref={headerRef} className="workspace-header">
       <div className="workspace-brand">
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="업무 메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />
-        <Link href={workspaceHref("/overview", search, { inheritFilters: false })} className="wordmark"><span className="meter-mark" aria-hidden="true"><i /><i /><i /></span>MeterEngine</Link>
+        <Link href={workspaceHref("/overview", search, { inheritFilters: false })} className="wordmark"><Image src="/brand/meterengine-mark.svg" width={26} height={27} alt="" className="meter-mark" unoptimized />MeterEngine</Link>
         <span className="workspace-divider" />
         <Link href="/organizations" className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span><SwapOutlined aria-hidden="true" /></Link>
       </div>
