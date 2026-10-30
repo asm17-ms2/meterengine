@@ -1,4 +1,5 @@
 import { tenantExport } from "@/lib/api/client";
+import { toDisplayMessage } from "@/lib/api/transport";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { exportFilename } from "@/lib/export-filename";
 import { readListQuery, toServerParams } from "@/lib/list-query";
@@ -29,7 +30,7 @@ export async function GET(request: Request, context: { params: Promise<{ resourc
   delete params.page;
   delete params.size;
   const result = await tenantExport(target.path, params);
-  if (!result.ok) return Response.json({ code: result.error.code, message: result.error.message }, { status: result.error.status || 503, headers: { "Cache-Control": "no-store" } });
+  if (!result.ok) return Response.json({ code: result.error.code, message: toDisplayMessage(result.error) }, { status: result.error.status || 503, headers: { "Cache-Control": "no-store" } });
   const csv = result.data.body.startsWith("\uFEFF") ? result.data.body : "\uFEFF" + result.data.body;
   return new Response(csv, { headers: { "Content-Type": result.data.contentType, "Content-Disposition": `attachment; filename="${exportFilename(resource, { month: query.month, from: query.from, to: query.to, environment: url.searchParams.get("environment") })}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }

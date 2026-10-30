@@ -328,6 +328,13 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   }
 });
 
+test("격리 계약: CSV 내보내기가 거절되면 서버가 준 필드 사유를 보여 준다", async ({ page }) => {
+  await page.goto("/customers");
+  await page.getByRole("button", { name: "조건 전체 CSV 내보내기", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "10000행 이하가 되도록 검색 범위를 좁혀 주세요" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "요청 값이 올바르지 않습니다" })).toHaveCount(0);
+});
+
 test("the payments list can show only the month's failed payments and go back to all of them", async ({ page, request }) => {
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&payment_status=failed");

@@ -89,6 +89,7 @@ const server = createServer(async (request, response) => {
       const items = ["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario) ? [{ id: "99999999-9999-4999-8999-999999999999", name: "다른 도입사 B의 비공개 고객", external_id: "organization-b-private", billing_email: null, archived_at: null, created_at: NOW, version: 0 }] : [];
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
     }
+    if (path === "/v1/customers/export") return send(response, 400, { code: "validation_error", message: "요청 값이 올바르지 않습니다", errors: [{ field: "export", message: "10000행 이하가 되도록 검색 범위를 좁혀 주세요" }] });
     if (current.scenario === "customer-options-retry" && path === "/v1/customers/options") {
       current.customerOptionQueries.push(new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "");
       if (current.customerOptionQueries.length === 1) return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
