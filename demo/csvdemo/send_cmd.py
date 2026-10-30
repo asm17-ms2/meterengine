@@ -22,7 +22,7 @@ from core.api_client import (
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import Prediction, predict_send
 from core.jsonl_log import JsonlLogWriter, classify_outcome
-from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, parse_properties, parse_rfc3339
+from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, loads_decimal, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
 LOGS_DIR = os.path.join(
@@ -135,8 +135,8 @@ def _send_batches(events, client, writer, counts, notes, console, args):
         if start:
             _pause(args.interval, args.jitter)
         chunk = events[start:start + batch_size]
-        # 속성이 깨진 행은 봉투 전체를 깨뜨리므로 단건으로 보내 서버가 그 행만 판정하게 한다.
-        broken = {offset for offset, event in enumerate(chunk) if not _has_valid_properties(event)}
+        # JSON으로 읽히지 않는 속성은 봉투 전체를 깨뜨리므로 단건으로 보내 서버가 그 행만 판정하게 한다.
+        broken = {offset for offset, event in enumerate(chunk) if not _is_json(event)}
         batched = [event for offset, event in enumerate(chunk) if offset not in broken]
         sent_at = datetime.now(KST).isoformat()
         result, rows, failure, problem = _post_batch(client, batched) if batched else (None, [], None, None)
@@ -178,9 +178,10 @@ def _send_batches(events, client, writer, counts, notes, console, args):
     return sent, auth_problem
 
 
-def _has_valid_properties(event: Event) -> bool:
+# 객체가 아닌 JSON은 봉투를 깨뜨리지 않고 배치 API가 그 행만 validation_error로 거절해 거절 기록에 남긴다.
+def _is_json(event: Event) -> bool:
     try:
-        parse_properties(event.properties_text)
+        loads_decimal(event.properties_text)
     except ValueError:
         return False
     return True
