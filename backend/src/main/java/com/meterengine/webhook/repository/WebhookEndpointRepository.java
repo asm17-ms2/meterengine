@@ -19,9 +19,19 @@ public class WebhookEndpointRepository {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  // 새 전송은 아직 시도하지 않았을 수 있어, 전송 생성 순서가 아니라 기록된 마지막 시도의 결과로 판단한다.
+  private static final String LATEST_ATTEMPT_FAILED =
+      "COALESCE((SELECT a.failure_reason IS NOT NULL FROM webhook_delivery d"
+          + " JOIN webhook_delivery_attempt a ON a.organization_id = d.organization_id"
+          + " AND a.webhook_delivery_id = d.id"
+          + " WHERE d.organization_id = e.organization_id AND d.webhook_endpoint_id = e.id"
+          + " ORDER BY a.attempted_at DESC, a.id DESC LIMIT 1), false) AS latest_attempt_failed";
+
   public List<WebhookEndpointResponse> findByOrganizationId(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? ORDER BY created_at, id",
+        "SELECT e.*, "
+            + LATEST_ATTEMPT_FAILED
+            + " FROM webhook_endpoint e WHERE organization_id = ? AND environment_scope_id = ? ORDER BY created_at, id",
         (rs, rowNum) -> endpoint(rs),
         organizationId,
         BusinessEnvironmentContext.scopeId());
@@ -29,7 +39,9 @@ public class WebhookEndpointRepository {
 
   public List<WebhookEndpointResponse> findByOrganizationIdAndId(UUID organizationId, UUID id) {
     return jdbcTemplate.query(
-        "SELECT * FROM webhook_endpoint WHERE organization_id = ? AND environment_scope_id = ? AND id = ?",
+        "SELECT e.*, "
+            + LATEST_ATTEMPT_FAILED
+            + " FROM webhook_endpoint e WHERE organization_id = ? AND environment_scope_id = ? AND id = ?",
         (rs, rowNum) -> endpoint(rs),
         organizationId,
         BusinessEnvironmentContext.scopeId(),
@@ -117,6 +129,7 @@ public class WebhookEndpointRepository {
         rs.getString("description"),
         rs.getObject("created_at", OffsetDateTime.class),
         null,
-        rs.getObject("deleted_at", OffsetDateTime.class));
+        rs.getObject("deleted_at", OffsetDateTime.class),
+        rs.getBoolean("latest_attempt_failed"));
   }
 }
