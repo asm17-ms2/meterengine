@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-29T23:41:27+09:00",
+  "updated_at": "2026-10-30T10:05:23+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -87,7 +87,7 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "main(af15d7f5)에서도 layout.tsx 8-14행이 preload 옵션 없이 2,057,688바이트 전체 글리프 파일 하나를 localFont로 부르고, next 16.2.12의 기본값 preload true와 27행 루트 html 때문에 카드 등록과 청구서 링크를 포함한 모든 경로가 이 글꼴을 받는다. 글꼴 blob 49c54b5와 선언 줄은 넘길 때 head와 같고, #443 squash(be67d816) 뒤로 두 파일을 바꾼 main 커밋은 없어 이미 고쳐지지 않았다. 피해 쪽으로 보면 운영의 Caddyfile 70-72행은 frontend:3000으로 그대로 넘길 뿐 CDN이나 캐시 층이 없고, woff2는 이미 압축된 형식이라 encode를 더해도 줄지 않으며, Next의 immutable 캐시는 재방문에만 듣는다. 공개 링크를 여는 고객은 거의 항상 첫 방문이라 느린 모바일망에서 2MB가 JS와 토스 SDK와 대역폭을 나눠 버튼 활성화가 늦어지는 피해가 실제로 남는다(수치는 저장소 밖 lab 측정이고 표시는 막히지 않아 심각도는 medium 정도다). body(globals.css 131행)와 antd 토큰이 이 글꼴을 바로 쓰므로 preload: false만으로는 전송량이 줄지 않고, 줄이려면 표시 음절을 KS X 1001로 줄이거나 조각 파일 구조로 바꿔야 해서 #443이 정한 공통 글꼴 디자인에 대한 결정이 필요하다.",
       "evidence": [
@@ -115,7 +115,9 @@
         "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5",
         "git log af15d7f5 -- frontend/src/app/layout.tsx frontend/src/app/fonts/: 마지막 변경 be67d816(#443)",
         "be67d816 본문: 소개 화면부터 업무 화면까지 일관된 글꼴이 필요하다"
-      ]
+      ],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다."
     },
     {
       "id": "D-024",
@@ -264,7 +266,7 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "X-012와 원인이 같다. main의 layout.tsx 8-14행은 넘길 때 head와 같고 글꼴 파일도 같은 blob 49c54b5라, 공개 카드 등록과 청구서 화면도 metadata만 두는 하위 layout을 거쳐 같은 2MB preload를 받는다. 제안 중 preload: false는 body(globals.css 131행)와 antd 토큰(AppProviders.tsx 17행)이 첫 렌더에서 같은 글꼴을 요청하므로 전송량을 줄이지 못한다. 다른 제안인 dynamic subset은 next/font/local로 파일마다 unicode-range를 줄 수 없어 public/ 조각, globals.css @font-face, layout.tsx 변수 정의를 함께 바꾸는 구조 변경이 된다. 프록시나 캐시 층이 첫 방문 비용을 막지 않으므로 피해는 남지만, 어느 쪽으로 줄일지는 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
@@ -288,14 +290,16 @@
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/next.config.ts:15: invoice-links CSP font-src 'self'"
-      ]
+      ],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다."
     },
     {
       "id": "G-075",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "지적은 두 부분이다. 글꼴 버전과 출처가 없다는 부분은 main에서 이미 고쳐졌다. be67d816(#443 squash)이 README.md 147행에 Pretendard Variable 1.3.9와 받은 저장소 주소를 적었고, 넘길 때 head 135행의 '시스템 글꼴이다. 웹폰트를 받지 않는다' 문장도 지웠다. 그러나 제목의 본론인 2MB 전체 글꼴 preload는 layout.tsx 8-14행과 blob 49c54b5가 그대로라 X-012와 같은 이유로 남고, 운영 프록시나 캐시가 첫 방문 비용을 막지 않는다. 줄이는 방법이 공통 글꼴 디자인 결정에 걸려 있어 X-012와 같은 질문으로 둔다.",
       "evidence": [
@@ -319,14 +323,16 @@
         "frontend/README.md:147: 버전 1.3.9와 출처 주소, be67d816에서 들어옴",
         "frontend/README.md:135: 시스템 글꼴 문장, main에서 사라짐",
         "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5"
-      ]
+      ],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다."
     },
     {
       "id": "G-085",
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "X-012와 원인이 같다. main의 Caddyfile 70-72행은 프론트엔드로 그대로 넘길 뿐 encode나 캐시 설정이 없다는 지적은 맞지만, woff2는 이미 압축된 형식이라 encode를 더해도 전송량은 그대로이고 원인은 layout.tsx 8-14행이 부르는 2,057,688바이트 단일 파일이다. 제안 중 공개 경로만 시스템 글꼴로 빼려면 localFont를 하위 layout으로 옮겨야 하는데, 27행 html의 변수 클래스가 빠지면 body로 포털되는 antd 모달과 메시지가 var(--font-pretendard)를 잃는다. 첫 방문 고객의 피해는 남지만 subset 교체나 조각 구조 중 무엇으로 줄일지는 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
@@ -346,7 +352,9 @@
         "base": "origin/main"
       },
       "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): X-012와 같은 결정",
-      "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다."
+      "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다."
     },
     {
       "id": "X-054",
@@ -499,8 +507,8 @@
       "id": "D-011",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 .workspace-header는 모든 폭에서 sticky다(globals.css 97행). 767px 이하에서는 202행의 height: auto가 129행의 64px 고정 높이를 덮고, 203-208행이 브랜드 줄과 workspace-user 줄을 각각 width 100%로 쌓는다. 그 workspace-user에는 ConsoleShell.tsx 70행이 업무 환경 select(303행, 44px), 시연 안내, 권한 범위, 권한 새로 조회, 로그아웃을 모두 넣어 390px 폭에서 세 줄 가까이 된다. 그런데 메뉴 Drawer(77행)에는 NavMenu만 있다. 지적에 함께 적힌 112px 변수 불일치는 #443 squash(be67d816)의 ResizeObserver(43-50행)가 이미 없앴다. 헤더를 56-64px 한 줄로 줄이려면 업무 환경 select를 헤더 밖으로 빼야 하는데, frontend/README.md 67행이 박성종 님의 #452에서 업무 환경을 상단에 둔다고 적었다. sticky를 풀면 메뉴 버튼까지 함께 스크롤되어 사라지므로, 어떤 배치로 갈지 정해야 한다.",
       "evidence": [
@@ -512,28 +520,56 @@
         "frontend/src/components/shell/ConsoleShell.tsx:77 @ af15d7f5",
         "frontend/src/components/shell/ConsoleShell.tsx:43-50 @ af15d7f5",
         "frontend/README.md:67 @ af15d7f5",
-        "frontend/src/app/globals.css:227-231 @ 0f1d1bf"
+        "frontend/src/app/globals.css:227-231 @ 0f1d1bf",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임)",
+        "between phone and desktop widths the header still leaves out the user name: 실패 (900px에 이름 보임)",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 (서랍이 남음)",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 (헤더 로그아웃을 찾음)",
+        "커밋 455ced37",
+        "커밋 079b1fa2",
+        "커밋 ad807614",
+        "커밋 811994d9",
+        "커밋 c91c6f9b"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "455ced37a86bdd7c57743ef10053afd58fdc1a22",
+        "079b1fa2f39f4b7280cc81f67455cf03e739891c",
+        "ad80761406ea65ec76e198ad633ba59e4f2b7354",
+        "811994d968630e0251bb7d9efc2a94280a0225cf",
+        "c91c6f9b424cf9817f9a9266c9981ce2d701b8b4"
+      ],
+      "tests": [
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls",
+        "between phone and desktop widths the header still leaves out the user name",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows",
+        "permissions.real.spec.ts 6개 통과",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 확인 뒤 통과",
+        "between phone and desktop widths the header still leaves out the user name: 실패 확인 뒤 통과",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 확인 뒤 통과",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 767px 이하에서 시연 안내, 권한 범위와 새로 조회, 로그아웃을 메뉴 서랍으로 옮긴다. 업무 환경 선택은 README 67행대로 헤더에 두고 sticky도 유지한다",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다",
+      "decision": "fix: 767px 이하에서 시연 안내, 권한 범위와 새로 조회, 로그아웃을 메뉴 서랍으로 옮긴다. 업무 환경 선택은 README 67행대로 헤더에 두고 sticky도 유지한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-065",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적대로 main에서도 767px 이하 헤더는 줄바꿈된다. globals.css 203-208행이 브랜드와 workspace-user를 각각 한 줄씩 차지하게 하고, 97행 sticky가 그대로 남는다. ConsoleShell.tsx 70행이 업무 환경 select, 시연 안내, 권한 범위, 권한 새로 조회, 로그아웃을 모두 헤더에 두는 반면, 77행 Drawer에는 NavMenu만 있다는 점도 맞다. 112px 변수와 128px scroll-padding 불일치는 #443 squash(be67d816)가 ResizeObserver(43-50행)와 141행 calc로 바꿔 이미 사라졌다. 남은 헤더 크기를 한 줄로 줄이려면 업무 환경을 Tag로 줄이고 select는 Drawer로 옮겨야 한다. 이는 frontend/README.md 67행이 적은 상단 업무 환경 배치(박성종 님, #452)를 바꾸는 일이라 D-011과 같은 결정이 필요하다.",
       "evidence": [
@@ -543,21 +579,49 @@
         "frontend/src/components/shell/ConsoleShell.tsx:77 @ af15d7f5",
         "frontend/src/components/shell/ConsoleShell.tsx:43-50 @ af15d7f5",
         "frontend/src/app/globals.css:141 @ af15d7f5",
-        "frontend/README.md:67 @ af15d7f5"
+        "frontend/README.md:67 @ af15d7f5",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임)",
+        "between phone and desktop widths the header still leaves out the user name: 실패 (900px에 이름 보임)",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 (서랍이 남음)",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 (헤더 로그아웃을 찾음)",
+        "커밋 455ced37",
+        "커밋 079b1fa2",
+        "커밋 ad807614",
+        "커밋 811994d9",
+        "커밋 c91c6f9b"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "455ced37a86bdd7c57743ef10053afd58fdc1a22",
+        "079b1fa2f39f4b7280cc81f67455cf03e739891c",
+        "ad80761406ea65ec76e198ad633ba59e4f2b7354",
+        "811994d968630e0251bb7d9efc2a94280a0225cf",
+        "c91c6f9b424cf9817f9a9266c9981ce2d701b8b4"
+      ],
+      "tests": [
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls",
+        "between phone and desktop widths the header still leaves out the user name",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows",
+        "permissions.real.spec.ts 6개 통과",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 확인 뒤 통과",
+        "between phone and desktop widths the header still leaves out the user name: 실패 확인 뒤 통과",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 확인 뒤 통과",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-011과 같은 결정",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다",
+      "decision": "fix: D-011과 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-153",
@@ -1180,8 +1244,8 @@
       "id": "G-072",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적에 나온 README 131행('바꾸는 값은 AppProviders.tsx에만 둔다')은 be67d816(#443)에서 README:143으로 바뀌었다. 지금은 같은 색이 globals.css와 CSS Modules에도 있으니 함께 바꾼다고 적혀 있어 문서와 코드의 어긋남은 사라졌지만, 복제 자체는 main에 그대로 남아 있다. AppProviders.tsx:12,17,19의 #5746ad, #202b40, #5a6578, #dce1eb, #7c8799는 globals.css:27 변수와 같은 값을 따로 적고, globals.css:101,115,120,127,246,247,288은 --blue가 있는데도 #5746ad를 리터럴로 쓰며, HomePage.module.css:1의 --home-muted #535f73은 --muted #5a6578과 값이 다르다. 입력 테두리와 placeholder는 AppProviders.tsx:17,19 토큰과 globals.css:199,200 덮어쓰기로 두 번 정해지고, 글꼴 스택은 layout.tsx:13, AppProviders.tsx:17, globals.css:123,127,131,295에 복제돼 있다. 한 곳에서 만들려면 새 모듈과 AppProviders.tsx, layout.tsx, globals.css, HomePage.module.css를 바꾸는 구조 변경이고 README:143에 적힌 방식도 뒤집어야 하므로 needs-decision이다. globals.css 안의 리터럴만 var()로 바꾸는 일은 한 파일 수정으로 따로 뗄 수 있다.",
       "evidence": [
@@ -1196,21 +1260,34 @@
         "frontend/src/app/globals.css:199,200 @ af15d7f5",
         "frontend/src/app/layout.tsx:13 @ af15d7f5",
         "frontend/src/app/globals.css:123,127,131,295 @ af15d7f5",
-        "frontend/README.md:131 @ 0f1d1bf"
+        "frontend/README.md:131 @ 0f1d1bf",
+        "globals.css uses its own color tokens instead of repeating the same literal values: 실패 (토큰과 같은 리터럴 21줄)",
+        "커밋 9fdea128",
+        "커밋 c91c6f9b"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "9fdea128076075d5e4dc91452849e27f794734e5",
+        "c91c6f9b424cf9817f9a9266c9981ce2d701b8b4"
+      ],
+      "tests": [
+        "globals.css uses its own color tokens instead of repeating the same literal values",
+        "globals.css uses its own color tokens instead of repeating the same literal values: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): README 143행의 여러 곳 방식은 유지하고, globals.css 안에서 이미 있는 :root 토큰과 같은 색 리터럴만 var()로 바꾼다",
       "decision_question": "색과 글꼴 값을 TS 모듈 하나에서 antd 테마와 :root CSS 변수로 함께 만들고 globals.css와 CSS Modules는 var()만 쓰게 바꿀지, README:143대로 여러 곳에 두고 함께 바꾸는 지금 방식을 유지할지(유지한다면 globals.css 안 리터럴만 var()로 바꿀지) 정한다.",
       "evidence_notes": [
         "frontend/README.md:131: be67d816에서 README:143으로 바뀜"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "globals.css의 토큰과 같은 색 리터럴을 var()로 바꾼다",
+      "decision": "fix: README 143행의 여러 곳 방식은 유지하고, globals.css 안에서 이미 있는 :root 토큰과 같은 색 리터럴만 var()로 바꾼다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "L-001",
@@ -1429,8 +1506,8 @@
       "id": "G-080",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 globals.css:120이 .workspace-kicker에 글꼴과 색을 주고, 같은 파일 147행이 display: none으로 다시 덮어서 120행은 효과가 없다. WorkspaceHeader.tsx:7은 kicker가 있으면 이 클래스의 span을 그리고, 12개 파일 15곳이 \"도입사 콘솔\", \"요금 설계\" 같은 값을 넘기지만 화면에도 접근성 트리에도 나오지 않는다. 반박하려고 이 span을 다시 보이게 하는 다른 선택자와 e2e 시험의 kicker 문구 의존을 찾았으나 없었고, #443 이후 globals.css를 바꾼 #448도 이 두 줄은 건드리지 않아 고쳐지지 않았다. 지적 자체는 맞지만 고치는 길이 둘 다 결정이 필요하다. prop과 호출부 인자, 두 규칙을 지우면 시험 밖 파일 14개가 바뀌어 유지보수 분류의 파일 셋 한도를 넘고, 147행만 지워 문구를 보이면 박성종 님 커밋 f671a4f가 일부러 넣은 숨김 결정을 뒤집는다.",
       "evidence": [
@@ -1441,22 +1518,33 @@
         "frontend/src/app/(console)/members/page.tsx:36 @ af15d7f5",
         "frontend/src/app/(console)/pricing/page.tsx:30,47 @ af15d7f5",
         "frontend/src/app/admin/page.tsx:12 @ af15d7f5",
-        "frontend/src/components/workspace/AuditScreen.tsx:44 @ af15d7f5"
+        "frontend/src/components/workspace/AuditScreen.tsx:44 @ af15d7f5",
+        "workspace headers no longer carry a kicker that is always hidden: 실패 (kicker 인자 15곳과 숨김 규칙)",
+        "커밋 ff144773"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "ff144773b9300cb67a7843819faa5fb9d2b6bfd5"
+      ],
+      "tests": [
+        "workspace headers no longer carry a kicker that is always hidden",
+        "workspace headers no longer carry a kicker that is always hidden: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 숨겨 둔 kicker를 보이지 않는 채 남기지 않고, WorkspaceHeader의 kicker prop과 호출부 인자, 숨김 규칙을 지운다(화면 변화 없음)",
       "decision_question": "WorkspaceHeader의 kicker를 화면에 보이게 할지(globals.css:147 삭제, f671a4f 숨김 결정 되돌림) 아니면 kicker prop과 12개 호출 파일의 인자, globals.css:120과 147 규칙을 함께 지울지 정한다.",
       "evidence_notes": [
         "커밋 f671a4f5 (SEONGJONG PARK, #443 be67d816로 squash) globals.css에 120행과 147행 두 규칙을 함께 추가",
         "frontend/e2e 아래 kicker 문구 의존 없음 (git grep 결과 빈 출력)"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "늘 숨겨진 kicker prop과 호출부 인자, 규칙을 지운다",
+      "decision": "fix: 숨겨 둔 kicker를 보이지 않는 채 남기지 않고, WorkspaceHeader의 kicker prop과 호출부 인자, 숨김 규칙을 지운다(화면 변화 없음)",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-080",
@@ -1683,7 +1771,7 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "reason": "X-012와 원인이 같다. be67d816(#443)이 2,057,688바이트 PretendardVariable.woff2를 더하고 layout.tsx 8-14행에서 preload 없이 선언한 상태가 main에 그대로 있어, next 16.2.12 기본값으로 모든 경로 head에 preload가 붙는다. globals.css 131행과 AppProviders.tsx 17행이 이 글꼴을 쓰므로 실제로 내려받고, display swap이라 표시는 막히지 않지만 첫 방문 전송량과 hydration 지연은 남는다. 운영 프록시와 캐시는 첫 방문 비용을 막지 않으며, 줄이는 방법은 공통 글꼴 디자인 결정이 필요하다.",
       "evidence": [
@@ -1705,7 +1793,9 @@
       "decision_question": "모든 경로가 받는 2MB Pretendard 전체 가변 글꼴을 (가) 같은 1.3.9 릴리스의 KS X 1001 subset woff2로 바꿔 드문 음절은 대체 글꼴로 그릴지, (나) unicode-range로 나눈 동적 subset 조각을 public/에 두고 globals.css에서 불러올지, (다) 지금 파일을 그대로 둘지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/app/fonts/PretendardVariable.woff2 (blob 49c54b5, 2057688바이트) @ af15d7f5"
-      ]
+      ],
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다."
     },
     {
       "id": "C443-001",
@@ -1808,8 +1898,8 @@
       "id": "D-039",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main의 globals.css 97행은 .workspace-header를 모든 폭에서 sticky로 둔다. 767px 이하에서는 202행 height: auto와 203-208행 줄바꿈 규칙 때문에 브랜드 줄 아래에 업무 환경, 시연 안내, 권한, 로그아웃 줄이 쌓인 채 화면 위에 남는다(ConsoleShell.tsx 70행). 표 sticky 기준인 --workspace-header-height가 112px로 실제와 다르다는 부분은 #443 squash(be67d816)의 ResizeObserver(43-50행)가 실제 높이를 써서 이미 고쳐졌다. 남은 문제를 풀 방법은 sticky를 풀거나 조작을 Drawer로 옮기는 것이다. 앞쪽은 메뉴 버튼도 함께 사라지고, 뒤쪽은 README 67행의 상단 업무 환경 배치와 걸린다. 그래서 D-011과 같은 결정이 필요하다.",
       "evidence": [
@@ -1818,21 +1908,49 @@
         "frontend/src/components/shell/ConsoleShell.tsx:70 @ af15d7f5",
         "frontend/src/components/shell/ConsoleShell.tsx:77 @ af15d7f5",
         "frontend/src/components/shell/ConsoleShell.tsx:43-50 @ af15d7f5",
-        "frontend/README.md:67 @ af15d7f5"
+        "frontend/README.md:67 @ af15d7f5",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임)",
+        "between phone and desktop widths the header still leaves out the user name: 실패 (900px에 이름 보임)",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 (서랍이 남음)",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 (헤더 로그아웃을 찾음)",
+        "커밋 455ced37",
+        "커밋 079b1fa2",
+        "커밋 ad807614",
+        "커밋 811994d9",
+        "커밋 c91c6f9b"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "455ced37a86bdd7c57743ef10053afd58fdc1a22",
+        "079b1fa2f39f4b7280cc81f67455cf03e739891c",
+        "ad80761406ea65ec76e198ad633ba59e4f2b7354",
+        "811994d968630e0251bb7d9efc2a94280a0225cf",
+        "c91c6f9b424cf9817f9a9266c9981ce2d701b8b4"
+      ],
+      "tests": [
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls",
+        "between phone and desktop widths the header still leaves out the user name",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows",
+        "permissions.real.spec.ts 6개 통과",
+        "on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 확인 뒤 통과",
+        "between phone and desktop widths the header still leaves out the user name: 실패 확인 뒤 통과",
+        "turning on the demo guide from the phone menu closes the menu so the guide shows: 실패 확인 뒤 통과",
+        "수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 API에서 독립적으로 동작한다: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-011과 같은 결정",
       "decision_question": "767px 이하 콘솔 헤더를 줄이기 위해 시연 안내, 권한 범위와 새로 조회, 로그아웃만 메뉴 Drawer로 옮길지, 업무 환경 select까지 옮기고 헤더에는 환경 표시만 남길지, 모바일에서 sticky를 풀지, 지금 배치를 유지할지 정해야 한다.",
       "evidence_notes": [
         "frontend/src/components/shell/ConsoleShell.tsx:43-50: 변수 불일치 부분은 be67d816에서 해결"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다",
+      "decision": "fix: D-011과 같은 결정",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-055",
@@ -2772,8 +2890,8 @@
       "id": "D-244",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "지적 가운데 일부는 be67d816(#443)에서 이미 고쳐졌다. :root 네 번 정의와 쓰이지 않던 36행 값은 globals.css:27 한 줄로 합쳐졌고(265, 268행은 헤더 높이만 둔다), .workspace-content gap 덮어쓰기는 globals.css:118 한 곳만 남았으며, README의 '시스템 글꼴' 문장은 README:147의 Pretendard 설명으로 바뀌었다. 남은 것은 토큰이 있는데도 쓴 리터럴(globals.css:101,110,114 등, registration.module.css:2,4,5,15,25, pricing.module.css:1, HomePage.module.css:64, CsvDownload.tsx:54), 같은 역할인데 값이 갈라진 오류 빨강(globals.css:154 #b72c3c, :165 #a92334, AppProviders.tsx:12 #c23d4b)과 --home-muted, 세 가지로 따로 만든 테스트 환경 안내(globals.css:302, PublicInvoiceView.module.css:15, CardRegistration.tsx:59)다. .organization-link(104, 192, 296행)와 pricing.module.css 1, 2행의 덮어쓰기는 globals.css 캐스케이드 문제로 G-071 몫과 겹친다. 제안한 수정은 토큰 이름을 역할 이름으로 바꾸고 TS 상수를 들이며 안내 상자를 한 컴포넌트로 묶는 일이라 파일 여섯 개 이상에 걸치고, 어느 빨강과 연보라를 기준으로 할지도 디자인 결정이라 needs-decision이다.",
       "evidence": [
@@ -2792,30 +2910,43 @@
         "frontend/src/components/invoice-links/PublicInvoiceView.module.css:15 @ af15d7f5",
         "frontend/src/components/payment-registration/CardRegistration.tsx:59 @ af15d7f5",
         "frontend/src/app/globals.css:104,192,296 @ af15d7f5",
-        "frontend/README.md:143 @ af15d7f5"
+        "frontend/README.md:143 @ af15d7f5",
+        "globals.css uses its own color tokens instead of repeating the same literal values: 실패 (토큰과 같은 리터럴 21줄)",
+        "커밋 9fdea128",
+        "커밋 c91c6f9b"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "9fdea128076075d5e4dc91452849e27f794734e5",
+        "c91c6f9b424cf9817f9a9266c9981ce2d701b8b4"
+      ],
+      "tests": [
+        "globals.css uses its own color tokens instead of repeating the same literal values",
+        "globals.css uses its own color tokens instead of repeating the same literal values: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): G-072와 같은 범위로 리터럴만 var()로 바꾼다. 토큰 이름 바꾸기와 기준값 통일은 하지 않는다",
       "decision_question": "색 토큰을 역할 이름으로 다시 짓고 globals.css와 CSS Modules의 리터럴을 var()로 바꾸며, 갈라진 오류 빨강, 연보라 배경, --home-muted의 기준값을 하나로 정하고 테스트 환경 안내를 한 컴포넌트로 묶을지 정한다.",
       "evidence_notes": [
         "frontend/src/app/globals.css:27: be67d816에서 :root 하나로 합침",
         "frontend/src/app/globals.css:118: gap 덮어쓰기 사라짐",
         "frontend/README.md:147: 글꼴 문장 고쳐짐"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "globals.css의 토큰과 같은 색 리터럴을 var()로 바꾼다",
+      "decision": "fix: G-072와 같은 범위로 리터럴만 var()로 바꾼다. 토큰 이름 바꾸기와 기준값 통일은 하지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-022",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 워드마크는 여러 갈래로 남아 있다. 콘솔 셸만 막대 아이콘을 붙이고, 로그인과 가입(AuthFrame), 도입사 선택, 플랫폼 운영(OperatorShell)은 글자만 쓰며, 소개 화면, 카드 등록, 청구서 조회는 각자 CSS 모듈로 따로 그린다. 글꼴도 globals.css 292행과 HomePage.module.css 4행, 61행은 Avenir Next에 Segoe UI 대체, registration.module.css 3행은 Avenir Next에 sans-serif 대체이고, 청구서 조회는 글꼴 지정이 없어 Pretendard로 나온다. 그런데 frontend/README.md 147행은 로고를 기존 서체로 둔다고 적어 두어 Avenir Next를 번들하지 않은 것은 기록된 결정이고, 청구서 조회 화면만 그 문서와 어긋난다. 하나의 Wordmark로 묶으려면 공용 컴포넌트에 ConsoleShell, AuthFrame, OperatorShell, organizations/page.tsx, page.tsx, RegistrationFrame, PublicInvoiceView와 CSS 네 개를 함께 바꿔야 하고, 아이콘을 인증과 운영 화면에도 붙일지와 글꼴을 무엇으로 할지 디자인 결정이 먼저 필요하다. 실제로 어떻게 보이는지는 화면을 찍어 비교해야 확정된다.",
       "evidence": [
@@ -2833,25 +2964,36 @@
         "frontend/src/components/invoice-links/PublicInvoiceView.tsx:119 @ af15d7f5",
         "frontend/src/components/invoice-links/PublicInvoiceView.module.css:3 @ af15d7f5",
         "frontend/src/app/layout.tsx:8-14 @ af15d7f5",
-        "frontend/README.md:147 @ af15d7f5"
+        "frontend/README.md:147 @ af15d7f5",
+        "the console and the introduction page draw the logo mark from one component that only changes its size: 실패 (마크 사본 두 곳)",
+        "커밋 5e49f8f6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "5e49f8f635f02c315142c774c72dabdd378cbd69"
+      ],
+      "tests": [
+        "the console and the introduction page draw the logo mark from one component that only changes its size",
+        "the console and the introduction page draw the logo mark from one component that only changes its size: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 로고 마크를 공용 컴포넌트 하나로 묶고 크기만 prop으로 받는다. README 147행대로 로고 서체는 그대로 두고 다른 화면에 마크를 더하지 않는다",
-      "decision_question": "워드마크를 공용 컴포넌트 하나로 묶을지, 묶는다면 README 147행대로 로고를 기존 서체(Avenir Next, 번들 안 함)로 둘지 Pretendard나 번들한 브랜드 글꼴로 바꿀지, 로그인, 가입, 도입사 선택, 운영 화면과 카드 등록, 청구서 조회 화면에도 막대 아이콘을 붙일지 정해야 한다."
+      "decision_question": "워드마크를 공용 컴포넌트 하나로 묶을지, 묶는다면 README 147행대로 로고를 기존 서체(Avenir Next, 번들 안 함)로 둘지 Pretendard나 번들한 브랜드 글꼴로 바꿀지, 로그인, 가입, 도입사 선택, 운영 화면과 카드 등록, 청구서 조회 화면에도 막대 아이콘을 붙일지 정해야 한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "로고 마크를 BrandMark 하나로 묶고 소개 화면은 크기만 키운다",
+      "decision": "fix: 로고 마크를 공용 컴포넌트 하나로 묶고 크기만 prop으로 받는다. README 147행대로 로고 서체는 그대로 두고 다른 화면에 마크를 더하지 않는다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "G-084",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "막대 세 개 로고 마크 마크업은 main에서도 page.tsx 20행과 ConsoleShell.tsx 66행에 따로 있다. 스타일도 HomePage.module.css .mark(5~8행, 폭 6px, 높이 17/27/22px, 간격 4px)와 globals.css .meter-mark(100~102행, 폭 5px, 높이 14/23/19px, 간격 3px)로 갈라져 있어 중복 자체는 맞다. 다만 두 마크는 헤더 글자 크기(24px, 21px)에 맞춰 거의 비례로 줄인 값이라 지금 보이는 비율 차이는 작다. 중복을 없애려면 새 BrandMark 컴포넌트와 page.tsx, ConsoleShell.tsx, HomePage.module.css, globals.css를 함께 바꿔야 해서 유지보수 분류의 파일 셋 이상 기준에 걸리고, 어느 크기를 기준으로 삼을지도 정해야 한다. 원인은 D-022와 같은 공용 브랜드 컴포넌트 부재이므로 D-022 결정과 함께 정하는 것이 맞다.",
       "evidence": [
@@ -2861,25 +3003,36 @@
         "frontend/src/app/globals.css:100-102 @ af15d7f5",
         "frontend/src/app/HomePage.module.css:4 @ af15d7f5",
         "frontend/src/app/HomePage.module.css:61 @ af15d7f5",
-        "frontend/src/app/globals.css:292 @ af15d7f5"
+        "frontend/src/app/globals.css:292 @ af15d7f5",
+        "the console and the introduction page draw the logo mark from one component that only changes its size: 실패 (마크 사본 두 곳)",
+        "커밋 5e49f8f6"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "5e49f8f635f02c315142c774c72dabdd378cbd69"
+      ],
+      "tests": [
+        "the console and the introduction page draw the logo mark from one component that only changes its size",
+        "the console and the introduction page draw the logo mark from one component that only changes its size: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): D-022와 같은 결정. 콘솔 비율을 기준으로 소개 화면은 크기만 키운다",
-      "decision_question": "로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(폭 6px, 최대 27px)과 콘솔(폭 5px, 최대 23px) 중 어느 비율을 기준으로 할지 정해야 한다."
+      "decision_question": "로고 마크를 공용 BrandMark 컴포넌트 하나로 합쳐 소개 화면과 콘솔 셸이 크기만 달리 쓰게 할지, 합친다면 소개 화면(폭 6px, 최대 27px)과 콘솔(폭 5px, 최대 23px) 중 어느 비율을 기준으로 할지 정해야 한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "로고 마크를 BrandMark 하나로 묶고 소개 화면은 크기만 키운다",
+      "decision": "fix: D-022와 같은 결정. 콘솔 비율을 기준으로 소개 화면은 크기만 키운다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "G-078",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "main에서도 고쳐지지 않았다. LinkButton.tsx 17-18행은 ScopedLink.tsx 11-13행의 상대 경로 처리와 workspaceHref 호출을 그대로 옮긴 코드로 남아 있고, #443(be67d816)에서 들어온 뒤 위층에서 바뀌지 않았다. ConsoleShell.tsx 66, 72, 74행은 workspaceHref로 만든 href를 ScopedLink(별칭 Link)에 다시 넘기고, NavMenu.tsx 24행도 같은 중첩 호출이다. 두 번째 호출은 이미 붙은 값을 덮지 않아 지금 결과는 같으므로 실패 경로는 없고 같은 코드가 두 곳에 갈라진 유지보수 지적으로 확인했다. 지적 전체를 고치려면 ScopedLink.tsx, LinkButton.tsx, ConsoleShell.tsx 세 파일(NavMenu.tsx까지 넣으면 네 파일)을 바꿔야 해서 유지보수 분류의 세 파일 기준에 걸린다. 두 파일로 줄이려면 LinkButton과 ScopedLink 중복만 합치고 ConsoleShell과 NavMenu의 중첩 호출은 남기는 안이 있다.",
       "evidence": [
@@ -2888,22 +3041,33 @@
         "frontend/src/components/shell/ConsoleShell.tsx:13,66,72,74 @ af15d7f5",
         "frontend/src/components/shell/NavMenu.tsx:8,24 @ af15d7f5",
         "frontend/src/lib/workspace-href.ts:13 @ af15d7f5",
-        "frontend/src/components/screen/LinkButton.tsx:18 @ 0f1d1bf"
+        "frontend/src/components/screen/LinkButton.tsx:18 @ 0f1d1bf",
+        "link buttons and scoped links resolve workspace addresses through one shared hook: 실패 (변환 코드 복사본)",
+        "커밋 77dd660c"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "77dd660cc788959085afee54099c1ac7dad5599a"
+      ],
+      "tests": [
+        "link buttons and scoped links resolve workspace addresses through one shared hook",
+        "link buttons and scoped links resolve workspace addresses through one shared hook: 실패 확인 뒤 통과"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): LinkButton과 ScopedLink의 같은 주소 변환만 하나로 합친다. ConsoleShell과 NavMenu는 그대로 둔다",
       "decision_question": "LinkButton과 ScopedLink의 href 변환을 공용 훅 하나로 합치고 ConsoleShell(그리고 NavMenu)의 workspaceHref 중첩 호출을 inheritFilters prop으로 바꾸는 세 파일 이상 정리를 할지, LinkButton과 ScopedLink 두 파일 중복만 합칠지, 그대로 둘지 정한다.",
       "evidence_notes": [
         "git log af15d7f5 -- LinkButton.tsx: be67d816(#443)가 workspaceHref 복사를 넣은 뒤 변경 없음",
         "frontend/src/components/screen/LinkButton.tsx:18: pinned_head와 main 같은 코드"
-      ]
+      ],
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "LinkButton과 ScopedLink의 주소 변환을 useScopedHref 하나로 합친다",
+      "decision": "fix: LinkButton과 ScopedLink의 같은 주소 변환만 하나로 합친다. ConsoleShell과 NavMenu는 그대로 둔다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "D-075",
@@ -2944,8 +3108,8 @@
       "id": "D-237",
       "merged_ids": [],
       "layer": 443,
-      "branch": "feat/product-design",
-      "status": "open",
+      "branch": "fix/s456-t-inho-shell-design",
+      "status": "fixed",
       "verdict": "confirmed",
       "reason": "콘솔 화면끼리의 제목 크기 차이는 main에서 풀렸다. #443 squash(be67d816)가 ScreenHeader의 고정 28과 .workspace-heading h1을 같은 --screen-title-size(28px)로 맞춰서, 고객에서 사용량으로 넘어가도 제목 크기가 바뀌지 않는다. 그래도 제목 구현은 여전히 셋이다. admin/organizations와 admin/users의 .page-heading h1은 전역 h1 규칙(26px에서 34px 사이 clamp)을 따라 1440px에서 34px이고, 같은 운영자 영역인 admin 개요(WorkspaceHeader)는 28px이다. 12개 파일이 넘기는 kicker는 globals.css:147에서 숨는데 admin/organizations의 eyebrow는 보이고, 제목 줄 생성 버튼도 고객 등록은 ActionPanel 기본 버튼인데 미터 등록과 운영자 계정 생성은 primary다. 지적이 권하는 헤더 통합과 kicker 제거는 WorkspaceHeader를 쓰는 14개 파일에 걸친 구조 변경이고, 제목 줄 생성 행동을 primary로 할지 정한 문서 규칙이 없는 디자인 결정이라 needs-decision이다.",
       "evidence": [
@@ -2966,18 +3130,31 @@
         "frontend/src/components/auth/CreateOperatorButton.tsx:92 @ af15d7f5",
         "frontend/README.md:125 @ af15d7f5",
         "frontend/README.md:142 @ af15d7f5",
-        "frontend/e2e/auth.contract.spec.ts:744 @ af15d7f5"
+        "frontend/e2e/auth.contract.spec.ts:744 @ af15d7f5",
+        "operator list titles use the shared screen title size: 실패 (34px)",
+        "registering a customer is the primary action in the customer list title row: 실패 (기본 버튼)",
+        "커밋 d1d409ac"
       ],
-      "commits": [],
-      "tests": [],
-      "behavior_change": false,
+      "commits": [
+        "d1d409ac7dfbfef2f488f07a9020ce5a14cd7737"
+      ],
+      "tests": [
+        "operator list titles use the shared screen title size; registering a customer is the primary action in the customer list title row",
+        "operator list titles use the shared screen title size: 실패 확인 뒤 통과",
+        "registering a customer is the primary action in the customer list title row: 실패 확인 뒤 통과"
+      ],
+      "behavior_change": true,
       "judged_at": {
         "layer_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "top_sha": "af15d7f5910f1b77aa0f6f8fde7f35b8d98bbda4",
         "base": "origin/main"
       },
-      "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(fix): 제목 컴포넌트 통합은 하지 않고 운영 화면 제목 크기와 고객 등록 버튼 위계만 맞춘다",
-      "decision_question": "화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker와 admin의 .page-heading을 없앨지, 아니면 admin 제목 크기와 고객 등록 버튼만 맞추는 작은 수정(ActionPanel triggerType에 primary 추가)으로 끝낼지 정한다."
+      "decision_question": "화면 제목을 ScreenHeader 하나로 합쳐 WorkspaceHeader의 kicker와 admin의 .page-heading을 없앨지, 아니면 admin 제목 크기와 고객 등록 버튼만 맞추는 작은 수정(ActionPanel triggerType에 primary 추가)으로 끝낼지 정한다.",
+      "fails_without_fix": true,
+      "top_head": "main af15d7f5 same",
+      "summary": "운영자 목록 제목을 28px로 맞추고 고객 등록을 primary로 둔다",
+      "decision": "fix: 제목 컴포넌트 통합은 하지 않고 운영 화면 제목 크기와 고객 등록 버튼 위계만 맞춘다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499"
     },
     {
       "id": "G-079",
@@ -14161,7 +14338,7 @@
       "merged_ids": [],
       "layer": 443,
       "branch": "feat/product-design",
-      "status": "open",
+      "status": "needs-decision",
       "verdict": "confirmed",
       "title": "실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다",
       "reason": "main에서도 '시연'이라는 낱말이 그대로 남아 있다. 관리 권한(admin)이 있는 모든 도입사 관리자에게 헤더 토글 '시연 안내 보기'가 보이고, 켜면 안내 영역 aria-label '시연 안내', '시연 진행 순서'와 '시연 준비 확인' 요약이 나온다. 다만 실패 경로가 없는 문구 지적이고 docs/contributing에 화면 문구 규칙이 없으며, 이 이름은 공개 소개 화면의 '화면 시연 모드' 안내, frontend README, e2e 시험까지 한결같이 쓰고 있어 코드끼리 어긋난 곳이 없다. 그래서 문구가 틀렸다고 확정할 근거는 없고, 이 안내를 시연용 기능으로 둘지 실제 도입사의 업무 안내로 볼지 정하는 제품 결정이 남는다. 이름을 바꾸면 GuideMode.tsx, ConsoleShell.tsx, page.tsx 세 화면 파일과 시험, README가 함께 바뀌고, 시연 전용으로 두면 실제 환경에서 숨기는 동작 변경이 될 수 있다.",
@@ -14182,7 +14359,10 @@
         "base": "origin/main"
       },
       "left": "1단계 판정 끝(main af15d7f5). PR 묶음 '콘솔 셸과 디자인'(fix/s456-t-inho-shell-design) 승인됨, 고칠 차례. 결정안(keep): 시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다",
-      "decision_question": "헤더 안내 토글과 안내 영역을 시연용 기능으로 두고 '시연' 낱말을 유지할지, 도입사 관리자용 업무 안내로 보고 소개 화면과 README까지 문구를 바꿀지 정해야 한다."
+      "decision_question": "헤더 안내 토글과 안내 영역을 시연용 기능으로 두고 '시연' 낱말을 유지할지, 도입사 관리자용 업무 안내로 보고 소개 화면과 README까지 문구를 바꿀지 정해야 한다.",
+      "decision": "keep: 시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다",
+      "pr": "https://github.com/asm17-ms2/meterengine/pull/499",
+      "question": "세션이 지금 문구를 유지하기로 정하고 근거를 PR #499 본문에 적었다(시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다."
     },
     {
       "id": "NT-inho-002",
@@ -14468,6 +14648,60 @@
     }
   ],
   "checks": [
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 12개, merge한 트리의 프론트와 백엔드",
+      "result": "pass",
+      "detail": "12개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "pass",
+      "detail": "12 passed",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "71 passed",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 92, fail 0",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm build (origin/main merge 커밋 7fb47e45)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
+    },
     {
       "kind": "screen",
       "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 브랜치 백엔드",
@@ -18492,6 +18726,11 @@
       "branch": "fix/s456-t-inho-work-screens",
       "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99",
       "at": "2026-10-29T23:41:27+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-shell-design",
+      "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531",
+      "at": "2026-10-30T10:05:23+09:00"
     }
   ],
   "usage_log": [],
@@ -18545,7 +18784,8 @@
     "auth-security": "https://github.com/asm17-ms2/meterengine/pull/493",
     "demo-infra": "https://github.com/asm17-ms2/meterengine/pull/495",
     "list-screens": "https://github.com/asm17-ms2/meterengine/pull/496",
-    "work-screens": "https://github.com/asm17-ms2/meterengine/pull/498"
+    "work-screens": "https://github.com/asm17-ms2/meterengine/pull/498",
+    "shell-design": "https://github.com/asm17-ms2/meterengine/pull/499"
   },
   "final_checks": [
     {

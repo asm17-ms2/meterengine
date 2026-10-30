@@ -1,14 +1,14 @@
-미완료 16건, 결과: 끝 상태 357/372건 (fixed 322, refuted 4, already-fixed 29(그중 fixed-above 3), needs-decision 2, blocked 0(그중 no-evidence 0))
-push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37), fix/s456-t-inho-list-screens 1번(마지막 58be815), fix/s456-t-inho-work-screens 1번(마지막 acad05a)
-정할 것: 5건 (Ck3-451-02, Nk3-011, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
+결과: 끝 상태 372/372건 (fixed 332, refuted 4, already-fixed 29(그중 fixed-above 3), needs-decision 7, blocked 0(그중 no-evidence 0))
+push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(마지막 c0a9f4a), fix/s456-446-t-inho 9번(마지막 a7a789e), fix/s456-448-t-inho 9번(마지막 cea0a76), fix/s456-t-inho-real-spec-baseline 1번(마지막 3373654), fix/s456-t-inho-events-query 1번(마지막 e4c8c17), fix/s456-t-inho-billing-api 1번(마지막 a0ec597), fix/s456-t-inho-webhook-audit-ops 1번(마지막 6039fad), fix/s456-t-inho-auth-security 1번(마지막 abc82c5), fix/s456-t-inho-demo-infra 1번(마지막 aac9c37), fix/s456-t-inho-list-screens 1번(마지막 58be815), fix/s456-t-inho-work-screens 1번(마지막 acad05a), fix/s456-t-inho-shell-design 1번(마지막 7fb47e4)
+정할 것: 11건 (X-012, D-071, G-075, G-085, C443-002, Ck3-451-02, Nk3-011, NT-inho-001, NT-inho-004, NT-inho-008, NT-inho-010). 로컬 DB 다시 만들기: fix/s456-444-t-inho V28__create_webhook_tables.sql
 
-상태: running, 갱신 2026-10-29T23:41:27+09:00
+상태: running, 갱신 2026-10-30T10:05:23+09:00
 
 ## 층별 상태
 
 | 층 | 브랜치 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | 미완료 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #443 | fix/s456-443-t-inho | 92 | 75 | 1 | 1 | 0 | 0 | 15 |
+| #443 | fix/s456-443-t-inho | 92 | 85 | 1 | 1 | 5 | 0 | 0 |
 | #444 | fix/s456-444-t-inho | 40 | 33 | 0 | 7 | 0 | 0 | 0 |
 | #446 | fix/s456-446-t-inho | 50 | 43 | 0 | 7 | 0 | 0 | 0 |
 | #448 | fix/s456-t-inho-webhook-audit-ops | 24 | 22 | 1 | 1 | 0 | 0 | 0 |
@@ -31,6 +31,8 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-073 | #443 | cc3de53 | README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다 | 없음(문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조; 글꼴 버전: PretendardVaria) |
 | G-074 | #443 | e72b5f2 | 루트 error.tsx가 digest를 안내 문단에 붙인다 | the root error page shows the error digest so a report can be matched with the server log: 실패 Expected pattern /\([0-9A-Za-z]+\)/ Received '화면을 불러오지 못했습니다서버 연결과 |
 | G-086 | #443 | e72b5f2 | 루트 error.tsx가 digest를 안내 문단에 붙인다 | the root error page shows the error digest so a report can be matched with the server log: 실패 Expected pattern /\([0-9A-Za-z]+\)/ Received '화면을 불러오지 못했습니다서버 연결과 |
+| D-011 | #443 | 455ced3, 079b1fa, ad80761, 811994d, c91c6f9 | 폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다 | on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임) |
+| D-065 | #443 | 455ced3, 079b1fa, ad80761, 811994d, c91c6f9 | 폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다 | on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임) |
 | D-153 | #443 | 57c1ad9 | 헤더 실제 높이를 --workspace-header-height에 쓰고 셸 격자와 scroll-padding이 그 변수를 쓴다 | the header height variable matches the real header at 390px: 실패 Expected true Received false (헤더 높이와 변수 차이 1px 초과, 900px도 같은 결과) |
 | X-047 | #443 | 57c1ad9 | 헤더 실제 높이를 --workspace-header-height에 쓰고 셸 격자와 scroll-padding이 그 변수를 쓴다 | the header height variable matches the real header at 390px: 실패 Expected true Received false (헤더 높이와 변수 차이 1px 초과, 900px도 같은 결과) |
 | D-002 | #443 | 0dfdbd3 | 사이드바 높이를 화면에 맞추고 넘치면 사이드바 안에서 스크롤 | the sidebar fits a short screen and scrolls by itself so its last link stays visible: 실패 Expected <= 720 Received 886.90625 (사이드바 아래 끝) |
@@ -49,12 +51,14 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-233 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | X-043 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | G-071 | #443 | d84372b | globals.css에서 뒤 규칙에 덮여 효과가 없던 :root, body, a, .workspace-content, .setup-list p, .detail-strip dt, .mobile-menu 재정의를 지웠다 | 없음(보이는 결과가 바뀌지 않는 정리: 정리 전후 18개 라우트 1440x900, 390x844 화소 비교에서 캡처 시각 글자 말고 같음(evidence/G-071/pixel-compare.txt)) |
+| G-072 | #443 | 9fdea12, c91c6f9 | globals.css의 토큰과 같은 색 리터럴을 var()로 바꾼다 | globals.css uses its own color tokens instead of repeating the same literal values: 실패 (토큰과 같은 리터럴 21줄) |
 | L-001 | #443 | f07a01f | 도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다 | a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝) |
 | D-083 | #443 | 8abe196 | .workspace-actions를 세로 가운데로 맞추고 필드 줄은 버튼만 입력 아래선에 맞췄다 | 없음(보이는 정렬만 바뀌어 시험으로 잡을 수 없다. evidence/D-083 before, after 캡처(members, admin-users, customers)) |
 | X-076 | #443 | 8abe196 | .workspace-actions를 세로 가운데로 맞추고 필드 줄은 버튼만 입력 아래선에 맞췄다 | 없음(보이는 정렬만 바뀌어 시험으로 잡을 수 없다. evidence/D-083 before, after 캡처(members, admin-users, customers)) |
 | D-082 | #443 | 3901315 | .setup-list 조치 링크를 기본 글자 크기와 44px 높이로 맞췄다 | 없음(git grep -n setup-list HEAD -- frontend/src/**/*.tsx: 이 층에는 쓰는 화면이 없다; git grep -n setup-list origin/feat/rds-auto-stop:) |
 | X-073 | #443 | 3901315 | .setup-list 조치 링크를 기본 글자 크기와 44px 높이로 맞췄다 | 없음(git grep -n setup-list HEAD -- frontend/src/**/*.tsx: 이 층에는 쓰는 화면이 없다; git grep -n setup-list origin/feat/rds-auto-stop:) |
 | X-078 | #443 | b6d0822 | 옆 패널 h2를 clamp(22px, 1.8vw, 26px)로 낮춰 과업 제목보다 작게 했다 | the login side panel title is smaller than the task title: 실패 Expected < 34 Received 42 (1440px 패널 h2) |
+| G-080 | #443 | ff14477 | 늘 숨겨진 kicker prop과 호출부 인자, 규칙을 지운다 | workspace headers no longer carry a kicker that is always hidden: 실패 (kicker 인자 15곳과 숨김 규칙) |
 | D-080 | #443 | e26db2c | 지표 띠 초록 배경을 마지막 칸이 아니라 .is-settled 칸에만 건다 | 없음(git grep -n finance-flow HEAD -- frontend/src: 이 층에는 globals.css 정의만 있고 쓰는 화면이 없다; git grep -n finance-flow origin/feat/) |
 | D-084 | #443 | d4129fb | 767px 이하 WorkspaceTable 레코드 제목을 14px로 낮췄다 | 없음(보이는 크기만 바뀌어 시험으로 잡을 수 없다. evidence/D-084 before, after 캡처(members, integrations 390). integrations PNG는 키 정보가 보일 수 있어 보고) |
 | D-097 | #443 | c002716 | .month-apply에 hover, 누름, 비활성 상태를 주었다 | 없음(보이는 상태만 바뀌어 저장소 시험으로 두지 않았다. /login에 .month-apply 버튼을 넣어 계산된 스타일을 쟀다(.s456-work/probe-month.mjs). 고치기 전 hover와 disabled가) |
@@ -63,6 +67,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | G-076 | #443 | 4455641 | 어디에서도 쓰지 않는 선택자(.console-content, .tenant-*, .workspace-grid-wide, .setup-state)를 지웠다 | 없음(쓰지 않는 CSS 삭제라 실패하는 시험이 없다. 지운 선택자는 층 head와 정점 b8abfdf frontend/src(globals.css 제외)에서 git grep 0건. 삭제 전후 19개 라우트 화소 비교에서 ) |
 | C443-001 | #443 | 55ce723 | 스켈레톤을 aria-hidden div로 감싸고 상태 영역에서 aria-busy, aria-label을 뺐다 | 없음(개발 서버 /customers?state=loading의 상태 영역 접근성 트리(.s456-work/verify-skeleton.mjs): 고치기 전 status 이름 '데이터를 불러오고 있습니다' 안에 list와 ) |
 | G-087 | #443 | cc3de53 | README의 / 설명, 스타일 규칙, 테마, 글꼴 줄과 화면 표를 코드에 맞췄다 | 없음(문서 변경: 고친 README 줄을 layout.tsx 8-14행, AppProviders.tsx 10-19행, page.tsx, HomePage.module.css와 대조; 글꼴 버전: PretendardVaria) |
+| D-039 | #443 | 455ced3, 079b1fa, ad80761, 811994d, c91c6f9 | 폰 헤더에 업무 환경만 남기고 계정 조작을 메뉴 서랍으로 옮긴다 | on a phone the sticky header keeps only the brand and environment and the menu drawer holds the account controls: 실패 (헤더에 계정 조작이 보임) |
 | G-083 | #443 | 57c1ad9 | 헤더 높이 리터럴을 --workspace-header-height로 모았다 | 없음(auth.contract.spec.ts 'the header height variable matches the real header at 390px', 'at 900px'; evidence/D-153 before, ) |
 | X-058 | #443 | f07a01f | 도입사 이름을 span으로 감싸 말줄임을 걸고 아이콘이 줄지 않게 했다 | a long organization name is cut with an ellipsis and keeps the header icon inside the link: 실패 Expected <= 300.71875 Received 317.90625 (320px, 아이콘 오른쪽 끝) |
 | X-079 | #443 | abb155d | 그룹 제목 선택자의 구체성을 올려 24px 시작선과 11px 글자를 적용했다 | sidebar group titles start on the same line as the sidebar label: 실패 Expected "24px" Received "16px" (padding-inline-start) |
@@ -90,7 +95,12 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 | D-098 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-169 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
 | D-260 | #443 | 6730d65 | globals.css의 파랑 리터럴을 var(--blue), var(--focus), 테마 연보라 값으로 바꿨다 | 없음(보이는 색만 바뀌어 시험으로 잡을 수 없다. evidence/D-009 before, after 캡처(login, signup, pending, organizations, admin-organizations, adm) |
+| D-244 | #443 | 9fdea12, c91c6f9 | globals.css의 토큰과 같은 색 리터럴을 var()로 바꾼다 | globals.css uses its own color tokens instead of repeating the same literal values: 실패 (토큰과 같은 리터럴 21줄) |
+| D-022 | #443 | 5e49f8f | 로고 마크를 BrandMark 하나로 묶고 소개 화면은 크기만 키운다 | the console and the introduction page draw the logo mark from one component that only changes its size: 실패 (마크 사본 두 곳) |
+| G-084 | #443 | 5e49f8f | 로고 마크를 BrandMark 하나로 묶고 소개 화면은 크기만 키운다 | the console and the introduction page draw the logo mark from one component that only changes its size: 실패 (마크 사본 두 곳) |
+| G-078 | #443 | 77dd660 | LinkButton과 ScopedLink의 주소 변환을 useScopedHref 하나로 합친다 | link buttons and scoped links resolve workspace addresses through one shared hook: 실패 (변환 코드 복사본) |
 | D-075 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
+| D-237 | #443 | d1d409a | 운영자 목록 제목을 28px로 맞추고 고객 등록을 primary로 둔다 | operator list titles use the shared screen title size: 실패 (34px) |
 | G-079 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
 | X-070 | #443 | f82e677 | 제목 크기 변수 --screen-title-size를 두고 두 제목 컴포넌트가 함께 쓴다 | screen titles use the same size whichever header component draws them: 실패 Expected "28px" Received "34px" (1440px 사용자 관리 대 고객) |
 | X-017 | #443 | cd1a0fa | 문단, 입력 안내, 경고 안 링크에 밑줄을 되살렸다 | a link inside a sentence keeps its underline: 실패 Expected "underline" Received "none" |
@@ -330,8 +340,14 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 | id | 층 | 질문 |
 | --- | --- | --- |
+| X-012 | #443 | 정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다. |
+| D-071 | #443 | 정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다. |
+| G-075 | #443 | 정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다. |
+| G-085 | #443 | 정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다. |
+| C443-002 | #443 | 정해 둔 KS X 1001 subset 가변 글꼴이 Pretendard 1.3.9에 공식 파일로 없다(npm pretendard에는 전체 가변, 굵기별 정적 subset, 가변 dynamic subset 92조각만 있고 pretendard-std 가변 글꼴은 한글이 없다. OFL 예약 이름 때문에 직접 만든 subset은 이름을 바꿔야 한다). 사용자가 PR #499에서 빼고 결정 대기로 두기로 했다. 공식 dynamic subset, 쓰는 굵기만 정적 subset, 직접 만든 subset 가운데 박성종 님과 정한 뒤 따로 올린다. |
 | Ck3-451-02 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(PATCH는 If-Match 필수 전체 교체로 둔다(박성종 님 #451 설계, API 설명에 이미 적힘)). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | Nk3-011 | #451 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #491 본문에 적었다(draft_invoice는 read API 키 호환 때문에 응답에 남긴다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
+| NT-inho-001 | #443 | 세션이 지금 문구를 유지하기로 정하고 근거를 PR #499 본문에 적었다(시연 안내는 발표용 기능이라 '시연' 낱말을 유지한다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | NT-inho-004 | #448 | 세션이 지금 동작을 유지하기로 정하고 근거를 PR #492 본문에 적었다(감사 화면 기본 보기는 지금처럼 모든 기록으로 둔다(#448 설계). 행동 조건으로 좁힌다). 리뷰어 박성종 님이 동의하면 그대로 닫고, 바꾸자고 하면 후속 PR로 고친다. |
 | NT-inho-008 | #454 | 세션이 HSTS를 이번에 더하지 않기로 정하고 근거를 PR #493 본문에 적었다. 배포 도메인 기준과 max-age를 정할 때 박성종 님이 따로 결정한다. |
 | NT-inho-010 | #454 | 인증 호출 제한에서 IPv6 클라이언트 주소를 접두 대역(/64 등)으로 묶어 셀지. 운영 배포에 IPv6가 들어오는지 먼저 확인해야 한다. |
@@ -345,7 +361,7 @@ push: fix/s456-443-t-inho 33번(마지막 b99d2ef), fix/s456-444-t-inho 14번(�
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
-| NT-inho-001 | #443 | open | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
+| NT-inho-001 | #443 | needs-decision | 실제 도입사 관리자에게 보이는 헤더 토글과 안내 영역이 '시연'이라는 낱말을 쓴다 |
 | NT-inho-002 | #444 | already-fixed | 반영된 #442 workspace-operations.test.mjs가 #444 head에서 실패한다(restoreWebhookEndpoint 분기 없음) |
 | NT-inho-003 | #444 | fixed | 도입사에게 보이는 웹훅 실패 사유가 인증서 오류와 우리 쪽 예외까지 connection_error 하나다 |
 | NT-inho-004 | #448 | needs-decision | 감사 화면을 직접 열면 기본 목록이 화면 조회 때마다 쌓이는 API 요청 기록으로 채워진다 |
