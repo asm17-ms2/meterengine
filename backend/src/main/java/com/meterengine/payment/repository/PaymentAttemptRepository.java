@@ -125,9 +125,15 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
       OffsetDateTime requestedFrom, OffsetDateTime requestedBefore);
 
   @Query(
-      "select count(a) from PaymentAttempt a where a.status = 'pending'"
+      "select count(a) from PaymentAttempt a where a.status = 'pending' and a.mode = :mode"
           + " and a.requestedAt < :requestedBefore")
-  long countPendingRequestedBefore(OffsetDateTime requestedBefore);
+  long countPendingRequestedBefore(String mode, OffsetDateTime requestedBefore);
+
+  @Query(
+      "select min(a.requestedAt) from PaymentAttempt a where a.status = 'pending'"
+          + " and a.mode = :mode and a.requestedAt < :requestedBefore")
+  Optional<OffsetDateTime> findOldestPendingRequestedAt(
+      String mode, OffsetDateTime requestedBefore);
 
   @Query(
       nativeQuery = true,
