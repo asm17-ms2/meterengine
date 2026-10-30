@@ -527,7 +527,7 @@ test("operator dialogs report invalid input inline instead of browser bubbles", 
   await expect(attach.getByText("항목을 선택하세요.")).toBeVisible();
   await expect(attach.getByLabel(/^연결할 도입사/)).toHaveAttribute("aria-invalid", "true");
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
-  expect(calls.some((call: { path: string; method: string }) => call.method === "POST" && /operators|memberships|members/.test(call.path))).toBe(false);
+  expect(calls.some((call: { path: string; method: string }) => call.method === "POST" && (call.path === "/v1/user-accounts" || /^\/v1\/organizations\/[^/]+\/members$/.test(call.path)))).toBe(false);
 });
 
 test("a missing required field is reported inline like other form errors", async ({ page, request }) => {
