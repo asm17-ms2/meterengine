@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = path => readFileSync(new URL(`../src/components/${path}`, import.meta.url), "utf8");
+const appSource = path => readFileSync(new URL(`../src/app/${path}`, import.meta.url), "utf8");
 
 test("paged tables name their totals as totals of the whole filtered set", () => {
   const billing = source("billing/BillingTable.tsx");
@@ -88,5 +89,12 @@ test("mobile usage cards label each dimension row with its dimension values unde
   assert.ok(!usage.includes('item.kind === "meter" ? "차원별 집계값" : line.label'));
   assert.ok(usage.includes("{toDimensionText(line.dimensionValues)}"));
   assert.ok(usage.includes('<p className="field-hint">차원별 집계값</p>'));
+});
+
+test("the event issue summary uses the same reason names as the filter and the problem column", () => {
+  const issues = appSource("(console)/event-issues/page.tsx");
+  assert.ok(!issues.includes("미터 없음 {result.data.summary"));
+  assert.ok(issues.includes("{REASONS.unknown_event_type} {result.data.summary.unknown_event_type}건"));
+  assert.ok(issues.includes("{REASONS.unpriced_usage} {result.data.summary.unpriced_usage}건"));
 });
 
