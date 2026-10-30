@@ -332,6 +332,52 @@ class WebhookIntegrationTest {
   }
 
   @Test
+  void 수신_주소_목록은_보관_상태로_거른다() {
+    String url = endpoint.url();
+    WebhookEndpointResponse archived =
+        webhookEndpointService.create(
+            organizationId, new CreateWebhookEndpointRequest(url, List.of("webhook_test"), null));
+    webhookEndpointService.delete(organizationId, archived.id());
+
+    assertThat(endpointIds("active")).contains(endpoint.id()).doesNotContain(archived.id());
+    assertThat(endpointIds("archived")).contains(archived.id()).doesNotContain(endpoint.id());
+    assertThat(endpointIds("all")).contains(endpoint.id(), archived.id());
+  }
+
+  @Test
+  void 수신_주소_목록은_시도_전_전송이_쌓여도_기록된_마지막_시도의_실패를_알린다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    webhookEndpointService.test(organizationId, endpoint.id());
+    WebhookClaim failed = webhookDeliveryRepository.claim(List.of()).orElseThrow();
+    webhookDeliveryRepository.complete(failed, new WebhookOutcome(null, "connection_error", 1));
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending'");
+    for (int i = 0; i < 21; i++) webhookEndpointService.test(organizationId, endpoint.id());
+
+    assertThat(latestAttemptFailed()).isTrue();
+  }
+
+  @Test
+  void 수신_주소_목록은_실패_뒤_성공한_시도가_있으면_실패로_알리지_않는다() {
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
+        organizationId);
+    webhookEndpointService.test(organizationId, endpoint.id());
+    webhookDeliveryRepository.complete(
+        webhookDeliveryRepository.claim(List.of()).orElseThrow(),
+        new WebhookOutcome(null, "connection_error", 1));
+    webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND attempt_count > 0");
+    webhookDeliveryRepository.complete(
+        webhookDeliveryRepository.claim(List.of()).orElseThrow(), new WebhookOutcome(200, null, 1));
+
+    assertThat(latestAttemptFailed()).isFalse();
+  }
+
+  @Test
   void 두_워커의_claim이_겹치지_않고_만료된_워커의_결과가_새_결과를_덮지_않는다() throws Exception {
     jdbcTemplate.update(
         "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() + interval '1 day' WHERE status = 'pending' AND organization_id <> ?",
@@ -638,5 +684,19 @@ class WebhookIntegrationTest {
     } catch (Exception exception) {
       throw new IllegalStateException("다른 연결에서 선점 상태를 읽지 못했다", exception);
     }
+  }
+
+  private boolean latestAttemptFailed() {
+    return webhookEndpointService.list(organizationId).stream()
+        .filter(candidate -> candidate.id().equals(endpoint.id()))
+        .findFirst()
+        .orElseThrow()
+        .latestAttemptFailed();
+  }
+
+  private List<UUID> endpointIds(String status) {
+    return webhookEndpointService.list(organizationId, status).stream()
+        .map(WebhookEndpointResponse::id)
+        .toList();
   }
 }

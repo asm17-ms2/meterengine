@@ -102,6 +102,23 @@ const server = createServer(async (request, response) => {
       const items = q ? [{ value: FAR_CUSTOMER_ID, label: "검색으로만 보이는 고객", archived: false }] : [{ value: ZERO_CUSTOMER_ID, label: "첫 페이지 고객", archived: false }];
       return send(response, 200, { items, total: items.length, total_unfiltered: 201, page: 1, size: 200, summary: {} });
     }
+    if (current.scenario === "draft-failure") {
+      if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
+      if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-09"] });
+      if (path === "/v1/invoices/draft/search") return error(response, 503, "service_unavailable", "청구 예정액을 계산하지 못했습니다.");
+      if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
+    }
+    if (current.scenario === "finalize-month") {
+      const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `확정할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [] }));
+      if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
+      if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-09"] });
+      if (path === "/v1/invoices/draft/search") return send(response, 200, {
+        items: customers, total: 7, total_unfiltered: 7, page: 1, size: 20,
+        summary: { month: "2026-09", calculated_at: NOW, amount: 70_000, customer_count: 7, billable_customer_count: 7, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 70_000, month_customer_count: 7, month_billable_customer_count: 7, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month" },
+      });
+      if (path === "/v1/invoices" && request.method === "POST") return send(response, 201, { finalized_count: 7, supply_amount: 70_000, tax_amount: 7_000, total_amount: 77_000, invoices: customers.map((customer, index) => ({ ...invoice, id: `15151515-1515-4515-8515-${String(index).padStart(12, "0")}`, invoice_number: `INV-2026-09-${index}`, customer_id: customer.customer_id, customer_name: customer.customer_name, month: "2026-09" })) });
+      if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
+    }
     if (current.scenario === "finalized-month-zero-customer") {
       const url = new URL(request.url, "http://127.0.0.1");
       if (path === "/v1/customers/options") return send(response, 200, { items: [{ value: ZERO_CUSTOMER_ID, label: "인보이스 없는 0원 고객", archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 200, summary: {} });
