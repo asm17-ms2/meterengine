@@ -1,15 +1,15 @@
 {
   "package": "T-inho",
   "status": "running",
-  "updated_at": "2026-10-30T10:05:23+09:00",
+  "updated_at": "2026-10-30T10:17:22+09:00",
   "handover_sha": "41d92a544e325a60395f8f5c9a97d48defe9023b",
   "stop_reason": null,
   "resume_hint": null,
   "current": {
     "id": null,
-    "step": "fix",
-    "branch": "fix/s456-t-inho-work-screens",
-    "note": "PR 8 #499 올림. main이 움직여 PR 7 #498이 충돌. worktree에서 origin/main merge(df26abce, 미push) 뒤 검사 예정. 글꼴 5건은 needs-decision."
+    "step": "done",
+    "branch": null,
+    "note": "8개 PR 모두 올림(#488 #491 #492 #493 #495 #496 #498 #499). #498은 main 이동으로 merge(df26abce) 뒤 검사 통과하고 push. 글꼴 5건 등 needs-decision 7건. 실화면 환경 정리 예정."
   },
   "finished_ids": [
     "C443-000",
@@ -441,8 +441,8 @@
       "pr": "https://github.com/asm17-ms2/meterengine/pull/496"
     },
     "fix/s456-t-inho-work-screens": {
-      "origin_sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99",
-      "local_sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99",
+      "origin_sha": "df26abce150ec0c6c80372e2eb139c04902696c8",
+      "local_sha": "df26abce150ec0c6c80372e2eb139c04902696c8",
       "unpushed": [],
       "pr": "https://github.com/asm17-ms2/meterengine/pull/498"
     },

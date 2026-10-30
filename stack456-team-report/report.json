@@ -2,7 +2,7 @@
   "package": "T-inho",
   "owner": "문인호",
   "status": "running",
-  "updated_at": "2026-10-30T10:05:23+09:00",
+  "updated_at": "2026-10-30T10:17:22+09:00",
   "start_heads": {
     "feat/product-design": "0f1d1bfcb896768aac8d781d3a72ab7f2286d5cc",
     "feat/webhook-jobs": "81651ede279e5809de4ff11ab9c9595fc6f30592",
@@ -5503,6 +5503,7 @@
         "frontend/e2e/query-workspace.real.spec.ts:56 @ af15d7f5",
         "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패",
         "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패",
+        "work-copy.test.mjs the pricing meter rail stays a wrapping row of chips at 900px and below: 실패",
         "커밋 80d87456"
       ],
       "commits": [
@@ -5635,6 +5636,7 @@
         "frontend/package.json:19 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:76 @ c27b229",
         "frontend/src/components/pricing/PricingWorkspace.tsx:82 @ c27b229",
+        "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패",
         "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패",
         "work-copy.test.mjs pricing history empty states use the readable Empty component instead of the faint default text: 실패",
         "커밋 28c0fda5"
@@ -5852,6 +5854,8 @@
         "frontend/src/app/(console)/workspace-actions.ts:23 @ af15d7f5",
         "frontend/src/app/(console)/workspace-actions.ts:73 @ af15d7f5",
         "frontend/src/components/billing/BillingSection.tsx:123 @ af15d7f5",
+        "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 (모듈 없음)",
+        "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won: 실패 (step 10이 9995를 막음)",
         "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 (모듈 없음)",
         "base fee and minimum fee accept any whole won and only say the billed amount drops amounts under 10 won: 실패 (step 10이 9995를 막음)",
         "plan-amount.test.mjs plan amounts show the billed amount when billing drops the part under 10 won: 실패 (모듈 없음)",
@@ -6107,6 +6111,7 @@
         "frontend/src/app/globals.css:124 @ af15d7f5",
         "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패",
         "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패",
+        "work-copy.test.mjs the pricing CSS module does not rely on global class selectors that the module hashes away: 실패",
         "커밋 b9774121"
       ],
       "commits": [
@@ -6153,6 +6158,7 @@
         "frontend/e2e/query-workspace.real.spec.ts:206 @ af15d7f5",
         "frontend/e2e/mvp.real.spec.ts:90 @ af15d7f5",
         "frontend/src/components/pricing/PricingWorkspace.tsx:93,95,122 @ c27b229",
+        "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패",
         "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패",
         "work-copy.test.mjs unit prices say they are per billed quantity, not per raw usage: 실패",
         "커밋 0b1b15b1"
@@ -6464,6 +6470,9 @@
         "price-rate.test.mjs unit prices the screen can show exactly are accepted and finer ones are sent to the API instead: 실패 (export 없음)",
         "unit prices typed in other number input forms are judged by their value: 실패 (.5, 1e3을 막음)",
         "a unit price whose decimals the screen would round away is sent to the API: 실패 (큰 정수부 단가 통과)",
+        "price-rate.test.mjs unit prices the screen can show exactly are accepted and finer ones are sent to the API instead: 실패 (export 없음)",
+        "unit prices typed in other number input forms are judged by their value: 실패 (.5, 1e3을 막음)",
+        "a unit price whose decimals the screen would round away is sent to the API: 실패 (큰 정수부 단가 통과)",
         "커밋 ceaabfd9",
         "커밋 db915039"
       ],
@@ -6514,6 +6523,7 @@
         "frontend/e2e/workspace-contract-server.mjs:97 @ af15d7f5",
         "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패",
         "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패",
+        "work-copy.test.mjs a disabled month finalization shows its reason as text the button describes, not only a tooltip: 실패",
         "커밋 58c8297f"
       ],
       "commits": [
@@ -6551,6 +6561,7 @@
         "frontend/src/components/billing/BillingTable.tsx:237 @ af15d7f5",
         "frontend/src/app/globals.css:127 @ af15d7f5",
         "frontend/src/components/table/NumberText.tsx:17 @ af15d7f5",
+        "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패",
         "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패",
         "work-copy.test.mjs pricing history money columns are right aligned numbers: 실패",
         "커밋 28c0fda5"
@@ -11622,6 +11633,7 @@
         "frontend/src/components/pricing/PricingWorkspace.tsx:70 @ af15d7f5",
         "a meter shows both its name and code on the usage screen and on customer detail: 실패 (한 화면은 코드, 다른 화면은 이름만)",
         "a meter shows both its name and code on the usage screen and on customer detail: 실패 (한 화면은 코드, 다른 화면은 이름만)",
+        "a meter shows both its name and code on the usage screen and on customer detail: 실패 (한 화면은 코드, 다른 화면은 이름만)",
         "커밋 ce5972fc"
       ],
       "commits": [
@@ -11668,6 +11680,7 @@
         "backend/src/main/java/com/meterengine/dashboard/service/DashboardService.java:126 @ af15d7f5",
         "frontend/src/app/(console)/settings/page.tsx:28 @ af15d7f5",
         "frontend/e2e/contract-server.mjs:86 @ af15d7f5",
+        "the overview setup step says which supplier and payment settings are missing: 실패 (빠진 설정을 밝히지 않음)",
         "the overview setup step says which supplier and payment settings are missing: 실패 (빠진 설정을 밝히지 않음)",
         "the overview setup step says which supplier and payment settings are missing: 실패 (빠진 설정을 밝히지 않음)",
         "커밋 4ee27ae2"
@@ -11719,6 +11732,7 @@
         "frontend/src/app/(console)/event-issues/page.tsx:47 @ af15d7f5",
         "frontend/src/components/billing/BillingCalculatedStamp.tsx:14 @ af15d7f5",
         "frontend/src/lib/format.ts:22 @ af15d7f5",
+        "customer detail and overview write months and times in the shared Korean format: 실패 (원시 월과 로케일 시각)",
         "customer detail and overview write months and times in the shared Korean format: 실패 (원시 월과 로케일 시각)",
         "customer detail and overview write months and times in the shared Korean format: 실패 (원시 월과 로케일 시각)",
         "커밋 31f0e9f8"
@@ -11864,6 +11878,7 @@
         "frontend/src/app/(console)/pricing/page.tsx:39 @ 17cc788",
         "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 (고른 미터만 계산식)",
         "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 (고른 미터만 계산식)",
+        "every pricing rail meter shows its rate count and the selected meter's formula sits in its price panel: 실패 (고른 미터만 계산식)",
         "커밋 951fc97f"
       ],
       "commits": [
@@ -11902,6 +11917,7 @@
         "frontend/src/components/auth/AttachOrganizationButton.tsx:43 @ af15d7f5",
         "frontend/src/components/workspace/ActionPanel.tsx:151 @ af15d7f5",
         "frontend/e2e/mvp.real.spec.ts:166 @ af15d7f5",
+        "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패",
         "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패",
         "work-copy.test.mjs the finalization result lists only the first few invoices and points to the invoice list for the rest: 실패",
         "커밋 ffb168f6"
@@ -12021,6 +12037,8 @@
         "frontend/src/components/workspace/ActionPanel.tsx:163 @ af15d7f5",
         "frontend/src/app/globals.css:125 @ af15d7f5",
         "frontend/src/components/workspace/WorkspaceHeader.tsx:7 @ af15d7f5",
+        "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 (보관 버튼이 이동 링크 줄에 있음)",
+        "restoring a customer returns focus to the same button, now offering to archive: 실패 (포커스 없음)",
         "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 (보관 버튼이 이동 링크 줄에 있음)",
         "restoring a customer returns focus to the same button, now offering to archive: 실패 (포커스 없음)",
         "the customer archive action sits with the other customer actions, not in the navigation link row: 실패 (보관 버튼이 이동 링크 줄에 있음)",
@@ -12416,6 +12434,7 @@
         "frontend/src/lib/api/transport.ts:33 @ af15d7f5",
         "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 (다른 고객 카드 포함)",
         "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 (다른 고객 카드 포함)",
+        "카드_목록에_customer_id를_주면_그_고객의_카드와_보관_이력만_나온다: 실패 (다른 고객 카드 포함)",
         "커밋 416fb268"
       ],
       "commits": [
@@ -12624,6 +12643,7 @@
         "frontend/src/app/(console)/customers/[id]/page.tsx:46 @ af15d7f5",
         "a missing customer says it was not found and links back to the customer list without a retry: 실패 (제목과 목록 링크 없음)",
         "a missing customer says it was not found and links back to the customer list without a retry: 실패 (제목과 목록 링크 없음)",
+        "a missing customer says it was not found and links back to the customer list without a retry: 실패 (제목과 목록 링크 없음)",
         "커밋 214e22f6"
       ],
       "commits": [
@@ -12679,6 +12699,8 @@
         "changing the month on the payments list keeps the customer carried in from other screens: 실패 (customer_id 빠짐)",
         "the payments list can show only the month's failed payments and go back to all of them: 실패 (상태로 거를 수 없음)",
         "changing the month on the payments list keeps the customer carried in from other screens: 실패 (customer_id 빠짐)",
+        "the payments list can show only the month's failed payments and go back to all of them: 실패 (상태로 거를 수 없음)",
+        "changing the month on the payments list keeps the customer carried in from other screens: 실패 (customer_id 빠짐)",
         "커밋 3bb093e5",
         "커밋 f76f1edf",
         "커밋 02b3f101"
@@ -12724,6 +12746,7 @@
         "frontend/src/components/workspace/ActionPanel.tsx:60 @ af15d7f5",
         "frontend/src/app/(console)/customers/page.tsx:22 @ af15d7f5",
         "frontend/e2e/contract-server.mjs:84 @ af15d7f5",
+        "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 (export 없음)",
         "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 (export 없음)",
         "workspace-action-feedback.test.mjs re-registering an existing external customer id is reported as not created: 실패 (export 없음)",
         "커밋 21ee4a0e"
@@ -12856,6 +12879,7 @@
         "backend/src/main/java/com/meterengine/global/error/ErrorCode.java:51 @ af15d7f5",
         "a customer edit that lost a version race offers to load the latest values and then saves: 실패 (다시 불러올 버튼 없음)",
         "a customer edit that lost a version race offers to load the latest values and then saves: 실패 (다시 불러올 버튼 없음)",
+        "a customer edit that lost a version race offers to load the latest values and then saves: 실패 (다시 불러올 버튼 없음)",
         "커밋 ccfa2508"
       ],
       "commits": [
@@ -12900,6 +12924,7 @@
         "frontend/src/app/(console)/workspace-action-feedback.ts:1 @ af15d7f5",
         "frontend/e2e/people.real.spec.ts:163 @ af15d7f5",
         "frontend/src/app/(console)/workspace-actions.ts:107 @ 17cc788",
+        "archiving a customer, a member or a receiver confirms what happened: 실패 (성공 문구 없음)",
         "archiving a customer, a member or a receiver confirms what happened: 실패 (성공 문구 없음)",
         "archiving a customer, a member or a receiver confirms what happened: 실패 (성공 문구 없음)",
         "커밋 8cc84f91"
@@ -14653,6 +14678,68 @@
       "command": "11절 6번 실화면 명세 12개, merge한 트리의 프론트와 백엔드",
       "result": "pass",
       "detail": "12개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "pass",
+      "detail": "14 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "70 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 109, fail 0",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build (origin/main merge 커밋 df26abce)",
+      "result": "pass",
+      "detail": "openapi.yaml 다시 만든 뒤 변경 없음",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 12개, merge한 트리의 프론트와 백엔드",
+      "result": "pass",
+      "detail": "12개 파일 모두 통과",
       "branch": "fix/s456-t-inho-shell-design",
       "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
     },
@@ -14701,68 +14788,6 @@
       "result": "pass",
       "branch": "fix/s456-t-inho-shell-design",
       "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531"
-    },
-    {
-      "kind": "screen",
-      "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 브랜치 백엔드",
-      "result": "pass",
-      "detail": "12개 파일 모두 통과",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
-      "result": "not-applicable",
-      "detail": "11개 중 9개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
-      "result": "pass",
-      "detail": "6 passed",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "screen",
-      "command": "cd frontend && corepack pnpm test:e2e:contract",
-      "result": "pass",
-      "detail": "69 passed",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "frontend-unit",
-      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
-      "result": "pass",
-      "detail": "tests 100, fail 0",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "frontend",
-      "command": "cd frontend && corepack pnpm lint && corepack pnpm build",
-      "result": "pass",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "backend",
-      "command": "cd backend && ./gradlew build (백엔드 마지막 변경 커밋 416fb268, 이후 백엔드 변경 없음)",
-      "result": "pass",
-      "detail": "openapi.yaml 다시 만든 뒤 변경 없음",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
-    },
-    {
-      "kind": "forbidden-chars",
-      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
-      "result": "pass",
-      "branch": "fix/s456-t-inho-work-screens",
-      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
     },
     {
       "kind": "screen",
@@ -18359,6 +18384,68 @@
       "kind": "forbidden-chars",
       "command": "8절 금지 문자 검사(diff, 커밋 메시지)",
       "result": "pass"
+    },
+    {
+      "kind": "forbidden-chars",
+      "command": "8절 금지 문자 검사(diff, 커밋 메시지, PR 본문)",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "backend",
+      "command": "cd backend && ./gradlew build (백엔드 마지막 변경 커밋 416fb268, 이후 백엔드 변경 없음)",
+      "result": "pass",
+      "detail": "openapi.yaml 다시 만든 뒤 변경 없음",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "frontend",
+      "command": "cd frontend && corepack pnpm lint && corepack pnpm build",
+      "result": "pass",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "frontend-unit",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "result": "pass",
+      "detail": "tests 100, fail 0",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "result": "pass",
+      "detail": "69 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.payment.config.ts",
+      "result": "pass",
+      "detail": "6 passed",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "cd frontend && corepack pnpm exec playwright test --config playwright.workspace.config.ts",
+      "result": "not-applicable",
+      "detail": "11개 중 9개 통과. 실패 2개는 main에서도 같은 이유(비밀값 복사 전 창 닫힘 막힘, NT-inho-009)로 실패하고 PR #488이 고친다",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
+    },
+    {
+      "kind": "screen",
+      "command": "11절 6번 실화면 명세 12개, 브랜치 프론트와 브랜치 백엔드",
+      "result": "pass",
+      "detail": "12개 파일 모두 통과",
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "acad05adc8437155d7dfd03d8c09c1d79012bf99"
     }
   ],
   "pushes": [
@@ -18731,6 +18818,11 @@
       "branch": "fix/s456-t-inho-shell-design",
       "sha": "7fb47e45c23e7fe3dd820193fb420944befcb531",
       "at": "2026-10-30T10:05:23+09:00"
+    },
+    {
+      "branch": "fix/s456-t-inho-work-screens",
+      "sha": "df26abce150ec0c6c80372e2eb139c04902696c8",
+      "at": "2026-10-30T10:16:04+09:00"
     }
   ],
   "usage_log": [],
