@@ -1,12 +1,12 @@
-결과: 끝 상태 328/328건 (fixed 262, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 10(그중 no-evidence 0))
-push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 1개(마지막 6152c0b), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 1개(마지막 b78630c), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 1개(마지막 a34c969), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 2개(마지막 b562b3f), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 2개(마지막 84c47c7)
+결과: 끝 상태 328/328건 (fixed 263, refuted 17, already-fixed 39(그중 fixed-above 12), needs-decision 0, blocked 9(그중 no-evidence 0))
+push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15개(마지막 22dfb35), fix/s456-447-t-yang 1개(마지막 84bb5e7), fix/s456-t-yang-invoice-retry 1개(마지막 59e548e), fix/s456-t-yang-public-invoice 1개(마지막 22943db), fix/s456-t-yang-lumen 2개(마지막 7ed660f), fix/s456-t-yang-demo-bridge-web 1개(마지막 c1ee7a8), fix/s456-t-yang-toss-key 3개(마지막 f7eb389), fix/s456-t-yang-audit-env 1개(마지막 04c93d9), fix/s456-t-yang-ops-metrics 2개(마지막 a38b0ed), fix/s456-t-yang-readme 1개(마지막 6da19c6), fix/s456-t-yang-e2e 2개(마지막 ffcf739), fix/s456-t-yang-env-ui 3개(마지막 f062667), fix/s456-t-yang-backend-cleanup 1개(마지막 6b954c5), fix/s456-t-yang-demo-web-target 2개(마지막 62caa25), fix/s456-t-yang-frontend-cleanup 1개(마지막 395d4b7), fix/s456-t-yang-auth-session 3개(마지막 ab6835d), fix/s456-t-yang-month-picker 2개(마지막 b19d150), fix/s456-t-yang-sidebar-nav 1개(마지막 63a0b57), fix/s456-t-yang-pricing-archive 1개(마지막 a937f8f), fix/s456-t-yang-reconcile-catchup 2개(마지막 8edf94b), fix/s456-t-yang-ci-tests 3개(마지막 61ba35e), fix/s456-t-yang-mobile-heading 1개(마지막 dd5810c)
 정할 것: 0건 (없음). 로컬 DB 다시 만들기: 없음
 
 ## 층별 상태
 
 | 층 | 전체 | fixed | refuted | already-fixed | needs-decision | blocked | open |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #442 | 143 | 114 | 9 | 17 | 0 | 3 | 0 |
+| #442 | 143 | 115 | 9 | 17 | 0 | 2 | 0 |
 | #445 | 68 | 59 | 0 | 9 | 0 | 0 | 0 |
 | #447 | 35 | 27 | 5 | 3 | 0 | 0 | 0 |
 | #449 | 24 | 13 | 2 | 3 | 0 | 6 | 0 |
@@ -108,6 +108,7 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | X-021 | #442 | eb3e1bc | 표 스크롤 영역 tabindex와 region 이름 | a workspace table scroll area is a named keyboard stop: 실패 Error: expect(locator).toHaveAttribute(expected) failed, Locator: getByRole('region', { name: 'API 키  |
 | X-025 | #442 | 212b604 | 사이드바에 미터 항목 추가 | the sidebar lists the meter screen and marks it as the current place: 실패 locator.click: Test timeout of 45000ms exceeded(미터 링크 없음) |
 | X-046 | #442 | 6dd3dc9, ad54b89 | 두 컴포넌트로 갈린 문제는 D-236과 같은 PR에서 네이티브 month를 MonthPicker로 바꿔 고친 | month-control.test.mjs console lookup filters use MonthPicker instead of native month input: 실패 actual에 event-issues, event-rejections, EventFilters, WorkspaceH |
+| X-057 | #442 | 38018ee | 72e8718에서 WorkspaceTable을 부르는 화면은 integrations와 members 둘뿐이고, 두 화면 모두 표 앞에 h2를 둔다(integrations/page.tsx:19, members/page.tsx:36-37). 그래서 이 층 | workspace-mobile-record.test.mjs workspace mobile record title is not a heading: 실패 actual '<h3><CellValue value={row[columns[0].key]} column={columns[0]} row={ |
 | X-072 | #442 | 09d27a3 | 표 빈 상태 작은 삽화 | an empty workspace table uses the small empty illustration: 실패 Expected 1, Received 0 |
 | X-094 | #442 | 646a22e | 초대 재발급 시 이전 링크 유효 안내 | 없음(보이는 변경(문구): 백엔드 invite가 이전 초대를 취소하지 않는 것과 대조했다. lint, build, auth.contract.spec.ts, auth.real.spec.ts 통과) |
 | X-104 | #442 | 57c3f7c | 고친다. 로그아웃 요청이 401 밖의 이유로 실패해도 이 브라우저의 me_session 쿠키는 지우고, 로그 | network failure is recoverable and logout does not claim success before revocation: 실패 고치기 전 로그아웃 뒤 /customers에 머물고 me_session 쿠키가 남음 |
@@ -239,19 +240,16 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 | --- | --- | --- |
 | G-012 | #442 | do-not-touch G-031 V26__organization_people_and_invitations: 소속 보관 열 revoked_at(V26:36)을 archived_at으로 맞추려면 V26 내용이나 새 V__ 파일이 필요하다. 열 이름은 공개 이름이기도 하다 |
 | G-019 | #442 | do-not-touch G-031 G-032 V26__organization_people_and_invitations: 감사 인덱스와 anonymous 행위자 변경을 #448로 옮기려면 V26 내용을 바꾸고 #448에 새 V__ 파일을 더해야 한다 |
-| X-057 | #442 | not-owner #444: #442의 두 화면(integrations, members)은 표 앞에 h2를 둬 카드 h3가 건너뛰지 않는다. h2 없이 WorkspaceTable을 처음 부르는 화면은 #444 integrations/[id]이고 같은 건너뜀은 #445 #446 #447 #450 #451 화면에서 생긴다. 지적의 AuthFrame 부분은 원인이 달라 NT-yang-001로 떼어 냈다 |
 | D-216 | #449 | needs-new-migration: 확정 시점 미터 이름을 담을 invoice_line 열이 없다. 필요한 SQL: ALTER TABLE invoice_line ADD COLUMN billable_metric_name varchar(255); 확정 때 채우고 공개 응답에 billable_metric_name을 더한다. 지금 이름을 읽을 때 붙이는 길은 이름을 바꾼 뒤 확정 청구서가 달라져 결정이 필요하다 |
 | G-135 | #453 | do-not-touch M4-B3: 쓰이지 않는 조회 인덱스를 빼거나 고치려면 V48 내용을 바꾸거나 새 V__가 있어야 한다(T-yang brief가 G-135를 do-not-touch로 두라 함). 조회를 environment_scope_id 조건으로 바꾸는 길은 문인호 님 open 파일 WorkspaceQueryRepository를 함께 바꿔야 한다 |
-| NT-yang-002 | #442 | not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다 |
-| NT-yang-003 | #453 | not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다 |
 
 ## 새 지적
 
 | id | 층 | 상태 | 내용 |
 | --- | --- | --- | --- |
 | NT-yang-001 | #442 | fixed | 인증 화면 프레임(AuthFrame)이 h1보다 앞에 h2를 둔다(X-057에서 떼어 냄) |
-| NT-yang-002 | #442 | blocked | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
-| NT-yang-003 | #453 | blocked | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
+| NT-yang-002 | #442 | already-fixed | mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다 |
+| NT-yang-003 | #453 | already-fixed | environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다 |
 | NT-yang-004 | #442 | fixed | 업무 계약 명세가 복사 전 닫기 확인에 막혀 실패한다 |
 
 ## 돌리지 못한 검사
@@ -487,3 +485,8 @@ push: feat/account-permissions 62개(마지막 643ae66), fix/s456-445-t-yang 15�
 - 2026-10-30T10:47:14+09:00 보고 검사 오류 22건 정리: 리뷰 p4 반영 기록 9항목의 evidence를 부록 A 형식('<시험 이름>: 실패 <출력>')으로 고쳐 썼고(뜻은 그대로), checks kind 'ci' 2건(GitHub Actions 결과)은 10절 kind가 아니어서 checks에서 빼 메모로 옮기고 10절 static 검사를 그 sha에서 다시 돌려 적었다. 로컬 도구 두 개를 고쳤다(커밋하지 않음): rpush-main.sh가 파이프 끝 grep 대신 check-report-main.mjs의 종료 코드로 멈추게 했고, check-report-main.mjs가 다른 세션의 fix/s456-t-yang-export-error(#497)를 이 보고의 주제 브랜치로 세지 않게 했다.
 - fix/s456-t-yang-ci-tests a9ce8d1 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40868392114): backend, demo, deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(2db50b4, #481이 고침)
 - fix/s456-t-yang-ci-tests 84c47c7 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40871714563): backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)
+- 2026-10-30T11:14:51+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `backend/src/test/java/com/meterengine/payment/PaymentEnvironmentIntegrationTest.java`: 이 PR이 더한 운영 현황 시험과 main(#476)이 같은 자리에 더한 옛 키 대사 시험 셋이 겹쳤다. 서로 다른 시험이라 둘 다 남겼다(이 PR 시험 뒤에 main 시험). 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.
+- 2026-10-30T11:14:51+09:00 main 받기 #480 fix/s456-t-yang-e2e: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `frontend/README.md`: 이 PR이 더한 DB 컨테이너와 백엔드 설정 파일 변수 문단과 main(#479)이 같은 자리에 더한 mvp 설정 실행 문단이 겹쳤다. 다른 문단이라 둘 다 남겼고, 실행 방법 문단을 먼저, 그 시나리오의 변수 문단을 뒤에 두었다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.
+- 2026-10-30T11:14:51+09:00 main 받기 #483 fix/s456-t-yang-demo-web-target: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `demo/README.md` 변수 표: `METERENGINE_ENVIRONMENT` 행은 이 PR의 설명(웹훅을 그 환경으로 받는다)이 main(#475) 설명(비우면 키의 환경)을 포함하므로 이 PR 행을 남겼고, `METERENGINE_TARGETS` 행은 main이 더한 문장(api_key는 그 environment에서 발급한 키)을 살렸다. `demo/web/src/lib/webhook-target.test.ts`: 이 PR의 단일 대상 환경 시험과 main의 브라우저 요청, 본문 상한 시험이 같은 자리에 더해져 둘 다 남겼다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.
+- 2026-10-30T11:14:51+09:00 main 받기 #485 fix/s456-t-yang-auth-session: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java`: 이 PR의 첫 비밀번호 변경 시험과 signIn 도우미, main(#482)의 이메일 형식 오류 시험이 같은 자리에 더해져 둘 다 남겼다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.
+- 2026-10-30T11:14:51+09:00 main 받기 #494 fix/s456-t-yang-ci-tests: be62d91, c661d80 merge 모두 충돌 없음.

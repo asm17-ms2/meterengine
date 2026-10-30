@@ -2,7 +2,7 @@
   "package": "T-yang",
   "owner": "양성지",
   "status": "running",
-  "updated_at": "2026-10-30T10:48:49+09:00",
+  "updated_at": "2026-10-30T11:14:51+09:00",
   "start_heads": {
     "feat/account-permissions": "72e8718",
     "feat/billing-payments": "54bb1d5",
@@ -27,19 +27,20 @@
     "fix/s456-t-yang-demo-bridge-web": "c1ee7a8",
     "fix/s456-t-yang-toss-key": "f7eb389",
     "fix/s456-t-yang-audit-env": "04c93d9",
-    "fix/s456-t-yang-ops-metrics": "6152c0b",
+    "fix/s456-t-yang-ops-metrics": "a38b0ed",
     "fix/s456-t-yang-readme": "6da19c6",
-    "fix/s456-t-yang-e2e": "b78630c",
+    "fix/s456-t-yang-e2e": "ffcf739",
     "fix/s456-t-yang-env-ui": "f062667",
     "fix/s456-t-yang-backend-cleanup": "6b954c5",
-    "fix/s456-t-yang-demo-web-target": "a34c969",
+    "fix/s456-t-yang-demo-web-target": "62caa25",
     "fix/s456-t-yang-frontend-cleanup": "395d4b7",
-    "fix/s456-t-yang-auth-session": "b562b3f",
+    "fix/s456-t-yang-auth-session": "ab6835d",
     "fix/s456-t-yang-month-picker": "b19d150",
     "fix/s456-t-yang-sidebar-nav": "63a0b57",
     "fix/s456-t-yang-pricing-archive": "a937f8f",
     "fix/s456-t-yang-reconcile-catchup": "8edf94b",
-    "fix/s456-t-yang-ci-tests": "84c47c7"
+    "fix/s456-t-yang-ci-tests": "61ba35e",
+    "fix/s456-t-yang-mobile-heading": "dd5810c"
   },
   "env": {
     "model": "claude-opus-5-5",
@@ -3751,26 +3752,36 @@
       "id": "X-057",
       "merged_ids": [],
       "layer": 442,
-      "branch": "feat/account-permissions",
-      "status": "blocked",
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "status": "fixed",
       "verdict": "confirmed",
-      "reason": "72e8718에서 WorkspaceTable을 부르는 화면은 integrations와 members 둘뿐이고, 두 화면 모두 표 앞에 h2를 둔다(integrations/page.tsx:19, members/page.tsx:36-37). 그래서 이 층에서는 WorkspaceView.tsx:60의 카드 h3가 h1 바로 뒤에 오지 않는다. 건너뜀은 위층에서 생긴다. h2 없이 WorkspaceTable을 부르는 화면(#444 integrations/[id], #445 payments, #447 customers, #450 event-issues와 event-rejections)과, 카드 h3나 level 5 소제목을 새로 들인 #446 BillingTable, InvoicesTable, UsageTable, BillableMetricFormDialog, #451 EventsTable이다. 정점 customers/page.tsx:19,25에서 h1 '고객' 다음에 카드 h3가 오는 것도 그대로 확인했다. EventDetailDrawer의 level 5는 main 코드 그대로다. AuthFrame.tsx:10의 h1 앞 h2는 axe heading-order가 첫 제목과 수준 낮춤을 문제 삼지 않고 지적의 axe 근거에도 인증 화면이 없어서 취향 차이로 본다. 결론적으로 지적은 정점에서 맞지만 #442에서 고칠 줄은 없고, 건너뜀이 처음 생기는 #444부터 각 층의 화면을 고쳐야 한다.",
+      "reason": "72e8718에서 WorkspaceTable을 부르는 화면은 integrations와 members 둘뿐이고, 두 화면 모두 표 앞에 h2를 둔다(integrations/page.tsx:19, members/page.tsx:36-37). 그래서 이 층에서는 WorkspaceView.tsx:60의 카드 h3가 h1 바로 뒤에 오지 않는다. 건너뜀은 위층에서 생긴다. h2 없이 WorkspaceTable을 부르는 화면(#444 integrations/[id], #445 payments, #447 customers, #450 event-issues와 event-rejections)과, 카드 h3나 level 5 소제목을 새로 들인 #446 BillingTable, InvoicesTable, UsageTable, BillableMetricFormDialog, #451 EventsTable이다. 정점 customers/page.tsx:19,25에서 h1 '고객' 다음에 카드 h3가 오는 것도 그대로 확인했다. EventDetailDrawer의 level 5는 main 코드 그대로다. AuthFrame.tsx:10의 h1 앞 h2는 axe heading-order가 첫 제목과 수준 낮춤을 문제 삼지 않고 지적의 axe 근거에도 인증 화면이 없어서 취향 차이로 본다. 결론적으로 지적은 정점에서 맞지만 #442에서 고칠 줄은 없고, 건너뜀이 처음 생기는 #444부터 각 층의 화면을 고쳐야 한다. [10-30 결정] 사용자 지시로 not-owner 막음을 풀고 세션이 정했다. main(c661d80) 화면 캡처의 axe에서 heading-order는 /customers 모바일 한 곳이고 원인은 WorkspaceTable(#442, T-yang) 모바일 카드의 h3다. 고른 방법: 카드 첫 열을 제목이 아닌 굵은 문단으로 그린다(WorkspaceView.tsx와 CSS 두 줄). 데스크톱 표 행처럼 카드도 목록 항목으로 다루는 것이 같은 뜻이고 모든 WorkspaceTable 화면에 한 번에 맞는다. 고르지 않은 것: 화면마다 숨긴 h2를 두거나 제목 수준 prop을 넘기는 방법은 고객, 수납, 웹훅 상세, 이벤트 진단 화면 호출부를 함께 바꿔야 하고 그 파일을 열린 #496, #498, #499가 고치는 중이라 겹친다. 문인호 님 화면의 카드 h3(BillingTable 등)와 대화상자, 서랍의 level 5 제목은 #496이 그 마크업을 고치는 중이고 main 캡처에서 위반이 나오지 않아 이 PR(#501)에서 건드리지 않았다. 문인호 님을 리뷰어로 지정했다.",
       "evidence": [
         "frontend/src/components/workspace/WorkspaceView.tsx:60 @ 72e8718",
         "frontend/src/app/(console)/integrations/page.tsx:19,27 @ 72e8718",
         "frontend/src/app/(console)/integrations/[id]/page.tsx:17,26 @ 81651ed",
         "frontend/src/app/(console)/customers/page.tsx:19,25 @ 0fe7d2a",
-        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 72e8718"
+        "frontend/src/components/auth/AuthFrame.tsx:10,13 @ 72e8718",
+        "frontend/src/components/workspace/WorkspaceView.tsx:68 @ c661d80",
+        "workspace-mobile-record.test.mjs workspace mobile record title is not a heading: 실패 actual '<h3><CellValue value={row[columns[0].key]} column={columns[0]} row={row} /></h3>'",
+        "커밋 38018ee"
       ],
-      "commits": [],
-      "tests": [],
+      "commits": [
+        "38018ee7"
+      ],
+      "tests": [
+        "cd frontend && node --test e2e/workspace-mobile-record.test.mjs",
+        "frontend lint, build, 단위 94건, 계약 명세 셋",
+        "screens.mjs 전후 비교(/customers 390px heading-order)"
+      ],
       "behavior_change": false,
       "judged_at": {
         "layer_sha": "72e8718",
         "top_sha": "0fe7d2a"
       },
-      "blocked_reason": "not-owner #444: #442의 두 화면(integrations, members)은 표 앞에 h2를 둬 카드 h3가 건너뛰지 않는다. h2 없이 WorkspaceTable을 처음 부르는 화면은 #444 integrations/[id]이고 같은 건너뜀은 #445 #446 #447 #450 #451 화면에서 생긴다. 지적의 AuthFrame 부분은 원인이 달라 NT-yang-001로 떼어 냈다",
-      "propagation_note": "WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다."
+      "propagation_note": "WorkspaceView.tsx는 72e8718부터 0fe7d2a까지 바뀐 커밋이 없고 카드 제목은 그대로 h3다. 층마다 맞출 방법은 다음과 같다. (1) h2 없이 WorkspaceTable을 부르는 화면에서는 표 앞에 sr-only h2(예: '고객 목록')를 둔다. 정점 기준 위치는 customers/page.tsx:25(#447 2ec5d85에서 시작, #451 e5fca11), event-issues/page.tsx:48과 event-rejections/page.tsx:38(#450 8bb17c3), integrations/[id]/page.tsx:26(#444 80a3ef1), payments/page.tsx:17(#445 4ace811)이다. (2) #446 614d3bc의 BillingTable.tsx:254, InvoicesTable.tsx:228, UsageTable.tsx:164와 #451 e5fca11의 EventsTable.tsx:114 카드 목록 앞에도 같은 h2를 둔다. (3) BillableMetricFormDialog.tsx:286(#446)과 EventDetailDrawer.tsx:61(main 코드, #451에서 줄만 옮겨짐)의 Title은 level={3}으로 낮춘다. (4) RegistrationFrame.tsx:10(#445)의 h1 앞 h2는 AuthFrame과 같은 취향 차이라 선택 사항이다. #445 payments/page.tsx:17, RegistrationFrame.tsx:10과 #447 customers/page.tsx:19는 T-yang 담당 층이다. 조율에서 이 id를 나누면 그 층 차례에 고칠 수 있다. 대안으로 #442 WorkspaceTable에 headingLevel prop을 두는 방법도 있다. 그 경우에도 (1)의 위층 호출부가 모두 값을 넘겨야 하고, globals.css:244의 .workspace-mobile-record h3 선택자도 함께 맞춰야 한다.",
+      "fails_without_fix": true,
+      "top_head": "main c661d80 (same, main 기준)"
     },
     {
       "id": "X-072",
@@ -8388,38 +8399,42 @@
       "merged_ids": [],
       "layer": 442,
       "branch": "main",
-      "status": "blocked",
-      "verdict": "confirmed",
-      "reason": "main의 mvp.real.spec.ts가 API 키 발급 뒤 Escape로 창을 닫는데, 이 패키지 커밋 2db50b4(D-127, main 1b2c555d)가 복사 전 닫기에 window.confirm을 걸어 Playwright가 대화상자를 거절하고 창이 남는다. 다음 단계 수신 주소 등록 클릭을 창이 가로채 바꾸지 않은 main에서도 실패한다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "main의 mvp.real.spec.ts가 API 키 발급 뒤 Escape로 창을 닫는데, 이 패키지 커밋 2db50b4(D-127, main 1b2c555d)가 복사 전 닫기에 window.confirm을 걸어 Playwright가 대화상자를 거절하고 창이 남는다. 다음 단계 수신 주소 등록 클릭을 창이 가로채 바꾸지 않은 main에서도 실패한다. 문인호 님 #471(main 9df2768)이 이 명세를 지금 화면에 맞춰 고쳤고, main 9df2768에서 DB를 새로 띄운 마지막 실화면 점검(evidence/final-main/specs.txt)에서 통과했다.",
       "evidence": [
         "frontend/e2e/mvp.real.spec.ts:128-129 @ af15d7f",
         "mvp.real.spec.ts: 실패 locator.click Timeout 15000ms, ant-modal-wrap intercepts pointer events",
-        "커밋 2db50b4"
+        "커밋 2db50b4",
+        "커밋 9df2768",
+        "mvp.real.spec.ts @ main 9df2768(evidence/final-main/specs.txt): 통과 1 passed (46.1s)"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "title": "mvp 실화면 명세가 복사 전 닫기 확인에 막혀 실패한다",
-      "blocked_reason": "not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다"
+      "top_head": "main 9df2768 #471"
     },
     {
       "id": "NT-yang-003",
       "merged_ids": [],
       "layer": 453,
       "branch": "main",
-      "status": "blocked",
-      "verdict": "confirmed",
-      "reason": "environment-cycle.real.spec.ts 143행은 개요 h1을 이번 달 과금 운영으로 기대하지만 main의 overview/page.tsx 23행은 <월> 과금 운영이나 첫 청구를 준비하세요를 보인다(#451 squash f53222e7). 바꾸지 않은 main에서 실패한다.",
+      "status": "already-fixed",
+      "verdict": "already-fixed",
+      "reason": "environment-cycle.real.spec.ts 143행은 개요 h1을 이번 달 과금 운영으로 기대하지만 main의 overview/page.tsx 23행은 <월> 과금 운영이나 첫 청구를 준비하세요를 보인다(#451 squash f53222e7). 바꾸지 않은 main에서 실패한다. 문인호 님 #471(main 9df2768)이 이 명세를 지금 화면에 맞춰 고쳤고, main 9df2768에서 DB를 새로 띄운 마지막 실화면 점검(evidence/final-main/specs.txt)에서 통과했다.",
       "evidence": [
         "frontend/e2e/environment-cycle.real.spec.ts:143-144 @ af15d7f",
         "frontend/src/app/(console)/overview/page.tsx:23 @ af15d7f",
-        "environment-cycle.real.spec.ts: 실패 heading 이번 달 과금 운영 level 1 not found"
+        "environment-cycle.real.spec.ts: 실패 heading 이번 달 과금 운영 level 1 not found",
+        "커밋 9df2768",
+        "environment-cycle.real.spec.ts @ main 9df2768(evidence/final-main/specs.txt): 통과 1 passed (13.6s)"
       ],
       "commits": [],
       "tests": [],
       "behavior_change": false,
       "title": "environment-cycle 실화면 명세가 #451의 개요 제목 변경을 따라가지 않는다",
-      "blocked_reason": "not-owner 문인호 님이 main 실화면 명세 실패(environment-cycle, mvp)를 첫 PR에서 고치기로 했다(#논의 스택 스레드 2026-10-29 15:25, 박성종 님 15:26 동의). 겹치지 않게 이 세션은 두 명세 파일을 건드리지 않는다"
+      "top_head": "main 9df2768 #471"
     },
     {
       "id": "NT-yang-004",
@@ -15887,6 +15902,542 @@
       "result": "pass",
       "command": "cd frontend && node --test 'e2e/*.test.mjs'",
       "detail": "tests 79, pass 79. 10-30 이어 하기에서 그 sha로 다시 돌림"
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " 대상 형식 파일 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 88 ℹ pass 88 ℹ fail 0 "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (31.2s) "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.6s) "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  12 passed (18.8s) "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 330 tests in 12.405s OK (skipped=7) "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 39 tests in 23.210s OK (skipped=10) "
+    },
+    {
+      "branch": "main",
+      "sha": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1392개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 93 ℹ pass 93 ℹ fail 0 "
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (32.5s) "
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.5s) "
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (19.6s) "
+    },
+    {
+      "branch": "main",
+      "sha": "c661d802a97a8e76b49393c459a11fddf02e4b6d",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1418개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "d60720b18c5ce87502a46808fc473257a3900098",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-ops-metrics..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "d60720b18c5ce87502a46808fc473257a3900098",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " yaml:deploy/grafana/provisioning/alerting/alerting.yml"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "d60720b18c5ce87502a46808fc473257a3900098",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 39 tests in 29.599s OK (skipped=10) "
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "d60720b18c5ce87502a46808fc473257a3900098",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1394개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-e2e..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 88 ℹ pass 88 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (33.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.5s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  12 passed (19.1s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "eccc41335de1c3a1ad4d401d5194bdacc4c79c2f",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 330 tests in 12.465s OK (skipped=7) "
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a3da4640dcdb07a5bb05af81636da0e7cf040c40",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-demo-web-target..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "a3da4640dcdb07a5bb05af81636da0e7cf040c40",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 330 tests in 12.005s OK (skipped=7) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-auth-session..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 88 ℹ pass 88 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (30.9s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  12 passed (18.3s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "6473220746845dd5e6c5d305ce545d83826cd9b5",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1395개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "388bf7c9b49b1bc686905a54a468a71e1f8e2823",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-ci-tests..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "388bf7c9b49b1bc686905a54a468a71e1f8e2823",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " yaml:.github/workflows/ci.yml"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "a38b0ed1b1139f9a3874492a7b77fef00300ab5f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-ops-metrics..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "a38b0ed1b1139f9a3874492a7b77fef00300ab5f",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " yaml:deploy/grafana/provisioning/alerting/alerting.yml"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "a38b0ed1b1139f9a3874492a7b77fef00300ab5f",
+      "kind": "deploy",
+      "result": "pass",
+      "command": "python3 -m unittest discover -s deploy/tests -v",
+      "detail": "Ran 39 tests in 26.278s OK (skipped=10) "
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "a38b0ed1b1139f9a3874492a7b77fef00300ab5f",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1420개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-e2e..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 93 ℹ pass 93 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (31.9s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.3s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (19.5s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 330 tests in 12.074s OK (skipped=7) "
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "62caa25241f90a65065f377a2b46f7b086c5782a",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-demo-web-target..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "62caa25241f90a65065f377a2b46f7b086c5782a",
+      "kind": "demo",
+      "result": "pass",
+      "command": "cd demo && python3 -m unittest discover && corepack pnpm install --frozen-lockfile && corepack pnpm -r typecheck && corepack pnpm -r lint && corepack pnpm -r test && corepack pnpm -r build",
+      "detail": "모두 성공. Ran 330 tests in 12.521s OK (skipped=7) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-auth-session..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 93 ℹ pass 93 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (31.7s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (19.4s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "kind": "backend",
+      "result": "pass",
+      "command": "cd backend && ./gradlew build --no-daemon && git status --porcelain -- backend/openapi.yaml",
+      "detail": "BUILD SUCCESSFUL, 시험 1421개, openapi.yaml 변경 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "61ba35e9d7e49f1ffa2c32e9f5480bb76fa6719f",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/fix/s456-t-yang-ci-tests..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "61ba35e9d7e49f1ffa2c32e9f5480bb76fa6719f",
+      "kind": "static",
+      "result": "pass",
+      "command": "바뀐 파일마다 bash -n, python3 -m json.tool, ruby -ryaml",
+      "detail": " yaml:.github/workflows/ci.yml"
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "forbidden-chars",
+      "result": "pass",
+      "command": "git diff -U0 origin/main...HEAD | perl 금지 문자; git log --format=%B origin/main..HEAD | perl 금지 문자",
+      "detail": "출력 없음"
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "frontend",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm install --frozen-lockfile && corepack pnpm lint && corepack pnpm build",
+      "detail": "install, lint, build 성공"
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "frontend-unit",
+      "result": "pass",
+      "command": "cd frontend && node --test 'e2e/*.test.mjs'",
+      "detail": "ℹ tests 94 ℹ pass 94 ℹ fail 0 "
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm test:e2e:contract",
+      "detail": "계약 명세  66 passed (31.0s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.payment.config.ts",
+      "detail": "계약 명세  6 passed (2.5s) "
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "kind": "screen",
+      "result": "pass",
+      "command": "cd frontend && corepack pnpm exec playwright test -c playwright.workspace.config.ts",
+      "detail": "계약 명세  13 passed (19.6s) "
     }
   ],
   "pushes": [
@@ -16419,6 +16970,36 @@
       "branch": "fix/s456-t-yang-month-picker",
       "sha": "b19d150bcf7c883f8bbc63459497827a019d5020",
       "at": "2026-10-30T00:29:59+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ops-metrics",
+      "sha": "a38b0ed1b1139f9a3874492a7b77fef00300ab5f",
+      "at": "2026-10-30T11:13:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-e2e",
+      "sha": "ffcf73913f5fa82054685aeb9c5b9670f712a498",
+      "at": "2026-10-30T11:13:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-demo-web-target",
+      "sha": "62caa25241f90a65065f377a2b46f7b086c5782a",
+      "at": "2026-10-30T11:13:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-auth-session",
+      "sha": "ab6835d30a705c9624b352aead960ab6b09e0616",
+      "at": "2026-10-30T11:13:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-ci-tests",
+      "sha": "61ba35e9d7e49f1ffa2c32e9f5480bb76fa6719f",
+      "at": "2026-10-30T11:13:03+09:00"
+    },
+    {
+      "branch": "fix/s456-t-yang-mobile-heading",
+      "sha": "dd5810c1017a2c5c1607c9487c08c5373528f7c3",
+      "at": "2026-10-30T11:13:03+09:00"
     }
   ],
   "usage_log": [],
@@ -16475,7 +17056,12 @@
     "2026-10-30T10:46:43+09:00 이어 하기(main 기준 2차): state.json branches에서 main에 squash 머지된 주제 브랜치 14개(#472~#477, #479, #481, #482, #484, #486, #487, #489, #490, GitHub에서 자동 삭제)를 빼고 main을 be62d91로 고쳤다. 남은 것은 열린 PR 다섯 개(#478 ops-metrics, #480 e2e, #483 demo-web-target, #485 auth-session, #494 ci-tests)의 브랜치다. 시작 점검은 Docker(OrbStack)가 꺼져 있어 세션이 orb start로 켠 뒤 통과했다.",
     "2026-10-30T10:47:14+09:00 보고 검사 오류 22건 정리: 리뷰 p4 반영 기록 9항목의 evidence를 부록 A 형식('<시험 이름>: 실패 <출력>')으로 고쳐 썼고(뜻은 그대로), checks kind 'ci' 2건(GitHub Actions 결과)은 10절 kind가 아니어서 checks에서 빼 메모로 옮기고 10절 static 검사를 그 sha에서 다시 돌려 적었다. 로컬 도구 두 개를 고쳤다(커밋하지 않음): rpush-main.sh가 파이프 끝 grep 대신 check-report-main.mjs의 종료 코드로 멈추게 했고, check-report-main.mjs가 다른 세션의 fix/s456-t-yang-export-error(#497)를 이 보고의 주제 브랜치로 세지 않게 했다.",
     "fix/s456-t-yang-ci-tests a9ce8d1 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40868392114): backend, demo, deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(2db50b4, #481이 고침)",
-    "fix/s456-t-yang-ci-tests 84c47c7 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40871714563): backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)"
+    "fix/s456-t-yang-ci-tests 84c47c7 GitHub Actions 결과(10절 kind가 아니라 checks에서 빼 메모로 옮김): PR #494 GitHub Actions CI(run 40871714563): backend, demo(콘솔 시험 포함 328건 skip 없음), deploy, terraform 통과. frontend는 업무 계약 2건만 실패하며 main 기준선과 같다(#481이 고침)",
+    "2026-10-30T11:14:51+09:00 main 받기 #478 fix/s456-t-yang-ops-metrics: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `backend/src/test/java/com/meterengine/payment/PaymentEnvironmentIntegrationTest.java`: 이 PR이 더한 운영 현황 시험과 main(#476)이 같은 자리에 더한 옛 키 대사 시험 셋이 겹쳤다. 서로 다른 시험이라 둘 다 남겼다(이 PR 시험 뒤에 main 시험). 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.",
+    "2026-10-30T11:14:51+09:00 main 받기 #480 fix/s456-t-yang-e2e: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `frontend/README.md`: 이 PR이 더한 DB 컨테이너와 백엔드 설정 파일 변수 문단과 main(#479)이 같은 자리에 더한 mvp 설정 실행 문단이 겹쳤다. 다른 문단이라 둘 다 남겼고, 실행 방법 문단을 먼저, 그 시나리오의 변수 문단을 뒤에 두었다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.",
+    "2026-10-30T11:14:51+09:00 main 받기 #483 fix/s456-t-yang-demo-web-target: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `demo/README.md` 변수 표: `METERENGINE_ENVIRONMENT` 행은 이 PR의 설명(웹훅을 그 환경으로 받는다)이 main(#475) 설명(비우면 키의 환경)을 포함하므로 이 PR 행을 남겼고, `METERENGINE_TARGETS` 행은 main이 더한 문장(api_key는 그 environment에서 발급한 키)을 살렸다. `demo/web/src/lib/webhook-target.test.ts`: 이 PR의 단일 대상 환경 시험과 main의 브라우저 요청, 본문 상한 시험이 같은 자리에 더해져 둘 다 남겼다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.",
+    "2026-10-30T11:14:51+09:00 main 받기 #485 fix/s456-t-yang-auth-session: origin/main(be62d91)을 merge했고 충돌을 이렇게 풀었다. `backend/src/test/java/com/meterengine/organization/OrganizationPeopleIntegrationTest.java`: 이 PR의 첫 비밀번호 변경 시험과 signIn 도우미, main(#482)의 이메일 형식 오류 시험이 같은 자리에 더해져 둘 다 남겼다. 남의 커밋을 바꾸거나 버리지 않았다. 이어 #488이 들어간 c661d80을 다시 merge했다(충돌 없음). PR 본문에도 적었다.",
+    "2026-10-30T11:14:51+09:00 main 받기 #494 fix/s456-t-yang-ci-tests: be62d91, c661d80 merge 모두 충돌 없음."
   ],
   "final_checks": [
     {
