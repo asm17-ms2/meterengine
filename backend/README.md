@@ -272,7 +272,7 @@ unset SESSION
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(승인, 거절, 정지, 재개), 소속 추가 | `/v1/organization`, `/v1/organizations` |
 | `apikey` | API 키 발급, 폐기, 교체와 키 검증 | `/v1/api-keys` |
 | `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/user-accounts` |
-| `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
+| `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다. 단가 행(`price_rate`)의 target_id는 단가 버전 id이고 미터 code는 detail의 `billable_metric_code`에 있다. 버전 단가 전에 남은 행은 target_id가 미터 code다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
@@ -311,6 +311,7 @@ unset SESSION
 - 단가는 월 단위 이력이며 종료 월은 포함하지 않는다. 고객 단가가 도입사 공통 단가보다 우선한다. 모델은 `per_unit`, `graduated`, `volume`이다.
 - 기본료와 최소 사용료는 음수 합을 0으로 자른 뒤 유효 사용량이 있는 고객에게만 적용한다. 최소 사용료는 사용료와 비교하고 기본료는 별도로 더한다. 각 라인에서 10원 미만을 절사한다.
 - 확정 라인은 `line_type`, `tier_index`로 구간, 기본료와 최소 과금 조정 근거를 보존한다. 단가 이력 마이그레이션 뒤에는 구형 PK와 시드로 되돌리지 않고 후속 마이그레이션으로 복구한다.
+- 고객과 미터 등록의 `Idempotency-Key`는 1~255자 문자열이다. 같은 키의 같은 본문은 최초 응답을 상태 코드까지 다시 돌려주고 `Idempotency-Replayed: true`를 붙이며, 다른 본문은 409 `idempotency_conflict`다. 최초 응답(고객은 이름과 billing_email 포함)을 `idempotent_request`에 기한 없이 보관하고 지우는 작업은 없다.
 - 고객 `external_id`는 도입사의 업무 환경 범위(기존 데이터, test, live) 안에서 고유하다. 같은 범위에서 같은 ID를 다시 등록하면 기존 고객과 200을 반환한다. 배치는 `POST /v1/event-batches`로 최대 100건을 받고 원소별 저장, 중복, 거절을 응답한다.
 - 키 발급 시 `rate_limit_per_minute`를 양수로 지정하거나 null로 비워 무제한으로 둘 수 있다. 유한 한도는 인스턴스별로 적용하고 초과 시 429와 `Retry-After`를 반환한다.
 - `read` 키로 고객, 요금, 사용량, 인보이스와 결제 상태, 마스킹된 결제 설정, 통보 내역과 대시보드를 조회할 수 있다. 키 발급과 폐기, 전체 운영 조회는 로그인 역할을 따른다.
@@ -331,7 +332,7 @@ unset SESSION
 
 - 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST, 웹훅 발송 30초다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
 - 대사는 보통 직전 하루를 맞춘다. 실패하거나 항목이 실패했거나 빠진 날이 있으면 마지막으로 실패 없이 끝난 대사 슬롯부터 이어서 맞추고(그런 슬롯이 없으면 가장 이른 대사 실행의 창부터), 최대 7일 전까지 본다. 같은 불일치는 다시 돌려도 한 줄만 남는다.
-- 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 기존 결과를 반환하고 다른 내용이면 409다.
+- 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 그 취소를 지금 상태로 반환하고 다른 내용이면 409 `payment_cancellation_idempotency_conflict`다. 고객과 미터 등록의 키와 달리 UUID만 받고 `Idempotency-Replayed` 헤더를 붙이지 않는다.
 - 결제 결과가 미확인인 상태를 실패로 단정하지 않는다. 7일을 넘긴 불확실한 이전 주문은 새 주문으로 자동 청구하지 않는다.
 - 웹훅은 Standard Webhooks 서명을 쓰고 중복과 순서 변경을 전제로 수신한다. 시험 통보의 202는 발송 대기 등록이며 전달 완료가 아니다. 실패한 통보는 같은 `webhook-id`로 재전송한다.
 - 인보이스 메일은 저장 기록과 실제 발송을 구분한다. 전자세금계산서 발행은 구현 범위에 포함하지 않는다.

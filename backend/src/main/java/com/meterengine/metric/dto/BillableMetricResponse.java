@@ -24,37 +24,6 @@ public record BillableMetricResponse(
     BigDecimal percentile,
     long version) {
 
-  public BillableMetricResponse(
-      String code,
-      String name,
-      String eventType,
-      String aggregation,
-      String targetProperty,
-      List<String> dimensionProperties,
-      java.time.OffsetDateTime archivedAt,
-      String activeFrom,
-      String inactiveFrom,
-      BigDecimal unitSize,
-      String roundingMode,
-      int roundingPrecision,
-      BigDecimal percentile) {
-    this(
-        code,
-        name,
-        eventType,
-        aggregation,
-        targetProperty,
-        dimensionProperties,
-        archivedAt,
-        activeFrom,
-        inactiveFrom,
-        unitSize,
-        roundingMode,
-        roundingPrecision,
-        percentile,
-        0);
-  }
-
   public static BillableMetricResponse from(BillableMetric billableMetric) {
     return new BillableMetricResponse(
         billableMetric.getCode(),

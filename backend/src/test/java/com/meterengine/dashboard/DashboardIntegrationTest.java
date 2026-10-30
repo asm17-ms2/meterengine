@@ -65,6 +65,9 @@ class DashboardIntegrationTest {
             + " now())",
         UUID.randomUUID(),
         otherOrganizationId);
+    UUID otherPaid = insertInvoice(otherOrganizationId, "2026-10", 1000);
+    insertAttempt(otherOrganizationId, otherPaid, "test", "done");
+    insertInvoice(otherOrganizationId, "2026-10", 2000);
     assertThat(
             mvc.get()
                 .uri("/v1/dashboard?month=2026-10")
@@ -72,8 +75,42 @@ class DashboardIntegrationTest {
                 .exchange())
         .hasStatusOk()
         .bodyJson()
-        .extractingPath("$.customer_count")
-        .isEqualTo(0);
+        .isLenientlyEqualTo(
+            """
+            {"customer_count": 0, "finalized_total_amount": 0, "collected_amount": 0,
+             "canceled_amount": 0, "outstanding_amount": 0, "failed_payment_count": 0}
+            """);
+  }
+
+  @Test
+  void 개요_금액은_결제_상태마다_수납과_취소와_미수로_나눠_더한다() {
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID paid = insertInvoice(organizationId, "2026-10", 1000);
+    insertAttempt(organizationId, paid, "test", "done");
+    UUID partial = insertInvoice(organizationId, "2026-10", 2000);
+    insertAttempt(organizationId, partial, "test", "done");
+    insertCancellation(organizationId, partial, 200);
+    UUID canceled = insertInvoice(organizationId, "2026-10", 3000);
+    insertAttempt(organizationId, canceled, "test", "done");
+    insertCancellation(organizationId, canceled, 3300);
+    UUID failed = insertInvoice(organizationId, "2026-10", 4000);
+    insertAttempt(organizationId, failed, "test", "failed");
+    UUID pending = insertInvoice(organizationId, "2026-10", 5000);
+    insertAttempt(organizationId, pending, "test", "pending");
+    insertInvoice(organizationId, "2026-10", 6000);
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard?month=2026-10")
+                .header("Authorization", readKey)
+                .exchange())
+        .hasStatusOk()
+        .bodyJson()
+        .isLenientlyEqualTo(
+            """
+            {"finalized_total_amount": 23100, "collected_amount": 3100, "canceled_amount": 3500,
+             "outstanding_amount": 16500, "failed_payment_count": 1}
+            """);
   }
 
   @Test
@@ -295,6 +332,19 @@ class DashboardIntegrationTest {
         supplyAmount / 10,
         supplyAmount + supplyAmount / 10);
     return invoiceId;
+  }
+
+  private void insertCancellation(UUID organizationId, UUID invoiceId, long amount) {
+    jdbcTemplate.update(
+        "insert into payment_cancellation (id, organization_id, payment_attempt_id, mode, amount,"
+            + " reason, status, transaction_key, requested_at, completed_at)"
+            + " select ?, organization_id, id, mode, ?, '개요 시험', 'done', ?, now(), now()"
+            + " from payment_attempt where organization_id = ? and invoice_id = ? and status = 'done'",
+        UUID.randomUUID(),
+        amount,
+        "mock-cancel-" + UUID.randomUUID(),
+        organizationId,
+        invoiceId);
   }
 
   private void insertAttempt(UUID organizationId, UUID invoiceId, String mode, String status) {
