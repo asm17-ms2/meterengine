@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "aws_account_id": "928618307647",
+  "aws_region": "ap-northeast-2",
+  "site_aliases": [],
+  "enabled_services": [
+    "caddy",
+    "frontend",
+    "backend-blue",
+    "backend-green",
+    "prometheus",
+    "node-exporter",
+    "postgres-exporter",
+    "cloudwatch-exporter",
+    "grafana"
+  ],
+  "deployment_environment": "sut",
+  "instance_id": "i-0e49c8d863561c654",
+  "database_identifier": "meterengine-test-storage-db",
+  "database_host": "meterengine-test-storage-db.cbqy2s86g8zf.ap-northeast-2.rds.amazonaws.com",
+  "parameter_path": "/meterengine/test-storage",
+  "site_domain": "test-storage.meterengine.com",
+  "compose_project": "meterengine-prod"
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "aws_account_id": "928618307647",
+  "aws_region": "ap-northeast-2",
+  "site_aliases": [
+    "www.meterengine.com"
+  ],
+  "enabled_services": [
+    "caddy",
+    "frontend",
+    "backend-blue",
+    "backend-green",
+    "prometheus",
+    "node-exporter",
+    "postgres-exporter",
+    "cloudwatch-exporter",
+    "grafana",
+    "cadvisor",
+    "oauth2-proxy"
+  ],
+  "deployment_environment": "production",
+  "instance_id": "i-0f47bb1f028cd29a9",
+  "database_identifier": "meterengine-db",
+  "database_host": "meterengine-db.cbqy2s86g8zf.ap-northeast-2.rds.amazonaws.com",
+  "parameter_path": "/meterengine/production",
+  "site_domain": "meterengine.com",
+  "compose_project": "meterengine-prod"
+}

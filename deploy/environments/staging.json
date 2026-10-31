@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "aws_account_id": "928618307647",
+  "aws_region": "ap-northeast-2",
+  "site_aliases": [],
+  "enabled_services": [
+    "caddy",
+    "frontend",
+    "backend-blue",
+    "backend-green"
+  ],
+  "deployment_environment": "staging",
+  "instance_id": "i-07af113d3e710e766",
+  "database_identifier": "meterengine-staging-db",
+  "database_host": "meterengine-staging-db.cbqy2s86g8zf.ap-northeast-2.rds.amazonaws.com",
+  "parameter_path": "/meterengine/staging",
+  "site_domain": "staging.meterengine.com",
+  "compose_project": "meterengine-staging"
+}
