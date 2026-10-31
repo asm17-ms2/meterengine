@@ -1,0 +1,572 @@
+{
+  "__comment": "MeterEngine API 상세 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. uri와 method 변수로 API를 골라 지연과 오류를 보고, 인증 행은 변수와 상관없이 전체를 센다.",
+  "uid": "meterengine-api",
+  "title": "MeterEngine API 상세",
+  "tags": [
+    "meterengine"
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "meterengine"
+      ],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "refresh": "1m",
+  "templating": {
+    "list": [
+      {
+        "name": "uri",
+        "label": "uri",
+        "description": "API 행 패널에만 걸린다. 인증 행은 UNKNOWN과 경로 uri를 함께 세야 해서 이 변수를 쓰지 않는다. UNKNOWN은 보안 필터가 막은 응답이라 지연 패널에서는 빠진다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count{job=\"backend\", uri!~\"/actuator.*\"}, uri)",
+          "refId": "uri"
+        },
+        "definition": "label_values(http_server_requests_seconds_count{job=\"backend\", uri!~\"/actuator.*\"}, uri)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "method",
+        "label": "method",
+        "description": "API 행 패널에만 걸린다. 고른 uri에서 나온 method만 보여 준다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
+          "refId": "method"
+        },
+        "definition": "label_values(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "API",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "지연 p50",
+      "description": "고른 API의 성공 응답 시간 p50을 method와 uri별로 그리고, 실패 응답과 보안 필터가 막은 UNKNOWN, actuator는 뺀다. 오르면 보통의 요청도 느려진 것이다. 지표: `http_server_requests_seconds_bucket`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "지연 p99",
+      "description": "고른 API의 성공 응답 시간 p99를 method와 uri별로 그리고, 실패 응답과 보안 필터가 막은 UNKNOWN, actuator는 뺀다. 오르면 운 나쁜 요청이 오래 기다리는 것이다. 요청이 드문 API는 창 안 성공 요청이 적어 가장 느린 요청 하나에 끌린다. 지표: `http_server_requests_seconds_bucket`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "요청 수",
+      "description": "고른 API의 초당 요청 수를 실패 응답까지 넣어 method와 uri별로 그린다. 갑자기 줄면 호출하는 쪽이나 앞단에 문제가 있는 것이다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "5xx 비율",
+      "description": "고른 API의 응답 가운데 5xx가 차지하는 비율을 method와 uri별로 그린다. 오르면 서버 잘못으로 실패하는 요청이 는 것이고, SQL 하나가 30초에 끊긴 집계 조회처럼 성공만 쓰는 p99에 안 보이는 실패도 여기 드러난다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\", status=~\"5..\"}[$__rate_interval])) or sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval])) * 0) / sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "heatmap",
+      "title": "지연 히트맵",
+      "description": "고른 API의 성공 응답 시간이 어느 구간에 몰렸는지 시간 흐름으로 보여 준다. 진한 칸이 위로 옮겨 가면 응답이 느려진 것이고, 띠가 둘로 갈리면 빠른 요청과 느린 요청이 섞인 것이다. 지표: `http_server_requests_seconds_bucket`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (le) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 64,
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "reverse": false
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": false
+        },
+        "legend": {
+          "show": true
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "상태 코드별 요청 수",
+      "description": "고른 API의 초당 응답 수를 상태 코드별로 그리고, uri가 전체이거나 UNKNOWN을 고르면 보안 필터가 핸들러 전에 막은 응답도 함께 본다. 400대가 늘면 호출하는 쪽 요청이 틀린 것이고 500대가 늘면 서버 쪽 실패다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "인증",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "401, 403, 429 응답 수",
+      "description": "인증 실패 401, 권한 없음 403, 호출 제한 429 응답을 한 점 간격(최소 5분) 동안 상태 코드별로 세고, 보안 필터가 막아 uri가 UNKNOWN인 응답과 경로 uri로 남은 응답을 함께 담는다. 갑자기 늘면 키 유출이나 대입 시도를 의심한다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "interval": "5m",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"backend\", status=~\"401|403|429\"}[$__interval]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "로그인 결과",
+      "description": "로그인 요청(POST /v1/sessions)을 한 점 간격(최소 5분) 동안 상태 코드별로 센다. 201은 성공, 400은 입력 형식 오류, 401은 이메일이나 비밀번호 불일치, 403은 활성 도입사 없음, 429는 로그인 호출 제한이고 그 밖의 코드도 함께 그리며, Authorization 헤더 값이 올바르지 않아 보안 필터가 막은 401은 uri가 UNKNOWN이라 여기서 세지 않는다. 401이 평소보다 늘면 비밀번호 대입 시도를 의심한다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "interval": "5m",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/sessions\"}[$__interval]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "호출 제한 거절 수",
+      "description": "호출 제한에 걸려 429로 거절한 요청을 API 키, 로그인, 가입 한도별로 한 점 간격(최소 5분) 동안 센다. API 키는 보안 필터의 거절 카운터로, 로그인과 가입은 경로 uri의 429로 세며, 늘면 어떤 키, IP, 계정이 한도를 넘게 호출하는 것이다. 지표: `meterengine_api_key_rate_limit_rejections_total`, `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "interval": "5m",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum (increase(meterengine_api_key_rate_limit_rejections_total{job=\"backend\"}[$__interval]))",
+          "legendFormat": "API 키"
+        },
+        {
+          "refId": "B",
+          "expr": "sum (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/sessions\", status=\"429\"}[$__interval]))",
+          "legendFormat": "로그인"
+        },
+        {
+          "refId": "C",
+          "expr": "sum (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/signups\", status=\"429\"}[$__interval]))",
+          "legendFormat": "가입"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "감사 기록 실패 수",
+      "description": "요청 감사 기록 저장이 실패한 수를 한 점 간격(최소 5분) 동안 센다. 0보다 크면 그만큼 요청의 감사 기록이 빠진 것이니 오류 로그의 request_id로 원인을 찾는다. 지표: `meterengine_request_audit_failures_total`",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "interval": "5m",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum (increase(meterengine_request_audit_failures_total{job=\"backend\"}[$__interval]))",
+          "legendFormat": "실패"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}
