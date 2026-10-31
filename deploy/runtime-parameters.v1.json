@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "parameters": [
+    {"parameter_name": "db-host", "environment_name": "DB_HOST", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-port", "environment_name": "DB_PORT", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-name", "environment_name": "DB_NAME", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-shared-username", "environment_name": "DB_SHARED_USERNAME", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-shared-password", "environment_name": "DB_SHARED_PASSWORD", "service": "backend", "secret": true, "required": true},
+    {"parameter_name": "db-test-username", "environment_name": "DB_TEST_USERNAME", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-test-password", "environment_name": "DB_TEST_PASSWORD", "service": "backend", "secret": true, "required": true},
+    {"parameter_name": "db-live-username", "environment_name": "DB_LIVE_USERNAME", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "db-live-password", "environment_name": "DB_LIVE_PASSWORD", "service": "backend", "secret": true, "required": true},
+    {"parameter_name": "crypto-encryption-key", "environment_name": "CRYPTO_ENCRYPTION_KEY", "service": "backend", "secret": true, "required": true},
+    {"parameter_name": "meterengine-cutover-mode", "environment_name": "METERENGINE_CUTOVER_MODE", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "operator-email", "environment_name": "OPERATOR_EMAIL", "service": "backend", "secret": false, "required": true},
+    {"parameter_name": "operator-password", "environment_name": "OPERATOR_PASSWORD", "service": "backend", "secret": true, "required": true},
+    {"parameter_name": "db-exporter-password", "environment_name": "DB_EXPORTER_PASSWORD", "service": "postgres-exporter", "secret": true, "required": true},
+    {"parameter_name": "oauth2-proxy-client-id", "environment_name": "OAUTH2_PROXY_CLIENT_ID", "service": "oauth2-proxy", "secret": true, "required": true},
+    {"parameter_name": "oauth2-proxy-client-secret", "environment_name": "OAUTH2_PROXY_CLIENT_SECRET", "service": "oauth2-proxy", "secret": true, "required": true},
+    {"parameter_name": "oauth2-proxy-cookie-secret", "environment_name": "OAUTH2_PROXY_COOKIE_SECRET", "service": "oauth2-proxy", "secret": true, "required": true},
+    {"parameter_name": "grafana-admin-password", "environment_name": "GRAFANA_ADMIN_PASSWORD", "service": "grafana", "secret": true, "required": true},
+    {"parameter_name": "slack-webhook-url", "environment_name": "SLACK_WEBHOOK_URL", "service": "grafana", "secret": true, "required": true},
+    {"parameter_name": "meterengine-auth-rate-limit-login-ip-limit", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-auth-rate-limit-login-account-limit", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-auth-rate-limit-login-window", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-auth-rate-limit-signup-ip-limit", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-auth-rate-limit-signup-account-limit", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-auth-rate-limit-signup-window", "environment_name": "METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW", "service": "backend", "secret": false, "required": false},
+    {"parameter_name": "meterengine-staging-webhook-allowed-urls", "environment_name": "METERENGINE_STAGING_WEBHOOK_ALLOWED_URLS", "service": "backend", "secret": false, "required": false}
+  ]
+}

@@ -18,6 +18,7 @@ DUMMY_ENV = {
         "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET")
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
+DUMMY_ENV["METERENGINE_DEPLOYMENT_ENVIRONMENT"] = "production"
 MONITORING_ONLY = ("grafana", "node-exporter", "cadvisor", "postgres-exporter", "cloudwatch-exporter")
 APPS = ("frontend", "backend-blue", "backend-green")
 WRITE_FLAGS = ("--web.enable-admin-api", "--web.enable-lifecycle",
@@ -109,9 +110,16 @@ class MonitoringNetworkTest(unittest.TestCase):
         self.assertFalse(any(arg.startswith("--skip-auth") for arg in command))
 
     def test_oauth2_proxy_refuses_to_start_without_secrets(self):
-        for name in ("OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET"):
-            with self.assertRaisesRegex(AssertionError, name):
-                compose_config(**{name: None})  # None은 env에서 뺀다는 뜻
+        import test_runtime_parameters
+        fixture = test_runtime_parameters.RuntimeParametersTest("runTest")
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        for name in ("oauth2-proxy-client-id", "oauth2-proxy-client-secret", "oauth2-proxy-cookie-secret"):
+            for mutation in ({"OAUTH_MISSING": name}, {"OAUTH_EMPTY": name}):
+                result = fixture.snapshot("backend-blue", "oauth2-proxy", DEPLOY_ENVIRONMENT="production", **mutation)
+                self.assertNotEqual(result.returncode, 0, name)
+                self.assertEqual(result.stdout, "", name)
+
 
 
 if __name__ == "__main__":
