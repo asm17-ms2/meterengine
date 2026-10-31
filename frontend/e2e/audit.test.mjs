@@ -9,7 +9,8 @@ const javaFiles = dir => readdirSync(dir).flatMap(name => {
   const path = join(dir, name);
   return statSync(path).isDirectory() ? javaFiles(path) : name.endsWith(".java") ? [path] : [];
 });
-const ACTION_LITERAL = /"([a-z]+(?:_[a-z]+)*_(?:created|updated|deleted|archived|restored|retried|accepted|revoked|finalized|viewed|requested|completed))"/g;
+// enum 상수의 생성자 인자(`NOT_REQUESTED("not_requested")`)는 지표 라벨이라 감사 action에서 뺀다.
+const ACTION_LITERAL = /(?<![A-Z0-9_]\()"([a-z]+(?:_[a-z]+)*_(?:created|updated|deleted|archived|restored|retried|accepted|revoked|finalized|viewed|requested|completed))"/g;
 
 test("an audit entry names the person who acted and falls back to the actor kind", () => {
   const names = new Map([["11111111-1111-4111-8111-111111111111", "김대표 (owner@example.com)"]]);
