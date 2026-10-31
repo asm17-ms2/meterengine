@@ -1,0 +1,33 @@
+name: Terraform checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Validate without AWS credentials
+        run: python3 deploy/terraform_workflow.py checks --directory "$RUNNER_TEMP/terraform-checks"
+      - name: Python deployment checks
+        env:
+          TF_WORKSPACE: default
+          TF_DATA_DIR: ${{ runner.temp }}/terraform-checks/staging/data
+        run: |
+          docker pull caddy:2.11.7-alpine
+          python3 -m unittest discover -s deploy/tests -v
+      - name: Bootstrap access policy checks
+        env:
+          TF_WORKSPACE: default
+          TF_DATA_DIR: ${{ runner.temp }}/terraform-checks/automation/data
+        run: python3 deploy/terraform/automation/tests/test_access.py

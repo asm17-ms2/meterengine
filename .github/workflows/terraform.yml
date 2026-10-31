@@ -1,0 +1,141 @@
+name: Terraform infrastructure
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Infrastructure target
+        type: choice
+        required: true
+        options: [staging, production]
+permissions:
+  contents: read
+concurrency:
+  group: terraform-${{ inputs.target }}
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+      id-token: write
+    outputs:
+      expected: ${{ steps.plan.outputs.expected }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TF_STAGING_DB_PASSWORD_VERSION: ${{ vars.TF_STAGING_DB_PASSWORD_VERSION }}
+      TF_STAGING_RUNTIME_SECRET_VERSIONS_JSON: ${{ vars.TF_STAGING_RUNTIME_SECRET_VERSIONS_JSON }}
+      TF_STAGING_OPERATOR_EMAIL: ${{ vars.TF_STAGING_OPERATOR_EMAIL }}
+      TF_PRODUCTION_OWNERSHIP_AUDIT_KEY: ${{ vars.TF_PRODUCTION_OWNERSHIP_AUDIT_KEY }}
+      TF_PRODUCTION_OWNERSHIP_AUDIT_VERSION_ID: ${{ vars.TF_PRODUCTION_OWNERSHIP_AUDIT_VERSION_ID }}
+      TF_PRODUCTION_OWNERSHIP_AUDIT_SHA256: ${{ vars.TF_PRODUCTION_OWNERSHIP_AUDIT_SHA256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Local validation
+        run: python3 deploy/terraform_workflow.py checks --directory "$RUNNER_TEMP/terraform-checks"
+      - name: Verify dispatch and native approval configuration
+        id: preflight
+        env:
+          TARGET: ${{ inputs.target }}
+        run: python3 deploy/terraform_workflow.py prepare-plan --target "$TARGET"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ steps.preflight.outputs.role_arn }}
+          role-duration-seconds: 3600
+          aws-region: ap-northeast-2
+          allowed-account-ids: '928618307647'
+          mask-aws-account-id: false
+          unset-current-credentials: true
+      - name: Create and store private saved plan
+        id: plan
+        env:
+          TARGET: ${{ inputs.target }}
+        run: python3 deploy/terraform_workflow.py plan --target "$TARGET" --directory "$RUNNER_TEMP/terraform-plan"
+  apply-staging:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.target == 'staging'
+    needs: plan
+    environment: staging-infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_PLAN: ${{ needs.plan.outputs.expected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Verify same-run plan and approval configuration after approval
+        id: preflight
+        env:
+          TF_STAGING_DB_PASSWORD: ${{ secrets.TF_STAGING_DB_PASSWORD }}
+          TF_STAGING_RUNTIME_SECRETS_JSON: ${{ secrets.TF_STAGING_RUNTIME_SECRETS_JSON }}
+        run: python3 deploy/terraform_workflow.py prepare-apply --target staging
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ steps.preflight.outputs.role_arn }}
+          role-duration-seconds: 10800
+          aws-region: ap-northeast-2
+          allowed-account-ids: '928618307647'
+          mask-aws-account-id: false
+          unset-current-credentials: true
+      - name: Apply the verified private saved plan
+        env:
+          TF_STAGING_DB_PASSWORD: ${{ secrets.TF_STAGING_DB_PASSWORD }}
+          TF_STAGING_RUNTIME_SECRETS_JSON: ${{ secrets.TF_STAGING_RUNTIME_SECRETS_JSON }}
+        run: python3 deploy/terraform_workflow.py apply --target staging --directory "$RUNNER_TEMP/terraform-apply"
+  apply-production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.target == 'production'
+    needs: plan
+    environment: production-infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_PLAN: ${{ needs.plan.outputs.expected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Verify same-run plan and approval configuration after approval
+        id: preflight
+        run: python3 deploy/terraform_workflow.py prepare-apply --target production
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ steps.preflight.outputs.role_arn }}
+          role-duration-seconds: 7200
+          aws-region: ap-northeast-2
+          allowed-account-ids: '928618307647'
+          mask-aws-account-id: false
+          unset-current-credentials: true
+      - name: Apply the verified private saved plan
+        run: python3 deploy/terraform_workflow.py apply --target production --directory "$RUNNER_TEMP/terraform-apply"
