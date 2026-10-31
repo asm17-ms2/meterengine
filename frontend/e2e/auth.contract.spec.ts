@@ -1039,6 +1039,8 @@ test("a focused field in a workspace dialog keeps its whole focus ring inside th
   await login(page, "member@contract.local", "/members");
   await page.getByRole("button", { name: "초대 링크 만들기", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  // 열림 애니메이션 도중에는 대화상자가 축소된 크기로 재지므로 다 열린 뒤에 잰다.
+  await expect.poll(() => page.locator(".ant-modal").evaluate(element => getComputedStyle(element).opacity)).toBe("1");
   await dialog.locator("input:not([type=hidden])").first().focus();
   const room = await dialog.evaluate(element => {
     const body = element.querySelector(".ant-modal-body")!;
