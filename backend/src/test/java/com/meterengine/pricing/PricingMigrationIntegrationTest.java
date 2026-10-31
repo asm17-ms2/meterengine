@@ -124,6 +124,12 @@ class PricingMigrationIntegrationTest {
                         + " FROM invoice WHERE id=?",
                     invoiceId))
             .isEqualTo(invoiceBefore);
+        assertThat(
+                scalar(
+                    connection,
+                    "SELECT (cutoff_at = finalized_at)::text FROM invoice WHERE id=?",
+                    invoiceId))
+            .isEqualTo("true");
         for (String table :
             List.of(
                 "customer",

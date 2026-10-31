@@ -396,6 +396,47 @@ class SchemaConstraintTest {
   }
 
   @Test
+  void 마감_시각은_생략하면_DB가_대신_채우지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+                       total_amount, finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200, now())
+                    """,
+                    organizationId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("cutoff_at");
+  }
+
+  @Test
+  void 마감_시각이_확정_시각보다_늦은_인보이스는_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice
+                      (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
+                       total_amount, cutoff_at, finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200,
+                            '2026-09-01T13:00:01+09:00', '2026-09-01T13:00:00+09:00')
+                    """,
+                    organizationId,
+                    customerId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_cutoff_at_check");
+  }
+
+  @Test
   void 다른_도입사의_인보이스에는_라인을_붙일_수_없다() {
     UUID organizationId = insertOrganization();
     UUID invoiceId =

@@ -26,7 +26,7 @@ class InvoiceRoundTripTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  void 저장한_인보이스는_고객_이름과_기간과_금액과_합계와_확정_시각이_그대로_되읽힌다() {
+  void 저장한_인보이스는_고객_이름과_기간과_금액과_합계와_마감_시각과_확정_시각이_그대로_되읽힌다() {
     UUID organizationId = insertOrganization();
     OffsetDateTime finalizedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     OffsetDateTime cutoffAt = finalizedAt.minusHours(1);
@@ -52,6 +52,7 @@ class InvoiceRoundTripTest {
     assertThat(reloadedInvoice.getSupplyAmount()).isEqualTo(12000L);
     assertThat(reloadedInvoice.getTaxAmount()).isEqualTo(1200L);
     assertThat(reloadedInvoice.getTotalAmount()).isEqualTo(13200L);
+    assertThat(reloadedInvoice.getCutoffAt()).isAtSameInstantAs(cutoffAt);
     assertThat(reloadedInvoice.getFinalizedAt()).isAtSameInstantAs(finalizedAt);
   }
 
