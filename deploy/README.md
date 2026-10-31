@@ -470,6 +470,38 @@ aws ssm get-parameter --name /meterengine/prod/operator-password --with-decrypti
 - 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
 
+### RDS CA와 owner 작업
+
+CA는 공식 HTTPS truststore에서 받아 모든 인증서의 파싱과 유효성을 확인한 뒤 원자 교체한다. 별도 게시 checksum이 있다고 가정하지 않는다. 승인한 서버 변경에서 설치하고 같은 파일을 runtime에 read-only로 마운트한다.
+
+```bash
+sudo ./deploy/rds-ca.sh install /etc/meterengine/rds-ca.pem
+stat /etc/meterengine/rds-ca.pem
+```
+
+실제 staging에서는 원래 RDS endpoint로 정상 연결, 잘못된 CA와 hostname의 실패를 확인해야 한다. 로컬 TLS 시험은 이 실제 연결 검증을 대신하지 않는다.
+
+owner 작업은 manifest의 instance/endpoint와 CA를 확인하고 SSM 포트 전달을 연 뒤 별도 승인하여 실행한다. Linux를 지원하며 staging은 OrbStack Linux ARM64를 확인한 macOS에서도 실행할 수 있다. production은 Linux의 migration만 지원한다. 포트 전달 세션에 owner 자격을 보내지 않는다.
+
+```bash
+aws ssm start-session --target <staging-instance-id> \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters '{"host":["<원래-RDS-endpoint>"],"portNumber":["5432"],"localPortNumber":["15432"]}'
+./deploy/migrate.sh staging <ECR-backend@sha256:digest> 15432 /tmp/approved-rds-ca.pem
+```
+
+기존 네 인자는 `--migrate-only`와 같다. staging의 빈 새 DB는 같은 이미지와 포트 전달에서 다음 순서로 준비한다. 각 명령은 별도 승인한 owner 작업이며 실제 DB 초기화와 TLS 검증을 통과한 이미지가 필요하다.
+
+```bash
+./deploy/migrate.sh staging <ECR-backend@sha256:digest> 15432 /tmp/approved-rds-ca.pem --bootstrap-database
+./deploy/migrate.sh staging <ECR-backend@sha256:digest> 15432 /tmp/approved-rds-ca.pem --migrate-only
+DB_TARGET_IDENTIFIER=<manifest-database_identifier> ./deploy/migrate.sh staging <ECR-backend@sha256:digest> 15432 /tmp/approved-rds-ca.pem --activate-target --fresh-target
+```
+
+bootstrap만 staging의 shared/test/live username/password를 추가로 읽는다. 역할은 `meterengine_shared`, `meterengine_test`, `meterengine_live`로 고정한다. migration과 activation은 연결 정보와 owner 자격만 읽으며 activation target은 manifest와 정확히 일치해야 한다. 혼합하거나 순서를 바꾼 모드는 거절한다.
+
+자격은 권한 0600의 임시 env 파일로 전달하고 종료 시 지운다. CA read-only mount, host network, 원래 RDS hostname의 loopback 매핑과 backend의 `verify-full`을 유지한다. 전달 세션과 임시 CA도 종료 시 해제한다. 로컬 runner 시험과 Mac loopback TCP 확인은 실제 SSM/RDS/TLS, 이미지의 DB 초기화 성공을 보증하지 않는다.
+
 ## 모니터링
 
 - Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
