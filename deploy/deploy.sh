@@ -2,14 +2,15 @@
 # 실행 중 git checkout이 이 파일을 덮어쓰므로, 본문은 모두 main()에 두고 맨 끝에서 한 번 부른다.
 
 set -euo pipefail
+set +x
+DEPLOY_CONTRACT_VERSION=1
+RUNTIME_CONTRACT_VERSION=1
 
 REPO_DIR=/opt/meterengine
 ENV_FILE=/etc/meterengine/prod.env
+RDS_CA_FILE=/etc/meterengine/rds-ca.pem
 CONFIG_FILE=/etc/meterengine/deploy.conf
 STATE_FILE=/etc/meterengine/deploy-state
-PARAM_PATH=/meterengine/prod
-SITE_DOMAIN=meterengine.com
-SITE_ALIASES=www.meterengine.com
 DEPLOY_TIMING=off
 BACKEND_MEM_LIMIT=768m
 BACKEND_MAX_RAM_PERCENTAGE=50
@@ -24,11 +25,8 @@ fi
 # 옛 스크립트가 FD 9와 deploy.lock을 다시 열어도 호출부의 잠금은 유지한다.
 LOCK_FILE=/etc/meterengine/deploy-command.lock
 
-# 계정이나 리전을 옮기면 .github/workflows의 같은 값도 함께 고친다.
-export AWS_REGION=ap-northeast-2
-ECR_REGISTRY=928618307647.dkr.ecr.ap-northeast-2.amazonaws.com
-# compose.prod.yml의 name과 같아야 한다.
-COMPOSE_PROJECT=meterengine-prod
+export AWS_REGION
+ENABLED_SERVICES=
 # Caddyfile의 lb_try_duration과 같아야 한다. reload 전에 들어온 요청은 그 안에 옛 색에 넘어가거나 실패하고,
 # 넘어간 요청은 옛 색의 Spring이 마치고 멈춘다.
 DRAIN_SECONDS=5
@@ -41,6 +39,9 @@ legacy_container=
 serving=
 switched=no
 discard_target_on_failure=no
+parameter_snapshot=
+env_tmp_file=
+deploy_timing_started=no
 
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] 실패: %s\n' "$*" >&2; exit 1; }
@@ -269,29 +270,30 @@ discard_target() {
 
 on_exit() {
 	local code=$?
+	[ -z "${parameter_snapshot:-}" ] || rm -f "$parameter_snapshot"
+	[ -z "${env_tmp_file:-}" ] || rm -f "$env_tmp_file"
 	case "$(target_on_exit "$code" "$discard_target_on_failure")" in
 	discard)
 		discard_target || true
 		;;
 	esac
-	if [ "$DEPLOY_TIMING" = on ]; then
+	if [ "$DEPLOY_TIMING" = on ] && [ "${deploy_timing_started:-no}" = yes ]; then
 		log "측정 끝 $(now_ms) backend=$(backend_container) 종료=$code" || true
 	fi
 	exit "$code"
 }
 
-# Parameter Store 값으로 .env를 매번 새로 만든다.
-write_env_file() {
-	local image_tag="$1" blue_tag="$2" green_tag="$3"
+# 검증한 파라미터를 checkout 전에 한 번만 읽어 보관한다.
+fetch_parameter_snapshot() {
+	parameter_snapshot=$(mktemp "${TMPDIR:-/tmp}/meterengine-parameters.XXXXXX")
+	chmod 600 "$parameter_snapshot"
 
-	mkdir -p "$(dirname "$ENV_FILE")"
-	# 비밀번호가 들어가므로 쓰기 전에 권한부터 좁힌다.
-	touch "$ENV_FILE"
-	chmod 600 "$ENV_FILE"
-
-	local tmp
-	tmp=$(mktemp)
-	chmod 600 "$tmp"
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		[ -r "$RDS_CA_FILE" ] || die "RDS CA가 없다. rds-ca.sh install로 먼저 설치한다"
+		python3 "$script_dir/runtime_parameters.py" --environment "$environment" --expected-db-host "$EXPECTED_DB_HOST" --services $ENABLED_SERVICES >"$parameter_snapshot" || die "runtime 파라미터를 읽거나 검증하지 못했다"
+		printf 'DB_SSL_ROOT_CERT=%s\n' "$RDS_CA_FILE" >>"$parameter_snapshot"
+		return
+	fi
 
 	aws ssm get-parameters-by-path \
 		--path "$PARAM_PATH" \
@@ -305,20 +307,60 @@ write_env_file() {
 			*$'\n'*) die "파라미터 $name 의 값에 개행이 있다. 값을 고쳐야 한다" ;;
 			esac
 			printf '%s=%s\n' "$key" "$value"
-		done >>"$tmp"
+		done >>"$parameter_snapshot"
+
+	local required="DB_HOST DB_PORT DB_NAME DB_USERNAME DB_PASSWORD CRYPTO_ENCRYPTION_KEY OPERATOR_EMAIL OPERATOR_PASSWORD" key
+	if service_enabled postgres-exporter; then required="$required DB_EXPORTER_PASSWORD"; fi
+	if service_enabled grafana; then required="$required GRAFANA_ADMIN_PASSWORD SLACK_WEBHOOK_URL"; fi
+	if service_enabled oauth2-proxy; then required="$required OAUTH2_PROXY_CLIENT_ID OAUTH2_PROXY_CLIENT_SECRET OAUTH2_PROXY_COOKIE_SECRET"; fi
+	for key in $required; do
+		if ! grep -q "^$key=.*[^[:space:]]" "$parameter_snapshot"; then
+			die "$key is required for enabled_services"
+		fi
+	done
+	if [ "$(sed -n 's/^DB_HOST=//p' "$parameter_snapshot")" != "$EXPECTED_DB_HOST" ]; then
+		die "db-host changed after environment preflight"
+	fi
+}
+
+# 검증한 스냅샷에 이미지 참조를 더한 뒤 env 파일을 교체한다.
+write_env_file() {
+	local image_tag="$1" blue_tag="$2" green_tag="$3" blue_image="$4" green_image="$5" frontend_image="$6"
+	if grep -q '^METERENGINE_DEPLOYMENT_ENVIRONMENT=' "$parameter_snapshot"; then
+		die "deployment_environment must come from the verified manifest"
+	fi
+	mkdir -p "$(dirname "$ENV_FILE")"
+	env_tmp_file=$(mktemp "$ENV_FILE.XXXXXX")
+	chmod 600 "$env_tmp_file"
+	cat "$parameter_snapshot" >"$env_tmp_file"
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		local parameter_name parameter_value
+		while IFS='=' read -r parameter_name parameter_value; do
+			export -n "$parameter_name"
+		done <"$parameter_snapshot"
+	fi
 
 	{
+		printf 'METERENGINE_DEPLOYMENT_ENVIRONMENT=%s\n' "$METERENGINE_DEPLOYMENT_ENVIRONMENT"
 		printf 'IMAGE_TAG=%s\n' "$image_tag"
 		printf 'BACKEND_BLUE_TAG=%s\n' "$blue_tag"
 		printf 'BACKEND_GREEN_TAG=%s\n' "$green_tag"
+		printf 'BACKEND_BLUE_IMAGE=%s\n' "$blue_image"
+		printf 'BACKEND_GREEN_IMAGE=%s\n' "$green_image"
+		printf 'FRONTEND_IMAGE=%s\n' "$frontend_image"
 		printf 'ECR_REGISTRY=%s\n' "$ECR_REGISTRY"
 		printf 'SITE_DOMAIN=%s\n' "$SITE_DOMAIN"
 		printf 'SITE_ALIASES=%s\n' "$SITE_ALIASES"
 		printf 'BACKEND_MEM_LIMIT=%s\n' "$BACKEND_MEM_LIMIT"
 		printf 'BACKEND_MAX_RAM_PERCENTAGE=%s\n' "$BACKEND_MAX_RAM_PERCENTAGE"
-	} >>"$tmp"
+	} >>"$env_tmp_file"
+	export -n METERENGINE_DEPLOYMENT_ENVIRONMENT
+	export -n METERENGINE_STAGING_WEBHOOK_ALLOWED_URLS
 
-	mv "$tmp" "$ENV_FILE"
+	mv "$env_tmp_file" "$ENV_FILE"
+	env_tmp_file=
+	rm -f "$parameter_snapshot"
+	parameter_snapshot=
 	chmod 600 "$ENV_FILE"
 
 	grep -q '^DB_HOST=' "$ENV_FILE" || die "Parameter Store에서 db-host를 읽지 못했다"
@@ -334,16 +376,35 @@ write_access_log_file() {
 	mv "$tmp" "$file"
 }
 
-# SUT도 이 Caddyfile을 쓰는데 DNS 없는 이름은 meterengine.com 공용 Let's Encrypt 한도로 발급을 계속 재시도하고, 이미 있는 SUT는 user-data를 다시 돌지 않아 PARAM_PATH로 정한다.
+# 검증된 production의 SSO 서비스가 모두 선택됐을 때만 사이트를 기본 공개한다.
 sso_sites_default() {
-	if [ "$PARAM_PATH" = /meterengine/prod ]; then echo on; else echo off; fi
+	if [ "$METERENGINE_DEPLOYMENT_ENVIRONMENT" = production ] &&
+		service_enabled oauth2-proxy && service_enabled grafana && service_enabled prometheus; then
+		echo on
+	else
+		echo off
+	fi
+}
+
+sso_sites_value() {
+	local value=${CADDY_SSO_SITES-$(sso_sites_default)} service
+	case "$value" in
+	on)
+		for service in oauth2-proxy grafana prometheus; do
+			service_enabled "$service" || die "CADDY_SSO_SITES=on requires $service in enabled_services"
+		done
+		;;
+	off) ;;
+	*) die "deploy.conf의 CADDY_SSO_SITES는 on이나 off여야 한다. 지금 값: '$value'" ;;
+	esac
+	printf '%s\n' "$value"
 }
 
 # Caddyfile이 가져오는 SSO 사이트 설정을 쓴다. deploy.conf의 CADDY_SSO_SITES가 있으면 그 값을 따른다.
 # Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
 write_sso_file() {
 	local file="$REPO_DIR/deploy/caddy/sso.caddy" value content tmp
-	value=${CADDY_SSO_SITES-$(sso_sites_default)}
+	value=$(sso_sites_value) || return 1
 	case "$value" in
 	on) content='import sso-sites.caddy' ;;
 	off) content='# CADDY_SSO_SITES=off' ;;
@@ -379,7 +440,28 @@ write_state_file() {
 	local tmp
 	tmp=$(mktemp "$STATE_FILE.XXXXXX")
 	printf 'LIVE_COLOR=%s\nLIVE_SHA=%s\n' "$1" "$2" >"$tmp"
+	if [ "${environment:-}" = staging ] || [ "${environment:-}" = production ]; then
+		{
+			printf 'SOURCE_REF=%s\nSOURCE_TREE=%s\nDEPLOY_RUN_ID=%s\n' "$git_ref" "$source_tree" "$DEPLOY_RUN_ID"
+			printf 'BACKEND_IMAGE_DIGEST=%s\nFRONTEND_IMAGE_DIGEST=%s\n' "$BACKEND_IMAGE_DIGEST" "$FRONTEND_IMAGE_DIGEST"
+			printf 'BACKEND_IMAGE_ID=%s\nFRONTEND_IMAGE_ID=%s\n' "$BACKEND_IMAGE_ID" "$FRONTEND_IMAGE_ID"
+		} >>"$tmp"
+	fi
 	mv "$tmp" "$STATE_FILE"
+}
+
+observe_deployment() {
+	local before after observations
+	before=$(routed_color)
+	[ "$before" = "$target_color" ] || die "관측 전 Caddy 색이 다르다"
+	backend_healthy "$before" || die "관측 전 backend health가 실패했다"
+	observations=$(python3 "$script_dir/observe_images.py" "$environment" --backend-service "backend-$before" --backend-digest "$BACKEND_IMAGE_DIGEST" --frontend-digest "$FRONTEND_IMAGE_DIGEST") || die "실제 이미지 관측이 실패했다"
+	after=$(routed_color)
+	[ "$before" = "$after" ] || die "관측 중 Caddy 색이 바뀌었다"
+	[ "$(git rev-parse HEAD 8>&- 9>&-)" = "$git_ref" ] &&
+		[ "$(git rev-parse 'HEAD^{tree}' 8>&- 9>&-)" = "$source_tree" ] &&
+		git diff --quiet "$git_ref" -- 8>&- 9>&- || die "관측 중 source가 바뀌었다"
+	eval "$observations"
 }
 
 # 명령이 성공할 때까지 정한 횟수와 간격으로 다시 시도한다.
@@ -421,7 +503,12 @@ wait_for_prometheus_ready() {
 # 비밀번호는 curl 설정의 표준 입력으로 전달하고, 각 요청은 남은 대기 시간 안에 끝낸다.
 reload_grafana_alerting() {
 	local end=$((SECONDS + 90)) left password
-	password=$(grep '^GRAFANA_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | sed 's/[\\"]/\\&/g') || return 1
+	if [ "${environment:-sut}" = staging ] || [ "${environment:-sut}" = production ]; then
+		password=$(python3 "$script_dir/runtime_parameters.py" read-env "$ENV_FILE" GRAFANA_ADMIN_PASSWORD) || return 1
+	else
+		password=$(grep '^GRAFANA_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2-) || return 1
+	fi
+	password=$(printf '%s' "$password" | sed 's/[\\"]/\\&/g') || return 1
 	while :; do
 		left=$((end - SECONDS))
 		[ "$left" -gt 0 ] || return 1
@@ -435,16 +522,66 @@ reload_grafana_alerting() {
 	done
 }
 
-main() {
-	local sha="${1:-}"
-	[ -n "$sha" ] || die "배포할 이미지의 git SHA를 인자로 줘야 한다. 예: $0 979e251... [체크아웃할 git ref]"
-	local git_ref="${2:-$sha}"
+service_enabled() {
+	case " $ENABLED_SERVICES " in *" $1 "*) return 0 ;; *) return 1 ;; esac
+}
 
-	# CD가 기다리다 포기해도 SSM은 이 스크립트를 계속 돌린다. 두 배포가 겹치면 살아 있는 색을 멈출 수 있다.
+verify_image_digest() {
+	local repository="$1" sha="$2" expected="$3" actual
+	[[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || die "$repository image digest가 필요하다"
+	actual=$(aws ecr describe-images --repository-name "$repository" --image-ids "imageTag=$sha" --query 'imageDetails[0].imageDigest' --output text) || die "$repository image digest를 읽지 못했다"
+	[ "$actual" = "$expected" ] || die "$repository SHA tag digest가 다르다"
+}
+
+deploy_main() {
+	local environment="${1:-}" sha="${2:-}" git_ref="${3:-${2:-}}"
+	case "$environment" in staging | production | test-slo | test-storage) ;; *) die "environment 인자가 필요하다: staging|production|test-slo|test-storage IMAGE_SOURCE_SHA [SOURCE_REF]" ;; esac
+	[[ "$sha" =~ ^[0-9a-f]{40}$ ]] || die "IMAGE_SOURCE_SHA는 소문자 git SHA 40자여야 한다"
+	[[ "$git_ref" != -* ]] && [ -n "$git_ref" ] || die "SOURCE_REF가 잘못되었다"
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		[[ "${DEPLOY_RUN_ID:-}" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$ ]] || die "DEPLOY_RUN_ID가 잘못되었다"
+	fi
+	if [[ "$environment" == test-* ]]; then
+		[ "${DEPLOYMENT_TARGET:-}" = "$environment" ] || die "deploy.conf DEPLOYMENT_TARGET가 environment와 다르다"
+	fi
+	local script_dir target_values configured_path="${PARAM_PATH:-}" configured_domain="${SITE_DOMAIN:-}" configured_aliases="${SITE_ALIASES-}"
+	script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+	target_values=$(python3 "$script_dir/environment.py" preflight --environment "$environment") || exit 2
+	eval "$target_values"
+	sso_sites_value >/dev/null || return 1
+	[ -z "$configured_path" ] || [ "$configured_path" = "$PARAM_PATH" ] || die "deploy.conf PARAM_PATH가 environment와 다르다"
+	[ -z "$configured_domain" ] || [ "$configured_domain" = "$SITE_DOMAIN" ] || die "deploy.conf SITE_DOMAIN이 environment와 다르다"
+	[ -z "$configured_aliases" ] || [ "$configured_aliases" = "$SITE_ALIASES" ] || die "deploy.conf SITE_ALIASES가 environment와 다르다"
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		verify_image_digest meterengine-backend "$sha" "${BACKEND_IMAGE_DIGEST:-}"
+		verify_image_digest meterengine-frontend "$sha" "${FRONTEND_IMAGE_DIGEST:-}"
+	fi
+
 	acquire_deploy_lock
+	target_values=$(python3 "$script_dir/environment.py" preflight --environment "$environment") || exit 2
+	eval "$target_values"
+	cd "$REPO_DIR"
+	git fetch --quiet origin 8>&- 9>&-
+	git_ref=$(git rev-parse --verify "$git_ref^{commit}" 8>&- 9>&-) || die "SOURCE_REF를 찾지 못했다"
+	git show "$git_ref:deploy/deploy.sh" 8>&- 9>&- | grep -x 'DEPLOY_CONTRACT_VERSION=1' >/dev/null || die "SOURCE_REF의 deploy.sh에 environment 계약이 없다"
+	git show "$git_ref:deploy/environment.py" 8>&- 9>&- | cmp -s - "$script_dir/environment.py" || die "SOURCE_REF에 같은 environment 계약이 없다"
+	git show "$git_ref:deploy/environments/$environment.json" 8>&- 9>&- | cmp -s - "$script_dir/environments/$environment.json" || die "SOURCE_REF의 environment manifest가 다르다"
+
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		git show "$git_ref:deploy/deploy.sh" 8>&- 9>&- | grep -x 'RUNTIME_CONTRACT_VERSION=1' >/dev/null || die "SOURCE_REF에 runtime 계약이 없다"
+		local runtime_file
+		for runtime_file in runtime_parameters.py runtime-parameters.v1.json compose.runtime.yml observe_images.py; do
+			git show "$git_ref:deploy/$runtime_file" 8>&- 9>&- | cmp -s - "$script_dir/$runtime_file" || die "SOURCE_REF의 runtime 계약이 다르다"
+		done
+	fi
+	local source_tree
+	source_tree=$(git rev-parse "$git_ref^{tree}" 8>&- 9>&-) || die "SOURCE_TREE를 읽지 못했다"
+	[[ "$source_tree" =~ ^[0-9a-f]{40}$ ]] || die "SOURCE_TREE가 잘못되었다"
 
 	trap on_exit EXIT
+	fetch_parameter_snapshot
 	if [ "$DEPLOY_TIMING" = on ]; then
+		deploy_timing_started=yes
 		log "측정 시작 $(now_ms) backend=$(backend_container)"
 	fi
 
@@ -484,9 +621,9 @@ main() {
 	log "대상 색: $target_color, 살아 있는 색: ${live_color:-없음}, 멈출 색: ${previous_color:-없음}, 블루그린 이전 backend: ${legacy_container:-없음}"
 
 	cd "$REPO_DIR"
-	git fetch --quiet origin 8>&- 9>&-
 	git checkout --quiet --force "$git_ref" 8>&- 9>&- || die "커밋 $git_ref 를 찾지 못했다"
-	log "레포를 $(git rev-parse --short HEAD) 로 맞췄다"
+	git diff --quiet "$git_ref" -- 8>&- 9>&- || die "SOURCE_REF와 체크아웃 tree가 다르다"
+	log "레포를 $(git rev-parse --short HEAD 8>&- 9>&-) 로 맞췄다"
 	# 체크아웃한 Caddyfile이 이 파일들을 import하므로, 뒤에서 실패해도 Caddy가 다시 뜰 때 읽을 수 있게 바로 쓴다.
 	write_access_log_file
 	write_sso_file
@@ -494,23 +631,32 @@ main() {
 	write_upstreams_file "$serving" || die "Caddy 백엔드 목록 파일을 쓰지 못했다"
 	log "Caddy가 보낼 백엔드: $serving"
 
-	local blue_tag="$sha" green_tag="$sha" previous_image
+	local want_image="$ECR_REGISTRY/meterengine-backend:$sha" frontend_image="$ECR_REGISTRY/meterengine-frontend:$sha"
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		want_image="$ECR_REGISTRY/meterengine-backend@$BACKEND_IMAGE_DIGEST"
+		frontend_image="$ECR_REGISTRY/meterengine-frontend@$FRONTEND_IMAGE_DIGEST"
+	fi
+	local blue_image="$want_image" green_image="$want_image" previous_image
 	if [ -n "$previous_color" ]; then
 		previous_image=$(running_image "backend-$previous_color") || die "이전 백엔드(backend-$previous_color)의 이미지를 읽지 못했다"
 		if [ "$previous_color" = blue ]; then
-			blue_tag="${previous_image##*:}"
+			blue_image="$previous_image"
 		else
-			green_tag="${previous_image##*:}"
+			green_image="$previous_image"
 		fi
 	fi
-	write_env_file "$sha" "$blue_tag" "$green_tag"
+	write_env_file "$sha" "$sha" "$sha" "$blue_image" "$green_image" "$frontend_image"
 
 	# 엉뚱한 DB에 붙은 채 성공한 배포를 알아챌 수 있게 남긴다.
 	local db_host
 	db_host=$(grep '^DB_HOST=' "$ENV_FILE" | cut -d= -f2-)
+	export DB_HOST="$db_host" BACKEND_BLUE_IMAGE="$blue_image" BACKEND_GREEN_IMAGE="$green_image" FRONTEND_IMAGE="$frontend_image"
 	log "DB: $db_host"
 
-	compose=(docker compose --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.prod.yml")
+	compose=(docker compose --project-name "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.prod.yml")
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		compose+=(-f "$REPO_DIR/deploy/compose.runtime.yml")
+	fi
 
 	# 비밀번호가 로그에 남지 않게 stdin으로 넘긴다.
 	aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_REGISTRY" >/dev/null
@@ -518,15 +664,14 @@ main() {
 
 	# 살아 있는 색과 블루그린 이전 backend는 그대로 두고 나머지만 받고 올린다.
 	# 살아 있는 색의 태그는 ECR에서 이미 지워졌을 수 있어 받지 않는다.
-	local service_list service others=()
-	service_list=$("${compose[@]}" config --services | grep -v '^backend-')
-	while IFS= read -r service; do
-		others+=("$service")
-	done <<<"$service_list"
+	local service others=()
+	for service in $ENABLED_SERVICES; do
+		case "$service" in backend-*) ;; *) others+=("$service") ;; esac
+	done
 	"${compose[@]}" pull --quiet "${others[@]}" "backend-$target_color"
-	"${compose[@]}" up -d "${others[@]}"
+	"${compose[@]}" up -d --no-deps "${others[@]}"
 	discard_target_on_failure=yes
-	"${compose[@]}" up -d "backend-$target_color"
+	"${compose[@]}" up -d --no-deps "backend-$target_color"
 	log "컨테이너 기동 요청 완료"
 
 	# 첫 전환 배포에서 다시 만들어진 프론트엔드가 부를 :8081을 대상 색 기동을 기다리기 전에 연다.
@@ -539,20 +684,24 @@ main() {
 		die "새 백엔드(backend-$target_color)가 90초 안에 준비되지 않았다"
 	fi
 
-	local want_image="$ECR_REGISTRY/meterengine-backend:$sha" target_image
+	local target_image
 	target_image=$(running_image "backend-$target_color") || die "새 백엔드(backend-$target_color)의 이미지를 읽지 못했다"
 	[ "$target_image" = "$want_image" ] || die "새 백엔드(backend-$target_color)의 이미지가 다르다. 기대: $want_image, 실제: $target_image"
 
 	# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
-	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
-	"${compose[@]}" exec -T prometheus kill -HUP 1
-	log "Prometheus 설정 반영 완료"
+	if service_enabled prometheus; then
+		wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
+		"${compose[@]}" exec -T prometheus kill -HUP 1
+		log "Prometheus 설정 반영 완료"
+	fi
 	# cloudwatch exporter도 기동할 때만 config.yml을 읽는다.
 	# 실패해도 새 색은 멀쩡하므로 이것 때문에 새 색을 버리지 않는다.
-	if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
-		log "cloudwatch exporter 설정 반영 완료"
-	else
-		log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+	if service_enabled cloudwatch-exporter; then
+		if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
+			log "cloudwatch exporter 설정 반영 완료"
+		else
+			log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+		fi
 	fi
 
 	# 옛 색을 멈추기 전에 목록에서 빼야 Caddy가 멈추는 색에 새 요청을 보내지 않는다.
@@ -573,9 +722,10 @@ main() {
 		"${compose[@]}" stop "backend-$previous_color"
 		log "이전 백엔드(backend-$previous_color)를 멈췄다"
 	fi
-	# 서비스 이름을 주면 orphan(블루그린 이전 backend)만 graceful하게 지우고 다른 서비스는 건드리지 않는다.
-	"${compose[@]}" up -d --remove-orphans "backend-$target_color"
+	# 비활성 서비스를 건드리지 않고 블루그린 이전 backend만 지운다.
 	if [ -n "$legacy_container" ]; then
+		docker stop "$legacy_container"
+		docker rm "$legacy_container"
 		log "블루그린 이전 backend 컨테이너를 정리했다"
 	fi
 
@@ -589,12 +739,47 @@ main() {
 
 	# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
 	# 앱이 쓰는 경로가 아니라서 앱 확인과 이미지 정리가 끝난 뒤에 한다.
-	wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
-	reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. 401이면 admin 비밀번호가 grafana-admin-password와 다르고, 아니면 alerting.yml을 확인한다"
-	log "Grafana 경보 설정 반영 완료"
+	if service_enabled grafana; then
+		wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
+		reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. 401이면 admin 비밀번호가 grafana-admin-password와 다르고, 아니면 alerting.yml을 확인한다"
+		log "Grafana 경보 설정 반영 완료"
+	fi
 
+	if [ "$environment" = staging ] || [ "$environment" = production ]; then
+		observe_deployment
+	fi
 	write_state_file "$target_color" "$sha"
 	log "배포 성공: $sha"
+}
+
+probe_main() {
+	local environment="${1:-}" sha="${2:-}" git_ref="${3:-}" script_dir target_values source_tree target_color BACKEND_IMAGE_ID FRONTEND_IMAGE_ID
+	case "$environment" in staging | production) ;; *) die "probe environment가 잘못되었다" ;; esac
+	[[ "$sha" =~ ^[0-9a-f]{40}$ ]] && [[ "$git_ref" =~ ^[0-9a-f]{40}$ ]] || die "probe source가 잘못되었다"
+	[[ "${DEPLOY_RUN_ID:-}" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$ ]] || die "DEPLOY_RUN_ID가 잘못되었다"
+	script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+	acquire_deploy_lock
+	target_values=$(python3 "$script_dir/environment.py" preflight --environment "$environment") || exit 2
+	eval "$target_values"
+	cd "$REPO_DIR"
+	source_tree=$(git rev-parse "$git_ref^{tree}" 8>&- 9>&-)
+	target_color=$(recorded_live_color)
+	observe_deployment
+	local field
+	for field in "LIVE_SHA=$sha" "SOURCE_REF=$git_ref" "SOURCE_TREE=$source_tree" "DEPLOY_RUN_ID=$DEPLOY_RUN_ID" \
+		"BACKEND_IMAGE_DIGEST=$BACKEND_IMAGE_DIGEST" "FRONTEND_IMAGE_DIGEST=$FRONTEND_IMAGE_DIGEST" \
+		"BACKEND_IMAGE_ID=$BACKEND_IMAGE_ID" "FRONTEND_IMAGE_ID=$FRONTEND_IMAGE_ID"; do
+		grep -Fqx "$field" "$STATE_FILE" || die "state와 실제 배포 관측이 다르다"
+	done
+}
+
+main() {
+	if [ "${1:-}" = --probe ]; then
+		shift
+		probe_main "$@"
+	else
+		deploy_main "$@"
+	fi
 }
 
 main "$@"

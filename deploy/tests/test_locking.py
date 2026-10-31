@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+import importlib.util
 
 
 ROOT = Path(os.environ.get("DEPLOY_TEST_REPO", Path(__file__).resolve().parents[2]))
@@ -26,6 +27,9 @@ class DeploymentLockTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        if os.environ.get('DEPLOY_FIXTURE_ARTIFACTS'):
+            destination = Path(os.environ['DEPLOY_FIXTURE_ARTIFACTS']) / self.id()
+            self.addCleanup(lambda: shutil.copytree(self.root, destination, symlinks=True))
         self.repo = self.root / "repo"
         (self.repo / "deploy").mkdir(parents=True)
         source = (ROOT / "deploy/deploy.sh").read_text()
@@ -43,7 +47,7 @@ class DeploymentLockTest(unittest.TestCase):
             self.acquire = 'acquire_deploy_lock() {\n' + re.search(
                 r'\texec 9>"\$LOCK_FILE"\n\tflock -n 9[^\n]*', source
             ).group() + '\n}'
-        script = ('#!/usr/bin/env bash\nset -euo pipefail\n'
+        script = ('#!/usr/bin/env bash\nset -euo pipefail\nDEPLOY_CONTRACT_VERSION=1\n'
                   'die() { echo "$*" >&2; exit 1; }\n' + self.acquire + '\n'
                   'if [ "${LEGACY:-no}" = reopens ]; then\n'
                   '  LOCK_FILE=$LEGACY_LOCK_FILE\n'
@@ -57,6 +61,7 @@ class DeploymentLockTest(unittest.TestCase):
         deploy = self.repo / "deploy/deploy.sh"
         deploy.write_text(script)
         deploy.chmod(0o755)
+        (self.repo / "deploy/environment.py").touch()
 
     def entrypoints(self):
         entries = {}
@@ -68,15 +73,14 @@ class DeploymentLockTest(unittest.TestCase):
             if relative == "deploy/README.md":
                 entries["manual"] = re.search(r"^(?:\(exec [89]>|cd /opt/meterengine &&).*deploy/deploy.sh.*$",
                                                source, re.M).group()
-        config = self.root / "deploy.conf"
-        config.write_text("PARAM_PATH=/meterengine/test\nSITE_DOMAIN=test.example\n")
         for target in ("test-slo", "test-storage"):
+            config = self.root / f"{target}.conf"
+            config.write_text(f"PARAM_PATH=/meterengine/test\nSITE_DOMAIN=test.example\nDEPLOYMENT_TARGET={target}\n")
             source = (ROOT / f"measurements/{target}/sut/scripts/sut-deploy.sh").read_text()
             generate = ('REMOTE_DEPLOY_CONFIG=' + shlex.quote(str(config)) + '\n'
                         'REMOTE_REPO_DIR=/opt/meterengine\n'
-                        'FIRST_SHA_WITH_DEPLOY_CONF=' + 'c' * 40 + '\n'
                         + function(source, "deploy_command") + '\n'
-                        'deploy_command "$SHA" /meterengine/test test.example\n')
+                        'deploy_command "$SHA" /meterengine/test test.example "$REF"\n')
             command = subprocess.run(["bash", "-c", generate], env=self.env,
                                      text=True, capture_output=True, check=True).stdout
             entries[target] = command
@@ -84,10 +88,11 @@ class DeploymentLockTest(unittest.TestCase):
                 .replace("/etc/meterengine/deploy.lock", str(self.legacy_lock))
                 .replace("/opt/meterengine", str(self.repo))
                 .replace("<git-sha>", "$SHA").replace("<SHA>", "$SHA")
+                .replace("<source-ref>", "$REF").replace("<SOURCE_REF>", "$REF")
                 for key, value in entries.items()}
 
     def run_entry(self, command, shell="bash", invocation="ssm", **env):
-        script = '''set -euo pipefail
+        script = '''set -eu
 git() {
     if [ -e /proc/self/fd/8 ] || [ -e /proc/self/fd/9 ]; then echo 'git inherited lock' >&2; return 97; fi
     printf 'git %s\n' "$*" >> "$TRACE"
@@ -196,6 +201,37 @@ git() {
         result = self.run_entry(command, RESULT="23")
         self.assertEqual(result.returncode, 23, result.stderr)
         self.assertEqual(subprocess.run(["flock", "-n", str(self.lock), "true"]).returncode, 0)
+
+    def test_install_deploy_and_probe_share_fd8(self):
+        spec = importlib.util.spec_from_file_location('request_renderer', ROOT / 'deploy/install_host_request.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        version = self.root / 'deployer' / ('b'*40)
+        version.mkdir(parents=True)
+        (version / 'installation.json').write_text('{}')
+        (version / 'deploy.sh').write_text((self.repo / 'deploy/deploy.sh').read_text())
+        (version / 'deploy.sh').chmod(0o755)
+        (version.parent / 'current').symlink_to(version.name)
+        (self.root / 'staging-state').write_text('LIVE_COLOR=blue\n')
+        bin_dir = self.root / 'bin'
+        bin_dir.mkdir()
+        (bin_dir / 'curl').write_text('#!/bin/sh\necho ok\n')
+        (bin_dir / 'curl').chmod(0o755)
+        command = module.deployment_command('a'*40,'b'*40,'manual.fixture','sha256:'+'c'*64,'sha256:'+'d'*64).replace('/etc/meterengine',str(self.root))
+        self.holder()
+        result = self.run_entry(command, PATH=str(bin_dir)+':'+os.environ['PATH'])
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(self.trace.read_text().count('started'),1)
+        self.release.touch()
+        deadline=time.monotonic()+5
+        while time.monotonic()<deadline:
+            if subprocess.run(['flock','-n',str(self.lock),'true']).returncode==0: break
+            time.sleep(.02)
+        # The wrapper must use the same lock path, resolved version and inherited FD for both calls.
+        command=command.replace(str(self.root/'deploy-command.lock'),str(self.lock))
+        result=self.run_entry(command, PATH=str(bin_dir)+':'+os.environ['PATH'])
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('started --probe staging',self.trace.read_text())
 
 
 if __name__ == "__main__":

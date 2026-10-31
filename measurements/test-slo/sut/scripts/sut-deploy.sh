@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SUT에 커밋 하나를 배포한다. 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있는 가장 최근 main 커밋)
+# SUT에 이미지를 배포한다. 사용법: sut-deploy.sh IMAGE_SOURCE_SHA SOURCE_REF
 
 set -euo pipefail
 
@@ -14,8 +14,6 @@ readonly ECR_REPOSITORIES="$BACKEND_ECR_REPOSITORY $FRONTEND_ECR_REPOSITORY"
 readonly FULL_SHA_PATTERN='^[0-9a-f]{40}$'
 readonly REMOTE_REPO_DIR=/opt/meterengine
 readonly REMOTE_DEPLOY_CONFIG=/etc/meterengine/deploy.conf
-# 이 커밋보다 앞선 deploy.sh는 deploy.conf를 읽지 않아 개발 서버 파라미터 경로와 도메인을 쓴다.
-readonly FIRST_SHA_WITH_DEPLOY_CONF=a4bdf42e963df521514bf54283393f217c0d93cf
 readonly DEPLOY_DB_LINE_PREFIX='[deploy] DB: '
 
 deploy_output_file=""
@@ -89,17 +87,14 @@ require_dns_points_to() {
 	log "DNS 확인: $domain -> $expected_ip"
 }
 
-# CD처럼 대상 커밋으로 먼저 checkout해 그 커밋의 deploy.sh를 돌린다. 하한 확인은 checkout 전에 해야 옛 Caddyfile이 깔리지 않는다.
 deploy_command() {
-	local sha="$1" param_path="$2" domain="$3"
-	printf '%s' "grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG || { echo '$REMOTE_DEPLOY_CONFIG 의 PARAM_PATH나 SITE_DOMAIN이 SUT 값이 아니다' >&2; exit 1; }
+	local sha="$1" param_path="$2" domain="$3" source_ref="$4"
+	printf '%s' "grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG && grep -qx 'DEPLOYMENT_TARGET=test-slo' $REMOTE_DEPLOY_CONFIG || { echo 'SUT deploy.conf가 target과 다르다' >&2; exit 1; }
 exec 8>/etc/meterengine/deploy-command.lock || exit 1
 flock -n 8 || { echo '다른 배포가 아직 돌고 있거나 잠금을 잡지 못했다' >&2; exit 1; }
 cd $REMOTE_REPO_DIR || exit 1
-git fetch --quiet origin 8>&- 9>&- || exit 1
-git merge-base --is-ancestor $FIRST_SHA_WITH_DEPLOY_CONF $sha 8>&- 9>&- || { echo '$sha 는 deploy.conf를 읽기 전 커밋(${FIRST_SHA_WITH_DEPLOY_CONF:0:7} 이전)이거나 원격에 없는 커밋이라 배포하지 않는다' >&2; exit 1; }
-git checkout --quiet --force $sha 8>&- 9>&- || exit 1
-./deploy/deploy.sh $sha"
+[ -r deploy/environment.py ] && grep -qx 'DEPLOY_CONTRACT_VERSION=1' deploy/deploy.sh || { echo '서버에 environment v1 배포 계약을 먼저 설치해야 한다' >&2; exit 1; }
+./deploy/deploy.sh test-slo $sha $source_ref"
 }
 
 deployed_db_host() {
@@ -119,7 +114,9 @@ require_sut_db() {
 main() {
 	need_cmd aws terraform git curl jq dig
 
-	local sha="${1:-}"
+	local sha="${1:-}" source_ref="${2:-}"
+	[ -n "$source_ref" ] || die "SOURCE_REF를 두 번째 인자로 명시해야 한다"
+	require_full_sha "$source_ref"
 	if [ -z "$sha" ]; then
 		sha=$(latest_deployable_sha) || exit 1
 		log "SHA를 주지 않아 ECR에 이미지가 있는 가장 최근 커밋을 쓴다: $sha"
@@ -149,7 +146,7 @@ main() {
 
 	log "SUT $sut_instance_id 에 $sha 를 배포한다"
 	if ! run_remote_command "$sut_instance_id" "sut-deploy ${sha:0:7}" \
-		"$(deploy_command "$sha" "$param_path" "$domain")" | tee "$deploy_output_file"; then
+		"$(deploy_command "$sha" "$param_path" "$domain" "$source_ref")" | tee "$deploy_output_file"; then
 		[ -z "$(deployed_db_host "$deploy_output_file")" ] || require_sut_db "$deploy_output_file" "$db_address"
 		die "배포가 실패했다. 위 출력을 확인한다"
 	fi

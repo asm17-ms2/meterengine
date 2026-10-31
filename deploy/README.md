@@ -131,6 +131,39 @@ EOF
 
 ## 배포
 
+### staging host 설치와 배포
+
+승인할 source commit/tree, installer와 bundle의 SHA256, Terraform target JSON을 고정한다. staging manifest의 instance ID와 DB host가 null이면 설치할 수 없다. 아래 renderer는 요청만 만들며 AWS를 호출하지 않는다.
+
+```bash
+python3 deploy/install_host_request.py bootstrap \
+  --source-sha <source-sha> --source-tree <source-tree> --public-ref <published-ref> \
+  --installer-sha256 <installer-sha256> --bundle-sha256 <bundle-sha256> \
+  --target-file <approved-target.json> > <request.json>
+```
+
+요청의 정확한 bytes와 대상 인스턴스를 검토하고 승인받은 뒤 기존 `aws ssm send-command --cli-input-json file://<request.json>` 경로로 실행한다. 승인 payload가 신뢰 시작점이다. 공개 pinned fetch에서 commit/tree, installer, 정해진 `git -c tar.umask=0022 archive --format=tar` bundle과 target hash를 대조하며, 기본 clone의 installer는 실행하지 않는다. fetch 실패 시 자격이나 다른 저장소로 우회하지 않는다.
+
+installer의 직접 호출 형태는 다음과 같다. bootstrap이 검증한 파일과 pin만 전달하며 bundle 옆의 private bare `source.git`도 보존한다. 이 sidecar가 없거나 다른 commit/tree를 갖거나 외부경로 링크를 포함하면 설치를 거절한다.
+
+```bash
+bash <verified-install-host.sh> staging --source-sha <source-sha> --source-tree <source-tree> \
+  --bundle <bundle.tar> --bundle-sha256 <bundle-sha256> --target-file <approved-target.json>
+```
+
+bundle의 명시 경로, 일반 파일, mode, 중복을 검사하고 private Git의 commit/tree와 archive bytes, committed target을 대조한다. identity preflight와 FD8 아래 재확인을 통과한 뒤 `/etc/meterengine/deployer/<source-sha>`에 설치한다. CA는 기존 helper로 검증하고, 없는 CA/config만 만든다. receipt를 완성한 뒤 `deployer/current`를 원자 교체한다. 같은 SHA는 receipt와 모든 파일, mode가 같을 때만 재사용한다. 실패한 candidate와 private bootstrap source는 진단을 위해 남기며, installer는 checkout, 앱 env, Caddy와 Docker를 바꾸지 않는다.
+
+```bash
+python3 deploy/install_host_request.py deploy \
+  --image-sha <image-source-sha> --source-ref <installed-source-sha> \
+  --run-id manual.<execution-id> --backend-digest sha256:<backend-digest> \
+  --frontend-digest sha256:<frontend-digest> > <deploy-command.sh>
+```
+
+검토하고 승인한 명령을 기존 SSM 경로로 전달한다. wrapper는 FD8을 잡은 뒤 current의 실제 버전을 고정하고, 배포, FE health와 재관측까지 잠금을 유지한다. 실행 ID는 첫 글자 영숫자, 나머지 ASCII 영숫자와 `._:-`, 최대 128자로 제한한다. 수동 ID는 GitHub run이나 정식 release PASS를 증명하지 않는다.
+
+staging/production은 Caddy가 선택한 서비스의 정확히 한 running container와 frontend를 관측한다. container의 실제 `.Image` ID로 image를 inspect하여 해당 ECR RepoDigest와 linux/arm64를 확인한다. 관측 전후 Caddy 색, checkout commit/tree와 health가 같아야 state에 `SOURCE_REF`, `SOURCE_TREE`, `DEPLOY_RUN_ID`, 양 이미지 digest/ID를 기존 `LIVE_COLOR`, `LIVE_SHA`와 함께 원자 기록한다. 관측 실패는 기존 state를 보존한다.
+
 ### 자동 배포
 
 - main에 머지되면 `.github/workflows/cd.yml`이 배포까지 끝낸다. 따로 할 일은 없다.

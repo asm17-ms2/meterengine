@@ -50,10 +50,10 @@ terraform -chdir=measurements/test-storage/sut/terraform output
 ### 2. 배포
 
 ```bash
-measurements/test-storage/sut/scripts/sut-deploy.sh
+measurements/test-storage/sut/scripts/sut-deploy.sh <IMAGE_SOURCE_SHA> <SOURCE_REF>
 ```
 
-- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
+- 이미지 SHA와 환경 계약을 포함한 소스 SHA 40자를 따로 명시한다. 설치된 서버에 `environment.py`, 계약 버전 1의 `deploy.sh`, `DEPLOYMENT_TARGET=test-storage` 설정이 없으면 checkout 전에 거절한다. 기존 서버의 설치와 설정 전환은 별도 승인이 필요하다.
 - 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태, `deploy.conf`를 확인하고 하나라도 틀리면 멈춘다.
 - 성공하면 아래 두 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
 
@@ -74,7 +74,7 @@ measurements/test-storage/sut/scripts/create-exporter-user.sh
 ## 다시 배포
 
 ```bash
-measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
+measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자> <SOURCE_REF>
 ```
 
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
@@ -192,7 +192,7 @@ DB 비밀번호를 바꿀 때는 측정이 없을 때 SUT를 켠 상태에서 �
 ```bash
 terraform -chdir=measurements/test-storage/sut/terraform apply
 measurements/test-storage/sut/scripts/create-exporter-user.sh
-measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA>
+measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA> <SOURCE_REF>
 ```
 
 - 지금 SHA는 SUT 안에서 `sudo git -C /opt/meterengine rev-parse HEAD`로 본다.

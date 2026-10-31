@@ -55,8 +55,10 @@ class SniConnection(http.client.HTTPSConnection):
 class CaddySsoFixture:
     @classmethod
     def docker(cls, *arguments, check=True):
-        return subprocess.run(["docker", *arguments], capture_output=True, text=True,
-                              check=check, timeout=30)
+        result = subprocess.run(["docker", *arguments], capture_output=True, text=True, timeout=30)
+        if check and result.returncode:
+            raise AssertionError(f"Docker command failed: {arguments}: {result.stdout}{result.stderr}")
+        return result
 
     @classmethod
     def require_image(cls, image):
@@ -212,13 +214,16 @@ class RealOAuth2ProxyLoginTest(CaddySsoFixture, unittest.TestCase):
         self.assertIn("domain=localhost", headers["Set-Cookie"].lower())
 
 
-def write_sso_file(repo, value=None, param_path="/meterengine/prod"):
+def write_sso_file(repo, value=None, manifest="production", services=None):
     source = (DEPLOY / "deploy.sh").read_text()
     functions = repo / "functions.sh"
     functions.write_text(source[source.index("log() {"):source.rindex('\nmain "$@"')])
     (repo / "deploy/caddy").mkdir(parents=True, exist_ok=True)
     environment = {name: text for name, text in os.environ.items() if name != "CADDY_SSO_SITES"}
-    environment["PARAM_PATH"] = param_path
+    target = json.loads((DEPLOY / "environments" / f"{manifest}.json").read_text())
+    environment.update(PARAM_PATH=target["parameter_path"],
+                       METERENGINE_DEPLOYMENT_ENVIRONMENT=target["deployment_environment"],
+                       ENABLED_SERVICES=" ".join(services if services is not None else target["enabled_services"]))
     if value is not None:
         environment["CADDY_SSO_SITES"] = value
     return subprocess.run(
@@ -241,16 +246,23 @@ class SsoSitesSwitchTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return (self.repo / "deploy/caddy/sso.caddy").read_text()
 
-    def test_default_is_on_only_for_the_production_parameter_path(self):
-        source = (DEPLOY / "deploy.sh").read_text()
-        production = re.findall(r"^PARAM_PATH=(.+)$", source, re.M)[0]
-        self.assertEqual(self.written(param_path=production), self.ON)
-        for path in ("/meterengine/test-slo", "/meterengine/test-storage"):
-            self.assertEqual(self.written(param_path=path), self.OFF, path)
+    def test_default_uses_validated_environment_and_selected_services(self):
+        self.assertEqual(self.written(), self.ON)
+        for manifest in ("staging", "test-slo", "test-storage"):
+            self.assertEqual(self.written(manifest=manifest), self.OFF, manifest)
+        self.assertEqual(self.written(services=["caddy", "frontend", "backend-blue", "backend-green"]), self.OFF)
 
     def test_deploy_conf_value_overrides_the_default(self):
-        self.assertEqual(self.written(value="off", param_path="/meterengine/prod"), self.OFF)
-        self.assertEqual(self.written(value="on", param_path="/meterengine/test-slo"), self.ON)
+        self.assertEqual(self.written(value="off"), self.OFF)
+        services = ["caddy", "frontend", "backend-blue", "backend-green", "oauth2-proxy", "grafana", "prometheus"]
+        self.assertEqual(self.written(value="on", manifest="test-slo", services=services), self.ON)
+
+    def test_explicit_on_rejects_missing_sso_dependencies_before_writing(self):
+        services = ["caddy", "frontend", "backend-blue", "backend-green", "oauth2-proxy", "grafana", "prometheus"]
+        for missing in ("oauth2-proxy", "grafana", "prometheus"):
+            result = write_sso_file(self.repo, "on", services=[s for s in services if s != missing])
+            self.assertNotEqual(result.returncode, 0, missing)
+            self.assertFalse((self.repo / "deploy/caddy/sso.caddy").exists())
 
     def test_unknown_value_stops_the_deploy(self):
         for value in ("", "yes", "OFF"):

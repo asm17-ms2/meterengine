@@ -3,8 +3,9 @@ set -euxo pipefail
 
 mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
-# 빠진 값은 deploy.sh가 개발 서버 값으로 채운다. 아래 단계가 실패해도 남도록 먼저 쓴다.
+# SUT 대상이 빠졌거나 다르면 배포를 거절한다.
 cat >/etc/meterengine/deploy.conf <<'CONF'
+DEPLOYMENT_TARGET=test-storage
 PARAM_PATH=${param_path}
 SITE_DOMAIN=${domain}
 SITE_ALIASES=
