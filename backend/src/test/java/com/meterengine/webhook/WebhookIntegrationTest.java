@@ -172,19 +172,102 @@ class WebhookIntegrationTest {
   }
 
   @Test
-  void 보낼_때가_지난_대기_전송의_건수와_가장_오래_밀린_시간을_지표로_낸다() {
+  void 보낼_때가_지난_전송은_다음_시도_예정_시각부터_밀린_시간을_잰다() {
     UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
     jdbcTemplate.update(
-        "UPDATE webhook_delivery SET next_attempt_at = clock_timestamp() - interval '20 minutes' WHERE organization_id = ? AND webhook_event_id = ?",
+        "UPDATE webhook_delivery SET created_at = clock_timestamp() - interval '1 day', attempt_count = 3, next_attempt_at = clock_timestamp() - interval '20 minutes' WHERE organization_id = ? AND webhook_event_id = ?",
         organizationId,
         eventId);
 
     webhookDeliveryService.measure();
 
-    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog").gauge().value())
-        .isGreaterThanOrEqualTo(1);
-    assertThat(meterRegistry.get("meterengine.webhook.delivery.backlog.age").gauge().value())
-        .isGreaterThanOrEqualTo(1200);
+    assertThat(backlogGauge("meterengine.webhook.delivery.backlog")).isGreaterThanOrEqualTo(1);
+    assertThat(backlogGauge("meterengine.webhook.delivery.backlog.age"))
+        .isGreaterThanOrEqualTo(1200)
+        .isLessThan(86400);
+  }
+
+  @Test
+  void 다음_시도를_기다리는_오래된_전송은_미전달_최장_경과에만_잡힌다() {
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET created_at = clock_timestamp() - interval '1 day', attempt_count = 3, next_attempt_at = clock_timestamp() + interval '1 hour' WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+
+    webhookDeliveryService.measure();
+
+    assertThat(backlogGauge("meterengine.webhook.delivery.pending.oldest.age"))
+        .isGreaterThanOrEqualTo(86400);
+    assertThat(backlogGauge("meterengine.webhook.delivery.backlog.age")).isLessThan(86400);
+  }
+
+  @Test
+  void 때가_오지_않은_재시도_대기_전송을_재시도_예정_건수로_낸다() {
+    webhookDeliveryService.measure();
+    double before = backlogGauge("meterengine.webhook.delivery.retry.waiting");
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET attempt_count = 1, next_attempt_at = clock_timestamp() + interval '5 minutes' WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+
+    webhookDeliveryService.measure();
+
+    assertThat(backlogGauge("meterengine.webhook.delivery.retry.waiting")).isEqualTo(before + 1);
+  }
+
+  @Test
+  void 선점_중인_전송은_재시도_예정_건수에_넣지_않는다() {
+    webhookDeliveryService.measure();
+    double before = backlogGauge("meterengine.webhook.delivery.retry.waiting");
+    UUID eventId = webhookEndpointService.test(organizationId, endpoint.id());
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET attempt_count = 1, next_attempt_at = clock_timestamp() + interval '2 minutes', claim_token = gen_random_uuid() WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+
+    webhookDeliveryService.measure();
+
+    assertThat(backlogGauge("meterengine.webhook.delivery.retry.waiting")).isEqualTo(before);
+  }
+
+  @Test
+  void 수동_재시도한_전송의_시도는_첫_시도로_세지_않는다() {
+    UUID eventId = failOnce();
+    jdbcTemplate.update(
+        "UPDATE webhook_delivery SET status = 'failed', next_attempt_at = NULL WHERE organization_id = ? AND webhook_event_id = ?",
+        organizationId,
+        eventId);
+    UUID deliveryId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM webhook_delivery WHERE organization_id = ? AND webhook_event_id = ?",
+            UUID.class,
+            organizationId,
+            eventId);
+    responseStatus.set(200);
+    double firstAttemptBefore = deliveredCount("true");
+    double laterAttemptBefore = deliveredCount("false");
+
+    webhookDeliveryService.retry(organizationId, endpoint.id(), deliveryId);
+    webhookDeliveryService.deliver();
+
+    assertThat(deliveredCount("true")).isEqualTo(firstAttemptBefore);
+    assertThat(deliveredCount("false")).isEqualTo(laterAttemptBefore + 1);
+  }
+
+  private double backlogGauge(String name) {
+    return meterRegistry.get(name).tag("environment", "legacy").gauge().value();
+  }
+
+  private double deliveredCount(String firstAttempt) {
+    return meterRegistry
+        .find("meterengine.webhook.delivery")
+        .tags("result", "done", "environment", "legacy", "first_attempt", firstAttempt)
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   @Test

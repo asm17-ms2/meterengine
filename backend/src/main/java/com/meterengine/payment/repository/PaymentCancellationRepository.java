@@ -3,6 +3,7 @@ package com.meterengine.payment.repository;
 import com.meterengine.payment.entity.PaymentCancellation;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -38,9 +39,15 @@ public interface PaymentCancellationRepository extends JpaRepository<PaymentCanc
       OffsetDateTime requestedFrom, OffsetDateTime requestedBefore);
 
   @Query(
-      "select count(c) from PaymentCancellation c where c.status = 'pending'"
+      "select count(c) from PaymentCancellation c where c.status = 'pending' and c.mode = :mode"
           + " and c.requestedAt < :requestedBefore")
-  long countPendingRequestedBefore(OffsetDateTime requestedBefore);
+  long countPendingRequestedBefore(String mode, OffsetDateTime requestedBefore);
+
+  @Query(
+      "select min(c.requestedAt) from PaymentCancellation c where c.status = 'pending'"
+          + " and c.mode = :mode and c.requestedAt < :requestedBefore")
+  Optional<OffsetDateTime> findOldestPendingRequestedAt(
+      String mode, OffsetDateTime requestedBefore);
 
   @Query(
       "select c from PaymentCancellation c where c.organizationId = :organizationId and"

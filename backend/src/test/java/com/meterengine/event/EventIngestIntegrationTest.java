@@ -8,6 +8,8 @@ import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -39,6 +41,7 @@ class EventIngestIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private MeterRegistry meterRegistry;
 
   private final Map<UUID, String> authorizationsByOrganizationId = new HashMap<>();
 
@@ -399,6 +402,56 @@ class EventIngestIntegrationTest {
   }
 
   @Test
+  void 형식_검증에서_거절한_이벤트도_rejected로_센다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID customerId = insertCustomer(organizationId, "acme");
+    double before = rejectedCount(ErrorCode.VALIDATION_ERROR);
+
+    String withoutEventType =
+        """
+        {"transaction_id":"tx-1","customer_id":"%s","properties":{},"timestamp":"%s"}
+        """
+            .formatted(customerId, OCCURRED_AT);
+    assertThat(post(organizationId, withoutEventType)).hasStatus(400);
+
+    assertThat(rejectedCount(ErrorCode.VALIDATION_ERROR) - before).isEqualTo(1.0);
+  }
+
+  @Test
+  void 읽을_수_없는_본문으로_거절한_이벤트도_rejected로_센다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    double before = rejectedCount(ErrorCode.MALFORMED_REQUEST_BODY);
+
+    assertThat(post(organizationId, "{\"bad")).hasStatus(400);
+
+    assertThat(rejectedCount(ErrorCode.MALFORMED_REQUEST_BODY) - before).isEqualTo(1.0);
+  }
+
+  @Test
+  void test_환경_키로_저장한_이벤트는_environment_test로_센다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID environmentId = environmentId(organizationId, "test");
+    UUID customerId = insertCustomer(organizationId, environmentId, "acme");
+    double before = ingestCount("stored", "none", "test");
+
+    assertThat(post(testKey(organizationId, environmentId), body("tx-1", customerId.toString())))
+        .hasStatusOk();
+
+    assertThat(ingestCount("stored", "none", "test") - before).isEqualTo(1.0);
+  }
+
+  @Test
+  void test_환경_키의_본문_거절은_environment_test로_센다() {
+    UUID organizationId = insertOrganization("도입사 A");
+    UUID environmentId = environmentId(organizationId, "test");
+    double before = ingestCount("rejected", "malformed_request_body", "test");
+
+    assertThat(post(testKey(organizationId, environmentId), "{\"bad")).hasStatus(400);
+
+    assertThat(ingestCount("rejected", "malformed_request_body", "test") - before).isEqualTo(1.0);
+  }
+
+  @Test
   void 소수는_자릿수가_잘리지_않고_저장된다() {
     UUID organizationId = insertOrganization("도입사 A");
     UUID customerId = insertCustomer(organizationId, "acme");
@@ -593,10 +646,31 @@ class EventIngestIntegrationTest {
         transactionId);
   }
 
+  private String testKey(UUID organizationId, UUID environmentId) {
+    String authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test");
+    jdbcTemplate.update(
+        "UPDATE api_key SET environment_id = ? WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
+        environmentId,
+        TestCredentials.rawKeyOf(authorization));
+    return authorization;
+  }
+
+  private UUID environmentId(UUID organizationId, String mode) {
+    return jdbcTemplate.queryForObject(
+        "SELECT id FROM organization_environment WHERE organization_id = ? AND mode = ?",
+        UUID.class,
+        organizationId,
+        mode);
+  }
+
   private MvcTestResult post(UUID organizationId, String jsonBody) {
+    return post(authorization(organizationId), jsonBody);
+  }
+
+  private MvcTestResult post(String authorization, String jsonBody) {
     return mvc.post()
         .uri("/v1/events")
-        .header(AUTHORIZATION, authorization(organizationId))
+        .header(AUTHORIZATION, authorization)
         .contentType(MediaType.APPLICATION_JSON)
         .content(jsonBody)
         .exchange();
@@ -632,6 +706,15 @@ class EventIngestIntegrationTest {
         name);
   }
 
+  private UUID insertCustomer(UUID organizationId, UUID environmentId, String name) {
+    return jdbcTemplate.queryForObject(
+        "INSERT INTO customer (organization_id, environment_id, name) VALUES (?, ?, ?) RETURNING id",
+        UUID.class,
+        organizationId,
+        environmentId,
+        name);
+  }
+
   private int storedCount(UUID organizationId, String transactionId) {
     Integer count =
         jdbcTemplate.queryForObject(
@@ -640,6 +723,27 @@ class EventIngestIntegrationTest {
             organizationId,
             transactionId);
     return count == null ? 0 : count;
+  }
+
+  private double rejectedCount(ErrorCode reason) {
+    return meterRegistry
+        .get("meterengine.event.ingest")
+        .tag("result", "rejected")
+        .tag("reason", reason.getCode())
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
+  }
+
+  private double ingestCount(String result, String reason, String environment) {
+    return meterRegistry
+        .get("meterengine.event.ingest")
+        .tag("result", result)
+        .tag("reason", reason)
+        .tag("environment", environment)
+        .counter()
+        .count();
   }
 
   private int totalCount(UUID organizationId) {

@@ -1,6 +1,7 @@
 package com.meterengine.payment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -17,6 +18,7 @@ import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -309,12 +311,12 @@ class PaymentAttemptConfirmationServiceTest {
     verify(tossPaymentsClient)
         .findPaymentByOrderId(organization.secretKey(), recentAttemptId.toString());
     assertThat(attemptRow(staleAttemptId)).containsEntry("status", "pending");
-    double stalePending = meterRegistry.get("meterengine.payment.stale.pending").gauge().value();
+    double stalePending = stalePending("test");
     assertThat(stalePending)
         .isGreaterThanOrEqualTo(2)
         .isBetween(
-            (double) pendingOlderThan(Duration.ofSeconds(125)),
-            (double) pendingOlderThan(Duration.ofSeconds(115)));
+            (double) pendingOlderThan("test", Duration.ofSeconds(125)),
+            (double) pendingOlderThan("test", Duration.ofSeconds(115)));
   }
 
   @Test
@@ -342,12 +344,13 @@ class PaymentAttemptConfirmationServiceTest {
 
     paymentAttemptConfirmationService.confirm();
 
-    double stalePending = meterRegistry.get("meterengine.payment.stale.pending").gauge().value();
+    double stalePending = stalePending("test");
     assertThat(stalePending)
-        .isGreaterThan((double) pendingAttemptsOlderThan(Duration.ofSeconds(115)))
+        .isGreaterThan(
+            (double) pendingRowsOlderThan("payment_attempt", "test", Duration.ofSeconds(115)))
         .isBetween(
-            (double) pendingOlderThan(Duration.ofSeconds(125)),
-            (double) pendingOlderThan(Duration.ofSeconds(115)));
+            (double) pendingOlderThan("test", Duration.ofSeconds(125)),
+            (double) pendingOlderThan("test", Duration.ofSeconds(115)));
   }
 
   @Test
@@ -358,12 +361,45 @@ class PaymentAttemptConfirmationServiceTest {
 
     paymentAttemptConfirmationService.confirm();
 
-    double stalePending = meterRegistry.get("meterengine.payment.stale.pending").gauge().value();
+    double stalePending = stalePending("test");
     assertThat(stalePending)
         .isGreaterThanOrEqualTo(2)
         .isBetween(
-            (double) pendingOlderThan(Duration.ofSeconds(125)),
-            (double) pendingOlderThan(Duration.ofSeconds(115)));
+            (double) pendingOlderThan("test", Duration.ofSeconds(125)),
+            (double) pendingOlderThan("test", Duration.ofSeconds(115)));
+  }
+
+  @Test
+  void live_결과_모름은_test와_따로_live_게이지에_센다() {
+    Organization organization = organization();
+    insertPendingAttempt(organization, "live", Duration.ofMinutes(5));
+
+    paymentAttemptConfirmationService.confirm();
+
+    assertThat(stalePending("live"))
+        .isGreaterThanOrEqualTo(1)
+        .isBetween(
+            (double) pendingOlderThan("live", Duration.ofSeconds(125)),
+            (double) pendingOlderThan("live", Duration.ofSeconds(115)));
+  }
+
+  @Test
+  void 결과_모름_가운데_시도와_취소를_통틀어_가장_오래된_요청_시각을_낸다() {
+    Organization organization = organization();
+    pendingAttempt(organization, Duration.ofMinutes(30));
+    pendingCancellation(organization, doneAttempt(organization), Duration.ofDays(8));
+
+    paymentAttemptConfirmationService.confirm();
+
+    double oldestRequestedEpochSeconds =
+        meterRegistry
+            .get("meterengine.payment.stale.pending.oldest.requested")
+            .tag("mode", "test")
+            .gauge()
+            .value();
+    assertThat(oldestRequestedEpochSeconds)
+        .isLessThanOrEqualTo(OffsetDateTime.now().minusDays(8).toEpochSecond())
+        .isCloseTo(oldestPendingRequestedEpochSeconds("test"), within(1.0));
   }
 
   @Test
@@ -509,29 +545,48 @@ class PaymentAttemptConfirmationServiceTest {
         "SELECT * FROM payment_cancellation WHERE id = ?", cancellationId);
   }
 
-  private long pendingOlderThan(Duration age) {
-    return pendingAttemptsOlderThan(age) + pendingRowsOlderThan("payment_cancellation", age);
+  private double stalePending(String mode) {
+    return meterRegistry.get("meterengine.payment.stale.pending").tag("mode", mode).gauge().value();
   }
 
-  private long pendingAttemptsOlderThan(Duration age) {
-    return pendingRowsOlderThan("payment_attempt", age);
+  private long pendingOlderThan(String mode, Duration age) {
+    return pendingRowsOlderThan("payment_attempt", mode, age)
+        + pendingRowsOlderThan("payment_cancellation", mode, age);
   }
 
-  private long pendingRowsOlderThan(String table, Duration age) {
+  private long pendingRowsOlderThan(String table, String mode, Duration age) {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM "
             + table
-            + " WHERE status = 'pending' AND requested_at < now() - make_interval(secs => ?)",
+            + " WHERE status = 'pending' AND mode = ?"
+            + " AND requested_at < now() - make_interval(secs => ?)",
         Long.class,
+        mode,
         age.toSeconds());
+  }
+
+  private double oldestPendingRequestedEpochSeconds(String mode) {
+    return jdbcTemplate.queryForObject(
+        """
+        SELECT floor(extract(epoch FROM min(requested_at)))
+        FROM (SELECT requested_at FROM payment_attempt WHERE status = 'pending' AND mode = ?
+              UNION ALL
+              SELECT requested_at FROM payment_cancellation WHERE status = 'pending' AND mode = ?)
+             pending
+        """,
+        Double.class,
+        mode,
+        mode);
   }
 
   private double attemptCount(String result) {
     return meterRegistry
         .get("meterengine.payment.attempt")
         .tags("mode", "test", "result", result)
-        .counter()
-        .count();
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   private double cancellationCount(String result) {
@@ -543,19 +598,24 @@ class PaymentAttemptConfirmationServiceTest {
   }
 
   private UUID pendingAttempt(Organization organization, Duration age) {
+    return insertPendingAttempt(organization, "test", age);
+  }
+
+  private UUID insertPendingAttempt(Organization organization, String mode, Duration age) {
     UUID attemptId = UUID.randomUUID();
     jdbcTemplate.update(
         """
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status,
            requested_at)
-        VALUES (?, ?, ?, ?, 'test', 13200, '2026-08 사용료', 'pending',
+        VALUES (?, ?, ?, ?, ?, 13200, '2026-08 사용료', 'pending',
                 now() - make_interval(secs => ?))
         """,
         attemptId,
         organization.organizationId(),
         organization.customerId(),
         invoice(organization),
+        mode,
         age.toSeconds());
     return attemptId;
   }

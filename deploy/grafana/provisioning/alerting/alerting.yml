@@ -395,6 +395,7 @@ groups:
                 - evaluator: { type: gt, params: [0] }
 
       # 보낼 때가 지난 웹훅이 10분 넘게 밀렸다. 실패가 없어도 발송이 처리량을 따라가지 못하면 도입사 통보가 늦는다.
+      # test 환경 적체는 웹훅 전송 실패 경보처럼 뺀다.
       - uid: webhook-delivery-backlog
         title: 웹훅 발송 적체
         condition: C
@@ -409,7 +410,7 @@ groups:
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max(meterengine_webhook_delivery_backlog_age_seconds)
+              expr: max(meterengine_webhook_delivery_backlog_age_seconds{environment!="test"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }

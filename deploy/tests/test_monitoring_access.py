@@ -18,7 +18,7 @@ DUMMY_ENV = {
         "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET")
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
-MONITORING_ONLY = ("grafana", "node-exporter", "postgres-exporter", "cloudwatch-exporter")
+MONITORING_ONLY = ("grafana", "node-exporter", "cadvisor", "postgres-exporter", "cloudwatch-exporter")
 APPS = ("frontend", "backend-blue", "backend-green")
 WRITE_FLAGS = ("--web.enable-admin-api", "--web.enable-lifecycle",
                "--web.enable-remote-write-receiver", "--web.enable-otlp-receiver")

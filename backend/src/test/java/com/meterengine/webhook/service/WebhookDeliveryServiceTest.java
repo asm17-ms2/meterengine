@@ -17,10 +17,12 @@ import com.meterengine.webhook.client.WebhookClient;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import com.meterengine.webhook.repository.WebhookDeliveryRepository;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +56,7 @@ class WebhookDeliveryServiceTest {
             signer,
             client,
             mock(AuditLogService.class),
-            new SimpleMeterRegistry(),
+            new WebhookDeliveryMetrics(new SimpleMeterRegistry()),
             now::get);
     assertThat(service.deliver().processedCount()).isEqualTo(1);
     verify(repository, times(1)).claim(any());
@@ -124,6 +126,114 @@ class WebhookDeliveryServiceTest {
     assertThat(deliveryCount(meterRegistry, "retry", "secret_unavailable")).isEqualTo(1);
   }
 
+  @Test
+  void 전달에_성공하면_웹훅_이벤트가_생긴_때부터의_소요_시간을_기록한다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    WebhookClaim claim = claim("v1:cipher", true, 2, OffsetDateTime.now().minusMinutes(5));
+    when(repository.claim(any())).thenReturn(Optional.of(claim), Optional.empty());
+    when(repository.complete(any(), any())).thenReturn(Optional.of("done"));
+    when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new WebhookOutcome(200, null, 10));
+
+    service(repository, client, meterRegistry).deliver();
+
+    assertThat(
+            meterRegistry
+                .get(WebhookDeliveryMetrics.LATENCY_TIMER_NAME)
+                .tag("environment", "legacy")
+                .timer()
+                .totalTime(TimeUnit.SECONDS))
+        .isGreaterThanOrEqualTo(300);
+  }
+
+  @Test
+  void 재시도로_남은_전송은_전달_소요_시간을_기록하지_않는다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    when(repository.claim(any())).thenReturn(Optional.of(claim()), Optional.empty());
+    when(repository.complete(any(), any())).thenReturn(Optional.of("pending"));
+    when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new WebhookOutcome(503, "unexpected_status", 10));
+
+    service(repository, client, meterRegistry).deliver();
+
+    assertThat(meterRegistry.find(WebhookDeliveryMetrics.LATENCY_TIMER_NAME).timer()).isNull();
+  }
+
+  @Test
+  void 수신_주소에_보낸_전송은_걸린_시간을_수신_측_응답_시간으로_기록한다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    when(repository.claim(any())).thenReturn(Optional.of(claim()), Optional.empty());
+    when(repository.complete(any(), any())).thenReturn(Optional.of("pending"));
+    when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new WebhookOutcome(503, "unexpected_status", 1500));
+
+    service(repository, client, meterRegistry).deliver();
+
+    Timer responseTimer =
+        meterRegistry
+            .get(WebhookDeliveryMetrics.RESPONSE_TIMER_NAME)
+            .tag("environment", "legacy")
+            .timer();
+    assertThat(responseTimer.count()).isEqualTo(1);
+    assertThat(responseTimer.totalTime(TimeUnit.MILLISECONDS)).isEqualTo(1500);
+  }
+
+  @Test
+  void 비활성_엔드포인트로_끝낸_전송은_수신_측_응답_시간을_기록하지_않는다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    when(repository.claim(any()))
+        .thenReturn(Optional.of(claim("v1:cipher", false, 1)), Optional.empty());
+    when(repository.complete(any(), any())).thenReturn(Optional.of("failed"));
+
+    service(repository, client, meterRegistry).deliver();
+
+    assertThat(meterRegistry.find(WebhookDeliveryMetrics.RESPONSE_TIMER_NAME).timer()).isNull();
+  }
+
+  @Test
+  void 처음_보내는_전송의_시도를_첫_시도로_센다() {
+    assertThat(firstAttemptTagOf(claim())).isEqualTo("true");
+  }
+
+  @Test
+  void 두_번째_시도부터는_첫_시도로_세지_않는다() {
+    assertThat(firstAttemptTagOf(claim("v1:cipher", true, 2))).isEqualTo("false");
+  }
+
+  @Test
+  void 수동_재시도로_시도_횟수가_되돌아간_전송은_첫_시도로_세지_않는다() {
+    WebhookClaim retried = claim("v1:cipher", true, 1, OffsetDateTime.now(), true);
+
+    assertThat(firstAttemptTagOf(retried)).isEqualTo("false");
+  }
+
+  private static String firstAttemptTagOf(WebhookClaim claim) {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookClient client = mock(WebhookClient.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    when(repository.claim(any())).thenReturn(Optional.of(claim), Optional.empty());
+    when(repository.complete(any(), any())).thenReturn(Optional.of("done"));
+    when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new WebhookOutcome(200, null, 10));
+
+    service(repository, client, meterRegistry).deliver();
+
+    return meterRegistry.get("meterengine.webhook.delivery").counters().stream()
+        .filter(counter -> counter.count() > 0)
+        .findFirst()
+        .orElseThrow()
+        .getId()
+        .getTag("first_attempt");
+  }
+
   private static WebhookDeliveryService service(
       WebhookDeliveryRepository repository, WebhookClient client, SimpleMeterRegistry registry) {
     EncryptedStringConverter converter = mock(EncryptedStringConverter.class);
@@ -140,7 +250,7 @@ class WebhookDeliveryServiceTest {
         signer,
         client,
         mock(AuditLogService.class),
-        registry,
+        new WebhookDeliveryMetrics(registry),
         System::nanoTime);
   }
 
@@ -159,6 +269,20 @@ class WebhookDeliveryServiceTest {
   }
 
   private static WebhookClaim claim(String secret, boolean enabled, int attemptCount) {
+    return claim(secret, enabled, attemptCount, OffsetDateTime.now());
+  }
+
+  private static WebhookClaim claim(
+      String secret, boolean enabled, int attemptCount, OffsetDateTime eventCreatedAt) {
+    return claim(secret, enabled, attemptCount, eventCreatedAt, false);
+  }
+
+  private static WebhookClaim claim(
+      String secret,
+      boolean enabled,
+      int attemptCount,
+      OffsetDateTime eventCreatedAt,
+      boolean attemptedBefore) {
     return new WebhookClaim(
         UUID.randomUUID(),
         UUID.randomUUID(),
@@ -170,6 +294,9 @@ class WebhookDeliveryServiceTest {
         enabled,
         false,
         attemptCount,
-        OffsetDateTime.now());
+        OffsetDateTime.now(),
+        null,
+        eventCreatedAt,
+        attemptedBefore);
   }
 }

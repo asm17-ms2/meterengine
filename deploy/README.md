@@ -17,9 +17,10 @@
                  |                           (asm17-ms2 GitHub 로그인)   (monitoring 네트워크)
             인증서 자동 발급
 
-[Prometheus] --scrape--> backend-blue:8080, backend-green:8080, backend:8080 (블루그린 이전 이름, 첫 전환 배포용)의
-             /actuator/prometheus, node-exporter:9100,
-             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch)
+[Prometheus] --scrape--> backend-blue:8080, backend-green:8080의
+             /actuator/prometheus, caddy:2020 (Caddy 지표), node-exporter:9100, cadvisor:8080 (컨테이너),
+             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch),
+             grafana:3000 (경보 평가와 알림 전송)
      ^
 [Grafana:3001(127.0.0.1)] --경보--> Slack
   (deploy.sh 경보 재적재와 SSO 장애 때 비상 접근)
@@ -33,7 +34,7 @@
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
-- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`과 Caddy 내부 사이트 `8081`은 compose 네트워크 안에서만 닿는다.
+- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
 - 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - Grafana, oauth2-proxy, exporter들은 `monitoring` 네트워크(`172.30.1.0/24`)에만 붙어 프론트와 백엔드에서 닿지 않는다. Caddy는 이 네트워크에서 `172.30.1.10`으로 주소를 고정하고, Grafana는 이 주소에서 온 사용자 헤더만 믿는다. Prometheus는 `default`, `proxy`, `monitoring`에 모두 붙는다.
   - 서버에 `172.30.1.0/24`와 겹치는 docker 네트워크가 있으면 배포가 실패한다.
@@ -45,8 +46,8 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana, oauth2-proxy |
-| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트 |
+| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana, oauth2-proxy |
+| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트, `:2020`은 Prometheus가 긁는 지표 사이트 |
 | `caddy/sso-sites.caddy` | `grafana.`, `prometheus.` 사이트. oauth2-proxy 확인을 거친다. `CADDY_SSO_SITES`가 `on`일 때만 Caddyfile에 들어간다 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
@@ -179,8 +180,9 @@ aws ssm send-command \
    - 돌고 있는 반대 색은 받지도 다시 만들지도 않는다. 그 태그가 ECR에서 지워졌어도 배포가 막히지 않는다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
 5. 대상 색의 `/actuator/health`(DB 포함)가 UP인지 최대 90초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
-6. Prometheus 설정을 다시 읽게 한다.
+6. Prometheus와 cloudwatch exporter 설정을 다시 읽게 한다.
    - prometheus.yml도 Caddyfile과 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
+   - cloudwatch/config.yml도 같다. `docker compose -p meterengine-prod exec cloudwatch-exporter kill -HUP 1`로 다시 읽게 한다. 이것이 실패해도 배포는 멈추지 않는다.
 7. 백엔드 목록을 대상 색 하나로 바꾸고 Caddy를 reload 한다. 새 요청은 대상 색으로 가고, 반대 색이 받던 요청은 마저 끝난다. 이어 내부 사이트 `:8081`의 응답 헤더 `X-Upstream`이 대상 색인지 최대 60초 확인한다.
 8. 5초(Caddyfile의 `lb_try_duration`) 기다린 뒤 돌고 있던 반대 색을 `stop`으로 멈춘다. 지우지 않아 그 이미지가 정리되지 않는다. 블루그린 이전 `backend` 컨테이너가 있으면 이때 지운다.
 9. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
@@ -197,7 +199,7 @@ aws ssm send-command \
 
 블루그린 이전 구성(백엔드 서비스 이름 `backend`)인 서버에 이 구성을 처음 배포할 때다.
 
-- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. prometheus.yml의 `backend:8080`은 이 전환을 위해 남겨 둔 것이다.
+- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. Prometheus는 `backend`를 긁지 않아 전환 중 그 지표는 남지 않는다. 이 배포에서 Prometheus는 정의가 바뀌어 다시 만들어지므로 블루가 뜰 때까지 백엔드 헬스체크 실패 경보가 한 번 울릴 수 있다.
 - 프론트엔드는 이 배포에서 백엔드 주소가 `http://caddy:8081`로 바뀌어 다시 만들어진다. 곧이어 Caddy가 reload 될 때까지 몇 초 동안 화면이 백엔드를 부르지 못할 수 있다. 수집 API는 영향이 없다.
 - 개발 서버의 첫 전환 배포는 머지 직전부터 CD가 끝날 때까지 로컬 터미널에서 아래 루프를 돌려 200이 아닌 응답을 센다. 조회 권한이 있는 API 키를 사용한다.
 
@@ -470,7 +472,7 @@ aws ssm get-parameter --name /meterengine/prod/operator-password --with-decrypti
 
 ## 모니터링
 
-- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter와 postgres exporter를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -486,7 +488,14 @@ GRANT pg_monitor TO meterengine_exporter;
 
 - https://grafana.meterengine.com, https://prometheus.meterengine.com 에 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
   - 로그인은 24시간 유지된다. 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 그동안은 들어온다.
-- Grafana의 MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표, MeterEngine 결제와 예약 작업은 결제, 웹훅 발송, 예약 작업 지표다.
+- Grafana의 MeterEngine 폴더에서 대시보드를 연다.
+  - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
+  - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
+  - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
+  - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
+  - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
+  - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
+  - MeterEngine DB는 PostgreSQL과 RDS 지표다.
 - 처음 로그인하면 GitHub 로그인 이름으로 Grafana 사용자가 생기고 권한은 Editor다.
   - 파일로 관리하는 대시보드와 경보 규칙은 화면에서 저장되지 않는다. 바꾸려면 파일을 고쳐 배포한다.
   - 화면에서 새로 만든 대시보드는 Grafana 볼륨에만 남는다. 오래 쓸 것은 JSON으로 내보내 `grafana/dashboards/`에 넣고 PR로 올린다.
@@ -521,7 +530,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | 결제 재시도 소진 | 1시간 안에 재시도 상한까지 실패한 live 인보이스 > 0 | 자동 청구가 멈췄다. 고객에게 연락해야 한다 |
 | 결제 대사 불일치 | 1시간 안에 live 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |
 | 웹훅 전송 실패 | 15분 안에 실패로 끝난 웹훅 > 0. 재시도 상한, 마지막 시도의 선점 만료(`lease_expired`), 첫 시도에 끝나는 막힌 주소(`blocked_address`)를 센다. 도입사가 끄거나 지운 엔드포인트(`endpoint_disabled`)와 test 환경 전송은 뺀다 | 도입사가 이벤트를 받지 못했다 |
-| 웹훅 발송 적체 | 보낼 때가 지난 웹훅 가운데 가장 오래 밀린 것 > 10분, 5분 지속 | 발송이 처리량을 따라가지 못해 도입사 통보가 늦다 |
+| 웹훅 발송 적체 | 보낼 때가 지난 웹훅 가운데 가장 오래 밀린 것 > 10분, 5분 지속. test 환경 전송은 뺀다 | 발송이 처리량을 따라가지 못해 도입사 통보가 늦다 |
 
 - 예약 작업 경보는 결제, 웹훅 발송, 청구 제외 통보 작업만 본다.
 - 결제 경보는 테스트 모드 결제에서도 울리고 `mode` 라벨로 구분한다.

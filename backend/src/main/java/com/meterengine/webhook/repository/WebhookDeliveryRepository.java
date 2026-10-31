@@ -87,7 +87,8 @@ public class WebhookDeliveryRepository {
             claim_token = gen_random_uuid()
           FROM picked WHERE d.id = picked.id RETURNING d.*
         )
-        SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload
+        SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload, v.created_at AS event_created_at,
+          EXISTS (SELECT 1 FROM webhook_delivery_attempt a WHERE a.organization_id = c.organization_id AND a.webhook_delivery_id = c.id) AS attempted_before
         FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.environment_scope_id = c.environment_scope_id AND e.id = c.webhook_endpoint_id
         JOIN webhook_event v ON v.organization_id = c.organization_id AND v.environment_scope_id = c.environment_scope_id AND v.id = c.webhook_event_id
         """
@@ -105,7 +106,9 @@ public class WebhookDeliveryRepository {
                     rs.getObject("deleted_at") != null,
                     rs.getInt("attempt_count"),
                     rs.getObject("last_attempted_at", OffsetDateTime.class),
-                    rs.getObject("environment_id", UUID.class)),
+                    rs.getObject("environment_id", UUID.class),
+                    rs.getObject("event_created_at", OffsetDateTime.class),
+                    rs.getBoolean("attempted_before")),
             arguments)
         .stream()
         .findFirst();
@@ -152,10 +155,32 @@ public class WebhookDeliveryRepository {
     return Optional.of(status);
   }
 
-  public WebhookBacklog backlog() {
-    return jdbcTemplate.queryForObject(
-        "SELECT count(*), COALESCE(floor(extract(epoch FROM clock_timestamp() - min(next_attempt_at))), 0) FROM webhook_delivery WHERE status = 'pending' AND next_attempt_at <= clock_timestamp()",
-        (rs, rowNum) -> new WebhookBacklog(rs.getLong(1), rs.getLong(2)));
+  // 적체 경과는 재시도 간격이 섞이지 않게 다음 시도 예정 시각부터 재고, 재시도를 기다리는 전송까지 보는 미전달 경과는 생긴 시각부터 잰다.
+  // 다음 시도를 기다리는 전송은 적체로 세지 않고 재시도 대기로 세며, 선점 중인 전송은 적체와 재시도 대기에서 뺀다.
+  public Map<String, WebhookBacklog> backlog() {
+    Map<String, WebhookBacklog> backlog = new LinkedHashMap<>();
+    jdbcTemplate.query(
+        """
+        SELECT coalesce(e.mode, 'legacy') AS environment,
+          count(*) FILTER (WHERE d.next_attempt_at <= c.now) AS due_count,
+          coalesce(floor(extract(epoch FROM c.now - min(d.next_attempt_at) FILTER (WHERE d.next_attempt_at <= c.now))), 0) AS oldest_due_age_seconds,
+          count(*) FILTER (WHERE d.next_attempt_at > c.now AND d.attempt_count > 0 AND d.claim_token IS NULL) AS waiting_retry_count,
+          coalesce(floor(extract(epoch FROM c.now - min(d.created_at))), 0) AS oldest_pending_age_seconds
+        FROM webhook_delivery d CROSS JOIN (SELECT clock_timestamp() AS now) c
+        LEFT JOIN organization_environment e ON e.id = d.environment_id
+        WHERE d.status = 'pending'
+        GROUP BY 1, c.now
+        """,
+        (RowCallbackHandler)
+            rs ->
+                backlog.put(
+                    rs.getString("environment"),
+                    new WebhookBacklog(
+                        rs.getLong("due_count"),
+                        rs.getLong("oldest_due_age_seconds"),
+                        rs.getLong("waiting_retry_count"),
+                        rs.getLong("oldest_pending_age_seconds"))));
+    return backlog;
   }
 
   public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {

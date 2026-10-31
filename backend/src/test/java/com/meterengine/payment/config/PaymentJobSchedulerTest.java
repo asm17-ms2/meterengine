@@ -1,13 +1,18 @@
 package com.meterengine.payment.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.invoice.service.InvoiceFinalizationBacklogService;
 import com.meterengine.payment.dto.PaymentJobResult;
 import com.meterengine.payment.service.PaymentAttemptConfirmationService;
 import com.meterengine.payment.service.PaymentReconciliationService;
@@ -30,12 +35,15 @@ class PaymentJobSchedulerTest {
   private final PaymentRetryService paymentRetryService = mock(PaymentRetryService.class);
   private final PaymentReconciliationService paymentReconciliationService =
       mock(PaymentReconciliationService.class);
+  private final InvoiceFinalizationBacklogService invoiceFinalizationBacklogService =
+      mock(InvoiceFinalizationBacklogService.class);
   private final PaymentJobScheduler paymentJobScheduler =
       new PaymentJobScheduler(
           scheduledJobRunService,
           paymentAttemptConfirmationService,
           paymentRetryService,
           paymentReconciliationService,
+          invoiceFinalizationBacklogService,
           Clock.fixed(Instant.parse("2026-10-26T19:00:15Z"), ZoneOffset.UTC));
 
   @Test
@@ -45,6 +53,7 @@ class PaymentJobSchedulerTest {
     verify(scheduledJobRunService).register("payment_attempt_confirmation");
     verify(scheduledJobRunService).register("payment_retry");
     verify(scheduledJobRunService).register("payment_reconciliation");
+    verifyNoMoreInteractions(scheduledJobRunService);
   }
 
   @Test
@@ -120,6 +129,46 @@ class PaymentJobSchedulerTest {
     paymentJobScheduler.reconcile();
 
     verify(paymentReconciliationService).reconcile(slot, firstSlot.minusDays(1));
+  }
+
+  @Test
+  void 대사_틱마다_같은_4시_슬롯을_잡아_확정_대기를_다시_센다() {
+    when(invoiceFinalizationBacklogService.measure()).thenReturn(new ScheduledJobResult(2, 3, 1));
+    assertResult("invoice_finalization_backlog", OffsetDateTime.parse("2026-10-27T04:00+09:00"));
+
+    paymentJobScheduler.reconcile();
+
+    verify(invoiceFinalizationBacklogService).measure();
+  }
+
+  @Test
+  void 대사가_예외로_끝나도_확정_대기를_센다() {
+    failJob("payment_reconciliation", "대사 실패");
+
+    assertThatThrownBy(paymentJobScheduler::reconcile).isInstanceOf(IllegalStateException.class);
+
+    verify(scheduledJobRunService).run(eq("invoice_finalization_backlog"), any(), any());
+  }
+
+  @Test
+  void 확정_대기가_실패해도_대사_예외를_그대로_던진다() {
+    failJob("payment_reconciliation", "대사 실패");
+    failJob("invoice_finalization_backlog", "확정 대기 실패");
+
+    assertThatThrownBy(paymentJobScheduler::reconcile).hasMessage("대사 실패");
+  }
+
+  @Test
+  void 확정_대기가_실패해도_대사_틱은_예외_없이_끝난다() {
+    failJob("invoice_finalization_backlog", "확정 대기 실패");
+
+    assertThatCode(paymentJobScheduler::reconcile).doesNotThrowAnyException();
+  }
+
+  private void failJob(String name, String message) {
+    doThrow(new IllegalStateException(message))
+        .when(scheduledJobRunService)
+        .run(eq(name), any(), any());
   }
 
   private void assertResult(String name, OffsetDateTime slot) {

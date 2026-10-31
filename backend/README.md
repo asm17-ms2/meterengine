@@ -279,6 +279,7 @@ unset SESSION
 | `global.error` | 오류 계약과 예외 핸들러 | 없음 |
 | `global.config` | OpenAPI, 시계, 인자 리졸버 등록 | 없음 |
 | `global.crypto` | 비밀값 암호화 변환기와 키 설정, 로그에 남길 비밀값 가림 | 없음 |
+| `global.metrics` | DB 왕복 시간 지표(`meterengine.db.operation`, operation과 table 태그). API 키, 도입사, 환경 조회는 인증 단계에서, 고객 조회와 이벤트 삽입과 커밋은 단건 수집에서 잰다 | 없음 |
 
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
