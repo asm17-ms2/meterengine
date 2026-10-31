@@ -12,6 +12,9 @@
                  |   |  \--그 외--> [frontend:3000]
                  |   |                     |
                  |   \------:8081---------/  (서버사이드 호출도 Caddy를 거쳐 백엔드로)
+                 |
+                 +--grafana., prometheus.--> [oauth2-proxy] 확인 뒤 --> [Grafana:3000], [Prometheus:9090]
+                 |                           (asm17-ms2 GitHub 로그인)   (monitoring 네트워크)
             인증서 자동 발급
 
 [Prometheus] --scrape--> backend-blue:8080, backend-green:8080의
@@ -20,6 +23,7 @@
              grafana:3000 (경보 평가와 알림 전송)
      ^
 [Grafana:3001(127.0.0.1)] --경보--> Slack
+  (deploy.sh 경보 재적재와 SSO 장애 때 비상 접근)
 ```
 
 - 도메인: https://meterengine.com (Route 53 호스티드 존, A 레코드가 EC2 탄력적 IP를 가리킨다).
@@ -32,6 +36,9 @@
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
 - `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
 - 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
+- Grafana, oauth2-proxy, exporter들은 `monitoring` 네트워크(`172.30.1.0/24`)에만 붙어 프론트와 백엔드에서 닿지 않는다. Caddy는 이 네트워크에서 `172.30.1.10`으로 주소를 고정하고, Grafana는 이 주소에서 온 사용자 헤더만 믿는다. Prometheus는 `default`, `proxy`, `monitoring`에 모두 붙는다.
+  - 서버에 `172.30.1.0/24`와 겹치는 docker 네트워크가 있으면 배포가 실패한다.
+  - `monitoring` 네트워크가 생기는 첫 배포에서 Caddy, Grafana, Prometheus, exporter들이 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 공개 접속이 끊긴다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
 - compose 프로젝트 이름은 `meterengine-prod`다.
 - 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
 - 마지막으로 성공한 배포의 색과 SHA는 `/etc/meterengine/deploy-state`에 `LIVE_COLOR`, `LIVE_SHA`로 남는다.
@@ -39,8 +46,9 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana |
+| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana, oauth2-proxy |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트, `:2020`은 Prometheus가 긁는 지표 사이트 |
+| `caddy/sso-sites.caddy` | `grafana.`, `prometheus.` 사이트. oauth2-proxy 확인을 거친다. `CADDY_SSO_SITES`가 `on`일 때만 Caddyfile에 들어간다 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
 | `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
@@ -56,6 +64,10 @@
 - 로컬에 AWS CLI와 `session-manager-plugin`을 설치하고 `ap-northeast-2` 자격을 설정한다.
 - `/meterengine/prod/*` 파라미터가 먼저 등록되어 있어야 한다.
   - **compose가 값이 없으면 기동을 막으므로, 값을 쓰는 구성이 파라미터 없이 main에 머지되면 그 즉시 CD 배포가 실패한다.** 등록 명령은 "설정값" 참조.
+- Grafana, Prometheus의 GitHub 로그인에는 아래가 있어야 한다. oauth2-proxy가 든 구성을 머지하기 전에 순서대로 만든다.
+  1. Route 53에 `grafana.meterengine.com`, `prometheus.meterengine.com` A 레코드. `meterengine.com`과 같은 EC2 탄력적 IP를 가리킨다. 없으면 Caddy가 두 주소의 인증서를 받지 못한다.
+  2. GitHub OAuth App. 개인 계정이 아니라 조직 `asm17-ms2` 소유로 만든다. 만드는 사람은 조직의 organization owner여야 한다. 콜백 URL은 `https://grafana.meterengine.com/oauth2/callback`이다.
+  3. 파라미터 `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret`. 앞의 둘은 OAuth App 화면의 값이다. 없으면 compose가 배포를 멈춘다.
 
 ### 서버 1회 셋업
 
@@ -112,6 +124,10 @@ EOF
 - 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
   - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
   - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, 경로에 퍼센트 인코딩, 세미콜론, 점 세그먼트가 있으면 경로 전체를 가린다. 규칙은 Caddyfile의 `redacted_path` 한 곳에 있다. `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
+- `CADDY_SSO_SITES`는 `grafana.`, `prometheus.` SSO 사이트를 켜고 끈다. 적지 않으면 `PARAM_PATH`가 `/meterengine/prod`인 서버만 `on`이고, SUT처럼 다른 경로를 쓰는 서버는 설정 없이 `off`다. `deploy.conf`에 적으면 그 값을 따른다.
+  - SUT에는 두 이름의 DNS 레코드가 없어, 켜면 Caddy가 받을 수 없는 인증서 발급을 계속 재시도한다. 그 실패가 운영과 함께 쓰는 `meterengine.com` 발급 한도에 잡히는지 확인하지 못했다.
+  - `deploy.sh`가 배포마다 이 값으로 `deploy/caddy/sso.caddy`(git이 무시하는 파일)를 쓰고 Caddyfile이 그 파일을 import한다. `on`, `off` 말고 다른 값이면 배포가 멈춘다.
+  - `off`여도 oauth2-proxy 컨테이너는 뜨므로 `oauth2-proxy-*` 파라미터는 있어야 한다.
 
 ## 배포
 
@@ -157,7 +173,7 @@ aws ssm send-command \
    - 한 색만 돌면 반대 색이 대상이다. 도는 색이 UP이 아니어도 다시 만들지 않고 경고만 남긴다.
    - 두 색이 다 돌면 UP이 아닌 색이 대상이다. 둘 다 UP이면 Caddy 내부 사이트 `:8081` 응답의 `X-Upstream`이 가리키는 색을 살리고, 그 색을 알 수 없으면 기록 파일의 색(파일이 없으면 블루)을 살린다. 둘 다 UP이 아니면 블루가 대상이다.
    - 둘 다 돌지 않으면 블루가 대상이다.
-2. `/opt/meterengine`을 그 커밋(두 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 요청 로그 설정 `deploy/caddy/access-log.caddy`와 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
+2. `/opt/meterengine`을 그 커밋(두 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 요청 로그 설정 `deploy/caddy/access-log.caddy`, SSO 사이트 설정 `deploy/caddy/sso.caddy`, 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
    - 목록은 돌고 있는 반대 색과 블루그린 이전 `backend`다. 그중 UP인 색도 `backend`도 없으면 대상 색을 더한다.
 3. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 대상 색의 태그는 새 SHA, 돌고 있는 반대 색의 태그는 지금 이미지의 태그다.
 4. ECR에 로그인하고 백엔드가 아닌 서비스와 대상 색의 이미지만 받은 뒤, 백엔드가 아닌 서비스를 `up -d`로 올리고(orphan은 지우지 않는다) 대상 색을 띄운다. 이어 Caddy 설정을 reload 한다.
@@ -413,6 +429,9 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | `organization-id` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트가 조회하던 도입사이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `organization-name` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트 상단 바의 이름이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `grafana-admin-password` | SecureString | Grafana admin 로그인 |
+| `oauth2-proxy-client-id` | SecureString | oauth2-proxy GitHub 로그인. GitHub OAuth App의 Client ID |
+| `oauth2-proxy-client-secret` | SecureString | oauth2-proxy GitHub 로그인. GitHub OAuth App의 Client secret |
+| `oauth2-proxy-cookie-secret` | SecureString | oauth2-proxy 로그인 쿠키 암호화. 바꾸면 모두 다시 로그인한다 |
 | `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
@@ -436,6 +455,8 @@ aws ssm put-parameter --name /meterengine/prod/operator-password --type SecureSt
   --value "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
 aws ssm put-parameter --name /meterengine/prod/frontend-api-key --type SecureString \
   --value "me_live_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
+aws ssm put-parameter --name /meterengine/prod/oauth2-proxy-cookie-secret --type SecureString \
+  --value "$(openssl rand -base64 32 | tr -- '+/' '-_')"
 ```
 
 - 운영자로 로그인할 때 비밀번호는 Parameter Store에서 본다.
@@ -465,7 +486,21 @@ GRANT pg_monitor TO meterengine_exporter;
 
 ### 대시보드 보기
 
-Grafana는 인터넷에 노출하지 않고 127.0.0.1:3001에 바인딩되어 있다.
+- https://grafana.meterengine.com, https://prometheus.meterengine.com 에 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
+  - 로그인은 24시간 유지된다. 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 그동안은 들어온다.
+- Grafana의 MeterEngine 폴더에서 대시보드를 연다.
+  - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
+  - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
+  - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
+  - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
+  - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
+  - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
+  - MeterEngine DB는 PostgreSQL과 RDS 지표다.
+- 처음 로그인하면 GitHub 로그인 이름으로 Grafana 사용자가 생기고 권한은 Editor다.
+  - 파일로 관리하는 대시보드와 경보 규칙은 화면에서 저장되지 않는다. 바꾸려면 파일을 고쳐 배포한다.
+  - 화면에서 새로 만든 대시보드는 Grafana 볼륨에만 남는다. 오래 쓸 것은 JSON으로 내보내 `grafana/dashboards/`에 넣고 PR로 올린다.
+
+GitHub 로그인이 안 되면 서버의 127.0.0.1:3001로 들어간다.
 
 1. 포트 포워딩 세션을 켠다.
 
@@ -477,14 +512,6 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
-4. MeterEngine 폴더에서 대시보드를 연다.
-    - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
-    - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
-    - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
-    - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
-    - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
-    - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
-    - MeterEngine DB는 PostgreSQL과 RDS 지표다.
 
 ### 경보
 

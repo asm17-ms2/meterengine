@@ -1,0 +1,36 @@
+# 콜백 쿼리의 OAuth 코드가 접속 로그에 남지 않게 SSO 사이트에는 Caddy 접속 로그를 두지 않는다.
+(sso) {
+	# Grafana는 이 헤더의 사용자로 로그인시키므로 밖에서 온 값은 어느 경로든 먼저 지운다.
+	request_header -X-WEBAUTH-USER
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Uri {uri}
+		}
+	}
+	handle {
+		forward_auth oauth2-proxy:4180 {
+			uri /oauth2/auth
+			header_up X-Real-IP {remote_host}
+			copy_headers X-Auth-Request-User>X-WEBAUTH-USER
+			@unauthenticated status 401
+			handle_response @unauthenticated {
+				# redir로 ?rd={uri}를 붙이면 원래 쿼리의 & 뒤가 rd 밖으로 잘리므로 돌아갈 주소를 헤더로 넘긴다.
+				reverse_proxy oauth2-proxy:4180 {
+					rewrite /oauth2/start
+					header_up X-Real-IP {remote_host}
+					header_up X-Auth-Request-Redirect {scheme}://{host}{uri}
+				}
+			}
+		}
+		reverse_proxy {args[0]}
+	}
+}
+
+grafana.{$SITE_DOMAIN} {
+	import sso grafana:3000
+}
+
+prometheus.{$SITE_DOMAIN} {
+	import sso prometheus:9090
+}

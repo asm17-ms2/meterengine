@@ -52,6 +52,8 @@ class CaddyLoggingPrivacyTest(unittest.TestCase):
         cls.upstream = f"{cls.network}-upstream"
         cls.addClassCleanup(cls.cleanup)
         shutil.copyfile(SOURCE, cls.root / "Caddyfile")
+        shutil.copyfile(SOURCE.with_name("sso-sites.caddy"), cls.root / "sso-sites.caddy")
+        (cls.root / "sso.caddy").write_text("# CADDY_SSO_SITES=off\n")
         (cls.root / "upstreams.caddy").write_text("to backend-blue:8080\n")
         (cls.root / "access-log.caddy").write_text("output stdout\n")
         (cls.root / "Upstreamfile").write_text(
