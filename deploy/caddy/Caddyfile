@@ -30,6 +30,14 @@
 		include http.handlers.reverse_proxy.health_checker.active
 		level WARN
 	}
+	metrics
+	# 지표의 server 라벨을 srv0 같은 자동 이름 대신 고정한다. 대시보드가 이 이름으로 사이트를 가른다.
+	servers :443 {
+		name public
+	}
+	servers :8081 {
+		name internal
+	}
 }
 
 # deploy.sh가 정한 백엔드 목록 중 헬스체크를 통과한 쪽으로 보낸다.
@@ -86,10 +94,20 @@
 
 # 프론트엔드와 deploy.sh만 compose 네트워크 안에서 부른다. compose가 8081을 서버 밖으로 열지 않는다.
 http://:8081 {
-	# 프론트 고정 주소가 아닌 연결이 보낸 클라이언트 IP는 접속 주소로 덮어쓴다. compose의 프론트 주소를 바꾸면 같이 바꾼다.
-	@not_frontend not remote_ip {$FRONTEND_ADDRESS:172.30.0.11}
-	request_header @not_frontend X-MeterEngine-Client-IP {remote_host}
-	import backend
+	# Caddy 지표는 사이트 맨 바깥의 처리기마다 요청을 센다. route 하나로 묶어 요청마다 한 번만 세게 한다.
+	route {
+		# 프론트 고정 주소가 아닌 연결이 보낸 클라이언트 IP는 접속 주소로 덮어쓴다. compose의 프론트 주소를 바꾸면 같이 바꾼다.
+		@not_frontend not remote_ip {$FRONTEND_ADDRESS:172.30.0.11}
+		request_header @not_frontend X-MeterEngine-Client-IP {remote_host}
+		import backend
+	}
+}
+
+# Prometheus만 긁는 지표 사이트다. 설정을 바꿀 수 있는 admin API 대신 지표만 따로 열고, compose가 2020을 서버 밖으로 열지 않는다.
+http://:2020 {
+	@not_metrics not path /metrics
+	respond @not_metrics 404
+	metrics /metrics
 }
 
 # /actuator/*와 프론트엔드 /health는 노출하지 않는다. 헬스체크는 deploy.sh가 서버 안에서 부른다.

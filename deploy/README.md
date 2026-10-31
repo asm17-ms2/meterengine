@@ -15,7 +15,7 @@
             인증서 자동 발급
 
 [Prometheus] --scrape--> backend-blue:8080, backend-green:8080의
-             /actuator/prometheus, node-exporter:9100, cadvisor:8080 (컨테이너),
+             /actuator/prometheus, caddy:2020 (Caddy 지표), node-exporter:9100, cadvisor:8080 (컨테이너),
              postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch),
              grafana:3000 (경보 평가와 알림 전송)
      ^
@@ -30,7 +30,7 @@
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
-- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`과 Caddy 내부 사이트 `8081`은 compose 네트워크 안에서만 닿는다.
+- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
 - 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - compose 프로젝트 이름은 `meterengine-prod`다.
 - 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
@@ -40,7 +40,7 @@
 | 파일 | 내용 |
 | --- | --- |
 | `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana |
-| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트 |
+| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트, `:2020`은 Prometheus가 긁는 지표 사이트 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
 | `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
@@ -450,7 +450,7 @@ aws ssm get-parameter --name /meterengine/prod/operator-password --with-decrypti
 
 ## 모니터링
 
-- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -477,7 +477,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
 4. MeterEngine 폴더에서 대시보드를 연다.
-    - MeterEngine SLO는 가용성과 응답 지연이다.
+    - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
     - MeterEngine 결제와 예약 작업은 결제, 웹훅 발송, 예약 작업 지표다.
     - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
     - MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
