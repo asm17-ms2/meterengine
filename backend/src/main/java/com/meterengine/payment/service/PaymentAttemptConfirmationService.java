@@ -14,8 +14,10 @@ import com.meterengine.payment.repository.PaymentCancellationRepository;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -64,7 +66,7 @@ public class PaymentAttemptConfirmationService {
     OffsetDateTime confirmableFrom = now.minus(CONFIRMATION_WINDOW);
     OffsetDateTime confirmableBefore = now.minus(paymentProperties.confirmationDelay());
     OffsetDateTime notFoundFailableBefore = now.minus(paymentProperties.notFoundFailureDelay());
-    paymentMetrics.setStalePending(countStalePending(confirmableBefore));
+    measureStalePending(confirmableBefore);
     PaymentJobTally tally = new PaymentJobTally();
     for (PaymentAttempt attempt :
         paymentAttemptRepository.findPendingRequestedBetween(confirmableFrom, confirmableBefore)) {
@@ -103,13 +105,32 @@ public class PaymentAttemptConfirmationService {
         tally.countFailed();
       }
     }
-    paymentMetrics.setStalePending(countStalePending(confirmableBefore));
+    measureStalePending(confirmableBefore);
     return tally.result();
   }
 
-  private long countStalePending(OffsetDateTime confirmableBefore) {
-    return paymentAttemptRepository.countPendingRequestedBefore(confirmableBefore)
-        + paymentCancellationRepository.countPendingRequestedBefore(confirmableBefore);
+  private void measureStalePending(OffsetDateTime confirmableBefore) {
+    for (String mode : PaymentMetrics.MODES) {
+      paymentMetrics.setStalePending(mode, countStalePending(mode, confirmableBefore));
+      findOldestStalePendingRequestedAt(mode, confirmableBefore)
+          .ifPresentOrElse(
+              requestedAt -> paymentMetrics.setStalePendingOldestRequestedAt(mode, requestedAt),
+              () -> paymentMetrics.clearStalePendingOldestRequestedAt(mode));
+    }
+  }
+
+  private long countStalePending(String mode, OffsetDateTime confirmableBefore) {
+    return paymentAttemptRepository.countPendingRequestedBefore(mode, confirmableBefore)
+        + paymentCancellationRepository.countPendingRequestedBefore(mode, confirmableBefore);
+  }
+
+  private Optional<OffsetDateTime> findOldestStalePendingRequestedAt(
+      String mode, OffsetDateTime confirmableBefore) {
+    return Stream.of(
+            paymentAttemptRepository.findOldestPendingRequestedAt(mode, confirmableBefore),
+            paymentCancellationRepository.findOldestPendingRequestedAt(mode, confirmableBefore))
+        .flatMap(Optional::stream)
+        .min(Comparator.naturalOrder());
   }
 
   private boolean confirmAttempt(PaymentAttempt attempt, OffsetDateTime notFoundFailableBefore) {

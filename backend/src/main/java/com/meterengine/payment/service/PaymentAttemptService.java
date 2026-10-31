@@ -47,8 +47,6 @@ public class PaymentAttemptService {
   private static final Logger logger = LoggerFactory.getLogger(PaymentAttemptService.class);
   private static final String ORDER_NAME_SUFFIX = " 사용료";
   private static final String TOSS_PAYMENT_DONE = "DONE";
-  private static final Set<String> TOSS_PAYMENT_ENDED_WITHOUT_APPROVAL =
-      Set.of("ABORTED", "EXPIRED");
   private static final String ENDED_WITHOUT_APPROVAL_MESSAGE = "토스페이먼츠 결제가 승인되지 않고 끝났습니다";
 
   private final PaymentAttemptRepository paymentAttemptRepository;
@@ -216,7 +214,7 @@ public class PaymentAttemptService {
             mode,
             new TossPaymentsError(null, notDone.value().status()).singleLineMessage(),
             notDone.value().paymentKey() != null);
-        paymentMetrics.countAttempt(mode, PaymentMetrics.UNKNOWN);
+        paymentMetrics.countAttempt(mode, attemptCount(pendingAttempt), PaymentMetrics.UNKNOWN);
       }
       case TossPaymentsResult.Rejected<TossPaymentsPayment> rejected -> {
         logger.warn(
@@ -235,7 +233,7 @@ public class PaymentAttemptService {
             attemptId,
             mode,
             unknown.reason());
-        paymentMetrics.countAttempt(mode, PaymentMetrics.UNKNOWN);
+        paymentMetrics.countAttempt(mode, attemptCount(pendingAttempt), PaymentMetrics.UNKNOWN);
       }
     }
     return find(organizationId, attemptId);
@@ -254,27 +252,24 @@ public class PaymentAttemptService {
 
   boolean markDone(PaymentAttempt attempt, String paymentKey) {
     UUID attemptId = attempt.getId();
-    String mode = attempt.getMode();
-    boolean applied =
-        Boolean.TRUE.equals(
-            transactionTemplate.execute(
-                status -> {
-                  if (paymentAttemptRepository.markDone(attemptId, paymentKey, now()) != 1) {
-                    return false;
-                  }
-                  publish(attempt, WebhookEventType.PAYMENT_SUCCEEDED);
-                  return true;
-                }));
-    if (applied) {
-      paymentMetrics.countAttempt(mode, PaymentAttempt.DONE);
+    Optional<Long> attemptCount =
+        transactionTemplate.execute(
+            status -> {
+              if (paymentAttemptRepository.markDone(attemptId, paymentKey, now()) != 1) {
+                return Optional.empty();
+              }
+              publish(attempt, WebhookEventType.PAYMENT_SUCCEEDED);
+              return Optional.of(attemptCount(attempt));
+            });
+    if (attemptCount.isEmpty()) {
+      return false;
     }
-    return applied;
+    paymentMetrics.countAttempt(attempt.getMode(), attemptCount.get(), PaymentAttempt.DONE);
+    return true;
   }
 
   boolean markFailed(PaymentAttempt attempt, String failureCode, String failureMessage) {
     UUID attemptId = attempt.getId();
-    UUID organizationId = attempt.getOrganizationId();
-    UUID invoiceId = attempt.getInvoiceId();
     String mode = attempt.getMode();
     Optional<Long> attemptCount =
         transactionTemplate.execute(
@@ -284,14 +279,12 @@ public class PaymentAttemptService {
                 return Optional.empty();
               }
               publish(attempt, WebhookEventType.PAYMENT_FAILED);
-              return Optional.of(
-                  paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
-                      organizationId, invoiceId, mode));
+              return Optional.of(attemptCount(attempt));
             });
     if (attemptCount.isEmpty()) {
       return false;
     }
-    paymentMetrics.countAttempt(mode, PaymentAttempt.FAILED);
+    paymentMetrics.countFailedAttempt(mode, attemptCount.get(), failureCode);
     if (attemptCount.get() == paymentProperties.retryMaxAttempts()) {
       paymentMetrics.countRetryExhausted(mode);
     }
@@ -405,6 +398,12 @@ public class PaymentAttemptService {
         yield false;
       }
     };
+  }
+
+  // pending 시도가 있는 동안은 새 시도를 만들지 않으므로 끝내는 시도가 그 인보이스의 마지막 시도다.
+  private long attemptCount(PaymentAttempt attempt) {
+    return paymentAttemptRepository.countByOrganizationIdAndInvoiceIdAndMode(
+        attempt.getOrganizationId(), attempt.getInvoiceId(), attempt.getMode());
   }
 
   private void publish(PaymentAttempt attempt, WebhookEventType type) {
@@ -623,7 +622,7 @@ public class PaymentAttemptService {
   }
 
   static boolean isEndedWithoutApproval(TossPaymentsPayment payment) {
-    return TOSS_PAYMENT_ENDED_WITHOUT_APPROVAL.contains(payment.status());
+    return TossPaymentsFailureCode.ENDED_WITHOUT_APPROVAL.contains(payment.status());
   }
 
   private static boolean isDone(TossPaymentsPayment payment) {
