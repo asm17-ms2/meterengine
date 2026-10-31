@@ -13,53 +13,68 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class EventIngestionService {
 
-  private static final Duration MAX_EVENT_AGE = Duration.ofDays(35);
+  static final Duration MAX_EVENT_AGE = Duration.ofDays(35);
 
   private final EventRepository eventRepository;
   private final CustomerDirectory customerDirectory;
   private final JsonMapper jsonMapper;
   private final EventIngestMetrics eventIngestMetrics;
+  private final TransactionTemplate transactionTemplate;
 
   EventIngestionService(
       EventRepository eventRepository,
       CustomerDirectory customerDirectory,
       JsonMapper jsonMapper,
-      EventIngestMetrics eventIngestMetrics) {
+      EventIngestMetrics eventIngestMetrics,
+      PlatformTransactionManager platformTransactionManager) {
     this.eventRepository = eventRepository;
     this.customerDirectory = customerDirectory;
     this.jsonMapper = jsonMapper;
     this.eventIngestMetrics = eventIngestMetrics;
+    this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
 
-  @Transactional
+  // 커밋 실패는 트랜잭션을 닫을 때 나므로 결과는 트랜잭션 밖에서 센다.
   public IngestEventResponse ingest(UUID organizationId, IngestEventRequest request) {
+    Instant receivedAt = Instant.now();
+    IngestEventResponse response;
     try {
-      return store(organizationId, request);
+      response = transactionTemplate.execute(status -> store(organizationId, request, receivedAt));
     } catch (BusinessException rejection) {
-      eventIngestMetrics.recordRejected();
+      eventIngestMetrics.recordRejected(rejection.getErrorCode());
       throw rejection;
+    } catch (RuntimeException failure) {
+      eventIngestMetrics.recordFailed(1);
+      throw failure;
     }
+    if (response.duplicate()) {
+      eventIngestMetrics.recordDuplicate();
+    } else {
+      eventIngestMetrics.recordStored(
+          Duration.between(request.occurredAt().toInstant(), receivedAt));
+    }
+    return response;
   }
 
-  private IngestEventResponse store(UUID organizationId, IngestEventRequest request) {
+  private IngestEventResponse store(
+      UUID organizationId, IngestEventRequest request, Instant receivedAt) {
     try {
       customerDirectory.check(organizationId, request.customerId());
     } catch (com.meterengine.global.error.ConflictException exception) {
       if (exception.getErrorCode() != ErrorCode.CUSTOMER_ARCHIVED
           || !eventRepository.exists(organizationId, request.transactionId())) throw exception;
-      eventIngestMetrics.recordDuplicate();
       return IngestEventResponse.alreadyStored(request.transactionId());
     }
 
-    if (isTooOld(request.occurredAt().toInstant(), Instant.now())) {
+    if (isTooOld(request.occurredAt().toInstant(), receivedAt)) {
       if (eventRepository.exists(organizationId, request.transactionId())) {
-        eventIngestMetrics.recordDuplicate();
         return IngestEventResponse.alreadyStored(request.transactionId());
       }
       throw new InvalidRequestException(
@@ -78,10 +93,8 @@ public class EventIngestionService {
             propertiesJson,
             request.occurredAt());
     if (inserted == 1) {
-      eventIngestMetrics.recordStored();
       return IngestEventResponse.stored(request.transactionId());
     }
-    eventIngestMetrics.recordDuplicate();
     return IngestEventResponse.alreadyStored(request.transactionId());
   }
 
