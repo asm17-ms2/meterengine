@@ -16,6 +16,9 @@ public record InvoiceResponse(
     @JsonProperty("customer_id") UUID customerId,
     @JsonProperty("customer_name") String customerName,
     String month,
+    @Schema(description = "확정이 읽은 이벤트의 받은 시각 상한. 그 달에 발생했고 이 시각 전에 받은 이벤트만 금액에 들었다. KST(+09:00)")
+        @JsonProperty("cutoff_at")
+        OffsetDateTime cutoffAt,
     @JsonProperty("finalized_at") OffsetDateTime finalizedAt,
     @JsonProperty("supply_amount") long supplyAmount,
     @JsonProperty("tax_amount") long taxAmount,

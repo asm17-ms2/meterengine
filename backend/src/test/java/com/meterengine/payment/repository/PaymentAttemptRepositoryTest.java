@@ -303,8 +303,8 @@ class PaymentAttemptRepositoryTest {
         """
         INSERT INTO invoice
           (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-           total_amount, finalized_at)
-        VALUES (?, ?, '결제 고객', ?, 1000, 100, 1100, now())
+           total_amount, cutoff_at, finalized_at)
+        VALUES (?, ?, '결제 고객', ?, 1000, 100, 1100, now(), now())
         RETURNING id
         """,
         UUID.class,

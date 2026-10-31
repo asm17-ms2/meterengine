@@ -387,8 +387,8 @@ class SchemaConstraintTest {
                     """
                     INSERT INTO invoice
                       (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-                       total_amount)
-                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200)
+                       total_amount, cutoff_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200, now())
                     """,
                     organizationId,
                     customerId))
@@ -428,8 +428,8 @@ class SchemaConstraintTest {
                     """
                     INSERT INTO invoice
                       (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-                       total_amount, finalized_at)
-                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13201, now())
+                       total_amount, cutoff_at, finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13201, now(), now())
                     """,
                     organizationId,
                     customerId))
@@ -448,8 +448,8 @@ class SchemaConstraintTest {
                     """
                     INSERT INTO invoice
                       (organization_id, customer_id, period, supply_amount, tax_amount, total_amount,
-                       finalized_at)
-                    VALUES (?, ?, '2026-08', 12000, 1200, 13200, now())
+                       cutoff_at, finalized_at)
+                    VALUES (?, ?, '2026-08', 12000, 1200, 13200, now(), now())
                     """,
                     organizationId,
                     customerId))
@@ -468,8 +468,8 @@ class SchemaConstraintTest {
                     """
                     INSERT INTO invoice
                       (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-                       finalized_at)
-                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, now())
+                       cutoff_at, finalized_at)
+                    VALUES (?, ?, 'acme', '2026-08', 12000, 1200, now(), now())
                     """,
                     organizationId,
                     customerId))
@@ -1028,8 +1028,8 @@ class SchemaConstraintTest {
         """
         INSERT INTO invoice
           (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-           total_amount, finalized_at)
-        VALUES (?, ?, 'acme', ?, 12000, 1200, 13200, now())
+           total_amount, cutoff_at, finalized_at)
+        VALUES (?, ?, 'acme', ?, 12000, 1200, 13200, now(), now())
         RETURNING id
         """,
         UUID.class,

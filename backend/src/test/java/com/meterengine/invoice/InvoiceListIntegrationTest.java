@@ -65,7 +65,7 @@ class InvoiceListIntegrationTest {
             """
             {"invoices": [{
               "id": "%s", "invoice_number": "%s", "customer_id": "%s", "customer_name": "아크메", "month": "2026-08",
-              "finalized_at": "2026-09-01T14:00:00+09:00",
+              "cutoff_at": "2026-09-01T13:00:00+09:00", "finalized_at": "2026-09-01T14:00:00+09:00",
               "supply_amount": 12000, "tax_amount": 1200, "total_amount": 13200,
               "lines": [
                 {"billable_metric_code": "api-call", "billable_metric_name": null, "target_property": null,
@@ -287,6 +287,7 @@ class InvoiceListIntegrationTest {
             period,
             supplyAmount,
             supplyAmount / 10,
+            OffsetDateTime.parse("2026-09-01T04:00:00Z"),
             OffsetDateTime.parse("2026-09-01T05:00:00Z"));
     return invoiceRepository.save(invoice).getId();
   }

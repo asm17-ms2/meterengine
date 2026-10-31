@@ -220,7 +220,7 @@ class EventIssueIntegrationTest {
   @Test
   void 확정한_달의_단가_없는_사용량은_단가_등록_대신_확정_안내를_준다() {
     jdbcTemplate.update(
-        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,'진단 고객','2026-10',0,0,0,now())",
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at) VALUES (?,?,'진단 고객','2026-10',0,0,0,now(),now())",
         organization,
         customer);
     String json = body(get(read, "&reason=unpriced_usage"));

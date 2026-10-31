@@ -581,6 +581,7 @@ class TossPaymentsWebhookIntegrationTest {
             "2026-08",
             12000,
             1200,
+            OffsetDateTime.parse("2026-09-01T04:00:00Z"),
             OffsetDateTime.parse("2026-09-01T05:00:00Z"));
     return invoiceRepository.save(invoice).getId();
   }

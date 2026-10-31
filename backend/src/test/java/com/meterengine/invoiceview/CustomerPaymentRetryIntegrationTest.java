@@ -671,7 +671,7 @@ class CustomerPaymentRetryIntegrationTest {
         customerId,
         organizationId);
     jdbcTemplate.update(
-        "INSERT INTO invoice(id,organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,?,'재시도 고객','2026-10',1000,100,1100,now())",
+        "INSERT INTO invoice(id,organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at) VALUES (?,?,?,'재시도 고객','2026-10',1000,100,1100,now(),now())",
         invoiceId,
         organizationId,
         customerId);
