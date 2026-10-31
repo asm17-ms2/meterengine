@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "targets": {
+    "staging": {
+      "aws_account_id": "928618307647",
+      "aws_region": "ap-northeast-2",
+      "bucket": "meterengine-tfstate-928618307647",
+      "repository": "asm17-ms2/meterengine",
+      "repository_id": "1313421667",
+      "repository_owner_id": "293532363",
+      "terraform_version": "1.17.1",
+      "name": "staging",
+      "root": "deploy/terraform/staging",
+      "state_key": "deploy/staging/terraform.tfstate",
+      "environment": "staging-infrastructure",
+      "plan_role_arn": "arn:aws:iam::928618307647:role/meterengine-terraform-staging-plan",
+      "apply_role_arn": "arn:aws:iam::928618307647:role/meterengine-terraform-staging-apply",
+      "secrets": {
+        "db_password_wo": "TF_STAGING_DB_PASSWORD",
+        "runtime_secrets": "TF_STAGING_RUNTIME_SECRETS_JSON"
+      },
+      "variables": {
+        "db_password_version": "TF_STAGING_DB_PASSWORD_VERSION",
+        "runtime_secret_versions": "TF_STAGING_RUNTIME_SECRET_VERSIONS_JSON",
+        "operator_email": "TF_STAGING_OPERATOR_EMAIL"
+      }
+    },
+    "production": {
+      "aws_account_id": "928618307647",
+      "aws_region": "ap-northeast-2",
+      "bucket": "meterengine-tfstate-928618307647",
+      "repository": "asm17-ms2/meterengine",
+      "repository_id": "1313421667",
+      "repository_owner_id": "293532363",
+      "terraform_version": "1.17.1",
+      "name": "production",
+      "root": "deploy/terraform/production",
+      "state_key": "deploy/production/terraform.tfstate",
+      "environment": "production-infrastructure",
+      "plan_role_arn": "arn:aws:iam::928618307647:role/meterengine-terraform-production-plan",
+      "apply_role_arn": "arn:aws:iam::928618307647:role/meterengine-terraform-production-apply",
+      "secrets": {},
+      "variables": {}
+    }
+  }
+}
