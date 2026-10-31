@@ -1,0 +1,47 @@
+x-runtime: &runtime
+  environment:
+    SPRING_DATASOURCE_URL: !reset null
+    SPRING_DATASOURCE_USERNAME: !reset null
+    SPRING_DATASOURCE_PASSWORD: !reset null
+    DB_HOST: ${DB_HOST:?DB_HOST is required}
+    DB_PORT: ${DB_PORT:?DB_PORT is required}
+    DB_NAME: ${DB_NAME:?DB_NAME is required}
+    DB_SHARED_USERNAME: ${DB_SHARED_USERNAME:?DB_SHARED_USERNAME is required}
+    DB_SHARED_PASSWORD: ${DB_SHARED_PASSWORD:?DB_SHARED_PASSWORD is required}
+    DB_TEST_USERNAME: ${DB_TEST_USERNAME:?DB_TEST_USERNAME is required}
+    DB_TEST_PASSWORD: ${DB_TEST_PASSWORD:?DB_TEST_PASSWORD is required}
+    DB_LIVE_USERNAME: ${DB_LIVE_USERNAME:?DB_LIVE_USERNAME is required}
+    DB_LIVE_PASSWORD: ${DB_LIVE_PASSWORD:?DB_LIVE_PASSWORD is required}
+    DB_SSL_ROOT_CERT: ${DB_SSL_ROOT_CERT:?DB_SSL_ROOT_CERT is required}
+    METERENGINE_CUTOVER_MODE: ${METERENGINE_CUTOVER_MODE:?METERENGINE_CUTOVER_MODE is required}
+    METERENGINE_DEPLOYMENT_ENVIRONMENT: ${METERENGINE_DEPLOYMENT_ENVIRONMENT:?METERENGINE_DEPLOYMENT_ENVIRONMENT is required}
+    METERENGINE_STAGING_WEBHOOK_ALLOWED_URLS: ${METERENGINE_STAGING_WEBHOOK_ALLOWED_URLS:-}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT:-100}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT:-10}
+    METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW:-5m}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT:-20}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT:-3}
+    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW:-30m}
+  volumes:
+    - type: bind
+      source: ${DB_SSL_ROOT_CERT:?DB_SSL_ROOT_CERT is required}
+      target: /etc/meterengine/rds-ca.pem
+      read_only: true
+      bind:
+        create_host_path: false
+
+services:
+  backend-blue:
+    <<: *runtime
+  backend-green:
+    <<: *runtime
+  postgres-exporter:
+    environment:
+      DATA_SOURCE_URI: ${DB_HOST:?DB_HOST is required}:${DB_PORT:?DB_PORT is required}/${DB_NAME:?DB_NAME is required}?sslmode=verify-full&sslrootcert=/etc/meterengine/rds-ca.pem
+    volumes:
+      - type: bind
+        source: ${DB_SSL_ROOT_CERT:?DB_SSL_ROOT_CERT is required}
+        target: /etc/meterengine/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false

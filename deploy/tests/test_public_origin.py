@@ -18,6 +18,7 @@ DUMMY_ENV = {
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
 DUMMY_ENV["SITE_DOMAIN"] = "billing.example.com"
+DUMMY_ENV["METERENGINE_DEPLOYMENT_ENVIRONMENT"] = "production"
 
 
 @unittest.skipUnless(shutil.which("docker"), "Docker required")
@@ -32,6 +33,27 @@ class PublicOriginTest(unittest.TestCase):
             raise AssertionError(f"compose config failed: {result.stderr}")
         frontend = json.loads(result.stdout)["services"]["frontend"]["environment"]
         self.assertEqual("https://billing.example.com", frontend.get("METERENGINE_PUBLIC_ORIGIN"))
+
+    def test_disabled_observability_requires_no_secrets(self):
+        environment = {**os.environ, **DUMMY_ENV}
+        for name in ("DB_EXPORTER_PASSWORD", "GRAFANA_ADMIN_PASSWORD", "SLACK_WEBHOOK_URL"):
+            environment.pop(name, None)
+        result = subprocess.run(
+            ["docker", "compose", "--project-name", "meterengine-staging", "-f", str(COMPOSE_FILE),
+             "config", "--format", "json"], capture_output=True, text=True, env=environment, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["name"], "meterengine-staging")
+
+    def test_production_volume_names_are_unchanged(self):
+        result = subprocess.run(
+            ["docker", "compose", "--project-name", "meterengine-prod", "-f", str(COMPOSE_FILE),
+             "config", "--format", "json"], capture_output=True, text=True,
+            env={**os.environ, **DUMMY_ENV}, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        volumes = json.loads(result.stdout)["volumes"]
+        self.assertEqual({name: value["name"] for name, value in volumes.items()}, {
+            "caddy-data": "meterengine-prod_caddy-data", "caddy-config": "meterengine-prod_caddy-config",
+            "prometheus-data": "meterengine-prod_prometheus-data", "grafana-data": "meterengine-prod_grafana-data"})
 
 
 if __name__ == "__main__":

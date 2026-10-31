@@ -23,6 +23,7 @@ DUMMY_ENV = {
         "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET")
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
+DUMMY_ENV["METERENGINE_DEPLOYMENT_ENVIRONMENT"] = "production"
 
 
 @unittest.skipUnless(shutil.which("docker"), "Docker required")

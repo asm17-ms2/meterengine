@@ -22,6 +22,7 @@ class ConsoleKeyEnvironmentTest(unittest.TestCase):
         environment.update({name: "dummy" for name in required_names()})
         environment["BACKEND_MEM_LIMIT"] = "768m"
         environment["SITE_DOMAIN"] = "billing.example.com"
+        environment["METERENGINE_DEPLOYMENT_ENVIRONMENT"] = "production"
         result = subprocess.run(
             ["docker", "compose", "-f", str(COMPOSE_FILE), "config", "--format", "json"],
             capture_output=True, text=True, env=environment, timeout=30)
